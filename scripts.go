@@ -12,3 +12,13 @@ func FetchScripts(Repo map[string]string) {
   // todo: git clone или fetch + смотрим изменение коммита, шлем сигнал в ScriptsUpdated
 }
 
+func InitScriptsManager() {
+    
+}
+
+// Запускается в отдельной goroutine
+func RunScriptsManager() {
+    for ;; {
+        // Ловим RepoUpdated
+    }
+}
