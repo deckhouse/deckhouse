@@ -24,13 +24,14 @@ type Module struct {
 }
 
 type Config struct {
-	Repo Repo
+	Repo    Repo
+	Modules *Module
 }
 
 func InitConfigManager() {
 	rlog.Info("Init config manager")
 
-	CurrentConfig = &Config{Repo{"github.com/deckhouse/deckhouse-scripts", "master"}}
+	CurrentConfig = &Config{Repo{"https://github.com/deckhouse/deckhouse-scripts", "master"}}
 }
 
 func RunConfigManager() {
