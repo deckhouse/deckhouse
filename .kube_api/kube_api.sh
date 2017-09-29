@@ -17,4 +17,8 @@ cat <<EOF
 
 \$ GET /api/v1/nodes | jq '.["items"][] | { name: .metadata.name, labels: .metadata.labels }'
   - list all nodes with name and labels
+  
+PATCH /api/v1/namespaces/$KUBE_NS/pods/antiopa-1344919674-zjfkm '[{"op":"add","path":"/metadata/labels/qwe", "value": "qwe" }]' -H "Content-Type:application/json-patch+json"
+  - add a new label to pod
+  https://stackoverflow.com/a/36163917
 EOF
