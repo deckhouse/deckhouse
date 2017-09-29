@@ -7,8 +7,8 @@ import (
 )
 
 var (
-    lastModules []map[string]string,
-    lastScriptsCommit string,
+	lastModules       []map[string]string
+	lastScriptsCommit string
 )
 
 /*
@@ -24,27 +24,32 @@ ScriptsUpdated -> RunScripts(lastModules, newCommit), lastScriptsCommit = newCom
 func Init() {
 	rlog.Info("Init")
 
+	lastModules = make([]map[string]string, 0)
+	lastScriptsCommit = ""
+
 	InitConfigManager()
 	InitScriptsManager()
-}
-
-func RunScripts(Modules []map[string]string, Commit string) {
-  // Делает checkout во временную директорию по указанному Commit
-  // Запускает скрипты без mutex'ов во временной директории. Впоследствии можно делать diff по OldCommit и NewCommit и запускать только изменившиеся модули
-  // Удаляет временную директорию
 }
 
 func Run() {
 	rlog.Info("Run")
 
-    // Общее правило: запускаем всех "менеджеров" в отдельные goroutine
 	go RunConfigManager()
 	go RunScriptsManager()
 
-    // В главной goroutine оркестрируем получение новых данных и запускаем сами скрипты
 	for {
-	    // Получаем RepoUpdated => запускаем FetchScripts(cfg)
-	    // Получаем ScriptsUpdated => запускаем скрипты если
+		select {
+		case modules := <-ModulesUpdated:
+			if lastScriptsCommit != "" {
+				// TODO: Заметить разницу между modules и запустить только новые скрипты
+				RunScripts(modules, lastScriptsCommit)
+			}
+		case commit := <-ScriptsCommitted:
+			if len(lastModules) != 0 {
+				// TODO: Заметить разницу между modules и запустить только новые скрипты
+				RunScripts(lastModules, commit)
+			}
+		}
 		time.Sleep(time.Duration(1) * time.Second)
 	}
 }
