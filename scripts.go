@@ -19,6 +19,6 @@ func InitScriptsManager() {
 // Запускается в отдельной goroutine
 func RunScriptsManager() {
     for ;; {
-        // Ловим RepoUpdated
+        // Ловим RepoUpdated -> запускаем FetchScripts
     }
 }
