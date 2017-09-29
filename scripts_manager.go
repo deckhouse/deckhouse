@@ -13,12 +13,12 @@ func FetchScripts(Repo map[string]string) {
 }
 
 func InitScriptsManager() {
-    
 }
 
 // Запускается в отдельной goroutine
 func RunScriptsManager() {
     for ;; {
         // Ловим RepoUpdated -> запускаем FetchScripts
+        // Периодически запускаем FetchScripts
     }
 }
