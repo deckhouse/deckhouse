@@ -1,0 +1,132 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: antiopa
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        service: antiopa
+    spec:
+      imagePullSecrets:
+        - name: registrysecret
+      containers:
+      - name: antiopa
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "trap : TERM INT; sleep infinity & wait" ]
+        image: {{ tuple . | include "dimg" }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9115
+          name: http-metrics
+          protocol: TCP
+        env:
+        - name: KUBERNETES_DEPLOYED
+          value: {{ now | quote }}
+        - name: RLOG_LOG_LEVEL
+          value: DEBUG
+      serviceAccount: antiopa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: antiopa
+  labels:
+    app: antiopa
+spec:
+  clusterIP: None
+  selector:
+    service: antiopa
+  ports:
+  - name: http
+    port: 9115
+    protocol: TCP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: antiopa
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: antiopa
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - services
+      - endpoints
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - replace
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: antiopa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: antiopa
+subjects:
+  - kind: ServiceAccount
+    name: antiopa
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: antiopa-cluster
+rules:
+- apiGroups:
+  - ""
+  - "extensions"
+  resources:
+  - services
+  - endpoints
+  - ingresses
+  - nodes
+  - pods
+  verbs:
+  - list
+  - watch
+  - get
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - "extensions"
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: antiopa-cluster-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: antiopa-cluster
+subjects:
+  - kind: ServiceAccount
+    name: antiopa
+    namespace: {{.Values.global.namespace}}
+
