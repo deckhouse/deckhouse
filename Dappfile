@@ -30,7 +30,21 @@ dimg do
   
   shell.before_install do
     run 'apt-get -y update'
-    run 'apt-get -y install iproute2 tcpdump nmap git curl jq python3 httpie'
+    run 'apt-get -y install iproute2 tcpdump nmap git curl jq python3'
+    run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
+    run 'chmod +x /usr/bin/resty'
+    run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
+  end
+  
+  shell.setup do
+    run 'cp /kube_api/kube_api.sh /usr/bin/kube_api'
+    run 'chmod +x /usr/bin/kube_api'
+  end
+  
+  git do
+    add '/.kube_api' do
+      to '/kube_api'
+    end
   end
 
 end
