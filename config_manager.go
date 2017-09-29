@@ -7,31 +7,22 @@ import (
 )
 
 var (
-	ConfigUpdated chan *Config
-	CurrentConfig *Config
+    // (старый-репо, новый-репо)
+	RepoUpdated chan (map[string]interface{}, map[string]interface{})
+
+	// (старый-список, новый-список)
+	ModulesUpdated chan ([]map[string]interface{}, []map[string]interface{})
 )
 
-type Repo struct {
-	Url    string
-	Branch string
-}
-
-type Module struct {
-	Name          string
-	Path          string
-	EntryPointBin string
-	WorkDir       string
-}
-
-type Config struct {
-	Repo    Repo
-	Modules *Module
-}
+/*
+repo => json{url: "...", ref: "..." || "master"}
+modules => json[{name: "", entrypoint: "path-to-sh" || "ctl.sh"}, ...]
+*/
 
 func InitConfigManager() {
 	rlog.Info("Init config manager")
 
-	CurrentConfig = &Config{Repo{"https://github.com/deckhouse/deckhouse-scripts", "master"}}
+    RepoUpdated<- map[string]interface{}{"url": "https://github.com/deckhouse/deckhouse-scripts"}
 }
 
 func RunConfigManager() {
