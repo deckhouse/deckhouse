@@ -8,10 +8,10 @@ import (
 
 var (
     // (старый-репо, новый-репо)
-	RepoUpdated chan (map[string]interface{}, map[string]interface{})
+	RepoUpdated chan (map[string]string, map[string]string
 
 	// (старый-список, новый-список)
-	ModulesUpdated chan ([]map[string]interface{}, []map[string]interface{})
+	ModulesUpdated chan ([]map[string]string []map[string]string
 )
 
 /*
@@ -22,7 +22,7 @@ modules => json[{name: "", entrypoint: "path-to-sh" || "ctl.sh"}, ...]
 func InitConfigManager() {
 	rlog.Info("Init config manager")
 
-    RepoUpdated<- map[string]interface{}{"url": "https://github.com/deckhouse/deckhouse-scripts"}
+    RepoUpdated<- map[string]string{"url": "https://github.com/deckhouse/deckhouse-scripts"}
 }
 
 func RunConfigManager() {
