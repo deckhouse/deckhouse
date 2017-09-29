@@ -31,8 +31,11 @@ func RunScripts(Modules []map[string]string, Commit string) {
 func Run() {
 	rlog.Info("Run")
 
+    // Общее правило: запускаем всех "менеджеры" в отдельные goroutine
 	go RunConfigManager()
+	go RunScriptsManager()
 
+    // В главной goroutine оркестрируем получение новых данных и запускаем сами скрипты
 	for {
 	    // Получаем RepoUpdated => запускаем FetchScripts(cfg)
 	    // Получаем ScriptsUpdated => запускаем скрипты
