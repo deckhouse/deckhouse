@@ -6,7 +6,15 @@ import (
 	"github.com/romana/rlog"
 )
 
-var ()
+/*
+RepoUpdated
+ModulesUpdated
+ScriptsUpdated
+
+RepoUpdated -> FetchScripts
+ModulesUpdated -> RunScripts
+ScriptsUpdated -> RunScripts
+*/
 
 func Init() {
 	rlog.Info("Init")
