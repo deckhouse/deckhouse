@@ -20,6 +20,8 @@ func Run() {
 	go RunConfigManager()
 
 	for {
+	    // Получаем RepoUpdated => запускаем FetchScripts(cfg)
+	    // Получаем ScriptsUpdated => запускаем скрипты
 		time.Sleep(time.Duration(1) * time.Second)
 	}
 }
