@@ -20,5 +20,6 @@ func RunScriptsManager() {
     for ;; {
         // Ловим RepoUpdated -> запускаем FetchScripts
         // Периодически запускаем FetchScripts
+        time.Sleep(time.Duration(1) * time.Second)
     }
 }

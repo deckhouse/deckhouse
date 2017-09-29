@@ -7,12 +7,22 @@ import (
 )
 
 var (
-    // (старый-репо, новый-репо)
-	RepoUpdated chan (map[string]string, map[string]string
+	// (старый-репо, новый-репо)
+	RepoUpdated chan RepoUpdate
 
 	// (старый-список, новый-список)
-	ModulesUpdated chan ([]map[string]string []map[string]string
+	ModulesUpdated chan ModulesUpdate
 )
+
+type RepoUpdate struct {
+	OldRepo map[string]string
+	Repo    map[string]string
+}
+
+type ModulesUpdate struct {
+	OldModules []map[string]string
+	Modules    []map[string]string
+}
 
 /*
 repo => json{url: "...", ref: "..." || "master"}
@@ -22,7 +32,7 @@ modules => json[{name: "", entrypoint: "path-to-sh" || "ctl.sh"}, ...]
 func InitConfigManager() {
 	rlog.Info("Init config manager")
 
-    RepoUpdated<- map[string]string{"url": "https://github.com/deckhouse/deckhouse-scripts"}
+	RepoUpdated <- map[string]string{"url": "https://github.com/deckhouse/deckhouse-scripts"}
 }
 
 func RunConfigManager() {

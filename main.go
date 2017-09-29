@@ -7,7 +7,7 @@ import (
 )
 
 var (
-    lastModules map[string]string,
+    lastModules []map[string]string,
     lastScriptsCommit string,
 )
 
@@ -28,7 +28,7 @@ func Init() {
 	InitScriptsManager()
 }
 
-func RunScripts(Modules []map[string]string, OldCommit string, Commit string) {
+func RunScripts(Modules []map[string]string, Commit string) {
   // Делает checkout во временную директорию по указанному Commit
   // Запускает скрипты без mutex'ов во временной директории. Впоследствии можно делать diff по OldCommit и NewCommit и запускать только изменившиеся модули
   // Удаляет временную директорию
