@@ -20,10 +20,15 @@ func InitConfigManager() {
 	rlog.Info("Init config manager")
 
 	RepoUpdated = make(chan map[string]string, 1)
-	ModulesUpdated = make(chan []map[string]string)
+	ModulesUpdated = make(chan []map[string]string, 1)
 
 	RepoUpdated <- map[string]string{
 		"url": "https://github.com/deckhouse/deckhouse-scripts",
+	}
+	ModulesUpdated <- []map[string]string{
+		map[string]string{
+			"name": "mymodule",
+		},
 	}
 }
 

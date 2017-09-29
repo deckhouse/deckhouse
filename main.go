@@ -31,19 +31,21 @@ func Run() {
 	for {
 		select {
 		case modules := <-ModulesUpdated:
-			if lastModulesInitialized {
+			if lastScriptsCommitInitialized {
 				// TODO: Заметить разницу между modules и запустить только новые скрипты
 				RunScripts(modules, lastScriptsCommit)
-
-				lastModules = modules
 			}
+
+			lastModules = modules
+			lastModulesInitialized = true
 		case commit := <-ScriptsCommitted:
 			if lastModulesInitialized {
 				// TODO: Заметить разницу между modules и запустить только новые скрипты
 				RunScripts(lastModules, commit)
-
-				lastScriptsCommit = commit
 			}
+
+			lastScriptsCommit = commit
+			lastScriptsCommitInitialized = true
 		}
 	}
 }
