@@ -19,6 +19,9 @@ modules => json[{name: "", entrypoint: "path-to-sh" || "ctl.sh"}, ...]
 func InitConfigManager() {
 	rlog.Info("Init config manager")
 
+	RepoUpdated = make(chan map[string]string, 1)
+	ModulesUpdated = make(chan []map[string]string)
+
 	RepoUpdated <- map[string]string{
 		"url": "https://github.com/deckhouse/deckhouse-scripts",
 	}
@@ -45,15 +48,20 @@ func RunConfigManager() {
 	}
 	i := 0
 
+	ticker := time.NewTicker(time.Duration(10) * time.Second)
+
 	for {
-		time.Sleep(time.Duration(60) * time.Second)
+		select {
+		case <-ticker.C:
+			time.Sleep(time.Duration(2) * time.Second)
 
-		rlog.Debugf("REPOUPDATE old=%v new=%v", lastRepo, repoS[i])
+			rlog.Debugf("REPOUPDATE old=%v new=%v", lastRepo, repoS[i])
 
-		RepoUpdated <- repoS[i]
+			RepoUpdated <- repoS[i]
 
-		lastRepo = repoS[i]
+			lastRepo = repoS[i]
 
-		i = (i + 1) % len(repoS)
+			i = (i + 1) % len(repoS)
+		}
 	}
 }
