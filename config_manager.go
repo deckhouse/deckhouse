@@ -48,13 +48,11 @@ func RunConfigManager() {
 	}
 	i := 0
 
-	ticker := time.NewTicker(time.Duration(10) * time.Second)
+	ticker := time.NewTicker(time.Duration(60) * time.Second)
 
 	for {
 		select {
 		case <-ticker.C:
-			time.Sleep(time.Duration(2) * time.Second)
-
 			rlog.Debugf("REPOUPDATE old=%v new=%v", lastRepo, repoS[i])
 
 			RepoUpdated <- repoS[i]

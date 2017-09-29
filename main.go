@@ -5,15 +5,18 @@ import (
 )
 
 var (
-	lastModules       []map[string]string
-	lastScriptsCommit string
+	lastModulesInitialized bool
+	lastModules            []map[string]string
+
+	lastScriptsCommitInitialized bool
+	lastScriptsCommit            string
 )
 
 func Init() {
 	rlog.Info("Init")
 
-	lastModules = make([]map[string]string, 0)
-	lastScriptsCommit = ""
+	lastModulesInitialized = false
+	lastScriptsCommitInitialized = false
 
 	InitConfigManager()
 	InitScriptsManager()
@@ -28,16 +31,18 @@ func Run() {
 	for {
 		select {
 		case modules := <-ModulesUpdated:
-			rlog.Debugf("ModulesUpdated %v", modules)
-			if lastScriptsCommit != "" {
+			if lastModulesInitialized {
 				// TODO: Заметить разницу между modules и запустить только новые скрипты
 				RunScripts(modules, lastScriptsCommit)
+
+				lastModules = modules
 			}
 		case commit := <-ScriptsCommitted:
-			rlog.Debugf("ScriptsCommitted %s", commit)
-			if len(lastModules) != 0 {
+			if lastModulesInitialized {
 				// TODO: Заметить разницу между modules и запустить только новые скрипты
 				RunScripts(lastModules, commit)
+
+				lastScriptsCommit = commit
 			}
 		}
 	}

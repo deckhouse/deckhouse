@@ -2,6 +2,7 @@ package main
 
 import (
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/romana/rlog"
@@ -26,9 +27,9 @@ func FetchScripts(repo map[string]string) {
 		return
 	}
 
-	newCommit := string(out)
+	newCommit := strings.TrimSpace(string(out))
 
-	rlog.Debugf("REPOFETCH %v oldCommit=%s newCommit=%s", repo, currentCommit, newCommit)
+	rlog.Debugf("REPOFETCH %v currentCommit='%s' newCommit='%s'", repo, currentCommit, newCommit)
 
 	currentCommit = newCommit
 
@@ -42,7 +43,7 @@ func InitScriptsManager() {
 }
 
 func RunScriptsManager() {
-	ticker := time.NewTicker(time.Duration(60) * time.Second)
+	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
 	for {
 		select {
