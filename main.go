@@ -22,6 +22,12 @@ func Init() {
 	InitConfigManager()
 }
 
+func RunScripts(Modules []map[string]string, Commit string) {
+  // todo: делаем checkout во временную директорию по указанному Commit
+  // Запускает скрипты без mutex'ов во временной директории. Впоследствии можно делать diff по OldCommit и NewCommit и запускать только изменившиеся модули
+  // Удаляет временную директорию
+}
+
 func Run() {
 	rlog.Info("Run")
 
