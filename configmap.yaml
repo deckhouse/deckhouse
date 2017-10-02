@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: antiopa
+  namespace: antiopa
+data:
+  repo: |
+    {
+      "url": "https://github.com/deckhouse/deckhouse-scripts",
+      "branch": "master"
+    }
+  modules: |
+    [
+      {"name": "dashboard"},
+      {"name": "kube-lego"},
+      {"name": "nginx-ingress"},
+      {"name": "node-role"},
+      {"name": "prometheus-operator", "entrypoint": "contrib/kube-prometheus/hack/scripts/ctl.sh"}
+    ]
