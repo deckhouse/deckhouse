@@ -1,60 +1,74 @@
 package main
 
 import (
-	"os/exec"
-	"strings"
-	"time"
-
 	"github.com/romana/rlog"
+	"time"
 )
 
 var (
+	ScriptsGitRepo   *GitRepo
 	ScriptsCommitted chan string
-
-	lastRepoInitialized bool
-	lastRepo            map[string]string
 
 	// TODO: хранить в ConfigMap в кластере
 	currentCommit string
 )
 
-func FetchScripts(repo map[string]string) {
-	// todo: git clone или fetch + смотрим изменение коммита, шлем сигнал в ScriptsCommitted
-	// посылаем новый коммит только если он поменялся с последнего раза
-
-	out, err := exec.Command("uuidgen").Output()
+func FetchScripts() {
+	err := ScriptsGitRepo.FetchCurrentBranch()
 	if err != nil {
+		rlog.Errorf("REPOFETCH: %s", err.Error())
 		return
 	}
 
-	newCommit := strings.TrimSpace(string(out))
+	newCommit, err := ScriptsGitRepo.GetHeadRef()
+	if err != nil {
+		rlog.Errorf("REPOGETHEAD", err.Error())
+		return
+	}
 
-	rlog.Debugf("REPOFETCH %v currentCommit='%s' newCommit='%s'", repo, currentCommit, newCommit)
+	if newCommit != currentCommit {
+		rlog.Debugf("REPOFETCH %v currentCommit='%s' newCommit='%s'", currentCommit, newCommit)
 
-	currentCommit = newCommit
+		currentCommit = newCommit
 
-	ScriptsCommitted <- newCommit
+		ScriptsCommitted <- newCommit
+	}
 }
 
 func InitScriptsManager() {
 	ScriptsCommitted = make(chan string)
-	lastRepoInitialized = false
 	currentCommit = ""
 }
 
 func RunScriptsManager() {
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
+	var err error
 	for {
 		select {
 		case repo := <-RepoUpdated:
-			FetchScripts(repo)
+			subticker := time.NewTicker(time.Duration(10) * time.Second)
 
-			lastRepo = repo
-			lastRepoInitialized = true
+			branch := repo["branch"]
+			if branch == "" {
+				branch = "master"
+			}
+
+			for {
+				select {
+				case <-subticker.C:
+					ScriptsGitRepo, err = GitRepoCloneMemory(repo["url"], repo["branch"])
+					if err != nil {
+						rlog.Errorf("REPOCLONE `%s` (`%s`): %s", repo["url"], repo["branch"], err.Error())
+					} else {
+						break
+					}
+				}
+			}
+			FetchScripts()
 		case <-ticker.C:
-			if lastRepoInitialized {
-				FetchScripts(lastRepo)
+			if ScriptsGitRepo != nil {
+				FetchScripts()
 			}
 		}
 	}
