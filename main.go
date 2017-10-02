@@ -18,6 +18,7 @@ func Init() {
 	lastModulesInitialized = false
 	lastScriptsCommitInitialized = false
 
+	InitKube()
 	InitConfigManager()
 	InitScriptsManager()
 }
