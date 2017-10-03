@@ -14,20 +14,20 @@ var (
 )
 
 func FetchScripts() {
-	err := ScriptsGitRepo.FetchCurrentBranch()
+	err := ScriptsGitRepo.Fetch()
 	if err != nil {
 		rlog.Errorf("REPOFETCH: %s", err.Error())
 		return
 	}
 
-	newCommit, err := ScriptsGitRepo.GetHeadRef()
+	newCommit, err := ScriptsGitRepo.GetHead()
 	if err != nil {
-		rlog.Errorf("REPOGETHEAD", err.Error())
+		rlog.Errorf("REPOGETHEAD: %s", err.Error())
 		return
 	}
 
 	if newCommit != currentCommit {
-		rlog.Debugf("REPOFETCH %v currentCommit='%s' newCommit='%s'", currentCommit, newCommit)
+		rlog.Debugf("REPOFETCH currentCommit='%s' newCommit='%s'", currentCommit, newCommit)
 
 		currentCommit = newCommit
 
@@ -53,18 +53,21 @@ func RunScriptsManager() {
 				branch = "master"
 			}
 
+		loop:
 			for {
 				select {
 				case <-subticker.C:
-					clonedRepo, err := GitRepoClone(repo["url"], branch)
+					clonedRepo, err := GetOrCreateGitBareRepo(repo["url"], branch)
 					if err != nil {
 						rlog.Errorf("REPOCLONE `%s` (`%s`): %s", repo["url"], branch, err.Error())
 					} else {
 						ScriptsGitRepo = clonedRepo
-						break
+						break loop
 					}
 				}
 			}
+			subticker.Stop()
+
 			FetchScripts()
 		case <-ticker.C:
 			if ScriptsGitRepo != nil {
