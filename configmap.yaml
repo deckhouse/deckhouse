@@ -6,7 +6,7 @@ metadata:
 data:
   repo: |
     {
-      "url": "/antiopa-scripts/.git",
+      "url": "https://timofey.kirillov:***REMOVED***@github.com/deckhouse/deckhouse-scripts",
       "branch": "master"
     }
   modules: |
