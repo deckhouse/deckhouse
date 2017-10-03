@@ -1,52 +1,74 @@
 package main
 
 import (
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"io/ioutil"
+	"bytes"
+	"github.com/gosimple/slug"
+	"os"
+	"os/exec"
+	"path"
 	"strings"
 )
 
 type GitRepo struct {
-	*git.Repository
-	ClonedBranch string
+	Url    string
+	Branch string
+	Path   string
 }
 
-func GitRepoClone(url string, remoteBranch string) (*GitRepo, error) {
-	tmpDir, err := ioutil.TempDir("/tmp", "antiopa")
+func GetOrCreateGitBareRepo(url string, branch string) (*GitRepo, error) {
+	gitRepo := &GitRepo{url, branch, path.Join("/tmp/antiopa", slug.Make(url), ".git")}
+	if !gitRepo.IsExist() {
+		if err := gitRepo.CloneBare(); err != nil {
+			return nil, err
+		}
+	}
+	return gitRepo, nil
+}
+
+func (r *GitRepo) IsExist() bool {
+	if _, err := os.Stat(r.Path); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func (r *GitRepo) CloneBare() error {
+	cmd := exec.Command("git", "clone", "--bare", r.Url, r.Path)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	r, err := git.PlainClone(tmpDir, false, &git.CloneOptions{
-		URL:           url,
-		ReferenceName: branchReference(remoteBranch),
-	})
-
-	return &GitRepo{r, remoteBranch}, err
+	return nil
 }
 
-func (r *GitRepo) FetchCurrentBranch() error {
-	return r.Fetch(&git.FetchOptions{RemoteName: r.ClonedBranch})
+func (r *GitRepo) Fetch() error {
+	cmd := exec.Command("git", "-C", r.Path, "fetch")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (r *GitRepo) GetHeadRef() (string, error) {
-	ref, err := r.Head()
+func (r *GitRepo) GetHead() (string, error) {
+	cmd := exec.Command("git", "-C", r.Path, "show-ref", "-s", path.Join("refs/heads", r.Branch))
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+
 	if err != nil {
 		return "", err
 	}
 
-	commit, err := r.CommitObject(ref.Hash())
-	if err != nil {
-		return "", err
-	}
-
-	return commit.Hash.String(), nil
-}
-
-func branchReference(ref string) plumbing.ReferenceName {
-	if !strings.HasPrefix(ref, "refs/heads/") {
-		ref = strings.Join([]string{"refs/heads/", ref}, "")
-	}
-	return plumbing.ReferenceName(ref)
+	ref := strings.TrimSpace(out.String())
+	return ref, nil
 }
