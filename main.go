@@ -104,12 +104,15 @@ func Run() {
 	go RunConfigManager()
 	go RunScriptsManager()
 
-	retryModuleTicker := time.NewTicker(time.Duration(10) * time.Second)
+	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
 
 	for {
 		select {
 		case modules := <-ModulesUpdated:
 			lastModules = modules
+
+			// Сброс очереди на рестарт
+			retryModulesQueue = make([]map[string]string, 0)
 
 			RunModules(lastScriptsDir, lastModules)
 
@@ -125,6 +128,9 @@ func Run() {
 				os.RemoveAll(lastScriptsDir)
 			}
 			lastScriptsDir = scriptsDir
+
+			// Сброс очереди на рестарт
+			retryModulesQueue = make([]map[string]string, 0)
 
 			RunModules(lastScriptsDir, lastModules)
 
