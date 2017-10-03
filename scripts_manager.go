@@ -43,7 +43,6 @@ func InitScriptsManager() {
 func RunScriptsManager() {
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
-	var err error
 	for {
 		select {
 		case repo := <-RepoUpdated:
@@ -57,10 +56,11 @@ func RunScriptsManager() {
 			for {
 				select {
 				case <-subticker.C:
-					ScriptsGitRepo, err = GitRepoCloneMemory(repo["url"], repo["branch"])
+					clonedRepo, err := GitRepoClone(repo["url"], branch)
 					if err != nil {
-						rlog.Errorf("REPOCLONE `%s` (`%s`): %s", repo["url"], repo["branch"], err.Error())
+						rlog.Errorf("REPOCLONE `%s` (`%s`): %s", repo["url"], branch, err.Error())
 					} else {
+						ScriptsGitRepo = clonedRepo
 						break
 					}
 				}

@@ -10,7 +10,7 @@ import (
 
 type GitRepo struct {
 	*git.Repository
-	RemoteBranch string
+	ClonedBranch string
 }
 
 func GitRepoClone(url string, remoteBranch string) (*GitRepo, error) {
@@ -27,16 +27,8 @@ func GitRepoClone(url string, remoteBranch string) (*GitRepo, error) {
 	return &GitRepo{r, remoteBranch}, err
 }
 
-func GitRepoCloneMemory(repositoryUrl string, remoteBranch string) (*GitRepo, error) {
-	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:           repositoryUrl,
-		ReferenceName: branchReference(remoteBranch),
-	})
-	return &GitRepo{r, remoteBranch}, err
-}
-
 func (r *GitRepo) FetchCurrentBranch() error {
-	return r.Fetch(&git.FetchOptions{RemoteName: r.RemoteBranch})
+	return r.Fetch(&git.FetchOptions{RemoteName: r.ClonedBranch})
 }
 
 func (r *GitRepo) GetHeadRef() (string, error) {
