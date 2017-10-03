@@ -19,6 +19,7 @@ var (
 
 	lastKnownRepoChecksum    string
 	lastKnownModulesChecksum string
+	lastKnownRepo            map[string]string
 )
 
 func getConfigMap() (*v1.ConfigMap, error) {
@@ -67,6 +68,7 @@ func InitConfigManager() {
 
 	RepoUpdated = make(chan map[string]string, 1)
 	ModulesUpdated = make(chan []map[string]string, 1)
+	lastKnownRepo = make(map[string]string)
 
 	if cm, err := getConfigMap(); err == nil {
 		if repo, err := getRepo(cm); err == nil {
@@ -75,6 +77,8 @@ func InitConfigManager() {
 			rlog.Debugf("UPDATEREPO:[%s] %v", lastKnownRepoChecksum, repo)
 
 			RepoUpdated <- repo
+
+			lastKnownRepo = repo
 		} else {
 			rlog.Errorf("Bad repo configuration: %s", err)
 		}

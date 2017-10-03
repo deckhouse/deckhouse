@@ -6,14 +6,29 @@ metadata:
 data:
   repo: |
     {
-      "url": "https://github.com/deckhouse/deckhouse-scripts",
+      "url": "/antiopa-scripts/.git",
       "branch": "master"
     }
   modules: |
     [
-      {"name": "dashboard"},
-      {"name": "kube-lego"},
-      {"name": "nginx-ingress"},
-      {"name": "node-role"},
-      {"name": "prometheus-operator", "entrypoint": "contrib/kube-prometheus/hack/scripts/ctl.sh"}
+      {
+        "name": "dashboard",
+        "args": "--install --gitlab-url=https://gitlab.example.com --oauth2-id=example --oauth2-secret=example --dashboard-url=dashboard.example.com"
+      },
+      {
+        "name": "kube-lego",
+        "args": "--install --email=256@flant.ru"
+      },
+      {
+        "name": "nginx-ingress",
+        "args": "--install --type=aws"
+      },
+      {
+        "name": "node-role"
+      },
+      {
+        "name": "prometheus-operator",
+        "entrypoint": "contrib/kube-prometheus/hack/scripts/ctl.sh",
+        "args": "--install --retention=10 --storage-class-name=example --storage-size=10G --memory-usage=100M --git-branch=master"
+      }
     ]
