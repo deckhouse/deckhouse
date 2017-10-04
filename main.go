@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -19,8 +18,15 @@ var (
 	lastModules       []map[string]string
 	retryModulesQueue []map[string]string
 
-	modulesStatusDir string
+	ModulesStatusDir string
+	WorkingDir       string
+	RunDir           string
 )
+
+func main() {
+	Init()
+	Run()
+}
 
 func Init() {
 	rlog.Info("Init")
@@ -29,90 +35,18 @@ func Init() {
 	lastModules = make([]map[string]string, 0)
 	retryModulesQueue = make([]map[string]string, 0)
 
-	wd, err := os.Getwd()
+	WorkingDir, err := os.Getwd()
 	if err != nil {
-		rlog.Error("Terminating: %s", err)
+		rlog.Error("Cannot determine antiopa working dir: %s", err)
 		os.Exit(1)
 	}
-	modulesStatusDir = path.Join(wd, "antiopa-status")
+
+	RunDir = path.Join(WorkingDir, "antiopa-run")
+	ModulesStatusDir = path.Join(RunDir, "module-status")
 
 	InitKube()
 	InitConfigManager()
 	InitScriptsManager()
-}
-
-func prepareScripts(commit string) (string, error) {
-	var err error
-	var cmd *exec.Cmd
-
-	if len(lastKnownRepo) == 0 {
-		return "", errors.New("Repo is not initialized yet")
-	}
-
-	dir, err := ioutil.TempDir("", "antiopa-scripts-tree-")
-	if err != nil {
-		return "", err
-	}
-
-	cmd = exec.Command("git", "clone", lastKnownRepo["url"], dir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		return "", err
-	}
-
-	cmd = exec.Command("git", "--git-dir", path.Join(dir, ".git"), "checkout", commit)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		return "", err
-	}
-
-	return dir, nil
-}
-
-func getModuleStatus(moduleName string) (res map[string]string) {
-	p := path.Join(modulesStatusDir, moduleName)
-	if _, err := os.Stat(p); os.IsNotExist(err) {
-		return make(map[string]string)
-	}
-
-	dat, err := ioutil.ReadFile(p)
-	if err != nil {
-		return make(map[string]string)
-	}
-	if len(dat) > 0 {
-		dat = dat[:len(dat)-1]
-	}
-
-	if err := json.Unmarshal(dat, &res); err != nil {
-		return make(map[string]string)
-	}
-
-	return
-}
-
-func setModuleStatus(moduleName string, moduleStatus map[string]string) error {
-	dat, err := json.Marshal(moduleStatus)
-	if err != nil {
-		return err
-	}
-
-	dat = append(dat, []byte("\n")...)
-
-	if _, err := os.Stat(modulesStatusDir); os.IsNotExist(err) {
-		if err = os.MkdirAll(modulesStatusDir, 0777); err != nil {
-			return err
-		}
-	}
-
-	if err = ioutil.WriteFile(path.Join(modulesStatusDir, moduleName), dat, 0644); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func RunModule(scriptsDir string, module map[string]string) error {
@@ -207,7 +141,44 @@ func Run() {
 	}
 }
 
-func main() {
-	Init()
-	Run()
+func getModuleStatus(moduleName string) (res map[string]string) {
+	p := path.Join(ModulesStatusDir, moduleName)
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		return make(map[string]string)
+	}
+
+	dat, err := ioutil.ReadFile(p)
+	if err != nil {
+		return make(map[string]string)
+	}
+	if len(dat) > 0 {
+		dat = dat[:len(dat)-1]
+	}
+
+	if err := json.Unmarshal(dat, &res); err != nil {
+		return make(map[string]string)
+	}
+
+	return
+}
+
+func setModuleStatus(moduleName string, moduleStatus map[string]string) error {
+	dat, err := json.Marshal(moduleStatus)
+	if err != nil {
+		return err
+	}
+
+	dat = append(dat, []byte("\n")...)
+
+	if _, err := os.Stat(ModulesStatusDir); os.IsNotExist(err) {
+		if err = os.MkdirAll(ModulesStatusDir, 0777); err != nil {
+			return err
+		}
+	}
+
+	if err = ioutil.WriteFile(path.Join(ModulesStatusDir, moduleName), dat, 0644); err != nil {
+		return err
+	}
+
+	return nil
 }

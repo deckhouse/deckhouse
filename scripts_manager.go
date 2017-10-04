@@ -32,6 +32,7 @@ func RunScriptsManager() {
 		select {
 		case repo := <-RepoUpdated:
 			NotClonedRepo = repo
+			cloneRepo()
 		case <-ticker.C:
 			if len(NotClonedRepo) != 0 {
 				cloneRepo()
@@ -62,13 +63,13 @@ func cloneRepo() {
 func fetchScripts() {
 	err := ScriptsGitRepo.Fetch()
 	if err != nil {
-		rlog.Errorf("REPOFETCH: %s", err.Error())
+		rlog.Errorf("Unable to fetch scripts: %s", err.Error())
 		return
 	}
 
 	newCommit, err := ScriptsGitRepo.GetHead()
 	if err != nil {
-		rlog.Errorf("REPOGETHEAD: %s", err.Error())
+		rlog.Errorf("Unable to fetch scripts: %s", err.Error())
 		return
 	}
 
@@ -79,7 +80,7 @@ func fetchScripts() {
 
 		var repoPath string
 		if repoPath, err = ScriptsGitRepo.CreateClone(currentCommit); err != nil {
-			rlog.Errorf("REPOCLONE: %s", err.Error())
+			rlog.Errorf("Unable to prepare scripts run tree: %s", err.Error())
 			return
 		}
 
