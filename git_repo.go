@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
-	"github.com/gosimple/slug"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -17,7 +19,12 @@ type GitRepo struct {
 }
 
 func GetOrCreateGitBareRepo(url string, branch string) (*GitRepo, error) {
-	gitRepo := &GitRepo{url, branch, path.Join("/tmp/antiopa", slug.Make(url), ".git")}
+	hasher := md5.New()
+	hasher.Write([]byte(url))
+	hasher.Write([]byte(branch))
+	path := path.Join(path.Join(RunDir, "scripts-repo"), hex.EncodeToString(hasher.Sum(nil)))
+
+	gitRepo := &GitRepo{url, branch, path}
 	if !gitRepo.IsExist() {
 		if err := CloneBare(gitRepo.Url, gitRepo.Path); err != nil {
 			return nil, err
@@ -34,7 +41,7 @@ func (r *GitRepo) IsExist() bool {
 }
 
 func (r *GitRepo) CreateClone(commit string) (string, error) {
-	tmpDir, err := ioutil.TempDir("/tmp/antiopa", slug.Make(r.Url))
+	tmpDir, err := ioutil.TempDir("", "antiopa-scripts-run-tree-")
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +75,7 @@ func (r *GitRepo) GetHead() (string, error) {
 	err := cmd.Run()
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("bad branch %s", r.Branch)
 	}
 
 	ref := strings.TrimSpace(out.String())
@@ -77,6 +84,8 @@ func (r *GitRepo) GetHead() (string, error) {
 
 func Clone(url string, path string) error {
 	cmd := exec.Command("git", "clone", url, path)
+	cmd.Env = append(cmd.Env, []string{"GIT_ASKPASS=", "GIT_TERMINAL_PROMPT=0"}...)
+
 	err := cmd.Run()
 	if err != nil {
 		return err
@@ -87,6 +96,10 @@ func Clone(url string, path string) error {
 
 func CloneBare(url string, path string) error {
 	cmd := exec.Command("git", "clone", "--bare", url, path)
+	cmd.Env = append(cmd.Env, []string{"GIT_ASKPASS=", "GIT_TERMINAL_PROMPT=0"}...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	err := cmd.Run()
 	if err != nil {
 		return err
