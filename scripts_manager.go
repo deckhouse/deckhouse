@@ -6,9 +6,8 @@ import (
 )
 
 var (
-	ScriptsGitRepo   *GitRepo
-	ScriptsUpdated   chan *ScriptsUpdate
-	ScriptsCommitted chan string
+	ScriptsGitRepo *GitRepo
+	ScriptsUpdated chan ScriptsUpdate
 
 	// TODO: хранить в ConfigMap в кластере
 	currentCommit string
@@ -43,13 +42,12 @@ func FetchScripts() {
 			return
 		}
 
-		ScriptsUpdated <- &ScriptsUpdate{repoPath, currentCommit}
+		ScriptsUpdated <- ScriptsUpdate{repoPath, currentCommit}
 	}
 }
 
 func InitScriptsManager() {
-	ScriptsCommitted = make(chan string)
-	ScriptsUpdated = make(chan *ScriptsUpdate)
+	ScriptsUpdated = make(chan ScriptsUpdate)
 	currentCommit = ""
 }
 

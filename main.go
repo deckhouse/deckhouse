@@ -126,7 +126,7 @@ func RunModule(scriptsDir string, module map[string]string) error {
 	is_first_run := (getModuleStatus(module["name"])["installed"] != "true")
 
 	var args string
-	if is_first_run {
+	if is_first_run && module["first_run_args"] != "" {
 		args = module["first_run_args"]
 	} else {
 		args = module["args"]
@@ -183,18 +183,11 @@ func Run() {
 
 			RunModules(lastScriptsDir, lastModules)
 
-		case commit := <-ScriptsCommitted:
-			// TODO: получать repo-dir+commit из канала
-
-			scriptsDir, err := prepareScripts(commit)
-			if err != nil {
-				rlog.Errorf("Unable to prepare scripts from repo %v at commit %s", lastKnownRepo, commit)
-			}
-
+		case upd := <-ScriptsUpdated:
 			if lastScriptsDir != "" {
 				os.RemoveAll(lastScriptsDir)
 			}
-			lastScriptsDir = scriptsDir
+			lastScriptsDir = upd.Path
 
 			// Сброс очереди на рестарт
 			retryModulesQueue = make([]map[string]string, 0)
