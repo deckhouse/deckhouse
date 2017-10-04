@@ -89,7 +89,7 @@ func InitConfigManager() {
 			rlog.Errorf("Bad modules configuration: %s", err)
 		}
 	} else {
-		rlog.Errorf("Unable to get kubernetes ConfigMap: %s", err)
+		rlog.Warnf("Unable to get kubernetes ConfigMap: %s", err)
 	}
 }
 
