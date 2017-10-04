@@ -4,6 +4,7 @@
 *.so
 *.dylib
 /antiopa
+/antiopa-status
 
 # Test binary, build with `go test -c`
 *.test
