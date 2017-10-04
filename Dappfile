@@ -1,33 +1,33 @@
 dimg do
   docker.from 'ubuntu:16.04'
 
-#  artifact do
-#    docker.from 'golang:1.8'
-#
-#    git do
-#      add '/' do
-#        to '/go/src/github.com/deckhouse/deckhouse'
-#        exclude_paths 'playground'
-#        stage_dependencies.install '**/*.go'
-#      end
-#    end
-#
-#    shell.install do
-#      run '(go get -v -d github.com/deckhouse/deckhouse/... ; true)'
-#    end
-#
-#    shell.build_artifact do
-#      run 'cd /go/src/github.com/deckhouse/deckhouse'
-#      #run 'go test'
-#      run 'go build'
-#    end
-#
-#    export '/go/src/fox.flant.com/sys/gogomonia/antiopa' do
-#      to '/usr/local/bin/antiopa'
-#      before 'install'
-#    end
-#  end
-  
+  artifact do
+    docker.from 'golang:1.8'
+
+    git do
+      add '/' do
+        to '/go/src/github.com/deckhouse/deckhouse'
+        exclude_paths 'playground', 'play-git'
+        stage_dependencies.install '**/*.go'
+      end
+    end
+
+    shell.install do
+      run '(go get -v -d github.com/deckhouse/deckhouse/... ; true)'
+    end
+
+    shell.build_artifact do
+      run 'cd /go/src/github.com/deckhouse/deckhouse'
+      run 'go test'
+      run 'go build'
+    end
+
+    export '/go/src/github.com/deckhouse/deckhouse/antiopa' do
+      to '/antiopa'
+      before 'install'
+    end
+  end
+
   shell.before_install do
     run 'apt-get -y update'
     run 'apt-get -y install iproute2 tcpdump nmap git curl jq python3'
@@ -35,12 +35,12 @@ dimg do
     run 'chmod +x /usr/bin/resty'
     run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
   end
-  
+
   shell.setup do
     run 'cp /kube_api/kube_api.sh /usr/bin/kube_api'
     run 'chmod +x /usr/bin/kube_api'
   end
-  
+
   git do
     add '/.kube_api' do
       to '/kube_api'
