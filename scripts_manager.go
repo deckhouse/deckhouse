@@ -7,11 +7,17 @@ import (
 
 var (
 	ScriptsGitRepo   *GitRepo
+	ScriptsUpdated   chan *ScriptsUpdate
 	ScriptsCommitted chan string
 
 	// TODO: хранить в ConfigMap в кластере
 	currentCommit string
 )
+
+type ScriptsUpdate struct {
+	Path   string
+	Commit string
+}
 
 func FetchScripts() {
 	err := ScriptsGitRepo.Fetch()
@@ -31,12 +37,19 @@ func FetchScripts() {
 
 		currentCommit = newCommit
 
-		ScriptsCommitted <- newCommit
+		var repoPath string
+		if repoPath, err = ScriptsGitRepo.CreateClone(currentCommit); err != nil {
+			rlog.Errorf("REPOCLONE: %s", err.Error())
+			return
+		}
+
+		ScriptsUpdated <- &ScriptsUpdate{repoPath, currentCommit}
 	}
 }
 
 func InitScriptsManager() {
 	ScriptsCommitted = make(chan string)
+	ScriptsUpdated = make(chan *ScriptsUpdate)
 	currentCommit = ""
 }
 
