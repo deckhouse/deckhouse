@@ -22,9 +22,9 @@ var (
 )
 
 func getConfigMap() (*v1.ConfigMap, error) {
-	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesNamespace).Get("antiopa", meta_v1.GetOptions{})
+	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get("antiopa", meta_v1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("ConfigMap '%s' is not found in namespace '%s'", "antiopa", KubernetesNamespace)
+		return nil, fmt.Errorf("ConfigMap '%s' is not found in namespace '%s'", "antiopa", KubernetesAntiopaNamespace)
 	}
 
 	return configMap, nil
@@ -89,7 +89,7 @@ func InitConfigManager() {
 			rlog.Errorf("Bad modules configuration: %s", err)
 		}
 	} else {
-		rlog.Errorf("Unable to get kubernetes ConfigMap: %s", err)
+		rlog.Warnf("Unable to get kubernetes ConfigMap: %s", err)
 	}
 }
 

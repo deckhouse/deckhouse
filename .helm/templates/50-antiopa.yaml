@@ -12,37 +12,36 @@ spec:
       imagePullSecrets:
         - name: registrysecret
       containers:
-      - name: antiopa
-        command: [ "/bin/bash", "-c", "--" ]
-        args: [ "trap : TERM INT; sleep infinity & wait" ]
-        image: {{ tuple . | include "dimg" }}
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 9115
-          name: http-metrics
-          protocol: TCP
-        env:
-        - name: KUBERNETES_DEPLOYED
-          value: {{ now | quote }}
-        - name: RLOG_LOG_LEVEL
-          value: DEBUG
+        - name: antiopa
+          command: ["/antiopa"]
+          image: {{ tuple . | include "dimg" }}
+          imagePullPolicy: Always
+          env:
+            - name: KUBERNETES_DEPLOYED
+              value: {{ now | quote }}
+            - name: RLOG_LOG_LEVEL
+              value: DEBUG
+          volumeMounts:
+            - mountPath: /antiopa-run
+              name: antiopa
+      volumes:
+        - name: antiopa
+          persistentVolumeClaim:
+            claimName: antiopa
       serviceAccount: antiopa
 ---
+kind: PersistentVolumeClaim
 apiVersion: v1
-kind: Service
 metadata:
   name: antiopa
-  labels:
-    app: antiopa
+  annotations:
+    volume.beta.kubernetes.io/mount-options: "discard"
 spec:
-  clusterIP: None
-  selector:
-    service: antiopa
-  ports:
-  - name: http
-    port: 9115
-    protocol: TCP
-
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512M
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -53,25 +52,7 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
   name: antiopa
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-      - services
-      - endpoints
-      - pods
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - replace
+rules: []
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
@@ -91,31 +72,15 @@ metadata:
   name: antiopa-cluster
 rules:
 - apiGroups:
-  - ""
-  - "extensions"
+    - "*"
   resources:
-  - services
-  - endpoints
-  - ingresses
-  - nodes
-  - pods
+    - "*"
   verbs:
-  - list
-  - watch
-  - get
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - events
+    - "*"
+- nonResourceURLs:
+    - "*"
   verbs:
-  - create
-- apiGroups:
-  - "extensions"
-  resources:
-  - ingresses/status
-  verbs:
-  - update
+    - "*"
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -129,4 +94,3 @@ subjects:
   - kind: ServiceAccount
     name: antiopa
     namespace: {{.Values.global.namespace}}
-

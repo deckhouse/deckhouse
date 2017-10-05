@@ -2,14 +2,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: antiopa
-  namespace: antiopa
 data:
   repo: |
     {
       "url": "https://timofey.kirillov:***REMOVED***@github.com/deckhouse/deckhouse-scripts",
       "branch": "master"
     }
-
+{{- if ne .Values.global.env "minikube" }}
+  modules: "[]"
+{{- else }}
   modules: |
     [
       {
@@ -33,7 +34,7 @@ data:
         "name": "nginx-ingress",
         "entrypoint": "bash",
         "first_run_args": "ctl.sh --install --type=aws",
-        "args": "ctl.sh --upgrade"
+        "args": "ctl.sh --upgrade --type=aws"
       },
       {
         "name": "node-role",
@@ -41,3 +42,4 @@ data:
         "args": "ctl.sh"
       }
     ]
+{{- end }}

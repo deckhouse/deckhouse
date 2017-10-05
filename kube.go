@@ -1,21 +1,18 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/romana/rlog"
-
-	// "k8s.io/apimachinery/pkg/api/errors"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"io/ioutil"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path/filepath"
 )
 
 var (
-	KubernetesClient    *kubernetes.Clientset
-	KubernetesNamespace = "antiopa"
+	KubernetesClient           *kubernetes.Clientset
+	KubernetesAntiopaNamespace = "antiopa"
 )
 
 func InitKube() {
@@ -46,6 +43,22 @@ func InitKube() {
 		if err != nil {
 			rlog.Errorf("Kubernetes in-cluster configuration problem: %s", err)
 			os.Exit(1)
+		}
+	}
+
+	nsFilename := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	if _, err := os.Stat(nsFilename); os.IsExist(err) {
+		res, err := ioutil.ReadFile("nsFilename")
+		if err != nil {
+			rlog.Errorf("Cannot read namespace from %s: %s", nsFilename, err)
+			os.Exit(1)
+		}
+
+		KubernetesAntiopaNamespace = string(res)
+	} else {
+		KubernetesAntiopaNamespace = os.Getenv("ANTIOPA_NAMESPACE")
+		if KubernetesAntiopaNamespace == "" {
+			KubernetesAntiopaNamespace = "antiopa"
 		}
 	}
 
