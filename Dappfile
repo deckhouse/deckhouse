@@ -34,6 +34,9 @@ dimg do
     run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
     run 'chmod +x /usr/bin/resty'
     run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
+
+    run 'curl -L https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
+    run 'chmod +x /usr/local/bin/kubectl'
   end
 
   shell.setup do

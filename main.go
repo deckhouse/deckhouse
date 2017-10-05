@@ -50,23 +50,24 @@ func Init() {
 }
 
 func RunModule(scriptsDir string, module map[string]string) error {
+	var args []string
+
 	entrypoint := module["entrypoint"]
 	if entrypoint == "" {
-		entrypoint = "./ctl.sh"
-	} else {
-		entrypoint = "./" + entrypoint
+		entrypoint = "bash"
+		args = append(args, "ctl.sh")
 	}
 
-	is_first_run := (getModuleStatus(module["name"])["installed"] != "true")
-
-	var args string
-	if is_first_run && module["first_run_args"] != "" {
-		args = module["first_run_args"]
+	isFirstRun := (getModuleStatus(module["name"])["installed"] != "true")
+	var userArgs string
+	if isFirstRun && module["first_run_args"] != "" {
+		userArgs = module["first_run_args"]
 	} else {
-		args = module["args"]
+		userArgs = module["args"]
 	}
+	args = append(args, strings.Fields(userArgs)...)
 
-	cmd := exec.Command(entrypoint, strings.Fields(args)...)
+	cmd := exec.Command(entrypoint, args...)
 	cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -76,7 +77,7 @@ func RunModule(scriptsDir string, module map[string]string) error {
 
 	err := cmd.Run()
 	if err == nil {
-		if is_first_run {
+		if isFirstRun {
 			setModuleStatus(module["name"], map[string]string{"installed": "true"})
 		}
 

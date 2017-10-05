@@ -25,15 +25,19 @@ data:
       },
       {
         "name": "kube-lego",
-        "first_run_args": "--install --email=256@flant.ru",
-        "args": "--upgrade"
+        "entrypoint": "bash",
+        "first_run_args": "ctl.sh --install --email=256@flant.ru",
+        "args": "ctl.sh --upgrade"
       },
       {
         "name": "nginx-ingress",
-        "first_run_args": "--install --type=aws",
-        "args": "--upgrade"
+        "entrypoint": "bash",
+        "first_run_args": "ctl.sh --install --type=aws",
+        "args": "ctl.sh --upgrade"
       },
       {
-        "name": "node-role"
+        "name": "node-role",
+        "entrypoint": "bash",
+        "args": "ctl.sh"
       }
     ]
