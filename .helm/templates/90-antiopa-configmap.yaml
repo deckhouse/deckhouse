@@ -8,36 +8,38 @@ data:
       "url": "https://timofey.kirillov:***REMOVED***@github.com/deckhouse/deckhouse-scripts",
       "branch": "master"
     }
+{{- if ne .Values.global.env "minikube" }}
   modules: "[]"
-
-# modules: |
-#   [
-#     {
-#       "name": "prometheus-operator",
-#       "entrypoint": "contrib/kube-prometheus/hack/scripts/ctl.sh",
-#       "first_run_args": "--install --retention=10 --storage-class-name=example --storage-size=10G --memory-usage=100M --git-branch=master 127.0.0.1 127.0.0.1",
-#       "args": "--upgrade"
-#     },
-#     {
-#       "name": "dashboard",
-#       "first_run_args": "--install --gitlab-url=https://gitlab.example.com --oauth2-id=example --oauth2-secret=example --dashboard-url=dashboard.example.com",
-#       "args": "--upgrade"
-#     },
-#     {
-#       "name": "kube-lego",
-#       "entrypoint": "bash",
-#       "first_run_args": "ctl.sh --install --email=256@flant.ru",
-#       "args": "ctl.sh --upgrade"
-#     },
-#     {
-#       "name": "nginx-ingress",
-#       "entrypoint": "bash",
-#       "first_run_args": "ctl.sh --install --type=aws",
-#       "args": "ctl.sh --upgrade"
-#     },
-#     {
-#       "name": "node-role",
-#       "entrypoint": "bash",
-#       "args": "ctl.sh"
-#     }
-#   ]
+{{- else }}
+  modules: |
+    [
+      {
+        "name": "prometheus-operator",
+        "entrypoint": "contrib/kube-prometheus/hack/scripts/ctl.sh",
+        "first_run_args": "--install --retention=10 --storage-class-name=example --storage-size=10G --memory-usage=100M --git-branch=master 127.0.0.1 127.0.0.1",
+        "args": "--upgrade"
+      },
+      {
+        "name": "dashboard",
+        "first_run_args": "--install --gitlab-url=https://gitlab.example.com --oauth2-id=example --oauth2-secret=example --dashboard-url=dashboard.example.com",
+        "args": "--upgrade"
+      },
+      {
+        "name": "kube-lego",
+        "entrypoint": "bash",
+        "first_run_args": "ctl.sh --install --email=256@flant.ru",
+        "args": "ctl.sh --upgrade"
+      },
+      {
+        "name": "nginx-ingress",
+        "entrypoint": "bash",
+        "first_run_args": "ctl.sh --install --type=aws",
+        "args": "ctl.sh --upgrade --type=aws"
+      },
+      {
+        "name": "node-role",
+        "entrypoint": "bash",
+        "args": "ctl.sh"
+      }
+    ]
+{{- end }}

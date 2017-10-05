@@ -41,39 +41,17 @@ spec:
   - name: http
     port: 9115
     protocol: TCP
-
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: antiopa
-
-{{- if ne .Values.global.env "minikube" }}
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
   name: antiopa
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-      - services
-      - endpoints
-      - pods
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - replace
+rules: []
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
@@ -93,31 +71,15 @@ metadata:
   name: antiopa-cluster
 rules:
 - apiGroups:
-  - ""
-  - "extensions"
+    - "*"
   resources:
-  - services
-  - endpoints
-  - ingresses
-  - nodes
-  - pods
+    - "*"
   verbs:
-  - list
-  - watch
-  - get
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - events
+    - "*"
+- nonResourceURLs:
+    - "*"
   verbs:
-  - create
-- apiGroups:
-  - "extensions"
-  resources:
-  - ingresses/status
-  verbs:
-  - update
+    - "*"
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -131,5 +93,3 @@ subjects:
   - kind: ServiceAccount
     name: antiopa
     namespace: {{.Values.global.namespace}}
-
-{{ end }}
