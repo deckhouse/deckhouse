@@ -30,7 +30,7 @@ dimg do
 
   shell.before_install do
     run 'apt-get -y update'
-    run 'apt-get -y install iproute2 tcpdump nmap git curl jq python3'
+    run 'apt-get -y install iproute2 tcpdump nmap git curl jq python3 apache2-utils'
     run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
     run 'chmod +x /usr/bin/resty'
     run 'echo "export TERM=xterm" >> /etc/bash.bashrc'

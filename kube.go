@@ -47,7 +47,7 @@ func InitKube() {
 	}
 
 	nsFilename := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-	if _, err := os.Stat(nsFilename); os.IsNotExist(err) {
+	if _, err := os.Stat(nsFilename); os.IsExist(err) {
 		res, err := ioutil.ReadFile("nsFilename")
 		if err != nil {
 			rlog.Errorf("Cannot read namespace from %s: %s", nsFilename, err)
