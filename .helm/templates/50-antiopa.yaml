@@ -12,35 +12,36 @@ spec:
       imagePullSecrets:
         - name: registrysecret
       containers:
-      - name: antiopa
-        command: ["/antiopa"]
-        image: {{ tuple . | include "dimg" }}
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 9115
-          name: http-metrics
-          protocol: TCP
-        env:
-        - name: KUBERNETES_DEPLOYED
-          value: {{ now | quote }}
-        - name: RLOG_LOG_LEVEL
-          value: DEBUG
+        - name: antiopa
+          command: ["/antiopa"]
+          image: {{ tuple . | include "dimg" }}
+          imagePullPolicy: Always
+          env:
+            - name: KUBERNETES_DEPLOYED
+              value: {{ now | quote }}
+            - name: RLOG_LOG_LEVEL
+              value: DEBUG
+          volumeMounts:
+            - mountPath: /antiopa-run
+              name: antiopa
+      volumes:
+        - name: antiopa
+          persistentVolumeClaim:
+            claimName: antiopa
       serviceAccount: antiopa
 ---
+kind: PersistentVolumeClaim
 apiVersion: v1
-kind: Service
 metadata:
   name: antiopa
-  labels:
-    app: antiopa
+  annotations:
+    volume.beta.kubernetes.io/mount-options: "discard"
 spec:
-  clusterIP: None
-  selector:
-    service: antiopa
-  ports:
-  - name: http
-    port: 9115
-    protocol: TCP
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512M
 ---
 apiVersion: v1
 kind: ServiceAccount
