@@ -21,6 +21,8 @@ var (
 	ModulesStatusDir string
 	WorkingDir       string
 	RunDir           string
+
+	lastRunAt time.Time
 )
 
 func main() {
@@ -56,16 +58,16 @@ func Run() {
 	go RunScriptsManager()
 
 	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
-
 	nightRunTicker := time.NewTicker(time.Duration(300) * time.Second)
-	var lastNightRunAt time.Time
 
 	for {
 		select {
 		case modules := <-ModulesUpdated:
 			lastModules = modules
 
-			runModules(lastScriptsDir, lastModules)
+			if lastScriptsDir != "" && len(lastModules) > 0 {
+				runModules(lastScriptsDir, lastModules)
+			}
 
 		case upd := <-ScriptsUpdated:
 			if lastScriptsDir != "" {
@@ -73,10 +75,12 @@ func Run() {
 			}
 			lastScriptsDir = upd.Path
 
-			runModules(lastScriptsDir, lastModules)
+			if lastScriptsDir != "" && len(lastModules) > 0 {
+				runModules(lastScriptsDir, lastModules)
+			}
 
 		case <-retryModuleTicker.C:
-			if len(retryModulesQueue) > 0 && lastScriptsDir != "" {
+			if lastScriptsDir != "" && len(retryModulesQueue) > 0 {
 				retryModule := retryModulesQueue[0]
 				retryModulesQueue = retryModulesQueue[1:]
 
@@ -86,13 +90,14 @@ func Run() {
 			}
 
 		case <-nightRunTicker.C:
-			now := time.Now()
-			nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, now.Location())
+			if lastScriptsDir != "" && len(lastModules) > 0 {
+				now := time.Now()
+				nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, now.Location())
 
-			if lastNightRunAt.Before(nightRunTime) {
-				rlog.Infof("Night run modules ...")
-				runModules(lastScriptsDir, lastModules)
-				lastNightRunAt = now
+				if lastRunAt.Before(nightRunTime) {
+					rlog.Infof("Night run modules ...")
+					runModules(lastScriptsDir, lastModules)
+				}
 			}
 		}
 	}
@@ -102,13 +107,11 @@ func runModules(scriptsDir string, modules []map[string]string) {
 	// Сброс очереди на рестарт
 	retryModulesQueue = make([]map[string]string, 0)
 
-	if scriptsDir == "" {
-		return
-	}
-
 	for _, module := range modules {
 		runModule(scriptsDir, module)
 	}
+
+	lastRunAt = time.Now()
 }
 
 func runModule(scriptsDir string, module map[string]string) {
