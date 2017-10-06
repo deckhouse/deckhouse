@@ -57,13 +57,13 @@ func Run() {
 
 	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
 
+	nightRunTicker := time.NewTicker(time.Duration(300) * time.Second)
+	var lastNightRunAt time.Time
+
 	for {
 		select {
 		case modules := <-ModulesUpdated:
 			lastModules = modules
-
-			// Сброс очереди на рестарт
-			retryModulesQueue = make([]map[string]string, 0)
 
 			runModules(lastScriptsDir, lastModules)
 
@@ -72,9 +72,6 @@ func Run() {
 				os.RemoveAll(lastScriptsDir)
 			}
 			lastScriptsDir = upd.Path
-
-			// Сброс очереди на рестарт
-			retryModulesQueue = make([]map[string]string, 0)
 
 			runModules(lastScriptsDir, lastModules)
 
@@ -87,14 +84,28 @@ func Run() {
 
 				runModule(lastScriptsDir, retryModule)
 			}
+
+		case <-nightRunTicker.C:
+			now := time.Now()
+			nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, now.Location())
+
+			if lastNightRunAt.Before(nightRunTime) {
+				rlog.Infof("Night run modules ...")
+				runModules(lastScriptsDir, lastModules)
+				lastNightRunAt = now
+			}
 		}
 	}
 }
 
 func runModules(scriptsDir string, modules []map[string]string) {
+	// Сброс очереди на рестарт
+	retryModulesQueue = make([]map[string]string, 0)
+
 	if scriptsDir == "" {
 		return
 	}
+
 	for _, module := range modules {
 		runModule(scriptsDir, module)
 	}
