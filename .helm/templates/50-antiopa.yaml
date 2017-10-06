@@ -37,6 +37,7 @@ metadata:
   annotations:
     volume.beta.kubernetes.io/mount-options: "discard"
 spec:
+  storageClassName: rbd
   accessModes:
     - ReadWriteOnce
   resources:

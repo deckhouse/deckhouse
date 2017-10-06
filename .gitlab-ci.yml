@@ -1,16 +1,3 @@
-.base_deploy: &base_deploy
-  stage: deploy
-  script:
-    - dapp kube deploy
-      --image-version ${CI_COMMIT_REF_NAME}
-      --namespace ${CI_PROJECT_NAME}-${CI_ENVIRONMENT_SLUG}
-      --set global.env=${CI_ENVIRONMENT_SLUG}
-      $CI_REGISTRY_IMAGE
-  dependencies:
-    - Build
-  tags:
-    - deploy
-
 stages:
   - build
   - deploy
@@ -27,32 +14,18 @@ Build:
   tags:
     - build
 
-Deploy to Stage:
-  <<: *base_deploy
-  environment:
-    name: stage
-    url: http://antiopa.stage.flant.com
-  only:
-    - branches
-  when: manual
-
-
-Deploy to Test:
-  <<: *base_deploy
-  environment:
-    name: test
-    url: http://antiopa.test.flant.com
-  only:
-    - branches
-  when: manual
-
-Deploy to Production:
-  <<: *base_deploy
-  environment:
-    name: production
-    url: http://antiopa.flant.com
-  only:
-    - master
+Deploy to someproject:
+  stage: deploy
+  script:
+    - dapp kube deploy
+      --image-version ${CI_COMMIT_REF_NAME}
+      --namespace antiopa
+      --set global.env=production
+      $CI_REGISTRY_IMAGE
+  dependencies:
+    - Build
+  tags:
+    - deploy
   when: manual
 
 Cleanup dapp dimg stages:
@@ -65,3 +38,40 @@ Cleanup dapp dimg stages:
     - branches
   tags:
     - build
+
+# .base_deploy: &base_deploy
+#   stage: deploy
+#   script:
+#     - dapp kube deploy
+#       --image-version ${CI_COMMIT_REF_NAME}
+#       --namespace ${CI_PROJECT_NAME}-${CI_ENVIRONMENT_SLUG}
+#       --set global.env=${CI_ENVIRONMENT_SLUG}
+#       $CI_REGISTRY_IMAGE
+#   dependencies:
+#     - Build
+#   tags:
+#     - deploy
+# Deploy to Stage:
+#   <<: *base_deploy
+#   environment:
+#     name: stage
+#     url: http://antiopa.stage.flant.com
+#   only:
+#     - branches
+#   when: manual
+# Deploy to Test:
+#   <<: *base_deploy
+#   environment:
+#     name: test
+#     url: http://antiopa.test.flant.com
+#   only:
+#     - branches
+#   when: manual
+# Deploy to Production:
+#   <<: *base_deploy
+#   environment:
+#     name: production
+#     url: http://antiopa.flant.com
+#   only:
+#     - master
+#   when: manual
