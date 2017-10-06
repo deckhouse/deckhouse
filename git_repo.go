@@ -58,7 +58,9 @@ func (r *GitRepo) CreateClone(commit string) (string, error) {
 }
 
 func (r *GitRepo) Fetch() error {
-	cmd := exec.Command("git", "-C", r.Path, "fetch")
+	cmd := exec.Command("git", "-C", r.Path, "fetch", "--progress", "origin", fmt.Sprintf("%s:%s", r.Branch, r.Branch))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		return err
