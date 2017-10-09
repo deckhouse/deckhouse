@@ -1,1 +1,3 @@
-defaultRepo: "github.com/deckhouse/deckhouse"
+repo:
+  user: antiopa
+  # token in secret-values.yaml
