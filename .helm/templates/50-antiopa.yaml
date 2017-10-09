@@ -37,7 +37,9 @@ metadata:
   annotations:
     volume.beta.kubernetes.io/mount-options: "discard"
 spec:
+{{- if ne .Values.global.env "minikube" }}
   storageClassName: rbd
+{{- end }}
   accessModes:
     - ReadWriteOnce
   resources:

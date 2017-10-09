@@ -5,7 +5,7 @@ metadata:
 data:
   repo: |
     {
-      "url": "https://timofey.kirillov:***REMOVED***@github.com/deckhouse/deckhouse-scripts",
+      "url": "https://{{ required ".Values.repo.user" .Values.repo.user }}:{{ required ".Values.repo.token" .Values.repo.token}}@github.com/deckhouse/deckhouse-scripts",
       "branch": "master"
     }
 {{- if ne .Values.global.env "minikube" }}
