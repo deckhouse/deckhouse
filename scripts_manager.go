@@ -55,7 +55,7 @@ func cloneRepo() {
 		branch = "master"
 	}
 
-	clonedGitRepo, err := GetOrCreateGitBareRepo(NotClonedRepo["url"], branch)
+	clonedGitRepo, err := OpenOrCloneMainRepo(NotClonedRepo["url"], branch)
 	if err != nil {
 		rlog.Errorf("REPOCLONE `%s` (`%s`): %s", NotClonedRepo["url"], branch, err.Error())
 	} else {
@@ -71,9 +71,9 @@ func fetchScripts() {
 		return
 	}
 
-	newCommit, err := ScriptsGitRepo.GetHead()
+	newCommit, err := ScriptsGitRepo.GetHeadRef()
 	if err != nil {
-		rlog.Errorf("Unable to fetch scripts: %s", err.Error())
+		rlog.Errorf("Unable to get head: %s", err.Error())
 		return
 	}
 
@@ -82,12 +82,12 @@ func fetchScripts() {
 
 		currentCommit = newCommit
 
-		var repoPath string
-		if repoPath, err = ScriptsGitRepo.CreateClone(currentCommit); err != nil {
+		var clonedRepoPath string
+		if clonedRepoPath, err = ScriptsGitRepo.Clone(); err != nil {
 			rlog.Errorf("Unable to prepare scripts run tree: %s", err.Error())
 			return
 		}
 
-		ScriptsUpdated <- ScriptsUpdate{repoPath, currentCommit}
+		ScriptsUpdated <- ScriptsUpdate{clonedRepoPath, currentCommit}
 	}
 }

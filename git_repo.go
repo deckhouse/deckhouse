@@ -1,121 +1,198 @@
 package main
 
 import (
-	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
+	"regexp"
 	"strings"
+
+	"github.com/romana/rlog"
+	git "gopkg.in/libgit2/git2go.v24"
 )
 
+var HttpUserPasswdRegex = regexp.MustCompile(`https?:\/\/((([^:@]*):?([^@]*))@)?[^@].*`)
+
 type GitRepo struct {
-	Url    string
-	Branch string
-	Path   string
+	Ref  string
+	Path string
+	Hash string
+	*git.Repository
 }
 
-func GetOrCreateGitBareRepo(url string, branch string) (*GitRepo, error) {
+func (r *GitRepo) Fetch() (err error) {
+	remote, err := r.Remotes.Lookup("origin")
+	if err != nil {
+		rlog.Debugf("GITREPO fetch err remote lookup `%v`", err)
+		return
+	}
+
+	err = remote.Fetch(nil, &git.FetchOptions{
+		RemoteCallbacks: git.RemoteCallbacks{
+			CredentialsCallback: credentialsCallback,
+		},
+	}, "")
+	if err != nil {
+		rlog.Debugf("GITREPO fetch err fetch `%v`", err)
+		return
+	}
+
+	rlog.Debug("GITREPO fetch ended")
+	return nil
+}
+
+func (r *GitRepo) GetHeadRef() (string, error) {
+	branch, err := r.LookupBranch(fmt.Sprintf("origin/%s", r.Ref), git.BranchRemote)
+	if err != nil {
+		rlog.Debugf("GITREPO copy err LookupBranch `%v`", err)
+		return "", err
+	}
+
+	commit, err := branch.Peel(git.ObjectCommit)
+	if err != nil {
+		rlog.Debugf("GITREPO copy err peel commit `%v`", err)
+		return "", err
+	}
+
+	return commit.Id().String(), nil
+}
+
+func (r *GitRepo) Clone() (clonedRepoPath string, err error) {
+	if err = r.CheckoutRef(); err != nil {
+		return "", err
+	}
+
+	clonedRepoPath, err = ioutil.TempDir("", "antiopa-scripts-run-tree-")
+	if err != nil {
+		return "", err
+	}
+	_, err = CloneRepo(r.Path, clonedRepoPath)
+
+	return clonedRepoPath, err
+}
+
+// Построение workdir из ветки - то, что делает
+// git checkout -b test origin/test
+// В процессе достаётся коммит - его можно возвратить для хранения и сравнения с предыдущим
+func (r *GitRepo) CheckoutRef() error {
+	branch, err := r.LookupBranch(fmt.Sprintf("origin/%s", r.Ref), git.BranchRemote)
+	if err != nil {
+		rlog.Debugf("GITREPO copy err LookupBranch `%v`", err)
+		return err
+	}
+
+	treeObj, err := branch.Peel(git.ObjectTree)
+	if err != nil {
+		rlog.Debugf("GITREPO copy err Peel `%v`", err)
+		return err
+	}
+
+	tree, err := treeObj.AsTree()
+	if err != nil {
+		rlog.Debugf("GITREPO copy err AsTree `%v`", err)
+		return err
+	}
+
+	commit, err := branch.Peel(git.ObjectCommit)
+	if err != nil {
+		rlog.Debugf("GITREPO copy err peel commit `%v`", err)
+		return err
+	}
+	rlog.Debugf("GITREPO branch %s has commit %s and tree %s", r.Ref, commit.Id(), tree.Id())
+
+	err = r.CheckoutTree(tree, &git.CheckoutOpts{
+		Strategy: git.CheckoutForce,
+	})
+	if err != nil {
+		rlog.Debugf("GITREPO copy err checkout tree `%v`", err)
+		return err
+	}
+
+	refname := fmt.Sprintf("refs/heads/%s", r.Ref)
+	newRef, err := r.References.Create(refname, commit.Id(), true, "")
+	if err != nil {
+		rlog.Debugf("GITREPO copy err reference create `%v`", err)
+		return err
+	}
+
+	err = r.SetHead(newRef.Name())
+	if err != nil {
+		rlog.Debugf("GITREPO copy err SetHead `%v`", err)
+		return err
+	}
+
+	return nil
+}
+
+func OpenOrCloneMainRepo(url string, branch string) (*GitRepo, error) {
 	hasher := md5.New()
 	hasher.Write([]byte(url))
 	hasher.Write([]byte(branch))
-	path := path.Join(path.Join(RunDir, "scripts-repo"), hex.EncodeToString(hasher.Sum(nil)))
+	bareRepoPath := path.Join(path.Join(RunDir, "scripts-repo"), hex.EncodeToString(hasher.Sum(nil)))
 
-	gitRepo := &GitRepo{url, branch, path}
-	if !gitRepo.IsExist() {
-		if err := CloneBare(gitRepo.Url, gitRepo.Path); err != nil {
-			return nil, err
-		}
-	}
-	return gitRepo, nil
+	repo, err := OpenOrCloneRepo(url, bareRepoPath)
+	return &GitRepo{branch, bareRepoPath, hex.EncodeToString(hasher.Sum(nil)), repo}, err
 }
 
-func (r *GitRepo) IsExist() bool {
-	if _, err := os.Stat(r.Path); os.IsNotExist(err) {
+func OpenOrCloneRepo(url string, dstDir string) (repo *git.Repository, err error) {
+	if IsExist(dstDir) {
+		rlog.Debugf("GITREPO directory `%s` already exist", dstDir)
+
+		repo, err = git.OpenRepository(dstDir)
+		if err != nil {
+			rlog.Debugf("GITREPO copy err open `%v`", err)
+			return nil, err
+		}
+	} else {
+		repo, err = CloneRepo(url, dstDir)
+	}
+
+	return
+}
+
+func CloneRepo(url string, dstDir string) (repo *git.Repository, err error) {
+	repo, err = git.Clone(url, dstDir, &git.CloneOptions{
+		FetchOptions: &git.FetchOptions{
+			RemoteCallbacks: git.RemoteCallbacks{
+				CredentialsCallback: credentialsCallback,
+			},
+		},
+	})
+	if err != nil {
+		rlog.Debugf("GITREPO copy err clone `%v`", err)
+		return nil, err
+	}
+
+	rlog.Debug("GITREPO Successfully cloned")
+
+	return
+}
+
+// Кандидат в пакет utils
+// IsExist returns true if file exists
+func IsExist(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
 
-func (r *GitRepo) CreateClone(commit string) (string, error) {
-	tmpDir, err := ioutil.TempDir("", "antiopa-scripts-run-tree-")
-	if err != nil {
-		return "", err
+// в url Приходит то, что передаётся в PlainClone в ключе URL
+// Здесь парсится url на предмет username и password.
+func credentialsCallback(url string, username string, allowedTypes git.CredType) (git.ErrorCode, *git.Cred) {
+	rlog.Debugf("GITREPO allowed types: `%+v`", allowedTypes)
+	rlog.Debugf("GITREPO url `%s` username `%s`", url, username)
+	if strings.HasPrefix(url, "http") {
+		matches := HttpUserPasswdRegex.FindStringSubmatch(url)
+		if matches != nil {
+			ret, cred := git.NewCredUserpassPlaintext(matches[3], matches[4])
+			return git.ErrorCode(ret), &cred
+		}
+	} else {
+		rlog.Debugf("GITREPO cannot determine credentials for url `%s`", url)
 	}
-
-	if err = Clone(r.Path, tmpDir); err != nil {
-		return "", err
-	}
-
-	if err = Checkout(tmpDir, commit); err != nil {
-		return "", err
-	}
-
-	return tmpDir, nil
-}
-
-func (r *GitRepo) Fetch() error {
-	cmd := exec.Command("git", "-C", r.Path, "fetch", "--progress", "origin", fmt.Sprintf("%s:%s", r.Branch, r.Branch))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *GitRepo) GetHead() (string, error) {
-	cmd := exec.Command("git", "-C", r.Path, "show-ref", "-s", path.Join("refs/heads", r.Branch))
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
-
-	if err != nil {
-		return "", fmt.Errorf("bad branch %s", r.Branch)
-	}
-
-	ref := strings.TrimSpace(out.String())
-	return ref, nil
-}
-
-func Clone(url string, path string) error {
-	cmd := exec.Command("git", "clone", url, path)
-	cmd.Env = append(cmd.Env, []string{"GIT_ASKPASS=", "GIT_TERMINAL_PROMPT=0"}...)
-
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func CloneBare(url string, path string) error {
-	cmd := exec.Command("git", "clone", "--bare", url, path)
-	cmd.Env = append(cmd.Env, []string{"GIT_ASKPASS=", "GIT_TERMINAL_PROMPT=0"}...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func Checkout(gitDir string, commit string) error {
-	cmd := exec.Command("git", "-C", gitDir, "checkout", commit)
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return git.ErrUser, nil
 }
