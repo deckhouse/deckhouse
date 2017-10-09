@@ -21,6 +21,8 @@ var (
 	ModulesStatusDir string
 	WorkingDir       string
 	RunDir           string
+
+	lastRunAt time.Time
 )
 
 func main() {
@@ -49,56 +51,6 @@ func Init() {
 	InitScriptsManager()
 }
 
-func RunModule(scriptsDir string, module map[string]string) error {
-	entrypoint := module["entrypoint"]
-	if entrypoint == "" {
-		entrypoint = "./ctl.sh"
-	} else {
-		entrypoint = "./" + entrypoint
-	}
-
-	is_first_run := (getModuleStatus(module["name"])["installed"] != "true")
-
-	var args string
-	if is_first_run && module["first_run_args"] != "" {
-		args = module["first_run_args"]
-	} else {
-		args = module["args"]
-	}
-
-	cmd := exec.Command(entrypoint, strings.Fields(args)...)
-	cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	rlog.Infof("Running module %s ...", module["name"])
-	rlog.Debugf("Module %s command: `%s %s", module["name"], entrypoint, args)
-
-	err := cmd.Run()
-	if err == nil {
-		if is_first_run {
-			setModuleStatus(module["name"], map[string]string{"installed": "true"})
-		}
-
-		rlog.Infof("Module %s OK", module["name"])
-	} else {
-		retryModulesQueue = append(retryModulesQueue, module)
-
-		rlog.Errorf("Module %s FAILED: %s", module["name"], err)
-	}
-
-	return err
-}
-
-func RunModules(scriptsDir string, modules []map[string]string) {
-	if scriptsDir == "" {
-		return
-	}
-	for _, module := range modules {
-		RunModule(scriptsDir, module)
-	}
-}
-
 func Run() {
 	rlog.Info("Run")
 
@@ -106,16 +58,16 @@ func Run() {
 	go RunScriptsManager()
 
 	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
+	nightRunTicker := time.NewTicker(time.Duration(300) * time.Second)
 
 	for {
 		select {
 		case modules := <-ModulesUpdated:
 			lastModules = modules
 
-			// Сброс очереди на рестарт
-			retryModulesQueue = make([]map[string]string, 0)
-
-			RunModules(lastScriptsDir, lastModules)
+			if lastScriptsDir != "" && len(lastModules) > 0 {
+				runModules(lastScriptsDir, lastModules)
+			}
 
 		case upd := <-ScriptsUpdated:
 			if lastScriptsDir != "" {
@@ -123,22 +75,102 @@ func Run() {
 			}
 			lastScriptsDir = upd.Path
 
-			// Сброс очереди на рестарт
-			retryModulesQueue = make([]map[string]string, 0)
-
-			RunModules(lastScriptsDir, lastModules)
+			if lastScriptsDir != "" && len(lastModules) > 0 {
+				runModules(lastScriptsDir, lastModules)
+			}
 
 		case <-retryModuleTicker.C:
-			if len(retryModulesQueue) > 0 && lastScriptsDir != "" {
+			if lastScriptsDir != "" && len(retryModulesQueue) > 0 {
 				retryModule := retryModulesQueue[0]
 				retryModulesQueue = retryModulesQueue[1:]
 
 				rlog.Infof("Retrying module %s", retryModule["name"])
 
-				RunModule(lastScriptsDir, retryModule)
+				runModule(lastScriptsDir, retryModule)
+			}
+
+		case <-nightRunTicker.C:
+			if lastScriptsDir != "" && len(lastModules) > 0 {
+				now := time.Now()
+				mskLocation, err := time.LoadLocation("Europe/Moscow")
+				if err == nil {
+					// Ежедневный запуск в 3:45 по московскому времени
+					nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, mskLocation)
+
+					if lastRunAt.Before(nightRunTime) {
+						rlog.Infof("Night run modules ...")
+						runModules(lastScriptsDir, lastModules)
+					}
+				}
 			}
 		}
 	}
+}
+
+func runModules(scriptsDir string, modules []map[string]string) {
+	// Сброс очереди на рестарт
+	retryModulesQueue = make([]map[string]string, 0)
+
+	for _, module := range modules {
+		runModule(scriptsDir, module)
+	}
+
+	lastRunAt = time.Now()
+}
+
+func runModule(scriptsDir string, module map[string]string) {
+	var baseArgs []string
+
+	entrypoint := module["entrypoint"]
+	if entrypoint == "" {
+		entrypoint = "bash"
+		baseArgs = append(baseArgs, "ctl.sh")
+	}
+
+	isFirstRun := (getModuleStatus(module["name"])["installed"] != "true")
+	firstRunUserArgs, firstRunUserArgsExist := module["first_run_args"]
+
+	if isFirstRun && firstRunUserArgsExist {
+		args := append(baseArgs, strings.Fields(firstRunUserArgs)...)
+
+		cmd := exec.Command(entrypoint, args...)
+		cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		rlog.Infof("Running module %s (first run) ...", module["name"])
+		rlog.Debugf("Module %s command: `%s %s`", module["name"], entrypoint, strings.Join(args, " "))
+
+		err := cmd.Run()
+		if err == nil {
+			setModuleStatus(module["name"], map[string]string{"installed": "true"})
+			rlog.Infof("Module %s first run OK", module["name"])
+		} else {
+			retryModulesQueue = append(retryModulesQueue, module)
+			rlog.Errorf("Module %s FAILED: %s", module["name"], err)
+			return
+		}
+	}
+
+	args := append(baseArgs, strings.Fields(module["args"])...)
+	cmd := exec.Command(entrypoint, args...)
+
+	cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	rlog.Infof("Running module %s ...", module["name"])
+	rlog.Debugf("Module %s command: `%s %s`", module["name"], entrypoint, strings.Join(args, " "))
+
+	err := cmd.Run()
+	if err == nil {
+		rlog.Infof("Module %s OK", module["name"])
+	} else {
+		retryModulesQueue = append(retryModulesQueue, module)
+		rlog.Errorf("Module %s FAILED: %s", module["name"], err)
+	}
+
+	return
 }
 
 func getModuleStatus(moduleName string) (res map[string]string) {

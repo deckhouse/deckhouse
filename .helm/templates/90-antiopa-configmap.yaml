@@ -2,14 +2,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: antiopa
-  namespace: antiopa
 data:
   repo: |
     {
-      "url": "https://timofey.kirillov:***REMOVED***@github.com/deckhouse/deckhouse-scripts",
+      "url": "https://{{ required ".Values.repo.user" .Values.repo.user }}:{{ required ".Values.repo.token" .Values.repo.token}}@github.com/deckhouse/deckhouse-scripts",
       "branch": "master"
     }
-
+{{- if ne .Values.global.env "minikube" }}
+  modules: "[]"
+{{- else }}
   modules: |
     [
       {
@@ -25,15 +26,20 @@ data:
       },
       {
         "name": "kube-lego",
-        "first_run_args": "--install --email=256@flant.ru",
-        "args": "--upgrade"
+        "entrypoint": "bash",
+        "first_run_args": "ctl.sh --install --email=256@flant.ru",
+        "args": "ctl.sh --upgrade"
       },
       {
         "name": "nginx-ingress",
-        "first_run_args": "--install --type=aws",
-        "args": "--upgrade"
+        "entrypoint": "bash",
+        "first_run_args": "ctl.sh --install --type=aws",
+        "args": "ctl.sh --upgrade --type=aws"
       },
       {
-        "name": "node-role"
+        "name": "node-role",
+        "entrypoint": "bash",
+        "args": "ctl.sh"
       }
     ]
+{{- end }}

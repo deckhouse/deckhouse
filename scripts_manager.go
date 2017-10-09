@@ -26,22 +26,26 @@ func InitScriptsManager() {
 }
 
 func RunScriptsManager() {
-	ticker := time.NewTicker(time.Duration(10) * time.Second)
+	ticker := time.NewTicker(time.Duration(60) * time.Second)
 
 	for {
 		select {
 		case repo := <-RepoUpdated:
 			NotClonedRepo = repo
-			cloneRepo()
+			cloneAndFetchRepo()
 		case <-ticker.C:
-			if len(NotClonedRepo) != 0 {
-				cloneRepo()
-			}
-
-			if ScriptsGitRepo != nil {
-				fetchScripts()
-			}
+			cloneAndFetchRepo()
 		}
+	}
+}
+
+func cloneAndFetchRepo() {
+	if len(NotClonedRepo) != 0 {
+		cloneRepo()
+	}
+
+	if ScriptsGitRepo != nil {
+		fetchScripts()
 	}
 }
 
@@ -74,7 +78,7 @@ func fetchScripts() {
 	}
 
 	if newCommit != currentCommit {
-		rlog.Debugf("REPOFETCH currentCommit='%s' newCommit='%s'", currentCommit, newCommit)
+		rlog.Debugf("REPOCHANGE currentCommit='%s' newCommit='%s'", currentCommit, newCommit)
 
 		currentCommit = newCommit
 
