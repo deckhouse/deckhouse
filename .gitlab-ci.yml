@@ -6,6 +6,10 @@ stages:
 Build:
   stage: build
   script:
+    - echo CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE}
+    - echo CI_COMMIT_REF_NAME=${CI_COMMIT_REF_NAME}
+    - echo CI_REGISTRY_USER=${CI_REGISTRY_USER}
+    - echo CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD}
     - source /etc/profile.d/rvm.sh
     - dapp --version
     - dapp dimg stages cleanup local --build-dir ~/dapp_build/${CI_PROJECT_NAME} --improper-git-commit

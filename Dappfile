@@ -60,13 +60,20 @@ dimg_group do
     docker.from 'ubuntu:16.04'
 
     shell.before_install do
-      run 'apt-get -y install iproute2 tcpdump nmap jq apache2-utils'
+      run 'apt-get -y install iproute2 tcpdump nmap git curl jq python3 apache2-utils gnupg2 libssh2-1-dev libssl-dev cmake'
+
       run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
       run 'chmod +x /usr/bin/resty'
       run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
 
       run 'curl -L https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
       run 'chmod +x /usr/local/bin/kubectl'
+
+      run 'gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3'
+      run 'curl -sSL https://get.rvm.io | bash -s stable --ruby'
+      run 'source /etc/profile.d/rvm.sh'
+      run 'rvm install ruby'
+      run 'gem install dapp'
     end
 
     shell.install do
@@ -89,7 +96,6 @@ dimg_group do
         to '/app/src/github.com/deckhouse/deckhouse'
       end
     end
-
   end
 
 end
