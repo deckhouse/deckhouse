@@ -92,11 +92,15 @@ func Run() {
 		case <-nightRunTicker.C:
 			if lastScriptsDir != "" && len(lastModules) > 0 {
 				now := time.Now()
-				nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, now.Location())
+				mskLocation, err := time.LoadLocation("Europe/Moscow")
+				if err == nil {
+					// Ежедневный запуск в 3:45 по московскому времени
+					nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, mskLocation)
 
-				if lastRunAt.Before(nightRunTime) {
-					rlog.Infof("Night run modules ...")
-					runModules(lastScriptsDir, lastModules)
+					if lastRunAt.Before(nightRunTime) {
+						rlog.Infof("Night run modules ...")
+						runModules(lastScriptsDir, lastModules)
+					}
 				}
 			}
 		}
