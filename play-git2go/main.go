@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	git "gopkg.in/libgit2/git2go.v24"
+	git "gopkg.in/libgit2/git2go.v26"
 )
 
 var HttpUserPasswdRegex = regexp.MustCompile(`https?:\/\/((([^:@]*):?([^@]*))@)?[^@].*`)
@@ -28,28 +28,33 @@ type AntiopaScriptsActions interface {
 	GetHeadCommit(repoDir string)
 }
 
-var repo_url = "https://oauth2:Sf5zFGUrzXm5vraq7xgp@github.com/deckhouse/deckhouse-scripts"
+var repoUrl = "https://oauth2:Sf5zFGUrzXm5vraq7xgp@github.com/deckhouse/deckhouse-scripts"
 //var token = "Sf5zFGUrzXm5vraq7xgp"
 var branch = "test-go-gits"
-var bare_dir = "antiopa"
-var copy_dir = "antiopa-copy"
+var mainDir = "antiopa"
+var copyDir = "antiopa-copy"
 
 func main() {
 	defer TimeTrack(time.Now(), "main")
 	fmt.Println("start clone Main")
 
-	//repo, err := OpenOrCloneMainRepo(repo_url, branch, bare_dir)
-	// клонирование из директории с основным репом в директорию для запуска скриптов
-	repo, err := OpenOrCloneMainRepo("antiopa-local", "test-go-gits", "antiopa-local-2")
+	// Клонирование из gitlab в директорию с основной копией
+	mainRepo, err := OpenOrCloneMainRepo(repoUrl, branch, mainDir)
 	if err != nil {
 		fmt.Println("Error open or close main repo: %v", err)
 		os.Exit(1)
 	}
-
 	// Обновление основного репо
-	FetchMainRepo(repo, "")
+	FetchMainRepo(mainRepo, branch)
 	// Процесс построения workdir в libgit2 - отдельный от обновления
-	CheckoutRef(repo, "test-go-gits")
+	CheckoutRef(mainRepo, branch)
+
+	// Какой-то другой нужно сделать метод, чтобы сначала удалился существующий copyDir, а потом туда склонировался бы основной реп
+	_, err = OpenOrCloneMainRepo(mainDir, "", copyDir)
+	if err != nil {
+		fmt.Println("Error open or close main repo: %v", err)
+		os.Exit(1)
+	}
 }
 
 // открыть или склонировать основной репозиторий
@@ -100,7 +105,7 @@ func credentialsCallback(url string, username string, allowedTypes git.CredType)
 			return git.ErrorCode(ret), &cred
 		}
 	} else {
-		fmt.Println("cannot determine credentials for url %s")
+		fmt.Println("cannot determine credentials for url %s\n")
 	}
 	return git.ErrUser, nil
 }
@@ -129,7 +134,7 @@ func IsExist(path string) bool {
 // git checkout -b test origin/test
 // В процессе достаётся коммит - его можно возвратить для хранения и сравнения с предыдущим
 func CheckoutRef(repo *git.Repository, ref string) {
-	branch, err := repo.LookupBranch(ref, git.BranchRemote)
+	branch, err := repo.LookupBranch(fmt.Sprintf("origin/%s", ref), git.BranchRemote)
 	if err != nil {
 		fmt.Printf("copy err LookupBranch %v\n", err)
 		os.Exit(1)
@@ -185,7 +190,11 @@ func FetchMainRepo(repo *git.Repository, ref string) {
 		return
 	}
 
-	err = remote.Fetch(nil, nil, "")
+	err = remote.Fetch(nil, &git.FetchOptions{
+		RemoteCallbacks: git.RemoteCallbacks{
+			CredentialsCallback: credentialsCallback,
+		},
+	}, "")
 	if (err != nil) {
 		fmt.Printf("fetch err fetch %v", err)
 		return
@@ -199,132 +208,132 @@ func FetchMainRepo(repo *git.Repository, ref string) {
 // Клон из bare во временный репо прошёл, но сделать checkout не получилось.
 
 // CloneToBare clones repo to bare_dir
-func CloneToBare() *git.Repository {
-	defer TimeTrack(time.Now(), "CloneToBareRepo")
-	if IsExist(bare_dir) {
-		fmt.Printf("Directory %s already exist\n", bare_dir)
+// func CloneToBare() *git.Repository {
+// 	defer TimeTrack(time.Now(), "CloneToBareRepo")
+// 	if IsExist(bare_dir) {
+// 		fmt.Printf("Directory %s already exist\n", bare_dir)
 
-		repo, err := git.OpenRepository(bare_dir)
-		if err != nil {
-			fmt.Printf("copy err open %v\n", err)
-			os.Exit(1)
-		}
-		return repo
-	}
+// 		repo, err := git.OpenRepository(bare_dir)
+// 		if err != nil {
+// 			fmt.Printf("copy err open %v\n", err)
+// 			os.Exit(1)
+// 		}
+// 		return repo
+// 	}
 
-	//repo_url := fmt.Sprintf("https://oauth2:%s@github.com/deckhouse/deckhouse-scripts", token)
+// 	//repo_url := fmt.Sprintf("https://oauth2:%s@github.com/deckhouse/deckhouse-scripts", token)
 
-	repo, err := git.Clone(repo_url, bare_dir, &git.CloneOptions{
-		FetchOptions: &git.FetchOptions{
-			RemoteCallbacks: git.RemoteCallbacks{
-				CredentialsCallback: credentialsCallback,
-				//CertificateCheckCallback: certificateCheckCallback,
-			},
-		},
-		CheckoutBranch: branch,
-		//Bare: true,
-	})
+// 	repo, err := git.Clone(repo_url, bare_dir, &git.CloneOptions{
+// 		FetchOptions: &git.FetchOptions{
+// 			RemoteCallbacks: git.RemoteCallbacks{
+// 				CredentialsCallback: credentialsCallback,
+// 				//CertificateCheckCallback: certificateCheckCallback,
+// 			},
+// 		},
+// 		CheckoutBranch: branch,
+// 		//Bare: true,
+// 	})
 
-	if err != nil {
-		fmt.Printf("Clone %s err %v\n", repo_url, err)
-		os.Exit(1)
-	}
-	fmt.Println("Successfully cloned")
-	return repo
-}
+// 	if err != nil {
+// 		fmt.Printf("Clone %s err %v\n", repo_url, err)
+// 		os.Exit(1)
+// 	}
+// 	fmt.Println("Successfully cloned")
+// 	return repo
+// }
 
 
 
 // CloneBareToLocalWorkdir clones from bare_dir to copy_dir using branch
-func CloneBareToLocalWorkdir() {
-	defer TimeTrack(time.Now(), "CloneBareToLocalWorkdir")
-	_, err := git.Clone(bare_dir, copy_dir, &git.CloneOptions{
-		CheckoutOpts: &git.CheckoutOpts{
-			Strategy: git.CheckoutForce,
-		},
-		//		CheckoutBranch: "origin/test-go-gits",
-		Bare: false,
-	})
-	if err != nil {
-		fmt.Printf("copy err %v\n", err)
-		os.Exit(1)
-	}
+// func CloneBareToLocalWorkdir() {
+// 	defer TimeTrack(time.Now(), "CloneBareToLocalWorkdir")
+// 	_, err := git.Clone(bare_dir, copy_dir, &git.CloneOptions{
+// 		CheckoutOpts: &git.CheckoutOpts{
+// 			Strategy: git.CheckoutForce,
+// 		},
+// 		//		CheckoutBranch: "origin/test-go-gits",
+// 		Bare: false,
+// 	})
+// 	if err != nil {
+// 		fmt.Printf("copy err %v\n", err)
+// 		os.Exit(1)
+// 	}
 
-	// rev, err := repo.RevparseSingle(branch)
-	// if err != nil {
-	// 	fmt.Printf("copy err revparsesingle %v\n", err)
-	// 	os.Exit(1)
-	// }
+// 	// rev, err := repo.RevparseSingle(branch)
+// 	// if err != nil {
+// 	// 	fmt.Printf("copy err revparsesingle %v\n", err)
+// 	// 	os.Exit(1)
+// 	// }
 
-	// tree, err := rev.AsTree()
-	// if err != nil {
-	// 	fmt.Printf("copy err as tree %v\n", err)
-	// 	os.Exit(1)
-	// }
+// 	// tree, err := rev.AsTree()
+// 	// if err != nil {
+// 	// 	fmt.Printf("copy err as tree %v\n", err)
+// 	// 	os.Exit(1)
+// 	// }
 
-	// err = repo.CheckoutTree(tree, nil)
-	// if err != nil {
-	// 	fmt.Printf("copy err checkouttree %v\n", err)
-	// 	os.Exit(1)
-	// }
+// 	// err = repo.CheckoutTree(tree, nil)
+// 	// if err != nil {
+// 	// 	fmt.Printf("copy err checkouttree %v\n", err)
+// 	// 	os.Exit(1)
+// 	// }
 
-	//err = repo.SetHead(tree.AsCommit().ref.Name())
-	//if err != nil {
-	//	fmt.Printf("copy err sethead %v\n", err)
-	//	os.Exit(1)
-	//}
+// 	//err = repo.SetHead(tree.AsCommit().ref.Name())
+// 	//if err != nil {
+// 	//	fmt.Printf("copy err sethead %v\n", err)
+// 	//	os.Exit(1)
+// 	//}
 
-	//err = repo.CheckoutHead(nil)
-	//if err != nil {
-	//	fmt.Printf("copy err checkout %v\n", err)
-	//	os.Exit(1)
-	//}
+// 	//err = repo.CheckoutHead(nil)
+// 	//if err != nil {
+// 	//	fmt.Printf("copy err checkout %v\n", err)
+// 	//	os.Exit(1)
+// 	//}
 
-	fmt.Println("Successfully copied")
-}
+// 	fmt.Println("Successfully copied")
+// }
 
-func CheckoutToAnotherWorkdir() {
-	repo, err := git.OpenRepository(bare_dir)
-	if err != nil {
-		fmt.Printf("copy err open %v\n", err)
-		os.Exit(1)
-	}
+// func CheckoutToAnotherWorkdir() {
+// 	repo, err := git.OpenRepository(bare_dir)
+// 	if err != nil {
+// 		fmt.Printf("copy err open %v\n", err)
+// 		os.Exit(1)
+// 	}
 
-	branch, err := repo.LookupBranch("origin/test-go-gits", git.BranchRemote)
-	if err != nil {
-		fmt.Printf("copy err LookupBranch %v\n", err)
-		os.Exit(1)
-	}
+// 	branch, err := repo.LookupBranch("origin/test-go-gits", git.BranchRemote)
+// 	if err != nil {
+// 		fmt.Printf("copy err LookupBranch %v\n", err)
+// 		os.Exit(1)
+// 	}
 
-	treeObj, err := branch.Peel(git.ObjectTree)
-	if err != nil {
-		fmt.Printf("copy err Peel %v\n", err)
-		os.Exit(1)
-	}
+// 	treeObj, err := branch.Peel(git.ObjectTree)
+// 	if err != nil {
+// 		fmt.Printf("copy err Peel %v\n", err)
+// 		os.Exit(1)
+// 	}
 
-	tree, err := treeObj.AsTree()
-	if err != nil {
-		fmt.Printf("copy err AsTree %v\n", err)
-		os.Exit(1)
-	}
+// 	tree, err := treeObj.AsTree()
+// 	if err != nil {
+// 		fmt.Printf("copy err AsTree %v\n", err)
+// 		os.Exit(1)
+// 	}
 
-	commit, err := branch.Peel(git.ObjectCommit)
-	if err != nil {
-		fmt.Printf("copy err pell commit %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("commit %+v %s\n", commit, commit.Id())
+// 	commit, err := branch.Peel(git.ObjectCommit)
+// 	if err != nil {
+// 		fmt.Printf("copy err pell commit %v\n", err)
+// 		os.Exit(1)
+// 	}
+// 	fmt.Printf("commit %+v %s\n", commit, commit.Id())
 
-	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
-		TargetDirectory: copy_dir,
-		Strategy:        git.CheckoutForce,
-	})
-	if err != nil {
-		fmt.Printf("copy err checkouttree %v\n", err)
-		os.Exit(1)
-	}
+// 	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
+// 		TargetDirectory: copy_dir,
+// 		Strategy:        git.CheckoutForce,
+// 	})
+// 	if err != nil {
+// 		fmt.Printf("copy err checkouttree %v\n", err)
+// 		os.Exit(1)
+// 	}
 
-}
+// }
 
 func TimeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
