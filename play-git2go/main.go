@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	git "gopkg.in/libgit2/git2go.v26"
+	git "gopkg.in/libgit2/git2go.v24"
 )
 
 var HttpUserPasswdRegex = regexp.MustCompile(`https?:\/\/((([^:@]*):?([^@]*))@)?[^@].*`)
@@ -29,6 +29,7 @@ type AntiopaScriptsActions interface {
 }
 
 var repoUrl = "https://oauth2:Sf5zFGUrzXm5vraq7xgp@github.com/deckhouse/deckhouse-scripts"
+
 //var token = "Sf5zFGUrzXm5vraq7xgp"
 var branch = "test-go-gits"
 var mainDir = "antiopa"
@@ -185,7 +186,7 @@ func CheckoutRef(repo *git.Repository, ref string) {
 // git fetch
 func FetchMainRepo(repo *git.Repository, ref string) {
 	remote, err := repo.Remotes.Lookup("origin")
-	if (err != nil) {
+	if err != nil {
 		fmt.Printf("fetch err remote lookup %v", err)
 		return
 	}
@@ -195,14 +196,13 @@ func FetchMainRepo(repo *git.Repository, ref string) {
 			CredentialsCallback: credentialsCallback,
 		},
 	}, "")
-	if (err != nil) {
+	if err != nil {
 		fmt.Printf("fetch err fetch %v", err)
 		return
 	}
 
 	fmt.Println("FetchMainRepo ended")
 }
-
 
 // Предыдущий неудачный эксперимент - клон основного bare-repo, клон из bare-repo во временный.
 // Клон из bare во временный репо прошёл, но сделать checkout не получилось.
@@ -241,8 +241,6 @@ func FetchMainRepo(repo *git.Repository, ref string) {
 // 	fmt.Println("Successfully cloned")
 // 	return repo
 // }
-
-
 
 // CloneBareToLocalWorkdir clones from bare_dir to copy_dir using branch
 // func CloneBareToLocalWorkdir() {

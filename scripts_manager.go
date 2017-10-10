@@ -2,6 +2,9 @@ package main
 
 import (
 	"github.com/romana/rlog"
+	"io/ioutil"
+	"os"
+	"path"
 	"time"
 )
 
@@ -11,7 +14,6 @@ var (
 	ScriptsUpdated chan ScriptsUpdate
 
 	// TODO: хранить в ConfigMap в кластере
-	currentCommit string
 )
 
 type ScriptsUpdate struct {
@@ -22,7 +24,6 @@ type ScriptsUpdate struct {
 func InitScriptsManager() {
 	ScriptsUpdated = make(chan ScriptsUpdate)
 	NotClonedRepo = map[string]string{}
-	currentCommit = ""
 }
 
 func RunScriptsManager() {
@@ -55,7 +56,7 @@ func cloneRepo() {
 		branch = "master"
 	}
 
-	clonedGitRepo, err := GetOrCreateGitBareRepo(NotClonedRepo["url"], branch)
+	clonedGitRepo, err := OpenOrCloneMainRepo(NotClonedRepo["url"], branch)
 	if err != nil {
 		rlog.Errorf("REPOCLONE `%s` (`%s`): %s", NotClonedRepo["url"], branch, err.Error())
 	} else {
@@ -71,23 +72,61 @@ func fetchScripts() {
 		return
 	}
 
-	newCommit, err := ScriptsGitRepo.GetHead()
+	newCommit, err := ScriptsGitRepo.GetHeadRef()
 	if err != nil {
-		rlog.Errorf("Unable to fetch scripts: %s", err.Error())
+		rlog.Errorf("Unable to get head: %s", err.Error())
+		return
+	}
+
+	currentCommit, err := getCurrentCommit()
+	if err != nil {
+		rlog.Errorf("Getting current commit failed: %s", err.Error())
 		return
 	}
 
 	if newCommit != currentCommit {
 		rlog.Debugf("REPOCHANGE currentCommit='%s' newCommit='%s'", currentCommit, newCommit)
 
-		currentCommit = newCommit
+		if err = setCurrentCommit(newCommit); err != nil {
+			rlog.Errorf("Setting current commit failed: %s", err.Error())
+			return
+		}
 
-		var repoPath string
-		if repoPath, err = ScriptsGitRepo.CreateClone(currentCommit); err != nil {
+		var clonedRepoPath string
+		if clonedRepoPath, err = ScriptsGitRepo.Clone(); err != nil {
 			rlog.Errorf("Unable to prepare scripts run tree: %s", err.Error())
 			return
 		}
 
-		ScriptsUpdated <- ScriptsUpdate{repoPath, currentCommit}
+		ScriptsUpdated <- ScriptsUpdate{clonedRepoPath, currentCommit}
 	}
+}
+
+func getCurrentCommit() (commit string, err error) {
+	ccfp := currentCommitFilePath()
+	if IsExist(ccfp) {
+		var bytes []byte
+		bytes, err = ioutil.ReadFile(ccfp)
+		if err != nil {
+			return
+		}
+
+		return string(bytes), nil
+	}
+
+	return
+}
+
+func setCurrentCommit(commit string) error {
+	ccfp := currentCommitFilePath()
+
+	if !IsExist(path.Dir(ccfp)) {
+		os.Mkdir(path.Dir(ccfp), 0755)
+	}
+
+	return ioutil.WriteFile(ccfp, []byte(commit), 0644)
+}
+
+func currentCommitFilePath() string {
+	return path.Join(path.Join(RunDir, "scripts-commit"), ScriptsGitRepo.Hash)
 }
