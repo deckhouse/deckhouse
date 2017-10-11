@@ -15,6 +15,12 @@ dapp dimg push :minikube
 dapp kube deploy --set global.env=minikube :minikube
 ```
 
+Эти команды обёрнуты в скрипты:
+```
+scripts/setup_minikube_and_helm.sh
+scripts/deploy_to_minikube.sh
+```
+
 
 Установка libgit2-24 на 14.04
 -----------------------------
