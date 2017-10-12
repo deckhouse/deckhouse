@@ -69,16 +69,6 @@ func Run() {
 				runModules(lastScriptsDir, lastModules)
 			}
 
-		case upd := <-ScriptsUpdated:
-			if lastScriptsDir != "" {
-				os.RemoveAll(lastScriptsDir)
-			}
-			lastScriptsDir = upd.Path
-
-			if lastScriptsDir != "" && len(lastModules) > 0 {
-				runModules(lastScriptsDir, lastModules)
-			}
-
 		case <-retryModuleTicker.C:
 			if lastScriptsDir != "" && len(retryModulesQueue) > 0 {
 				retryModule := retryModulesQueue[0]
