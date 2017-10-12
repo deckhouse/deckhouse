@@ -15,8 +15,10 @@ var (
 	KubernetesAntiopaNamespace = "antiopa"
 )
 
+// InitKube - инициализация kubernetes клиента
+// Можно подключить изнутри, а можно на основе .kube директории
 func InitKube() {
-	rlog.Info("Init kube")
+	rlog.Info("Init kubernetes client")
 
 	var err error
 	var config *rest.Config
