@@ -13,6 +13,8 @@ var (
 	ScriptsGitRepo *GitRepo
 	ScriptsUpdated chan ScriptsUpdate
 
+	RepoUpdated chan map[string]string
+
 	// TODO: хранить в ConfigMap в кластере
 )
 

@@ -5,12 +5,12 @@ func mergeTwoValues(A map[string]interface{}, B map[string]interface{}) map[stri
 	return A
 }
 
-func MergeValues(ValuesArr map[string]interface{}...) map[string]interface{} {
+func MergeValues(ValuesArr ... map[string]interface{}) map[string]interface{} {
 	// FIXME
 
 	res := make(map[string]interface{})
 
-	for _, values := ValuesArr {
+	for _, values := range ValuesArr {
 		res = MergeValues(res, values)
 	}
 

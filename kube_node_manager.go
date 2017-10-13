@@ -1,5 +1,8 @@
 package main
 
+import (
+	"github.com/romana/rlog"
+)
 var (
 	KubeNodesChanged chan bool
 )

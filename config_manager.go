@@ -1,11 +1,11 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
+	_ "crypto/md5"
+	_ "encoding/hex"
+	_ "encoding/json"
 	"fmt"
-	"time"
+	_ "time"
 
 	"github.com/romana/rlog"
 

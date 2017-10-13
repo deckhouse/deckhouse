@@ -1,11 +1,11 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
+	_ "crypto/md5"
+	_ "encoding/hex"
+	_ "encoding/json"
 	"fmt"
-	"time"
+	_ "time"
 
 	"github.com/romana/rlog"
 
@@ -38,7 +38,7 @@ type KubeModuleValuesUpdate struct {
 	Values     map[string]interface{}
 }
 
-func getConfigMap() (*v1.ConfigMap, error) {
+func getConfigMap2() (*v1.ConfigMap, error) {
 	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get("antiopa", meta_v1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("ConfigMap '%s' is not found in namespace '%s'", "antiopa", KubernetesAntiopaNamespace)

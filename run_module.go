@@ -1,3 +1,5 @@
+package main
+
 func RunModule(Name string, Values map[string]interface{}) {
 	 /*
 	 * Хуки /modules/<module-name>/hooks/before-helm/* в алфавитном порядке
