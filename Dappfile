@@ -1,5 +1,4 @@
-dimg do
-  docker.from 'ubuntu:16.04'
+dimg_group do
 
   shell.before_install do
     run 'apt-get update',
@@ -57,25 +56,40 @@ dimg do
     end
   end
 
-  shell.before_install do
-    run 'apt-get -y install iproute2 tcpdump nmap jq apache2-utils'
-    run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
-    run 'chmod +x /usr/bin/resty'
-    run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
+  dimg do
+    docker.from 'ubuntu:16.04'
 
-    run 'curl -L https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
-    run 'chmod +x /usr/local/bin/kubectl'
-  end
+    shell.before_install do
+      run 'apt-get -y install iproute2 tcpdump nmap jq apache2-utils'
+      run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
+      run 'chmod +x /usr/bin/resty'
+      run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
 
-  shell.setup do
-    run 'cp /kube_api/kube_api.sh /usr/bin/kube_api'
-    run 'chmod +x /usr/bin/kube_api'
-  end
-
-  git do
-    add '/.kube_api' do
-      to '/kube_api'
+      run 'curl -L https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
+      run 'chmod +x /usr/local/bin/kubectl'
     end
+
+    shell.install do
+      run 'curl -LOs https://storage.googleapis.com/golang/go1.8.4.linux-amd64.tar.gz'
+      run 'tar -C /usr/local -xzf go1.8.4.linux-amd64.tar.gz'
+      run 'echo "export PATH=\$PATH:/usr/local/go/bin" >> /etc/profile'
+      run 'echo "export GOPATH=/app" >> /etc/profile'
+    end
+
+    shell.setup do
+      run 'cp /kube_api/kube_api.sh /usr/bin/kube_api'
+      run 'chmod +x /usr/bin/kube_api'
+    end
+
+    git do
+      add '/.kube_api' do
+        to '/kube_api'
+      end
+      add '/' do
+        to '/app/src/github.com/deckhouse/deckhouse'
+      end
+    end
+
   end
 
 end

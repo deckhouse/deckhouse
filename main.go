@@ -23,6 +23,9 @@ var (
 	RunDir           string
 
 	lastRunAt time.Time
+
+	// Имя хоста совпадает с именем пода. Можно использовать для запросов API
+	Hostname string
 )
 
 func main() {
@@ -39,16 +42,23 @@ func Init() {
 
 	WorkingDir, err := os.Getwd()
 	if err != nil {
-		rlog.Error("Cannot determine antiopa working dir: %s", err)
+		rlog.Error("MAIN Fatal: Cannot determine antiopa working dir: %s", err)
 		os.Exit(1)
 	}
 
 	RunDir = path.Join(WorkingDir, "antiopa-run")
 	ModulesStatusDir = path.Join(RunDir, "module-status")
 
+	Hostname, err = os.Hostname()
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %v", err)
+		os.Exit(1)
+	}
+
 	InitKube()
 	InitConfigManager()
 	InitScriptsManager()
+	InitRegistryManager()
 }
 
 func Run() {
@@ -56,6 +66,7 @@ func Run() {
 
 	go RunConfigManager()
 	go RunScriptsManager()
+	go RunRegistryManager()
 
 	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
 	nightRunTicker := time.NewTicker(time.Duration(300) * time.Second)
@@ -93,6 +104,9 @@ func Run() {
 					}
 				}
 			}
+		case newImageId := <-ImageUpdated:
+			KubeUpdateDeployment(newImageId)
+			// TODO На этом можно выйти из программы, т.к. прилетел новый образ
 		}
 	}
 }
