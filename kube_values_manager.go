@@ -47,11 +47,12 @@ func getConfigMap2() (*v1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) {
+func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error {
 	/*
 	* Читаем текущий ConfigMap
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
 	 */
+  return nil
 }
 
 func InitKubeValuesManager() (struct {

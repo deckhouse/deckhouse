@@ -15,6 +15,7 @@ import (
 )
 
 var HttpUserPasswdRegex = regexp.MustCompile(`https?:\/\/((([^:@]*):?([^@]*))@)?[^@].*`)
+var RunDir = "FAKE"
 
 type GitRepo struct {
 	Ref  string
