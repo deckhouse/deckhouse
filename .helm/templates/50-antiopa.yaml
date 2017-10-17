@@ -21,6 +21,9 @@ spec:
               value: {{ now | quote }}
             - name: RLOG_LOG_LEVEL
               value: DEBUG
+            # временный токен, пока нет bootsrtap.sh и не убрали токен в секреты.
+            - name: GITLAB_TOKEN
+              value: nyx_JqnnTaGody8cpnKq
           volumeMounts:
             - mountPath: /antiopa-run
               name: antiopa
