@@ -54,19 +54,28 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) {
 	 */
 }
 
-func InitKubeValuesManager() {
-	rlog.Info("Init config manager")
+func InitKubeValuesManager() (struct {
+	Values        map[string]interface{}
+	ModulesValues map[string]map[string]interface{}
+}, error) {
+	rlog.Info("Init kube values manager")
 
 	/*
 		* Достать через kubernetes-api текущую версию ConfigMap по api
 		* запоминаем в глобальную переменную resourceVersion
 		* читаем values из этого ConfigMap
-			* Прочесть текущий values, сгенерить ValuesUpdated.
+			* Прочесть текущий values
 			* Запомнить в переменной (глобальной) valuesChecksum md5 от yaml-строки, которую достали из ConfigMap
 		* читаем все module values из этого же ConfigMap
-			* Прочесть все остальные <module-name>-values (которые найдутся в configmap'е), сгенерить ModuleValuesUpdated для каждого
+			* Прочесть все остальные <module-name>-values (которые найдутся в configmap'е)
 			* Запомнить в переменной (глобальной) moduleValuesChecksum[module-name] md5 от yaml-строки, которую достали из ConfigMap
+		* Метод возвращает текущие значения values и modules-values разом. Любая возникающая ошибка тоже сразу возвращается.
 	*/
+
+	return struct {
+		Values        map[string]interface{}
+		ModulesValues map[string]map[string]interface{}
+	}{make(map[string]interface{}), make(map[string]map[string]interface{})}, nil
 }
 
 func RunKubeValuesManager() {
@@ -80,13 +89,13 @@ func RunKubeValuesManager() {
 		* Если resource-version поменялся, то kubernetes возвращает какой-то ответ с новым ресурсом
 			* запоминаем в глобальную переменную новый resourceVersion
 			* читаем values из этого ConfigMap
-				* Считаем md5 от yaml-строки, если поменялась, то обновляем глобальную переменную и генерим сигнал в ValuesUpdated
+				* Считаем md5 от yaml-строки, если поменялась, то обновляем глобальную переменную и генерим сигнал в KubeValuesUpdated
 			* читаем все module values из этого же ConfigMap, для каждого
 				* Считаем md5 от yaml-строки -> фактический хэш
 				* Если фактический хэш совпадает с <module-name>-checksum => не делаем ничего
 				* Если фактический хэш не совпадает с <module-name>-checksum
 					* Если фактический хэш не совпадает с moduleValuesChecksum[module-name]
-						* Обновляем moduleValuesChecksum[module-name], генерим сигнал
+						* Обновляем moduleValuesChecksum[module-name], генерим сигнал KubeModuleValuesUpdated
 				* Считаем md5 от yaml-строки, если поменялась, то обновляем глобальную переменную и генерим сигнал в ModuleValuesUpdate
 	*/
 }
