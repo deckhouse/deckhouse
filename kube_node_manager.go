@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/romana/rlog"
 )
+
 var (
 	KubeNodesChanged chan bool
 )
@@ -13,9 +14,9 @@ var (
  */
 
 func InitKubeNodeManager() {
-	rlog.Info("Init config manager")
+	rlog.Info("Init kube node manager")
 }
 
 func RunKubeNodeManager() {
-	rlog.Info("Run config manager")
+	rlog.Info("Run kube node manager")
 }

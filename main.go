@@ -54,6 +54,9 @@ func Init() {
 		rlog.Errorf("Cannot read antiopa modules: %s", err)
 		os.Exit(1)
 	}
+	for _, moduleName := range modulesNames {
+		rlog.Debugf("Found module %s", moduleName)
+	}
 
 	values, err = readValues()
 	if err != nil {
@@ -66,6 +69,8 @@ func Init() {
 		rlog.Errorf("Cannot read modules values: %s", err)
 		os.Exit(1)
 	}
+
+	rlog.Debugf("Read values: %v %v", values, modulesValues)
 
 	retryModulesQueue = make([]string, 0)
 
@@ -100,44 +105,32 @@ func Run() {
 	go RunKubeNodeManager()
 	go RunRegistryManager()
 
+	RunModules()
+
 	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
 	nightRunTicker := time.NewTicker(time.Duration(300) * time.Second)
-
-	retryModulesQueue = make([]string, 0)
-	for _, moduleName := range modulesNames {
-		vals, err := PrepareModuleValues(moduleName)
-		if err != nil {
-			rlog.Errorf("Cannot prepare values for module %s: %s", moduleName, err)
-			continue
-		}
-
-		err = RunModule(moduleName, vals)
-		if err != nil {
-			rlog.Errorf("Module %s run failed: %s", moduleName, err)
-			retryModulesQueue = append(retryModulesQueue, moduleName)
-			continue
-		}
-	}
-	lastRunAt = time.Now()
 
 	for {
 		select {
 		case newKubevalues := <-KubeValuesUpdated:
 			kubeValues = newKubevalues
-			// runModules()
+			RunModules()
 
 		case moduleValuesUpdate := <-KubeModuleValuesUpdated:
 			kubeModulesValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
-			// runModules()
+
+			rlog.Infof("Module %s kube values has been updated, rerun ...")
+
+			RunModule(moduleValuesUpdate.ModuleName)
 
 		case <-retryModuleTicker.C:
 			if len(retryModulesQueue) > 0 {
 				retryModuleName := retryModulesQueue[0]
 				retryModulesQueue = retryModulesQueue[1:]
 
-				rlog.Infof("Retrying module %s", retryModuleName)
+				rlog.Infof("Retrying module %s ...", retryModuleName)
 
-				// runModule(retryModuleName)
+				RunModule(retryModuleName)
 			}
 
 		case <-nightRunTicker.C:
@@ -150,15 +143,67 @@ func Run() {
 
 					if lastRunAt.Before(nightRunTime) {
 						rlog.Infof("Night run modules ...")
-						// runModules()
+						RunModules()
 					}
+				} else {
+					rlog.Error(err)
 				}
 			}
+
 		case newImageId := <-ImageUpdated:
 			KubeUpdateDeployment(newImageId)
 			// TODO На этом можно выйти из программы, т.к. прилетел новый образ
+			// TODO Обрабатывать ошибки обновления и выходить только при отсутствии ошибок
 		}
 	}
+}
+
+func RunModules() {
+	retryModulesQueue = make([]string, 0)
+	for _, moduleName := range modulesNames {
+		RunModule(moduleName)
+	}
+	lastRunAt = time.Now()
+}
+
+func RunModule(ModuleName string) {
+	vals, err := PrepareModuleValues(ModuleName)
+	if err != nil {
+		retryModulesQueue = append(retryModulesQueue, ModuleName)
+		rlog.Errorf("Cannot prepare values for module %s: %s", ModuleName, err)
+		return
+	}
+
+	err = RunModuleBeforeHelmHooks(ModuleName, vals)
+	if err != nil {
+		retryModulesQueue = append(retryModulesQueue, ModuleName)
+		rlog.Errorf("Module %s before-helm hooks have failed: %s", ModuleName, err)
+		return
+	}
+
+	err = RunModuleHelmOrEntrypoint(ModuleName, vals)
+	if err != nil {
+		rlog.Errorf("Module %s run have failed: %s", ModuleName, err)
+	}
+
+	err = RunModuleAfterHelmHooks(ModuleName, vals)
+	if err != nil {
+		retryModulesQueue = append(retryModulesQueue, ModuleName)
+		rlog.Errorf("Module %s after-helm hooks have failed: %s", ModuleName, err)
+		return
+	}
+}
+
+func RunModuleBeforeHelmHooks(ModuleName string, Values map[string]interface{}) error {
+	return nil
+}
+
+func RunModuleAfterHelmHooks(ModuleName string, Values map[string]interface{}) error {
+	return nil
+}
+
+func RunModuleHelmOrEntrypoint(ModuleName string, Values map[string]interface{}) error {
+	return nil
 }
 
 func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
@@ -196,7 +241,9 @@ func readModulesNames() ([]string, error) {
 
 	res := make([]string, 0)
 	for _, file := range files {
-		res = append(res, file.Name())
+		if file.IsDir() {
+			res = append(res, file.Name())
+		}
 	}
 
 	return res, nil
@@ -219,7 +266,12 @@ func readValuesYamlFile(Path string) (map[string]interface{}, error) {
 }
 
 func readValues() (map[string]interface{}, error) {
-	return readValuesYamlFile(filepath.Join(WorkingDir, "values.yaml"))
+	path := filepath.Join(WorkingDir, "values.yaml")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return make(map[string]interface{}), nil
+	}
+
+	return readValuesYamlFile(path)
 }
 
 func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}, error) {
@@ -230,7 +282,12 @@ func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}
 	var err error
 
 	for _, moduleName := range ModulesNames {
-		values, err = readValuesYamlFile(filepath.Join(modulesDir, moduleName, "values.yaml"))
+		path := filepath.Join(modulesDir, moduleName, "values.yaml")
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue
+		}
+
+		values, err = readValuesYamlFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -239,17 +296,6 @@ func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}
 
 	return res, nil
 }
-
-// func runModules(scriptsDir string, modules []map[string]string) {
-// 	// Сброс очереди на рестарт
-// 	retryModulesQueue = make([]map[string]string, 0)
-
-// 	for _, module := range modules {
-// 		runModule(scriptsDir, module)
-// 	}
-
-// 	lastRunAt = time.Now()
-// }
 
 // func runModule(scriptsDir string, module map[string]string) {
 // 	var baseArgs []string
