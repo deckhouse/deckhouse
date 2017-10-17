@@ -1,8 +1,8 @@
 package main
 
 import (
-	registryclient "github.com/flant/docker-registry-client/registry"
 	"github.com/docker/distribution/reference"
+	registryclient "github.com/flant/docker-registry-client/registry"
 	"github.com/romana/rlog"
 )
 
@@ -12,8 +12,8 @@ import (
 
 var DockerRegistryInfo = map[string]map[string]string{
 	"registry.flant.com": map[string]string{
-		"url": "https://registry.flant.com",
-		"user": "oauth2",
+		"url":      "https://registry.flant.com",
+		"user":     "oauth2",
 		"password": "qweqwe",
 	},
 	// minikube specific
@@ -22,15 +22,14 @@ var DockerRegistryInfo = map[string]map[string]string{
 	},
 }
 
-
 //const DockerRegistryUrl = "https://registry.flant.com"
 //const DockerRegistryUser = "oauth2"
 //const DockerRegistryToken = ""
 
 type DockerImageInfo struct {
-	Registry string
+	Registry   string
 	Repository string
-	Tag string
+	Tag        string
 }
 
 func DockerRegistryGetImageId(image string) (string, error) {
@@ -82,13 +81,12 @@ func DockerParseImageName(imageName string) (imageInfo DockerImageInfo, err erro
 	}
 
 	imageInfo = DockerImageInfo{
-		Registry: reference.Domain(namedRef),
+		Registry:   reference.Domain(namedRef),
 		Repository: reference.Path(namedRef),
-		Tag: tag,
+		Tag:        tag,
 	}
 
 	rlog.Debugf("REGISTRY image %s parsed to reg=%s repo=%s tag=%s", imageName, imageInfo.Registry, imageInfo.Repository, imageInfo.Tag)
 
 	return
 }
-
