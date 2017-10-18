@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"github.com/romana/rlog"
@@ -17,6 +18,10 @@ var (
 
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
 func InitRegistryManager() {
+	// TODO Пока для доступа к registry.flant.com передаётся временный токен через переменную среды
+	GitlabToken := os.Getenv("GITLAB_TOKEN")
+	DockerRegistryInfo["registry.flant.com"]["password"] = GitlabToken
+
 	ImageUpdated = make(chan string)
 	AntiopaImageName = KubeGetPodImageName(Hostname)
 	AntiopaImageId, _ = DockerRegistryGetImageId(AntiopaImageName)

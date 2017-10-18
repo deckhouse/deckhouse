@@ -87,10 +87,6 @@ func Init() {
 		os.Exit(1)
 	}
 
-	// TODO Пока для доступа к registry.flant.com передаётся временный токен через переменную среды
-	GitlabToken := os.Getenv("GITLAB_TOKEN")
-	DockerRegistryInfo["registry.flant.com"]["password"] = GitlabToken
-
 	InitKube()
 
 	res, err := InitKubeValuesManager()
