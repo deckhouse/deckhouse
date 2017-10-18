@@ -1,16 +1,15 @@
 package main
 
 import (
-	_ "crypto/md5"
-	_ "encoding/hex"
-	_ "encoding/json"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
-	_ "time"
-
 	"github.com/romana/rlog"
-
+	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
+	_ "time"
 )
 
 /* Формат values:
@@ -29,8 +28,9 @@ var (
 	KubeValuesUpdated       chan map[string]interface{}
 	KubeModuleValuesUpdated chan KubeModuleValuesUpdate
 
-	valuesChecksum       string
-	moduleValuesChecksum map[string]string
+	kubeValuesChecksum         string
+	kubeModulesValuesChecksums map[string]string
+	knownCmResourceVersion     string
 )
 
 type KubeModuleValuesUpdate struct {
@@ -38,7 +38,7 @@ type KubeModuleValuesUpdate struct {
 	Values     map[string]interface{}
 }
 
-func getConfigMap2() (*v1.ConfigMap, error) {
+func getConfigMap() (*v1.ConfigMap, error) {
 	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get("antiopa", meta_v1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("ConfigMap '%s' is not found in namespace '%s'", "antiopa", KubernetesAntiopaNamespace)
@@ -55,28 +55,96 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error
 	return nil
 }
 
-func InitKubeValuesManager() (struct {
+type KubeValues struct {
 	Values        map[string]interface{}
 	ModulesValues map[string]map[string]interface{}
-}, error) {
+}
+
+func getConfigMapValues(CM *v1.ConfigMap) (map[string]interface{}, error) {
+	var res map[string]interface{}
+
+	if valuesYamlStr, hasKey := CM.Data["values"]; hasKey {
+		err := yaml.Unmarshal([]byte(valuesYamlStr), &res)
+		if err != nil {
+			return nil, fmt.Errorf("Bad ConfigMap yaml at key 'values': %s", err)
+		}
+	}
+
+	return res, nil
+}
+
+func getConfigMapModulesValues(CM *v1.ConfigMap) (map[string]map[string]interface{}, error) {
+	res := make(map[string]map[string]interface{})
+
+	for key, value := range CM.Data {
+		if strings.HasSuffix(key, "-values") {
+			moduleName := strings.TrimSuffix(key, "-values")
+
+			var moduleValues map[string]interface{}
+
+			err := yaml.Unmarshal([]byte(value), &moduleValues)
+			if err != nil {
+				return nil, fmt.Errorf("Bad ConfigMap yaml at key '%s': %s", key, err)
+			}
+
+			res[moduleName] = moduleValues
+		}
+	}
+
+	return res, nil
+}
+
+func calculateChecksum(Data string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(Data))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func InitKubeValuesManager() (KubeValues, error) {
 	rlog.Debug("Init kube values manager")
 
-	/*
-		* Достать через kubernetes-api текущую версию ConfigMap по api
-		* запоминаем в глобальную переменную resourceVersion
-		* читаем values из этого ConfigMap
-			* Прочесть текущий values
-			* Запомнить в переменной (глобальной) valuesChecksum md5 от yaml-строки, которую достали из ConfigMap
-		* читаем все module values из этого же ConfigMap
-			* Прочесть все остальные <module-name>-values (которые найдутся в configmap'е)
-			* Запомнить в переменной (глобальной) moduleValuesChecksum[module-name] md5 от yaml-строки, которую достали из ConfigMap
-		* Метод возвращает текущие значения values и modules-values разом. Любая возникающая ошибка тоже сразу возвращается.
-	*/
+	cm, err := getConfigMap()
+	if err != nil {
+		return KubeValues{}, err
+	}
 
-	return struct {
-		Values        map[string]interface{}
-		ModulesValues map[string]map[string]interface{}
-	}{make(map[string]interface{}), make(map[string]map[string]interface{})}, nil
+	var res KubeValues
+
+	if valuesYaml, hasKey := cm.Data["values"]; hasKey {
+		err := yaml.Unmarshal([]byte(valuesYaml), &res.Values)
+		if err != nil {
+			return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key 'values': %s", err)
+		}
+		kubeValuesChecksum = calculateChecksum(valuesYaml)
+	}
+
+	for key, value := range cm.Data {
+		if strings.HasSuffix(key, "-values") {
+			moduleName := strings.TrimSuffix(key, "-values")
+
+			var moduleValues map[string]interface{}
+
+			err := yaml.Unmarshal([]byte(value), &moduleValues)
+			if err != nil {
+				return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key '%s': %s", key, err)
+			}
+
+			res.ModulesValues[moduleName] = moduleValues
+			kubeModulesValuesChecksums[moduleName] = calculateChecksum(value)
+		}
+	}
+
+	modulesValues, err := getConfigMapModulesValues(cm)
+	if err != nil {
+		return KubeValues{}, err
+	}
+	for moduleName := range modulesValues {
+		kubeModulesValuesChecksums[moduleName] = calculateChecksum(cm.Data[fmt.Sprintf("%s-values", moduleName)])
+	}
+
+	knownCmResourceVersion = cm.ResourceVersion
+
+	return res, nil
 }
 
 func RunKubeValuesManager() {
