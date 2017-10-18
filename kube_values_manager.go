@@ -52,14 +52,14 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error
 	* Читаем текущий ConfigMap
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
 	 */
-  return nil
+	return nil
 }
 
 func InitKubeValuesManager() (struct {
 	Values        map[string]interface{}
 	ModulesValues map[string]map[string]interface{}
 }, error) {
-	rlog.Info("Init kube values manager")
+	rlog.Debug("Init kube values manager")
 
 	/*
 		* Достать через kubernetes-api текущую версию ConfigMap по api
@@ -80,7 +80,7 @@ func InitKubeValuesManager() (struct {
 }
 
 func RunKubeValuesManager() {
-	rlog.Info("Run config manager")
+	rlog.Debug("Run kube values manager")
 
 	/*
 		Это горутина, поэтому в цикле.

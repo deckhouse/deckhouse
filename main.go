@@ -6,7 +6,9 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -26,8 +28,7 @@ var (
 	retryModulesQueue []string
 
 	WorkingDir string
-
-	lastRunAt time.Time
+	TempDir    string
 
 	// Имя хоста совпадает с именем пода. Можно использовать для запросов API
 	Hostname string
@@ -46,6 +47,12 @@ func Init() {
 	WorkingDir, err = os.Getwd()
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot determine antiopa working dir: %s", err)
+		os.Exit(1)
+	}
+
+	TempDir, err = ioutil.TempDir("", "antiopa-")
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: cannot create antiopa temporary dir: %s", err)
 		os.Exit(1)
 	}
 
@@ -108,7 +115,6 @@ func Run() {
 	RunModules()
 
 	retryModuleTicker := time.NewTicker(time.Duration(30) * time.Second)
-	nightRunTicker := time.NewTicker(time.Duration(300) * time.Second)
 
 	for {
 		select {
@@ -133,23 +139,6 @@ func Run() {
 				RunModule(retryModuleName)
 			}
 
-		case <-nightRunTicker.C:
-			if len(modulesNames) > 0 {
-				now := time.Now()
-				mskLocation, err := time.LoadLocation("Europe/Moscow")
-				if err == nil {
-					// Ежедневный запуск в 3:45 по московскому времени
-					nightRunTime := time.Date(now.Year(), now.Month(), now.Day(), 3, 45, 0, 0, mskLocation)
-
-					if lastRunAt.Before(nightRunTime) {
-						rlog.Infof("Night run modules ...")
-						RunModules()
-					}
-				} else {
-					rlog.Error(err)
-				}
-			}
-
 		case newImageId := <-ImageUpdated:
 			KubeUpdateDeployment(newImageId)
 			// TODO На этом можно выйти из программы, т.к. прилетел новый образ
@@ -163,7 +152,6 @@ func RunModules() {
 	for _, moduleName := range modulesNames {
 		RunModule(moduleName)
 	}
-	lastRunAt = time.Now()
 }
 
 func RunModule(ModuleName string) {
@@ -173,6 +161,7 @@ func RunModule(ModuleName string) {
 		rlog.Errorf("Cannot prepare values for module %s: %s", ModuleName, err)
 		return
 	}
+	rlog.Debugf("PrepareModuleValues -> %v", vals)
 
 	err = RunModuleBeforeHelmHooks(ModuleName, vals)
 	if err != nil {
@@ -203,6 +192,55 @@ func RunModuleAfterHelmHooks(ModuleName string, Values map[string]interface{}) e
 }
 
 func RunModuleHelmOrEntrypoint(ModuleName string, Values map[string]interface{}) error {
+	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
+
+	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); os.IsExist(err) {
+		valuesPath, err := dumpModuleValuesYaml(ModuleName, Values)
+		if err != nil {
+			return err
+		}
+
+		entrypoint := "helm"
+		args := []string{"upgrade", "--install", "--values", valuesPath}
+
+		cmd := exec.Command(entrypoint, args...)
+		cmd.Dir = moduleDir
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		rlog.Infof("Running module %s helm ...", ModuleName)
+		rlog.Debugf("Module %s command: `%s %s`", ModuleName, entrypoint, strings.Join(args, " "))
+
+		err = cmd.Run()
+		if err != nil {
+			return fmt.Errorf("helm FAILED: %s", err)
+		}
+	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); os.IsExist(err) {
+		valuesPath, err := dumpModuleValuesYaml(ModuleName, Values)
+		if err != nil {
+			return err
+		}
+
+		entrypoint := "/bin/bash"
+		args := []string{"ctl.sh"}
+
+		cmd := exec.Command(entrypoint, args...)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
+		cmd.Dir = moduleDir
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		rlog.Infof("Running module %s ctl.sh ...", ModuleName)
+		rlog.Debugf("Module %s command: `%s %s`", ModuleName, entrypoint, strings.Join(args, " "))
+
+		err = cmd.Run()
+		if err != nil {
+			return fmt.Errorf("ctl.sh FAILED: %s", err)
+		}
+	} else {
+		rlog.Warnf("No helm chart or ctl.sh found for module %s", ModuleName)
+	}
+
 	return nil
 }
 
@@ -263,6 +301,26 @@ func readValuesYamlFile(Path string) (map[string]interface{}, error) {
 	}
 
 	return res, nil
+}
+
+func dumpModuleValuesYaml(ModuleName string, Values map[string]interface{}) (string, error) {
+	return dumpValuesYaml(fmt.Sprintf("%s.yaml", ModuleName), Values)
+}
+
+func dumpValuesYaml(FileName string, Values map[string]interface{}) (string, error) {
+	valuesYaml, err := yaml.Marshal(&Values)
+	if err != nil {
+		return "", err
+	}
+
+	filePath := filepath.Join(TempDir, FileName)
+
+	err = ioutil.WriteFile(filePath, valuesYaml, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	return filePath, nil
 }
 
 func readValues() (map[string]interface{}, error) {

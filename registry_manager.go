@@ -9,22 +9,25 @@ import (
 var (
 	// новый id образа с тем же именем
 	// (смена самого имени образа будет обрабатываться самим Deployment'ом автоматом)
-	ImageUpdated chan string
-	AntiopaImageId string
+	ImageUpdated     chan string
+	AntiopaImageId   string
 	AntiopaImageName string
+	PodName          string
 )
 
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
 func InitRegistryManager() {
 	ImageUpdated = make(chan string)
 	AntiopaImageName = KubeGetPodImageName(Hostname)
-	AntiopaImageId,_ = DockerRegistryGetImageId(AntiopaImageName)
+	AntiopaImageId, _ = DockerRegistryGetImageId(AntiopaImageName)
 }
 
 // RunRegistryManager каждые 10 секунд проверяет
 // не изменился ли id образа.
 func RunRegistryManager() {
-	ticker := time.NewTicker(time.Duration(10) * time.Second)
+	rlog.Debug("Run registry manager")
+
+	ticker := time.NewTicker(time.Duration(60) * time.Second)
 
 	for {
 		select {
@@ -42,4 +45,3 @@ func RunRegistryManager() {
 		}
 	}
 }
-

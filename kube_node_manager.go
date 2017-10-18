@@ -14,9 +14,9 @@ var (
  */
 
 func InitKubeNodeManager() {
-	rlog.Info("Init kube node manager")
+	rlog.Debug("Init kube node manager")
 }
 
 func RunKubeNodeManager() {
-	rlog.Info("Run kube node manager")
+	rlog.Debug("Run kube node manager")
 }
