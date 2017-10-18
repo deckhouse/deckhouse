@@ -1,10 +1,10 @@
 package main
 
 import (
-	"regexp"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/romana/rlog"
 
@@ -130,7 +130,7 @@ func KubeGetPodImageName(podName string) string {
 func KubeUpdateDeployment(imageId string) {
 	deploymentsClient := KubernetesClient.AppsV1beta1().Deployments(KubernetesAntiopaNamespace)
 
-	res,err := deploymentsClient.Get(KubeAntiopaDeploymentName, metav1.GetOptions{})
+	res, err := deploymentsClient.Get(KubeAntiopaDeploymentName, metav1.GetOptions{})
 
 	if err != nil {
 		rlog.Errorf("KUBE Cannot get antiopa deployment! %v", err)
