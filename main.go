@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
@@ -251,12 +252,25 @@ func RunModuleHelmOrEntrypoint(ModuleName string, ValuesPath string) error {
 }
 
 func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
-	valuesShPath := filepath.Join(WorkingDir, "modules", ModuleName, "values.sh")
+	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
+	valuesShPath := filepath.Join(moduleDir, "values.sh")
 
 	if _, err := os.Stat(valuesShPath); os.IsExist(err) {
-		generatedValues, err := runValuesSh(valuesShPath)
+		rlog.Debugf("Running values generator %s ...", valuesShPath)
+
+		var valuesYamlBuffer bytes.Buffer
+		cmd := exec.Command("/bin/bash", []string{valuesShPath}...)
+		cmd.Dir = moduleDir
+		cmd.Stdout = &valuesYamlBuffer
+		err := execCommand(cmd)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Values generator %s have FAILED: %s", valuesShPath, err)
+		}
+
+		var generatedValues map[string]interface{}
+		err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
+		if err != nil {
+			return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
 		}
 
 		newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
@@ -268,11 +282,6 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 	}
 
 	return MergeValues(values, modulesValues[ModuleName], kubeValues, kubeModulesValues[ModuleName]), nil
-}
-
-func runValuesSh(ValuesShPath string) (map[string]interface{}, error) {
-	// TODO
-	return make(map[string]interface{}), nil
 }
 
 func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
