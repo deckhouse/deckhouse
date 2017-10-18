@@ -157,21 +157,26 @@ func RunModule(ModuleName string) {
 		rlog.Errorf("Cannot prepare values for module %s: %s", ModuleName, err)
 		return
 	}
-	rlog.Debugf("PrepareModuleValues -> %v", vals)
 
-	err = RunModuleBeforeHelmHooks(ModuleName, vals)
+	valuesPath, err := dumpModuleValuesYaml(ModuleName, vals)
+	if err != nil {
+		rlog.Errorf("Cannot dump values yaml for module %s: %s", ModuleName, err)
+		return
+	}
+
+	err = RunModuleBeforeHelmHooks(ModuleName, valuesPath)
 	if err != nil {
 		retryModulesQueue = append(retryModulesQueue, ModuleName)
 		rlog.Errorf("Module %s before-helm hooks have failed: %s", ModuleName, err)
 		return
 	}
 
-	err = RunModuleHelmOrEntrypoint(ModuleName, vals)
+	err = RunModuleHelmOrEntrypoint(ModuleName, valuesPath)
 	if err != nil {
 		rlog.Errorf("Module %s run have failed: %s", ModuleName, err)
 	}
 
-	err = RunModuleAfterHelmHooks(ModuleName, vals)
+	err = RunModuleAfterHelmHooks(ModuleName, valuesPath)
 	if err != nil {
 		retryModulesQueue = append(retryModulesQueue, ModuleName)
 		rlog.Errorf("Module %s after-helm hooks have failed: %s", ModuleName, err)
@@ -179,57 +184,62 @@ func RunModule(ModuleName string) {
 	}
 }
 
-func RunModuleBeforeHelmHooks(ModuleName string, Values map[string]interface{}) error {
+func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
+	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
+	hooksDir := filepath.Join(moduleDir, "before-helm")
+
+	hooksNames, err := readDirectoryFilesNames(hooksDir)
+	if err != nil {
+		return err
+	}
+
+	for _, hookName := range hooksNames {
+		rlog.Infof("Running module %s before-helm hook %s ...", ModuleName, hookName)
+
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "bin/bash", []string{filepath.Join(hooksDir, hookName)}))
+		if err != nil {
+			return fmt.Errorf("before-helm hook %s FAILED: %s", hookName, err)
+		}
+	}
+
 	return nil
 }
 
-func RunModuleAfterHelmHooks(ModuleName string, Values map[string]interface{}) error {
+func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
+	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
+	hooksDir := filepath.Join(moduleDir, "after-helm")
+
+	hooksNames, err := readDirectoryFilesNames(hooksDir)
+	if err != nil {
+		return err
+	}
+
+	for _, hookName := range hooksNames {
+		rlog.Infof("Running module %s after-helm hook %s ...", ModuleName, hookName)
+
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "bin/bash", []string{filepath.Join(hooksDir, hookName)}))
+		if err != nil {
+			return fmt.Errorf("after-helm hook %s FAILED: %s", hookName, err)
+		}
+	}
+
 	return nil
 }
 
-func RunModuleHelmOrEntrypoint(ModuleName string, Values map[string]interface{}) error {
+func RunModuleHelmOrEntrypoint(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 
 	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); os.IsExist(err) {
-		valuesPath, err := dumpModuleValuesYaml(ModuleName, Values)
-		if err != nil {
-			return err
-		}
-
-		entrypoint := "helm"
-		args := []string{"upgrade", "--install", "--values", valuesPath}
-
-		cmd := exec.Command(entrypoint, args...)
-		cmd.Dir = moduleDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
 		rlog.Infof("Running module %s helm ...", ModuleName)
-		rlog.Debugf("Module %s command: `%s %s`", ModuleName, entrypoint, strings.Join(args, " "))
 
-		err = cmd.Run()
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", "--install", "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
 	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); os.IsExist(err) {
-		valuesPath, err := dumpModuleValuesYaml(ModuleName, Values)
-		if err != nil {
-			return err
-		}
-
-		entrypoint := "/bin/bash"
-		args := []string{"ctl.sh"}
-
-		cmd := exec.Command(entrypoint, args...)
-		cmd.Env = append(cmd.Env, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
-		cmd.Dir = moduleDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
 		rlog.Infof("Running module %s ctl.sh ...", ModuleName)
-		rlog.Debugf("Module %s command: `%s %s`", ModuleName, entrypoint, strings.Join(args, " "))
 
-		err = cmd.Run()
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{"ctl.sh"}))
 		if err != nil {
 			return fmt.Errorf("ctl.sh FAILED: %s", err)
 		}
@@ -263,6 +273,37 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 func runValuesSh(ValuesShPath string) (map[string]interface{}, error) {
 	// TODO
 	return make(map[string]interface{}), nil
+}
+
+func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
+	cmd := exec.Command(Entrypoint, Args...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("VALUES_PATH=%s", ValuesPath))
+	cmd.Dir = ModuleDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd
+}
+
+func execCommand(cmd *exec.Cmd) error {
+	rlog.Debugf("Executing command in %s: `%s %s`", cmd.Dir, cmd.Path, strings.Join(cmd.Args, " "))
+	return cmd.Run()
+}
+
+func readDirectoryFilesNames(Dir string) ([]string, error) {
+	files, err := ioutil.ReadDir(Dir)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]string, 0)
+	for _, file := range files {
+		if !file.IsDir() {
+			res = append(res, file.Name())
+		}
+	}
+
+	return res, nil
 }
 
 func readModulesNames() ([]string, error) {
