@@ -18,9 +18,9 @@ var (
 	modulesNames []string
 
 	// values для всех модулей, для всех кластеров
-	values map[string]interface{}
+	globalValues map[string]interface{}
 	// values для конкретного модуля, для всех кластеров
-	modulesValues map[string]map[string]interface{}
+	globalModulesValues map[string]map[string]interface{}
 	// values для всех модулей, для конкретного кластера
 	kubeValues map[string]interface{}
 	// values для конкретного модуля, для конкретного кластера
@@ -66,19 +66,19 @@ func Init() {
 		rlog.Debugf("Found module %s", moduleName)
 	}
 
-	values, err = readValues()
+	globalValues, err = readValues()
 	if err != nil {
 		rlog.Errorf("Cannot read values: %s", err)
 		os.Exit(1)
 	}
+	rlog.Debugf("Initialized global VALUES: %s", globalValues)
 
-	modulesValues, err = readModulesValues(modulesNames)
+	globalModulesValues, err = readModulesValues(modulesNames)
 	if err != nil {
 		rlog.Errorf("Cannot read modules values: %s", err)
 		os.Exit(1)
 	}
-
-	rlog.Debugf("Read values: %v %v", values, modulesValues)
+	rlog.Debugf("Initialized global modules VALUES: %s", globalModulesValues)
 
 	retryModulesQueue = make([]string, 0)
 
@@ -158,6 +158,7 @@ func RunModule(ModuleName string) {
 		rlog.Errorf("Cannot prepare values for module %s: %s", ModuleName, err)
 		return
 	}
+	rlog.Debugf("Prepared module %s VALUES: %v", ModuleName, vals)
 
 	valuesPath, err := dumpModuleValuesYaml(ModuleName, vals)
 	if err != nil {
@@ -277,14 +278,12 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 			return nil, fmt.Errorf("Values generator %s have FAILED: %s", valuesShPath, err)
 		}
 
-		rlog.Debugf("GOT values.sh res: %v", valuesYamlBuffer.String())
-
 		var generatedValues map[string]interface{}
 		err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
 		if err != nil {
 			return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
 		}
-		rlog.Debugf("GOT values.sh yaml: %v", generatedValues)
+		rlog.Debugf("got VALUES from values.sh: %v", generatedValues)
 
 		newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
 
@@ -297,7 +296,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 		kubeModulesValues[ModuleName] = newModuleValues
 	}
 
-	return MergeValues(values, modulesValues[ModuleName], kubeValues, kubeModulesValues[ModuleName]), nil
+	return MergeValues(globalValues, globalModulesValues[ModuleName], kubeValues, kubeModulesValues[ModuleName]), nil
 }
 
 func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
@@ -399,15 +398,13 @@ func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}
 
 	res := make(map[string]map[string]interface{})
 
-	var err error
-
 	for _, moduleName := range ModulesNames {
 		path := filepath.Join(modulesDir, moduleName, "values.yaml")
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			continue
 		}
 
-		values, err = readValuesYamlFile(path)
+		values, err := readValuesYamlFile(path)
 		if err != nil {
 			return nil, err
 		}
