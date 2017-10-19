@@ -13,8 +13,8 @@ spec:
         - name: registrysecret
       containers:
         - name: antiopa
-          command: ["/antiopa"]
-          image: {{ tuple . | include "dimg" }}
+          command: ["/antiopa/antiopa"]
+          image: {{ tuple "antiopa" . | include "dimg" }}
           imagePullPolicy: Always
           env:
             - name: KUBERNETES_DEPLOYED
@@ -27,6 +27,14 @@ spec:
           volumeMounts:
             - mountPath: /antiopa-run
               name: antiopa
+{{- if eq .Values.global.kubeapitester "true" }}
+        # образ для ручного тестирования kube api
+        - name: kube-api-tester
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "trap : TERM INT; sleep infinity & wait" ]
+          image: {{ tuple "kube-api-tester" . | include "dimg" }}
+          imagePullPolicy: Always
+{{- end }}
       volumes:
         - name: antiopa
           persistentVolumeClaim:
