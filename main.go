@@ -310,7 +310,7 @@ func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, A
 }
 
 func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in %s: `%s %s`", cmd.Dir, cmd.Path, strings.Join(cmd.Args, " "))
+	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
 	return cmd.Run()
 }
 
@@ -413,100 +413,3 @@ func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}
 
 	return res, nil
 }
-
-// func runModule(scriptsDir string, module map[string]string) {
-// 	var baseArgs []string
-
-// 	entrypoint := module["entrypoint"]
-// 	if entrypoint == "" {
-// 		entrypoint = "bash"
-// 		baseArgs = append(baseArgs, "ctl.sh")
-// 	}
-
-// 	isFirstRun := (getModuleStatus(module["name"])["installed"] != "true")
-// 	firstRunUserArgs, firstRunUserArgsExist := module["first_run_args"]
-
-// 	if isFirstRun && firstRunUserArgsExist {
-// 		args := append(baseArgs, strings.Fields(firstRunUserArgs)...)
-
-// 		cmd := exec.Command(entrypoint, args...)
-// 		cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
-// 		cmd.Stdout = os.Stdout
-// 		cmd.Stderr = os.Stderr
-
-// 		rlog.Infof("Running module %s (first run) ...", module["name"])
-// 		rlog.Debugf("Module %s command: `%s %s`", module["name"], entrypoint, strings.Join(args, " "))
-
-// 		err := cmd.Run()
-// 		if err == nil {
-// 			setModuleStatus(module["name"], map[string]string{"installed": "true"})
-// 			rlog.Infof("Module %s first run OK", module["name"])
-// 		} else {
-// 			retryModulesQueue = append(retryModulesQueue, module)
-// 			rlog.Errorf("Module %s FAILED: %s", module["name"], err)
-// 			return
-// 		}
-// 	}
-
-// 	args := append(baseArgs, strings.Fields(module["args"])...)
-// 	cmd := exec.Command(entrypoint, args...)
-
-// 	cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
-// 	cmd.Stdout = os.Stdout
-// 	cmd.Stderr = os.Stderr
-
-// 	rlog.Infof("Running module %s ...", module["name"])
-// 	rlog.Debugf("Module %s command: `%s %s`", module["name"], entrypoint, strings.Join(args, " "))
-
-// 	err := cmd.Run()
-// 	if err == nil {
-// 		rlog.Infof("Module %s OK", module["name"])
-// 	} else {
-// 		retryModulesQueue = append(retryModulesQueue, module)
-// 		rlog.Errorf("Module %s FAILED: %s", module["name"], err)
-// 	}
-
-// 	return
-// }
-
-// func getModuleStatus(moduleName string) (res map[string]string) {
-// 	p := path.Join(ModulesStatusDir, moduleName)
-// 	if _, err := os.Stat(p); os.IsNotExist(err) {
-// 		return make(map[string]string)
-// 	}
-
-// 	dat, err := ioutil.ReadFile(p)
-// 	if err != nil {
-// 		return make(map[string]string)
-// 	}
-// 	if len(dat) > 0 {
-// 		dat = dat[:len(dat)-1]
-// 	}
-
-// 	if err := json.Unmarshal(dat, &res); err != nil {
-// 		return make(map[string]string)
-// 	}
-
-// 	return
-// }
-
-// func setModuleStatus(moduleName string, moduleStatus map[string]string) error {
-// 	dat, err := json.Marshal(moduleStatus)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	dat = append(dat, []byte("\n")...)
-
-// 	if _, err := os.Stat(ModulesStatusDir); os.IsNotExist(err) {
-// 		if err = os.MkdirAll(ModulesStatusDir, 0777); err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	if err = ioutil.WriteFile(path.Join(ModulesStatusDir, moduleName), dat, 0644); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
