@@ -154,8 +154,8 @@ func RunModules() {
 func RunModule(ModuleName string) {
 	vals, err := PrepareModuleValues(ModuleName)
 	if err != nil {
-		retryModulesQueue = append(retryModulesQueue, ModuleName)
 		rlog.Errorf("Cannot prepare values for module %s: %s", ModuleName, err)
+		retryModulesQueue = append(retryModulesQueue, ModuleName)
 		return
 	}
 	rlog.Debugf("Prepared module %s VALUES: %v", ModuleName, vals)
@@ -163,25 +163,27 @@ func RunModule(ModuleName string) {
 	valuesPath, err := dumpModuleValuesYaml(ModuleName, vals)
 	if err != nil {
 		rlog.Errorf("Cannot dump values yaml for module %s: %s", ModuleName, err)
+		retryModulesQueue = append(retryModulesQueue, ModuleName)
 		return
 	}
 
 	err = RunModuleBeforeHelmHooks(ModuleName, valuesPath)
 	if err != nil {
+		rlog.Errorf("Module %s before-helm hooks error: %s", ModuleName, err)
 		retryModulesQueue = append(retryModulesQueue, ModuleName)
-		rlog.Errorf("Module %s before-helm hooks have failed: %s", ModuleName, err)
 		return
 	}
 
 	err = RunModuleHelmOrEntrypoint(ModuleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s run have failed: %s", ModuleName, err)
+		rlog.Errorf("Module %s run error: %s", ModuleName, err)
+		retryModulesQueue = append(retryModulesQueue, ModuleName)
 	}
 
 	err = RunModuleAfterHelmHooks(ModuleName, valuesPath)
 	if err != nil {
+		rlog.Errorf("Module %s after-helm hooks error: %s", ModuleName, err)
 		retryModulesQueue = append(retryModulesQueue, ModuleName)
-		rlog.Errorf("Module %s after-helm hooks have failed: %s", ModuleName, err)
 		return
 	}
 }
@@ -275,7 +277,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 		cmd.Stdout = &valuesYamlBuffer
 		err := execCommand(cmd)
 		if err != nil {
-			return nil, fmt.Errorf("Values generator %s have FAILED: %s", valuesShPath, err)
+			return nil, fmt.Errorf("Values generator %s error: %s", valuesShPath, err)
 		}
 
 		var generatedValues map[string]interface{}
