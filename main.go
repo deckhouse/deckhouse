@@ -277,13 +277,19 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 			return nil, fmt.Errorf("Values generator %s have FAILED: %s", valuesShPath, err)
 		}
 
+		rlog.Debugf("GOT values.sh res: %v", valuesYamlBuffer.String())
+
 		var generatedValues map[string]interface{}
 		err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
 		if err != nil {
 			return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
 		}
+		rlog.Debugf("GOT values.sh yaml: %v", generatedValues)
 
 		newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
+
+		rlog.Debugf("Setting module %s values in ConfigMap: %v", ModuleName, newModuleValues)
+
 		err = SetModuleKubeValues(ModuleName, newModuleValues)
 		if err != nil {
 			return nil, err
