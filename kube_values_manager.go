@@ -87,6 +87,8 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error
 		knownCmResourceVersion = updatedCm.ResourceVersion
 	} else {
 		cm := v1.ConfigMap{}
+		cm.Name = "antiopa"
+		cm.Data = make(map[string]string)
 
 		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
 		cm.Data[fmt.Sprintf("%s-checksum", ModuleName)] = checksum
@@ -149,46 +151,64 @@ func calculateChecksum(Data string) string {
 func InitKubeValuesManager() (KubeValues, error) {
 	rlog.Debug("Init kube values manager")
 
-	cm, err := getConfigMap()
-	if err != nil {
-		return KubeValues{}, err
-	}
+	kubeModulesValuesChecksums = make(map[string]string)
 
 	var res KubeValues
+	res.Values = make(map[string]interface{})
+	res.ModulesValues = make(map[string]map[string]interface{})
 
-	if valuesYaml, hasKey := cm.Data["values"]; hasKey {
-		err := yaml.Unmarshal([]byte(valuesYaml), &res.Values)
-		if err != nil {
-			return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key 'values': %s", err)
-		}
-		kubeValuesChecksum = calculateChecksum(valuesYaml)
-	}
-
-	for key, value := range cm.Data {
-		if strings.HasSuffix(key, "-values") {
-			moduleName := strings.TrimSuffix(key, "-values")
-
-			var moduleValues map[string]interface{}
-
-			err := yaml.Unmarshal([]byte(value), &moduleValues)
-			if err != nil {
-				return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key '%s': %s", key, err)
-			}
-
-			res.ModulesValues[moduleName] = moduleValues
-			kubeModulesValuesChecksums[moduleName] = calculateChecksum(value)
-		}
-	}
-
-	modulesValues, err := getConfigMapModulesValues(cm)
+	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(meta_v1.ListOptions{})
 	if err != nil {
 		return KubeValues{}, err
 	}
-	for moduleName := range modulesValues {
-		kubeModulesValuesChecksums[moduleName] = calculateChecksum(cm.Data[fmt.Sprintf("%s-values", moduleName)])
+	cmExist := false
+	for _, cm := range cmList.Items {
+		if cm.ObjectMeta.Name == "antiopa" {
+			cmExist = true
+			break
+		}
 	}
 
-	knownCmResourceVersion = cm.ResourceVersion
+	if cmExist {
+		cm, err := getConfigMap()
+		if err != nil {
+			return KubeValues{}, err
+		}
+
+		if valuesYaml, hasKey := cm.Data["values"]; hasKey {
+			err := yaml.Unmarshal([]byte(valuesYaml), &res.Values)
+			if err != nil {
+				return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key 'values': %s", err)
+			}
+			kubeValuesChecksum = calculateChecksum(valuesYaml)
+		}
+
+		for key, value := range cm.Data {
+			if strings.HasSuffix(key, "-values") {
+				moduleName := strings.TrimSuffix(key, "-values")
+
+				moduleValues := make(map[string]interface{})
+
+				err := yaml.Unmarshal([]byte(value), &moduleValues)
+				if err != nil {
+					return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key '%s': %s", key, err)
+				}
+
+				res.ModulesValues[moduleName] = moduleValues
+				kubeModulesValuesChecksums[moduleName] = calculateChecksum(value)
+			}
+		}
+
+		modulesValues, err := getConfigMapModulesValues(cm)
+		if err != nil {
+			return KubeValues{}, err
+		}
+		for moduleName := range modulesValues {
+			kubeModulesValuesChecksums[moduleName] = calculateChecksum(cm.Data[fmt.Sprintf("%s-values", moduleName)])
+		}
+
+		knownCmResourceVersion = cm.ResourceVersion
+	}
 
 	return res, nil
 }

@@ -18,9 +18,9 @@ var (
 	modulesNames []string
 
 	// values для всех модулей, для всех кластеров
-	values map[string]interface{}
+	globalValues map[string]interface{}
 	// values для конкретного модуля, для всех кластеров
-	modulesValues map[string]map[string]interface{}
+	globalModulesValues map[string]map[string]interface{}
 	// values для всех модулей, для конкретного кластера
 	kubeValues map[string]interface{}
 	// values для конкретного модуля, для конкретного кластера
@@ -66,19 +66,19 @@ func Init() {
 		rlog.Debugf("Found module %s", moduleName)
 	}
 
-	values, err = readValues()
+	globalValues, err = readValues()
 	if err != nil {
 		rlog.Errorf("Cannot read values: %s", err)
 		os.Exit(1)
 	}
+	rlog.Debugf("Initialized global VALUES: %s", globalValues)
 
-	modulesValues, err = readModulesValues(modulesNames)
+	globalModulesValues, err = readModulesValues(modulesNames)
 	if err != nil {
 		rlog.Errorf("Cannot read modules values: %s", err)
 		os.Exit(1)
 	}
-
-	rlog.Debugf("Read values: %v %v", values, modulesValues)
+	rlog.Debugf("Initialized global modules VALUES: %s", globalModulesValues)
 
 	retryModulesQueue = make([]string, 0)
 
@@ -158,6 +158,7 @@ func RunModule(ModuleName string) {
 		rlog.Errorf("Cannot prepare values for module %s: %s", ModuleName, err)
 		return
 	}
+	rlog.Debugf("Prepared module %s VALUES: %v", ModuleName, vals)
 
 	valuesPath, err := dumpModuleValuesYaml(ModuleName, vals)
 	if err != nil {
@@ -189,6 +190,10 @@ func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	hooksDir := filepath.Join(moduleDir, "before-helm")
 
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return nil
+	}
+
 	hooksNames, err := readDirectoryFilesNames(hooksDir)
 	if err != nil {
 		return err
@@ -210,6 +215,10 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	hooksDir := filepath.Join(moduleDir, "after-helm")
 
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return nil
+	}
+
 	hooksNames, err := readDirectoryFilesNames(hooksDir)
 	if err != nil {
 		return err
@@ -230,14 +239,16 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 func RunModuleHelmOrEntrypoint(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 
-	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); os.IsExist(err) {
+	rlog.Debugf("moduleDir = %s", moduleDir)
+
+	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); !os.IsNotExist(err) {
 		rlog.Infof("Running module %s helm ...", ModuleName)
 
 		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", "--install", "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
-	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); os.IsExist(err) {
+	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); !os.IsNotExist(err) {
 		rlog.Infof("Running module %s ctl.sh ...", ModuleName)
 
 		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{"ctl.sh"}))
@@ -255,7 +266,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	valuesShPath := filepath.Join(moduleDir, "values.sh")
 
-	if _, err := os.Stat(valuesShPath); os.IsExist(err) {
+	if _, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
 		rlog.Debugf("Running values generator %s ...", valuesShPath)
 
 		var valuesYamlBuffer bytes.Buffer
@@ -272,8 +283,12 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
 		}
+		rlog.Debugf("got VALUES from values.sh: %v", generatedValues)
 
 		newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
+
+		rlog.Debugf("Setting module %s values in ConfigMap: %v", ModuleName, newModuleValues)
+
 		err = SetModuleKubeValues(ModuleName, newModuleValues)
 		if err != nil {
 			return nil, err
@@ -281,7 +296,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 		kubeModulesValues[ModuleName] = newModuleValues
 	}
 
-	return MergeValues(values, modulesValues[ModuleName], kubeValues, kubeModulesValues[ModuleName]), nil
+	return MergeValues(globalValues, globalModulesValues[ModuleName], kubeValues, kubeModulesValues[ModuleName]), nil
 }
 
 func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
@@ -295,7 +310,7 @@ func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, A
 }
 
 func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in %s: `%s %s`", cmd.Dir, cmd.Path, strings.Join(cmd.Args, " "))
+	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
 	return cmd.Run()
 }
 
@@ -383,15 +398,13 @@ func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}
 
 	res := make(map[string]map[string]interface{})
 
-	var err error
-
 	for _, moduleName := range ModulesNames {
 		path := filepath.Join(modulesDir, moduleName, "values.yaml")
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			continue
 		}
 
-		values, err = readValuesYamlFile(path)
+		values, err := readValuesYamlFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -400,100 +413,3 @@ func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}
 
 	return res, nil
 }
-
-// func runModule(scriptsDir string, module map[string]string) {
-// 	var baseArgs []string
-
-// 	entrypoint := module["entrypoint"]
-// 	if entrypoint == "" {
-// 		entrypoint = "bash"
-// 		baseArgs = append(baseArgs, "ctl.sh")
-// 	}
-
-// 	isFirstRun := (getModuleStatus(module["name"])["installed"] != "true")
-// 	firstRunUserArgs, firstRunUserArgsExist := module["first_run_args"]
-
-// 	if isFirstRun && firstRunUserArgsExist {
-// 		args := append(baseArgs, strings.Fields(firstRunUserArgs)...)
-
-// 		cmd := exec.Command(entrypoint, args...)
-// 		cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
-// 		cmd.Stdout = os.Stdout
-// 		cmd.Stderr = os.Stderr
-
-// 		rlog.Infof("Running module %s (first run) ...", module["name"])
-// 		rlog.Debugf("Module %s command: `%s %s`", module["name"], entrypoint, strings.Join(args, " "))
-
-// 		err := cmd.Run()
-// 		if err == nil {
-// 			setModuleStatus(module["name"], map[string]string{"installed": "true"})
-// 			rlog.Infof("Module %s first run OK", module["name"])
-// 		} else {
-// 			retryModulesQueue = append(retryModulesQueue, module)
-// 			rlog.Errorf("Module %s FAILED: %s", module["name"], err)
-// 			return
-// 		}
-// 	}
-
-// 	args := append(baseArgs, strings.Fields(module["args"])...)
-// 	cmd := exec.Command(entrypoint, args...)
-
-// 	cmd.Dir = filepath.Join(scriptsDir, "modules", module["name"])
-// 	cmd.Stdout = os.Stdout
-// 	cmd.Stderr = os.Stderr
-
-// 	rlog.Infof("Running module %s ...", module["name"])
-// 	rlog.Debugf("Module %s command: `%s %s`", module["name"], entrypoint, strings.Join(args, " "))
-
-// 	err := cmd.Run()
-// 	if err == nil {
-// 		rlog.Infof("Module %s OK", module["name"])
-// 	} else {
-// 		retryModulesQueue = append(retryModulesQueue, module)
-// 		rlog.Errorf("Module %s FAILED: %s", module["name"], err)
-// 	}
-
-// 	return
-// }
-
-// func getModuleStatus(moduleName string) (res map[string]string) {
-// 	p := path.Join(ModulesStatusDir, moduleName)
-// 	if _, err := os.Stat(p); os.IsNotExist(err) {
-// 		return make(map[string]string)
-// 	}
-
-// 	dat, err := ioutil.ReadFile(p)
-// 	if err != nil {
-// 		return make(map[string]string)
-// 	}
-// 	if len(dat) > 0 {
-// 		dat = dat[:len(dat)-1]
-// 	}
-
-// 	if err := json.Unmarshal(dat, &res); err != nil {
-// 		return make(map[string]string)
-// 	}
-
-// 	return
-// }
-
-// func setModuleStatus(moduleName string, moduleStatus map[string]string) error {
-// 	dat, err := json.Marshal(moduleStatus)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	dat = append(dat, []byte("\n")...)
-
-// 	if _, err := os.Stat(ModulesStatusDir); os.IsNotExist(err) {
-// 		if err = os.MkdirAll(ModulesStatusDir, 0777); err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	if err = ioutil.WriteFile(path.Join(ModulesStatusDir, moduleName), dat, 0644); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
