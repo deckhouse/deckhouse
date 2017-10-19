@@ -137,9 +137,13 @@ func Run() {
 			}
 
 		case newImageId := <-ImageUpdated:
-			KubeUpdateDeployment(newImageId)
-			// TODO На этом можно выйти из программы, т.к. прилетел новый образ
-			// TODO Обрабатывать ошибки обновления и выходить только при отсутствии ошибок
+			err := KubeUpdateDeployment(newImageId)
+			if err == nil {
+				rlog.Infof("KUBE deployment update successful, exiting ...")
+				os.Exit(1)
+			} else {
+				rlog.Errorf("KUBE deployment update error: %s", err)
+			}
 		}
 	}
 }

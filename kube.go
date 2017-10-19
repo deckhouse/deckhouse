@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -127,14 +128,13 @@ func KubeGetPodImageName(podName string) string {
 
 // KubeUpdateDeployment - меняет лейбл antiopaImageName на новый id образа antiopa
 // тем самым заставляя kubernetes обновить Pod.
-func KubeUpdateDeployment(imageId string) {
+func KubeUpdateDeployment(imageId string) error {
 	deploymentsClient := KubernetesClient.AppsV1beta1().Deployments(KubernetesAntiopaNamespace)
 
 	res, err := deploymentsClient.Get(KubeAntiopaDeploymentName, metav1.GetOptions{})
 
 	if err != nil {
-		rlog.Errorf("KUBE Cannot get antiopa deployment! %v", err)
-		return
+		return fmt.Errorf("Cannot get antiopa deployment! %v", err)
 	}
 
 	res.Spec.Template.Labels["antiopaImageName"] = NormalizeLabelValue(imageId)
@@ -142,12 +142,12 @@ func KubeUpdateDeployment(imageId string) {
 	if _, err := deploymentsClient.Update(res); errors.IsConflict(err) {
 		// Deployment is modified in the meanwhile, query the latest version
 		// and modify the retrieved object.
-		rlog.Errorf("KUBE Deployment manifest changed during update: %v", err)
+		return fmt.Errorf("Manifest changed during update: %v", err)
 	} else if err != nil {
-		rlog.Errorf("KUBE Deployment update failed: %v", err)
+		return err
 	}
 
-	return
+	return nil
 }
 
 var NonSafeCharsRegexp = regexp.MustCompile(`[^a-zA-Z0-9]`)
