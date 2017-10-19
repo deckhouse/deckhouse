@@ -189,6 +189,10 @@ func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	hooksDir := filepath.Join(moduleDir, "before-helm")
 
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return nil
+	}
+
 	hooksNames, err := readDirectoryFilesNames(hooksDir)
 	if err != nil {
 		return err
@@ -210,6 +214,10 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	hooksDir := filepath.Join(moduleDir, "after-helm")
 
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return nil
+	}
+
 	hooksNames, err := readDirectoryFilesNames(hooksDir)
 	if err != nil {
 		return err
@@ -230,14 +238,16 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 func RunModuleHelmOrEntrypoint(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 
-	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); os.IsExist(err) {
+	rlog.Debugf("moduleDir = %s", moduleDir)
+
+	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); !os.IsNotExist(err) {
 		rlog.Infof("Running module %s helm ...", ModuleName)
 
 		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", "--install", "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
-	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); os.IsExist(err) {
+	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); !os.IsNotExist(err) {
 		rlog.Infof("Running module %s ctl.sh ...", ModuleName)
 
 		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{"ctl.sh"}))
@@ -255,7 +265,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	valuesShPath := filepath.Join(moduleDir, "values.sh")
 
-	if _, err := os.Stat(valuesShPath); os.IsExist(err) {
+	if _, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
 		rlog.Debugf("Running values generator %s ...", valuesShPath)
 
 		var valuesYamlBuffer bytes.Buffer
