@@ -149,12 +149,15 @@ func calculateChecksum(Data string) string {
 func InitKubeValuesManager() (KubeValues, error) {
 	rlog.Debug("Init kube values manager")
 
+	kubeModulesValuesChecksums = make(map[string]string)
+
 	cm, err := getConfigMap()
 	if err != nil {
 		return KubeValues{}, err
 	}
 
 	var res KubeValues
+	res.ModulesValues = make(map[string]map[string]interface{})
 
 	if valuesYaml, hasKey := cm.Data["values"]; hasKey {
 		err := yaml.Unmarshal([]byte(valuesYaml), &res.Values)
@@ -168,7 +171,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 		if strings.HasSuffix(key, "-values") {
 			moduleName := strings.TrimSuffix(key, "-values")
 
-			var moduleValues map[string]interface{}
+			moduleValues := make(map[string]interface{})
 
 			err := yaml.Unmarshal([]byte(value), &moduleValues)
 			if err != nil {
