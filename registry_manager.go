@@ -32,7 +32,7 @@ func InitRegistryManager() {
 func RunRegistryManager() {
 	rlog.Debug("Run registry manager")
 
-	ticker := time.NewTicker(time.Duration(60) * time.Second)
+	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
 	for {
 		select {
