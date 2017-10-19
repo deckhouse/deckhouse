@@ -41,7 +41,7 @@ type KubeModuleValuesUpdate struct {
 func getConfigMap() (*v1.ConfigMap, error) {
 	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get("antiopa", meta_v1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("ConfigMap '%s' is not found in namespace '%s'", "antiopa", KubernetesAntiopaNamespace)
+		return nil, fmt.Errorf("Cannot get ConfigMap %s from namespace %s: %s", "antiopa", KubernetesAntiopaNamespace, err)
 	}
 
 	return configMap, nil
@@ -49,9 +49,55 @@ func getConfigMap() (*v1.ConfigMap, error) {
 
 func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error {
 	/*
-	* Читаем текущий ConfigMap
+	* Читаем текущий ConfigMap, создать если нету
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
 	 */
+
+	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(meta_v1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	cmExist := false
+	for _, cm := range cmList.Items {
+		if cm.ObjectMeta.Name == "antiopa" {
+			cmExist = true
+			break
+		}
+	}
+
+	valuesYaml, err := yaml.Marshal(&Values)
+	if err != nil {
+		return err
+	}
+	checksum := calculateChecksum(string(valuesYaml))
+
+	if cmExist {
+		cm, err := getConfigMap()
+		if err != nil {
+			return err
+		}
+
+		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
+		cm.Data[fmt.Sprintf("%s-checksum", ModuleName)] = checksum
+
+		updatedCm, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Update(cm)
+		if err != nil {
+			return err
+		}
+		knownCmResourceVersion = updatedCm.ResourceVersion
+	} else {
+		cm := v1.ConfigMap{}
+
+		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
+		cm.Data[fmt.Sprintf("%s-checksum", ModuleName)] = checksum
+
+		updatedCm, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Create(&cm)
+		if err != nil {
+			return err
+		}
+		knownCmResourceVersion = updatedCm.ResourceVersion
+	}
+
 	return nil
 }
 
