@@ -26,15 +26,49 @@ dimg_group do
     end
   end
 
+  artifact do
+    docker.from 'ubuntu:16.04'
+    shell.before_install do
+      run 'apt-get update -y'
+      run 'apt-get -y install curl ca-certificates'
+
+      run 'curl -LsO https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl'
+      run 'chmod +x kubectl'
+
+      run 'curl -LsO https://storage.googleapis.com/kubernetes-helm/helm-v2.5.0-linux-amd64.tar.gz'
+      run 'tar zxf helm-v2.5.0-linux-amd64.tar.gz'
+      run 'chmod +x linux-amd64/helm'
+    end
+
+    shell.install do
+      run 'mkdir /antiopa'
+    end
+
+    export '/kubectl' do
+      to '/usr/local/bin/kubectl'
+      before 'install'
+    end
+    export '/linux-amd64/helm' do
+      to '/usr/local/bin/helm'
+      before 'install'
+    end
+    export '/etc/ssl/certs' do
+      to '/etc/ssl/certs'
+      before 'install'
+    end
+  end
+
   dimg 'antiopa' do
     docker.from 'ubuntu:16.04'
     git do
       add '/modules' do
         to '/antiopa/modules'
+        stage_dependencies.setup '**'
       end
-      add '/values.yaml' do
-        to '/antiopa/values.yaml'
-      end
+    end
+
+    shell.before_install do
+      run 'mkdir -p /etc/ssl/certs'
     end
   end
 end

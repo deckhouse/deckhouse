@@ -84,7 +84,7 @@ func InitKube() {
 
 	rlog.Info("KUBE-INIT Successfully connected to kubernetes")
 
-	// TODO: Запуск tiller
+	HelmInit()
 }
 
 func KubeGetDeploymentImageName() string {
@@ -137,7 +137,7 @@ func KubeUpdateDeployment(imageId string) error {
 		return fmt.Errorf("Cannot get antiopa deployment! %v", err)
 	}
 
-	res.Spec.Template.Labels["antiopaImageName"] = NormalizeLabelValue(imageId)
+	res.Spec.Template.Labels["antiopaImageId"] = NormalizeLabelValue(imageId)
 
 	if _, err := deploymentsClient.Update(res); errors.IsConflict(err) {
 		// Deployment is modified in the meanwhile, query the latest version
@@ -153,7 +153,7 @@ func KubeUpdateDeployment(imageId string) error {
 var NonSafeCharsRegexp = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 func NormalizeLabelValue(value string) string {
-	newVal := NonSafeCharsRegexp.ReplaceAllLiteralString(value, "")
+	newVal := NonSafeCharsRegexp.ReplaceAllLiteralString(value, "_")
 	labelLen := len(newVal)
 	if labelLen > 63 {
 		labelLen = 63
