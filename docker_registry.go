@@ -4,6 +4,8 @@ import (
 	"github.com/docker/distribution/reference"
 	registryclient "github.com/flant/docker-registry-client/registry"
 	"github.com/romana/rlog"
+	"net/http"
+	"strings"
 )
 
 // TODO данные для доступа к registry серверам нужно хранить в secret-ах.
@@ -49,13 +51,12 @@ func DockerRegistryGetImageId(image string) (string, error) {
 	}
 
 	// Установить соединение с registry
-	registry, err := registryclient.New(url, user, password)
-	if err != nil {
-		return "", err
-	}
+	registry := NewDockerRegistry(url, user, password)
+
 	// Получить описание образа
 	antiopaManifest, err := registry.ManifestV2(imageInfo.Repository, imageInfo.Tag)
 	if err != nil {
+		rlog.Errorf("REGISTRY cannot get manifest for %s:%s: %v", imageInfo.Repository, imageInfo.Tag, err)
 		return "", err
 	}
 
@@ -89,4 +90,25 @@ func DockerParseImageName(imageName string) (imageInfo DockerImageInfo, err erro
 	rlog.Debugf("REGISTRY image %s parsed to reg=%s repo=%s tag=%s", imageName, imageInfo.Registry, imageInfo.Repository, imageInfo.Tag)
 
 	return
+}
+
+func RegistryClientLogCallback(format string, args ...interface{}) {
+	rlog.Debugf(format, args...)
+}
+
+// NewDockerRegistry - ручной конструктор клиента, как рекомендовано в комментариях
+// к registryclient.New.
+// Этот конструктор не запускает registry.Ping и логирует события через rlog.
+func NewDockerRegistry(registryUrl, username, password string) *registryclient.Registry {
+	url := strings.TrimSuffix(registryUrl, "/")
+	transport := http.DefaultTransport
+	transport = registryclient.WrapTransport(transport, url, username, password)
+
+	return &registryclient.Registry{
+		URL: url,
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Logf: RegistryClientLogCallback,
+	}
 }

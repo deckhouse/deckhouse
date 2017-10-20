@@ -4,12 +4,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	_ "time"
+
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
-	_ "time"
 )
 
 /* Формат values:
@@ -23,6 +24,8 @@ data:
 		<values-yaml>
 	<module-name>-checksum: <checksum-of-values-yaml> // устанавливается самой antiopa
 */
+
+const AntiopaConfigMap = "antiopa"
 
 var (
 	KubeValuesUpdated       chan map[string]interface{}
@@ -39,9 +42,9 @@ type KubeModuleValuesUpdate struct {
 }
 
 func getConfigMap() (*v1.ConfigMap, error) {
-	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get("antiopa", meta_v1.GetOptions{})
+	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get(AntiopaConfigMap, meta_v1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("Cannot get ConfigMap %s from namespace %s: %s", "antiopa", KubernetesAntiopaNamespace, err)
+		return nil, fmt.Errorf("Cannot get ConfigMap %s from namespace %s: %s", AntiopaConfigMap, KubernetesAntiopaNamespace, err)
 	}
 
 	return configMap, nil
@@ -87,7 +90,7 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error
 		knownCmResourceVersion = updatedCm.ResourceVersion
 	} else {
 		cm := v1.ConfigMap{}
-		cm.Name = "antiopa"
+		cm.Name = AntiopaConfigMap
 		cm.Data = make(map[string]string)
 
 		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
@@ -163,7 +166,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 	}
 	cmExist := false
 	for _, cm := range cmList.Items {
-		if cm.ObjectMeta.Name == "antiopa" {
+		if cm.ObjectMeta.Name == AntiopaConfigMap {
 			cmExist = true
 			break
 		}

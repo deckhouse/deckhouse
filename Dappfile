@@ -1,41 +1,11 @@
 dimg_group do
-
-  shell.before_install do
-    run 'apt-get update',
-        'apt-get -q -y install git openssl apt-transport-https ca-certificates curl g++ gcc libc6-dev make python3 pkg-config libssl-dev cmake'
-
-    run 'cd',
-        'curl -fsSL https://github.com/libssh2/libssh2/archive/libssh2-1.7.0.tar.gz -o libssh2.tar.gz',
-        'mkdir libgit2',
-        'tar xvf libssh2.tar.gz -C libgit2',
-        'ls -la libgit2',
-        'cd libgit2/libssh2-libssh2-1.7.0',
-        'cmake -DBUILD_SHARED_LIBS=ON .',
-        'cmake --build .',
-        'make',
-        'make install',
-        'ldconfig'
-
-    run 'cd',
-        'curl -fsSL https://github.com/libgit2/libgit2/archive/v0.24.1.tar.gz -o v0.24.1.tar.gz',
-        'tar xvf v0.24.1.tar.gz -C libgit2',
-        'cd libgit2/libgit2-0.24.1',
-        'cmake -DCURL=OFF .',
-        'cmake --build .',
-        'make',
-        'make install',
-        'ldconfig'
-
-    run 'rm -rf ~/libgit2'
-  end
-
   artifact do
     docker.from 'golang:1.8'
 
     git do
       add '/' do
         to '/go/src/github.com/deckhouse/deckhouse'
-        exclude_paths 'playground', 'play-git'
+        exclude_paths 'playground', 'play-registry'
         stage_dependencies.install '**/*.go'
       end
     end
@@ -51,22 +21,80 @@ dimg_group do
     end
 
     export '/go/src/github.com/deckhouse/deckhouse/antiopa' do
-      to '/antiopa'
+      to '/antiopa/antiopa'
+      before 'setup'
+    end
+  end
+
+  artifact do
+    docker.from 'ubuntu:16.04'
+    shell.before_install do
+      run 'apt-get update -y'
+      run 'apt-get -y install curl ca-certificates'
+
+      run 'curl -LsO https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl'
+      run 'chmod +x kubectl'
+
+      run 'curl -LsO https://storage.googleapis.com/kubernetes-helm/helm-v2.5.0-linux-amd64.tar.gz'
+      run 'tar zxf helm-v2.5.0-linux-amd64.tar.gz'
+      run 'chmod +x linux-amd64/helm'
+    end
+
+    shell.install do
+      run 'mkdir /antiopa'
+    end
+
+    export '/kubectl' do
+      to '/usr/local/bin/kubectl'
+      before 'install'
+    end
+    export '/linux-amd64/helm' do
+      to '/usr/local/bin/helm'
+      before 'install'
+    end
+    export '/etc/ssl/certs' do
+      to '/etc/ssl/certs'
       before 'install'
     end
   end
 
-  dimg do
+  dimg 'antiopa' do
     docker.from 'ubuntu:16.04'
+    git do
+      add '/modules' do
+        to '/antiopa/modules'
+        stage_dependencies.setup '**'
+      end
+    end
 
     shell.before_install do
-      run 'apt-get -y install iproute2 tcpdump nmap jq apache2-utils'
+      run 'mkdir -p /etc/ssl/certs'
+    end
+  end
+end
+
+# Образ для экспериментов с Kubernetes API
+dimg_group do
+  dimg 'kube-api-tester' do
+    docker.from 'ubuntu:16.04'
+    shell.before_install do
+      run 'apt-get update -y'
+      run 'apt-get -y install iproute2 tcpdump nmap curl apache2-utils'
+      run 'apt-get -y install git jq python3'
+      run 'apt-get -y install gnupg2 libssh2-1-dev libssl-dev cmake'
+
       run 'curl -L https://raw.githubusercontent.com/micha/resty/master/resty > /usr/bin/resty'
       run 'chmod +x /usr/bin/resty'
       run 'echo "export TERM=xterm" >> /etc/bash.bashrc'
 
       run 'curl -L https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
       run 'chmod +x /usr/local/bin/kubectl'
+
+      run 'gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3'
+      run 'curl -sSL https://get.rvm.io | bash -s stable --ruby'
+      run 'source /etc/profile.d/rvm.sh'
+      run 'rvm install ruby'
+      run 'gem install dapp'
     end
 
     shell.install do
@@ -86,10 +114,8 @@ dimg_group do
         to '/kube_api'
       end
       add '/' do
-        to '/app/src/github.com/deckhouse/deckhouse'
+        to '/go/src/github.com/deckhouse/deckhouse'
       end
     end
-
   end
-
 end

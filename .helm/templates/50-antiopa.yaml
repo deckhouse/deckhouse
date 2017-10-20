@@ -9,12 +9,14 @@ spec:
       labels:
         service: antiopa
     spec:
+{{- if ne .Values.global.env "minikube" }}
       imagePullSecrets:
         - name: registrysecret
+{{-end}}
       containers:
         - name: antiopa
-          command: ["/antiopa"]
-          image: {{ tuple . | include "dimg" }}
+          command: ["/antiopa/antiopa"]
+          image: {{ tuple "antiopa" . | include "dimg" }}
           imagePullPolicy: Always
           env:
             - name: KUBERNETES_DEPLOYED
@@ -24,14 +26,22 @@ spec:
             # временный токен, пока нет bootsrtap.sh и не убрали токен в секреты.
             - name: GITLAB_TOKEN
               value: nyx_JqnnTaGody8cpnKq
-          volumeMounts:
-            - mountPath: /antiopa-run
-              name: antiopa
-      volumes:
-        - name: antiopa
-          persistentVolumeClaim:
-            claimName: antiopa
+{{- if eq .Values.global.kubeapitester "true" }}
+        # образ для ручного тестирования kube api
+        - name: kube-api-tester
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "trap : TERM INT; sleep infinity & wait" ]
+          image: {{ tuple "kube-api-tester" . | include "dimg" }}
+          imagePullPolicy: Always
+{{- end }}
       serviceAccount: antiopa
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: antiopa-secret
+data:
+  gitlab-token: {{ .Values}}
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1

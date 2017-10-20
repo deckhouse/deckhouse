@@ -391,7 +391,7 @@ func dumpValuesYaml(FileName string, Values map[string]interface{}) (string, err
 }
 
 func readValues() (map[string]interface{}, error) {
-	path := filepath.Join(WorkingDir, "values.yaml")
+	path := filepath.Join(WorkingDir, "modules", "values.yaml")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return make(map[string]interface{}), nil
 	}
