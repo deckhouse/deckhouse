@@ -14,7 +14,7 @@ main() {
   OUT_FILE=${OUT_FILE:-}
   LOG_LEVEL=${LOG_LEVEL:-'INFO'}
 
-  parse_args "$@" || usage
+  parse_args "$@" || (usage && exit 1)
 
   if [[ $REGISTRY == ":minikube" ]]; then
     REGISTRY="localhost:5000"
