@@ -8,7 +8,8 @@ set -e
 main() {
   NAMESPACE=${NAMESPACE:-'antiopa'}
   REGISTRY=${REGISTRY:-'registry.flant.com'}
-  IMAGE=${IMAGE:-'antiopa:stable'}
+  BRANCH=${BRANCH:-'stable'}
+  IMAGE=${IMAGE:-"antiopa:antiopa-$BRANCH"}
   TOKEN=${TOKEN:-}
   DRY_RUN=${DRY_RUN:-0}
   OUT_FILE=${OUT_FILE:-}
