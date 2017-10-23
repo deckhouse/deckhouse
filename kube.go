@@ -83,8 +83,6 @@ func InitKube() {
 	}
 
 	rlog.Info("KUBE-INIT Successfully connected to kubernetes")
-
-	HelmInit()
 }
 
 func KubeGetDeploymentImageName() string {

@@ -85,6 +85,10 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error
 			return err
 		}
 
+		if cm.Data == nil {
+			cm.Data = make(map[string]string)
+		}
+
 		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
 		cm.Data[fmt.Sprintf("%s-checksum", ModuleName)] = checksum
 
