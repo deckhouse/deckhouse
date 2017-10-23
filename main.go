@@ -250,7 +250,9 @@ func RunModuleHelmOrEntrypoint(ModuleName string, ValuesPath string) error {
 	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); !os.IsNotExist(err) {
 		rlog.Infof("Running module %s helm ...", ModuleName)
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", "--install", "--values", ValuesPath}))
+		helmReleaseName := fmt.Sprintf("antiopa-%s", ModuleName)
+
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
