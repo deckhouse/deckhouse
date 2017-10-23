@@ -78,7 +78,8 @@ func InitHelm() {
 // Можно ставить в другой namespace, можно в тот же, где сама antiopa.
 // TODO Есть переменная TILLER_NAMESPACE - можно её поставить ещё на этапе деплоя
 func HelmTillerNamespace() string {
-	return "kube-system"
+	return KubernetesAntiopaNamespace
+	//return fmt.Sprintf("%s-tiller", KubernetesAntiopaNamespace)
 }
 
 // HelmCmd запускает helm с переданными аргументами
