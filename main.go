@@ -279,6 +279,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 
 		var valuesYamlBuffer bytes.Buffer
 		cmd := exec.Command("/bin/bash", []string{valuesShPath}...)
+		cmd.Env = append(cmd.Env, os.Environ()...)
 		cmd.Dir = moduleDir
 		cmd.Stdout = &valuesYamlBuffer
 		err := execCommand(cmd)
@@ -309,7 +310,13 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 
 func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
 	cmd := exec.Command(Entrypoint, Args...)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("VALUES_PATH=%s", ValuesPath))
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Env = append(
+		cmd.Env,
+		fmt.Sprintf("VALUES_PATH=%s", ValuesPath),
+		fmt.Sprintf("TILLER_NAMESPACE=%s", HelmTillerNamespace()),
+	)
+
 	cmd.Dir = ModuleDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
