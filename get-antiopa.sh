@@ -12,9 +12,9 @@ main() {
   TOKEN=${TOKEN:-}
   DRY_RUN=${DRY_RUN:-0}
   OUT_FILE=${OUT_FILE:-}
-  LOG_LEVEL={$LOG_LEVEL:-'INFO'}
+  LOG_LEVEL=${LOG_LEVEL:-'INFO'}
 
-  parse_args "$@" || usage
+  parse_args "$@" || (usage && exit 1)
 
   if [[ $REGISTRY == ":minikube" ]]; then
     REGISTRY="localhost:5000"
@@ -125,13 +125,12 @@ generate_yaml() {
   then
 
     local AUTH_CFG_BASE64=$(cat <<- JSON | base64 -w0
-{
-  "auths": {
-    "$REGISTRY": {
-      "auth": "$(echo -n "oauth2:${TOKEN}" | base64 -w0)",
-      "email": "some@email.com"
-    }
-  }
+{"$REGISTRY": {
+  "username": "oauth2",
+  "password": "${TOKEN}",
+  "auth": "$(echo -n "oauth2:${TOKEN}" | base64 -w0)",
+  "email": "some@email.com"
+ }
 }
 JSON
 )
@@ -148,7 +147,7 @@ data:
 YAML
 )
     IMAGE_PULL_SECRETS=$(cat <<- YAML
-    imagePullSecrets:
+      imagePullSecrets:
         - name: registrysecret
 YAML
 )
@@ -261,16 +260,28 @@ kind: ConfigMap
 metadata:
   name: antiopa
 data:
-	#values: |
-	#	go:
-	#	- 2
-	#test1-values: |
-	#	go:
-	#	- 4
-	#	- 6
-	#	- 7
-	#test2-values: |
-	#  key: value
+  help-example: |
+    ---
+    section 'help-example' section is not nedded. You can remove it after adding real values.
+    ConfigMap 'antiopa' contains global values under 'values' key and module specific values
+    under <module>-values keys.
+    Antiopa will add keys <module>-checksum. Deletion of this keys will re-run modules.
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+    name: antiopa
+    data:
+      values: |
+	      go:
+	      - 2
+	    test1-values: |
+	      go:
+	      - 4
+	      - 6
+	      - 7
+	    test2-values: |
+	      key: value
 YAML
 )
 
