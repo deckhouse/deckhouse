@@ -6,29 +6,29 @@ import (
 )
 
 func TestMergeValues(t *testing.T) {
-	a := map[string]interface{}{
-		"one": map[string]interface{}{
-			"from-a":    []string{"one", "two", "three"},
-			"from-both": []string{"one", "three", "five", "seven", "nine", "eleven"},
+	a := map[interface{}]interface{}{
+		"one": map[interface{}]interface{}{
+			"from-a":    []interface{}{"one", "two", "three"},
+			"from-both": []interface{}{"one", "three", "five", "seven", "nine", "eleven"},
 		},
 		"two":   2,
 		"three": "3",
 	}
 
-	b := map[string]interface{}{
-		"one": map[string]interface{}{
-			"from-b":    []string{"one", "two", "three"},
-			"from-both": []string{"two", "four", "six", "eight", "ten", "twelve"},
+	b := map[interface{}]interface{}{
+		"one": map[interface{}]interface{}{
+			"from-b":    []interface{}{"one", "two", "three"},
+			"from-both": []interface{}{"two", "four", "six", "eight", "ten", "twelve"},
 		},
 		"three": 3,
 		"four":  4,
 	}
 
-	expectedRes := map[string]interface{}{
-		"one": map[string]interface{}{
-			"from-a":    []string{"one", "two", "three"},
-			"from-b":    []string{"one", "two", "three"},
-			"from-both": []string{"one", "three", "five", "seven", "nine", "eleven", "two", "four", "six", "eight", "ten", "twelve"},
+	expectedRes := map[interface{}]interface{}{
+		"one": map[interface{}]interface{}{
+			"from-a":    []interface{}{"one", "two", "three"},
+			"from-b":    []interface{}{"one", "two", "three"},
+			"from-both": []interface{}{"one", "three", "five", "seven", "nine", "eleven", "two", "four", "six", "eight", "ten", "twelve"},
 		},
 		"two":   2,
 		"three": 3,
@@ -38,6 +38,6 @@ func TestMergeValues(t *testing.T) {
 	res := MergeValues(a, b)
 
 	if !reflect.DeepEqual(res, expectedRes) {
-		t.Errorf("Merge %v with %v failed: expected %v, got %v", a, b, expectedRes, res)
+		t.Errorf("MERGE FAILED\nMAP-1:\n%v\nMAP-2:\n%v\nEXPECTED:\n%v\nGOT:\n%v", a, b, expectedRes, res)
 	}
 }

@@ -28,7 +28,7 @@ data:
 const AntiopaConfigMap = "antiopa"
 
 var (
-	KubeValuesUpdated       chan map[string]interface{}
+	KubeValuesUpdated       chan map[interface{}]interface{}
 	KubeModuleValuesUpdated chan KubeModuleValuesUpdate
 
 	kubeValuesChecksum         string
@@ -38,7 +38,7 @@ var (
 
 type KubeModuleValuesUpdate struct {
 	ModuleName string
-	Values     map[string]interface{}
+	Values     map[interface{}]interface{}
 }
 
 func getConfigMap() (*v1.ConfigMap, error) {
@@ -55,7 +55,7 @@ func getConfigMap() (*v1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error {
+func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) error {
 	/*
 	* Читаем текущий ConfigMap, создать если нету
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
@@ -116,12 +116,12 @@ func SetModuleKubeValues(ModuleName string, Values map[string]interface{}) error
 }
 
 type KubeValues struct {
-	Values        map[string]interface{}
-	ModulesValues map[string]map[string]interface{}
+	Values        map[interface{}]interface{}
+	ModulesValues map[string]map[interface{}]interface{}
 }
 
-func getConfigMapValues(CM *v1.ConfigMap) (map[string]interface{}, error) {
-	var res map[string]interface{}
+func getConfigMapValues(CM *v1.ConfigMap) (map[interface{}]interface{}, error) {
+	var res map[interface{}]interface{}
 
 	if valuesYamlStr, hasKey := CM.Data["values"]; hasKey {
 		err := yaml.Unmarshal([]byte(valuesYamlStr), &res)
@@ -133,14 +133,14 @@ func getConfigMapValues(CM *v1.ConfigMap) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func getConfigMapModulesValues(CM *v1.ConfigMap) (map[string]map[string]interface{}, error) {
-	res := make(map[string]map[string]interface{})
+func getConfigMapModulesValues(CM *v1.ConfigMap) (map[string]map[interface{}]interface{}, error) {
+	res := make(map[string]map[interface{}]interface{})
 
 	for key, value := range CM.Data {
 		if strings.HasSuffix(key, "-values") {
 			moduleName := strings.TrimSuffix(key, "-values")
 
-			var moduleValues map[string]interface{}
+			var moduleValues map[interface{}]interface{}
 
 			err := yaml.Unmarshal([]byte(value), &moduleValues)
 			if err != nil {
@@ -166,8 +166,8 @@ func InitKubeValuesManager() (KubeValues, error) {
 	kubeModulesValuesChecksums = make(map[string]string)
 
 	var res KubeValues
-	res.Values = make(map[string]interface{})
-	res.ModulesValues = make(map[string]map[string]interface{})
+	res.Values = make(map[interface{}]interface{})
+	res.ModulesValues = make(map[string]map[interface{}]interface{})
 
 	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(meta_v1.ListOptions{})
 	if err != nil {
@@ -199,7 +199,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 			if strings.HasSuffix(key, "-values") {
 				moduleName := strings.TrimSuffix(key, "-values")
 
-				moduleValues := make(map[string]interface{})
+				moduleValues := make(map[interface{}]interface{})
 
 				err := yaml.Unmarshal([]byte(value), &moduleValues)
 				if err != nil {
