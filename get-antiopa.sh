@@ -12,9 +12,9 @@ main() {
   TOKEN=${TOKEN:-}
   DRY_RUN=${DRY_RUN:-0}
   OUT_FILE=${OUT_FILE:-}
-  LOG_LEVEL={$LOG_LEVEL:-'INFO'}
+  LOG_LEVEL=${LOG_LEVEL:-'INFO'}
 
-  parse_args "$@" || usage
+  parse_args "$@" || (usage && exit 1)
 
   if [[ $REGISTRY == ":minikube" ]]; then
     REGISTRY="localhost:5000"
@@ -148,7 +148,7 @@ data:
 YAML
 )
     IMAGE_PULL_SECRETS=$(cat <<- YAML
-    imagePullSecrets:
+      imagePullSecrets:
         - name: registrysecret
 YAML
 )
