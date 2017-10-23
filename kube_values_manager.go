@@ -47,6 +47,11 @@ func getConfigMap() (*v1.ConfigMap, error) {
 		return nil, fmt.Errorf("Cannot get ConfigMap %s from namespace %s: %s", AntiopaConfigMap, KubernetesAntiopaNamespace, err)
 	}
 
+	// Data может придти пустой - нужно создать карту перед добавлением туда значений.
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
 	return configMap, nil
 }
 
