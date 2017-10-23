@@ -33,6 +33,21 @@ func InitHelm() {
 	if !helmInitialized {
 		rlog.Infof("HELM-INIT Initializing tiller in namespace %s", HelmTillerNamespace())
 
+		_, err := KubernetesClient.CoreV1().Namespaces().Get(HelmTillerNamespace(), meta_v1.GetOptions{})
+		if err != nil && errors.IsNotFound(err) {
+			ns := v1.Namespace{}
+			ns.Name = HelmTillerNamespace()
+
+			_, err = KubernetesClient.CoreV1().Namespaces().Create(&ns)
+			if err != nil {
+				rlog.Errorf("HELM-INIT: %s", err)
+				return
+			}
+		} else if err != nil {
+			rlog.Errorf("HELM-INIT: %s", err)
+			return
+		}
+
 		// Взято из https://github.com/kubernetes/helm/blob/master/docs/service_accounts.md#example-service-account-with-cluster-admin-role
 
 		serviceAccount := v1.ServiceAccount{}
