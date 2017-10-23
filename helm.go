@@ -8,27 +8,68 @@ import (
 	"strings"
 
 	"github.com/romana/rlog"
+	v1 "k8s.io/api/core/v1"
+	rbacapi "k8s.io/api/rbac/v1beta1"
+	errors "k8s.io/apimachinery/pkg/api/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HelmInit запускает установку tiller-a.
-func HelmInit() {
-	rlog.Infof("Start helm init. Use TILLER_NAMESPACE=%s", HelmTillerNamespace())
+// InitHelm запускает установку tiller-a.
+func InitHelm() {
 
-	stdout, stderr, err := HelmCmd("init")
-
+	svcList, err := KubernetesClient.CoreV1().Services(HelmTillerNamespace()).List(meta_v1.ListOptions{})
 	if err != nil {
-		rlog.Errorf("helm init error: %v", err)
+		rlog.Errorf("HELM-INIT: %s", err)
+		return
 	}
 
-	rlog.Infof("helm init output: %v %v", stdout, stderr)
-
-	stdout, stderr, err = HelmCmd("version")
-
-	if err != nil {
-		rlog.Errorf("helm version error: %v", err)
+	helmInitialized := false
+	for _, item := range svcList.Items {
+		if item.Name == "tiller-deploy" {
+			helmInitialized = true
+		}
 	}
 
-	rlog.Infof("helm version output: %v %v", stdout, stderr)
+	if !helmInitialized {
+		rlog.Infof("HELM-INIT Initializing tiller in namespace %s", HelmTillerNamespace())
+
+		serviceAccount := v1.ServiceAccount{}
+		serviceAccount.Name = "tiller"
+
+		_, err = KubernetesClient.CoreV1().ServiceAccounts(HelmTillerNamespace()).Create(&serviceAccount)
+		if err != nil && !errors.IsAlreadyExists(err) {
+			rlog.Errorf("HELM-INIT Unable to create tiller ServiceAccount: %s", err)
+			return
+		}
+
+		clusterRoleBinding := rbacapi.ClusterRoleBinding{}
+		clusterRoleBinding.Name = "tiller"
+		clusterRoleBinding.RoleRef.APIGroup = "rbac.authorization.k8s.io"
+		clusterRoleBinding.RoleRef.Kind = "ClusterRole"
+		clusterRoleBinding.RoleRef.Name = "cluster-admin"
+		clusterRoleBinding.Subjects = []rbacapi.Subject{
+			rbacapi.Subject{Kind: "ServiceAccount", Name: "tiller", Namespace: HelmTillerNamespace()},
+		}
+
+		_, err = KubernetesClient.RbacV1beta1().ClusterRoleBindings().Create(&clusterRoleBinding)
+		if err != nil && !errors.IsAlreadyExists(err) {
+			rlog.Errorf("HELM-INIT Unable to create tiller ClusterRoleBinding: %s", err)
+			return
+		}
+
+		stdout, stderr, err := HelmCmd("init", "--service-account", "tiller")
+		if err != nil {
+			rlog.Errorf("HELM-INIT: %s", err)
+			return
+		}
+		rlog.Infof("HELM-INIT Initialization done: %v %v", stdout, stderr)
+	}
+
+	stdout, stderr, err := HelmCmd("version")
+	if err != nil {
+		rlog.Errorf("HELM-INIT Unable to get helm version: %v", err)
+	}
+	rlog.Infof("HELM-INIT helm version:\n%v %v", stdout, stderr)
 }
 
 // HelmTillerNamespace возвращает имя namespace, куда устаналивается tiller

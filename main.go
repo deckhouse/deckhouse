@@ -89,6 +89,7 @@ func Init() {
 	}
 
 	InitKube()
+	InitHelm()
 
 	res, err := InitKubeValuesManager()
 	if err != nil {
