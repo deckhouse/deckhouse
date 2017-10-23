@@ -16,7 +16,6 @@ import (
 
 // InitHelm запускает установку tiller-a.
 func InitHelm() {
-
 	svcList, err := KubernetesClient.CoreV1().Services(HelmTillerNamespace()).List(meta_v1.ListOptions{})
 	if err != nil {
 		rlog.Errorf("HELM-INIT: %s", err)
@@ -27,11 +26,14 @@ func InitHelm() {
 	for _, item := range svcList.Items {
 		if item.Name == "tiller-deploy" {
 			helmInitialized = true
+			break
 		}
 	}
 
 	if !helmInitialized {
 		rlog.Infof("HELM-INIT Initializing tiller in namespace %s", HelmTillerNamespace())
+
+		// Взято из https://github.com/kubernetes/helm/blob/master/docs/service_accounts.md#example-service-account-with-cluster-admin-role
 
 		serviceAccount := v1.ServiceAccount{}
 		serviceAccount.Name = "tiller"
