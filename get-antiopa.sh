@@ -148,7 +148,7 @@ data:
 YAML
 )
     IMAGE_PULL_SECRETS=$(cat <<- YAML
-    imagePullSecrets:
+      imagePullSecrets:
         - name: registrysecret
 YAML
 )
