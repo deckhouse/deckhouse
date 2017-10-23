@@ -1,0 +1,7 @@
+mysql:
+  root:
+    password: gfhjkm
+  user:
+    username: test3
+    password: gfhjkm
+  database: test3
