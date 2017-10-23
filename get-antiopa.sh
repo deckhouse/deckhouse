@@ -12,7 +12,7 @@ main() {
   TOKEN=${TOKEN:-}
   DRY_RUN=${DRY_RUN:-0}
   OUT_FILE=${OUT_FILE:-}
-  LOG_LEVEL={$LOG_LEVEL:-'INFO'}
+  LOG_LEVEL=${LOG_LEVEL:-'INFO'}
 
   parse_args "$@" || usage
 
