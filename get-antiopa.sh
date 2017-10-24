@@ -6,19 +6,19 @@ set -e
 #   $ sudo bash get-antiopa.sh
 
 main() {
-  NAMESPACE=${NAMESPACE:-'antiopa'}
-  REGISTRY=${REGISTRY:-'registry.flant.com'}
-  BRANCH=${BRANCH:-'stable'}
-  IMAGE=${IMAGE:-"antiopa:antiopa-$BRANCH"}
-  TOKEN=${TOKEN:-}
-  DRY_RUN=${DRY_RUN:-0}
-  OUT_FILE=${OUT_FILE:-}
-  LOG_LEVEL=${LOG_LEVEL:-'DEBUG'}
+  NAMESPACE='antiopa'
+  IMAGE_REGISTRY='registry.flant.com'
+  IMAGE_REPO='sys/antiopa'
+  BRANCH='stable'
+  TOKEN=''
+  DRY_RUN=0
+  OUT_FILE=''
+  LOG_LEVEL='DEBUG'
 
   parse_args "$@" || (usage && exit 1)
 
-  if [[ $REGISTRY == ":minikube" ]]; then
-    REGISTRY="localhost:5000"
+  if [[ $IMAGE_REGISTRY == ":minikube" ]]; then
+    IMAGE_REGISTRY="localhost:5000"
   fi
 
   MANIFESTS=
@@ -41,19 +41,24 @@ main() {
 
 
 usage() {
-printf " Usage: $0 -n <namespace> --token <gitlab user auth token> [--tag <image tag>] [--dry-run]
+printf " Usage: $0 -n <namespace> --token <gitlab user auth token> [--dry-run]
 
     -n, --namespace <namespace>
             Define kubernetes namespace.
             Default: antiopa
 
-    --registry <docker registry url>
+    --image-registry <docker registry url>
             URL of registry with antiopa image
             Default: registry.flant.com
 
-    --image <name:tag>
-            Antiopa image name. Use it for
-            Default: antiopa:stable
+    --image-repo <docker repo in specified registry>
+            Antiopa image repo in registry.
+            Specify <user>/antiopa to use <user>'s fork of antiopa.
+            Default: sys/antiopa
+
+    --branch <branch>
+            Use antiopa image version from specified git branch.
+            Default: stable
 
     --token <token>
             Auth token generated in gitlab user's profile.
@@ -84,11 +89,15 @@ parse_args() {
         NAMESPACE="$2"
         shift
         ;;
-      --registry)
-        REGISTRY="$2"
+      --image-registry)
+        IMAGE_REGISTRY="$2"
         shift;;
-      --image)
-        IMAGE="$2"
+      --image-repo)
+        IMAGE_REPO="$2"
+        shift
+        ;;
+      --branch)
+        BRANCH="$2"
         shift
         ;;
       --token)
@@ -126,7 +135,7 @@ generate_yaml() {
   then
 
     local AUTH_CFG_BASE64=$(cat <<- JSON | base64 -w0
-{"$REGISTRY": {
+{"$IMAGE_REGISTRY": {
   "username": "oauth2",
   "password": "${TOKEN}",
   "auth": "$(echo -n "oauth2:${TOKEN}" | base64 -w0)",
@@ -178,7 +187,7 @@ spec:
     spec:
       containers:
         - name: antiopa
-          image: ${REGISTRY}/${IMAGE}
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPO}:antiopa-${BRANCH}
           imagePullPolicy: Always
           command: ["/antiopa/antiopa"]
           workingDir: /antiopa
