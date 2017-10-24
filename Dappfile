@@ -49,6 +49,7 @@ dimg_group do
     shell.before_install do
       run 'apt-get update -y'
       run 'apt-get install -y curl ca-certificates'
+      run 'apt-get install -y makepasswd apache2-utils python3'
       run 'curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
       run 'chmod +x /usr/local/bin/kubectl'
 
