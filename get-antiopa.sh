@@ -236,7 +236,9 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: antiopa-cluster
+  name: antiopa-${NAMESPACE}
+  labels:
+    antiopa-namespace: ${NAMESPACE}
 rules:
 - apiGroups:
     - "*"
@@ -252,7 +254,9 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: antiopa-cluster-binding
+  name: antiopa-${NAMESPACE}
+  labels:
+    antiopa-namespace: ${NAMESPACE}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
