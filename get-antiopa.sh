@@ -2,8 +2,10 @@
 set -e
 
 # Antiopa installer
-#   $ curl -fLOs https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh
-#   $ sudo bash get-antiopa.sh
+# Usage:
+# $ TOKEN=$(cat); curl -fLs -H "PRIVATE-TOKEN: $TOKEN"  https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh | bash -s -- --token $TOKEN
+# iusdvhaoihuvdoaihuv
+# <Ctrl-D>
 
 main() {
   NAMESPACE='antiopa'
