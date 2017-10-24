@@ -52,7 +52,7 @@ dimg_group do
       run 'curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
       run 'chmod +x /usr/local/bin/kubectl'
 
-      run 'curl -Ls https://storage.googleapis.com/kubernetes-helm/helm-v2.5.0-linux-amd64.tar.gz | tar zx linux-amd64/helm -O > /usr/local/bin/helm'
+      run 'curl -Ls https://storage.googleapis.com/kubernetes-helm/helm-v2.6.1-linux-amd64.tar.gz | tar zx linux-amd64/helm -O > /usr/local/bin/helm'
       run 'chmod +x /usr/local/bin/helm'
     end
   end
