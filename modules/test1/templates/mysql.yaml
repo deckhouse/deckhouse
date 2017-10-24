@@ -2,16 +2,16 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: mysql
-  namespace: antiopa-test3
+  namespace: antiopa-test1
   labels:
-    component: test3-mysql
+    component: test1-mysql
 spec:
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        component: test3-mysql
+        component: test1-mysql
     spec:
       containers:
       - name: mysql
