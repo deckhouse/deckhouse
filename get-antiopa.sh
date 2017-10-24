@@ -260,7 +260,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: antiopa-cluster
+  name: ${NAMESPACE}-main
 subjects:
   - kind: ServiceAccount
     name: antiopa
