@@ -201,7 +201,7 @@ func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 		return nil
 	}
 
-	hooksNames, err := readDirectoryFilesNames(hooksDir)
+	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 	for _, hookName := range hooksNames {
 		rlog.Infof("Running module %s before-helm hook %s ...", ModuleName, hookName)
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{filepath.Join(hooksDir, hookName)}))
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
 		if err != nil {
 			return fmt.Errorf("before-helm hook %s FAILED: %s", hookName, err)
 		}
@@ -226,7 +226,7 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 		return nil
 	}
 
-	hooksNames, err := readDirectoryFilesNames(hooksDir)
+	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 	for _, hookName := range hooksNames {
 		rlog.Infof("Running module %s after-helm hook %s ...", ModuleName, hookName)
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{filepath.Join(hooksDir, hookName)}))
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
 		if err != nil {
 			return fmt.Errorf("after-helm hook %s FAILED: %s", hookName, err)
 		}
@@ -270,35 +270,42 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	valuesShPath := filepath.Join(moduleDir, "values.sh")
 
-	if _, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
-		rlog.Debugf("Running values generator %s ...", valuesShPath)
+	if statRes, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
+		// Тупой тест, что файл executable.
+		// Т.к. antiopa всегда работает под root, то этого достаточно.
+		if statRes.Mode()&0111 != 0 {
+			rlog.Debugf("Running values generator %s ...", valuesShPath)
 
-		var valuesYamlBuffer bytes.Buffer
-		cmd := exec.Command("/bin/bash", []string{valuesShPath}...)
-		cmd.Env = append(cmd.Env, os.Environ()...)
-		cmd.Dir = moduleDir
-		cmd.Stdout = &valuesYamlBuffer
-		err := execCommand(cmd)
-		if err != nil {
-			return nil, fmt.Errorf("Values generator %s error: %s", valuesShPath, err)
+			var valuesYamlBuffer bytes.Buffer
+			cmd := exec.Command(valuesShPath)
+			cmd.Env = append(cmd.Env, os.Environ()...)
+			cmd.Dir = moduleDir
+			cmd.Stdout = &valuesYamlBuffer
+			err := execCommand(cmd)
+			if err != nil {
+				return nil, fmt.Errorf("Values generator %s error: %s", valuesShPath, err)
+			}
+
+			var generatedValues map[string]interface{}
+			err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
+			if err != nil {
+				return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
+			}
+			rlog.Debugf("got VALUES from values.sh: %v", generatedValues)
+
+			newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
+
+			rlog.Debugf("Setting module %s values in ConfigMap: %v", ModuleName, newModuleValues)
+
+			err = SetModuleKubeValues(ModuleName, newModuleValues)
+			if err != nil {
+				return nil, err
+			}
+			kubeModulesValues[ModuleName] = newModuleValues
+		} else {
+			rlog.Warnf("Ignoring non executable file %s", valuesShPath)
 		}
 
-		var generatedValues map[string]interface{}
-		err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
-		if err != nil {
-			return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
-		}
-		rlog.Debugf("got VALUES from values.sh: %v", generatedValues)
-
-		newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
-
-		rlog.Debugf("Setting module %s values in ConfigMap: %v", ModuleName, newModuleValues)
-
-		err = SetModuleKubeValues(ModuleName, newModuleValues)
-		if err != nil {
-			return nil, err
-		}
-		kubeModulesValues[ModuleName] = newModuleValues
 	}
 
 	return MergeValues(globalValues, globalModulesValues[ModuleName], kubeValues, kubeModulesValues[ModuleName]), nil
@@ -325,7 +332,7 @@ func execCommand(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-func readDirectoryFilesNames(Dir string) ([]string, error) {
+func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
 	files, err := ioutil.ReadDir(Dir)
 	if err != nil {
 		return nil, err
@@ -333,8 +340,14 @@ func readDirectoryFilesNames(Dir string) ([]string, error) {
 
 	res := make([]string, 0)
 	for _, file := range files {
-		if !file.IsDir() {
+		// Тупой тест, что файл executable.
+		// Т.к. antiopa всегда работает под root, то этого достаточно.
+		isExecutable := !file.IsDir() && (file.Mode()&0111 != 0)
+
+		if isExecutable {
 			res = append(res, file.Name())
+		} else {
+			rlog.Warnf("Ignoring non executable file %s", filepath.Join(Dir, file.Name()))
 		}
 	}
 

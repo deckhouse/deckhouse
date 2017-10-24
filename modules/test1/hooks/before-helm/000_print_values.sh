@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo test1 BEGIN
 echo env
 echo ================
