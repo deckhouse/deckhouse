@@ -69,7 +69,7 @@ printf " Usage: $0 -n <namespace> --token <gitlab user auth token> [--tag <image
 
     --log-level <INFO|ERROR|DEBUG>
             Set RLOG_LOG_LEVEL.
-            Default: INFO
+            Default: DEBUG
 
     --help|-h
             Print this message.
