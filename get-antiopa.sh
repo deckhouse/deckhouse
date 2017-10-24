@@ -4,7 +4,7 @@ set -e
 # Antiopa installer
 # Usage:
 # $ TOKEN=$(cat); curl -fLs -H "PRIVATE-TOKEN: $TOKEN"  https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh | bash -s -- --token $TOKEN
-# iusdvhaoihuvdoaihuv
+# iusdvhaoihuvdoaihuv<Enter>
 # <Ctrl-D>
 
 main() {
@@ -189,7 +189,7 @@ spec:
     spec:
       containers:
         - name: antiopa
-          image: ${IMAGE_REGISTRY}/${IMAGE_REPO}:antiopa-${BRANCH}
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPO}:${BRANCH}
           imagePullPolicy: Always
           command: ["/antiopa/antiopa"]
           workingDir: /antiopa
@@ -272,28 +272,9 @@ kind: ConfigMap
 metadata:
   name: antiopa
 data:
-  help-example: |
-    ---
-    section 'help-example' section is not nedded. You can remove it after adding real values.
-    ConfigMap 'antiopa' contains global values under 'values' key and module specific values
-    under <module>-values keys.
-    Antiopa will add keys <module>-checksum. Deletion of this keys will re-run modules.
-    ---
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-    name: antiopa
-    data:
-      values: |
-	      go:
-	      - 2
-	    test1-values: |
-	      go:
-	      - 4
-	      - 6
-	      - 7
-	    test2-values: |
-	      key: value
+  help: |
+    Add values key to define global values
+    Add <module>-values key to define values for module
 YAML
 )
 
