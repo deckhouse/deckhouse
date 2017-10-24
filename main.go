@@ -179,7 +179,7 @@ func RunModule(ModuleName string) {
 		return
 	}
 
-	err = RunModuleHelmOrEntrypoint(ModuleName, valuesPath)
+	err = RunModuleHelm(ModuleName, valuesPath)
 	if err != nil {
 		rlog.Errorf("Module %s run error: %s", ModuleName, err)
 		retryModulesQueue = append(retryModulesQueue, ModuleName)
@@ -195,7 +195,7 @@ func RunModule(ModuleName string) {
 
 func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
-	hooksDir := filepath.Join(moduleDir, "before-helm")
+	hooksDir := filepath.Join(moduleDir, "hooks", "before-helm")
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 		return nil
@@ -209,7 +209,7 @@ func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 	for _, hookName := range hooksNames {
 		rlog.Infof("Running module %s before-helm hook %s ...", ModuleName, hookName)
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "bin/bash", []string{filepath.Join(hooksDir, hookName)}))
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{filepath.Join(hooksDir, hookName)}))
 		if err != nil {
 			return fmt.Errorf("before-helm hook %s FAILED: %s", hookName, err)
 		}
@@ -220,7 +220,7 @@ func RunModuleBeforeHelmHooks(ModuleName string, ValuesPath string) error {
 
 func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
-	hooksDir := filepath.Join(moduleDir, "after-helm")
+	hooksDir := filepath.Join(moduleDir, "hooks", "after-helm")
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 		return nil
@@ -234,7 +234,7 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 	for _, hookName := range hooksNames {
 		rlog.Infof("Running module %s after-helm hook %s ...", ModuleName, hookName)
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "bin/bash", []string{filepath.Join(hooksDir, hookName)}))
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{filepath.Join(hooksDir, hookName)}))
 		if err != nil {
 			return fmt.Errorf("after-helm hook %s FAILED: %s", hookName, err)
 		}
@@ -243,29 +243,24 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 	return nil
 }
 
-func RunModuleHelmOrEntrypoint(ModuleName string, ValuesPath string) error {
+func RunModuleHelm(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 
 	rlog.Debugf("moduleDir = %s", moduleDir)
 
-	if _, err := os.Stat(filepath.Join(moduleDir, "Chart.yaml")); !os.IsNotExist(err) {
+	chartPath := filepath.Join(moduleDir, "Chart.yaml")
+
+	if _, err := os.Stat(chartPath); !os.IsNotExist(err) {
 		rlog.Infof("Running module %s helm ...", ModuleName)
 
-		helmReleaseName := fmt.Sprintf("antiopa-%s", ModuleName)
+		helmReleaseName := ModuleName
 
 		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
-	} else if _, err := os.Stat(filepath.Join(moduleDir, "ctl.sh")); !os.IsNotExist(err) {
-		rlog.Infof("Running module %s ctl.sh ...", ModuleName)
-
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "/bin/bash", []string{"ctl.sh"}))
-		if err != nil {
-			return fmt.Errorf("ctl.sh FAILED: %s", err)
-		}
 	} else {
-		rlog.Warnf("No helm chart or ctl.sh found for module %s", ModuleName)
+		rlog.Debugf("No helm chart found for module %s in %s", ModuleName, chartPath)
 	}
 
 	return nil
