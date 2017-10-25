@@ -277,8 +277,9 @@ metadata:
   name: antiopa
 data:
   help: |
-    Add values key to define global values
-    Add <module>-values key to define values for module
+    Add values key to define global values yaml
+    Add <module>-values key to define values yaml for module
+    Add disable-modules to specify disabled modules (comma separated, may be globs)
 YAML
 )
 
