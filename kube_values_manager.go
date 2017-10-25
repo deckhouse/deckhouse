@@ -10,7 +10,7 @@ import (
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 /* Формат values:
@@ -24,8 +24,6 @@ data:
 		<values-yaml>
 	<module-name>-checksum: <checksum-of-values-yaml> // устанавливается самой antiopa
 */
-
-const AntiopaConfigMap = "antiopa"
 
 var (
 	KubeValuesUpdated       chan map[interface{}]interface{}
@@ -41,27 +39,13 @@ type KubeModuleValuesUpdate struct {
 	Values     map[interface{}]interface{}
 }
 
-func getConfigMap() (*v1.ConfigMap, error) {
-	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get(AntiopaConfigMap, meta_v1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("Cannot get ConfigMap %s from namespace %s: %s", AntiopaConfigMap, KubernetesAntiopaNamespace, err)
-	}
-
-	// Data может придти пустой - нужно создать карту перед добавлением туда значений.
-	if configMap.Data == nil {
-		configMap.Data = make(map[string]string)
-	}
-
-	return configMap, nil
-}
-
 func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) error {
 	/*
 	* Читаем текущий ConfigMap, создать если нету
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
 	 */
 
-	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(meta_v1.ListOptions{})
+	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(metaV1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -80,11 +64,12 @@ func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) 
 	checksum := calculateChecksum(string(valuesYaml))
 
 	if cmExist {
-		cm, err := getConfigMap()
+		cm, err := GetConfigMap()
 		if err != nil {
 			return err
 		}
 
+		// Data может придти пустой - нужно создать карту перед добавлением туда значений.
 		if cm.Data == nil {
 			cm.Data = make(map[string]string)
 		}
@@ -169,7 +154,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 	res.Values = make(map[interface{}]interface{})
 	res.ModulesValues = make(map[string]map[interface{}]interface{})
 
-	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(meta_v1.ListOptions{})
+	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(metaV1.ListOptions{})
 	if err != nil {
 		return KubeValues{}, err
 	}
@@ -182,7 +167,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 	}
 
 	if cmExist {
-		cm, err := getConfigMap()
+		cm, err := GetConfigMap()
 		if err != nil {
 			return KubeValues{}, err
 		}

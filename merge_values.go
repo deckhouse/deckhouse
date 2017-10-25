@@ -31,6 +31,9 @@ func mergeTwoValues(A map[interface{}]interface{}, B map[interface{}]interface{}
 				if v1Type == v2Type {
 					switch v1Type.Kind() {
 					case reflect.Map:
+						// FIXME: создать новый map для A, чтобы не менять исходные данные
+						// FIXME: скопировать v1 в новый map
+						// FIXME: заменить pair.A[k] на новый map
 						queue = append(queue, mergeValuesPair{
 							A: v1.(map[interface{}]interface{}),
 							B: v2.(map[interface{}]interface{}),

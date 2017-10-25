@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/gobwas/glob"
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -57,13 +58,27 @@ func Init() {
 		os.Exit(1)
 	}
 
-	modulesNames, err = readModulesNames()
+	retryModulesQueue = make([]string, 0)
+
+	Hostname, err = os.Hostname()
 	if err != nil {
-		rlog.Errorf("Cannot read antiopa modules: %s", err)
+		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %v", err)
 		os.Exit(1)
 	}
+
+	InitKube()
+	InitHelm()
+
+	modulesNames, err = getEnabledModulesNames()
+	if err != nil {
+		rlog.Errorf("Cannot detect enabled antiopa modules: %s", err)
+		os.Exit(1)
+	}
+	if len(modulesNames) == 0 {
+		rlog.Warnf("No modules enabled")
+	}
 	for _, moduleName := range modulesNames {
-		rlog.Debugf("Found module %s", moduleName)
+		rlog.Debugf("Using module %s", moduleName)
 	}
 
 	globalValues, err = readValues()
@@ -79,17 +94,6 @@ func Init() {
 		os.Exit(1)
 	}
 	rlog.Debugf("Initialized global modules VALUES: %s", globalModulesValues)
-
-	retryModulesQueue = make([]string, 0)
-
-	Hostname, err = os.Hostname()
-	if err != nil {
-		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %v", err)
-		os.Exit(1)
-	}
-
-	InitKube()
-	InitHelm()
 
 	res, err := InitKubeValuesManager()
 	if err != nil {
@@ -348,6 +352,68 @@ func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
 			res = append(res, file.Name())
 		} else {
 			rlog.Warnf("Ignoring non executable file %s", filepath.Join(Dir, file.Name()))
+		}
+	}
+
+	return res, nil
+}
+
+func matchesGlob(value string, globPattern string) bool {
+	g, err := glob.Compile(globPattern)
+	if err != nil {
+		return false
+	}
+	return g.Match(value)
+}
+
+func getEnabledModulesNames() ([]string, error) {
+	allModules, err := readModulesNames()
+	if err != nil {
+		return nil, err
+	}
+
+	cm, err := GetConfigMap()
+	if err != nil {
+		return nil, err
+	}
+
+	var disabledModules []string
+	for _, configKey := range []string{"disable-modules", "disabled-modules"} {
+		if _, hasKey := cm.Data[configKey]; hasKey {
+			disabledModules = make([]string, 0)
+			for _, mod := range strings.Split(cm.Data[configKey], ",") {
+				disabledModules = append(disabledModules, strings.TrimSpace(mod))
+			}
+		}
+	}
+
+	for _, disabledMod := range disabledModules {
+		found := false
+		for _, mod := range allModules {
+			if matchesGlob(mod, disabledMod) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			rlog.Warnf("Bad value '%s' in antiopa ConfigMap disabled-modules: does not match any module", disabledMod)
+		}
+	}
+
+	res := make([]string, 0)
+	for _, mod := range allModules {
+		isEnabled := true
+
+		for _, disabledMod := range disabledModules {
+			if matchesGlob(mod, disabledMod) {
+				isEnabled = false
+				break
+			}
+		}
+
+		if isEnabled {
+			res = append(res, mod)
 		}
 	}
 
