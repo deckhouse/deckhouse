@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/romana/rlog"
 	v1 "k8s.io/api/core/v1"
@@ -88,6 +89,27 @@ func InitHelm() {
 			os.Exit(1)
 		}
 		rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
+	}
+
+	// Ожидаем в течении 2х минут готовности helm
+	helmReady := false
+	for i := 0; i < 120; i++ {
+		stdout, stderr, err := HelmCmd("ls")
+		if err != nil {
+			if stderr == "Error: could not find a ready tiller pod" {
+				time.Sleep(1)
+			} else {
+				rlog.Errorf("HELM-INIT: Helm not ready: %s\n%s %s", err, stdout, stderr)
+				os.Exit(1)
+			}
+		} else {
+			helmReady = true
+			break
+		}
+	}
+	if !helmReady {
+		rlog.Errorf("HELM-INIT: Helm readiness timeout: could not find a ready tiller pod")
+		os.Exit(1)
 	}
 
 	stdout, stderr, err := HelmCmd("version")
