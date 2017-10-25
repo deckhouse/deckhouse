@@ -1,6 +1,6 @@
 package main
 
-func RunModule2(Name string, Values map[string]interface{}) error {
+func RunModule2(Name string, Values map[interface{}]interface{}) error {
 	/*
 	 * Хуки /modules/<module-name>/hooks/before-helm/* в алфавитном порядке
 	 * Проверить наличие /modules/<module-name>/Chart.yaml и запустить helm при наличии

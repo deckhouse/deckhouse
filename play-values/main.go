@@ -16,7 +16,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var res map[string]interface{}
+	var res map[interface{}]interface{}
 	err = yaml.Unmarshal(valuesYaml, &res)
 	if err != nil {
 		rlog.Errorf("Bad values.yaml: %s", err)

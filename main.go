@@ -18,13 +18,13 @@ var (
 	modulesNames []string
 
 	// values для всех модулей, для всех кластеров
-	globalValues map[string]interface{}
+	globalValues map[interface{}]interface{}
 	// values для конкретного модуля, для всех кластеров
-	globalModulesValues map[string]map[string]interface{}
+	globalModulesValues map[string]map[interface{}]interface{}
 	// values для всех модулей, для конкретного кластера
-	kubeValues map[string]interface{}
+	kubeValues map[interface{}]interface{}
 	// values для конкретного модуля, для конкретного кластера
-	kubeModulesValues map[string]map[string]interface{}
+	kubeModulesValues map[string]map[interface{}]interface{}
 
 	retryModulesQueue []string
 
@@ -266,7 +266,7 @@ func RunModuleHelm(ModuleName string, ValuesPath string) error {
 	return nil
 }
 
-func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
+func PrepareModuleValues(ModuleName string) (map[interface{}]interface{}, error) {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 	valuesShPath := filepath.Join(moduleDir, "values.sh")
 
@@ -286,7 +286,7 @@ func PrepareModuleValues(ModuleName string) (map[string]interface{}, error) {
 				return nil, fmt.Errorf("Values generator %s error: %s", valuesShPath, err)
 			}
 
-			var generatedValues map[string]interface{}
+			var generatedValues map[interface{}]interface{}
 			err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
 			if err != nil {
 				return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
@@ -372,13 +372,13 @@ func readModulesNames() ([]string, error) {
 	return res, nil
 }
 
-func readValuesYamlFile(Path string) (map[string]interface{}, error) {
+func readValuesYamlFile(Path string) (map[interface{}]interface{}, error) {
 	valuesYaml, err := ioutil.ReadFile(Path)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot read %s: %s", Path, err)
 	}
 
-	var res map[string]interface{}
+	var res map[interface{}]interface{}
 
 	err = yaml.Unmarshal(valuesYaml, &res)
 	if err != nil {
@@ -388,11 +388,11 @@ func readValuesYamlFile(Path string) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func dumpModuleValuesYaml(ModuleName string, Values map[string]interface{}) (string, error) {
+func dumpModuleValuesYaml(ModuleName string, Values map[interface{}]interface{}) (string, error) {
 	return dumpValuesYaml(fmt.Sprintf("%s.yaml", ModuleName), Values)
 }
 
-func dumpValuesYaml(FileName string, Values map[string]interface{}) (string, error) {
+func dumpValuesYaml(FileName string, Values map[interface{}]interface{}) (string, error) {
 	valuesYaml, err := yaml.Marshal(&Values)
 	if err != nil {
 		return "", err
@@ -408,19 +408,19 @@ func dumpValuesYaml(FileName string, Values map[string]interface{}) (string, err
 	return filePath, nil
 }
 
-func readValues() (map[string]interface{}, error) {
+func readValues() (map[interface{}]interface{}, error) {
 	path := filepath.Join(WorkingDir, "modules", "values.yaml")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return make(map[string]interface{}), nil
+		return make(map[interface{}]interface{}), nil
 	}
 
 	return readValuesYamlFile(path)
 }
 
-func readModulesValues(ModulesNames []string) (map[string]map[string]interface{}, error) {
+func readModulesValues(ModulesNames []string) (map[string]map[interface{}]interface{}, error) {
 	modulesDir := filepath.Join(WorkingDir, "modules")
 
-	res := make(map[string]map[string]interface{})
+	res := make(map[string]map[interface{}]interface{})
 
 	for _, moduleName := range ModulesNames {
 		path := filepath.Join(modulesDir, moduleName, "values.yaml")
