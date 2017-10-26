@@ -1,7 +1,0 @@
-mysql:
-  root:
-    password: gfhjkm
-  user:
-    username: main
-    password: gfhjkm
-  database: main
