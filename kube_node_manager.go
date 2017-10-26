@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	KubeNodesChanged chan bool
+	KubeNodeChanged chan bool
 )
 
 /*
