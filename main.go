@@ -204,7 +204,7 @@ func OnKubeNodeChanged() {
 }
 
 func RunOnKubeNodeChangedHooks() (map[interface{}]interface{}, error) {
-	hooksDir := filepath.Join(WorkingDir, "global_hooks", "on-kube-node-change")
+	hooksDir := filepath.Join(WorkingDir, "global-hooks", "on-kube-node-change")
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 		return nil, nil
