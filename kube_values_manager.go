@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	_ "time"
@@ -137,12 +135,6 @@ func getConfigMapModulesValues(CM *v1.ConfigMap) (map[string]map[interface{}]int
 	}
 
 	return res, nil
-}
-
-func calculateChecksum(Data string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(Data))
-	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func InitKubeValuesManager() (KubeValues, error) {

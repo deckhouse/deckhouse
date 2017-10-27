@@ -198,8 +198,9 @@ func OnKubeNodeChanged() {
 	newHooksValues := MergeValues(hooksValues, values)
 
 	if !reflect.DeepEqual(hooksValues, newHooksValues) {
-		RunModules()
 		hooksValues = newHooksValues
+
+		RunModules()
 	}
 }
 
