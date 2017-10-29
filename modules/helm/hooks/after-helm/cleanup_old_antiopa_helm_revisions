@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -e
 
 TARGET_NUM_REVISIONS=5
 TARGET_NUM_REVISIONS=$(($TARGET_NUM_REVISIONS+0))
@@ -24,7 +24,7 @@ do
       CMNAME=$RELEASE.v$DELETE_REVISION
       echo "Deleting $CMNAME"
       # Do the delete
-      kubectl --namespace=kube-system delete cm $CMNAME
+      kubectl --namespace=antiopa delete cm $CMNAME
     done
   fi
 done
