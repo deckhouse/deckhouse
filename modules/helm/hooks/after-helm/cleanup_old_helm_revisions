@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -e
 
 TARGET_NUM_REVISIONS=10
 TARGET_NUM_REVISIONS=$(($TARGET_NUM_REVISIONS+0))
