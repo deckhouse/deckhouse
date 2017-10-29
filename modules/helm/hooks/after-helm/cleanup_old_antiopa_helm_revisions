@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+TARGET_NUM_REVISIONS=5
+TARGET_NUM_REVISIONS=$(($TARGET_NUM_REVISIONS+0))
+
+RELEASES=$(kubectl --namespace=antiopa get cm -l OWNER=TILLER -o go-template --template='{{range .items}}{{ .metadata.labels.NAME }}{{"\n"}}{{ end }}' | sort -u)
+
+for RELEASE in $RELEASES
+do
+  # get the revisions of this release
+  REVISIONS=$(kubectl --namespace=antiopa get cm -l OWNER=TILLER -l NAME=$RELEASE | awk '{if(NR>1)print $1}' | sed 's/.*\.v//' | sort -n)
+  NUM_REVISIONS=$(echo $REVISIONS | tr " " "\n" | wc -l)
+  NUM_REVISIONS=$(($NUM_REVISIONS+0))
+
+  echo "Release $RELEASE has $NUM_REVISIONS revisions. Target is $TARGET_NUM_REVISIONS."
+  if [[ $NUM_REVISIONS -gt $TARGET_NUM_REVISIONS ]]; then
+    NUM_TO_DELETE=$(($NUM_REVISIONS-$TARGET_NUM_REVISIONS))
+    echo "Will delete $NUM_TO_DELETE revisions"
+
+    TO_DELETE=$(echo $REVISIONS | tr " " "\n" | head -n $NUM_TO_DELETE)
+
+    for DELETE_REVISION in $TO_DELETE
+    do
+      CMNAME=$RELEASE.v$DELETE_REVISION
+      echo "Deleting $CMNAME"
+      # Do the delete
+      kubectl --namespace=kube-system delete cm $CMNAME
+    done
+  fi
+done
