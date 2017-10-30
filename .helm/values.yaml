@@ -1,5 +1,0 @@
-repo:
-  user: antiopa
-  # token in secret-values.yaml
-global:
-  kubeapitester: "false" # добавлять ли в pod образ с инструментами для экспериментов с Kubernetes API

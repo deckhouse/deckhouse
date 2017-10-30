@@ -1,15 +1,10 @@
 stages:
   - build
-  - deploy
   - cleanup
 
 Build:
   stage: build
   script:
-    - echo CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE}
-    - echo CI_COMMIT_REF_NAME=${CI_COMMIT_REF_NAME}
-    - echo CI_REGISTRY_USER=${CI_REGISTRY_USER}
-    - echo CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD}
     - source /etc/profile.d/rvm.sh
     - dapp --version
     - dapp dimg stages cleanup local --build-dir ~/dapp_build/${CI_PROJECT_NAME} --improper-git-commit
@@ -17,20 +12,6 @@ Build:
     - dapp dimg push --build-dir ~/dapp_build/${CI_PROJECT_NAME} ${CI_REGISTRY_IMAGE} --tag-ci --verbose
   tags:
     - build
-
-Deploy to someproject:
-  stage: deploy
-  script:
-    - dapp kube deploy
-      --image-version ${CI_COMMIT_REF_NAME}
-      --namespace antiopa
-      --set global.env=production
-      $CI_REGISTRY_IMAGE
-  dependencies:
-    - Build
-  tags:
-    - deploy
-  when: manual
 
 Cleanup dapp dimg stages:
   stage: cleanup
@@ -42,40 +23,3 @@ Cleanup dapp dimg stages:
     - branches
   tags:
     - build
-
-# .base_deploy: &base_deploy
-#   stage: deploy
-#   script:
-#     - dapp kube deploy
-#       --image-version ${CI_COMMIT_REF_NAME}
-#       --namespace ${CI_PROJECT_NAME}-${CI_ENVIRONMENT_SLUG}
-#       --set global.env=${CI_ENVIRONMENT_SLUG}
-#       $CI_REGISTRY_IMAGE
-#   dependencies:
-#     - Build
-#   tags:
-#     - deploy
-# Deploy to Stage:
-#   <<: *base_deploy
-#   environment:
-#     name: stage
-#     url: http://antiopa.stage.flant.com
-#   only:
-#     - branches
-#   when: manual
-# Deploy to Test:
-#   <<: *base_deploy
-#   environment:
-#     name: test
-#     url: http://antiopa.test.flant.com
-#   only:
-#     - branches
-#   when: manual
-# Deploy to Production:
-#   <<: *base_deploy
-#   environment:
-#     name: production
-#     url: http://antiopa.flant.com
-#   only:
-#     - master
-#   when: manual

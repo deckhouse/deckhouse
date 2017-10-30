@@ -4,7 +4,6 @@
 *.so
 *.dylib
 /antiopa
-/antiopa-run
 
 # Test binary, build with `go test -c`
 *.test
@@ -24,5 +23,4 @@
 .idea/
 
 # dapp
-.dapp_build
-.dapp_secret_key
+/.dapp_build
