@@ -353,8 +353,6 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 func RunModuleHelm(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 
-	rlog.Debugf("moduleDir = %s", moduleDir)
-
 	chartPath := filepath.Join(moduleDir, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); !os.IsNotExist(err) {
