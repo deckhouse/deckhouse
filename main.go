@@ -93,14 +93,16 @@ func Init() {
 		rlog.Errorf("Cannot read values: %s", err)
 		os.Exit(1)
 	}
-	rlog.Debugf("Initialized global VALUES: %s", globalValues)
+	rlog.Debugf("Read global VALUES:\n%s", valuesToString(globalValues))
 
 	globalModulesValues, err = readModulesValues(modulesNames)
 	if err != nil {
 		rlog.Errorf("Cannot read modules values: %s", err)
 		os.Exit(1)
 	}
-	rlog.Debugf("Initialized global modules VALUES: %s", globalModulesValues)
+	for moduleName, globalModuleValues := range globalModulesValues {
+		rlog.Debugf("Read module %s global VALUES:\n%s", moduleName, valuesToString(globalModuleValues))
+	}
 
 	res, err := InitKubeValuesManager()
 	if err != nil {
@@ -109,6 +111,10 @@ func Init() {
 	}
 	kubeValues = res.Values
 	kubeModulesValues = res.ModulesValues
+	rlog.Debugf("Read kube VALUES:\n%s", valuesToString(kubeValues))
+	for moduleName, kubeModuleValues := range kubeModulesValues {
+		rlog.Debugf("Read module %s kube VALUES:\n%s", moduleName, valuesToString(kubeModuleValues))
+	}
 
 	InitKubeNodeManager()
 	InitRegistryManager()
@@ -270,7 +276,7 @@ func RunModule(ModuleName string) {
 		retryModulesQueue = append(retryModulesQueue, ModuleName)
 		return
 	}
-	rlog.Debugf("Prepared module %s VALUES: %v", ModuleName, vals)
+	rlog.Debugf("Prepared module %s VALUES:\n%s", ModuleName, valuesToString(vals))
 
 	valuesPath, err := dumpModuleValuesYaml(ModuleName, vals)
 	if err != nil {
@@ -396,11 +402,11 @@ func PrepareModuleValues(ModuleName string) (map[interface{}]interface{}, error)
 			if err != nil {
 				return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
 			}
-			rlog.Debugf("got VALUES from initial_values: %v", generatedValues)
+			rlog.Debugf("got VALUES from initial_values:\n%s", valuesToString(generatedValues))
 
 			newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
 
-			rlog.Debugf("Setting module %s values in ConfigMap: %v", ModuleName, newModuleValues)
+			rlog.Debugf("Updating module %s VALUES in ConfigMap:\n%s", ModuleName, valuesToString(newModuleValues))
 
 			err = SetModuleKubeValues(ModuleName, newModuleValues)
 			if err != nil {
@@ -603,4 +609,12 @@ func readModulesValues(ModulesNames []string) (map[string]map[interface{}]interf
 	}
 
 	return res, nil
+}
+
+func valuesToString(Values map[interface{}]interface{}) string {
+	valuesYaml, err := yaml.Marshal(&Values)
+	if err != nil {
+		return fmt.Sprintf("%v", Values)
+	}
+	return string(valuesYaml)
 }
