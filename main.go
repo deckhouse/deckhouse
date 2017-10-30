@@ -353,8 +353,6 @@ func RunModuleAfterHelmHooks(ModuleName string, ValuesPath string) error {
 func RunModuleHelm(ModuleName string, ValuesPath string) error {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
 
-	rlog.Debugf("moduleDir = %s", moduleDir)
-
 	chartPath := filepath.Join(moduleDir, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); !os.IsNotExist(err) {
@@ -375,7 +373,7 @@ func RunModuleHelm(ModuleName string, ValuesPath string) error {
 
 func PrepareModuleValues(ModuleName string) (map[interface{}]interface{}, error) {
 	moduleDir := filepath.Join(WorkingDir, "modules", ModuleName)
-	valuesShPath := filepath.Join(moduleDir, "values.sh")
+	valuesShPath := filepath.Join(moduleDir, "initial_values")
 
 	if statRes, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
 		// Тупой тест, что файл executable.
@@ -398,7 +396,7 @@ func PrepareModuleValues(ModuleName string) (map[interface{}]interface{}, error)
 			if err != nil {
 				return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
 			}
-			rlog.Debugf("got VALUES from values.sh: %v", generatedValues)
+			rlog.Debugf("got VALUES from initial_values: %v", generatedValues)
 
 			newModuleValues := MergeValues(generatedValues, kubeModulesValues[ModuleName])
 
