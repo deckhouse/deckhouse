@@ -85,7 +85,7 @@ func InitHelm() {
 
 		stdout, stderr, err := HelmCmd("init", "--service-account", "tiller")
 		if err != nil {
-			rlog.Errorf("HELM-INIT: %s", err)
+			rlog.Errorf("HELM-INIT: %s\n%s %s", err, stdout, stderr)
 			os.Exit(1)
 		}
 		rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
