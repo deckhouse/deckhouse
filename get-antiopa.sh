@@ -192,6 +192,10 @@ spec:
           image: ${IMAGE_REGISTRY}/${IMAGE_REPO}:${BRANCH}
           imagePullPolicy: Always
           command: ["/antiopa/antiopa"]
+          resources:
+            limits:
+              cpu: 420m
+              memory: 1500Mi
           workingDir: /antiopa
           env:
             - name: KUBERNETES_DEPLOYED
