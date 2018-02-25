@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+# Автоопределятор "типа" кластера Kubernetes.
+# 
+# Тип кластера — это внутреннее понятие Флант. На данный момент мы различаем следующие типы:
+#  * aws — Amazon + kops
+#  * azure — Azure + aks
+#  * manual — "все остальное" + kubeadm
+
+function dynamic_values.global.cluster.type() {
+  if $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=aws' > /dev/null);  then
+    echo aws
+  elif $(kubectl -n kube-system get pod -l component=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=azure' > /dev/null);  then
+    echo azure
+  else
+    echo manual
+  fi
+}

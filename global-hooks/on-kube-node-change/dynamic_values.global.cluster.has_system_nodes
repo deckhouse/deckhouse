@@ -1,15 +1,9 @@
 #!/bin/bash -e
 
-if $(kubectl get nodes -l node-role/system -o name | grep . > /dev/null); then
-  cat > $RETURN_VALUES_PATH <<END
+source /antiopa/shell-lib
+
+cat > $RETURN_VALUES_PATH <<END
 global:
   cluster:
-    has_system_nodes: true
+    has_system_nodes: $(dynamic_values.global.cluster.has_system_nodes && echo "true" || echo "false")
 END
-else
-  cat > $RETURN_VALUES_PATH <<END
-global:
-  cluster:
-    has_system_nodes: false
-END
-fi
