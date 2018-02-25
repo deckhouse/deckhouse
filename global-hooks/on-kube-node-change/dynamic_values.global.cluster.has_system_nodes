@@ -5,5 +5,5 @@ source /antiopa/shell-lib
 cat > $RETURN_VALUES_PATH <<END
 global:
   cluster:
-    has_system_nodes: $(dynamic_values.global.cluster.has_system_nodes && echo "true" || echo "false")
+    has_system_nodes: $(cluster.has_system_nodes && echo "true" || echo "false")
 END

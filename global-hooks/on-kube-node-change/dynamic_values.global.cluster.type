@@ -5,5 +5,5 @@ source /antiopa/shell-lib
 cat > $RETURN_VALUES_PATH <<END
 global:
   cluster:
-    type: $(dynamic_values.global.cluster.type)
+    type: $(cluster.type)
 END
