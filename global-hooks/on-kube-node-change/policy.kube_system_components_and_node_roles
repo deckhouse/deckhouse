@@ -1,17 +1,5 @@
 #!/bin/bash
 
-KUBE_SYSTEM=$(kubectl get node -l node-role/system -o name |wc -l)
-if ! kubectl -n kube-system get deploy kube-dns -o go-template='{{range .spec.template.spec.tolerations}}{{if and .key .operator }}{{if and (eq .key "node-role/system") (eq .operator "Exists")}}YES{{end}}{{end}}{{end}}' | grep YES > /dev/null; then
-  DNS_TOLERATION=' | .spec.template.spec.tolerations = .spec.template.spec.tolerations + [{"effect":"NoExecute","key":"node-role/system","operator":"Exists"}]'
-else
-  DNS_TOLERATION=''
-fi
-if [[ $KUBE_SYSTEM -gt 0 ]]; then
-  kubectl get deploy kube-dns -n kube-system  -o json |jq '.spec.template.spec.affinity ={"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"beta.kubernetes.io/arch","operator":"In","values":["amd64"]},{"key":"node-role/system","operator":"Exists"}]}]}}} | .spec.replicas ='"${KUBE_SYSTEM} ${DNS_TOLERATION}" | kubectl apply -f -
-else
-   kubectl get deploy kube-dns -n kube-system  -o json |jq '.spec.template.spec.affinity ={"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"beta.kubernetes.io/arch","operator":"In","values":["amd64"]}]}]}}} | .spec.replicas =2 '"${DNS_TOLERATION}" | kubectl apply -f -
-fi
-
 
 #PROXY
 PROXY_TOLERATION=''
