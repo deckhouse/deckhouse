@@ -2,19 +2,14 @@
 
 source /antiopa/shell-lib
 
+# Политика: flanneld должен быть запущен на всех узлах, вне зависимости от taint'ов
+#
+# См. подробнее policy.cluster.kube-proxy
+
 # flannel есть только в manual кластерах
 [[ $(cluster.type) != "manual" ]] && exit
 
 JQ='.'
-
-# Политика #1: flanneld должен быть запущен на всех узлах, вне зависимости от taint'ов
-#
-# Даже если узел выделен под какую-то задачу, flanneld туда в любом случае должен доехать, нам же нужна сеть.
-#
-# TODO: По-хорошему, из перечисленного ниже, для taint'ов должны использоваться только dedicated. Теинты используются для запрета
-# шедулинга, соответственно узел становится выделенным для одной задачи, соответственно должен использовать dedicated=xxx.
-# Но это надо править глобально, в рамках отдельной задачи.
-#
 for TOLERATION_KEY in "node-role/frontend" "node-role/system" "node-role/monitoring" "node-role/logging" "dedicated"; do
   # Добавляем toleration, если не добавлен
   JQ=$JQ' | .spec.template.spec.tolerations |= (
