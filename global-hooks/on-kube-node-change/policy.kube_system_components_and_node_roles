@@ -15,18 +15,3 @@ PROXY_TOLERATION=$(echo $PROXY_TOLERATION | cut -c 3-)
 if [ -n "$PROXY_TOLERATION" ]; then
   kubectl get ds/kube-proxy -n kube-system -o json |jq "$PROXY_TOLERATION" | kubectl apply -f -
 fi
-
-#FLANNEL
-FLANNEL_TOLERATION=''
-
-FLANNEL_LABELS=("node-role/system" "node-role/monitoring" "node-role/ingress" "node-role/frontend" "node-role/logging" "dedicated")
-for i in "${FLANNEL_LABELS[@]}"; do
-  if ! kubectl -n kube-system get ds kube-flannel-ds -o go-template='{{range .spec.template.spec.tolerations}}{{if and .key .operator }}{{if and (eq .key "'$i'") (eq .operator "Exists")}}YES{{end}}{{end}}{{end}}' | grep YES > /dev/null; then
-    FLANNEL_TOLERATION=$FLANNEL_TOLERATION' | .spec.template.spec.tolerations = .spec.template.spec.tolerations + [{"effect":"NoExecute","key":"'$i'","operator":"Exists"}]'
-  fi
-done
-
-FLANNEL_TOLERATION=$(echo $FLANNEL_TOLERATION | cut -c 3-)
-if [ -n "$FLANNEL_TOLERATION" ]; then
-  kubectl get ds/kube-flannel-ds -n kube-system -o json |jq "$FLANNEL_TOLERATION" | kubectl apply -f -
-fi
