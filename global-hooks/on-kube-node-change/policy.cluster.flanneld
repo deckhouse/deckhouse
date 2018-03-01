@@ -18,4 +18,4 @@ for TOLERATION_KEY in "node-role/frontend" "node-role/system" "node-role/monitor
 done
 
 # Применяем
-kubectl -n kube-system get ds/kube-flannel-ds -o json | jq "$JQ" | kubectl apply -f -
+kubectl_apply_jq kube-system ds/kube-flannel-ds "$JQ"

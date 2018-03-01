@@ -62,5 +62,5 @@ JQ=$JQ' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringScheduling
 # Определяем имя deployment'а (в Azure он называется не kube-dns)
 kube_dns_deployment_name=$(kubectl -n kube-system get deployment -l k8s-app=kube-dns -o name)
 
-# Применяем все политики
-kubectl -n kube-system get ${kube_dns_deployment_name} -o json | jq "$JQ" | kubectl apply -f -
+# Применяем
+kubectl_apply_jq kube-system ${kube_dns_deployment_name} "$JQ"
