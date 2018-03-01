@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+source /antiopa/shell-lib
+
+cat > $RETURN_VALUES_PATH <<END
+global:
+  cluster:
+    has_system_nodes: $(cluster.has_system_nodes && echo "true" || echo "false")
+END

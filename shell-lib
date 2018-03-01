@@ -1,0 +1,6 @@
+#!/bin/bash
+
+
+for f in $(find /antiopa/shell-lib.d/ -type f); do
+  source $f
+done

@@ -35,16 +35,9 @@ dimg_group do
     docker.from 'ubuntu:16.04'
 
     git do
-      add '/modules' do
-        to '/antiopa/modules'
-      end
-
-      add '/global-hooks' do
-        to '/antiopa/global-hooks'
-      end
-
-      add '/.kube_api' do
-        to '/antiopa/.kube_api'
+      add '/' do
+        to '/antiopa'
+        include_paths 'modules', 'global-hooks', 'shell-lib', 'shell-lib.d', '.kube-api'
       end
     end
 
@@ -55,10 +48,10 @@ dimg_group do
       run 'apt-get update -y'
       run 'apt-get install -y curl ca-certificates jq'
       run 'apt-get install -y makepasswd apache2-utils python3'
-      run 'curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.7.7/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
+      run 'curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.8.8/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
       run 'chmod +x /usr/local/bin/kubectl'
 
-      run 'curl -Ls https://storage.googleapis.com/kubernetes-helm/helm-v2.6.1-linux-amd64.tar.gz | tar zx linux-amd64/helm -O > /usr/local/bin/helm'
+      run 'curl -Ls https://storage.googleapis.com/kubernetes-helm/helm-v2.6.2-linux-amd64.tar.gz | tar zx linux-amd64/helm -O > /usr/local/bin/helm'
       run 'chmod +x /usr/local/bin/helm'
     end
   end

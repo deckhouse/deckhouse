@@ -10,7 +10,7 @@ spec:
       labels:
         app: kube-lego
     spec:
-{{- if eq .Values.global.has_system_nodes true }}
+{{- if eq .Values.global.cluster.has_system_nodes true }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

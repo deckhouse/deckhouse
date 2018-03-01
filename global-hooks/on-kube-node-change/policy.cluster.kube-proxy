@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source /antiopa/shell-lib
+
+# Политика: kube-proxy должен быть запущен на всех узлах, вне зависимости от taint'ов
+#
+# Даже если узел выделен под какую-то задачу, kube-proxy туда в любом случае должен доехать, нам же нужна сеть и сервисы.
+
+CLUSTER_TYPE=$(cluster.type)
+
+# В aws и gce кластер разворачивается kops'ом, а он вместо ds/kube-proxy генерит на каждом
+# узле манифест в /etc/kubernetes/manifests, так что для kops не актуально.
+[[ $CLUSTER_TYPE == "aws" || $CLUSTER_TYPE == "gce" ]] && exit
+
+# В azure (точнее в acs-engine) на данный момент нет возможности указывать taint'ы группам узлов,
+# так что там никакой узел не может быть заблокирован.
+[[ $CLUSTER_TYPE == "acs" ]] && exit
+
+JQ='.'
+
+# TODO: По-хорошему, из перечисленного ниже, для taint'ов должны использоваться только dedicated. Теинты используются для запрета
+# шедулинга, соответственно узел становится выделенным для одной задачи, соответственно должен использовать dedicated=xxx.
+# Но это надо править глобально, в рамках отдельной задачи.
+#
+for TOLERATION_KEY in "node-role/frontend" "node-role/system" "node-role/monitoring" "node-role/logging" "dedicated"; do
+  # Добавляем toleration, если не добавлен
+  JQ=$JQ' | .spec.template.spec.tolerations |= (
+    . + [{"effect":"NoExecute","key":"'$TOLERATION_KEY'","operator":"Exists"}] | unique
+  )'
+done
+
+# Применяем
+kubectl_apply_jq kube-system ds/kube-proxy "$JQ"

@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+source /antiopa/shell-lib
+
+cat > $RETURN_VALUES_PATH <<END
+global:
+  cluster:
+    type: $(cluster.type)
+END

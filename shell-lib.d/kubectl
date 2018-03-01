@@ -1,0 +1,29 @@
+#!/bin/bash
+
+function kubectl_apply_jq() {
+  NAMESPACE=$1
+  RESOURCE=$2
+  JQ=$3
+
+  A=$(mktemp)
+  B=$(mktemp)
+
+  kubectl -n $NAMESPACE get $RESOURCE -o json | jq '.' | tee $A | jq "$JQ" | tee $B | kubectl apply -f -
+  RESULT=$?
+
+  if [[ $RESULT -eq 0 ]] ; then
+    diff -u $A $B
+  else
+    echo JQ: "$JQ"
+
+    echo "Before JQ"
+    cat $A
+    echo "After JQ"
+    cat $B
+  fi
+
+  rm $A
+  rm $B
+
+  return $RESULT
+}
