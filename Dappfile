@@ -1,7 +1,6 @@
 dimg_group do
-
   artifact do
-    docker.from 'golang:1.8'
+    docker.from 'golang:1.8-alpine3.6'
 
     git do
       add '/' do
@@ -14,6 +13,12 @@ dimg_group do
         # Пока вложенные нужно придётся добавлять отдельно: stage_dependencies.build_artifact 'play-values/*.go'
         stage_dependencies.build_artifact '*.go'
       end
+    end
+
+    shell.before_install do
+      run 'apk update'
+      run 'apk add git'
+      run 'rm -rf /var/cache/apk/*'
     end
 
     shell.install do
@@ -32,27 +37,36 @@ dimg_group do
   end
 
   dimg do
-    docker.from 'ubuntu:16.04'
+    docker.from 'alpine:3.6'
 
     git do
       add '/' do
         to '/antiopa'
-        include_paths 'modules', 'global-hooks', 'shell-lib', 'shell-lib.d', '.kube-api'
+        include_paths 'modules', 'global-hooks', 'shell-lib', 'shell-lib.d'
       end
     end
 
-    # Первой попыткой было отказаться от установки curl в финальном образе, но артефакты слишком связаны
-    # https://github.com/flant/dapp/issues/404
-    # ca-certificates ставятся явно, чтобы про них не забыть потом, т.к. нужны для работы helm.
     shell.before_install do
-      run 'apt-get update -y'
-      run 'apt-get install -y curl ca-certificates jq'
-      run 'apt-get install -y makepasswd apache2-utils python3'
+      run 'apk update'
+
+      # Нам нужны kubectl и helm
+      run 'apk add curl'
       run 'curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.8.8/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl'
       run 'chmod +x /usr/local/bin/kubectl'
-
       run 'curl -Ls https://storage.googleapis.com/kubernetes-helm/helm-v2.6.2-linux-amd64.tar.gz | tar zx linux-amd64/helm -O > /usr/local/bin/helm'
       run 'chmod +x /usr/local/bin/helm'
+      run 'apk del curl'
+
+      # ca-certificates нужны для работы helm
+      run 'apk add ca-certificates'
+
+      # Нам нужен bash, на нем все хуки
+      run 'apk add bash'
+
+      # Зависимости хуков
+      run 'apk add jq makepasswd apache2-utils'
+
+      run 'rm -rf /var/cache/apk/*'
     end
   end
 end
