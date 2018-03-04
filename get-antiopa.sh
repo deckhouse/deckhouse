@@ -11,7 +11,7 @@ main() {
   NAMESPACE='antiopa'
   IMAGE_REGISTRY='registry.flant.com'
   IMAGE_REPO='sys/antiopa'
-  BRANCH='stable'
+  VERSION='stable'
   TOKEN=''
   DRY_RUN=0
   OUT_FILE=''
@@ -49,17 +49,8 @@ printf " Usage: $0 -n <namespace> --token <gitlab user auth token> [--dry-run]
             Define kubernetes namespace.
             Default: antiopa
 
-    --image-registry <docker registry url>
-            URL of registry with antiopa image
-            Default: registry.flant.com
-
-    --image-repo <docker repo in specified registry>
-            Antiopa image repo in registry.
-            Specify <user>/antiopa to use <user>'s fork of antiopa.
-            Default: sys/antiopa
-
-    --branch <branch>
-            Use antiopa image version from specified git branch.
+    --version <version>
+            Use specified antiopa image version.
             Default: stable
 
     --token <token>
@@ -91,15 +82,8 @@ parse_args() {
         NAMESPACE="$2"
         shift
         ;;
-      --image-registry)
-        IMAGE_REGISTRY="$2"
-        shift;;
-      --image-repo)
-        IMAGE_REPO="$2"
-        shift
-        ;;
-      --branch)
-        BRANCH="$2"
+      --version)
+        VERSION="$2"
         shift
         ;;
       --token)
@@ -189,7 +173,7 @@ spec:
     spec:
       containers:
         - name: antiopa
-          image: ${IMAGE_REGISTRY}/${IMAGE_REPO}:${BRANCH}
+          image: ${IMAGE_REGISTRY}/${IMAGE_REPO}:${VERSION}
           imagePullPolicy: Always
           command: ["/antiopa/antiopa"]
           resources:

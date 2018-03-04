@@ -1,5 +1,6 @@
 stages:
   - build
+  - deploy
   - cleanup
 
 Build:
@@ -7,23 +8,47 @@ Build:
   script:
     - rvm gemset use dapp-0.26
     - dapp --version
-    - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}
+    - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}/dev
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then dapp push --tag-ci --verbose ${CI_REGISTRY_IMAGE}; fi
   except:
     - schedules
   tags:
     - build
+
+.base_deploy: &base_deploy
+  stage: deploy
+  script:
+    - dapp dimg push ${CI_REGISTRY_IMAGE} --tag ${CI_JOB_NAME}
+  when: manual
+  tags:
+    - build
+
+master:
+  <<: *base_deploy
+  only:
+    - master
+
+ea:
+  <<: *base_deploy
+  only:
+    - tags
+
+stable:
+  <<: *base_deploy
+  only:
+    - tags
 
 Cleanup:
   stage: cleanup
   script:
     - rvm gemset use dapp-0.26
     - dapp --version
-    - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE} --registry-username=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
+    - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE}/dev --registry-username=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
     - dapp dimg stages cleanup local
         --improper-cache-version
         --improper-git-commit
         --improper-repo-cache
-        ${CI_REGISTRY_IMAGE}
+        ${CI_REGISTRY_IMAGE}/dev
   only:
     - schedules
   tags:
