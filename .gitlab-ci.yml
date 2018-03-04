@@ -5,21 +5,25 @@ stages:
 Build:
   stage: build
   script:
-    - source /etc/profile.d/rvm.sh
+    - rvm gemset use dapp-0.26
     - dapp --version
-    - dapp dimg stages cleanup local --build-dir ~/dapp_build/${CI_PROJECT_NAME} --improper-git-commit
-    - dapp dimg build --build-dir ~/dapp_build/${CI_PROJECT_NAME}
-    - dapp dimg push --build-dir ~/dapp_build/${CI_PROJECT_NAME} ${CI_REGISTRY_IMAGE} --tag-ci --verbose
+    - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}
   tags:
     - build
 
-Cleanup dapp dimg stages:
+Cleanup:
   stage: cleanup
   script:
-    - source /etc/profile.d/rvm.sh
+    - rvm gemset use dapp-0.26
     - dapp --version
-    - dapp dimg stages cleanup local --build-dir ~/dapp_build/${CI_PROJECT_NAME} --improper-git-commit --improper-repo-cache ${CI_REGISTRY_IMAGE}
+    - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE} --registry-username=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
+    - dapp dimg stages cleanup local
+        --improper-cache-version
+        --improper-git-commit
+        --improper-repo-cache
+        ${CI_REGISTRY_IMAGE}
   only:
-    - branches
+    - schedules
   tags:
     - build
+  retry: 2
