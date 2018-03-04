@@ -8,6 +8,8 @@ Build:
     - rvm gemset use dapp-0.26
     - dapp --version
     - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}
+  except:
+    - schedules
   tags:
     - build
 
