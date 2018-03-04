@@ -14,11 +14,7 @@ main() {
 
 
 usage() {
-printf " Usage: $0 -n <namespace> [--dry-run]
-
-    -n, --namespace <namespace>
-            Define kubernetes namespace.
-            Default: antiopa
+printf " Usage: $0 [--dry-run]
 
     --dry-run
             Do not run kubectl apply.
@@ -33,10 +29,6 @@ printf " Usage: $0 -n <namespace> [--dry-run]
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      -n|--namespace)
-        NAMESPACE="$2"
-        shift
-        ;;
       --dry-run)
         DRY_RUN=1
         ;;

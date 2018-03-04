@@ -43,11 +43,7 @@ main() {
 
 
 usage() {
-printf " Usage: $0 -n <namespace> --token <gitlab user auth token> [--dry-run]
-
-    -n, --namespace <namespace>
-            Define kubernetes namespace.
-            Default: antiopa
+printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
 
     --version <version>
             Use specified antiopa image version.
@@ -78,10 +74,6 @@ printf " Usage: $0 -n <namespace> --token <gitlab user auth token> [--dry-run]
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      -n|--namespace)
-        NAMESPACE="$2"
-        shift
-        ;;
       --version)
         VERSION="$2"
         shift
