@@ -27,6 +27,8 @@ master:
   <<: *base_deploy
   only:
     - master
+  except:
+    - schedules
 
 ea:
   <<: *base_deploy
