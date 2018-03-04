@@ -25,6 +25,8 @@ Build:
 
 master:
   <<: *base_deploy
+  environment:
+    name: master
   only:
     - master
   except:
@@ -32,11 +34,15 @@ master:
 
 ea:
   <<: *base_deploy
+  environment:
+    name: ea
   only:
     - tags
 
 stable:
   <<: *base_deploy
+  environment:
+    name: stable
   only:
     - tags
 
