@@ -42,7 +42,7 @@ dimg_group do
     git do
       add '/' do
         to '/antiopa'
-        include_paths 'modules', 'global-hooks', 'shell-lib', 'shell-lib.d', '.kube-api'
+        include_paths 'modules', 'global-hooks', 'shell-lib', 'shell-lib.d'
       end
     end
 
