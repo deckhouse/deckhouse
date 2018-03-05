@@ -2,20 +2,14 @@
 
 source /antiopa/shell-lib
 
-# Политика: flanneld должен быть запущен на всех узлах, вне зависимости от taint'ов
-#
-# См. подробнее policy.cluster.kube-proxy
-
 # flannel есть только в manual кластерах
 [[ $(cluster.type) != "manual" ]] && exit
 
 JQ='.'
-for TOLERATION_KEY in "node-role/frontend" "node-role/system" "node-role/monitoring" "node-role/logging" "dedicated"; do
-  # Добавляем toleration, если не добавлен
-  JQ=$JQ' | .spec.template.spec.tolerations |= (
-    . + [{"effect":"NoExecute","key":"'$TOLERATION_KEY'","operator":"Exists"}] | unique
-  )'
-done
+
+###
+# Политика #1: flanneld должен быть запущен на всех узлах, вне зависимости от taint'ов
+JQ=$JQ' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
 
 # Применяем
 kubectl_apply_jq kube-system ds/kube-flannel-ds "$JQ"

@@ -4,13 +4,12 @@ source /antiopa/shell-lib
 
 JQ='.'
 
-
 ###
 # Политика #1: kube-dns должен выполняться на system-узлах, если они есть
 if cluster.has_system_nodes; then
   # Добавляем toleration, если не добавлен
   JQ=$JQ' | .spec.template.spec.tolerations |= (
-    . + [{"effect":"NoExecute","key":"node-role/system","operator":"Exists"}] | unique
+    . + [{"key":"node-role/system","operator":"Exists"}] | unique
   )'
 
   # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
@@ -24,7 +23,7 @@ if cluster.has_system_nodes; then
 else
   # Удаляем toleration, если был добавлен
   JQ=$JQ' | if .spec.template.spec.tolerations then
-    .spec.template.spec.tolerations |= . - [{"effect":"NoExecute","key":"node-role/system","operator":"Exists"}]
+    .spec.template.spec.tolerations |= . - [{"key":"node-role/system","operator":"Exists"}]
   else . end'
 
   # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
@@ -36,6 +35,10 @@ else
     )
   else . end'
 fi
+# В любом случае, есть system-узлы или нет, удаляем "старые" toleration'ы, с явно указанным effect
+JQ=$JQ' | if .spec.template.spec.tolerations then
+  .spec.template.spec.tolerations |= . - [{"effect":"NoExecute","key":"node-role/system","operator":"Exists"}]
+else . end'
 
 
 ###
