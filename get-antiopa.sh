@@ -49,6 +49,10 @@ printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
             Use specified antiopa image version.
             Default: stable
 
+    --dev
+            Use dev image (sys/antiopa/dev, instead of sys/antiopa).
+            Name of a dev branch could be passed using --version option.
+
     --token <token>
             Auth token generated in gitlab user's profile.
             If no token specified, no imagePullSecret will generate.
@@ -77,6 +81,9 @@ parse_args() {
       --version)
         VERSION="$2"
         shift
+        ;;
+      --dev)
+        IMAGE_REPO="$IMAGE_REPO/dev"
         ;;
       --token)
         TOKEN="$2"
