@@ -7,23 +7,36 @@ function kubectl_apply_jq() {
 
   A=$(mktemp)
   B=$(mktemp)
+  TMP=$(mktemp)
 
-  kubectl -n $NAMESPACE get $RESOURCE -o json | jq '.' | tee $A | jq "$JQ" | tee $B | kubectl apply -f -
-  RESULT=$?
+    CLEANUP_JQ='. | del(
+      .metadata.annotations."deployment.kubernetes.io/revision",
+      .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
+      .metadata.creationTimestamp,
+      .metadata.generation,
+      .metadata.resourceVersion,
+      .metadata.selfLink,
+      .metadata.uid,
+      .status
+    )'
 
-  if [[ $RESULT -eq 0 ]] ; then
-    diff -u $A $B
-  else
+  if ! kubectl -n $NAMESPACE get $RESOURCE -o json > $TMP ||
+     ! jq "$CLEANUP_JQ" $TMP > $A ||
+     ! jq "$JQ" $A > $B ||
+     ! kubectl apply -f $B ;
+  then
     echo JQ: "$JQ"
 
     echo "Before JQ"
     cat $A
     echo "After JQ"
     cat $B
+
+    rm $A $B $TMP
+    return 1
   fi
 
-  rm $A
-  rm $B
-
-  return $RESULT
+  diff -u $A $B
+  rm $A $B $TMP
+  return 0
 }
