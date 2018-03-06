@@ -10,7 +10,6 @@ import (
 
 	"github.com/romana/rlog"
 	v1 "k8s.io/api/core/v1"
-	rbacapi "k8s.io/api/rbac/v1beta1"
 	errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -49,41 +48,7 @@ func InitHelm() {
 			os.Exit(1)
 		}
 
-		// Взято из https://github.com/kubernetes/helm/blob/master/docs/service_accounts.md#example-service-account-with-cluster-admin-role
-
-		serviceAccount := v1.ServiceAccount{}
-		serviceAccount.Name = "tiller"
-
-		_, err = KubernetesClient.CoreV1().ServiceAccounts(HelmTillerNamespace()).Create(&serviceAccount)
-		if err != nil && !errors.IsAlreadyExists(err) {
-			rlog.Errorf("HELM-INIT Unable to create tiller ServiceAccount: %s", err)
-			os.Exit(1)
-		}
-
-		clusterRoleBinding := rbacapi.ClusterRoleBinding{}
-		clusterRoleBinding.Name = fmt.Sprintf("%s-tiller", HelmTillerNamespace())
-		clusterRoleBinding.Labels = make(map[string]string)
-		clusterRoleBinding.Labels["antiopa-namespace"] = HelmTillerNamespace()
-		clusterRoleBinding.RoleRef.APIGroup = "rbac.authorization.k8s.io"
-		clusterRoleBinding.RoleRef.Kind = "ClusterRole"
-		clusterRoleBinding.RoleRef.Name = "cluster-admin"
-		clusterRoleBinding.Subjects = []rbacapi.Subject{
-			rbacapi.Subject{Kind: "ServiceAccount", Name: "tiller", Namespace: HelmTillerNamespace()},
-		}
-
-		_, err = KubernetesClient.RbacV1beta1().ClusterRoleBindings().Create(&clusterRoleBinding)
-		if err != nil && errors.IsAlreadyExists(err) {
-			_, err = KubernetesClient.RbacV1beta1().ClusterRoleBindings().Update(&clusterRoleBinding)
-			if err != nil {
-				rlog.Errorf("HELM-INIT Unable to update ClusterRoleBinding %s: %s", clusterRoleBinding.Name, err)
-				os.Exit(1)
-			}
-		} else if err != nil {
-			rlog.Errorf("HELM-INIT Unable to create ClusterRoleBinding %s: %s", clusterRoleBinding.Name, err)
-			os.Exit(1)
-		}
-
-		stdout, stderr, err := HelmCmd("init", "--service-account", "tiller")
+		stdout, stderr, err := HelmCmd("init", "--service-account", "antiopa")
 		if err != nil {
 			rlog.Errorf("HELM-INIT: %s\n%s %s", err, stdout, stderr)
 			os.Exit(1)
