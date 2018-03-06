@@ -4,7 +4,7 @@ metadata:
   name: kube-lego-nginx
   namespace: kube-lego
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - name: http
       port: 8080
