@@ -224,9 +224,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: ${NAMESPACE}-main
-  labels:
-    antiopa-namespace: ${NAMESPACE}
+  name: cluster-admin
 rules:
 - apiGroups:
     - "*"
@@ -242,18 +240,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: ${NAMESPACE}-main
-  labels:
-    antiopa-namespace: ${NAMESPACE}
+  name: ${NAMESPACE}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: ${NAMESPACE}-main
+  name: cluster-admin
 subjects:
   - kind: ServiceAccount
     name: antiopa
     namespace: ${NAMESPACE}
-
 YAML
 )
 

@@ -48,8 +48,7 @@ delete_antiopa() {
   if [[ $DRY_RUN == 1 ]]; then
     ECHO="echo "
   fi
-  $ECHO kubectl delete clusterrolebinding -l antiopa-namespace=${NAMESPACE}
-  $ECHO kubectl delete clusterrole -l antiopa-namespace=${NAMESPACE}
+  $ECHO kubectl delete clusterrolebinding ${NAMESPACE}
   $ECHO kubectl delete namespace ${NAMESPACE}
 }
 
