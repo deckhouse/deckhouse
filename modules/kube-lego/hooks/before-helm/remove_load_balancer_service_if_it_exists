@@ -1,0 +1,9 @@
+#!/bin/bash
+
+###
+# Миграция 2018-03-06, https://github.com/deckhouse/deckhouse/merge_requests/102
+# Удаляем сервис kube-lego-nginx, если у него type LoadBalancer, чтобы сервис
+# мог быть корректно создан из helm.
+if [[ $(kubectl -n kube-lego get service/kube-lego-nginx -o json | jq '.spec.type' -r 2> /dev/null) == "LoadBalancer" ]]; then
+  kubectl -n kube-lego delete service/kube-lego-nginx
+fi
