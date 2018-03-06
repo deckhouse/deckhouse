@@ -13,7 +13,7 @@ JQ=$JQ' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
 
 ###
 # Политика #2: DaemonSet flanneld должен нормально обновляться
-JQ=$JQ' | .spec.updateStrategy = {"type":"RollingUpdate"}'
+JQ=$JQ' | .spec.updateStrategy.type = "RollingUpdate"'
 
 # Применяем
 kubectl_apply_jq kube-system ds/kube-flannel-ds "$JQ"
