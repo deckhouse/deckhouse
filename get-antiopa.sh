@@ -177,8 +177,9 @@ spec:
           command: ["/antiopa/antiopa"]
           resources:
             limits:
+              # Важно!!!! Изменять синхронно с policy.cluster.antiopa
               cpu: 420m
-              memory: 1500Mi
+              memory: 500Mi
           workingDir: /antiopa
           env:
             - name: KUBERNETES_DEPLOYED
