@@ -9,7 +9,7 @@ Build:
     - rvm gemset use dapp-0.26
     - dapp --version
     - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}/dev
-    - if [[ -n ${CI_COMMIT_TAG} ]]; then dapp push --tag-ci --verbose ${CI_REGISTRY_IMAGE}; fi
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then dapp dimg push --tag-ci --verbose ${CI_REGISTRY_IMAGE}; fi
   except:
     - schedules
   tags:
