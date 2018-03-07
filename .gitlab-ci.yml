@@ -29,6 +29,7 @@ master:
     name: master
   only:
     - master
+    - tags
   except:
     - schedules
 
