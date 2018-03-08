@@ -6,6 +6,7 @@ stages:
 Build:
   stage: build
   script:
+    - ./modules_images bp --write-tags=modules/images_tags.yaml
     - source dapp_use 0.27
     - dapp --version
     - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}/dev
@@ -63,3 +64,12 @@ Cleanup:
   tags:
     - build
   retry: 2
+
+Cleanup modules images:
+  stage: cleanup
+  script:
+    - ./modules_images cleanup --registry-user=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
+  only:
+    - schedules
+  tags:
+    - build

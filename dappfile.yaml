@@ -47,6 +47,13 @@ ansible:
 
   # Чистим кеш
   - command: rm -rf /var/cache/apk/*
+
+  setup:
+  - name: "Add modules images tags.yaml"
+    copy:
+      content: |
+{{ .Files.Get "modules/images_tags.yaml" | indent 8 }}
+      dest: /antiopa/modules/images_tags.yaml
 ---
 artifact: antiopa
 from: golang:1.8-alpine3.6

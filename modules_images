@@ -1,0 +1,365 @@
+#!/bin/bash
+
+#
+# Скрипт для управления образами модулей.
+#   * Собирает образы модулей из Dockerfile'ов, расположенных в директориях
+#     modules/*/images/*/
+#   * Умно тегирует образы на основании контрольной суммы содержимого
+#     директории образа (content-addressable)
+#   * Генерирует YAML-файл с маппингом имени модуля и имени образа в актуальный
+#     тег
+#   * Умеет очищать все не используемые теги (те теги, на которые не ссылается
+#     ни один акутальный тег)
+#
+# Как к этому пришли: https://github.com/deckhouse/deckhouse/issues/48
+#
+
+
+function bp() {
+  ! read -rd '' HELP_STRING <<"EOF"
+Usage: modules_images bp [OPTION]...
+Build and push all modules images
+
+Optional arguments:
+  --write-tags=PATH            write info about tags in YAML format
+  --registry=REGISTRY          the address of the registry
+                               (default: $CI_REGISTRY_IMAGE)
+  --registry-user=USER         the username to use to push containers to registry
+                               (default: $CI_REGISTRY_USER)
+  --registry-password=PASS     the password to use to push containers to registry
+                               (default: $CI_REGISTRY_PASSWORD)
+  -h, --help                   output this message
+EOF
+
+  TEMP=$(getopt -o h --long write-tags:,registry:,registry-user:,registry-password:,help -n 'modules_images bp' -- "$@")
+
+  eval set -- "$TEMP"
+
+  TAGS_YAML_FILE=""
+  REGISTRY=$CI_REGISTRY_IMAGE
+  REGISTRY_USER=$CI_REGISTRY_USER
+  REGISTRY_PASSWORD=$CI_REGISTRY_PASSWORD
+
+  while true ; do
+    case "$1" in
+      --write-tags )
+        TAGS_YAML_FILE=$2; shift 2;;
+      --registry )
+        REGISTRY=$2; shift 2;;
+      --registry-user )
+        REGISTRY_USER=$2; shift 2;;
+      --registry-password )
+        REGISTRY_PASSWORD=$2; shift 2;;
+      -h | --help )
+        echo "$HELP_STRING"; exit 0 ;;
+      -- )
+        shift; break ;;
+      * )
+        break ;;
+    esac
+  done
+
+  if [[ $# -ne 0 ]] ; then
+    echo "$HELP_STRING"
+    exit 1
+  fi
+
+  if [[ -z $REGISTRY ]] ; then
+    >&2 echo -e "\e[01;31mError, no registry is passed\e[0m"
+    exit 1
+  fi
+
+  set -o pipefail
+  set -e
+
+  # Логинимся в registry
+  if [[ -n $REGISTRY_USER || -n $REGISTRY_PASSWORD ]] ; then
+    echo $REGISTRY_PASSWORD | docker login --username="$REGISTRY_USER" --password-stdin $REGISTRY > /dev/null 2> >(while IFS='' read line ; do echo -e "\e[01;31m$line\e[0m" >&2; done)
+  fi
+
+  # Получаем тег для каждого образа каждого модуля
+  MODULES_IMAGES_WITH_TAGS=$(git ls-tree @ -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/([^\/]+)\/images\/([^\/]+)$/\2:\3:\1/' | sort)
+
+  PREVIOUS_MODULE_IN_TAGS_YAML_FILE=''
+  PREVIOUS_MODULE=''
+  # Проходим по каждому образу каждого тега
+  echo "$MODULES_IMAGES_WITH_TAGS" | while IFS=':' read -r MODULE IMAGE TAG ; do
+    FULL_IMAGE_NAME=$REGISTRY/$MODULE/$IMAGE:$TAG
+
+    # Генерируем запись в YAML файл
+    if [[ -n $TAGS_YAML_FILE ]] ; then
+      if [[ $MODULE != $PREVIOUS_MODULE_IN_TAGS_YAML_FILE ]] ; then
+        if [[ -z $PREVIOUS_MODULE_IN_TAGS_YAML_FILE ]] ; then
+          rm -f $TAGS_YAML_FILE
+        fi
+
+        echo $MODULE: >> $TAGS_YAML_FILE
+        PREVIOUS_MODULE_IN_TAGS_YAML_FILE=$MODULE
+      fi
+
+      echo '  '$IMAGE': "'$TAG'"' >> $TAGS_YAML_FILE
+    fi
+
+    # Пропускаем, если образ уже собран (присутствует локально на сборщике)
+    if [[ -n "$(docker image ls -q $FULL_IMAGE_NAME 2> /dev/null)" ]] ; then
+      continue
+    fi
+
+    # Красиво печатаем информацию о модуле
+    if [[ $MODULE != $PREVIOUS_MODULE ]] ; then
+      if [[ -n $PREVIOUS_MODULE ]] ; then
+        echo
+      fi
+
+      echo -e "\e[1;4m\e[93mBuilding images for $MODULE\e[0m"
+      PREVIOUS_MODULE=$MODULE
+    else
+      echo
+    fi
+
+    # Печатаем информацию об образе
+    echo -e "  \e[1m\e[33mBuilding $IMAGE\e[0m"
+
+    # Собираем и пушим образ
+    set +e
+    (
+      cd modules/$MODULE/images/$IMAGE
+      if ! docker image build -t $FULL_IMAGE_NAME . ; then
+        sleep 0.1
+        exit 1
+      fi
+
+      if ! docker image push $FULL_IMAGE_NAME ; then
+        docker image rm $FULL_IMAGE_NAME
+        sleep 0.1
+        exit 1
+      fi
+    ) 2> >(while IFS='' read line ; do echo -e "\e[01;31m    $line\e[0m" >&2; done) 1> >(while IFS='' read line ; do echo -e "\e[94m    $line\e[0m"; done)
+
+    # Обрабатываем результат
+    if [[ $? -eq 0 ]] ; then
+      echo -e "  \e[1m\e[32mDONE\e[0m"
+    else
+      echo -e "  \e[01;31mFAILED\e[0m"
+      exit 1
+    fi
+
+    set -e
+  done
+}
+
+
+function cleanup() {
+  ! read -rd '' HELP_STRING <<"EOF"
+Usage: modules_images cleanup [OPTION]...
+Cleanup unused tags (localy from Docker and from remote registry)
+
+Optional arguments:
+  --registry=REGISTRY          the address of the registry
+                               (default: $CI_REGISTRY_IMAGE)
+  --registry-user=USER         the username to use to push containers to registry
+                               (default: $CI_REGISTRY_USER)
+  --registry-password=PASS     the password to use to push containers to registry
+                               (default: $CI_REGISTRY_PASSWORD)
+  -h, --help                   output this message
+EOF
+
+  TEMP=$(getopt -o h --long registry:,registry-user:,registry-password:,help -n 'modules_images cleanup' -- "$@")
+
+  eval set -- "$TEMP"
+
+  REGISTRY=$CI_REGISTRY_IMAGE
+  REGISTRY_USER=$CI_REGISTRY_USER
+  REGISTRY_PASSWORD=$CI_REGISTRY_PASSWORD
+
+  while true ; do
+    case "$1" in
+      --registry )
+        REGISTRY=$2; shift 2;;
+      --registry-user )
+        REGISTRY_USER=$2; shift 2;;
+      --registry-password )
+        REGISTRY_PASSWORD=$2; shift 2;;
+      -h | --help )
+        echo "$HELP_STRING"; exit 0 ;;
+      -- )
+        shift; break ;;
+      * )
+        break ;;
+    esac
+  done
+
+  if [[ $# -ne 0 ]] ; then
+    echo "$HELP_STRING"
+    exit 1
+  fi
+
+  if [[ -z $REGISTRY ]] ; then
+    >&2 echo -e "\e[01;31mError, no registry is passed\e[0m"
+    exit 1
+  fi
+
+  # Парсим $REGISTRY
+  REGISTRY_URL="https://$(echo $REGISTRY | cut -d/ -f1)"
+  REGISTRY_REPO=$(echo $REGISTRY | cut -d/ -f2-)
+
+  # Проверяем наличие консольного клиента к registry
+  if ! command -v reg > /dev/null ; then
+    >&2 echo -e "\e[01;31mError, no reg command available\e[0m" >&2
+    echo "Please install https://github.com/jessfraz/reg:"
+    echo "  wget https://github.com/jessfraz/reg/releases/download/v0.12.0/reg-linux-amd64 -O /usr/bin/reg && chmod +x /usr/bin/reg"
+    exit 1
+  fi
+
+  set -o pipefail
+  set -e
+
+  # Логинимся в registry
+  if [[ -n $REGISTRY_USER || -n $REGISTRY_PASSWORD ]] ; then
+    echo $REGISTRY_PASSWORD | docker login --username="$REGISTRY_USER" --password-stdin $REGISTRY > /dev/null 2> >(while IFS='' read line ; do echo -e "\e[01;31m$line\e[0m" >&2; done)
+  fi
+
+  # Вычисляем список всех актуальных бранчей и тегов
+  CURRENT_REFS=$(git branch -r | awk {'print $1'} && git tag && echo HEAD)
+
+  # Получаем список всех образов из всех модулей во всех CURRENT_REF'ах
+  ALL_MODULES_IMAGES=$(
+    for REF in $CURRENT_REFS ; do
+      git ls-tree $REF -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+[0-9a-f]{40}\smodules\/([^\/]+)\/images\/([^\/]+)$/\1:\2/'
+    done | sort | uniq
+  )
+
+  PREVIOUS_MODULE=''
+  # Проходим по каждому образу каждого тега
+  echo "$ALL_MODULES_IMAGES" | while IFS=':' read -r MODULE IMAGE ; do
+    # Определяем список актуальных тегов (по данным git)
+    CURRENT_TAGS=$(
+      for REF in $CURRENT_REFS ; do
+        git ls-tree $REF -- modules/$MODULE/images/$IMAGE | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/'$MODULE'\/images\/'$IMAGE'$/\1/'
+      done | sort | uniq
+    )
+
+    # Определяем список локальных тегов на удаление
+    LOCAL_WASTE_TAGS=$(comm -13 <(echo "$CURRENT_TAGS") <(docker image ls $REGISTRY/$MODULE/$IMAGE --format="{{.Tag}}" | sort))
+
+    # Определяем список тегов на удаление из registry
+    REMOTE_WASTE_TAGS=$(comm -13 <(echo "$CURRENT_TAGS") <(reg --username="$REGISTRY_USER" --password="$REGISTRY_PASSWORD" --registry="$REGISTRY_URL" tags "$REGISTRY_REPO/$MODULE/$IMAGE" | sort) 2> >(while IFS='' read line ; do echo -e "\e[01;31m$line\e[0m" >&2; done))
+
+    # Пропускаем, если нечего чистить
+    if [[ -z "${LOCAL_WASTE_TAGS}${REMOTE_WASTE_TAGS}" ]] ; then
+      continue
+    fi
+
+    # Красиво печатаем информацию о модуле
+    if [[ $MODULE != $PREVIOUS_MODULE ]] ; then
+      if [[ -n $PREVIOUS_MODULE ]] ; then
+        echo
+      fi
+
+      echo -e "\e[1;4m\e[93mCleaning images for $MODULE\e[0m"
+      PREVIOUS_MODULE=$MODULE
+    else
+      echo
+    fi
+
+    # Печатаем информацию об образе
+    echo -e "  \e[1m\e[33mCleaning $IMAGE\e[0m"
+
+    # Производим локальную очистку
+    if [[ -n "${LOCAL_WASTE_TAGS}" ]] ; then
+      echo -e "    \e[1m\e[33mLocal docker\e[0m"
+      set +e
+      (
+        for TAG in $LOCAL_WASTE_TAGS ; do
+          docker image rm $REGISTRY/$MODULE/$IMAGE:$TAG
+        done
+      ) 2> >(while IFS='' read line ; do echo -e "\e[01;31m      $line\e[0m" >&2; done) 1> >(while IFS='' read line ; do echo -e "\e[94m      $line\e[0m"; done)
+
+      # Обрабатываем результат
+      if [[ $? -eq 0 ]] ; then
+        sleep 0.1
+        echo -e "    \e[1m\e[32mDONE\e[0m"
+      else
+        sleep 0.1
+        echo -e "    \e[01;31mFAILED\e[0m"
+        exit 1
+      fi
+      set -e
+    fi
+
+    # Производим очистку registry
+    #
+    # Важно! Если несколько тегов ссылаются на один образ (образ с одним
+    # digest'ом), то при удалении любого из таких тегов вместе с ним удаляется
+    # и образ и все ссылающиеся на него теги.
+    #   * Поведение одинаковое и при нажатии кнопки в интерфейсе Gitlab, и при
+    #     использовании утилиты reg и руками через API registry.
+    #   * У нас новый тег — это всегда новая контрольная сумма директории с
+    #     Dockerfile'ом, и скорей всего изменение любого файла в этой
+    #     директории приводит к созданию нового образа. По-другому может быть
+    #     только в ситуации, если файл лежащий в директории с образом никак не
+    #     используется, что странно.
+    # Ну и так-как поведение везде одинаковое и так-как вероятность совпадания
+    # образов у нас у разных тегов не большая, решил не разбираться, а воткнуть
+    # костыль — после очистки каждого образа делается docker push всего, что
+    # есть локально.
+    #
+    if [[ -n "${REMOTE_WASTE_TAGS}" ]] ; then
+      echo -e "    \e[1m\e[33mRemote registry\e[0m"
+      set +e
+      (
+        set -e
+
+        echo "Removing tags:"
+        for TAG in $REMOTE_WASTE_TAGS ; do
+          if reg --username="$REGISTRY_USER" --password="$REGISTRY_PASSWORD" --registry="$REGISTRY_URL" tags "$REGISTRY_REPO/$MODULE/$IMAGE" | grep '^'$TAG'$' > /dev/null ; then
+            reg --username="$REGISTRY_USER" --password="$REGISTRY_PASSWORD" --registry="$REGISTRY_URL" rm "$REGISTRY_REPO/$MODULE/$IMAGE:$TAG" | sed 's/^/  /g'
+          else
+            echo "  Skipping $TAG, image already removed"
+          fi
+        done
+
+        echo
+        echo "Repushing $REGISTRY/$MODULE/$IMAGE"
+        docker push $REGISTRY/$MODULE/$IMAGE | sed 's/^/  /g'
+      ) 2> >(while IFS='' read line ; do echo -e "\e[01;31m      $line\e[0m" >&2; done) 1> >(while IFS='' read line ; do echo -e "\e[94m      $line\e[0m"; done)
+
+      # Обрабатываем результат
+      if [[ $? -eq 0 ]] ; then
+        sleep 0.1
+        echo -e "    \e[1m\e[32mDONE\e[0m"
+      else
+        sleep 0.1
+        echo -e "    \e[01;31mFAILED\e[0m"
+        exit 1
+      fi
+      set -e
+    fi
+  done
+}
+
+! read -rd '' HELP_STRING <<"EOF"
+Usage: modules_images SUBCOMMAND [SUBCOMMAND OPTIONS]...
+
+Available subcommands: (for details, modules_images SUBCOMMAND --help)
+
+modules_images bp
+modules_images cleanup
+EOF
+
+if [[ $# -eq 0 ]] ; then
+  echo "$HELP_STRING"
+  exit 1
+fi
+
+SUBCOMMAND=$1
+shift
+
+case "$SUBCOMMAND" in
+  bp )
+    bp $@ ;;
+  cleanup )
+    cleanup $@ ;;
+  * )
+    echo "$HELP_STRING"; exit 1 ;;
+esac

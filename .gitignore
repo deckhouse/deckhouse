@@ -3,7 +3,6 @@
 *.dll
 *.so
 *.dylib
-/antiopa
 
 # Test binary, build with `go test -c`
 *.test
@@ -24,3 +23,6 @@
 
 # dapp
 /.dapp_build
+
+# modules_images tags
+/modules/images_tags.yaml
