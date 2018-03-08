@@ -3,15 +3,14 @@ dimg_group do
     docker.from 'golang:1.8-alpine3.6'
 
     git do
-      add '/' do
+      add '/antiopa' do
         to '/go/src/github.com/deckhouse/deckhouse'
-        exclude_paths 'playground', 'play-registry'
+        exclude_paths 'development'
+
         # go get будет вызывать только если изменился этот файл!
         stage_dependencies.install 'go-get-run'
-        # **/*.go срабатывает от изменений в modules
-        # **.go и *.go не срабатывают от изменений *.go во вложенных директориях
-        # Пока вложенные нужно придётся добавлять отдельно: stage_dependencies.build_artifact 'play-values/*.go'
-        stage_dependencies.build_artifact '*.go'
+
+        stage_dependencies.build_artifact '**/*.go'
       end
     end
 
