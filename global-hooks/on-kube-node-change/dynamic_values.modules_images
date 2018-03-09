@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+source /antiopa/shell-lib
+
+cat > $RETURN_VALUES_PATH <<END
+global:
+  modules_images:
+    registry: $(modules_images.registry)
+    registry_dockercfg: $(modules_images.registry_dockercfg)
+    tags:
+$(cat /antiopa/modules/images_tags.yaml | sed 's/^/      /g')
+END
