@@ -6,7 +6,7 @@ stages:
 Build:
   stage: build
   script:
-    - rvm gemset use dapp-0.26
+    - source dapp_use 0.27
     - dapp --version
     - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}/dev
     - if [[ -n ${CI_COMMIT_TAG} ]]; then dapp dimg push --tag-plain ${CI_COMMIT_TAG} --verbose ${CI_REGISTRY_IMAGE}; fi
@@ -50,7 +50,7 @@ stable:
 Cleanup:
   stage: cleanup
   script:
-    - rvm gemset use dapp-0.26
+    - source dapp_use 0.27
     - dapp --version
     - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE}/dev --registry-username=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
     - dapp dimg stages cleanup local

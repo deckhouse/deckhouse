@@ -1,0 +1,74 @@
+dimg: ~
+from: alpine:3.6
+git:
+- add: /
+  to: /antiopa
+  includePaths:
+  - modules
+  - global-hooks
+  - shell-lib
+  - shell-lib.d
+import:
+- artifact: antiopa
+  add: /go/src/github.com/deckhouse/deckhouse/antiopa
+  to: /antiopa/antiopa
+  before: setup
+ansible:
+  beforeInstall:
+  - apk: update_cache=yes
+
+  # ca-certificates нужны для работы helm
+  - apk: name=ca-certificates
+
+  # Нам нужен bash, на нем все хуки
+  - apk: name=bash
+
+  # Зависимости хуков
+  - apk: name=jq
+  - apk: name=makepasswd
+  - apk: name=apache2-utils
+
+  # Ставим kubectl
+  - name: Install kubectl
+    get_url:
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.8.8/bin/linux/amd64/kubectl
+      dest: /usr/local/bin/kubectl
+      mode: +x
+
+  # Ставим helm
+  - name: Install helm
+    unarchive:
+      extra_opts:
+      - linux-amd64/helm
+      - --strip-components=1
+      src: https://storage.googleapis.com/kubernetes-helm/helm-v2.6.2-linux-amd64.tar.gz
+      remote_src: yes
+      dest: /usr/local/bin
+
+  # Чистим кеш
+  - command: rm -rf /var/cache/apk/*
+---
+artifact: antiopa
+from: golang:1.8-alpine3.6
+git:
+- add: /antiopa
+  to: /go/src/github.com/deckhouse/deckhouse
+  excludePaths:
+  - development
+  stageDependencies:
+    install:
+    - go-get-run
+    buildArtifact:
+    - "**/*.go"
+ansible:
+  beforeInstall:
+  - apk: name=git update_cache=yes
+  - command: rm -rf /var/cache/apk/*
+
+  install:
+  - command: go get -v -d github.com/deckhouse/deckhouse/...
+
+  buildArtifact:
+  - command: go build
+    args:
+      chdir: /go/src/github.com/deckhouse/deckhouse
