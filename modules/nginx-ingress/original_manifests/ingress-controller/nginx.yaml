@@ -1,0 +1,67 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: nginx
+  namespace: kube-nginx-ingress
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: "..."
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: nginx
+#TODO: Docker before 1.12 does not support sysctls
+#      annotations:
+#        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
+    spec:
+      nodeSelector:
+        node-role/frontend: ""
+      tolerations:
+      - key: node-role/frontend
+        operator: Exists
+        effect: NoExecute
+      serviceAccount: kube-nginx-ingress
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - image: gcr.io/google_containers/nginx-ingress-controller:0.9.0-beta.15
+        name: nginx
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_VERSION
+          value: '16'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 2
+          timeoutSeconds: 5
+        args:
+        - /nginx-ingress-controller
+        - --default-backend-service=$(POD_NAMESPACE)/default-http-backend
+        - --configmap=$(POD_NAMESPACE)/nginx
+        - --v=0
+        volumeMounts:
+        - mountPath: /etc/nginx/template
+          name: nginx-config-template
+      volumes:
+      - name: nginx-config-template
+        configMap:
+          name: nginx-config-template

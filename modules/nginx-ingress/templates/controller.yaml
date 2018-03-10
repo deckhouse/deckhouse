@@ -1,0 +1,25 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+  {{- $_ := set . "Values" $.Values }}
+  {{- $_ := set . "Files" $.Files }}
+  {{- $_ := set . "Chart" $.Chart }}
+  {{- $inlet := (include "helper.inlet" .) }}
+
+  {{- if eq $inlet "LoadBalancer" }}
+    {{- include "template.nginx" (dict "context" .) }}
+    {{- include "template.config" (dict "context" .) }}
+    {{- include "template.service" (dict "context" . "type" "LoadBalancer") }}
+  {{- else if eq $inlet "AWSClassicLoadBalancer" }}
+    {{- include "template.nginx" (dict "context" .) }}
+    {{- include "template.config" (dict "context" . "useProxyProtocol" true) }}
+    {{- include "template.service" (dict "context" . "type" "LoadBalancer" "annotations" (dict "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol" "*" "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" "600")) }}
+  {{- else if eq $inlet "NodePort" }}
+    {{- include "template.nginx" (dict "context" .) }}
+    {{- include "template.config" (dict "context" .) }}
+    {{- include "template.service" (dict "context" . "type" "NodePort") }}
+  {{- else if eq $inlet "Direct" }}
+    {{- include "template.nginx" (dict "context" . "hostNetwork" true) }}
+    {{- include "template.config" (dict "context" .) }}
+    {{- include "template.nginx" (dict "context" . "suffix" "-for-bm-fallback") }}
+    {{- include "template.config" (dict "context" . "suffix" "-for-bm-fallback" "useProxyProtocol" "yes" ) }}
+  {{- end }}
+{{- end }}

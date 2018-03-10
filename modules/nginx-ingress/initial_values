@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+# Миграция 2018-03-13, https://github.com/deckhouse/deckhouse/merge_requests/88
+# Внимание! Все это нужно только на момент перехода и может быть полностью удалено после.
+
+
+# inlet
+if kubectl -n kube-nginx-ingress get ds/bm-fallback > /dev/null 2> /dev/null; then
+  if [[ $(cluster::type) != "Manual" && $(cluster::type) != "ACS" ]] ; then
+    inlet=Direct
+  fi
+fi
+
+# config.hsts
+res=$(kubectl -n kube-nginx-ingress get cm/nginx -o json | jq '.data.hsts' -r)
+if [[ "$res" == "null" || "$res" == "true" ]] ; then
+  hsts=true
+fi
+
+# config.setRealIPFrom
+res=$(kubectl -n kube-nginx-ingress get cm/nginx -o json | jq '.data."proxy-real-ip-cidr"' -r)
+if [[ "$res" != "0.0.0.0/32" ]] ; then
+  if [[ $(cluster::type) != "AWS" ]] ; then
+    set_real_ip_from=$res
+  fi
+fi
+
+# render
+[[ -n $inlet || -n $hsts || -n $set_real_ip_from ]] && echo "nginxIngress:"
+[[ -n $inlet ]] && "  inlet: $inlet"
+[[ -n $hsts || -n $set_real_ip_from ]] && echo "  config:"
+[[ -n $hsts ]] && echo "    hsts: $hsts"
+[[ -n $set_real_ip_from ]] && echo "    setRealIPFrom: $set_real_ip_from"

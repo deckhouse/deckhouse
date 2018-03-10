@@ -1,0 +1,79 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-for-bm-fallback
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: nginx-for-bm-fallback
+spec:
+  ports:
+  - name: http-proxy
+    port: 80
+    protocol: TCP
+  - name: https-proxy
+    port: 443
+    protocol: TCP
+  selector:
+    app: nginx-for-bm-fallback
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: bm-fallback
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: nginx-for-bm-fallback
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: bm-fallback
+  template:
+    metadata:
+      labels:
+        app: bm-fallback
+#TODO: Docker before 1.12 does not support sysctls
+#      annotations:
+#        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
+    spec:
+{{ include "helper.nodeSelector" . | indent 6 }}
+{{ include "helper.tolerations" . | indent 6 }}
+      serviceAccount: kube-nginx-ingress
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/bm-fallback:{{ $.Values.global.modulesImages.tags.nginxIngress.bmFallback }}
+        name: nginx
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10253
+            host: 127.0.0.1
+          initialDelaySeconds: 3
+      - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/bm-fallback-iptables:{{ $.Values.global.modulesImages.tags.nginxIngress.bmFallbackIptables }}
+        name: iptables-loop
+        imagePullPolicy: Always
+        securityContext:
+          capabilities:
+            add:
+            - NET_RAW
+            - NET_ADMIN
+      - name: bmlb-exporter
+        image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/nginx-exporter:{{ $.Values.global.modulesImages.tags.nginxIngress.nginxExporter }}
+        args: ["-nginx.scrape_uri=http://127.0.0.1:10253/nginx_status", "-telemetry.address=127.0.0.1:10354", "-insecure=true"]
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 10354
+            host: 127.0.0.1
+      imagePullSecrets:
+      - name: registry
+{{- end }}
