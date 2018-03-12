@@ -1,25 +1,25 @@
 #!/bin/bash
 
-source /antiopa/shell-lib
+source /antiopa/shell_lib.sh
 
 # Политика: kube-proxy должен быть запущен на всех узлах, вне зависимости от taint'ов
 #
 # Даже если узел выделен под какую-то задачу, kube-proxy туда в любом случае должен доехать, нам же нужна сеть и сервисы.
 
-CLUSTER_TYPE=$(cluster.type)
+cluster_type=$(cluster::type)
 
 # В aws и gce кластер разворачивается kops'ом, а он вместо ds/kube-proxy генерит на каждом
 # узле манифест в /etc/kubernetes/manifests, так что для kops не актуально.
-[[ $CLUSTER_TYPE == "aws" || $CLUSTER_TYPE == "gce" ]] && exit
+[[ $cluster_type == "aws" || $cluster_type == "gce" ]] && exit
 
 # В azure (точнее в acs-engine) на данный момент нет возможности указывать taint'ы группам узлов,
 # так что там никакой узел не может быть заблокирован.
-[[ $CLUSTER_TYPE == "acs" ]] && exit
+[[ $cluster_type == "acs" ]] && exit
 
-JQ='.'
+fltr='.'
 
 # Разрешаем запуск на любом узле с любыми taint'ами
-JQ=$JQ' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
+fltr=$fltr' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
 
 # Применяем
-kubectl_apply_jq kube-system ds/kube-proxy "$JQ"
+kubectl::apply_jq kube-system ds/kube-proxy "$fltr"

@@ -5,7 +5,7 @@
 #  * node-role/*
 #  * node-role.kubernetes.io/*
 
-function cluster.specific_nodes() {
+function cluster::specific_nodes() {
   kubectl get nodes -o json | jq '.items[]
     | select(.spec.taints)
     | select(
@@ -16,7 +16,7 @@ function cluster.specific_nodes() {
     | .metadata.name' -r
 }
 
-function cluster.nonspecific_nodes() {
+function cluster::nonspecific_nodes() {
   kubectl get nodes -o json | jq '.items[]
     | select(
       .spec.taints == null or (.spec.taints[] | select(

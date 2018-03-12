@@ -30,7 +30,7 @@
 #    не научился, потом придумаем как отличать), а если ничего из этих трех — значит это "без облака" и kubeadm
 
 
-function cluster.type() {
+function cluster::type() {
   if $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=aws' > /dev/null);  then
     echo aws
   elif $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=gce' > /dev/null); then

@@ -10,7 +10,7 @@ spec:
       labels:
         app: kube-lego
     spec:
-{{- if eq .Values.global.cluster.has_system_nodes true }}
+{{- if eq .Values.global.cluster.hasSystemNodes true }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -32,9 +32,9 @@ spec:
         - containerPort: 8080
         env:
         - name: LEGO_EMAIL
-          value: "{{ .Values.kube_lego.email }}"
+          value: "{{ .Values.kubeLego.email }}"
         - name: LEGO_URL
-          value: "{{ .Values.kube_lego.url }}"
+          value: "{{ .Values.kubeLego.url }}"
         - name: LEGO_NAMESPACE
           valueFrom:
             fieldRef:

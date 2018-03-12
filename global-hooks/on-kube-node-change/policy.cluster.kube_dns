@@ -1,19 +1,19 @@
 #!/bin/bash
 
-source /antiopa/shell-lib
+source /antiopa/shell_lib.sh
 
-JQ='.'
+fltr='.'
 
 ###
 # Политика #1: kube-dns должен выполняться на system-узлах, если они есть
-if cluster.has_system_nodes; then
+if cluster::has_system_nodes; then
   # Добавляем toleration, если не добавлен
-  JQ=$JQ' | .spec.template.spec.tolerations |= (
+  fltr=$fltr' | .spec.template.spec.tolerations |= (
     . + [{"key":"node-role/system","operator":"Exists"}] | unique
   )'
 
   # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
-  JQ=$JQ' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
+  fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
     if . then . else [{}] end | map(
       .matchExpressions |= (
         . + [{"key":"node-role/system","operator":"Exists"}] | unique
@@ -22,12 +22,12 @@ if cluster.has_system_nodes; then
   )'
 else
   # Удаляем toleration, если был добавлен
-  JQ=$JQ' | if .spec.template.spec.tolerations then
+  fltr=$fltr' | if .spec.template.spec.tolerations then
     .spec.template.spec.tolerations |= . - [{"key":"node-role/system","operator":"Exists"}]
   else . end'
 
   # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
-  JQ=$JQ' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
+  fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
     .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
       . | map(
         .matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
@@ -36,7 +36,7 @@ else
   else . end'
 fi
 # В любом случае, есть system-узлы или нет, удаляем "старые" toleration'ы, с явно указанным effect
-JQ=$JQ' | if .spec.template.spec.tolerations then
+fltr=$fltr' | if .spec.template.spec.tolerations then
   .spec.template.spec.tolerations |= . - [{"effect":"NoExecute","key":"node-role/system","operator":"Exists"}]
 else . end'
 
@@ -49,21 +49,21 @@ else . end'
 #    * Иначе количество реплик должно быть:
 #      * равно 2 или больше (если руками кто-то поставил),
 #      * но не больше, чем количество неспецифичных нод в кластере (без наших специальных taint)
-if [[ $(cluster.type) != "aws" && $(cluster.type) != "gce" ]] ; then
-  if cluster.has_system_nodes; then
-    JQ=$JQ' | .spec.replicas = '$(cluster.count_system_nodes)
+if [[ $(cluster::type) != "aws" && $(cluster::type) != "gce" ]] ; then
+  if cluster::has_system_nodes; then
+    fltr=$fltr' | .spec.replicas = '$(cluster::count_system_nodes)
   else
-    JQ=$JQ' | .spec.replicas |= ([[2,.] | max, '$(cluster.nonspecific_nodes | wc -l)'] | min)'
+    fltr=$fltr' | .spec.replicas |= ([[2,.] | max, '$(cluster::nonspecific_nodes | wc -l)'] | min)'
   fi
 fi
 
 
 ###
 # Политика #3: Не нужно запускать больше одного kube-dns на узле
-JQ=$JQ' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (. + [{"weight":100,"podAffinityTerm":{"labelSelector":{"matchLabels":{"k8s-app":"kube-dns"}},"topologyKey":"kubernetes.io/hostname"}}] | unique)'
+fltr=$fltr' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (. + [{"weight":100,"podAffinityTerm":{"labelSelector":{"matchLabels":{"k8s-app":"kube-dns"}},"topologyKey":"kubernetes.io/hostname"}}] | unique)'
 
 # Определяем имя deployment'а (в Azure он называется не kube-dns)
 kube_dns_deployment_name=$(kubectl -n kube-system get deployment -l k8s-app=kube-dns -o name)
 
 # Применяем
-kubectl_apply_jq kube-system ${kube_dns_deployment_name} "$JQ"
+kubectl::apply_jq kube-system ${kube_dns_deployment_name} "$fltr"
