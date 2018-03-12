@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+source /antiopa/shell_lib.sh
+
+cat > $RETURN_VALUES_PATH <<END
+global:
+  modulesImages:
+    registry: $(kubectl -n antiopa get deploy/antiopa -o json | jq '.spec.template.spec.containers[0].image' -r | cut -d: -f1 | sed 's/\/dev$//')
+    registryDockercfg: $(kubectl -n antiopa get secret/registrysecret -o json | jq '.data.".dockercfg"' -r)
+    tags:
+$(cat /antiopa/modules/images_tags.yaml | sed 's/^/      /g')
+END

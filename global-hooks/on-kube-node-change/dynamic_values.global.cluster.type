@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
-source /antiopa/shell-lib
+source /antiopa/shell_lib.sh
 
 cat > $RETURN_VALUES_PATH <<END
 global:
   cluster:
-    type: $(cluster.type)
+    type: $(cluster::type)
 END

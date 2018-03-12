@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+CHAIN_NAME="nginx-ingress-bm-fallback"
+JUMP_RULE="-p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j $CHAIN_NAME"
+SOCKET_EXISTS_RULE="-m socket --nowildcard -j RETURN"
+DNAT_HTTP_RULE="-p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:81"
+DNAT_HTTPS_RULE="-p tcp --dport 443 -j DNAT --to-destination 127.0.0.1:444"
+
+while true; do
+  iptables -w -t nat -n --list "$CHAIN_NAME" >/dev/null 2>&1 || iptables -w -t nat -N "$CHAIN_NAME"
+  iptables -w -t nat -C PREROUTING $JUMP_RULE >/dev/null 2>&1 || iptables -w -t nat -I PREROUTING 1 $JUMP_RULE
+  iptables -w -t nat -C "$CHAIN_NAME" $SOCKET_EXISTS_RULE >/dev/null 2>&1 || iptables -w -t nat -I "$CHAIN_NAME" 1 $SOCKET_EXISTS_RULE
+  iptables -w -t nat -C "$CHAIN_NAME" $DNAT_HTTP_RULE >/dev/null 2>&1 || iptables -w -t nat -I "$CHAIN_NAME" 2 $DNAT_HTTP_RULE
+  iptables -w -t nat -C "$CHAIN_NAME" $DNAT_HTTPS_RULE >/dev/null 2>&1 || iptables -w -t nat -I "$CHAIN_NAME" 3 $DNAT_HTTPS_RULE
+  sleep 60
+done

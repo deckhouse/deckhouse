@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell-lib
+source /antiopa/shell_lib.sh
 
 ###
 # Миграция 2018-03-06, https://github.com/deckhouse/deckhouse/merge_requests/101
@@ -31,4 +31,4 @@ fi
 # К сожалению на данный момент antiopa течет. Да и никто не защищен от ошибки.
 # Чтобы максимально обезопасить себя — ставим жесткий лимит на память и CPU.
 # Важно! Изменять необходимо синхронно и здесь и в инсталляторе!
-kubectl_apply_jq antiopa deploy/antiopa '. | .spec.template.spec.containers[0].resources.limits = {"cpu":"420m","memory":"500Mi"}'
+kubectl::apply_jq antiopa deploy/antiopa '. | .spec.template.spec.containers[0].resources.limits = {"cpu":"420m","memory":"500Mi"}'

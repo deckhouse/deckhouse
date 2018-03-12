@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-function cluster.has_system_nodes() {
+function cluster::has_system_nodes() {
   if $(kubectl get nodes -l node-role/system -o name | grep . > /dev/null); then
     return 0
   else
@@ -8,6 +8,6 @@ function cluster.has_system_nodes() {
   fi
 }
 
-function cluster.count_system_nodes() {
+function cluster::count_system_nodes() {
   kubectl get nodes -l node-role/system -o name | wc -l
 }

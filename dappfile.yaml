@@ -6,8 +6,8 @@ git:
   includePaths:
   - modules
   - global-hooks
-  - shell-lib
-  - shell-lib.d
+  - shell_lib.sh
+  - shell_lib
 import:
 - artifact: antiopa
   add: /go/src/github.com/deckhouse/deckhouse/antiopa
