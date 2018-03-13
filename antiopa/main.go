@@ -117,7 +117,12 @@ func Init() {
 	}
 
 	InitKubeNodeManager()
-	InitRegistryManager()
+
+	err = InitRegistryManager()
+	if err != nil {
+		rlog.Errorf("Cannot initialize registry manager: %s", err)
+		os.Exit(1)
+	}
 }
 
 func Run() {

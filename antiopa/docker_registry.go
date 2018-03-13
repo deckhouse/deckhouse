@@ -1,32 +1,16 @@
 package main
 
 import (
+	"crypto/tls"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/docker/distribution/reference"
 	registryclient "github.com/flant/docker-registry-client/registry"
 	"github.com/romana/rlog"
-	"net/http"
-	"strings"
 )
-
-// TODO данные для доступа к registry серверам нужно хранить в secret-ах.
-// TODO по imageInfo.Registry брать данные и подключаться к нужному registry.
-// Пока известно, что будет только registry.flant.com
-
-var DockerRegistryInfo = map[string]map[string]string{
-	"registry.flant.com": map[string]string{
-		"url":      "https://registry.flant.com",
-		"user":     "oauth2",
-		"password": "qweqwe",
-	},
-	// minikube specific
-	"localhost:5000": map[string]string{
-		"url": "http://kube-registry.kube-system.svc.cluster.local:5000",
-	},
-}
-
-//const DockerRegistryUrl = "https://registry.flant.com"
-//const DockerRegistryUser = "oauth2"
-//const DockerRegistryToken = ""
 
 type DockerImageInfo struct {
 	Registry   string
@@ -34,27 +18,9 @@ type DockerImageInfo struct {
 	Tag        string
 }
 
-func DockerRegistryGetImageId(image string) (string, error) {
-	imageInfo, err := DockerParseImageName(image)
-	if err != nil {
-		rlog.Errorf("REGISTRY Problem parsing image %s: %v", image, err)
-		return "", err
-	}
-
-	url := ""
-	user := ""
-	password := ""
-	if info, has_info := DockerRegistryInfo[imageInfo.Registry]; has_info {
-		url = info["url"]
-		user = info["user"]
-		password = info["password"]
-	}
-
-	// Установить соединение с registry
-	registry := NewDockerRegistry(url, user, password)
-
+func DockerRegistryGetImageId(imageInfo DockerImageInfo, dockerRegistry *registryclient.Registry) (string, error) {
 	// Получить описание образа
-	antiopaManifest, err := registry.ManifestV2(imageInfo.Repository, imageInfo.Tag)
+	antiopaManifest, err := dockerRegistry.ManifestV2(imageInfo.Repository, imageInfo.Tag)
 	if err != nil {
 		rlog.Errorf("REGISTRY cannot get manifest for %s:%s: %v", imageInfo.Repository, imageInfo.Tag, err)
 		return "", err
@@ -101,13 +67,28 @@ func RegistryClientLogCallback(format string, args ...interface{}) {
 // Этот конструктор не запускает registry.Ping и логирует события через rlog.
 func NewDockerRegistry(registryUrl, username, password string) *registryclient.Registry {
 	url := strings.TrimSuffix(registryUrl, "/")
-	transport := http.DefaultTransport
-	transport = registryclient.WrapTransport(transport, url, username, password)
+
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          1,
+		MaxIdleConnsPerHost:   1,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSNextProto:          make(map[string]func(string, *tls.Conn) http.RoundTripper),
+	}
+
+	wrappedTransport := registryclient.WrapTransport(transport, url, username, password)
 
 	return &registryclient.Registry{
 		URL: url,
 		Client: &http.Client{
-			Transport: transport,
+			Transport: wrappedTransport,
 		},
 		Logf: RegistryClientLogCallback,
 	}

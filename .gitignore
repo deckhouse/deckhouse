@@ -23,6 +23,10 @@
 
 # dapp
 /.dapp_build
+.dappfile.render*
 
 # modules_images tags
 /modules/images-tags.yaml
+
+# local development antiopa binary
+/antiopa/antiopa
