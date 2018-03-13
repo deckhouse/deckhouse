@@ -31,11 +31,11 @@
 
 
 function cluster::type() {
-  if $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=aws' > /dev/null);  then
+  if $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command} {.items[0].spec.containers[0].args}' 2>/dev/null | grep -- '--cloud-provider=aws' > /dev/null);  then
     echo AWS
-  elif $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=gce' > /dev/null); then
+  elif $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command} {.items[0].spec.containers[0].args}' 2>/dev/null | grep -- '--cloud-provider=gce' > /dev/null); then
     echo GCE
-  elif $(kubectl -n kube-system get pod -l component=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=azure' > /dev/null);  then
+  elif $(kubectl -n kube-system get pod -l component=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command} {.items[0].spec.containers[0].args}' 2>/dev/null | grep -- '--cloud-provider=azure' > /dev/null);  then
     echo ACS
   else
     echo Manual
