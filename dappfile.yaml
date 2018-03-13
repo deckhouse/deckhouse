@@ -46,7 +46,7 @@ ansible:
       dest: /usr/local/bin
 
   # Чистим кеш
-  - command: rm -rf /var/cache/apk/*
+  - raw: rm -rf /var/cache/apk/*
 
   setup:
   - name: "Add modules images tags.yaml"
