@@ -2,8 +2,8 @@
 
 source /antiopa/shell_lib.sh
 
-# flannel есть только в manual кластерах
-[[ $(cluster::type) != "manual" ]] && exit
+# flannel есть только в Manual кластерах
+[[ $(cluster::type) != "Manual" ]] && exit
 
 fltr='.'
 

@@ -8,13 +8,13 @@ source /antiopa/shell_lib.sh
 
 cluster_type=$(cluster::type)
 
-# В aws и gce кластер разворачивается kops'ом, а он вместо ds/kube-proxy генерит на каждом
+# В AWS и GCE кластер разворачивается kops'ом, а он вместо ds/kube-proxy генерит на каждом
 # узле манифест в /etc/kubernetes/manifests, так что для kops не актуально.
-[[ $cluster_type == "aws" || $cluster_type == "gce" ]] && exit
+[[ $cluster_type == "AWS" || $cluster_type == "GCE" ]] && exit
 
-# В azure (точнее в acs-engine) на данный момент нет возможности указывать taint'ы группам узлов,
+# В Azure (точнее в acs-engine) на данный момент нет возможности указывать taint'ы группам узлов,
 # так что там никакой узел не может быть заблокирован.
-[[ $cluster_type == "acs" ]] && exit
+[[ $cluster_type == "ACS" ]] && exit
 
 fltr='.'
 

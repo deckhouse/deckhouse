@@ -43,13 +43,13 @@ else . end'
 
 ###
 # Политика #2: Количество реплик kube-dns
-#  * В aws и gce — работает kube-dns-autoscaler (который ставит kops, и мы не хотим с ним спорить)
+#  * В AWS и GCE — работает kube-dns-autoscaler (который ставит kops, и мы не хотим с ним спорить)
 #  * В других случаях:
 #    * Если есть system-узлы, то kube-dns должен выполняться на каждом system-узле
 #    * Иначе количество реплик должно быть:
 #      * равно 2 или больше (если руками кто-то поставил),
 #      * но не больше, чем количество неспецифичных нод в кластере (без наших специальных taint)
-if [[ $(cluster::type) != "aws" && $(cluster::type) != "gce" ]] ; then
+if [[ $(cluster::type) != "AWS" && $(cluster::type) != "GCE" ]] ; then
   if cluster::has_system_nodes; then
     fltr=$fltr' | .spec.replicas = '$(cluster::count_system_nodes)
   else

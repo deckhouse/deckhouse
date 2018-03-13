@@ -9,16 +9,16 @@
 # По-хорошему можно было бы разделить "способ установки" и "cloud provider", и рассматривать все варианты установки для каждого
 # провайдера. Но это сильно усложнит нам работу, а никакого реального результата не даст. Унификация — мать порядка! Поэтому мы
 # "искусственно" ограничиваем возможные типы кластеров следующим набором:
-#  * aws — AWS + kops
-#  * acs — Azure + acs-engine
-#  * gce — GCE + kops
-#  * manual — "все остальное" + kubeadm
+#  * AWS — AWS + kops
+#  * ACS — Azure + acs-engine
+#  * GCE — GCE + kops
+#  * Manual — "все остальное" + kubeadm
 #
 # Дальше возможны следующие изменения:
-#  * когда kops научится разворачивать кластер в Azure — мы откажемся от типа acs в пользу типа azure
+#  * когда kops научится разворачивать кластер в Azure — мы откажемся от типа ACS в пользу типа Azure
 #  * если нам понадобится работать с кластером в GKE — будет тип gke
 #  * когда kops дозреет до нормальной установки в VMWare и у нас появится соответствующий кейс — сделаем vmware
-#  * когда kops дозреет до работы на железе — заменим manual на cloudless
+#  * когда kops дозреет до работы на железе — заменим Manual на cloudless
 #
 # Что касается способа детектирования:
 #  * есть (вроде бы) нормальный способ определить, что кластер развернут в (и интегрирован с) каком-то облаке
@@ -32,12 +32,12 @@
 
 function cluster::type() {
   if $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=aws' > /dev/null);  then
-    echo aws
+    echo AWS
   elif $(kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=gce' > /dev/null); then
-    echo gce
+    echo GCE
   elif $(kubectl -n kube-system get pod -l component=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command}' 2>/dev/null | grep -- '--cloud-provider=azure' > /dev/null);  then
-    echo acs
+    echo ACS
   else
-    echo manual
+    echo Manual
   fi
 }
