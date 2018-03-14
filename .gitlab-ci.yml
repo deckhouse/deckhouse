@@ -19,6 +19,8 @@ Build:
 .base_deploy: &base_deploy
   stage: deploy
   script:
+    - source dapp_use 0.27
+    - dapp --version
     - dapp dimg push ${CI_REGISTRY_IMAGE} --tag ${CI_JOB_NAME}
   when: manual
   tags:
