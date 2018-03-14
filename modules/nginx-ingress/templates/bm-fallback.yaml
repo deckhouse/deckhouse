@@ -1,4 +1,6 @@
 {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+  {{- $inlet := (include "helper.inlet" .) }}
+  {{- if eq $inlet "Direct" }}
 ---
 apiVersion: v1
 kind: Service
@@ -76,4 +78,5 @@ spec:
             host: 127.0.0.1
       imagePullSecrets:
       - name: registry
+  {{- end }}
 {{- end }}
