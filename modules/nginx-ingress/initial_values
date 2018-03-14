@@ -28,8 +28,22 @@ if [[ "$res" != "0.0.0.0/32" ]] ; then
 fi
 
 # render
-[[ -n $inlet || -n $hsts || -n $set_real_ip_from ]] && echo "nginxIngress:"
-[[ -n $inlet ]] && "  inlet: $inlet"
-[[ -n $hsts || -n $set_real_ip_from ]] && echo "  config:"
-[[ -n $hsts ]] && echo "    hsts: $hsts"
-[[ -n $set_real_ip_from ]] && echo "    setRealIPFrom: $set_real_ip_from"
+if [[ -n $inlet || -n $hsts || -n $set_real_ip_from ]] ; then
+  echo "nginxIngress:"
+
+  if [[ -n $inlet ]] ; then
+    echo "  inlet: $inlet"
+  fi
+
+  if [[ -n $hsts || -n $set_real_ip_from ]] ; then
+    echo "  config:"
+
+    if [[ -n $hsts ]] ; then
+      echo "    hsts: $hsts"
+    fi
+
+    if [[ -n $set_real_ip_from ]] ; then
+      echo "    setRealIPFrom: $set_real_ip_from"
+    fi
+  fi
+fi
