@@ -19,9 +19,13 @@ Build:
 .base_deploy: &base_deploy
   stage: deploy
   script:
-    - source dapp_use 0.27
-    - dapp --version
-    - dapp dimg push ${CI_REGISTRY_IMAGE} --tag ${CI_JOB_NAME}
+    - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
+    - docker image pull ${CI_REGISTRY_IMAGE}/dev:${CI_JOB_NAME}
+    - docker image tag ${CI_REGISTRY_IMAGE}/dev:${CI_JOB_NAME} ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
+    - docker image push ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
+  after_script:
+    - docker image rmi ${CI_REGISTRY_IMAGE}/dev:${CI_JOB_NAME}
+    - docker image rmi ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
   when: manual
   tags:
     - build
