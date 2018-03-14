@@ -4,7 +4,9 @@ source /antiopa/shell_lib.sh
 
 # Миграция 2018-03-13, https://github.com/deckhouse/deckhouse/merge_requests/88
 # Внимание! Все это нужно только на момент перехода и может быть полностью удалено после.
-
+if [[ "$(kubectl -n kube-nginx-ingress get ds/nginx -o json | jq .metadata.labels.heritage -r)" == "antiopa" ]] ; then
+  exit 0
+fi
 
 # inlet
 if kubectl -n kube-nginx-ingress get ds/bm-fallback > /dev/null 2> /dev/null; then
