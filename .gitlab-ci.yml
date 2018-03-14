@@ -18,9 +18,10 @@ Build:
 
 .base_deploy: &base_deploy
   stage: deploy
+  variables:
+    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
   script:
-    - source dapp_use 0.27
-    - dapp --version
     - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
     - docker image pull $SOURCE_IMAGE
     - docker image tag $SOURCE_IMAGE $DESTINATION_IMAGE
@@ -32,23 +33,26 @@ Build:
   tags:
     - build
 
-master:
+check on master:
+  <<: *base_deploy
   variables:
     SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:master
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
-  <<: *base_deploy
+    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:master
   environment:
     name: master
   only:
     - master
-    - tags
   except:
     - schedules
 
+master:
+  <<: *base_deploy
+  environment:
+    name: master
+  only:
+    - tags
+
 ea:
-  variables:
-    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
   <<: *base_deploy
   environment:
     name: ea
@@ -56,9 +60,6 @@ ea:
     - tags
 
 stable:
-  variables:
-    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
   <<: *base_deploy
   environment:
     name: stable
