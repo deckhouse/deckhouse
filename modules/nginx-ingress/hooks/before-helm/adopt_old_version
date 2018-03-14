@@ -1,0 +1,43 @@
+#!/bin/bash -e
+
+set pipefail
+
+source /antiopa/shell_lib.sh
+
+# Выходим, если nginx-ingress не установлен в кластере
+if ! kubectl get ns kube-nginx-ingress > /dev/null 2> /dev/null ; then
+  exit 0
+fi
+
+# Выходим, если уже все установлено через helm
+if [[ "$(kubectl -n antiopa get cm -l NAME=nginx-ingress,OWNER=TILLER -o name)" != "" ]] ; then
+  exit 0
+fi
+
+
+# Создаем файл с манифестами
+manifests_file=$(mktemp)
+
+# Определяем тип инсталляции и генерим файл с манифестами
+if kubectl -n kube-nginx-ingress get ds/bm-fallback > /dev/null 2> /dev/null; then
+  manifests_dirs="ingress-controller bm"
+else
+  manifests_dirs="ingress-controller aws"
+fi
+for d in $manifests_dirs ; do
+  for f in $(ls -1 /antiopa/modules/nginx-ingress/original_manifests/$d/) ; do
+    cat /antiopa/modules/nginx-ingress/original_manifests/$d/$f >> $manifests_file
+    echo "---" >> $manifests_file
+  done
+done
+
+# Дополнительные особенности (для Azure)
+if [[ $(cluster::type) == "ACS" ]] ; then
+  if kubectl -n kube-nginx-ingress get svc/nginx > /dev/null 2> /dev/null ; then
+    kubectl -n kube-nginx-ingress get svc/nginx -o yaml | grep -v '^  creationTimestamp:\|^  resourceVersion:\|^  selfLink:\|^  uid:\|^  clusterIP:\|^  healthCheckNodePort:\|^    nodePort:\|^  sessionAffinity:' | sed -n '/^status:/q;p' >> $manifests_file
+    echo "---" >> $manifests_file
+  fi
+fi
+
+# Усыновляем полученные манифесты в helm
+helm::adopt "nginx-ingress" $manifests_file

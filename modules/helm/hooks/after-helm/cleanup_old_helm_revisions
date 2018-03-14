@@ -5,26 +5,27 @@ target_num_revisions=$(($target_num_revisions+0))
 
 releases=$(kubectl --namespace=kube-system get cm -l OWNER=TILLER -o go-template --template='{{range .items}}{{ .metadata.labels.NAME }}{{"\n"}}{{ end }}' | sort -u)
 
-for release in $releases
-do
-  # get the revisions of this release
-  revisions=$(kubectl --namespace=kube-system get cm -l OWNER=TILLER -l NAME=$release | awk '{if(NR>1)print $1}' | sed 's/.*\.v//' | sort -n)
-  num_revisions=$(echo $revisions | tr " " "\n" | wc -l)
-  num_revisions=$(($num_revisions+0))
+for release in $releases ; do
+  for status in SUPERSEDED FAILED ; do
+    # get the revisions of this release
+    revisions=$(kubectl --namespace=kube-system get cm -l OWNER=TILLER,NAME=$release,STATUS=$status | awk '{if(NR>1)print $1}' | sed 's/.*\.v//' | sort -n)
+    num_revisions=$(echo $revisions | tr " " "\n" | wc -l)
+    num_revisions=$(($num_revisions+0))
 
-  echo "Release $release has $num_revisions revisions. Target is $target_num_revisions."
-  if [[ $num_revisions -gt $target_num_revisions ]]; then
-    num_to_delete=$(($num_revisions-$target_num_revisions))
-    echo "Will delete $num_to_delete revisions"
+    echo "Release $release has $num_revisions revisions in $status. Target is $target_num_revisions."
+    if [[ $num_revisions -gt $target_num_revisions ]]; then
+      num_to_delete=$(($num_revisions-$target_num_revisions))
+      echo "Will delete $num_to_delete revisions in $status"
 
-    to_delete=$(echo $revisions | tr " " "\n" | head -n $num_to_delete)
+      to_delete=$(echo $revisions | tr " " "\n" | head -n $num_to_delete)
 
-    for delete_revision in $to_delete
-    do
-      cmname=$release.v$delete_revision
-      echo "Deleting $cmname"
-      # Do the delete
-      kubectl --namespace=kube-system delete cm $cmname
-    done
-  fi
+      for delete_revision in $to_delete
+      do
+        cmname=$release.v$delete_revision
+        echo "Deleting $cmname"
+        # Do the delete
+        kubectl --namespace=kube-system delete cm $cmname
+      done
+    fi
+  done
 done

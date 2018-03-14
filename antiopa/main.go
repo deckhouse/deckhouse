@@ -371,7 +371,7 @@ func RunModuleHelm(ModuleName string, ValuesPath string) error {
 
 		helmReleaseName := ModuleName
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--values", ValuesPath}))
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(),"--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}

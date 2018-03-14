@@ -1,0 +1,10 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+{{- end }}
