@@ -5,11 +5,11 @@
   {{- $inlet := (include "helper.inlet" .) }}
 
   {{- if eq $inlet "LoadBalancer" }}
-    {{- include "template.nginx" (dict "context" .) }}
+    {{- include "template.nginx" (dict "context" . "publishService" true) }}
     {{- include "template.config" (dict "context" .) }}
     {{- include "template.service" (dict "context" . "type" "LoadBalancer") }}
   {{- else if eq $inlet "AWSClassicLoadBalancer" }}
-    {{- include "template.nginx" (dict "context" .) }}
+    {{- include "template.nginx" (dict "context" . "publishService" true) }}
     {{- include "template.config" (dict "context" . "useProxyProtocol" true) }}
     {{- include "template.service" (dict "context" . "type" "LoadBalancer" "annotations" (dict "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol" "*" "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" "600")) }}
   {{- else if eq $inlet "NodePort" }}
