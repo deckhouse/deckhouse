@@ -12,7 +12,7 @@ import (
 
 // InitHelm запускает установку tiller-a.
 func InitHelm() {
-	stdout, stderr, err := HelmCmd("init", "--service-account", "antiopa", "--upgrade", "--wait")
+	stdout, stderr, err := HelmCmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
 	if err != nil {
 		rlog.Errorf("HELM-INIT: %s\n%s %s", err, stdout, stderr)
 		os.Exit(1)

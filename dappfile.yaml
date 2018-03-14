@@ -44,6 +44,7 @@ ansible:
       src: https://storage.googleapis.com/kubernetes-helm/helm-v2.8.2-linux-amd64.tar.gz
       remote_src: yes
       dest: /usr/local/bin
+  - raw: helm init --client-only
 
   # Чистим кеш
   - raw: rm -rf /var/cache/apk/*
