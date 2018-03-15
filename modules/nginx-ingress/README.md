@@ -186,6 +186,7 @@ metadata:
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:eu-central-1:206112445282:certificate/23341234d-7813-45e8-b249-123421351251234
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
   name: nginx-site-1
   namespace: kube-nginx-ingress-aws-http
 spec:
@@ -193,6 +194,10 @@ spec:
   ports:
   - name: http
     port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    port: 443
     protocol: TCP
     targetPort: 80
   selector:
