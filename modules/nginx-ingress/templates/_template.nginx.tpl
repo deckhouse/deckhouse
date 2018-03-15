@@ -1,5 +1,6 @@
 {{- define "template.nginx" }}
   {{- $name := (print "nginx" (.suffix | default "")) }}
+  {{- $publishService := (.publishService | default false) }}
   {{- $hostNetwork := (.hostNetwork | default false) }}
   {{- with .context }}
 ---
@@ -37,7 +38,7 @@ spec:
       dnsPolicy: ClusterFirst
     {{- end }}
       containers:
-      - image: gcr.io/google_containers/nginx-ingress-controller:0.9.0-beta.15
+      - image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.11.0
         name: nginx
         env:
         - name: POD_NAME
@@ -66,7 +67,12 @@ spec:
         - /nginx-ingress-controller
         - --default-backend-service=$(POD_NAMESPACE)/default-http-backend
         - --configmap=$(POD_NAMESPACE)/{{ $name }}
-        - --v=0
+        - --annotations-prefix=ingress.kubernetes.io
+    {{- if $publishService }}
+        - --publish-service=$(POD_NAMESPACE)/{{ $name }}
+    {{- end }}
+        - --sort-backends
+        - --v=2
     {{- if not .name }}
         - --ingress-class=nginx
     {{- else }}
