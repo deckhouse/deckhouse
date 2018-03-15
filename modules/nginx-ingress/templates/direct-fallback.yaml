@@ -51,6 +51,7 @@ spec:
       serviceAccount: kube-nginx-ingress
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 300
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/direct-fallback:{{ $.Values.global.modulesImages.tags.nginxIngress.directFallback }}
         name: nginx
@@ -61,6 +62,10 @@ spec:
             port: 10253
             host: 127.0.0.1
           initialDelaySeconds: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/usr/sbin/nginx","-s","quit"]
       - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/direct-fallback-iptables:{{ $.Values.global.modulesImages.tags.nginxIngress.directFallbackIptables }}
         name: iptables-loop
         imagePullPolicy: Always
