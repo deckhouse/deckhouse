@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -372,7 +371,7 @@ func RunModuleHelm(ModuleName string, ValuesPath string) error {
 
 		helmReleaseName := ModuleName
 
-		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
+		err := execCommand(makeModuleCommand(moduleDir, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(),"--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
@@ -541,25 +540,11 @@ func readModulesNames() ([]string, error) {
 		return nil, fmt.Errorf("Cannot list modules directory %s: %s", modulesDir, err)
 	}
 
-	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
-
 	res := make([]string, 0)
-	badModulesFiles := make([]string, 0)
-
 	for _, file := range files {
 		if file.IsDir() {
-			matchRes := validModuleName.FindStringSubmatch(file.Name())
-			if matchRes != nil {
-				moduleName := matchRes[1]
-				res = append(res, moduleName)
-			} else {
-				badModulesFiles = append(badModulesFiles, filepath.Join(modulesDir, file.Name()))
-			}
+			res = append(res, file.Name())
 		}
-	}
-
-	if len(badModulesFiles) > 0 {
-		return nil, fmt.Errorf("bad module directory names, must match regex `%s`: %s", validModuleName, strings.Join(badModulesFiles, ", "))
 	}
 
 	return res, nil
