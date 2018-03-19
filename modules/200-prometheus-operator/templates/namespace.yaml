@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}

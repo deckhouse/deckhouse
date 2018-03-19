@@ -1,0 +1,71 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: operator
+  namespace: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: operator
+  template:
+    metadata:
+      labels:
+        app: operator
+    spec:
+{{- if and (hasKey . "nodeSelector") (.nodeSelector) }}
+      nodeSelector:
+{{ .nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey . "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey . "tolerations") (.tolerations) }}
+      tolerations:
+{{ .tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey . "tolerations")) .Values.global.cluster.hasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      containers:
+      - args:
+        - --kubelet-service=kube-system/kubelet
+        - --config-reloader-image=quay.io/coreos/configmap-reload:v0.0.1
+        image: quay.io/coreos/prometheus-operator:v0.17.0
+        name: prometheus-operator
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccountName: operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: operator
+  namespace: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: operator
