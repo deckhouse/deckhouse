@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: operator
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+rules:
+- apiGroups:
+  - extensions
+  resources:
+  - thirdpartyresources
+  verbs:
+  - "*"
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - "*"
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - alertmanagers
+  - prometheuses
+  - prometheuses/finalizers
+  - alertmanagers/finalizers
+  - servicemonitors
+  verbs:
+  - "*"
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "delete"]
+- apiGroups: [""]
+  resources:
+  - services
+  - endpoints
+  verbs: ["get", "create", "update"]
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-prometheus-operator
+subjects:
+- kind: ServiceAccount
+  name: operator
+  namespace: kube-prometheus-operator
