@@ -3,14 +3,14 @@
 # Скрипт проверят, что Prometheus Operator уже зарегистрировал CRD и если нет —
 # ожидает до тех пор, пока не зарегистрирует!
 
-n=0
+n=1
 while ! kubectl get customresourcedefinitions servicemonitors.monitoring.coreos.com > /dev/null 2>&1 ||
       ! kubectl get customresourcedefinitions prometheuses.monitoring.coreos.com > /dev/null 2>&1 ||
       ! kubectl get customresourcedefinitions alertmanagers.monitoring.coreos.com > /dev/null 2>&1 ||
       ! kubectl get servicemonitors.monitoring.coreos.com > /dev/null 2>&1 ||
       ! kubectl get prometheuses.monitoring.coreos.com > /dev/null 2>&1 ||
       ! kubectl get alertmanagers.monitoring.coreos.com > /dev/null 2>&1 ; do
-  if [[ $n -eq 0 ]] ; then
+  if [[ $n -eq 1 ]] ; then
     echo -n "Waiting for Prometheus Operator to register custom resource definitions.."
   fi
 
@@ -25,6 +25,6 @@ while ! kubectl get customresourcedefinitions servicemonitors.monitoring.coreos.
   echo -n .
 done
 
-if [[ $n -ne 0 ]] ; then
+if [[ $n -ne 1 ]] ; then
   echo "done!"
 fi
