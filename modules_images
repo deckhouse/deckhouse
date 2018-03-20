@@ -78,12 +78,12 @@ EOF
   fi
 
   # Получаем тег для каждого образа каждого модуля
-  modules_images_with_tags=$(git ls-tree @ -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/([^\/]+)\/images\/([^\/]+)$/\2:\3:\1/' | sort)
+  modules_images_with_tags=$(git ls-tree @ -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/([0-9]{3})-([^\/]+)\/images\/([^\/]+)$/\2:\3:\4:\1/' | sort)
 
   previous_module_in_tags_yaml_file=''
   previous_module=''
   # Проходим по каждому образу каждого тега
-  echo "$modules_images_with_tags" | while IFS=':' read -r module image tag ; do
+  echo "$modules_images_with_tags" | while IFS=':' read -r module_order module image tag ; do
     full_image_name=$REGISTRY/$module/$image:$tag
 
     # Генерируем запись в YAML файл
@@ -123,7 +123,7 @@ EOF
     # Собираем и пушим образ
     set +e
     (
-      cd modules/$module/images/$image
+      cd modules/${module_order}-${module}/images/${image}
       if ! docker image build -t $full_image_name . ; then
         sleep 0.1
         exit 1
@@ -225,7 +225,7 @@ EOF
   # Получаем список всех образов из всех модулей во всех current_ref'ах
   all_modules_images=$(
     for ref in $current_refs ; do
-      git ls-tree $ref -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+[0-9a-f]{40}\smodules\/([^\/]+)\/images\/([^\/]+)$/\1:\2/'
+      git ls-tree $ref -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+[0-9a-f]{40}\smodules\/([0-9]{3}-)?([^\/]+)\/images\/([^\/]+)$/\2:\3/'
     done | sort | uniq
   )
 
@@ -235,7 +235,7 @@ EOF
     # Определяем список актуальных тегов (по данным git)
     current_tags=$(
       for ref in $current_refs ; do
-        git ls-tree $ref -- modules/$module/images/$image | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/'$module'\/images\/'$image'$/\1/'
+        git ls-tree $ref -- modules/{{0,1,2,3,4,5,6,7,8,9}{0,1,2,3,4,5,6,7,8,9}{0,1,2,3,4,5,6,7,8,9}-,}$module/images/$image | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/([0-9]{3}-)?'$module'\/images\/'$image'$/\1/'
       done | sort | uniq
     )
 
