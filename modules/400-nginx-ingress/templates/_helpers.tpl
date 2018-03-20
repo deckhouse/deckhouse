@@ -45,7 +45,7 @@ nodeSelector:
   {{- if and (hasKey . "tolerations") (.tolerations) -}}
 tolerations:
 {{ .tolerations | toYaml | trim }}
-  {{- else if not (hasKey . "nodeSelector") -}}
+  {{- else if not (hasKey . "tolerations") -}}
 tolerations:
 - key: node-role/frontend
   effect: NoExecute
