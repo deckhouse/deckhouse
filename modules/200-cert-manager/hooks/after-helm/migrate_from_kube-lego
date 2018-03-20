@@ -1,0 +1,30 @@
+#!/bin/bash -e
+
+# Миграция 2018-04-01 https://github.com/deckhouse/deckhouse/merge_requests/89
+
+cleanup_filter='. | del(
+    .metadata.annotations."deployment.kubernetes.io/revision",
+    .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
+    .metadata.creationTimestamp,
+    .metadata.generation,
+    .metadata.resourceVersion,
+    .metadata.selfLink,
+    .metadata.uid,
+    .status
+  )'
+
+if kubectl get ns kube-lego; then
+  kubectl scale -n kube-lego --replicas=0 deployment kube-lego
+
+  kubectl get secret -o json -n kube-lego --export kube-lego-account | \
+  jq "$cleanup_filter" | \
+  jq '.metadata.name = "cert-manager-letsencrypt-private-key"' | \
+  kubectl create --record=false --save-config=false -n kube-cert-manager -f -
+
+  helm --tiller-namespace antiopa delete --purge kube-lego
+  kubectl delete clusterrolebinding lego || true
+  kubectl delete clusterrole lego        || true
+
+  kubectl scale -n kube-cert-manager --replicas=1 deployment cert-manager
+  kubectl scale -n kube-cert-manager --replicas=1 deployment cert-manager-ingress-shim
+fi
