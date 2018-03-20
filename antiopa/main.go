@@ -25,6 +25,8 @@ type Module struct {
 var (
 	// список модулей, найденных в инсталляции
 	modulesByName map[string]Module
+	// список имен модулей в порядке вызова
+	modulesOrder []string
 
 	// values для всех модулей, для всех кластеров
 	globalValues map[interface{}]interface{}
@@ -90,9 +92,11 @@ func Init() {
 	if len(modules) == 0 {
 		rlog.Warnf("No modules enabled")
 	}
+	modulesOrder = make([]string, 0)
 	modulesByName = make(map[string]Module)
 	for _, module := range modules {
 		modulesByName[module.Name] = module
+		modulesOrder = append(modulesOrder, module.Name)
 		rlog.Debugf("Using module %s", module.Name)
 	}
 
@@ -283,7 +287,7 @@ func RunOnKubeNodeChangedHooks() (map[interface{}]interface{}, error) {
 
 func RunModules() {
 	retryModulesNamesQueue = make([]string, 0)
-	for moduleName, _ := range modulesByName {
+	for _, moduleName := range modulesOrder {
 		RunModule(moduleName)
 	}
 }
