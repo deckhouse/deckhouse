@@ -18,6 +18,7 @@ data:
   proxy-read-timeout: "3600"
   proxy-send-timeout: "3600"
   worker-shutdown-timeout: "10800"
+  http-redirect-code: "301"
   hsts: {{ $config.hsts | default false | quote }}
   hsts-include-subdomains: "false"
   body-size: "64m"
