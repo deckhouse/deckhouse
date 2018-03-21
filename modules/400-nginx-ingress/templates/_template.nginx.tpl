@@ -82,9 +82,29 @@ spec:
         volumeMounts:
         - mountPath: /etc/nginx/template
           name: nginx-config-template
+        - mountPath: /var/lib/nginx/body
+          name: client-body-temp-path
+        - mountPath: /var/lib/nginx/fastcgi
+          name: fastcgi-temp-path
+        - mountPath: /var/lib/nginx/proxy
+          name: proxy-temp-path
+        - mountPath: /var/lib/nginx/scgi
+          name: scgi-temp-path
+        - mountPath: /var/lib/nginx/uwsgi
+          name: uwsgi-temp-path
       volumes:
       - name: nginx-config-template
         configMap:
           name: nginx-config-template
+      - name: client-body-temp-path
+        emptyDir: {}
+      - name: fastcgi-temp-path
+        emptyDir: {}
+      - name: proxy-temp-path
+        emptyDir: {}
+      - name: scgi-temp-path
+        emptyDir: {}
+      - name: uwsgi-temp-path
+        emptyDir: {}
   {{- end }}
 {{- end }}
