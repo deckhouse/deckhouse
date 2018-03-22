@@ -233,9 +233,9 @@ func OnKubeNodeChanged() {
 	}
 }
 
-# Вызов хуков при изменении опций узлов и самих узлов.
-# Таким образом можно подтюнить узлы кластера.
-# см. `/global-hooks/on-kube-node-change/*`
+// Вызов хуков при изменении опций узлов и самих узлов.
+// Таким образом можно подтюнить узлы кластера.
+// см. `/global-hooks/on-kube-node-change/*`
 func RunOnKubeNodeChangedHooks() (map[interface{}]interface{}, error) {
 	hooksDir := filepath.Join(WorkingDir, "global-hooks", "on-kube-node-change")
 
