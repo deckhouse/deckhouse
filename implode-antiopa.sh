@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+#
+# Delete antiopa from cluster.
+# Notice: this script doen't guarantee cluster to work properly after all.
+#
+# DO NOT delete Antiopa in client's project.
+# Rejected and abondoned clusters SHOULD BE FROZEN on version attached to date (based on pattern `YYYY-MM-DD.N`)
+#
+
 main() {
   NAMESPACE='antiopa'
   DRY_RUN=0

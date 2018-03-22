@@ -2,10 +2,15 @@
 set -e
 
 # Antiopa installer
+#
 # Usage:
 # $ TOKEN=$(cat); curl -fLs -H "PRIVATE-TOKEN: $TOKEN"  https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh | bash -s -- --token $TOKEN
-# iusdvhaoihuvdoaihuv<Enter>
-# <Ctrl-D>
+# Then print token, and press `<Enter>` and `<Ctrl-D>`
+#
+# You can also specify version using --version parameter (see `usage()` for cases!)
+#
+# You should add cluster to `/***REMOVED***_registry` file in this repository after installing Antiopa! Otherwise, `***REMOVED***` script won't work.
+#
 
 main() {
   NAMESPACE='antiopa'
@@ -46,7 +51,12 @@ usage() {
 printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
 
     --version <version>
-            Use specified antiopa image version.
+            Use specified antiopa image version. Notice recommendations:
+              - master - for dev clusters
+              - ea - early access, for production clusters with active work
+              - stable - for production clusters
+              - YYYY-MM-DD.N - images of fixed date - rejected and abondoned clusters, frozen on some version forever
+
             Default: stable
 
     --dev
