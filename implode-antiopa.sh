@@ -1,13 +1,11 @@
 #!/bin/bash
 set -e
 
+# Удаление antiopa из кластера
+# Внимание: этот скрипт не гарантирует работоспосоность кластера после своей работы.
 #
-# Delete antiopa from cluster.
-# Notice: this script doen't guarantee cluster to work properly after all.
-#
-# DO NOT delete Antiopa in client's project.
-# Rejected and abondoned clusters SHOULD BE FROZEN on version attached to date (based on pattern `YYYY-MM-DD.N`)
-#
+# НЕ УДАЛЯЙТЕ Antiopa с клиенских проектов!
+# Проекты, снятые с поддержки, ЗАМОРАЖИВАЮТСЯ на версии вида `YYYY-MM-DD.N`
 
 main() {
   NAMESPACE='antiopa'
