@@ -19,7 +19,6 @@ func InitHelm() {
 	}
 	rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
 
-
 	stdout, stderr, err = HelmCmd("version")
 	if err != nil {
 		rlog.Errorf("HELM-INIT Unable to get helm version: %v\n%v %v", err, stdout, stderr)

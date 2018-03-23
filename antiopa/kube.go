@@ -30,6 +30,11 @@ var (
 	KubernetesAntiopaNamespace string
 )
 
+func IsRunningOutOfKubeCluster() bool {
+	_, err := os.Stat(KubeTokenFile)
+	return os.IsNotExist(err)
+}
+
 // InitKube - инициализация kubernetes клиента
 // Можно подключить изнутри, а можно на основе .kube директории
 func InitKube() {
@@ -38,7 +43,7 @@ func InitKube() {
 	var err error
 	var config *rest.Config
 
-	if _, err := os.Stat(KubeTokenFile); os.IsNotExist(err) {
+	if IsRunningOutOfKubeCluster() {
 		rlog.Info("KUBE-INIT Connecting to kubernetes out-of-cluster")
 
 		var kubeconfig string
