@@ -2,10 +2,17 @@
 set -e
 
 # Antiopa installer
+#
 # Usage:
 # $ TOKEN=$(cat); curl -fLs -H "PRIVATE-TOKEN: $TOKEN"  https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh | bash -s -- --token $TOKEN
-# iusdvhaoihuvdoaihuv<Enter>
-# <Ctrl-D>
+# Напишите token, нажмите `<Enter>` и `<Ctrl-D>`
+# Token можно узнать в канале #tech-kubernetes
+#
+# Можно указать версию с помощью параметра --version (см. подробности в `usage()`!)
+# Можно указать устанавливаемые модули с помощью --out и --dry-run (см ниже)
+#
+# После установки вы должны добавить кластер в файл `/***REMOVED***_registry`! Иначе скрипт `***REMOVED***` не сможет работать.
+#
 
 main() {
   NAMESPACE='antiopa'
@@ -46,7 +53,12 @@ usage() {
 printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
 
     --version <version>
-            Use specified antiopa image version.
+            Use specified antiopa image version. Notice recommendations:
+              - master - for dev clusters
+              - ea - early access, for production clusters with active work
+              - stable - for production clusters
+              - YYYY-MM-DD.N - images of fixed date - rejected and abondoned clusters, frozen on some version forever
+
             Default: stable
 
     --dev
@@ -60,6 +72,7 @@ printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
 
     -o, --out <filename>
             Put generated yaml into file.
+            To disable installed modules - you should edit Antiopa's ConfigMaps.
 
     --dry-run
             Do not run kubectl apply.
@@ -262,7 +275,7 @@ data:
   help: |
     Add values key to define global values yaml
     Add <module>-values key to define values yaml for module
-    Add disable-modules to specify disabled modules (comma separated, may be globs)
+    Add disable-modules to specify disabled modules (comma separated, may be globs), for example `disable-modules: test*, kube-dashboard`
 YAML
 )
 
