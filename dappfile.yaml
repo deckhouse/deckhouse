@@ -25,6 +25,7 @@ ansible:
 
   # Зависимости хуков
   - apk: name=jq
+  - apk: name=curl
   - apk: name=makepasswd
   - apk: name=apache2-utils
 

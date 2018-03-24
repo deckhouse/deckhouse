@@ -1,0 +1,28 @@
+{{- if not (eq .Values.global.cluster.type "Manual") }}
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: kube-prometheus-discovery-of-kube-scheduler
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus-target: kube-scheduler
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+{{- if or (eq .Values.global.cluster.type "Manual") (eq .Values.global.cluster.type "ACS") }}
+    component: kube-scheduler
+    tier: control-plane
+{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+    k8s-app: kube-scheduler
+{{- else }}
+  {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
+{{- end }}
+  ports:
+  - name: http-metrics
+    port: 10251
+    targetPort: 10251
+    protocol: TCP
+{{- end }}

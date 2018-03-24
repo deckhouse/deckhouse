@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: grafana
+data:
+  prometheus.yaml: |+
+    datasources:
+     - name: main
+       type: prometheus
+       access: direct
+       org_id: 1
+       url: /prometheus
+       version: 1
+       editable: false
+       default: true
+

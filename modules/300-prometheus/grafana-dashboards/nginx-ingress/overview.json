@@ -1,0 +1,1454 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "5.0.3"
+    },
+    {
+      "type": "panel",
+      "id": "graph",
+      "name": "Graph",
+      "version": "5.0.0"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "limit": 100,
+        "name": "Annotations & Alerts",
+        "showIn": 0,
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 1521733429344,
+  "links": [],
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": 3,
+      "fill": 8,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "hideTimeOverride": false,
+      "id": 4,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sideWidth": null,
+        "sort": null,
+        "sortDesc": null,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 0,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "0.005",
+          "color": "#76B576"
+        },
+        {
+          "alias": "0.01",
+          "color": "#83BC6D"
+        },
+        {
+          "alias": "0.02",
+          "color": "#91C364"
+        },
+        {
+          "alias": "0.03",
+          "color": "#9FCB5B"
+        },
+        {
+          "alias": "0.04",
+          "color": "#ACD252"
+        },
+        {
+          "alias": "0.05",
+          "color": "#BADA49"
+        },
+        {
+          "alias": "0.075",
+          "color": "#C8E140"
+        },
+        {
+          "alias": "0.1",
+          "color": "#D5E837"
+        },
+        {
+          "alias": "0.2",
+          "color": "#E3F02E"
+        },
+        {
+          "alias": "0.3",
+          "color": "#F1F725"
+        },
+        {
+          "alias": "0.4",
+          "color": "#FFFF1C"
+        },
+        {
+          "alias": "0.5",
+          "color": "#FAE519"
+        },
+        {
+          "alias": "0.75",
+          "color": "#F6CC16"
+        },
+        {
+          "alias": "1.0",
+          "color": "#F2B213"
+        },
+        {
+          "alias": "1.5",
+          "color": "#EE9910"
+        },
+        {
+          "alias": "2",
+          "color": "#EA7F0E"
+        },
+        {
+          "alias": "3",
+          "color": "#E6660B"
+        },
+        {
+          "alias": "4",
+          "color": "#E24C08"
+        },
+        {
+          "alias": "5",
+          "color": "#DE3205"
+        },
+        {
+          "alias": "10",
+          "color": "#DA1902"
+        },
+        {
+          "alias": ">10",
+          "color": "#D60000"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "C",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Upstream Response Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": [
+          "total"
+        ]
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": 3,
+      "fill": 5,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 13,
+      "legend": {
+        "alignAsTable": false,
+        "avg": true,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 0,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "0.005",
+          "color": "#76B576"
+        },
+        {
+          "alias": "0.01",
+          "color": "#83BC6D"
+        },
+        {
+          "alias": "0.02",
+          "color": "#91C364"
+        },
+        {
+          "alias": "0.03",
+          "color": "#9FCB5B"
+        },
+        {
+          "alias": "0.04",
+          "color": "#ACD252"
+        },
+        {
+          "alias": "0.05",
+          "color": "#BADA49"
+        },
+        {
+          "alias": "0.075",
+          "color": "#C8E140"
+        },
+        {
+          "alias": "0.1",
+          "color": "#D5E837"
+        },
+        {
+          "alias": "0.2",
+          "color": "#E3F02E"
+        },
+        {
+          "alias": "0.3",
+          "color": "#F1F725"
+        },
+        {
+          "alias": "0.4",
+          "color": "#FFFF1C"
+        },
+        {
+          "alias": "0.5",
+          "color": "#FAE519"
+        },
+        {
+          "alias": "0.75",
+          "color": "#F6CC16"
+        },
+        {
+          "alias": "1.0",
+          "color": "#F2B213"
+        },
+        {
+          "alias": "1.5",
+          "color": "#EE9910"
+        },
+        {
+          "alias": "2",
+          "color": "#EA7F0E"
+        },
+        {
+          "alias": "3",
+          "color": "#E6660B"
+        },
+        {
+          "alias": "4",
+          "color": "#E24C08"
+        },
+        {
+          "alias": "5",
+          "color": "#DE3205"
+        },
+        {
+          "alias": "10",
+          "color": "#DA1902"
+        },
+        {
+          "alias": ">10",
+          "color": "#D60000"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "C",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Upstream Response Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": [
+          "total"
+        ]
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": null,
+      "fill": 5,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 5,
+      "legend": {
+        "alignAsTable": false,
+        "avg": true,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 0,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "0.005",
+          "color": "#76B576"
+        },
+        {
+          "alias": "0.01",
+          "color": "#83BC6D"
+        },
+        {
+          "alias": "0.02",
+          "color": "#91C364"
+        },
+        {
+          "alias": "0.03",
+          "color": "#9FCB5B"
+        },
+        {
+          "alias": "0.04",
+          "color": "#ACD252"
+        },
+        {
+          "alias": "0.05",
+          "color": "#BADA49"
+        },
+        {
+          "alias": "0.075",
+          "color": "#C8E140"
+        },
+        {
+          "alias": "0.1",
+          "color": "#D5E837"
+        },
+        {
+          "alias": "0.2",
+          "color": "#E3F02E"
+        },
+        {
+          "alias": "0.3",
+          "color": "#F1F725"
+        },
+        {
+          "alias": "0.4",
+          "color": "#FFFF1C"
+        },
+        {
+          "alias": "0.5",
+          "color": "#FAE519"
+        },
+        {
+          "alias": "0.75",
+          "color": "#F6CC16"
+        },
+        {
+          "alias": "1.0",
+          "color": "#F2B213"
+        },
+        {
+          "alias": "1.5",
+          "color": "#EE9910"
+        },
+        {
+          "alias": "2",
+          "color": "#EA7F0E"
+        },
+        {
+          "alias": "3",
+          "color": "#E6660B"
+        },
+        {
+          "alias": "4",
+          "color": "#E24C08"
+        },
+        {
+          "alias": "5",
+          "color": "#DE3205"
+        },
+        {
+          "alias": "10",
+          "color": "#DA1902"
+        },
+        {
+          "alias": ">10",
+          "color": "#D60000"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "A",
+          "step": 40
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "B",
+          "step": 40
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{key}}",
+          "refId": "C",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Upstream Response Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "series",
+        "name": null,
+        "show": true,
+        "values": [
+          "total"
+        ]
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 10,
+          "max": "10000000",
+          "min": "1",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 1,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": true,
+        "sort": "total",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_requests_total{server_zone='*'}[1m]))",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "Total",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_requests_total{server_zone!~'\\\\*|_'}[1m])) by (server_zone)",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{server_zone}}",
+          "refId": "C",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_requests_total{server_zone='_'}[1m])) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "default_vhost",
+          "refId": "B",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Requests",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "rps",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 7
+      },
+      "id": 6,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(nginx_upstream_response_msecs_avg * (sum(nginx_upstream_responses_total) without (status_code) > 0)) / sum(nginx_upstream_responses_total)",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{upstream}}",
+          "metric": "",
+          "refId": "A",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Average Upstream Response Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "fill": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 7
+      },
+      "id": 7,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(nginx_connections_total{type=~\"waiting|reading|writing\"})",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "Total",
+          "refId": "B",
+          "step": 40
+        },
+        {
+          "expr": "sum(nginx_connections_total{type=~\"waiting|reading|writing\"}) by (type)",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{type}}",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Connections",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "1xx": "#B7DBAB",
+        "2xx": "#7EB26D",
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total{server_zone!='*'}[1m])) by (status_code) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{status_code}}",
+          "refId": "A",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Responses",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "rps",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 14
+      },
+      "id": 10,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"4xx\"}[1m])) by (server_zone) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{server_zone}}",
+          "refId": "A",
+          "step": 40
+        },
+        {
+          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"4xx\"}[1m])) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "default_vhost",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "4xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "rps",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "id": 11,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"5xx\"}[1m])) by (server_zone) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{server_zone}}",
+          "refId": "A",
+          "step": 40
+        },
+        {
+          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"5xx\"}[1m])) > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "default_vhost",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "5xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "rps",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 9,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"out\"}[1m])) * 8",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "Total",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"out\"}[1m])) by (server_zone) * 8 > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{server_zone}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"out\"}[1m])) by (server_zone) * 8 > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "default_vhost",
+          "refId": "C",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Trafic Out",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$DS_PROMETHEUS",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 12,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"in\"}[1m])) * 8",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "Total",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"in\"}[1m])) by (server_zone) * 8 > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{server_zone}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"in\"}[1m])) by (server_zone) * 8 > 0",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "default_vhost",
+          "refId": "C",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Trafic In",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 16,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "prometheus",
+          "value": "prometheus"
+        },
+        "hide": 0,
+        "label": "Prometheus",
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "Overview",
+  "uid": "B7k2Xvkik",
+  "version": 1
+}
