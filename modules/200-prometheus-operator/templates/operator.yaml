@@ -1,7 +1,7 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: operator
+  name: prometheus-operator
   namespace: kube-prometheus-operator
   labels:
     heritage: antiopa
@@ -10,11 +10,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: operator
+      app: prometheus-operator
   template:
     metadata:
       labels:
-        app: operator
+        app: prometheus-operator
     spec:
 {{- if and (hasKey . "nodeSelector") (.nodeSelector) }}
       nodeSelector:
@@ -50,16 +50,17 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
-      serviceAccountName: operator
+      serviceAccountName: prometheus-operator
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: operator
+  name: prometheus-operator
   namespace: kube-prometheus-operator
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
+    app: prometheus-operator
 spec:
   type: ClusterIP
   ports:
@@ -68,4 +69,4 @@ spec:
     targetPort: http
     protocol: TCP
   selector:
-    app: operator
+    app: prometheus-operator

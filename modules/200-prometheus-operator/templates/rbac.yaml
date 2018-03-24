@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-  name: operator
+  name: prometheus-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
@@ -78,5 +78,5 @@ roleRef:
   name: kube-prometheus-operator
 subjects:
 - kind: ServiceAccount
-  name: operator
+  name: prometheus-operator
   namespace: kube-prometheus-operator
