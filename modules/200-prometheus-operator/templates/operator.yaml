@@ -16,17 +16,17 @@ spec:
       labels:
         app: prometheus-operator
     spec:
-{{- if and (hasKey . "nodeSelector") (.nodeSelector) }}
+{{- if and (hasKey .Values.prometheusOperator "nodeSelector") (.Values.prometheusOperator.nodeSelector) }}
       nodeSelector:
-{{ .nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey . "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+{{ .Values.prometheusOperator.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.prometheusOperator "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
       nodeSelector:
         node-role/system: ""
 {{- end }}
-{{- if and (hasKey . "tolerations") (.tolerations) }}
+{{- if and (hasKey .Values.prometheusOperator "tolerations") (.Values.prometheusOperator.tolerations) }}
       tolerations:
-{{ .tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey . "tolerations")) .Values.global.cluster.hasSystemNodes }}
+{{ .Values.prometheusOperator.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.prometheusOperator "tolerations")) .Values.global.cluster.hasSystemNodes }}
       tolerations:
       - key: node-role/system
         effect: NoExecute
