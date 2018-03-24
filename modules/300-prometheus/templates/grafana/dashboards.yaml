@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: grafana
+data:
+  dashboards.yaml: |+
+{{- define "dashboards_yaml_item" }}
+{{- $folder := index . 1 }}
+    - name: {{ $folder }}
+      org_id: 1
+      folder: {{ $folder | replace "-" " " | title | quote }}
+      type: file
+      options:
+        folder: /grafana-dashboard-definitions/{{ $folder }}
+{{- end }}
+{{- tuple . "dashboards_yaml_item" | include "for_each_dashboard_folder" }}
+    - name: custom
+      org_id: 1
+      folder: Custom
+      type: file
+      options:
+        folder: /grafana-dashboard-definitions/custom

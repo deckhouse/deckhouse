@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rabbitmq
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  endpoints:
+  - interval: 30s
+    port: rmq-metrics
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      prometheus-target: rabbitmq

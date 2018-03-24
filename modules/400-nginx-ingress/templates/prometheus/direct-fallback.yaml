@@ -1,0 +1,58 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+  {{- $_ := set . "Values" $.Values }}
+  {{- $inlet := (include "helper.inlet" .) }}
+  {{- if eq $inlet "Direct" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  {{- if not .name }}
+  name: nginx-ingress-direct-fallback
+  {{- else }}
+  name: nginx-ingress-direct-fallback-{{ .name }}
+  {{- end }}
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  endpoints:
+  - port: http-metrics
+    interval: 15s
+    metricRelabelings:
+    - targetLabel: ingress_class
+  {{- if not .name }}
+      replacement: nginx
+  {{- else }}
+      replacement: nginx-{{ .name }}
+  {{- end }}
+  selector:
+    matchLabels:
+      prometheus-target: nginx-ingress-direct-fallback
+  namespaceSelector:
+    matchNames:
+    - {{ include "helper.namespace" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-prometheus-discovery-of-direct-fallback
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus-target: nginx-ingress-direct-fallback
+spec:
+  selector:
+    app: direct-fallback
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http-metrics
+    port: 10355
+    targetPort: 10355
+    protocol: TCP
+  {{- end }}
+{{- end }}

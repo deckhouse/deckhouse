@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: kube-prometheus-discovery-of-kube-apiserver
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus-target: kube-apiserver
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+{{- if or (eq .Values.global.cluster.type "Manual") (eq .Values.global.cluster.type "ACS") }}
+    component: kube-apiserver
+    tier: control-plane
+{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+    k8s-app: kube-apiserver
+{{- else }}
+  {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
+{{- end }}
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+{{- if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") (eq .Values.global.cluster.type "ACS") }}
+    targetPort: 443
+{{- else if eq .Values.global.cluster.type "Manual" }}
+    targetPort: 6443
+{{- else }}
+  {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
+{{- end }}

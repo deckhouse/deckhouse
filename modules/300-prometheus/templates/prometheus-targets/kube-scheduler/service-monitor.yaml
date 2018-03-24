@@ -1,0 +1,24 @@
+{{- if not (eq .Values.global.cluster.type "Manual") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-scheduler
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  endpoints:
+  - port: http-metrics
+    interval: 30s
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ $.Chart.Name }}
+      prometheus-target: kube-scheduler
+  namespaceSelector:
+    matchNames:
+    - kube-system
+{{- end }}

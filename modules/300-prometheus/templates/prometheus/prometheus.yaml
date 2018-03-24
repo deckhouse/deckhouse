@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: main
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+spec:
+  replicas: 1
+  retention: {{ .Values.prometheus.retentionDays }}d
+  version: v2.2.1
+  serviceAccountName: prometheus
+  remoteRead:
+  - url: 'http://prometheus-k8s-0.prometheus-operated.monitoring.svc.cluster.local:9090/api/v1/read'
+    remoteTimeout: 300s
+  serviceMonitorSelector:
+    matchLabels:
+      prometheus: main
+  ruleSelector:
+    matchLabels:
+      prometheus: main
+      component: rules
+{{- if .Values.prometheus.ingressACME }}
+  externalUrl: https://{{ .Values.prometheus.ingressHostname }}/prometheus/
+{{- else }}
+  externalUrl: http://{{ .Values.prometheus.ingressHostname }}/prometheus/
+{{- end }}
+  resources:
+    requests:
+      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 11520) 1048576) 500 }}Mi
+{{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
+  nodeSelector:
+{{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
+{{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+  nodeSelector:
+    node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
+  tolerations:
+{{ .Values.prometheus.tolerations | toYaml | trim | indent 2 }}
+{{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.cluster.hasSystemNodes }}
+  tolerations:
+  - key: node-role/system
+    effect: NoExecute
+{{- end }}
+{{- $storageClassName := .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.cluster.defaultStorageClassName }}
+{{- if $storageClassName }}
+  storage:
+    volumeClaimTemplate:
+      metadata:
+        name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ add (div (mul (mul .Values.prometheus.estimatedNumberOfMetrics 7488) .Values.prometheus.retentionDays) 1073741824) 1 }}G
+        storageClassName: {{ $storageClassName }}
+{{- end }}

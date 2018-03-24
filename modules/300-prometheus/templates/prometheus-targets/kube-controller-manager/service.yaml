@@ -1,0 +1,28 @@
+{{- if not (eq .Values.global.cluster.type "Manual") }}
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: kube-prometheus-discovery-of-kube-controller-manager
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus-target: kube-controller-manager
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+{{- if or (eq .Values.global.cluster.type "Manual") (eq .Values.global.cluster.type "ACS") }}
+    component: kube-controller-manager
+    tier: control-plane
+{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+    k8s-app: kube-controller-manager
+{{- else }}
+  {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
+{{- end }}
+  ports:
+  - name: http-metrics
+    port: 10252
+    targetPort: 10252
+    protocol: TCP
+{{- end }}

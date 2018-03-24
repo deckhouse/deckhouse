@@ -1,0 +1,16 @@
+#!/bin/bash -e
+
+### Миграция, 2018-03-24: https://github.com/deckhouse/deckhouse/merge_requests/130
+if kubectl get clusterrole/prometheus-k8s > /dev/null 2> /dev/null ; then
+  for resource in deploy/kube-state-metrics alertmanager/main; do
+    if kubectl -n monitoring get $resource > /dev/null 2> /dev/null ; then
+      kubectl -n monitoring delete $resource --grace-period=1
+    fi
+  done
+
+  for resource in clusterrolebinding/kube-state-metrics clusterrole/kube-state-metrics clusterrolebinding/prometheus-k8s clusterrole/prometheus-k8s; do
+    if kubectl get $resource > /dev/null 2> /dev/null ; then
+      kubectl delete $resource
+    fi
+  done
+fi

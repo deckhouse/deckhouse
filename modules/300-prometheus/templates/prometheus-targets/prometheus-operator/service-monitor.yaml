@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-operator
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: app
+  endpoints:
+  - port: http
+  selector:
+    matchLabels:
+      app: prometheus-operator
+  namespaceSelector:
+    matchNames:
+    - kube-prometheus-operator

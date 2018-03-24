@@ -1,0 +1,37 @@
+{{- if .Values.prometheus.ingressHostname }}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: grafana
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.prometheus.ingressClass | quote }}
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: basic-auth
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+  {{- if .Values.prometheus.ingressACME }}
+    kubernetes.io/tls-acme: "true"
+  {{- end }}
+    ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-WEBAUTH-USER $remote_user;
+    ingress.kubernetes.io/affinity: cookie
+spec:
+  {{- if .Values.prometheus.ingressACME }}
+  tls:
+  - hosts:
+    - {{ .Values.prometheus.ingressHostname }}
+    secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: {{ .Values.prometheus.ingressHostname }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: grafana
+          servicePort: web
+{{- end }}

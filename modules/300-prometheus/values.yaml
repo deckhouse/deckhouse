@@ -1,0 +1,5 @@
+prometheus:
+  retentionDays: 7
+  estimatedNumberOfMetrics: 200000
+  ingressClass: nginx
+  ingressACME: true

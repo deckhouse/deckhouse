@@ -1,0 +1,33 @@
+{{- if .Values.prometheus.ingressHostname }}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.prometheus.ingressClass | quote }}
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: basic-auth
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+    ingress.kubernetes.io/affinity: cookie
+    ingress.kubernetes.io/rewrite-target: "/"
+spec:
+  {{- if .Values.prometheus.ingressACME }}
+  tls:
+  - hosts:
+    - {{ .Values.prometheus.ingressHostname }}
+    secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: {{ .Values.prometheus.ingressHostname }}
+    http:
+      paths:
+      - path: /prometheus/
+        backend:
+          serviceName: prometheus
+          servicePort: web
+{{- end }}

@@ -11,7 +11,7 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    app: nginx-for-direct-fallback
+    app: direct-fallback
 spec:
   ports:
   - name: http-proxy
@@ -31,7 +31,7 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    app: nginx-for-direct-fallback
+    app: direct-fallback
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -74,7 +74,7 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
-      - name: bmlb-exporter
+      - name: nginx-exporter
         image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/nginx-exporter:{{ $.Values.global.modulesImages.tags.nginxIngress.nginxExporter }}
         args: ["-nginx.scrape_uri=http://127.0.0.1:10253/nginx_status", "-telemetry.address=127.0.0.1:10354", "-insecure=true"]
         livenessProbe:

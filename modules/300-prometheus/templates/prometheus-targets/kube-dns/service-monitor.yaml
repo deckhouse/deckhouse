@@ -1,0 +1,26 @@
+{{- if not (eq .Values.global.cluster.type "ACS") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-dns
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  endpoints:
+  - port: http-metrics-skydns
+    interval: 30s
+  - port: http-metrics-dnsmasq
+    interval: 30s
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ $.Chart.Name }}
+      prometheus-target: kube-dns
+  namespaceSelector:
+    matchNames:
+    - kube-system
+{{- end }}

@@ -1,0 +1,103 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: grafana
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+{{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
+      nodeSelector:
+{{ .Values.prometheus.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
+      tolerations:
+{{ .Values.prometheus.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.cluster.hasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      containers:
+      - name: grafana
+        image: grafana/grafana:5.0.3
+        env:
+        - name: GF_AUTH_BASIC_ENABLED
+          value: "true"
+        - name: GF_AUTH_PROXY_ENABLED
+          value: "true"
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_USERS_DEFAULT_THEME
+          value: "light"
+        - name: GF_PATHS_PROVISIONING
+          value: /grafana/conf/provisioning
+        - name: GF_INSTALL_PLUGINS
+          value: petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: grafana-datasources
+          mountPath: /grafana/conf/provisioning/datasources
+        - name: grafana-dashboards
+          mountPath: /grafana/conf/provisioning/dashboards
+{{- define "dashboard_definition_volume_mount" }}
+{{- $folder := index . 1 }}
+        - name: grafana-dashboard-definitions-{{ $folder }}
+          mountPath: /grafana-dashboard-definitions/{{ $folder }}
+{{- end }}
+{{- tuple . "dashboard_definition_volume_mount" | include "for_each_dashboard_folder" }}
+        - name: grafana-dashboard-definitions-custom
+          mountPath: /grafana-dashboard-definitions/custom
+        ports:
+        - name: web
+          containerPort: 3000
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 100m
+          limits:
+            memory: 200Mi
+            cpu: 200m
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+      volumes:
+      - name: grafana-storage
+        emptyDir: {}
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards
+{{- define "dashboard_definition_volume" }}
+{{- $folder := index . 1 }}
+      - name: grafana-dashboard-definitions-{{ $folder }}
+        configMap:
+          name: grafana-dashboard-definitions-{{ $folder }}
+{{- end }}
+{{- tuple . "dashboard_definition_volume" | include "for_each_dashboard_folder" }}
+      - name: grafana-dashboard-definitions-custom
+        configMap:
+          name: grafana-dashboard-definitions-custom
+          optional: true
