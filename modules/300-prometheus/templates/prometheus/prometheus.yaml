@@ -29,6 +29,10 @@ spec:
 {{- end }}
   resources:
     requests:
+      {{- /* 2 раза в минуту * 60 минут * 24 часа * 2 байта на метрику + 50% запас = 8640 байт на метрику памяти */}}
+      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 8640) 1048576) 500 }}Mi
+    limits:
+      {{- /* 2 раза в минуту * 60 минут * 24 часа * 2 байта на метрику + 100% запас = 11520 байт на метрику памяти */}}
       memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 11520) 1048576) 500 }}Mi
 {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
@@ -56,6 +60,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
+            {{- /* 2 раза в минуту * 60 минут * 24 часа * 2 байта на метрику + 30% запас = 7488 байт на метрику в сутки */}}
             storage: {{ add (div (mul (mul .Values.prometheus.estimatedNumberOfMetrics 7488) .Values.prometheus.retentionDays) 1073741824) 1 }}G
         storageClassName: {{ $storageClassName }}
 {{- end }}
