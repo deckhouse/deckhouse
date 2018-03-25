@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+# Миграция 2018-03-25, https://github.com/deckhouse/deckhouse/merge_requests/141
+if kubectl -n kube-prometheus get deploy/kube-state-metrics > /dev/null 2> /dev/null ; then
+  if $(kubectl -n kube-prometheus get deploy/kube-state-metrics -o json | jq '. | (.spec.template.spec.tolerations | length > 0) != (.spec.template.spec.nodeSelector | length > 0)') ; then
+    kubectl -n kube-prometheus delete deploy/kube-state-metrics --grace-period=1
+  fi
+fi

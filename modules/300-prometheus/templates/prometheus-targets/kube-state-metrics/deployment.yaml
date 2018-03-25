@@ -75,7 +75,7 @@ spec:
         - "--telemetry-host=127.0.0.1"
         - "--telemetry-port=8082"
       - name: addon-resizer
-        image: gcr.io/google_containers/addon-resizer:1.0
+        image: gcr.io/google_containers/addon-resizer:1.8.1
         resources:
           limits:
             cpu: 100m
@@ -94,6 +94,7 @@ spec:
                 fieldPath: metadata.namespace
         command:
           - /pod_nanny
+          - --config-dir=/etc/config
           - --container=kube-state-metrics
           - --cpu=100m
           - --extra-cpu=2m
@@ -101,3 +102,24 @@ spec:
           - --extra-memory=30Mi
           - --threshold=5
           - --deployment=kube-state-metrics
+        volumeMounts:
+        - name: addon-resizer-config
+          mountPath: /etc/config
+      volumes:
+      - name: addon-resizer-config
+        configMap:
+          name: kube-state-metrics-addon-resizer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-state-metrics-addon-resizer
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kube-state-metrics
+data:
+  NannyConfiguration: |-
+    apiVersion: nannyconfig/v1alpha1
+    kind: NannyConfiguration
