@@ -1,7 +1,7 @@
 Модуль prometheus
 =======
 
-Модуль устанавливает [prometheus](https://prometheus.io/) (используея модуль [prometheus-operator](../200-prometheus-operator/)) и полностью его настраивает!
+Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [prometheus-operator](../200-prometheus-operator/)) и полностью его настраивает!
 
 Что нужно настраивать?
 ----------------------
