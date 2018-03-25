@@ -12,9 +12,6 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   version: v2.2.1
   serviceAccountName: prometheus
-  remoteRead:
-  - url: 'http://prometheus-k8s-0.prometheus-operated.monitoring.svc.cluster.local:9090/api/v1/read'
-    remoteTimeout: 300s
   serviceMonitorSelector:
     matchLabels:
       prometheus: main
