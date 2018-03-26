@@ -33,5 +33,32 @@ data:
   proxy-real-ip-cidr: {{ $config.setRealIPFrom | default (list "0.0.0.0/32") | join "," | quote }}
     {{- end }}
   server-tokens: "false"
+  log-format-escape-json: "true"
+  log-format-upstream: '{
+    "time": "$time_iso8601",
+    "remote_addr": "$the_real_ip",
+    "x_forwarded_for": "$proxy_add_x_forwarded_for",
+    "request_id": "$request_id",
+    "remote_user": "$remote_user",
+    "bytes_sent": $bytes_sent,
+    "request_time": $request_time,
+    "status": $status,
+    "host": "$host",
+    "request_proto": "$server_protocol",
+    "path": "$uri",
+    "request_query": "$args",
+    "request_length": $request_length,
+    "duration": $request_time,
+    "method": "$request_method",
+    "http_referrer": "$http_referer",
+    "http_user_agent": "$http_user_agent",
+    "upstream_addr": "$upstream_addr",
+    "upstream_response_length": "$upstream_response_length",
+    "upstream_response_time": "$upstream_response_time",
+    "upstream_status": "$upstream_status",
+    "namespace": "$namespace",
+    "ingress_name": "$ingress_name",
+    "service_name": "$service_name"
+  }'
   {{- end }}
 {{- end }}
