@@ -277,7 +277,7 @@ data:
   help: |
     Add values key to define global values yaml
     Add <module>-values key to define values yaml for module
-    Add disable-modules to specify disabled modules (comma separated, may be globs), for example `disable-modules: test*, kube-dashboard`
+    Add disable-modules to specify disabled modules (comma separated, may be globs), for example "disable-modules: test*, kube-dashboard"
 YAML
 )
 
