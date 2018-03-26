@@ -19,7 +19,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: http-metrics
+  - port: https-metrics
     interval: 15s
     metricRelabelings:
     - targetLabel: ingress_class
@@ -28,6 +28,10 @@ spec:
   {{- else }}
       replacement: nginx-{{ .name }}
   {{- end }}
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
   selector:
     matchLabels:
       prometheus-target: nginx-ingress-direct-fallback
@@ -50,7 +54,7 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: http-metrics
+  - name: https-metrics
     port: 10355
     targetPort: 10355
     protocol: TCP
