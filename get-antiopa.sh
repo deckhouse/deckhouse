@@ -4,9 +4,11 @@ set -e
 # Antiopa installer
 #
 # Usage:
+# Нужно узнать Token в канале #tech-kubernetes
+# https://flant.slack.com/archives/C3LRT80NB/p1522067965000308
+#
 # $ TOKEN=$(cat); curl -fLs -H "PRIVATE-TOKEN: $TOKEN"  https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh | bash -s -- --token $TOKEN
 # Напишите token, нажмите `<Enter>` и `<Ctrl-D>`
-# Token можно узнать в канале #tech-kubernetes
 #
 # Можно указать версию с помощью параметра --version (см. подробности в `usage()`!)
 # Можно указать устанавливаемые модули с помощью --out и --dry-run (см ниже)
