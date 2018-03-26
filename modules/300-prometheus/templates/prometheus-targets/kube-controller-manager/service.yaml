@@ -1,4 +1,3 @@
-{{- if not (eq .Values.global.cluster.type "Manual") }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,17 +11,25 @@ spec:
   type: ClusterIP
   clusterIP: None
   selector:
-{{- if or (eq .Values.global.cluster.type "Manual") (eq .Values.global.cluster.type "ACS") }}
+{{- if eq .Values.global.cluster.type "ACS" }}
     component: kube-controller-manager
     tier: control-plane
 {{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
     k8s-app: kube-controller-manager
+{{- else if eq .Values.global.cluster.type "Manual" }}
+    app: kube-prometheus-kube-control-plane-proxy
 {{- else }}
   {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
 {{- end }}
   ports:
+{{- if not (eq .Values.global.cluster.type "Manual") }}
   - name: http-metrics
     port: 10252
     targetPort: 10252
+    protocol: TCP
+{{- else }}
+  - name: https-metrics
+    port: 10252
+    targetPort: controller
     protocol: TCP
 {{- end }}
