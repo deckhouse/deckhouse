@@ -32,5 +32,6 @@ data:
     {{- else }}
   proxy-real-ip-cidr: {{ $config.setRealIPFrom | default (list "0.0.0.0/32") | join "," | quote }}
     {{- end }}
+  server-tokens: "false"
   {{- end }}
 {{- end }}
