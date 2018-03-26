@@ -26,7 +26,7 @@ spec:
   - host: {{ .Values.prometheus.ingressHostname }}
     http:
       paths:
-      - path: /prometheus/
+      - path: /prometheus
         backend:
           serviceName: prometheus
           servicePort: web
