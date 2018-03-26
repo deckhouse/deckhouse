@@ -1,4 +1,3 @@
-{{- if not (eq .Values.global.cluster.type "Manual") }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -11,8 +10,17 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
+{{- if not (eq .Values.global.cluster.type "Manual") }}
   - port: http-metrics
     interval: 30s
+{{- else }}
+  - port: https-metrics
+    scheme: https
+    interval: 30s
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+{{- end }}
   selector:
     matchLabels:
       heritage: antiopa
@@ -21,4 +29,3 @@ spec:
   namespaceSelector:
     matchNames:
     - kube-system
-{{- end }}
