@@ -90,7 +90,6 @@ func RunRegistryManager() {
 				rlog.Errorf("REGISTRY Cannot check image id: %v", err)
 			} else {
 				if imageID != AntiopaImageId {
-					AntiopaImageId = imageID
 					ImageUpdated <- imageID
 				}
 			}
