@@ -19,6 +19,13 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
+{{- if hasKey .Values.prometheus "madisonAuthKey" }}
+  alerting:
+    alertmanagers:
+    - namespace: kube-prometheus
+      name: madison-proxy
+      port: http
+{{- end }}
 {{- if .Values.prometheus.ingressACME }}
   externalUrl: https://{{ .Values.prometheus.ingressHostname }}/prometheus/
 {{- else }}
