@@ -74,6 +74,11 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+      - name: kube-rbac-proxy
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10356"
+        - "--upstream=http://127.0.0.1:10354/"
       - name: nginx-exporter
         image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/nginx-exporter:{{ $.Values.global.modulesImages.tags.nginxIngress.nginxExporter }}
         args: ["-nginx.scrape_uri=http://127.0.0.1:10253/nginx_status", "-telemetry.address=127.0.0.1:10354", "-insecure=true"]
