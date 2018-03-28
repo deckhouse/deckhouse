@@ -42,11 +42,11 @@ spec:
           name: http
         resources:
           limits:
-            cpu: 200m
-            memory: 100Mi
+            cpu: 100m
+            memory: 300Mi
           requests:
             cpu: 100m
-            memory: 50Mi
+            memory: 300Mi
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
