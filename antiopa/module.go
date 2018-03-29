@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/evanphx/json-patch"
 	"github.com/gobwas/glob"
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -64,13 +63,21 @@ func RunModule(moduleName string) {
 	}
 }
 
-func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
+func RunModuleBeforeHelmHooks(moduleName string, valuesPath string) error {
+	return runModuleHooks("before-helm", moduleName, valuesPath)
+}
+
+func RunModuleAfterHelmHooks(moduleName string, valuesPath string) error {
+	return runModuleHooks("after-helm", moduleName, valuesPath)
+}
+
+func runModuleHooks(orderType string, moduleName string, valuesPath string) error {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
 		return fmt.Errorf("no such module %s", moduleName)
 	}
 
-	hooksDir := filepath.Join(module.Path, "hooks", "before-helm")
+	hooksDir := filepath.Join(module.Path, "hooks", orderType)
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 		return nil
@@ -82,44 +89,41 @@ func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
 	}
 
 	for _, hookName := range hooksNames {
-		rlog.Infof("Running module %s before-helm hook %s ...", moduleName, hookName)
+		rlog.Infof("Running module %s %s hook %s ...", moduleName, orderType, hookName)
 
-		err := execCommand(makeModuleCommand(module.Path, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
+		var kubeModuleConfigValuesChanged, globalModuleConfigValuesChanged bool
+
+		configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := runModuleHook(module.Path, hooksDir, hookName, valuesPath)
+
 		if err != nil {
-			return fmt.Errorf("before-helm hook %s FAILED: %s", hookName, err)
+			return fmt.Errorf("%s hook %s FAILED: %s", orderType, hookName, err)
 		}
+
+		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = applyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
+			return err
+		}
+
+		if kubeModuleConfigValuesChanged {
+			rlog.Debugf("Updating module %s VALUES in ConfigMap:\n%s", module.Name, valuesToString(kubeModulesConfigValues[module.Name]))
+			err = SetModuleKubeValues(module.Name, kubeModulesConfigValues[module.Name])
+			if err != nil {
+				return err
+			}
+		}
+
+		if modulesDynamicValues[module.Name], globalModuleConfigValuesChanged, err = applyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
+			return err
+		}
+
+		modulesValuesChanged[module.Name] = kubeModuleConfigValuesChanged || globalModuleConfigValuesChanged
 	}
 
 	return nil
 }
 
-func RunModuleAfterHelmHooks(moduleName string, ValuesPath string) error {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
-	}
-
-	hooksDir := filepath.Join(module.Path, "hooks", "after-helm")
-
-	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
-		return nil
-	}
-
-	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
-	if err != nil {
-		return err
-	}
-
-	for _, hookName := range hooksNames {
-		rlog.Infof("Running module %s after-helm hook %s ...", moduleName, hookName)
-
-		err := execCommand(makeModuleCommand(module.Path, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
-		if err != nil {
-			return fmt.Errorf("after-helm hook %s FAILED: %s", hookName, err)
-		}
-	}
-
-	return nil
+func runModuleHook(modulePath, hooksDir, hookName string, valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+	cmd := makeCommand(modulePath, valuesPath, filepath.Join(hooksDir, hookName), []string{})
+	return runHook(filepath.Join(TempDir, "values", "modules"), hookName, cmd)
 }
 
 func RunModuleHelm(moduleName string, ValuesPath string) error {
@@ -135,7 +139,7 @@ func RunModuleHelm(moduleName string, ValuesPath string) error {
 
 		helmReleaseName := moduleName
 
-		err := execCommand(makeModuleCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
+		err := execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
@@ -147,68 +151,10 @@ func RunModuleHelm(moduleName string, ValuesPath string) error {
 }
 
 func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
+	if _, hasModule := modulesByName[moduleName]; !hasModule {
 		return nil, fmt.Errorf("no such module %s", moduleName)
 	}
-
-	valuesShPath := filepath.Join(module.Path, "initial_values")
-
-	if statRes, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
-		// Тупой тест, что файл executable.
-		// Т.к. antiopa всегда работает под root, то этого достаточно.
-		if statRes.Mode()&0111 != 0 {
-			rlog.Debugf("Running values generator %s ...", valuesShPath)
-
-			var valuesYamlBuffer bytes.Buffer
-			cmd := exec.Command(valuesShPath)
-			cmd.Env = append(cmd.Env, os.Environ()...)
-			cmd.Dir = module.Path
-			cmd.Stdout = &valuesYamlBuffer
-			err := execCommand(cmd)
-			if err != nil {
-				return nil, fmt.Errorf("Values generator %s error: %s", valuesShPath, err)
-			}
-
-			var generatedValues map[interface{}]interface{}
-			err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
-			if err != nil {
-				return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
-			}
-			rlog.Debugf("got VALUES from initial_values:\n%s", valuesToString(generatedValues))
-
-			newModuleValues := MergeValues(generatedValues, kubeModulesValues[moduleName])
-
-			rlog.Debugf("Updating module %s VALUES in ConfigMap:\n%s", moduleName, valuesToString(newModuleValues))
-
-			err = SetModuleKubeValues(moduleName, newModuleValues)
-			if err != nil {
-				return nil, err
-			}
-			kubeModulesValues[moduleName] = newModuleValues
-		} else {
-			rlog.Warnf("Ignoring non executable file %s", valuesShPath)
-		}
-
-	}
-
-	return MergeValues(globalValues, hooksValues, globalModulesValues[moduleName], kubeValues, kubeModulesValues[moduleName]), nil
-}
-
-func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
-	cmd := exec.Command(Entrypoint, Args...)
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	cmd.Env = append(
-		cmd.Env,
-		fmt.Sprintf("VALUES_PATH=%s", ValuesPath),
-		fmt.Sprintf("TILLER_NAMESPACE=%s", HelmTillerNamespace()),
-	)
-
-	cmd.Dir = ModuleDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd
+	return MergeValues(globalConfigValues, globalModulesConfigValues[moduleName], kubeConfigValues, kubeModulesConfigValues[moduleName], dynamicValues, modulesDynamicValues[moduleName]), nil
 }
 
 func matchesGlob(value string, globPattern string) bool {
@@ -278,7 +224,7 @@ func readModules() ([]Module, error) {
 
 	files, err := ioutil.ReadDir(modulesDir)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot list modules directory %s: %s", modulesDir, err)
+		return nil, fmt.Errorf("cannot list modules directory %s: %s", modulesDir, err)
 	}
 
 	var validmoduleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
@@ -309,24 +255,8 @@ func readModules() ([]Module, error) {
 	return res, nil
 }
 
-func dumpModuleValuesYaml(moduleName string, Values map[interface{}]interface{}) (string, error) {
-	return dumpValuesYaml(fmt.Sprintf("%s.yaml", moduleName), Values)
-}
-
-func dumpValuesYaml(FileName string, Values map[interface{}]interface{}) (string, error) {
-	valuesYaml, err := yaml.Marshal(&Values)
-	if err != nil {
-		return "", err
-	}
-
-	filePath := filepath.Join(TempDir, FileName)
-
-	err = ioutil.WriteFile(filePath, valuesYaml, 0644)
-	if err != nil {
-		return "", err
-	}
-
-	return filePath, nil
+func dumpModuleValuesYaml(moduleName string, values map[interface{}]interface{}) (string, error) {
+	return dumpValuesYaml(fmt.Sprintf("%s.yaml", moduleName), values)
 }
 
 func readModuleValues(module Module) (map[interface{}]interface{}, error) {
@@ -349,4 +279,20 @@ func readModulesValues() (map[interface{}]interface{}, error) {
 	}
 
 	return readValuesYamlFile(path)
+}
+
+func readValuesYamlFile(filePath string) (map[interface{}]interface{}, error) {
+	valuesYaml, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+	}
+
+	var res map[interface{}]interface{}
+
+	err = yaml.Unmarshal(valuesYaml, &res)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+	}
+
+	return res, nil
 }
