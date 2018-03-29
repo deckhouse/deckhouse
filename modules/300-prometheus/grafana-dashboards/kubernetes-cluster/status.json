@@ -109,7 +109,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(up{job=~\"apiserver|kube-scheduler|kube-controller-manager\"} == 0)",
+          "expr": "sum(up{job=~\"kube-apiserver|kube-scheduler|kube-controller-manager\"} == 0)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -288,7 +288,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(sum(up{job=\"apiserver\"} == 1) / sum(up{job=\"apiserver\"})) * 100",
+          "expr": "(sum(up{job=\"kube-apiserver\"} == 1) / sum(up{job=\"kube-apiserver\"})) * 100",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
