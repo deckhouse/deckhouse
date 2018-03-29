@@ -6,10 +6,9 @@
 Что нужно настраивать?
 ----------------------
 
-При установке **нужно настроить три параметра**:
+При установке **нужно настроить два параметра**:
 ```yaml
 prometheus:
-  ingressHostname: prometheus.kube.domain.my
   retentionDays: 15
   estimatedNumberOfMetrics: 250000
 ```
@@ -17,11 +16,6 @@ prometheus:
 Конфигурация
 ------------
 
-* `ingressClass` — класс ingress контроллера.
-    * По-умолчанию `nginx`.
-* `ingressACME` — заказывать ли автоматически сертификаты LetsEncrypt.
-    * По-умолчанию `true`.
-* `ingressHostname` — хостнейм, по которому будут доступны grafana и prometheus.
 * `retentionDays` — сколько дней хранить данные.
     * По-умолчанию `7`.
     * **Важно!!!** При изменении этого параметра перезаказывается диск (при этом удаляются все данные).
@@ -43,6 +37,7 @@ prometheus:
     * Если указать `false` — будет форсироваться использование emptyDir'а.
 * `userPassword` — пароль пользователя `user` (генерируется автоматически, но можно изменять).
 * `adminPassword` — пароль пользователя `admin` (генерируется автоматически, но можно изменять).
+* `madisonAuthKey` — ключ для отправки алертов в madison.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
@@ -54,9 +49,6 @@ prometheus:
 
 ```yaml
 prometheus:
-  ingressClass: nginx
-  ingressTlsACME: true
-  ingressHostname: prometheus.kube.domain.my
   userPassword: xxxxxx
   adminPassword: yyyyyy
   retentionDays: 7

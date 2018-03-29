@@ -38,6 +38,10 @@ var DockerRegistryInfo = map[string]map[string]string{
 
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
 func InitRegistryManager() error {
+	if IsRunningOutOfKubeCluster() {
+		return nil
+	}
+
 	rlog.Debug("Init registry manager")
 
 	// TODO Пока для доступа к registry.flant.com передаётся временный токен через переменную среды
@@ -76,6 +80,10 @@ func InitRegistryManager() error {
 // RunRegistryManager каждые 10 секунд проверяет
 // не изменился ли id образа.
 func RunRegistryManager() {
+	if IsRunningOutOfKubeCluster() {
+		return
+	}
+
 	rlog.Debug("Run registry manager")
 
 	ticker := time.NewTicker(time.Duration(10) * time.Second)

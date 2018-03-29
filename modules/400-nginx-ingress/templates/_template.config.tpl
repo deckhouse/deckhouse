@@ -28,7 +28,7 @@ data:
   vts-status-zone-size: "20m"
   use-proxy-protocol: {{ $useProxyProtocol | quote }}
     {{- if $useProxyProtocol }}
-  proxy-real-ip-cidr: "0.0.0.0/32"
+  proxy-real-ip-cidr: "0.0.0.0/0"
     {{- else }}
   proxy-real-ip-cidr: {{ $config.setRealIPFrom | default (list "0.0.0.0/32") | join "," | quote }}
     {{- end }}

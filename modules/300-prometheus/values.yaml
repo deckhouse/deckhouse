@@ -1,5 +1,9 @@
 prometheus:
   retentionDays: 7
   estimatedNumberOfMetrics: 200000
-  ingressClass: nginx
-  ingressACME: true
+
+  # https://github.com/deckhouse/deckhouse/issues/145
+  madisonBackends:
+  - 46.4.70.143
+  - 88.99.236.188
+  - 176.9.67.92

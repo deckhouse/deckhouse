@@ -158,18 +158,21 @@ func Run() {
 	for {
 		select {
 		case newKubevalues := <-KubeValuesUpdated:
-			kubeConfigValues = newKubevalues
+			kubeConfigValues = newKubevalues.Values
+			kubeConfigModulesValues = newKubevalues.ModulesValues
 
 			rlog.Infof("Kube values has been updated, rerun all modules ...")
 
 			RunModules()
 
 		case moduleValuesUpdate := <-KubeModuleValuesUpdated:
-			kubeModulesConfigValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
+			if _, hasKey := modulesByName[moduleValuesUpdate.ModuleName]; hasKey {
+			  kubeModulesConfigValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
 
-			rlog.Infof("Module %s kube values has been updated, rerun ...")
+				rlog.Infof("Module %s kube values has been updated, rerun ...", moduleValuesUpdate.ModuleName)
 
-			RunModule(moduleValuesUpdate.ModuleName)
+				RunModule(moduleValuesUpdate.ModuleName)
+			}
 
 		case <-KubeNodeChanged:
 			OnKubeNodeChanged()
