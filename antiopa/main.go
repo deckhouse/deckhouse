@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/evanphx/json-patch"
-	notordinaryyaml "github.com/ghodss/yaml"
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -268,7 +266,7 @@ func RunOnKubeNodeChangedHooks() error {
 
 		var kubeConfigValuesChanged, globalConfigValuesChanged bool
 
-		if kubeConfigValues, kubeConfigValuesChanged, err = applyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
+		if kubeConfigValues, kubeConfigValuesChanged, err = ApplyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
 			return err
 		}
 
@@ -276,7 +274,7 @@ func RunOnKubeNodeChangedHooks() error {
 			return err
 		}
 
-		if dynamicValues, globalConfigValuesChanged, err = applyJsonMergeAndPatch(globalConfigValues, dynamicVJMV, dynamicVJPV); err != nil {
+		if dynamicValues, globalConfigValuesChanged, err = ApplyJsonMergeAndPatch(globalConfigValues, dynamicVJMV, dynamicVJPV); err != nil {
 			return err
 		}
 
@@ -335,59 +333,6 @@ func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
 	}
 
 	return res, nil
-}
-
-func applyJsonMergeAndPatch(values map[interface{}]interface{}, mergeJsonValues map[string]interface{}, patch *jsonpatch.Patch) (map[interface{}]interface{}, bool, error) {
-	var resValues map[interface{}]interface{}
-	var err error
-
-	if mergeJsonValues != nil {
-		resValues = MergeValues(values, jsonValuesToValues(mergeJsonValues))
-	}
-
-	if patch != nil {
-		if resValues, err = applyJsonPatch(resValues, patch); err != nil {
-			return nil, false, err
-		}
-	}
-
-	valuesChanged := !reflect.DeepEqual(values, resValues)
-
-	return resValues, valuesChanged, nil
-}
-
-func jsonValuesToValues(jsonValues map[string]interface{}) map[interface{}]interface{} {
-	values := make(map[interface{}]interface{})
-	for key, value := range jsonValues {
-		values[key] = value
-	}
-	return values
-}
-
-func applyJsonPatch(values map[interface{}]interface{}, patch *jsonpatch.Patch) (map[interface{}]interface{}, error) {
-	yamlDoc, err := yaml.Marshal(values)
-	if err != nil {
-		return nil, err
-	}
-
-	jsonDoc, err := notordinaryyaml.YAMLToJSON(yamlDoc)
-	if err != nil {
-		return nil, err
-	}
-
-	resJsonDoc, err := patch.Apply(jsonDoc)
-	if err != nil {
-		return nil, err
-	}
-
-	resJsonValues := make(map[string]interface{})
-	if err = json.Unmarshal(resJsonDoc, &resJsonValues); err != nil {
-		return nil, err
-	}
-
-	resValues := jsonValuesToValues(resJsonValues)
-
-	return resValues, nil
 }
 
 func SetKubeValues(_ map[interface{}]interface{}) error {

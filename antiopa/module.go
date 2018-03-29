@@ -99,7 +99,7 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 			return fmt.Errorf("%s hook %s FAILED: %s", orderType, hookName, err)
 		}
 
-		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = applyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
+		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = ApplyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
 			return err
 		}
 
@@ -111,7 +111,7 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 			}
 		}
 
-		if modulesDynamicValues[module.Name], globalModuleConfigValuesChanged, err = applyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
+		if modulesDynamicValues[module.Name], globalModuleConfigValuesChanged, err = ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
 			return err
 		}
 

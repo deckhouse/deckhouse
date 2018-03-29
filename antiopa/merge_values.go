@@ -1,6 +1,11 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/evanphx/json-patch"
+	ghodssyaml "github.com/ghodss/yaml"
+	"github.com/mohae/deepcopy"
+	"gopkg.in/yaml.v2"
 	"reflect"
 )
 
@@ -73,4 +78,81 @@ func MergeValues(ValuesArr ...map[interface{}]interface{}) map[interface{}]inter
 	}
 
 	return res
+}
+
+func ApplyJsonMergeAndPatch(values map[interface{}]interface{}, jsonValuesToMerge map[string]interface{}, patch *jsonpatch.Patch) (map[interface{}]interface{}, bool, error) {
+	regeneratedValues, err := regenerateValues(values)
+	if err != nil {
+		return nil, false, err
+	}
+
+	resValues := deepcopy.Copy(regeneratedValues).(map[interface{}]interface{})
+
+	if jsonValuesToMerge != nil {
+		resValues = MergeValues(resValues, jsonValuesToValues(jsonValuesToMerge))
+	}
+
+	if patch != nil {
+		if resValues, err = applyJsonPatch(resValues, patch); err != nil {
+			return nil, false, err
+		}
+	}
+
+	return resValues, !reflect.DeepEqual(regeneratedValues, resValues), nil
+}
+
+func applyJsonPatch(values map[interface{}]interface{}, patch *jsonpatch.Patch) (map[interface{}]interface{}, error) {
+	jsonDoc, err := json.Marshal(valuesToJsonValues(values))
+	if err != nil {
+		return nil, err
+	}
+
+	resJsonDoc, err := patch.Apply(jsonDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	resJsonValues := make(map[string]interface{})
+	if err = json.Unmarshal(resJsonDoc, &resJsonValues); err != nil {
+		return nil, err
+	}
+
+	resValues := jsonValuesToValues(resJsonValues)
+
+	return resValues, nil
+}
+
+func regenerateValues(values map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	yamlDoc, err := yaml.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonDoc, err := ghodssyaml.YAMLToJSON(yamlDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonValues := make(map[string]interface{})
+	if err := json.Unmarshal(jsonDoc, &jsonValues); err != nil {
+		return nil, err
+	}
+
+	return jsonValuesToValues(jsonValues), nil
+}
+
+func jsonValuesToValues(jsonValues map[string]interface{}) map[interface{}]interface{} {
+	values := make(map[interface{}]interface{})
+	for key, value := range jsonValues {
+		values[key] = value
+	}
+	return values
+}
+
+func valuesToJsonValues(values map[interface{}]interface{}) map[string]interface{} {
+	jsonValues := make(map[string]interface{})
+	for key, value := range values {
+		jsonValues[key.(string)] = value
+	}
+	return jsonValues
 }
