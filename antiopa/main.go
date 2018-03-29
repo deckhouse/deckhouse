@@ -159,7 +159,7 @@ func Run() {
 		select {
 		case newKubevalues := <-KubeValuesUpdated:
 			kubeConfigValues = newKubevalues.Values
-			kubeConfigModulesValues = newKubevalues.ModulesValues
+			kubeModulesConfigValues = newKubevalues.ModulesValues
 
 			rlog.Infof("Kube values has been updated, rerun all modules ...")
 
