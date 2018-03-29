@@ -3,18 +3,3 @@
 echo 'prometheus:'
 echo '  adminPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
 echo '  userPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
-
-### Миграция 2018-03-24, https://github.com/deckhouse/deckhouse/merge_requests/130
-hostname=$(kubectl -n monitoring get ingress/prometheus-ingress -o json 2> /dev/null | jq '.spec.rules[0].host' -r)
-if [[ -n "$hostname" ]] ; then
-  echo '  ingressHostname: "'$hostname'"'
-  retention=$(expr \( $(kubectl -n monitoring get prometheus/k8s -o json 2> /dev/null | jq '.spec.retention' -r | sed 's/\([0-9]\+\)h$/\1/') + 23 \) \/ 24)
-  if [[ -n "$retention" ]] ; then
-    echo '  retentionDays: '$retention
-  fi
-  number_of_metrics=$(curl -s 'http://prometheus-k8s-0.prometheus-operated.monitoring.svc.cluster.local:9090/api/v1/query?query=count(max_over_time(%7B__name__%3D~%22.%2B%22%7D%5B1h%5D))' 2> /dev/null | jq '.data.result[0].value[1]' -r)
-  if [[ -n "$number_of_metrics" && "$number_of_metrics" != "null" ]] ; then
-    echo '  estimatedNumberOfMetrics: '$(expr \( $number_of_metrics + 9999 \) \/ 10000 \* 15000)
-  fi
-  kubectl -n monitoring delete ingress/prometheus-ingress > /dev/null 2> /dev/null
-fi
