@@ -1,0 +1,83 @@
+{{- if hasKey .Values.prometheus "madisonAuthKey" }}
+  {{- range $.Values.prometheus.madisonBackends }}
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: madison-proxy-{{ . | sha256sum }}
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: madison-proxy
+    madison-backend: {{ . }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: madison-proxy
+      madison-backend: {{ . }}
+  template:
+    metadata:
+      labels:
+        app: madison-proxy
+        madison-backend: {{ . }}
+    spec:
+    {{- if and (hasKey $.Values.prometheus "nodeSelector") ($.Values.prometheus.nodeSelector) }}
+      nodeSelector:
+{{ $.Values.prometheus.nodeSelector | toYaml | trim | indent 8 }}
+    {{- else if and (not (hasKey $.Values.prometheus "nodeSelector")) $.Values.global.cluster.hasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+    {{- end }}
+    {{- if and (hasKey $.Values.prometheus "tolerations") ($.Values.prometheus.tolerations) }}
+      tolerations:
+{{ $.Values.prometheus.tolerations | toYaml | trim | indent 6 }}
+    {{- else if and (not (hasKey $.Values.prometheus "tolerations")) $.Values.global.cluster.hasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+    {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: madison-proxy
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: nginx
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/madison-proxy:{{ $.Values.global.modulesImages.tags.prometheus.madisonProxy }}
+        env:
+        - name: MADISON_BACKEND
+          value: {{ . }}
+        - name: MADISON_AUTH_KEY
+          value: {{ $.Values.prometheus.madisonAuthKey }}
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 10253
+          name: healthz
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10253
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 10253
+            scheme: HTTP
+          timeoutSeconds: 5
+      imagePullSecrets:
+      - name: antiopa-registry
+  {{- end }}
+{{- end }}
