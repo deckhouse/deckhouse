@@ -26,10 +26,10 @@ spec:
       name: madison-proxy
       port: http
 {{- end }}
-{{- if .Values.prometheus.ingressACME }}
-  externalUrl: https://{{ .Values.prometheus.ingressHostname }}/prometheus/
+{{- if .Values.global.ingressACME }}
+  externalUrl: https://prometheus.{{ .Values.global.clusterHostname }}/prometheus/
 {{- else }}
-  externalUrl: http://{{ .Values.prometheus.ingressHostname }}/prometheus/
+  externalUrl: http://prometheus.{{ .Values.global.clusterHostname }}/prometheus/
 {{- end }}
   resources:
     requests:

@@ -22,6 +22,9 @@ main() {
   IMAGE_REPO='sys/antiopa'
   VERSION='stable'
   TOKEN=''
+  PROJECT=''
+  CLUSTER_NAME='main'
+  CLUSTER_HOSTNAME=''
   DRY_RUN=0
   OUT_FILE=''
   LOG_LEVEL='DEBUG'
@@ -72,6 +75,15 @@ printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
             If no token specified, no imagePullSecret will generate.
             E.g. registry in minikube can be without auth (dapp kube minikube setup).
 
+    --project <project>
+            Name of the project, same as in bush.flant.com
+
+    --cluster-name <name>
+            Name of the cluster, same as in ***REMOVED***_registry.
+
+    --cluster-hostname <hostname>
+            This hostname will be used as a suffix for other system componentes (prometheus, dashboard, etc).
+
     -o, --out <filename>
             Put generated yaml into file.
             To disable installed modules - you should edit Antiopa's ConfigMaps.
@@ -104,6 +116,18 @@ parse_args() {
         TOKEN="$2"
         shift
         ;;
+      --project)
+        PROJECT="$2"
+        shift
+        ;;
+      --cluster-name)
+        CLUSTER_NAME="$2"
+        shift
+        ;;
+      --cluster-hostname)
+        CLUSTER_HOSTNAME="$2"
+        shift
+        ;;
       -o|--out)
         OUT_FILE="$2"
         shift
@@ -125,6 +149,16 @@ parse_args() {
     esac
     shift $(( $# > 0 ? 1 : 0 ))
   done
+
+  if [[ "x$TOKEN" == "x" ]] ; then
+    echo "--token required"
+    return 1
+  fi
+
+  if [[ "x$PROJECT" == "x" ]] ; then
+    echo "--project required"
+    return 1
+  fi
 }
 
 generate_yaml() {
@@ -278,8 +312,18 @@ data:
     Add values key to define global values yaml
     Add <module>-values key to define values yaml for module
     Add disable-modules to specify disabled modules (comma separated, may be globs), for example "disable-modules: test*, kube-dashboard"
+  values: |
+    project: "${PROJECT}"
+    clusterName: "${CLUSTER_NAME}"
 YAML
 )
+  if [[ "x$CLUSTER_HOSTNAME" != "x" ]] ; then
+    VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
+
+    clusterHostname: "${CLUSTER_HOSTNAME}"
+YAML
+)
+  fi
 
   MANIFESTS=$(cat << YAML
 $SECRET

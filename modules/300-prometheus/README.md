@@ -6,10 +6,9 @@
 Что нужно настраивать?
 ----------------------
 
-При установке **нужно настроить три параметра**:
+При установке **нужно настроить два параметра**:
 ```yaml
 prometheus:
-  ingressHostname: prometheus.kube.domain.my
   retentionDays: 15
   estimatedNumberOfMetrics: 250000
 ```
@@ -17,11 +16,6 @@ prometheus:
 Конфигурация
 ------------
 
-* `ingressClass` — класс ingress контроллера.
-    * По-умолчанию `nginx`.
-* `ingressACME` — заказывать ли автоматически сертификаты LetsEncrypt.
-    * По-умолчанию `true`.
-* `ingressHostname` — хостнейм, по которому будут доступны grafana и prometheus.
 * `retentionDays` — сколько дней хранить данные.
     * По-умолчанию `7`.
     * **Важно!!!** При изменении этого параметра перезаказывается диск (при этом удаляются все данные).
@@ -55,9 +49,6 @@ prometheus:
 
 ```yaml
 prometheus:
-  ingressClass: nginx
-  ingressTlsACME: true
-  ingressHostname: prometheus.kube.domain.my
   userPassword: xxxxxx
   adminPassword: yyyyyy
   retentionDays: 7
