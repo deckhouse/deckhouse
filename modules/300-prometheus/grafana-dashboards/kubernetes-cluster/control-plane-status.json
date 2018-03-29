@@ -101,7 +101,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(sum(up{job=\"apiserver\"} == 1) / sum(up{job=\"apiserver\"})) * 100",
+          "expr": "(sum(up{job=\"kube-apiserver\"} == 1) / sum(up{job=\"kube-apiserver\"})) * 100",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A",
