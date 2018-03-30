@@ -165,7 +165,7 @@ func Run() {
 
 		case moduleValuesUpdate := <-KubeModuleValuesUpdated:
 			if _, hasKey := modulesByName[moduleValuesUpdate.ModuleName]; hasKey {
-			  kubeModulesConfigValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
+				kubeModulesConfigValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
 
 				rlog.Infof("Module %s kube values has been updated, rerun ...", moduleValuesUpdate.ModuleName)
 
@@ -223,18 +223,17 @@ func OnKubeNodeChanged() {
 
 	if valuesChanged {
 		rlog.Debug("Global values changed: run all modules")
+		valuesChanged = false
 		RunModules()
 	} else {
 		for _, moduleName := range modulesOrder {
 			if changed, exist := modulesValuesChanged[moduleName]; exist && changed {
 				rlog.Debugf("Module `%s` values changed: run module", moduleName)
+				modulesValuesChanged[moduleName] = false
 				RunModule(moduleName)
 			}
 		}
 	}
-
-	valuesChanged = false
-	modulesValuesChanged = make(map[string]bool)
 }
 
 // Вызов хуков при изменении опций узлов и самих узлов.
