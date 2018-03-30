@@ -4,16 +4,10 @@ set -e
 # Antiopa installer
 #
 # Usage:
-# Нужно узнать Token в канале #tech-kubernetes
-# https://flant.slack.com/archives/C3LRT80NB/p1522067965000308
-#
 # $ TOKEN=$(cat); curl -fLs -H "PRIVATE-TOKEN: $TOKEN"  https://github.com/deckhouse/deckhouse/raw/stable/get-antiopa.sh | bash -s -- --token $TOKEN
 # Напишите token, нажмите `<Enter>` и `<Ctrl-D>`
 #
-# Можно указать версию с помощью параметра --version (см. подробности в `usage()`!)
-# Можно указать устанавливаемые модули с помощью --out и --dry-run (см ниже)
-#
-# После установки вы должны добавить кластер в файл `/***REMOVED***_registry`! Иначе скрипт `***REMOVED***` не сможет работать.
+# Подробную инструкцию по установке см. в knowledge base: https://fox.flant.com/docs/kb/blob/master/rfc/rfc-antiopa.md
 #
 
 main() {
