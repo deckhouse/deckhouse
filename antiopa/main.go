@@ -277,7 +277,7 @@ func RunOnKubeNodeChangedHooks() error {
 			return err
 		}
 
-		valuesChanged = kubeConfigValuesChanged || globalConfigValuesChanged
+		valuesChanged = valuesChanged || kubeConfigValuesChanged || globalConfigValuesChanged
 	}
 
 	return nil

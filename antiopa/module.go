@@ -115,7 +115,7 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 			return err
 		}
 
-		modulesValuesChanged[module.Name] = kubeModuleConfigValuesChanged || globalModuleConfigValuesChanged
+		modulesValuesChanged[module.Name] = modulesValuesChanged[module.Name] || kubeModuleConfigValuesChanged || globalModuleConfigValuesChanged
 	}
 
 	return nil
