@@ -18,3 +18,5 @@ data:
        url: /prometheus
        version: 1
        isDefault: true
+       jsonData:
+         timeInterval: 30s
