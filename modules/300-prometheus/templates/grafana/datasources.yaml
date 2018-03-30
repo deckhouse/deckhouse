@@ -9,13 +9,12 @@ metadata:
     app: grafana
 data:
   prometheus.yaml: |+
+    apiVersion: 1
     datasources:
      - name: main
        type: prometheus
        access: direct
-       org_id: 1
+       orgId: 1
        url: /prometheus
        version: 1
-       editable: false
-       default: true
-
+       isDefault: true
