@@ -11,7 +11,6 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: web
-    interval: 30s
   namespaceSelector:
     any: true
   selector:

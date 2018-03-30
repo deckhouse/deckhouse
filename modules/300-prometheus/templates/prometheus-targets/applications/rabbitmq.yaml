@@ -10,8 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - interval: 30s
-    port: rmq-metrics
+  - port: rmq-metrics
   namespaceSelector:
     any: true
   selector:

@@ -10,8 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - interval: 30s
-    port: redis-metrics
+  - port: redis-metrics
   namespaceSelector:
     any: true
   selector:

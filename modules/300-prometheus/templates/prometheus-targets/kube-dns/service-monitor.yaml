@@ -12,9 +12,7 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: http-metrics-skydns
-    interval: 30s
   - port: http-metrics-dnsmasq
-    interval: 30s
   selector:
     matchLabels:
       heritage: antiopa

@@ -19,7 +19,6 @@ spec:
     - kube-system
   endpoints:
   - port: https
-    interval: 30s
     scheme: https
     tlsConfig:
       caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt

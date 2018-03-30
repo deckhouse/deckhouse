@@ -12,11 +12,9 @@ spec:
   endpoints:
 {{- if not (eq .Values.global.cluster.type "Manual") }}
   - port: http-metrics
-    interval: 30s
 {{- else }}
   - port: https-metrics
     scheme: https
-    interval: 30s
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
