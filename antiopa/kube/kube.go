@@ -1,8 +1,6 @@
-package main
+package kube
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"github.com/romana/rlog"
 	"io/ioutil"
@@ -173,12 +171,4 @@ func GetConfigMap() (*v1.ConfigMap, error) {
 	}
 
 	return configMap, nil
-}
-
-func calculateChecksum(Values ...string) string {
-	hasher := md5.New()
-	for _, value := range Values {
-		hasher.Write([]byte(value))
-	}
-	return hex.EncodeToString(hasher.Sum(nil))
 }

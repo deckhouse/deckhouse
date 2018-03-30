@@ -1,4 +1,4 @@
-package main
+package helm
 
 import (
 	"bytes"
@@ -10,8 +10,14 @@ import (
 	"github.com/romana/rlog"
 )
 
+var (
+	TillerNamespace string
+)
+
 // InitHelm запускает установку tiller-a.
-func InitHelm() {
+func Init(tillerNamespace string) {
+	TillerNamespace = tillerNamespace
+
 	stdout, stderr, err := HelmCmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
 	if err != nil {
 		rlog.Errorf("HELM-INIT: %s\n%s %s", err, stdout, stderr)
@@ -29,12 +35,10 @@ func InitHelm() {
 	rlog.Info("HELM-INIT Successfully initialized")
 }
 
-// HelmTillerNamespace возвращает имя namespace, куда устаналивается tiller
-// Можно ставить в другой namespace, можно в тот же, где сама antiopa.
-// TODO Есть переменная TILLER_NAMESPACE - можно её поставить ещё на этапе деплоя
-func HelmTillerNamespace() string {
-	return KubernetesAntiopaNamespace
-	//return fmt.Sprintf("%s-tiller", KubernetesAntiopaNamespace)
+func CommandEnv() []string {
+	res := make([]string, 0)
+	res = append(res, fmt.Sprintf("TILLER_NAMESPACE=%s", TillerNamespace))
+	return res
 }
 
 // HelmCmd запускает helm с переданными аргументами
@@ -42,9 +46,8 @@ func HelmTillerNamespace() string {
 // чтобы antiopa работала со своим tiller-ом
 func HelmCmd(args ...string) (stdout string, stderr string, err error) {
 	cmd := exec.Command("/usr/local/bin/helm", args...)
-	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("TILLER_NAMESPACE=%s", HelmTillerNamespace()),
-	)
+	cmd.Env = append(os.Environ(), CommandEnv()...)
+
 	var stdoutBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	var stderrBuf bytes.Buffer

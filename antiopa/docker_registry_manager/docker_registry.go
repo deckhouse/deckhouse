@@ -1,4 +1,4 @@
-package main
+package docker_registry_manager
 
 import (
 	"crypto/tls"

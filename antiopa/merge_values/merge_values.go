@@ -1,4 +1,4 @@
-package main
+package merge_values
 
 import (
 	"encoding/json"

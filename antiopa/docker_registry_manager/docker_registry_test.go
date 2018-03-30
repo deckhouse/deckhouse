@@ -1,4 +1,4 @@
-package main
+package docker_registry_manager
 
 import (
 	"regexp"
@@ -15,7 +15,7 @@ import (
 
 var re = regexp.MustCompile(`(?:([a-zA-Z][a-zA-Z\d\.\-]+(?::\d+)?)\/)?((?:[a-z\d][a-z\d\.\-\_]+\/?)+)(?::([a-zA-Z\d\_][a-zA-Z\d\-\_\.]{0,127}))?`)
 
-var mustPass = []string {
+var mustPass = []string{
 	"localhost/antiopa:latest",
 	"localhost/sys/antiopa:latest",
 	"antiopa:latest",
@@ -27,7 +27,7 @@ var mustPass = []string {
 	"registry.flant.com/sys/antiopa:stable",
 }
 
-var mustFail = []string {
+var mustFail = []string{
 	"",
 	"",
 }
@@ -41,7 +41,7 @@ func TestRegistryImageRegexp(t *testing.T) {
 	//t.Fail()
 }
 
-func PrintMatches(t *testing.T, test string, matches []string){
+func PrintMatches(t *testing.T, test string, matches []string) {
 	t.Log(test)
 	if matches == nil {
 		t.Log("  No matches")

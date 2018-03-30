@@ -1,4 +1,4 @@
-package main
+package kube_values_manager
 
 import (
 	"fmt"
@@ -11,6 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 /* Формат values:
@@ -44,13 +47,17 @@ type KubeValues struct {
 	ModulesValues map[string]map[interface{}]interface{}
 }
 
+func SetKubeValues(_ map[interface{}]interface{}) error {
+	return nil
+}
+
 func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) error {
 	/*
 	* Читаем текущий ConfigMap, создать если нету
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
 	 */
 
-	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(metav1.ListOptions{})
+	cmList, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -66,10 +73,10 @@ func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) 
 	if err != nil {
 		return err
 	}
-	checksum := calculateChecksum(string(valuesYaml))
+	checksum := utils.CalculateChecksum(string(valuesYaml))
 
 	if cmExist {
-		cm, err := GetConfigMap()
+		cm, err := kube.GetConfigMap()
 		if err != nil {
 			return err
 		}
@@ -82,20 +89,20 @@ func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) 
 		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
 		cm.Data[fmt.Sprintf("%s-checksum", ModuleName)] = checksum
 
-		updatedCm, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Update(cm)
+		updatedCm, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Update(cm)
 		if err != nil {
 			return err
 		}
 		knownCmResourceVersion = updatedCm.ResourceVersion
 	} else {
 		cm := v1.ConfigMap{}
-		cm.Name = AntiopaConfigMap
+		cm.Name = kube.AntiopaConfigMap
 		cm.Data = make(map[string]string)
 
 		cm.Data[fmt.Sprintf("%s-values", ModuleName)] = string(valuesYaml)
 		cm.Data[fmt.Sprintf("%s-checksum", ModuleName)] = checksum
 
-		updatedCm, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Create(&cm)
+		updatedCm, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Create(&cm)
 		if err != nil {
 			return err
 		}
@@ -154,20 +161,20 @@ func InitKubeValuesManager() (KubeValues, error) {
 	res.Values = make(map[interface{}]interface{})
 	res.ModulesValues = make(map[string]map[interface{}]interface{})
 
-	cmList, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).List(metav1.ListOptions{})
+	cmList, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return KubeValues{}, err
 	}
 	cmExist := false
 	for _, cm := range cmList.Items {
-		if cm.ObjectMeta.Name == AntiopaConfigMap {
+		if cm.ObjectMeta.Name == kube.AntiopaConfigMap {
 			cmExist = true
 			break
 		}
 	}
 
 	if cmExist {
-		cm, err := GetConfigMap()
+		cm, err := kube.GetConfigMap()
 		if err != nil {
 			return KubeValues{}, err
 		}
@@ -177,7 +184,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 			if err != nil {
 				return KubeValues{}, fmt.Errorf("Bad ConfigMap yaml at key 'values': %s:\n%s", err, valuesYaml)
 			}
-			kubeValuesChecksum = calculateChecksum(valuesYaml)
+			kubeValuesChecksum = utils.CalculateChecksum(valuesYaml)
 		}
 
 		for moduleName, valuesYaml := range getConfigMapModulesValuesYaml(cm) {
@@ -187,7 +194,7 @@ func InitKubeValuesManager() (KubeValues, error) {
 			}
 
 			res.ModulesValues[moduleName] = moduleValues
-			kubeModulesValuesChecksums[moduleName] = calculateChecksum(valuesYaml)
+			kubeModulesValuesChecksums[moduleName] = utils.CalculateChecksum(valuesYaml)
 		}
 
 		knownCmResourceVersion = cm.ResourceVersion
@@ -202,7 +209,7 @@ func handleNewCm(cm *v1.ConfigMap) error {
 	actualValuesChecksum := ""
 	valuesYaml, hasValuesKey := cm.Data["values"]
 	if hasValuesKey {
-		actualValuesChecksum = calculateChecksum(cm.Data["values"])
+		actualValuesChecksum = utils.CalculateChecksum(cm.Data["values"])
 	}
 
 	shouldUpdateValues := ((hasValuesKey &&
@@ -226,7 +233,7 @@ func handleNewCm(cm *v1.ConfigMap) error {
 			}
 
 			newModulesValues[moduleName] = moduleValues
-			newModulesValuesChecksums[moduleName] = calculateChecksum(valuesYaml)
+			newModulesValuesChecksums[moduleName] = utils.CalculateChecksum(valuesYaml)
 		}
 
 		kubeValuesChecksum = actualValuesChecksum
@@ -243,7 +250,7 @@ func handleNewCm(cm *v1.ConfigMap) error {
 
 		// New modules values and existing modules
 		for moduleName, moduleValuesYaml := range cmModulesValuesYaml {
-			actualModuleValuesChecksum := calculateChecksum(moduleValuesYaml)
+			actualModuleValuesChecksum := utils.CalculateChecksum(moduleValuesYaml)
 			if actualModuleValuesChecksum != cm.Data[fmt.Sprintf("%s-values-checksum", moduleName)] && actualModuleValuesChecksum != kubeModulesValuesChecksums[moduleName] {
 				moduleValues, err := parseValuesYaml(moduleValuesYaml)
 				if err != nil {
@@ -313,10 +320,10 @@ func RunKubeValuesManager() {
 	rlog.Debug("Run kube values manager")
 
 	lw := cache.NewListWatchFromClient(
-		KubernetesClient.CoreV1().RESTClient(),
+		kube.KubernetesClient.CoreV1().RESTClient(),
 		"configmaps",
-		KubernetesAntiopaNamespace,
-		fields.OneTermEqualSelector("metadata.name", AntiopaConfigMap))
+		kube.KubernetesAntiopaNamespace,
+		fields.OneTermEqualSelector("metadata.name", kube.AntiopaConfigMap))
 
 	cmInformer := cache.NewSharedInformer(
 		lw,
