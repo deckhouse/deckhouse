@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 )
 
 var (
@@ -117,6 +119,7 @@ func Init() {
 		}
 	}
 
+	// TODO: remove InitKubeValuesManager
 	res, err := InitKubeValuesManager()
 	if err != nil {
 		rlog.Errorf("Cannot initialize kube values manager: %s", err)
@@ -128,6 +131,14 @@ func Init() {
 	for moduleName, kubeModuleValues := range kubeModulesConfigValues {
 		rlog.Debugf("Read module %s kube VALUES:\n%s", moduleName, valuesToString(kubeModuleValues))
 	}
+
+	config, err := kube_config_manager.Init()
+	if err != nil {
+		rlog.Errorf("Cannot initialize kube config manager: %s", err)
+		os.Exit(1)
+	}
+	_ = config
+	// TODO: set config
 
 	InitKubeNodeManager()
 
