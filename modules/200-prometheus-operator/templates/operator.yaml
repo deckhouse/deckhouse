@@ -61,6 +61,7 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
     app: prometheus-operator
+    prometheus-target: prometheus-operator
 spec:
   type: ClusterIP
   ports:

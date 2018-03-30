@@ -8,14 +8,12 @@ metadata:
     module: {{ $.Chart.Name }}
     prometheus: main
 spec:
-  jobLabel: app
-  selector:
-    matchLabels:
-      app: prometheus
-      prometheus: main
-  namespaceSelector:
-    matchNames:
-    - kube-prometheus
+  jobLabel: prometheus-target
   endpoints:
   - port: web
     interval: 30s
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      prometheus-target: prometheus
