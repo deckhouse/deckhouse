@@ -19,6 +19,9 @@ spec:
     metadata:
       labels:
         app: grafana
+      annotations:
+        checksum/dashboards: {{ include (print $.Template.BasePath "/grafana/dashboards.yaml") . | sha256sum }}
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/datasources.yaml") . | sha256sum }}
     spec:
 {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
       nodeSelector:
