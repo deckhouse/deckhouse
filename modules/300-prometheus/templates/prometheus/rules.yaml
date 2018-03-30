@@ -1,7 +1,8 @@
+{{- range (tuple "coreos") }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prometheus-main-rules
+  name: prometheus-rules-{{ . }}
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -10,4 +11,5 @@ metadata:
     prometheus: main
     component: rules
 data:
-{{ (.Files.Glob "prometheus-rules/coreos/*.yaml").AsConfig | indent 2 }}
+{{ ($.Files.Glob (print "prometheus-rules/" . "/*.yaml") ).AsConfig | indent 2 }}
+{{- end }}
