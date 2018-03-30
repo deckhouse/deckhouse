@@ -1,5 +1,5 @@
 groups:
-- name: kube-state-metrics
+- name: coreos.kube-state-metrics
   rules:
   - alert: DeploymentGenerationMismatch
     expr: kube_deployment_status_observed_generation != kube_deployment_metadata_generation

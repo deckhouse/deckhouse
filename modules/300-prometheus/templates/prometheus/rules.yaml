@@ -10,4 +10,4 @@ metadata:
     prometheus: main
     component: rules
 data:
-{{ (.Files.Glob "prometheus-rules/*.yml").AsConfig | indent 2 }}
+{{ (.Files.Glob "prometheus-rules/coreos/*.yaml").AsConfig | indent 2 }}
