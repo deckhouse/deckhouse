@@ -64,6 +64,7 @@ metadata:
     prometheus-target: prometheus-operator
 spec:
   type: ClusterIP
+  clusterIP: None
   ports:
   - name: http-metrics
     port: 8080
