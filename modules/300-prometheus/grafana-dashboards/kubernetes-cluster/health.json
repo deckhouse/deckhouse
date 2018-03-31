@@ -43,7 +43,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -130,7 +130,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -213,7 +213,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -296,7 +296,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -379,7 +379,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -462,7 +462,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -545,7 +545,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -628,7 +628,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -715,7 +715,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,

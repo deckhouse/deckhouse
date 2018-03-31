@@ -49,7 +49,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "none",
@@ -131,7 +131,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "none",
@@ -213,7 +213,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "Bps",
@@ -295,7 +295,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "editable": true,
       "error": false,
@@ -379,7 +379,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "none",
@@ -461,7 +461,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "none",
@@ -544,7 +544,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "none",
@@ -623,7 +623,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -745,7 +745,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -755,7 +755,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -775,7 +775,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Deployment",

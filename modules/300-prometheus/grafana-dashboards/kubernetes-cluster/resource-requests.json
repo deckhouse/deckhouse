@@ -46,7 +46,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "description": "This represents the total [CPU resource requests](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-cpu) in the cluster.\nFor comparison the total [allocatable CPU cores](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node-allocatable.md) is also shown.",
       "fill": 1,
       "gridPos": {
@@ -139,7 +139,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "percent",
       "gauge": {
@@ -217,7 +217,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "description": "This represents the total [memory resource requests](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory) in the cluster.\nFor comparison the total [allocatable memory](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node-allocatable.md) is also shown.",
       "fill": 1,
       "gridPos": {
@@ -310,7 +310,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "format": "percent",
       "gauge": {
@@ -396,7 +396,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,

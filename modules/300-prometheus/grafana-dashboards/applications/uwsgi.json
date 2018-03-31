@@ -53,7 +53,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -136,7 +136,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -219,7 +219,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -319,7 +319,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -425,7 +425,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -435,7 +435,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -455,7 +455,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Controller Kind",
@@ -475,7 +475,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Controller Name",
@@ -495,7 +495,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 2,
         "includeAll": true,
         "label": "",
@@ -515,7 +515,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Pod",
