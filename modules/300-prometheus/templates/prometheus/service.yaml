@@ -17,6 +17,10 @@ spec:
     port: 9090
     protocol: TCP
     targetPort: web
+  - name: http-metrics
+    port: 9091
+    protocol: TCP
+    targetPort: web
   selector:
     app: prometheus
     prometheus: main
