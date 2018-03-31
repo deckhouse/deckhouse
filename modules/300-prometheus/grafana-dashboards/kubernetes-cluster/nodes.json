@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 22,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521732995625,
+  "iteration": 1522459120340,
   "links": [],
   "panels": [
     {
@@ -79,12 +79,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - (avg by (cpu) (irate(node_cpu{mode=\"idle\", instance=\"$server\"}[5m])) * 100)",
+          "expr": "100 - (avg by (cpu) (rate(node_cpu{mode=\"idle\", instance=\"$server\"}[$__interval_rv])) * 100)",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 10,
+          "intervalFactor": 1,
           "legendFormat": "{{cpu}}",
           "refId": "A",
           "step": 50
@@ -165,11 +166,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "node_load1{instance=\"$server\"}",
-          "intervalFactor": 4,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 1m",
           "refId": "A",
           "step": 20,
@@ -177,7 +179,8 @@
         },
         {
           "expr": "node_load5{instance=\"$server\"}",
-          "intervalFactor": 4,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 5m",
           "refId": "B",
           "step": 20,
@@ -185,7 +188,8 @@
         },
         {
           "expr": "node_load15{instance=\"$server\"}",
-          "intervalFactor": 4,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 15m",
           "refId": "C",
           "step": 20,
@@ -276,13 +280,14 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "node_memory_MemTotal{instance=\"$server\"} - node_memory_MemFree{instance=\"$server\"} - node_memory_Buffers{instance=\"$server\"} - node_memory_Cached{instance=\"$server\"}",
+          "format": "time_series",
           "hide": false,
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory used",
           "metric": "",
           "refId": "C",
@@ -290,8 +295,9 @@
         },
         {
           "expr": "node_memory_Buffers{instance=\"$server\"}",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory buffers",
           "metric": "",
           "refId": "E",
@@ -299,7 +305,8 @@
         },
         {
           "expr": "node_memory_Cached{instance=\"$server\"}",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "memory cached",
           "metric": "",
           "refId": "F",
@@ -307,7 +314,8 @@
         },
         {
           "expr": "node_memory_MemFree{instance=\"$server\"}",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "memory free",
           "metric": "",
           "refId": "D",
@@ -415,7 +423,8 @@
       "targets": [
         {
           "expr": "((node_memory_MemTotal{instance=\"$server\"} - node_memory_MemFree{instance=\"$server\"}  - node_memory_Buffers{instance=\"$server\"} - node_memory_Cached{instance=\"$server\"}) / node_memory_MemTotal{instance=\"$server\"}) * 100",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 60,
           "target": ""
@@ -485,27 +494,30 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (instance) (rate(node_disk_bytes_read{instance=\"$server\"}[2m]))",
+          "expr": "sum by (instance) (rate(node_disk_bytes_read{instance=\"$server\"}[$__interval_rv]))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 4,
+          "intervalFactor": 1,
           "legendFormat": "read",
           "refId": "A",
           "step": 20,
           "target": ""
         },
         {
-          "expr": "sum by (instance) (rate(node_disk_bytes_written{instance=\"$server\"}[2m]))",
-          "intervalFactor": 4,
+          "expr": "sum by (instance) (rate(node_disk_bytes_written{instance=\"$server\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "written",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum by (instance) (rate(node_disk_io_time_ms{instance=\"$server\"}[2m]))",
-          "intervalFactor": 4,
+          "expr": "sum by (instance) (rate(node_disk_io_time_ms{instance=\"$server\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "io time",
           "refId": "C",
           "step": 20
@@ -612,7 +624,8 @@
       "targets": [
         {
           "expr": "(sum(node_filesystem_size{device!=\"rootfs\",instance=\"$server\"}) - sum(node_filesystem_free{device!=\"rootfs\",instance=\"$server\"})) / sum(node_filesystem_size{device!=\"rootfs\",instance=\"$server\"})",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 60,
           "target": ""
@@ -674,12 +687,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes{instance=\"$server\",device!~\"lo\"}[5m])",
+          "expr": "rate(node_network_receive_bytes{instance=\"$server\",device!~\"lo\"}[$__interval_rv])",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{device}}",
           "refId": "A",
           "step": 10,
@@ -766,12 +780,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_transmit_bytes{instance=\"$server\",device!~\"lo\"}[5m])",
+          "expr": "rate(node_network_transmit_bytes{instance=\"$server\",device!~\"lo\"}[$__interval_rv])",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{device}}",
           "refId": "B",
           "step": 10,
@@ -816,7 +831,7 @@
       ]
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -824,8 +839,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -859,7 +874,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {

@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521732919312,
+  "iteration": 1522459876570,
   "links": [],
   "panels": [
     {
@@ -76,19 +76,21 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "min(sum(kube_node_status_allocatable_cpu_cores) by (instance))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Allocatable CPU Cores",
           "refId": "A",
           "step": 20
         },
         {
           "expr": "max(sum(kube_pod_container_resource_requests_cpu_cores) by (instance))",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "Requested CPU Cores",
           "refId": "B",
           "step": 20
@@ -193,7 +195,8 @@
       "targets": [
         {
           "expr": "max(sum(kube_pod_container_resource_requests_cpu_cores) by (instance)) / min(sum(kube_node_status_allocatable_cpu_cores) by (instance)) * 100",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 240
@@ -247,19 +250,21 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "min(sum(kube_node_status_allocatable_memory_bytes) by (instance))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Allocatable Memory",
           "refId": "A",
           "step": 20
         },
         {
           "expr": "max(sum(kube_pod_container_resource_requests_memory_bytes) by (instance))",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "Requested Memory",
           "refId": "B",
           "step": 20
@@ -364,7 +369,8 @@
       "targets": [
         {
           "expr": "max(sum(kube_pod_container_resource_requests_memory_bytes) by (instance)) / min(sum(kube_node_status_allocatable_memory_bytes) by (instance)) * 100",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 240
@@ -384,6 +390,7 @@
       "valueName": "avg"
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -391,8 +398,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",

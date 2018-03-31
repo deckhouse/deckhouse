@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 22,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521732614935,
+  "iteration": 1522458923769,
   "links": [],
   "panels": [
     {
@@ -79,12 +79,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(node_cpu{mode=\"idle\"}[2m])) * 100",
+          "expr": "sum(rate(node_cpu{mode=\"idle\"}[$__interval_rv])) * 100",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 10,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 50
@@ -165,11 +166,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(node_load1)",
-          "intervalFactor": 4,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 1m",
           "refId": "A",
           "step": 20,
@@ -177,7 +179,8 @@
         },
         {
           "expr": "sum(node_load5)",
-          "intervalFactor": 4,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 5m",
           "refId": "B",
           "step": 20,
@@ -185,7 +188,8 @@
         },
         {
           "expr": "sum(node_load15)",
-          "intervalFactor": 4,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 15m",
           "refId": "C",
           "step": 20,
@@ -272,11 +276,12 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(node_memory_MemTotal) - sum(node_memory_MemFree) - sum(node_memory_Buffers) - sum(node_memory_Cached)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "memory usage",
           "metric": "memo",
           "refId": "A",
@@ -285,8 +290,9 @@
         },
         {
           "expr": "sum(node_memory_Buffers)",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory buffers",
           "metric": "memo",
           "refId": "B",
@@ -295,8 +301,9 @@
         },
         {
           "expr": "sum(node_memory_Cached)",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory cached",
           "metric": "memo",
           "refId": "C",
@@ -305,8 +312,9 @@
         },
         {
           "expr": "sum(node_memory_MemFree)",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory free",
           "metric": "memo",
           "refId": "D",
@@ -415,7 +423,8 @@
       "targets": [
         {
           "expr": "((sum(node_memory_MemTotal) - sum(node_memory_MemFree) - sum(node_memory_Buffers) - sum(node_memory_Cached)) / sum(node_memory_MemTotal)) * 100",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "metric": "",
           "refId": "A",
           "step": 60,
@@ -486,27 +495,30 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(node_disk_bytes_read[5m]))",
+          "expr": "sum(rate(node_disk_bytes_read[$__interval_rv]))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 4,
+          "intervalFactor": 1,
           "legendFormat": "read",
           "refId": "A",
           "step": 20,
           "target": ""
         },
         {
-          "expr": "sum(rate(node_disk_bytes_written[5m]))",
-          "intervalFactor": 4,
+          "expr": "sum(rate(node_disk_bytes_written[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "written",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum(rate(node_disk_io_time_ms[5m]))",
-          "intervalFactor": 4,
+          "expr": "sum(rate(node_disk_io_time_ms[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "io time",
           "refId": "C",
           "step": 20
@@ -613,7 +625,8 @@
       "targets": [
         {
           "expr": "(sum(node_filesystem_size{device!=\"rootfs\"}) - sum(node_filesystem_free{device!=\"rootfs\"})) / sum(node_filesystem_size{device!=\"rootfs\"})",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 60,
           "target": ""
@@ -675,12 +688,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(node_network_receive_bytes{device!~\"lo\"}[5m]))",
+          "expr": "sum(rate(node_network_receive_bytes{device!~\"lo\"}[$__interval_rv]))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 10,
@@ -767,12 +781,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(node_network_transmit_bytes{device!~\"lo\"}[5m]))",
+          "expr": "sum(rate(node_network_transmit_bytes{device!~\"lo\"}[$__interval_rv]))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "B",
           "step": 10,
@@ -850,12 +865,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(kube_pod_info)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Current number of Pods",
           "refId": "A",
           "step": 10
@@ -863,7 +878,7 @@
         {
           "expr": "sum(kube_node_status_capacity_pods)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Maximum capacity of pods",
           "refId": "B",
           "step": 10
@@ -970,7 +985,7 @@
         {
           "expr": "100 - (sum(kube_node_status_capacity_pods) - sum(kube_pod_info)) / sum(kube_node_status_capacity_pods) * 100",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 60,
@@ -991,7 +1006,7 @@
       "valueName": "current"
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -999,8 +1014,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -1014,7 +1029,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1045,5 +1060,5 @@
   "timezone": "browser",
   "title": "Capacity Planing",
   "uid": "Yf3tuvkik",
-  "version": 2
+  "version": 3
 }
