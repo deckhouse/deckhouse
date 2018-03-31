@@ -68,7 +68,7 @@
   "gnetId": 3662,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1522457790486,
+  "iteration": 1522522787446,
   "links": [],
   "panels": [
     {
@@ -150,7 +150,7 @@
         {
           "expr": "avg(avg_over_time(up{instance=~\"$instance\",job=\"prometheus\"}[$__range]) * 100)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 40
@@ -237,7 +237,7 @@
         {
           "expr": "up{instance=~\"$instance\",job=\"prometheus\"} < 1",
           "format": "table",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 2
         }
@@ -311,7 +311,7 @@
         {
           "expr": "sum(prometheus_tsdb_head_series{job=\"prometheus\",instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "B",
           "step": 40
         }
@@ -392,7 +392,7 @@
         {
           "expr": "sum(prometheus_tsdb_head_chunks{job=\"prometheus\",instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "B",
           "step": 40
         }
@@ -488,7 +488,7 @@
         {
           "expr": "sum(sum_over_time(prometheus_evaluator_iterations_missed_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 40
         }
@@ -570,7 +570,7 @@
         {
           "expr": "sum(sum_over_time(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 40
         }
@@ -652,7 +652,7 @@
         {
           "expr": "sum(sum_over_time(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 40
         }
@@ -734,7 +734,7 @@
         {
           "expr": "sum(sum_over_time(prometheus_tsdb_reloads_failures_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 40
         }
@@ -816,7 +816,7 @@
         {
           "expr": "sum(sum_over_time(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_duplicate_timestamp_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_out_of_bounds_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_out_of_order_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) ",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 40
         }
@@ -883,164 +883,164 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(net_conntrack_dialer_conn_failed_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(net_conntrack_dialer_conn_failed_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Failed Connections",
           "refId": "A",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_evaluator_iterations_missed_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_evaluator_iterations_missed_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Missed Iterations",
           "refId": "B",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_evaluator_iterations_skipped_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_evaluator_iterations_skipped_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Skipped Iterations",
           "refId": "C",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_rule_evaluation_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_rule_evaluation_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Evaluation",
           "refId": "D",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_azure_refresh_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_azure_refresh_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Azure Refresh",
           "refId": "E",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_consul_rpc_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_consul_rpc_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Consul RPC",
           "refId": "F",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_dns_lookup_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_dns_lookup_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "DNS Lookup",
           "refId": "G",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_ec2_refresh_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_ec2_refresh_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "EC2 Refresh",
           "refId": "H",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_gce_refresh_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_gce_refresh_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "GCE Refresh",
           "refId": "I",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_marathon_refresh_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_marathon_refresh_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Marathon Refresh",
           "refId": "J",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_openstack_refresh_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_openstack_refresh_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Openstack Refresh",
           "refId": "K",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_triton_refresh_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_sd_triton_refresh_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Triton Refresh",
           "refId": "L",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_exceeded_sample_limit_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_exceeded_sample_limit_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Sample Limit",
           "refId": "M",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_sample_duplicate_timestamp_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_sample_duplicate_timestamp_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Duplicate Timestamp",
           "refId": "N",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_bounds_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_bounds_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Timestamp Out of Bounds",
           "refId": "O",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_order_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_order_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Sample Out of Order",
           "refId": "P",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_treecache_zookeeper_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_treecache_zookeeper_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Zookeeper",
           "refId": "Q",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_tsdb_compactions_failed_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_tsdb_compactions_failed_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "TSDB Compactions",
           "refId": "R",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_tsdb_head_series_not_found{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_tsdb_head_series_not_found{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Series Not Found",
           "refId": "S",
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_tsdb_reloads_failures_total{instance=~\"$instance\"}[5m])) > 0",
+          "expr": "sum(increase(prometheus_tsdb_reloads_failures_total{instance=~\"$instance\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Reload",
           "refId": "T",
           "step": 2
@@ -1130,7 +1130,7 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "up{instance=~\"$instance\",job=\"prometheus\"}",
@@ -1213,12 +1213,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "prometheus_tsdb_head_chunks{job=\"prometheus\",instance=~\"$instance\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 4
@@ -1308,12 +1308,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "prometheus_tsdb_head_series{job=\"prometheus\",instance=~\"$instance\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 4
@@ -1394,20 +1394,20 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum( increase(prometheus_tsdb_head_series_created_total{instance=~\"$instance\"}[5m]) )",
+          "expr": "sum( increase(prometheus_tsdb_head_series_created_total{instance=~\"$instance\"}[$__interval_rv]) )",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "created",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "sum( increase(prometheus_tsdb_head_series_removed_total{instance=~\"$instance\"}[5m]) )",
+          "expr": "sum( increase(prometheus_tsdb_head_series_removed_total{instance=~\"$instance\"}[$__interval_rv]) )",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "removed",
           "refId": "B",
           "step": 4
@@ -1500,12 +1500,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(prometheus_tsdb_head_samples_appended_total{job=\"prometheus\",instance=~\"$instance\"}[1m])",
+          "expr": "rate(prometheus_tsdb_head_samples_appended_total{job=\"prometheus\",instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 2
@@ -1596,13 +1596,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(prometheus_target_scrape_pool_sync_total{job=\"prometheus\",instance=~\"$instance\"}) by (scrape_job)",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{scrape_job}}",
           "refId": "B",
           "step": 4
@@ -1679,12 +1679,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(prometheus_target_sync_length_seconds_sum{job=\"prometheus\",instance=~\"$instance\"}[2m])) by (scrape_job) * 1000",
+          "expr": "sum(rate(prometheus_target_sync_length_seconds_sum{job=\"prometheus\",instance=~\"$instance\"}[$__interval_rv])) by (scrape_job) * 1000",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{scrape_job}}",
           "refId": "A",
           "step": 4
@@ -1774,12 +1774,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "scrape_duration_seconds{instance=~\"$instance\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 4
@@ -1856,12 +1856,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "exceeded sample limit",
           "refId": "A",
           "step": 4
@@ -1870,7 +1870,7 @@
           "expr": "sum(prometheus_target_scrapes_sample_duplicate_timestamp_total{job=\"prometheus\",instance=~\"$instance\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "duplicate timestamp",
           "refId": "B",
           "step": 4
@@ -1879,7 +1879,7 @@
           "expr": "sum(prometheus_target_scrapes_sample_out_of_bounds_total{job=\"prometheus\",instance=~\"$instance\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "out of bounds",
           "refId": "C",
           "step": 4
@@ -1888,7 +1888,7 @@
           "expr": "sum(prometheus_target_scrapes_sample_out_of_order_total{job=\"prometheus\",instance=~\"$instance\"}) ",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "out of order",
           "refId": "D",
           "step": 4
@@ -1980,12 +1980,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "1000 * rate(prometheus_evaluator_duration_seconds_sum{job=\"prometheus\", instance=~\"$instance\"}[5m]) / rate(prometheus_evaluator_duration_seconds_count{job=\"prometheus\", instance=~\"$instance\"}[5m])",
+          "expr": "1000 * rate(prometheus_evaluator_duration_seconds_sum{job=\"prometheus\", instance=~\"$instance\"}[$__interval_rv]) / rate(prometheus_evaluator_duration_seconds_count{job=\"prometheus\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "E",
           "step": 4
@@ -2061,12 +2061,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_microseconds_count{job=\"prometheus\",instance=~\"$instance\"}[1m])) by (handler) > 0",
+          "expr": "sum(rate(http_request_duration_microseconds_count{job=\"prometheus\",instance=~\"$instance\"}[$__interval_rv])) by (handler) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{handler}}",
           "refId": "A",
           "step": 4
@@ -2142,12 +2142,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(prometheus_engine_query_duration_seconds_sum{job=\"prometheus\",instance=~\"$instance\"}) by (slice)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{slice}}",
           "refId": "A",
           "step": 4
@@ -2224,28 +2224,28 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(prometheus_evaluator_iterations_total{job=\"prometheus\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum(rate(prometheus_evaluator_iterations_total{job=\"prometheus\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B",
           "step": 4
         },
         {
-          "expr": "sum(rate(prometheus_evaluator_iterations_missed_total{job=\"prometheus\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum(rate(prometheus_evaluator_iterations_missed_total{job=\"prometheus\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Missed",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "sum(rate(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum(rate(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Skipped",
           "refId": "C",
           "step": 4
@@ -2335,12 +2335,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(prometheus_notifications_sent_total[5m])",
+          "expr": "rate(prometheus_notifications_sent_total[$__interval_rv])",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 2
@@ -2430,12 +2430,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "(time() - prometheus_config_last_reload_success_timestamp_seconds{job=\"prometheus\",instance=~\"$instance\"}) / 60",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 4
@@ -2511,12 +2511,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "prometheus_config_last_reload_successful{job=\"prometheus\",instance=~\"$instance\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 4
@@ -2608,12 +2608,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(go_gc_duration_seconds_sum{instance=~\"$instance\",job=\"prometheus\"}[2m])) by (instance)",
+          "expr": "sum(rate(go_gc_duration_seconds_sum{instance=~\"$instance\",job=\"prometheus\"}[$__interval_rv])) by (instance)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 2
@@ -2622,7 +2622,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "GC Rate / 2m",
+      "title": "GC Rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2705,13 +2705,13 @@
           ],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum(go_memstats_alloc_bytes_total{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
               "hide": true,
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "alloc_bytes_total",
               "refId": "A",
               "step": 10
@@ -2720,7 +2720,7 @@
               "expr": "sum(go_memstats_alloc_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
               "hide": false,
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "allocated",
               "refId": "B",
               "step": 10
@@ -2728,7 +2728,7 @@
             {
               "expr": "sum(go_memstats_buck_hash_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "profiling bucket hash table",
               "refId": "C",
               "step": 10
@@ -2736,7 +2736,7 @@
             {
               "expr": "sum(go_memstats_gc_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "GC metadata",
               "refId": "D",
               "step": 10
@@ -2744,7 +2744,7 @@
             {
               "expr": "sum(go_memstats_heap_alloc_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "heap in-use",
               "refId": "E",
               "step": 10
@@ -2752,7 +2752,7 @@
             {
               "expr": "sum(go_memstats_heap_idle_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "heap idle",
               "refId": "F",
               "step": 10
@@ -2760,7 +2760,7 @@
             {
               "expr": "sum(go_memstats_heap_inuse_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "heap in use",
               "refId": "G",
               "step": 10
@@ -2768,7 +2768,7 @@
             {
               "expr": "sum(go_memstats_heap_released_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "heap released",
               "refId": "H",
               "step": 10
@@ -2776,7 +2776,7 @@
             {
               "expr": "sum(go_memstats_heap_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "heap system",
               "refId": "I",
               "step": 10
@@ -2784,7 +2784,7 @@
             {
               "expr": "sum(go_memstats_mcache_inuse_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "mcache in use",
               "refId": "J",
               "step": 10
@@ -2792,7 +2792,7 @@
             {
               "expr": "sum(go_memstats_mcache_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "mcache sys",
               "refId": "K",
               "step": 10
@@ -2800,7 +2800,7 @@
             {
               "expr": "sum(go_memstats_mspan_inuse_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "mspan in use",
               "refId": "L",
               "step": 10
@@ -2808,7 +2808,7 @@
             {
               "expr": "sum(go_memstats_mspan_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "mspan sys",
               "refId": "M",
               "step": 10
@@ -2816,7 +2816,7 @@
             {
               "expr": "sum(go_memstats_next_gc_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "heap next gc",
               "refId": "N",
               "step": 10
@@ -2824,7 +2824,7 @@
             {
               "expr": "sum(go_memstats_other_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "other sys",
               "refId": "O",
               "step": 10
@@ -2832,7 +2832,7 @@
             {
               "expr": "sum(go_memstats_stack_inuse_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "stack in use",
               "refId": "P",
               "step": 10
@@ -2840,7 +2840,7 @@
             {
               "expr": "sum(go_memstats_stack_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "stack sys",
               "refId": "Q",
               "step": 10
@@ -2848,7 +2848,7 @@
             {
               "expr": "sum(go_memstats_sys_bytes{job=\"prometheus\", instance=~\"$instance\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "sys",
               "refId": "R",
               "step": 10
@@ -2924,12 +2924,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "prometheus_target_interval_length_seconds{instance=~\"$instance\", job=\"prometheus\"}",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{quantile}} {{interval}}",
               "refId": "A",
               "step": 20
@@ -3005,12 +3005,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(rate(prometheus_target_interval_length_seconds_count{job=\"prometheus\",instance=~\"$instance\"}[5m])) by (interval)",
+              "expr": "sum(rate(prometheus_target_interval_length_seconds_count{job=\"prometheus\",instance=~\"$instance\"}[$__interval_rv])) by (interval)",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{interval}}",
               "refId": "A",
               "step": 20
