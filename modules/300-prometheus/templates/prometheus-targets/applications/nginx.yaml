@@ -10,7 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: nginx-metrics
+  - port: http-metrics
   namespaceSelector:
     any: true
   selector:
