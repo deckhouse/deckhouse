@@ -43,7 +43,7 @@ groups:
     labels:
       quantile: "0.5"
   - alert: APIServerLatencyHigh
-    expr: apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}
+    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
       > 1
     for: 10m
     labels:
@@ -53,7 +53,7 @@ groups:
         for {{$labels.verb}} {{$labels.resource}}
       summary: API server high latency
   - alert: APIServerLatencyHigh
-    expr: apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}
+    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
       > 4
     for: 10m
     labels:
@@ -63,22 +63,24 @@ groups:
         for {{$labels.verb}} {{$labels.resource}}
       summary: API server high latency
   - alert: APIServerErrorsHigh
-    expr: rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])
+    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
       * 100 > 2
     for: 10m
     labels:
       severity: warning
     annotations:
       description: API server returns errors for {{ $value }}% of requests
+        for {{$labels.verb}} {{$labels.resource}}
       summary: API server request errors
   - alert: APIServerErrorsHigh
-    expr: rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])
+    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
       * 100 > 5
     for: 10m
     labels:
       severity: critical
     annotations:
       description: API server returns errors for {{ $value }}% of requests
+        for {{$labels.verb}} {{$labels.resource}}
   - alert: K8SApiserverDown
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 20m
@@ -89,17 +91,16 @@ groups:
         discovery
       summary: No API servers are reachable
   - alert: K8sCertificateExpirationNotice
+    expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="604800"}) > 0
     labels:
       severity: warning
     annotations:
       description: Kubernetes API Certificate is expiring soon (less than 7 days)
       summary: Kubernetes API Certificate is expiering soon
-    expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="604800"}) > 0
-
   - alert: K8sCertificateExpirationNotice
+    expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="86400"}) > 0
     labels:
       severity: critical
     annotations:
       description: Kubernetes API Certificate is expiring in less than 1 day
       summary: Kubernetes API Certificate is expiering
-    expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="86400"}) > 0

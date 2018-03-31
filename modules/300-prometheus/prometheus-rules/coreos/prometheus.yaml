@@ -1,8 +1,8 @@
 groups:
-- name: coreos.kube-prometheus
+- name: coreos.prometheus
   rules:
   - alert: PrometheusConfigReloadFailed
-    expr: prometheus_config_last_reload_successful == 0
+    expr: min(prometheus_config_last_reload_successful) BY (namespace, pod) == 0
     for: 10m
     labels:
       severity: warning
@@ -10,7 +10,7 @@ groups:
       description: Reloading Prometheus' configuration has failed for {{$labels.namespace}}/{{$labels.pod}}
       summary: Reloading Promehteus' configuration failed
   - alert: PrometheusNotificationQueueRunningFull
-    expr: predict_linear(prometheus_notifications_queue_length[5m], 60 * 30) > prometheus_notifications_queue_capacity
+    expr: max(predict_linear(prometheus_notifications_queue_length[5m], 60 * 30) > prometheus_notifications_queue_capacity) BY (namespace, pod)
     for: 10m
     labels:
       severity: warning
@@ -19,27 +19,27 @@ groups:
         $labels.pod}}
       summary: Prometheus' alert notification queue is running full
   - alert: PrometheusErrorSendingAlerts
-    expr: rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
-      > 0.01
+    expr: max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
+      > 0.01) BY (namespace, pod, alertmanager)
     for: 10m
     labels:
       severity: warning
     annotations:
       description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{
-        $labels.pod}} to Alertmanager {{$labels.Alertmanager}}
+        $labels.pod}} to Alertmanager {{$labels.alertmanager}}
       summary: Errors while sending alert from Prometheus
   - alert: PrometheusErrorSendingAlerts
-    expr: rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
-      > 0.03
+    expr: max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
+      > 0.03) by (namespace, pod, alertmanager)
     for: 10m
     labels:
       severity: critical
     annotations:
       description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{
-        $labels.pod}} to Alertmanager {{$labels.Alertmanager}}
+        $labels.pod}} to Alertmanager {{$labels.alertmanager}}
       summary: Errors while sending alerts from Prometheus
   - alert: PrometheusNotConnectedToAlertmanagers
-    expr: prometheus_notifications_alertmanagers_discovered < 1
+    expr: min(prometheus_notifications_alertmanagers_discovered) BY (namespace, pod) < 1
     for: 10m
     labels:
       severity: warning
@@ -48,34 +48,34 @@ groups:
         to any Alertmanagers
       summary: Prometheus is not connected to any Alertmanagers
   - alert: PrometheusTSDBReloadsFailing
-    expr: increase(prometheus_tsdb_reloads_failures_total[2h]) > 0
+    expr: max(increase(prometheus_tsdb_reloads_failures_total[2h])) BY (namespace, pod) > 0
     for: 12h
     labels:
       severity: warning
     annotations:
-      description: '{{$labels.job}} at {{$labels.instance}} had {{$value | humanize}}
-        reload failures over the last four hours.'
+      description: 'Prometheus {{ $labels.namespace }}/{{ $labels.pod}} had {{$value | humanize}}
+        reload failures over the last two hours.'
       summary: Prometheus has issues reloading data blocks from disk
   - alert: PrometheusTSDBCompactionsFailing
-    expr: increase(prometheus_tsdb_compactions_failed_total[2h]) > 0
+    expr: max(increase(prometheus_tsdb_compactions_failed_total[2h])) BY (namespace, pod) > 0
     for: 12h
     labels:
       severity: warning
     annotations:
-      description: '{{$labels.job}} at {{$labels.instance}} had {{$value | humanize}}
-        compaction failures over the last four hours.'
+      description: 'Prometheus {{ $labels.namespace }}/{{ $labels.pod}} had {{$value | humanize}}
+        compaction failures over the last two hours.'
       summary: Prometheus has issues compacting sample blocks
   - alert: PrometheusTSDBWALCorruptions
-    expr: tsdb_wal_corruptions_total > 0
+    expr: max(prometheus_tsdb_wal_corruptions_total) BY (namespace, pod) > 0
     for: 4h
     labels:
       severity: warning
     annotations:
-      description: '{{$labels.job}} at {{$labels.instance}} has a corrupted write-ahead
+      description: 'Prometheus {{ $labels.namespace }}/{{ $labels.pod}} has a corrupted write-ahead
         log (WAL).'
       summary: Prometheus write-ahead log is corrupted
   - alert: PrometheusNotIngestingSamples
-    expr: rate(prometheus_tsdb_head_samples_appended_total[5m]) <= 0
+    expr: min(rate(prometheus_tsdb_head_samples_appended_total[5m])) by (namespace, pod) <= 0
     for: 10m
     labels:
       severity: warning

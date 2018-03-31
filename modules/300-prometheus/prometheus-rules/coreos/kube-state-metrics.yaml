@@ -2,7 +2,7 @@ groups:
 - name: coreos.kube-state-metrics
   rules:
   - alert: DeploymentGenerationMismatch
-    expr: kube_deployment_status_observed_generation != kube_deployment_metadata_generation
+    expr: max(kube_deployment_status_observed_generation != kube_deployment_metadata_generation) by (namespace, deployment)
     for: 15m
     labels:
       severity: warning
@@ -11,9 +11,9 @@ groups:
         deployment {{$labels.namespace}}/{{$labels.deployment}}
       summary: Deployment is outdated
   - alert: DeploymentReplicasNotUpdated
-    expr: ((kube_deployment_status_replicas_updated != kube_deployment_spec_replicas)
+    expr: max(((kube_deployment_status_replicas_updated != kube_deployment_spec_replicas)
       or (kube_deployment_status_replicas_available != kube_deployment_spec_replicas))
-      unless (kube_deployment_spec_paused == 1)
+      unless (kube_deployment_spec_paused == 1)) by (namespace, deployment)
     for: 15m
     labels:
       severity: warning
@@ -21,7 +21,7 @@ groups:
       description: Replicas are not updated and available for deployment {{$labels.namespace}}/{{$labels.deployment}}
       summary: Deployment replicas are outdated
   - alert: DaemonSetRolloutStuck
-    expr: kube_daemonset_status_number_ready / kube_daemonset_status_desired_number_scheduled
+    expr: max(kube_daemonset_status_number_ready / kube_daemonset_status_desired_number_scheduled) by (namespace, daemonset)
       * 100 < 100
     for: 15m
     labels:
@@ -31,29 +31,28 @@ groups:
         set {{$labels.namespace}}/{{$labels.daemonset}}
       summary: DaemonSet is missing pods
   - alert: K8SDaemonSetsNotScheduled
-    expr: kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_current_number_scheduled
+    expr: max(kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_current_number_scheduled) by (namespace, daemonset)
       > 0
     for: 10m
     labels:
       severity: warning
     annotations:
-      description: A number of daemonsets are not scheduled.
+      description: '{{$value}} of desired pods are not scheduled for daemon set {{$labels.namespace}}/{{$labels.daemonset}}'
       summary: Daemonsets are not scheduled correctly
   - alert: DaemonSetsMissScheduled
-    expr: kube_daemonset_status_number_misscheduled > 0
+    expr: max(kube_daemonset_status_number_misscheduled) by (namespace, daemonset) > 0
     for: 10m
     labels:
       severity: warning
     annotations:
-      description: A number of daemonsets are running where they are not supposed
-        to run.
+      description: '{{$value}} pods of daemon set {{$labels.namespace}}/{{$labels.daemonset}} are running where they are not supposed to run.'
       summary: Daemonsets are not scheduled correctly
   - alert: PodFrequentlyRestarting
-    expr: increase(kube_pod_container_status_restarts_total[1h]) > 5
+    expr: max(increase(kube_pod_container_status_restarts_total[1h])) by (namespace, pod) > 5
     for: 10m
     labels:
       severity: warning
     annotations:
-      description: Pod {{$labels.namespace}}/{{$labels.pod}} is was restarted {{$value}}
+      description: Pod {{$labels.namespace}}/{{$labels.pod}} was restarted {{$value}}
         times within the last hour
       summary: Pod is restarting frequently

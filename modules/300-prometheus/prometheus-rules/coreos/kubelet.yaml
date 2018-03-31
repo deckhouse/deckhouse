@@ -2,7 +2,7 @@ groups:
 - name: coreos.kubelet
   rules:
   - alert: K8SNodeNotReady
-    expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+    expr: min(kube_node_status_condition{condition="Ready",status="true"}) BY (node) == 0
     for: 1h
     labels:
       severity: warning
@@ -38,7 +38,7 @@ groups:
         have disappeared from service discovery.
       summary: Many Kubelets cannot be scraped
   - alert: K8SKubeletTooManyPods
-    expr: kubelet_running_pod_count > 100
+    expr: max(kubelet_running_pod_count) BY (instance) > 100
     for: 10m
     labels:
       severity: warning
