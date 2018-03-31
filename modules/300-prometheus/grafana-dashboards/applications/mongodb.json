@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 2583,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521734818149,
+  "iteration": 1522522442421,
   "links": [],
   "panels": [
     {
@@ -89,13 +89,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "irate(mongodb_op_counters_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m])",
+          "expr": "rate(mongodb_op_counters_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{type}}",
           "refId": "A",
           "step": 2
@@ -176,13 +176,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "irate(mongodb_metrics_document_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m])",
+          "expr": "rate(mongodb_metrics_document_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{state}}",
           "refId": "A",
           "step": 2
@@ -258,13 +258,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "irate(mongodb_metrics_query_executor_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m])",
+          "expr": "rate(mongodb_metrics_query_executor_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{state}}",
           "refId": "A",
           "step": 2
@@ -360,7 +360,7 @@
           "expr": "mongodb_replset_number_of_members{namespace=~\"$namespace\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "# members",
           "refId": "A",
           "step": 2
@@ -369,7 +369,7 @@
           "expr": "sum(mongodb_replset_member_health{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "healthy members",
           "refId": "B",
           "step": 2
@@ -455,7 +455,7 @@
           "expr": "mongodb_replset_member_state{namespace=~\"$namespace\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{state}} - {{name}}",
           "refId": "A",
           "step": 2
@@ -536,10 +536,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mongodb_op_counters_repl_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m])",
+          "expr": "rate(mongodb_op_counters_repl_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{type}}",
           "refId": "A",
           "step": 2
@@ -659,7 +659,7 @@
         {
           "expr": "mongodb_instance_uptime_seconds{namespace=~\"$namespace\", instance=~\"$instance\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 4
@@ -742,7 +742,7 @@
         {
           "expr": "mongodb_connections{namespace=~\"$namespace\", instance=~\"$instance\", state=\"available\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "mongodb_connections",
           "refId": "A",
@@ -825,7 +825,7 @@
         {
           "expr": "mongodb_connections{namespace=~\"$namespace\", instance=~\"$instance\", state=\"current\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "mongodb_connections",
           "refId": "A",
@@ -893,13 +893,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "mongodb_replset_oplog_size_bytes{namespace=~\"$namespace\", instance=~\"$instance\"}",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{type}}",
           "metric": "mongodb_locks_time_acquiring_global_microseconds_total",
           "refId": "A",
@@ -980,13 +980,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "mongodb_memory{namespace=~\"$namespace\", instance=~\"$instance\",type=~\"resident|virtual\"}",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{type}}",
           "refId": "A",
           "step": 2
@@ -1064,13 +1064,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "irate(mongodb_network_bytes_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m])",
+          "expr": "rate(mongodb_network_bytes_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{state}}",
           "metric": "mongodb_metrics_operation_total",
           "refId": "A",
@@ -1161,14 +1161,14 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(mongodb_replset_oplog_head_timestamp[5m])",
+          "expr": "rate(mongodb_replset_oplog_head_timestamp[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 2
@@ -1209,23 +1209,9 @@
           "show": false
         }
       ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 34
-      },
-      "id": 22,
-      "panels": [],
-      "repeat": null,
-      "title": "Dashboard Row",
-      "type": "row"
     }
   ],
-  "refresh": "1m",
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -1233,8 +1219,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -1288,7 +1274,7 @@
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1319,5 +1305,5 @@
   "timezone": "browser",
   "title": "MongoDB",
   "uid": "ktDL6Dzik",
-  "version": 1
+  "version": 4
 }

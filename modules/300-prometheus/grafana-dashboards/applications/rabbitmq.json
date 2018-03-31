@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 2121,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521734982665,
+  "iteration": 1522523103263,
   "links": [],
   "panels": [
     {
@@ -119,7 +119,7 @@
         {
           "expr": "count(rabbitmq_up) >= sum (rabbitmq_up)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "rabbitmq_up",
           "refId": "A",
@@ -187,12 +187,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_connectionsTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} connections",
           "metric": "rabbitmq_connectionsTotal",
           "refId": "A",
@@ -271,12 +271,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_consumersTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} consumers",
           "metric": "rabbitmq_consumersTotal",
           "refId": "A",
@@ -355,12 +355,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "rabbitmq_running{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{node}}",
           "metric": "rabbitmq_running",
           "refId": "A",
@@ -442,12 +442,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_partitions{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "metric": "rabbitmq_consumersTotal",
           "refId": "A",
@@ -526,12 +526,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_exchangesTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} exchanges",
           "metric": "rabbitmq_exchangesTotal",
           "refId": "A",
@@ -611,12 +611,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_channelsTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} channels",
           "metric": "rabbitmq_channelsTotal",
           "refId": "A",
@@ -694,12 +694,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_queuesTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} queues",
           "metric": "rabbitmq_queuesTotal",
           "refId": "A",
@@ -786,17 +786,17 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (instance) (irate(rabbitmq_exchange_messages_published_in_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum by (instance) (rate(rabbitmq_exchange_messages_published_in_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ instance }} in",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "sum by (instance) (irate(rabbitmq_exchange_messages_published_out_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum by (instance) (rate(rabbitmq_exchange_messages_published_out_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ instance }} out",
           "refId": "B",
           "step": 4
@@ -896,12 +896,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -910,7 +910,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_ram{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1001,12 +1001,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_ready{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1015,7 +1015,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_ready_ram{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1106,12 +1106,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_unacknowledged\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1120,7 +1120,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_unacknowledged_ram\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1211,12 +1211,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1225,7 +1225,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes_ram{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1316,12 +1316,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes_ready{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1412,12 +1412,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes_unacknowledged{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1513,21 +1513,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_disk_reads\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_disk_reads\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Reads {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_disk_writes\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_disk_writes\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Writes {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1623,12 +1623,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (queue_messages_persistent\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1724,12 +1724,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (queue_messages_persistent_bytes\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1825,12 +1825,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_memory{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Reads {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1926,12 +1926,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_consumers\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2027,12 +2027,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_consumer_utilisation\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}) * 100",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2128,21 +2128,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_published_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_published_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Published {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 10
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_confirmed_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_confirmed_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Confirmed {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -2238,21 +2238,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_delivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_delivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "ACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_delivered_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_delivered_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "noACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -2348,21 +2348,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_get_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_get_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "ACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_get_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_get_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "noACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -2458,12 +2458,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_returned_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_returned_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2559,12 +2559,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_redelivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_redelivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2657,12 +2657,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_sockets_used{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} used",
               "metric": "",
               "refId": "A",
@@ -2671,7 +2671,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_sockets_total{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} total",
               "metric": "",
               "refId": "B",
@@ -2750,12 +2750,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_node_mem_used{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} used",
               "metric": "rabbitmq_node_mem_used",
               "refId": "A",
@@ -2764,7 +2764,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_node_mem_limit{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} minimum",
               "metric": "node_mem",
               "refId": "B",
@@ -2842,12 +2842,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_fd_used{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} used",
               "metric": "",
               "refId": "A",
@@ -2856,7 +2856,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_fd_total{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} total",
               "metric": "node_mem",
               "refId": "B",
@@ -2934,12 +2934,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_node_disk_free{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} free",
               "metric": "",
               "refId": "A",
@@ -2948,7 +2948,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_node_disk_free_limit{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} minimum",
               "metric": "",
               "refId": "B",
@@ -3005,8 +3005,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -3151,5 +3151,5 @@
   "timezone": "browser",
   "title": "RabbitMQ",
   "uid": "pZO_eDzmz",
-  "version": 1
+  "version": 5
 }

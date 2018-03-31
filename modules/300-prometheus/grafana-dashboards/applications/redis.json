@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 763,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521734890536,
+  "iteration": 1522521878327,
   "links": [],
   "panels": [
     {
@@ -106,7 +106,7 @@
       "targets": [
         {
           "expr": "redis_uptime_in_seconds{instance=\"$host\",alias=\"$alias\"}",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
           "refId": "A",
@@ -192,7 +192,7 @@
       "targets": [
         {
           "expr": "redis_connected_clients{instance=\"$host\",alias=\"$alias\"}",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
           "refId": "A",
@@ -280,7 +280,7 @@
       "targets": [
         {
           "expr": "100 * (redis_memory_used_bytes{instance=\"$host\",alias=\"$alias\"}  / redis_memory_max_bytes{instance=\"$host\",alias=\"$alias\"} )",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
           "refId": "A",
@@ -339,12 +339,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_commands_processed_total{instance=\"$host\",alias=\"$alias\"}[5m])",
+          "expr": "rate(redis_commands_processed_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
           "refId": "A",
@@ -427,13 +428,14 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "irate(redis_keyspace_hits_total{instance=\"$host\",alias=\"$alias\"}[5m])",
+          "expr": "rate(redis_keyspace_hits_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "format": "time_series",
           "hide": false,
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "hits",
           "metric": "",
           "refId": "A",
@@ -441,10 +443,11 @@
           "target": ""
         },
         {
-          "expr": "irate(redis_keyspace_misses_total{instance=\"$host\",alias=\"$alias\"}[5m])",
+          "expr": "rate(redis_keyspace_misses_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "format": "time_series",
           "hide": false,
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "misses",
           "metric": "",
           "refId": "B",
@@ -530,11 +533,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "redis_memory_used_bytes{instance=\"$host\",alias=\"$alias\"} ",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "used",
           "metric": "",
           "refId": "A",
@@ -543,8 +547,9 @@
         },
         {
           "expr": "redis_memory_max_bytes{instance=\"$host\",alias=\"$alias\"} ",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "max",
           "refId": "B",
           "step": 2
@@ -624,19 +629,21 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_net_input_bytes_total{instance=\"$host\",alias=\"$alias\"}[5m])",
-          "intervalFactor": 2,
+          "expr": "rate(redis_net_input_bytes_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "{{ input }}",
           "refId": "A",
           "step": 2
         },
         {
-          "expr": "rate(redis_net_output_bytes_total{instance=\"$host\",alias=\"$alias\"}[5m])",
+          "expr": "rate(redis_net_output_bytes_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ output }}",
           "refId": "B",
           "step": 2
@@ -718,12 +725,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum (redis_db_keys{instance=\"$host\",alias=\"$alias\"}) by (db)",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ db }} ",
           "refId": "A",
           "step": 2,
@@ -804,12 +812,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum (redis_db_keys{instance=\"$host\",alias=\"$alias\"}) - sum (redis_db_keys_expiring{instance=\"$host\",alias=\"$alias\"}) ",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "not expiring",
           "refId": "A",
           "step": 2,
@@ -817,8 +826,9 @@
         },
         {
           "expr": "sum (redis_db_keys_expiring{instance=\"$host\",alias=\"$alias\"}) ",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "expiring",
           "metric": "",
           "refId": "B",
@@ -906,12 +916,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(redis_expired_keys_total{instance=\"$host\",alias=\"$alias\"}[5m])) by (addr)",
+          "expr": "sum(rate(redis_expired_keys_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "expired",
           "metric": "",
           "refId": "A",
@@ -919,9 +930,10 @@
           "target": ""
         },
         {
-          "expr": "sum(rate(redis_evicted_keys_total{instance=\"$host\",alias=\"$alias\"}[5m])) by (addr)",
+          "expr": "sum(rate(redis_evicted_keys_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "evicted",
           "refId": "B",
           "step": 2
@@ -1001,12 +1013,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "topk(5, irate(redis_command_call_duration_seconds_count{instance=\"$host\",alias=\"$alias\"} [1m]))",
+          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{instance=\"$host\",alias=\"$alias\"}[$__interval_rv]))",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ cmd }}",
           "metric": "",
           "refId": "A",
@@ -1051,6 +1064,7 @@
       ]
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -1058,8 +1072,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -1113,7 +1127,7 @@
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1144,5 +1158,5 @@
   "timezone": "browser",
   "title": "Redis",
   "uid": "DV0yeDkmz",
-  "version": 1
+  "version": 4
 }
