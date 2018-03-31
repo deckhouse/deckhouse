@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521735509631,
+  "iteration": 1522512240207,
   "links": [],
   "panels": [
     {
@@ -80,10 +80,10 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(container_name, pod_name, namespace) (irate(container_cpu_usage_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"}[5m] ))",
+          "expr": "sum by(container_name, pod_name, namespace) (rate(container_cpu_usage_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"}[$__interval_rv] ))",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -97,7 +97,7 @@
           "format": "time_series",
           "hide": false,
           "interval": "",
-          "intervalFactor": 10,
+          "intervalFactor": 1,
           "legendFormat": "Limits {{namespace}} / {{pod}} / {{container}}",
           "refId": "B",
           "step": 50
@@ -105,7 +105,7 @@
         {
           "expr": "sum by(pod, container, namespace)  (kube_pod_container_resource_requests_cpu_cores{pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\"})",
           "format": "time_series",
-          "intervalFactor": 10,
+          "intervalFactor": 1,
           "legendFormat": "Requests {{namespace}} / {{pod}} / {{container}}",
           "refId": "C",
           "step": 50
@@ -193,9 +193,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace, container_name, pod_name) (irate(container_cpu_cfs_throttled_periods_total{namespace=~\"$namespace\", container_name=~\"$container\", pod_name=~\"$pod\"}[5m])) / sum by (namespace, container_name, pod_name) (irate(container_cpu_cfs_periods_total{namespace=~\"$namespace\", container_name=~\"$container\", pod_name=~\"$pod\"}[5m]))",
+          "expr": "sum by (namespace, container_name, pod_name) (rate(container_cpu_cfs_throttled_periods_total{namespace=~\"$namespace\", container_name=~\"$container\", pod_name=~\"$pod\"}[$__interval_rv])) / sum by (namespace, container_name, pod_name) (rate(container_cpu_cfs_periods_total{namespace=~\"$namespace\", container_name=~\"$container\", pod_name=~\"$pod\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}} / {{pod_name}} / {{container_name}}",
           "metric": "",
           "refId": "A",
@@ -288,7 +288,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(pod_name, container_name, namespace) \n                                              (irate(container_cpu_user_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"}[5m]))",
+          "expr": "sum by(pod_name, container_name, namespace) \n                                              (rate(container_cpu_user_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "User {{namespace}} / {{pod_name}} / {{container_name}}",
@@ -296,7 +296,7 @@
           "step": 2
         },
         {
-          "expr": "sum by(pod_name, container_name, namespace) \n                                              (irate(container_cpu_system_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"}[5m]))",
+          "expr": "sum by(pod_name, container_name, namespace) \n                                              (rate(container_cpu_system_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "System {{namespace}} / {{pod_name}} / {{container_name}}",
@@ -391,7 +391,7 @@
           "expr": "sum by(container_name, pod_name, namespace) (container_memory_usage_bytes{pod_name=~\"$pod\", container_name!=\"POD\", pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"})",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 4,
+          "intervalFactor": 1,
           "legendFormat": "Current: {{ namespace }} / {{ pod_name }} / {{ container_name }}",
           "metric": "container_memory_usage_bytes",
           "refId": "A",
@@ -503,17 +503,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(pod_name, namespace) (irate(container_network_receive_bytes_total{pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
+          "expr": "sum by(pod_name, namespace) (rate(container_network_receive_bytes_total{pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "RX {{ namespace }} / {{ pod_name }}",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "sum by(pod_name, namespace) (irate(container_network_transmit_bytes_total{pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
+          "expr": "sum by(pod_name, namespace) (rate(container_network_transmit_bytes_total{pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "TX {{ namespace }} / {{ pod_name }}",
           "refId": "B",
           "step": 4
@@ -603,7 +603,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(container_name, pod_name, namespace) (irate(container_fs_reads_total{container_name=~\"$container\", container_name!=\"POD\", pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
+          "expr": "sum by(container_name, pod_name, namespace) (rate(container_fs_reads_total{container_name=~\"$container\", container_name!=\"POD\", pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Read {{namespace}} / {{pod_name}} / {{container_name}}",
@@ -611,7 +611,7 @@
           "step": 2
         },
         {
-          "expr": "sum by(container_name, pod_name, namespace) (irate(container_fs_writes_total{container_name=~\"$container\", container_name!=\"POD\", pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
+          "expr": "sum by(container_name, pod_name, namespace) (rate(container_fs_writes_total{container_name=~\"$container\", container_name!=\"POD\", pod_name=~\"$pod\", pod_name=~\"$pod\", namespace=~\"$namespace\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Write {{namespace}} / {{pod_name}} / {{container_name}}",
@@ -696,7 +696,7 @@
         {
           "expr": "sum by(container_name, pod_name, namespace) (container_fs_usage_bytes{pod_name=~\"$pod\", container_name!=\"POD\", pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"})",
           "format": "time_series",
-          "intervalFactor": 5,
+          "intervalFactor": 1,
           "legendFormat": "Current: {{namespace}} / {{pod_name}} / {{container_name}}",
           "refId": "A",
           "step": 10
@@ -704,7 +704,7 @@
         {
           "expr": "sum by(container_name, pod_name, namespace) (container_fs_limit_bytes{pod_name=~\"$pod\", container_name!=\"POD\", pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"})",
           "format": "time_series",
-          "intervalFactor": 5,
+          "intervalFactor": 1,
           "legendFormat": "Limit: {{namespace}} / {{pod_name}} / {{container_name}}",
           "refId": "B",
           "step": 10
@@ -747,7 +747,7 @@
       ]
     }
   ],
-  "refresh": "5m",
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -870,7 +870,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -901,5 +901,5 @@
   "timezone": "browser",
   "title": "Detailed",
   "uid": "rj4MRdziz",
-  "version": 1
+  "version": 3
 }

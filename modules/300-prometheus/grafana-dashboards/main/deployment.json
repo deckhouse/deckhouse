@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -37,7 +37,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521735435939,
+  "iteration": 1522511916541,
   "links": [],
   "panels": [
     {
@@ -103,8 +103,9 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}[3m])) ",
-          "intervalFactor": 2,
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}[$__interval_rv])) ",
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -186,7 +187,8 @@
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}) / 1024^3",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -267,8 +269,9 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}[3m])) + sum(rate(container_network_receive_bytes_total{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}[3m])) ",
-          "intervalFactor": 2,
+          "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}[$__interval_rv])) + sum(rate(container_network_receive_bytes_total{namespace=\"$deployment_namespace\",pod_name=~\"$deployment_name.*\"}[$__interval_rv])) ",
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -351,7 +354,8 @@
       "targets": [
         {
           "expr": "max(kube_deployment_spec_replicas{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "metric": "kube_deployment_spec_replicas",
           "refId": "A",
           "step": 600
@@ -434,7 +438,8 @@
       "targets": [
         {
           "expr": "min(kube_deployment_status_replicas_available{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -516,7 +521,8 @@
       "targets": [
         {
           "expr": "max(kube_deployment_status_observed_generation{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 600
@@ -599,7 +605,8 @@
       "targets": [
         {
           "expr": "max(kube_deployment_metadata_generation{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 600
@@ -656,39 +663,44 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "max(kube_deployment_status_replicas{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "current replicas",
           "refId": "A",
           "step": 30
         },
         {
           "expr": "min(kube_deployment_status_replicas_available{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "available",
           "refId": "B",
           "step": 30
         },
         {
           "expr": "max(kube_deployment_status_replicas_unavailable{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "unavailable",
           "refId": "C",
           "step": 30
         },
         {
           "expr": "min(kube_deployment_status_replicas_updated{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "updated",
           "refId": "D",
           "step": 30
         },
         {
           "expr": "max(kube_deployment_spec_replicas{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "desired",
           "refId": "E",
           "step": 30
@@ -733,6 +745,7 @@
       ]
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -795,7 +808,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -826,5 +839,5 @@
   "timezone": "browser",
   "title": "Deployment",
   "uid": "NSZGgOkmz",
-  "version": 1
+  "version": 2
 }

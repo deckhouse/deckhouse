@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521743600340,
+  "iteration": 1522512346935,
   "links": [],
   "panels": [
     {
@@ -76,10 +76,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(delta(kube_pod_container_status_restarts{pod!=\"\"}[1m])) by (namespace) > 0",
+          "expr": "sum(delta(kube_pod_container_status_restarts{pod!=\"\"}[$__interval_rv])) by (namespace) > 0",
           "format": "time_series",
           "interval": "1m",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "refId": "A",
           "step": 120
@@ -160,13 +160,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "((sum(kube_pod_status_ready{condition=\"false\"}) by (namespace) - sum(kube_pod_status_phase{phase=\"Succeeded\"}) by (namespace)) or sum(kube_pod_status_ready{condition=\"false\"}) by (namespace)) > 0",
           "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "refId": "A",
           "step": 120
@@ -253,8 +253,8 @@
         {
           "expr": "sum(kube_deployment_status_replicas - kube_deployment_status_replicas_updated) by (namespace) > 0",
           "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "refId": "A",
           "step": 120
@@ -336,12 +336,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "namespace:container_cpu_usage:sum{namespace!=\"\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "",
           "refId": "B",
@@ -424,12 +424,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{pod_name!=\"\",namespace!~\"kube-.*|monitoring\"}[1m])) by (namespace)",
+          "expr": "sum(rate(container_network_receive_bytes_total{pod_name!=\"\",namespace!~\"kube-.*|monitoring\"}[$__interval_rv])) by (namespace)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "",
           "refId": "A",
@@ -511,12 +511,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sort_desc(namespace:container_memory_usage_bytes:sum)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "",
           "refId": "B",
@@ -599,12 +599,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name!=\"\",namespace!~\"kube-.*|monitoring\"}[1m])) by (namespace)",
+          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name!=\"\",namespace!~\"kube-.*|monitoring\"}[$__interval_rv])) by (namespace)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "",
           "refId": "A",
@@ -691,7 +691,8 @@
         {
           "expr": "sort_desc(sum(cluster_namespace_controller_pod_container:memory_rss:bytes) by (namespace))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "cluster_namespace_controller_pod_container:memory_usage:bytes",
           "refId": "B",
@@ -774,13 +775,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(container_fs_usage_bytes{pod_name!=\"\"}) by (namespace)",
           "format": "time_series",
-          "interval": "5m",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "refId": "A",
           "step": 600
@@ -867,12 +868,12 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(kube_pod_container_resource_requests_memory_bytes)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "metric": "cluster_namespace_controller_pod_container:memory_usage:bytes",
           "refId": "B",
@@ -881,7 +882,7 @@
         {
           "expr": "sum(kube_pod_container_resource_requests_memory_bytes) by (namespace)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "cluster_namespace_controller_pod_container:memory_usage:bytes",
           "refId": "A",
@@ -971,12 +972,12 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(kube_pod_container_resource_requests_cpu_cores)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "metric": "cluster_namespace_controller_pod_container:memory_usage:bytes",
           "refId": "B",
@@ -985,7 +986,7 @@
         {
           "expr": "sum(kube_pod_container_resource_requests_cpu_cores) by (namespace)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
           "metric": "cluster_namespace_controller_pod_container:memory_usage:bytes",
           "refId": "A",
@@ -1030,7 +1031,7 @@
       ]
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -1084,5 +1085,5 @@
   "timezone": "",
   "title": "Overview All Namespaces",
   "uid": "n0ZGgdkik",
-  "version": 1
+  "version": 3
 }
