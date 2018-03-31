@@ -1,21 +1,16 @@
 {
+  "__inputs": [],
   "__requires": [
     {
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
       "id": "graph",
       "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
       "version": "5.0.0"
     },
     {
@@ -73,7 +68,7 @@
   "gnetId": 3662,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1522014282879,
+  "iteration": 1522457790486,
   "links": [],
   "panels": [
     {
@@ -101,7 +96,7 @@
       ],
       "datasource": "$ds_prometheus",
       "decimals": 3,
-      "description": "Percentage of uptime during the most recent $interval period.  Change the period with the 'interval' dropdown above.",
+      "description": "Percentage of uptime during the shown period.",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -153,7 +148,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(avg_over_time(up{instance=~\"$instance\",job=\"prometheus\"}[$interval]) * 100)",
+          "expr": "avg(avg_over_time(up{instance=~\"$instance\",job=\"prometheus\"}[$__range]) * 100)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -162,7 +157,7 @@
         }
       ],
       "thresholds": "90, 99",
-      "title": "Uptime [$interval]",
+      "title": "Uptime",
       "type": "singlestat",
       "valueFontSize": "100%",
       "valueMaps": [
@@ -491,7 +486,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(sum_over_time(prometheus_evaluator_iterations_missed_total{job=\"prometheus\",instance=~\"$instance\"}[$interval]))",
+          "expr": "sum(sum_over_time(prometheus_evaluator_iterations_missed_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A",
@@ -499,7 +494,7 @@
         }
       ],
       "thresholds": "1,10",
-      "title": "Missed Iterations [$interval]",
+      "title": "Missed Iterations",
       "type": "singlestat",
       "valueFontSize": "100%",
       "valueMaps": [
@@ -573,7 +568,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(sum_over_time(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\",instance=~\"$instance\"}[$interval]))",
+          "expr": "sum(sum_over_time(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A",
@@ -581,7 +576,7 @@
         }
       ],
       "thresholds": "1,10",
-      "title": "Skipped Iterations [$interval]",
+      "title": "Skipped Iterations",
       "type": "singlestat",
       "valueFontSize": "100%",
       "valueMaps": [
@@ -655,7 +650,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(sum_over_time(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"}[$interval]))",
+          "expr": "sum(sum_over_time(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A",
@@ -663,7 +658,7 @@
         }
       ],
       "thresholds": "1,10",
-      "title": "Tardy Scrapes [$interval]",
+      "title": "Tardy Scrapes",
       "type": "singlestat",
       "valueFontSize": "100%",
       "valueMaps": [
@@ -737,7 +732,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(sum_over_time(prometheus_tsdb_reloads_failures_total{job=\"prometheus\",instance=~\"$instance\"}[$interval]))",
+          "expr": "sum(sum_over_time(prometheus_tsdb_reloads_failures_total{job=\"prometheus\",instance=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A",
@@ -745,7 +740,7 @@
         }
       ],
       "thresholds": "1,10",
-      "title": "Reload Failures [$interval]",
+      "title": "Reload Failures",
       "type": "singlestat",
       "valueFontSize": "100%",
       "valueMaps": [
@@ -819,7 +814,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(sum_over_time(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"}[$interval])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_duplicate_timestamp_total{job=\"prometheus\",instance=~\"$instance\"}[$interval])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_out_of_bounds_total{job=\"prometheus\",instance=~\"$instance\"}[$interval])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_out_of_order_total{job=\"prometheus\",instance=~\"$instance\"}[$interval])) ",
+          "expr": "sum(sum_over_time(prometheus_target_scrapes_exceeded_sample_limit_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_duplicate_timestamp_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_out_of_bounds_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) + \nsum(sum_over_time(prometheus_target_scrapes_sample_out_of_order_total{job=\"prometheus\",instance=~\"$instance\"}[$__range])) ",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A",
@@ -827,7 +822,7 @@
         }
       ],
       "thresholds": "1,10",
-      "title": "Skipped Scrapes [$interval]",
+      "title": "Skipped Scrapes",
       "type": "singlestat",
       "valueFontSize": "100%",
       "valueMaps": [
@@ -3102,74 +3097,6 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": true,
-          "tags": [],
-          "text": "3h",
-          "value": "3h"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "interval",
-        "options": [
-          {
-            "selected": false,
-            "text": "1h",
-            "value": "1h"
-          },
-          {
-            "selected": true,
-            "text": "3h",
-            "value": "3h"
-          },
-          {
-            "selected": false,
-            "text": "6h",
-            "value": "6h"
-          },
-          {
-            "selected": false,
-            "text": "12h",
-            "value": "12h"
-          },
-          {
-            "selected": false,
-            "text": "1d",
-            "value": "1d"
-          },
-          {
-            "selected": false,
-            "text": "2d",
-            "value": "2d"
-          },
-          {
-            "selected": false,
-            "text": "7d",
-            "value": "7d"
-          },
-          {
-            "selected": false,
-            "text": "30d",
-            "value": "30d"
-          },
-          {
-            "selected": false,
-            "text": "90d",
-            "value": "90d"
-          },
-          {
-            "selected": false,
-            "text": "180d",
-            "value": "180d"
-          }
-        ],
-        "query": "1h, 3h, 6h, 12h, 1d, 2d, 7d, 30d, 90d, 180d",
-        "type": "custom"
       }
     ]
   },
@@ -3205,5 +3132,5 @@
   "timezone": "",
   "title": "Prometheus",
   "uid": "CFIjvxzik",
-  "version": 2
+  "version": 3
 }
