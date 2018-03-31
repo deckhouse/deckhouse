@@ -20,7 +20,7 @@ groups:
   - record: fd_utilization
     expr: process_open_fds / process_max_fds
   - alert: FdExhaustionClose
-    expr: predict_linear(fd_utilization[1h], 3600 * 4) > 1
+    expr: max(predict_linear(fd_utilization{pod!=""}[1h], 3600 * 4)) BY (job, namespace, pod) > 1
     for: 10m
     labels:
       severity: warning
@@ -29,11 +29,29 @@ groups:
         will exhaust in file/socket descriptors within the next 4 hours'
       summary: file descriptors soon exhausted
   - alert: FdExhaustionClose
-    expr: predict_linear(fd_utilization[10m], 3600) > 1
+    expr: max(predict_linear(fd_utilization{pod=""}[1h], 3600 * 4)) BY (job, instance) > 1
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      description: '{{ $labels.job }}: {{ $labels.instance }} instance
+        will exhaust in file/socket descriptors within the next 4 hours'
+      summary: file descriptors soon exhausted
+  - alert: FdExhaustionClose
+    expr: max(predict_linear(fd_utilization{pod!=""}[10m], 3600)) BY (job, namespace, pod) > 1
     for: 10m
     labels:
       severity: critical
     annotations:
       description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance
+        will exhaust in file/socket descriptors within the next hour'
+      summary: file descriptors soon exhausted
+  - alert: FdExhaustionClose
+    expr: max(predict_linear(fd_utilization{pod=""}[10m], 3600)) BY (job, instance) > 1
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      description: '{{ $labels.job }}: {{ $labels.instance }} instance
         will exhaust in file/socket descriptors within the next hour'
       summary: file descriptors soon exhausted
