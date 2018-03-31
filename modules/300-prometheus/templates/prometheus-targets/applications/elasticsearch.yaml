@@ -10,8 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - interval: 30s
-    port: es-metrics
+  - port: es-metrics
   namespaceSelector:
     any: true
   selector:

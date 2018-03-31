@@ -19,7 +19,6 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: http-metrics
-    interval: 15s
     metricRelabelings:
     - targetLabel: ingress_class
   {{- if not .name }}

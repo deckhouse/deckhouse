@@ -10,8 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - interval: 30s
-    port: uwsgi-metrics
+  - port: uwsgi-metrics
   namespaceSelector:
     any: true
   selector:

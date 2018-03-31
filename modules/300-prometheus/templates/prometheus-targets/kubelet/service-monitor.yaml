@@ -11,11 +11,9 @@ spec:
   jobLabel: k8s-app
   endpoints:
   - port: http-metrics
-    interval: 30s
     honorLabels: true
   - port: http-metrics
     path: /metrics/cadvisor
-    interval: 30s
     honorLabels: true
   selector:
     matchLabels:

@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521735679617,
+  "iteration": 1522519475664,
   "links": [],
   "panels": [
     {
@@ -39,7 +39,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -73,11 +73,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by(container_name) (container_memory_usage_bytes{pod_name=\"$pod\", container_name=~\"$container\", container_name!=\"POD\"})",
-          "interval": "10s",
+          "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current: {{ container_name }}",
           "metric": "container_memory_usage_bytes",
@@ -86,8 +87,9 @@
         },
         {
           "expr": "kube_pod_container_resource_requests_memory_bytes{pod=\"$pod\", container=~\"$container\"}",
-          "interval": "10s",
-          "intervalFactor": 2,
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Requested: {{ container }}",
           "metric": "kube_pod_container_resource_requests_memory_bytes",
           "refId": "B",
@@ -136,7 +138,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -170,11 +172,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (container_name)( rate(container_cpu_usage_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=\"$pod\"}[1m] ) )",
-          "intervalFactor": 2,
+          "expr": "sum by (container_name)( rate(container_cpu_usage_seconds_total{image!=\"\",container_name!=\"POD\",pod_name=\"$pod\"}[$__interval_rv] ) )",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "{{ container_name }}",
           "refId": "A",
           "step": 30
@@ -222,7 +225,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -256,11 +259,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sort_desc(sum by (pod_name) (rate (container_network_receive_bytes_total{pod_name=\"$pod\"}[1m]) ))",
-          "intervalFactor": 2,
+          "expr": "sort_desc(sum by (pod_name) (rate (container_network_receive_bytes_total{pod_name=\"$pod\"}[$__interval_rv]) ))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "{{ pod_name }}",
           "refId": "A",
           "step": 30
@@ -304,6 +308,7 @@
       ]
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -316,7 +321,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -326,7 +331,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
@@ -346,7 +351,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Pod",
@@ -366,7 +371,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Container",
@@ -386,7 +391,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -417,5 +422,5 @@
   "timezone": "browser",
   "title": "Pods",
   "uid": "wRIMgOzmk",
-  "version": 1
+  "version": 3
 }

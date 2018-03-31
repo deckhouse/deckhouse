@@ -19,6 +19,9 @@ spec:
     metadata:
       labels:
         app: grafana
+      annotations:
+        checksum/dashboards: {{ include (print $.Template.BasePath "/grafana/dashboards.yaml") . | sha256sum }}
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/datasources.yaml") . | sha256sum }}
     spec:
 {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
       nodeSelector:
@@ -37,7 +40,7 @@ spec:
 {{- end }}
       containers:
       - name: grafana
-        image: grafana/grafana:5.0.3
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
         env:
         - name: GF_AUTH_BASIC_ENABLED
           value: "true"
@@ -101,3 +104,5 @@ spec:
         configMap:
           name: grafana-dashboard-definitions-custom
           optional: true
+      imagePullSecrets:
+      - name: antiopa-registry

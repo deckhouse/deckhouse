@@ -10,8 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - interval: 30s
-    port: php-fpm-metrics
+  - port: php-fpm-metrics
   namespaceSelector:
     any: true
   selector:

@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -37,7 +37,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521732848527,
+  "iteration": 1522509485076,
   "links": [],
   "panels": [
     {
@@ -49,7 +49,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -103,7 +103,7 @@
         {
           "expr": "(sum(up{job=\"kube-apiserver\"} == 1) / sum(up{job=\"kube-apiserver\"})) * 100",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -130,7 +130,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -184,7 +184,7 @@
         {
           "expr": "(sum(up{job=\"kube-controller-manager\"} == 1) / sum(up{job=\"kube-controller-manager\"})) * 100",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -211,7 +211,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -265,7 +265,7 @@
         {
           "expr": "(sum(up{job=\"kube-scheduler\"} == 1) / sum(up{job=\"kube-scheduler\"})) * 100",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 600
         }
@@ -292,7 +292,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -344,9 +344,9 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "topk(1, (sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[5m])) / sum by(instance) (rate(apiserver_request_count[5m]))) * 100)",
+          "expr": "topk(1, (sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[$__range])) / sum by(instance) (rate(apiserver_request_count[$__range]))) * 100)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 600
@@ -370,7 +370,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -399,12 +399,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(verb) (rate(apiserver_latency_seconds:quantile[5m]) >= 0)",
+          "expr": "sum by(verb) (rate(apiserver_latency_seconds:quantile[$__interval_rv]) >= 0)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 30
@@ -451,7 +451,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -480,12 +480,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "cluster:scheduler_e2e_scheduling_latency_seconds:quantile",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "refId": "A",
           "step": 60
         }
@@ -531,7 +531,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -560,20 +560,20 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[5m]))",
+          "expr": "sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Error Rate",
           "refId": "A",
           "step": 60
         },
         {
-          "expr": "sum by(instance) (rate(apiserver_request_count[5m]))",
+          "expr": "sum by(instance) (rate(apiserver_request_count[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Request Rate",
           "refId": "B",
           "step": 60
@@ -616,6 +616,7 @@
       ]
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -623,12 +624,12 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -638,7 +639,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -669,5 +670,5 @@
   "timezone": "",
   "title": "Control Plane Status",
   "uid": "3yqtXDziz",
-  "version": 2
+  "version": 5
 }

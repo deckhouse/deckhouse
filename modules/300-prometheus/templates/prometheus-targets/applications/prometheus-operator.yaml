@@ -8,12 +8,11 @@ metadata:
     module: {{ $.Chart.Name }}
     prometheus: main
 spec:
-  jobLabel: app
+  jobLabel: prometheus-target
   endpoints:
   - port: http
+  namespaceSelector:
+    any: true
   selector:
     matchLabels:
-      app: prometheus-operator
-  namespaceSelector:
-    matchNames:
-    - kube-prometheus-operator
+      prometheus-target: prometheus-operator

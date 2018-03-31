@@ -1,0 +1,14 @@
+--- a/public/app/plugins/datasource/prometheus/datasource.ts	2018-03-31 00:55:44.311730859 +0300
++++ b/public/app/plugins/datasource/prometheus/datasource.ts	2018-03-31 01:08:45.001737703 +0300
+@@ -151,6 +151,11 @@
+         __interval_ms: { text: interval * 1000, value: interval * 1000 },
+       });
+     }
++    var intervalForRangeVectors = Math.max(minInterval * 2, interval);
++    scopedVars = Object.assign({}, scopedVars, {
++      __range: { text: range + 's', value: range + 's' },
++      __interval_rv: { text: intervalForRangeVectors + 's', value: intervalForRangeVectors + 's' },
++    });
+     query.step = interval;
+ 
+     // Only replace vars in expression after having (possibly) updated interval vars

@@ -19,7 +19,6 @@ spec:
   endpoints:
   - port: https
     scheme: https
-    interval: 30s
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true

@@ -1,5 +1,5 @@
 groups:
-- name: node
+- name: coreos.node
   rules:
   - record: instance:node_cpu:rate:sum
     expr: sum(rate(node_cpu{mode!="idle",mode!="iowait",mode!~"^(?:guest.*)$"}[3m]))

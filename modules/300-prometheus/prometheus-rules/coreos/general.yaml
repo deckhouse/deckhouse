@@ -1,5 +1,5 @@
 groups:
-- name: general
+- name: coreos.general
   rules:
   - alert: TargetDown
     expr: 100 * (count(up == 0) BY (job) / count(up) BY (job)) > 10

@@ -1,5 +1,5 @@
 groups:
-- name: kubernetes
+- name: coreos.kubernetes
   rules:
   - record: pod_name:container_memory_usage_bytes:sum
     expr: sum(container_memory_usage_bytes{container_name!="POD",pod_name!=""}) BY
@@ -88,7 +88,6 @@ groups:
       description: No API servers are reachable or all have disappeared from service
         discovery
       summary: No API servers are reachable
-
   - alert: K8sCertificateExpirationNotice
     labels:
       severity: warning

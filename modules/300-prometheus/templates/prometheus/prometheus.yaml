@@ -11,6 +11,8 @@ spec:
   replicas: 1
   retention: {{ .Values.prometheus.retentionDays }}d
   version: v2.2.1
+  scrapeInterval: 30s
+  evaluationInterval: 30s
   serviceAccountName: prometheus
   serviceMonitorSelector:
     matchLabels:
