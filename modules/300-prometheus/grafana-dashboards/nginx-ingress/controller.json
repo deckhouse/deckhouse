@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -31,12 +31,12 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521733275324,
+  "iteration": 1522509098813,
   "links": [],
   "panels": [
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
@@ -64,7 +64,7 @@
         "total": false,
         "values": true
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 0,
       "links": [],
       "nullPointMode": "null as zero",
@@ -160,10 +160,10 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -171,7 +171,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -179,7 +179,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -274,7 +274,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", namespace=\"kube-nginx-ingress\"}[1m])) * 8",
+          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", namespace=\"kube-nginx-ingress\"}[$__interval_rv])) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -282,7 +282,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", namespace=\"kube-nginx-ingress\"}[1m])) by (pod_name) * 8",
+          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", namespace=\"kube-nginx-ingress\"}[$__interval_rv])) by (pod_name) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod_name}}",
@@ -378,7 +378,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone='*'}[1m]))",
+          "expr": "sum(rate(nginx_requests_total{server_zone='*'}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -386,7 +386,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone!='*'}[1m])) by (pod) > 0",
+          "expr": "sum(rate(nginx_requests_total{server_zone!='*'}[$__interval_rv])) by (pod) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -575,10 +575,10 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(container_memory_usage_bytes{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|bmlb.*\"})",
+          "expr": "sum(container_memory_usage_bytes{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|direct-fallback.*\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -586,7 +586,7 @@
           "step": 10
         },
         {
-          "expr": "sum(container_memory_usage_bytes{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|bmlb.*\"}) by (pod_name)",
+          "expr": "sum(container_memory_usage_bytes{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|direct-fallback.*\"}) by (pod_name)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod_name}}",
@@ -674,10 +674,10 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|bmlb.*\"}[1m])) ",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|direct-fallback.*\"}[$__interval_rv])) ",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -685,7 +685,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|bmlb.*\"}[1m]))  by (pod_name)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kube-nginx-ingress\",pod_name=~\"nginx.*|direct-fallback.*\"}[$__interval_rv]))  by (pod_name)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod_name}}",
@@ -879,7 +879,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\"}[1m]))",
+          "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -887,7 +887,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\"}[1m])) by (pod)",
+          "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\"}[$__interval_rv])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -932,7 +932,7 @@
       ]
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -940,8 +940,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -986,5 +986,5 @@
   "timezone": "",
   "title": "Controller",
   "uid": "5Lg-nHkmk",
-  "version": 1
+  "version": 3
 }

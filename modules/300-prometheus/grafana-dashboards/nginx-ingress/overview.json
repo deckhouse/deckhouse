@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -33,12 +33,12 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521733429344,
+  "iteration": 1522508949454,
   "links": [],
   "panels": [
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
@@ -68,7 +68,7 @@
         "total": false,
         "values": false
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 0,
       "links": [],
       "nullPointMode": "null as zero",
@@ -164,28 +164,28 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "A",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "C",
           "step": 20
@@ -353,28 +353,28 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "A",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "C",
           "step": 20
@@ -545,28 +545,28 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "B",
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[1m])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "C",
           "step": 40
@@ -660,25 +660,25 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone='*'}[1m]))",
+          "expr": "sum(rate(nginx_requests_total{server_zone='*'}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone!~'\\\\*|_'}[1m])) by (server_zone)",
+          "expr": "sum(rate(nginx_requests_total{server_zone!~'\\\\*|_'}[$__interval_rv])) by (server_zone)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
           "refId": "C",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone='_'}[1m])) > 0",
+          "expr": "sum(rate(nginx_requests_total{server_zone='_'}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "default_vhost",
           "refId": "B",
           "step": 20
@@ -761,7 +761,7 @@
         {
           "expr": "sum(nginx_upstream_response_msecs_avg * (sum(nginx_upstream_responses_total) without (status_code) > 0)) / sum(nginx_upstream_responses_total)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{upstream}}",
           "metric": "",
           "refId": "A",
@@ -844,12 +844,12 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(nginx_connections_total{type=~\"waiting|reading|writing\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B",
           "step": 40
@@ -857,7 +857,7 @@
         {
           "expr": "sum(nginx_connections_total{type=~\"waiting|reading|writing\"}) by (type)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{type}}",
           "refId": "A",
           "step": 40
@@ -943,9 +943,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone!='*'}[1m])) by (status_code) > 0",
+          "expr": "sum(rate(nginx_responses_total{server_zone!='*'}[$__interval_rv])) by (status_code) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{status_code}}",
           "refId": "A",
           "step": 20
@@ -1032,17 +1032,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"4xx\"}[1m])) by (server_zone) > 0",
+          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"4xx\"}[$__interval_rv])) by (server_zone) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"4xx\"}[1m])) > 0",
+          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"4xx\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "default_vhost",
           "refId": "B",
           "step": 40
@@ -1129,17 +1129,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"5xx\"}[1m])) by (server_zone) > 0",
+          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"5xx\"}[$__interval_rv])) by (server_zone) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"5xx\"}[1m])) > 0",
+          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"5xx\"}[$__interval_rv])) > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "default_vhost",
           "refId": "B",
           "step": 40
@@ -1228,25 +1228,25 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"out\"}[1m])) * 8",
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"out\"}[$__interval_rv])) * 8",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"out\"}[1m])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"out\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"out\"}[1m])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"out\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "default_vhost",
           "refId": "C",
           "step": 20
@@ -1335,25 +1335,25 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"in\"}[1m])) * 8",
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"in\"}[$__interval_rv])) * 8",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"in\"}[1m])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"in\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"in\"}[1m])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"in\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "default_vhost",
           "refId": "C",
           "step": 20
@@ -1396,7 +1396,7 @@
       ]
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -1404,8 +1404,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
@@ -1450,5 +1450,5 @@
   "timezone": "",
   "title": "Overview",
   "uid": "B7k2Xvkik",
-  "version": 1
+  "version": 4
 }
