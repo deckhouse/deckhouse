@@ -1,4 +1,4 @@
-package main
+package docker_registry_manager
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 
 	registryclient "github.com/flant/docker-registry-client/registry"
 	"github.com/romana/rlog"
+
+	"github.com/deckhouse/deckhouse/antiopa/kube"
 )
 
 var (
@@ -37,8 +39,8 @@ var DockerRegistryInfo = map[string]map[string]string{
 }
 
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
-func InitRegistryManager() error {
-	if IsRunningOutOfKubeCluster() {
+func InitRegistryManager(hostname string) error {
+	if kube.IsRunningOutOfKubeCluster() {
 		return nil
 	}
 
@@ -49,7 +51,7 @@ func InitRegistryManager() error {
 	DockerRegistryInfo["registry.flant.com"]["password"] = GitlabToken
 
 	ImageUpdated = make(chan string)
-	AntiopaImageName = KubeGetPodImageName(Hostname)
+	AntiopaImageName = kube.KubeGetPodImageName(hostname)
 
 	var err error
 	AntiopaImageInfo, err = DockerParseImageName(AntiopaImageName)
@@ -80,7 +82,7 @@ func InitRegistryManager() error {
 // RunRegistryManager каждые 10 секунд проверяет
 // не изменился ли id образа.
 func RunRegistryManager() {
-	if IsRunningOutOfKubeCluster() {
+	if kube.IsRunningOutOfKubeCluster() {
 		return
 	}
 

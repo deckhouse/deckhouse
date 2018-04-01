@@ -1,6 +1,7 @@
-package main
+package module_manager
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/evanphx/json-patch"
 	"github.com/gobwas/glob"
@@ -8,15 +9,26 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/antiopa/helm"
+	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
+	"github.com/deckhouse/deckhouse/antiopa/merge_values"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 type Module struct {
 	Name          string
 	DirectoryName string
 	Path          string
+}
+
+type Hook struct {
+	Name string
 }
 
 func RunModules() {
@@ -99,19 +111,19 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 			return fmt.Errorf("%s hook %s FAILED: %s", orderType, hookName, err)
 		}
 
-		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = ApplyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
+		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
 			return err
 		}
 
 		if kubeModuleConfigValuesChanged {
 			rlog.Debugf("Updating module %s VALUES in ConfigMap:\n%s", module.Name, valuesToString(kubeModulesConfigValues[module.Name]))
-			err = SetModuleKubeValues(module.Name, kubeModulesConfigValues[module.Name])
+			err = kube_values_manager.SetModuleKubeValues(module.Name, kubeModulesConfigValues[module.Name])
 			if err != nil {
 				return err
 			}
 		}
 
-		if modulesDynamicValues[module.Name], globalModuleConfigValuesChanged, err = ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
+		if modulesDynamicValues[module.Name], globalModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
 			return err
 		}
 
@@ -139,7 +151,7 @@ func RunModuleHelm(moduleName string, ValuesPath string) error {
 
 		helmReleaseName := moduleName
 
-		err := execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
+		err := execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", ValuesPath}))
 		if err != nil {
 			return fmt.Errorf("helm FAILED: %s", err)
 		}
@@ -150,11 +162,16 @@ func RunModuleHelm(moduleName string, ValuesPath string) error {
 	return nil
 }
 
+func runGlobalHook(hooksDir, hookName string, valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+	cmd := makeCommand(WorkingDir, valuesPath, filepath.Join(hooksDir, hookName), []string{})
+	return runHook(filepath.Join(TempDir, "values", "hooks"), hookName, cmd)
+}
+
 func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
 	if _, hasModule := modulesByName[moduleName]; !hasModule {
 		return nil, fmt.Errorf("no such module %s", moduleName)
 	}
-	return MergeValues(globalConfigValues, globalModulesConfigValues[moduleName], kubeConfigValues, kubeModulesConfigValues[moduleName], dynamicValues, modulesDynamicValues[moduleName]), nil
+	return merge_values.MergeValues(globalConfigValues, globalModulesConfigValues[moduleName], kubeConfigValues, kubeModulesConfigValues[moduleName], dynamicValues, modulesDynamicValues[moduleName]), nil
 }
 
 func matchesGlob(value string, globPattern string) bool {
@@ -171,7 +188,7 @@ func getEnabledModules() ([]Module, error) {
 		return nil, err
 	}
 
-	cm, err := GetConfigMap()
+	cm, err := kube.GetConfigMap()
 	if err != nil {
 		return nil, err
 	}
@@ -295,4 +312,174 @@ func readValuesYamlFile(filePath string) (map[interface{}]interface{}, error) {
 	}
 
 	return res, nil
+}
+
+func makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
+	envs := make([]string, 0)
+	envs = append(envs, os.Environ()...)
+	envs = append(envs, helm.CommandEnv()...)
+	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
+
+	return utils.MakeCommand(dir, entrypoint, args, envs)
+}
+
+func runHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+	configValuesJsonMergePath := filepath.Join(tmpDir, hookName, "config_values_json_merge.json")
+	if err := createResultFile(configValuesJsonMergePath); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	configValuesJsonPatchPath := filepath.Join(tmpDir, hookName, "config_values_json_patch.json")
+	if err := createResultFile(configValuesJsonPatchPath); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	dynamicValuesJsonMergePath := filepath.Join(tmpDir, hookName, "dynamic_values_json_merge.json")
+	if err := createResultFile(dynamicValuesJsonMergePath); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	dynamicValuesJsonPatchPath := filepath.Join(tmpDir, hookName, "dynamic_values_json_patch.json")
+	if err := createResultFile(dynamicValuesJsonPatchPath); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	cmd.Env = append(
+		cmd.Env,
+		fmt.Sprintf("CONFIG_VALUES_JSON_MERGE_PATH=%s", configValuesJsonMergePath),
+		fmt.Sprintf("CONFIG_VALUES_JSON_PATCH_PATH=%s", configValuesJsonPatchPath),
+		fmt.Sprintf("DYNAMIC_VALUES_JSON_MERGE_PATH=%s", dynamicValuesJsonMergePath),
+		fmt.Sprintf("DYNAMIC_VALUES_JSON_PATCH_PATH=%s", dynamicValuesJsonPatchPath),
+	)
+
+	err := execCommand(cmd)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("%s FAILED: %s", hookName, err)
+	}
+
+	configValuesJsonMergeValues, err := readValuesJsonFile(configValuesJsonMergePath)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
+	}
+
+	configValuesJsonPatchValues, err := readJsonPatchFile(configValuesJsonPatchPath)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
+	}
+
+	dynamicValuesJsonMergeValues, err := readValuesJsonFile(dynamicValuesJsonMergePath)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
+	}
+
+	dynamicValuesJsonPatchValues, err := readJsonPatchFile(dynamicValuesJsonPatchPath)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
+	}
+
+	return configValuesJsonMergeValues, configValuesJsonPatchValues, dynamicValuesJsonMergeValues, dynamicValuesJsonPatchValues, nil
+}
+
+func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
+	files, err := ioutil.ReadDir(Dir)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]string, 0)
+	for _, file := range files {
+		// Тупой тест, что файл executable.
+		// Т.к. antiopa всегда работает под root, то этого достаточно.
+		isExecutable := !file.IsDir() && (file.Mode()&0111 != 0)
+
+		if isExecutable {
+			res = append(res, file.Name())
+		} else {
+			rlog.Warnf("Ignoring non executable file %s", filepath.Join(Dir, file.Name()))
+		}
+	}
+
+	return res, nil
+}
+
+func valuesToString(values map[interface{}]interface{}) string {
+	valuesYaml, err := yaml.Marshal(&values)
+	if err != nil {
+		return fmt.Sprintf("%v", values)
+	}
+	return string(valuesYaml)
+}
+
+func execCommand(cmd *exec.Cmd) error {
+	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
+	return cmd.Run()
+}
+
+func dumpValuesYaml(fileName string, values map[interface{}]interface{}) (string, error) {
+	valuesYaml, err := yaml.Marshal(&values)
+	if err != nil {
+		return "", err
+	}
+
+	filePath := filepath.Join(TempDir, fileName)
+
+	err = ioutil.WriteFile(filePath, valuesYaml, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	return filePath, nil
+}
+func createResultFile(filePath string) error {
+	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return nil
+	}
+
+	file.Close()
+	return nil
+}
+
+func readValuesJsonFile(filePath string) (map[string]interface{}, error) {
+	valuesJson, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+	}
+
+	if len(valuesJson) == 0 {
+		return make(map[string]interface{}), nil
+	}
+
+	var res map[string]interface{}
+
+	err = json.Unmarshal(valuesJson, &res)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+	}
+
+	return res, nil
+}
+func readJsonPatchFile(filePath string) (*jsonpatch.Patch, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+	}
+
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	patch, err := jsonpatch.DecodePatch(data)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+	}
+
+	return &patch, nil
+}
+func dumpGlobalHooksValuesYaml() (string, error) {
+	return dumpValuesYaml("global-hooks.yaml", prepareGlobalValues())
+}
+func prepareGlobalValues() map[interface{}]interface{} {
+	return merge_values.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues)
 }
