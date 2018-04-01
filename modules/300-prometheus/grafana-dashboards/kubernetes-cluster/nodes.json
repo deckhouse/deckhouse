@@ -38,7 +38,7 @@
   "gnetId": 22,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1522459120340,
+  "iteration": 1522626315324,
   "links": [],
   "panels": [
     {
@@ -82,7 +82,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - (avg by (cpu) (rate(node_cpu{mode=\"idle\", instance=\"$server\"}[$__interval_rv])) * 100)",
+          "expr": "100 - (avg by (cpu) (rate(node_cpu{mode=\"idle\", instance=\"$node\"}[$__interval_rv])) * 100)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -169,7 +169,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "node_load1{instance=\"$server\"}",
+          "expr": "node_load1{instance=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "load 1m",
@@ -178,7 +178,7 @@
           "target": ""
         },
         {
-          "expr": "node_load5{instance=\"$server\"}",
+          "expr": "node_load5{instance=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "load 5m",
@@ -187,7 +187,7 @@
           "target": ""
         },
         {
-          "expr": "node_load15{instance=\"$server\"}",
+          "expr": "node_load15{instance=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "load 15m",
@@ -283,7 +283,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "node_memory_MemTotal{instance=\"$server\"} - node_memory_MemFree{instance=\"$server\"} - node_memory_Buffers{instance=\"$server\"} - node_memory_Cached{instance=\"$server\"}",
+          "expr": "node_memory_MemTotal{instance=\"$node\"} - node_memory_MemFree{instance=\"$node\"} - node_memory_Buffers{instance=\"$node\"} - node_memory_Cached{instance=\"$node\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -294,7 +294,7 @@
           "step": 10
         },
         {
-          "expr": "node_memory_Buffers{instance=\"$server\"}",
+          "expr": "node_memory_Buffers{instance=\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -304,7 +304,7 @@
           "step": 10
         },
         {
-          "expr": "node_memory_Cached{instance=\"$server\"}",
+          "expr": "node_memory_Cached{instance=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "memory cached",
@@ -313,7 +313,7 @@
           "step": 10
         },
         {
-          "expr": "node_memory_MemFree{instance=\"$server\"}",
+          "expr": "node_memory_MemFree{instance=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "memory free",
@@ -422,7 +422,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "((node_memory_MemTotal{instance=\"$server\"} - node_memory_MemFree{instance=\"$server\"}  - node_memory_Buffers{instance=\"$server\"} - node_memory_Cached{instance=\"$server\"}) / node_memory_MemTotal{instance=\"$server\"}) * 100",
+          "expr": "((node_memory_MemTotal{instance=\"$node\"} - node_memory_MemFree{instance=\"$node\"}  - node_memory_Buffers{instance=\"$node\"} - node_memory_Cached{instance=\"$node\"}) / node_memory_MemTotal{instance=\"$node\"}) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -497,7 +497,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (instance) (rate(node_disk_bytes_read{instance=\"$server\"}[$__interval_rv]))",
+          "expr": "sum by (instance) (rate(node_disk_bytes_read{instance=\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -507,7 +507,7 @@
           "target": ""
         },
         {
-          "expr": "sum by (instance) (rate(node_disk_bytes_written{instance=\"$server\"}[$__interval_rv]))",
+          "expr": "sum by (instance) (rate(node_disk_bytes_written{instance=\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "written",
@@ -515,7 +515,7 @@
           "step": 20
         },
         {
-          "expr": "sum by (instance) (rate(node_disk_io_time_ms{instance=\"$server\"}[$__interval_rv]))",
+          "expr": "sum by (instance) (rate(node_disk_io_time_ms{instance=\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "io time",
@@ -623,7 +623,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(sum(node_filesystem_size{device!=\"rootfs\",instance=\"$server\"}) - sum(node_filesystem_free{device!=\"rootfs\",instance=\"$server\"})) / sum(node_filesystem_size{device!=\"rootfs\",instance=\"$server\"})",
+          "expr": "(sum(node_filesystem_size{device!=\"rootfs\",instance=\"$node\"}) - sum(node_filesystem_free{device!=\"rootfs\",instance=\"$node\"})) / sum(node_filesystem_size{device!=\"rootfs\",instance=\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -690,7 +690,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes{instance=\"$server\",device!~\"lo\"}[$__interval_rv])",
+          "expr": "rate(node_network_receive_bytes{instance=\"$node\",device!~\"lo\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -783,7 +783,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_transmit_bytes{instance=\"$server\",device!~\"lo\"}[$__interval_rv])",
+          "expr": "rate(node_network_transmit_bytes{instance=\"$node\",device!~\"lo\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -857,11 +857,11 @@
         "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
-        "label": null,
+        "label": "Node",
         "multi": false,
-        "name": "server",
+        "name": "node",
         "options": [],
-        "query": "label_values(node_boot_time, instance)",
+        "query": "label_values(up{job=\"node-exporter\"}, instance)",
         "refresh": 1,
         "regex": "",
         "sort": 0,
@@ -905,5 +905,5 @@
   "timezone": "browser",
   "title": "Nodes",
   "uid": "HB3tuvkmk",
-  "version": 2
+  "version": 8
 }
