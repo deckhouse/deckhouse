@@ -11,6 +11,11 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: http-metrics
+    relabelings:
+    - regex: endpoint|pod
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
   namespaceSelector:
     any: true
   selector:
