@@ -1,4 +1,4 @@
-package module_manager
+package module
 
 import (
 	"encoding/json"
@@ -38,7 +38,7 @@ func RunModules() {
 	}
 }
 
-func RunModule(moduleName string) {
+func RunModuleOld(moduleName string) {
 	vals, err := PrepareModuleValues(moduleName)
 	if err != nil {
 		rlog.Errorf("Cannot prepare values for module %s: %s", moduleName, err)
