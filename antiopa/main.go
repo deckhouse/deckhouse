@@ -314,6 +314,8 @@ func RunModule(moduleName string) {
 		return
 	}
 
+	CleanupModule(moduleName)
+
 	err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
 	if err != nil {
 		rlog.Errorf("Module %s before-helm hooks error: %s", moduleName, err)
@@ -335,12 +337,43 @@ func RunModule(moduleName string) {
 	}
 }
 
-func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
+func CheckModuleHelmChart(moduleName string) (err error) {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
 		return fmt.Errorf("no such module %s", moduleName)
 	}
 
+	chartPath := filepath.Join(module.Path, "Chart.yaml")
+
+	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
+		return fmt.Errorf("No helm chart found for module '%s' in %s", module.Name, chartPath)
+	}
+	return
+}
+
+func GenerateHelmReleaseName(moduleName string) string {
+	return moduleName
+}
+
+func CleanupModule(moduleName string) {
+	rlog.Infof("Running module '%s': cleanup ...", moduleName)
+
+	err := CheckModuleHelmChart(moduleName)
+	if err != nil {
+		rlog.Debug("cleanup module: %s", err)
+		return
+	}
+
+	helmReleaseName := GenerateHelmReleaseName(moduleName)
+
+	HelmDeleteSingleFailedRevision(helmReleaseName)
+}
+
+func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
+	module, hasModule := modulesByName[moduleName]
+	if !hasModule {
+		return fmt.Errorf("no such module %s", moduleName)
+	}
 	hooksDir := filepath.Join(module.Path, "hooks", "before-helm")
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
@@ -393,28 +426,28 @@ func RunModuleAfterHelmHooks(moduleName string, ValuesPath string) error {
 	return nil
 }
 
-func RunModuleHelm(moduleName string, ValuesPath string) error {
+func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
 		return fmt.Errorf("no such module %s", moduleName)
 	}
 
-	chartPath := filepath.Join(module.Path, "Chart.yaml")
+	rlog.Infof("Running module '%s': helm ...", module.Name)
 
-	if _, err := os.Stat(chartPath); !os.IsNotExist(err) {
-		rlog.Infof("Running module %s helm ...", moduleName)
-
-		helmReleaseName := moduleName
-
-		err := execCommand(makeModuleCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
-		if err != nil {
-			return fmt.Errorf("helm FAILED: %s", err)
-		}
-	} else {
-		rlog.Debugf("No helm chart found for module %s in %s", moduleName, chartPath)
+	err = CheckModuleHelmChart(moduleName)
+	if err != nil {
+		rlog.Debug("helm cannot run: %s", err)
+		return
 	}
 
-	return nil
+	helmReleaseName := GenerateHelmReleaseName(moduleName)
+
+	err = execCommand(makeModuleCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
+	if err != nil {
+		return fmt.Errorf("helm FAILED: %s", err)
+	}
+
+	return
 }
 
 func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
