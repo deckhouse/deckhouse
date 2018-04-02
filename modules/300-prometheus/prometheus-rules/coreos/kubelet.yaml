@@ -38,11 +38,11 @@ groups:
         have disappeared from service discovery.
       summary: Many Kubelets cannot be scraped
   - alert: K8SKubeletTooManyPods
-    expr: max(kubelet_running_pod_count) BY (instance) > 100
+    expr: label_replace(kubelet_running_pod_count, "node", "$1", "instance", "(.*)") > on(node) kube_node_status_capacity_pods * 0.9
     for: 10m
     labels:
       severity: warning
     annotations:
-      description: Kubelet {{$labels.instance}} is running {{$value}} pods, close
-        to the limit of 110
+      description: Kubelet {{ $labels.node }} is running {{$value}} pods, close
+        to the limit of {{ print "kube_node_status_capacity_pods{node='" $labels.node "'}" | query | first | value }}
       summary: Kubelet is close to pod limit
