@@ -28,6 +28,8 @@ spec:
       name: madison-proxy
       port: http
 {{- end }}
+  externalLabels:
+    kubernetes: {{ .Values.global.clusterName }}
 {{- if .Values.global.ingressACME }}
   externalUrl: https://prometheus.{{ .Values.global.clusterHostname }}/prometheus/
 {{- else }}
