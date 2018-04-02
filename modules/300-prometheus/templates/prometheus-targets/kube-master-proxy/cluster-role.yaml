@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: kube-prometheus:kube-control-plane-proxy
+  name: kube-prometheus:kube-master-proxy
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    app: kube-prometheus-kube-control-plane-proxy
+    app: kube-prometheus-kube-master-proxy
 rules:
 - apiGroups: ["authentication.k8s.io"]
   resources:

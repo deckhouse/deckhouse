@@ -17,7 +17,7 @@ spec:
 {{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
     k8s-app: kube-scheduler
 {{- else if eq .Values.global.cluster.type "Manual" }}
-    app: kube-prometheus-kube-control-plane-proxy
+    app: kube-prometheus-kube-master-proxy
 {{- else }}
   {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
 {{- end }}

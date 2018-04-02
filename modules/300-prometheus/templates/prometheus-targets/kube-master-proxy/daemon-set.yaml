@@ -1,0 +1,91 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: kube-prometheus-kube-master-proxy
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kube-prometheus-kube-master-proxy
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: kube-prometheus-kube-master-proxy
+  template:
+    metadata:
+      labels:
+        app: kube-prometheus-kube-master-proxy
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/prometheus-targets/kube-master-proxy/config-map.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: kube-prometheus-kube-master-proxy
+      hostNetwork: true
+      containers:
+      - name: nginx
+        image: nginx:1.13.10-alpine
+{{- if eq .Values.global.cluster.type "Manual" }}
+        ports:
+        - containerPort: 10360
+          name: scheduler
+        - containerPort: 10362
+          name: controller
+        - containerPort: 10364
+          name: etcd
+{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+        ports:
+        - containerPort: 10364
+          name: etcd
+        - containerPort: 10366
+          name: etcd-events
+{{- else if eq .Values.global.cluster.type "ACS" }}
+        ports:
+        - containerPort: 10364
+          name: etcd
+{{- end }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx
+{{- if eq .Values.global.cluster.type "Manual" }}
+      - name: kube-rbac-proxy-for-kube-scheduler
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10361"
+        - "--upstream=http://127.0.0.1:10251/"
+      - name: kube-rbac-proxy-for-kube-controller-manager
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10363"
+        - "--upstream=http://127.0.0.1:10252/"
+      - name: kube-rbac-proxy-for-kube-etcd
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10365"
+        - "--upstream=http://127.0.0.1:2379/"
+{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+      - name: kube-rbac-proxy-for-kube-etcd
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10365"
+        - "--upstream=http://127.0.0.1:4001/"
+      - name: kube-rbac-proxy-for-kube-etcd-events
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10367"
+        - "--upstream=http://127.0.0.1:4002/"
+{{- else if eq .Values.global.cluster.type "ACS" }}
+      - name: kube-rbac-proxy-for-kube-etcd
+        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        args:
+        - "--secure-listen-address=127.0.0.1:10365"
+        - "--upstream=http://127.0.0.1:4001/"
+{{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: kube-prometheus-kube-master-proxy
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
