@@ -1,5 +1,5 @@
 Модуль prometheus-operator
-=======
+==========================
 
 Модуль устанавливает [prometheus operator](https://github.com/coreos/prometheus-operator).
 
