@@ -35,8 +35,7 @@ var (
 	// dynamic-values для конкретного модуля, для всех кластеров
 	modulesDynamicValues map[string]map[interface{}]interface{}
 
-	valuesChanged        bool
-	modulesValuesChanged map[string]bool
+	valuesChanged bool
 
 	WorkingDir string
 	TempDir    string

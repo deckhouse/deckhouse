@@ -103,7 +103,7 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 	for _, hookName := range hooksNames {
 		rlog.Infof("Running module %s %s hook %s ...", moduleName, orderType, hookName)
 
-		var kubeModuleConfigValuesChanged, globalModuleConfigValuesChanged bool
+		var kubeModuleConfigValuesChanged bool
 
 		configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := runModuleHook(module.Path, hooksDir, hookName, valuesPath)
 
@@ -123,11 +123,9 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 			}
 		}
 
-		if modulesDynamicValues[module.Name], globalModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
+		if modulesDynamicValues[module.Name], _, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
 			return err
 		}
-
-		modulesValuesChanged[module.Name] = modulesValuesChanged[module.Name] || kubeModuleConfigValuesChanged || globalModuleConfigValuesChanged
 	}
 
 	return nil
