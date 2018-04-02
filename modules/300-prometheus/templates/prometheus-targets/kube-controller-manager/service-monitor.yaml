@@ -19,6 +19,11 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
 {{- end }}
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
   selector:
     matchLabels:
       heritage: antiopa

@@ -7,4 +7,9 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
+  {{- if not .name }}
+    controller: main
+  {{- else }}
+    controller: {{ .name }}
+  {{- end }}
 {{- end }}

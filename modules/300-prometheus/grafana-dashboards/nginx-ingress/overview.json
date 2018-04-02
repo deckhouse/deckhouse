@@ -33,7 +33,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522508949454,
+  "iteration": 1522624816961,
   "links": [],
   "panels": [
     {
@@ -167,7 +167,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -175,7 +175,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -183,7 +183,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -356,7 +356,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -364,7 +364,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -372,7 +372,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
@@ -545,7 +545,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -554,7 +554,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -563,7 +563,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -660,7 +660,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone='*'}[$__interval_rv]))",
+          "expr": "sum(rate(nginx_requests_total{job=\"nginx-ingress-controller\", server_zone='*'}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -668,7 +668,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone!~'\\\\*|_'}[$__interval_rv])) by (server_zone)",
+          "expr": "sum(rate(nginx_requests_total{job=\"nginx-ingress-controller\", server_zone!~'\\\\*|_'}[$__interval_rv])) by (server_zone)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
@@ -676,7 +676,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_requests_total{server_zone='_'}[$__interval_rv])) > 0",
+          "expr": "sum(rate(nginx_requests_total{job=\"nginx-ingress-controller\", server_zone='_'}[$__interval_rv])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "default_vhost",
@@ -759,7 +759,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(nginx_upstream_response_msecs_avg * (sum(nginx_upstream_responses_total) without (status_code) > 0)) / sum(nginx_upstream_responses_total)",
+          "expr": "sum(nginx_upstream_response_msecs_avg{job=\"nginx-ingress-controller\"} * (sum(nginx_upstream_responses_total{job=\"nginx-ingress-controller\"}) without (status_code) > 0)) / sum(nginx_upstream_responses_total{job=\"nginx-ingress-controller\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{upstream}}",
@@ -847,7 +847,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(nginx_connections_total{type=~\"waiting|reading|writing\"})",
+          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", type=~\"waiting|reading|writing\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -855,7 +855,7 @@
           "step": 40
         },
         {
-          "expr": "sum(nginx_connections_total{type=~\"waiting|reading|writing\"}) by (type)",
+          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", type=~\"waiting|reading|writing\"}) by (type)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{type}}",
@@ -943,7 +943,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone!='*'}[$__interval_rv])) by (status_code) > 0",
+          "expr": "sum(rate(nginx_responses_total{job=\"nginx-ingress-controller\", server_zone!='*'}[$__interval_rv])) by (status_code) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status_code}}",
@@ -1032,7 +1032,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"4xx\"}[$__interval_rv])) by (server_zone) > 0",
+          "expr": "sum(rate(nginx_responses_total{job=\"nginx-ingress-controller\", server_zone!~'\\\\*|_', status_code=\"4xx\"}[$__interval_rv])) by (server_zone) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
@@ -1040,7 +1040,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"4xx\"}[$__interval_rv])) > 0",
+          "expr": "sum(rate(nginx_responses_total{job=\"nginx-ingress-controller\", server_zone='_', status_code=\"4xx\"}[$__interval_rv])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "default_vhost",
@@ -1129,7 +1129,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone!~'\\\\*|_', status_code=\"5xx\"}[$__interval_rv])) by (server_zone) > 0",
+          "expr": "sum(rate(nginx_responses_total{job=\"nginx-ingress-controller\", server_zone!~'\\\\*|_', status_code=\"5xx\"}[$__interval_rv])) by (server_zone) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
@@ -1137,7 +1137,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(nginx_responses_total{server_zone='_', status_code=\"5xx\"}[$__interval_rv])) > 0",
+          "expr": "sum(rate(nginx_responses_total{job=\"nginx-ingress-controller\", server_zone='_', status_code=\"5xx\"}[$__interval_rv])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "default_vhost",
@@ -1228,7 +1228,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"out\"}[$__interval_rv])) * 8",
+          "expr": "sum(rate(nginx_bytes_total{job=\"nginx-ingress-controller\", server_zone=\"*\",direction=\"out\"}[$__interval_rv])) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1236,7 +1236,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"out\"}[$__interval_rv])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{job=\"nginx-ingress-controller\", server_zone!~\"\\\\*|_\",direction=\"out\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
@@ -1244,7 +1244,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"out\"}[$__interval_rv])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{job=\"nginx-ingress-controller\", server_zone=\"_\",direction=\"out\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "default_vhost",
@@ -1335,7 +1335,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"*\",direction=\"in\"}[$__interval_rv])) * 8",
+          "expr": "sum(rate(nginx_bytes_total{job=\"nginx-ingress-controller\", server_zone=\"*\",direction=\"in\"}[$__interval_rv])) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1343,7 +1343,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone!~\"\\\\*|_\",direction=\"in\"}[$__interval_rv])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{job=\"nginx-ingress-controller\", server_zone!~\"\\\\*|_\",direction=\"in\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{server_zone}}",
@@ -1351,7 +1351,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(nginx_bytes_total{server_zone=\"_\",direction=\"in\"}[$__interval_rv])) by (server_zone) * 8 > 0",
+          "expr": "sum(rate(nginx_bytes_total{job=\"nginx-ingress-controller\", server_zone=\"_\",direction=\"in\"}[$__interval_rv])) by (server_zone) * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "default_vhost",
@@ -1450,5 +1450,5 @@
   "timezone": "",
   "title": "Overview",
   "uid": "B7k2Xvkik",
-  "version": 4
+  "version": 7
 }

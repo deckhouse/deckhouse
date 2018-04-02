@@ -19,12 +19,19 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: http-metrics
-    metricRelabelings:
-    - targetLabel: ingress_class
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
+    - sourceLabels: [__meta_kubernetes_service_name]
+      regex: kube-prometheus-discovery-of-(.*)
+      targetLabel: app
+    - targetLabel: controller
   {{- if not .name }}
-      replacement: nginx
+      replacement: main
   {{- else }}
-      replacement: nginx-{{ .name }}
+      replacement: {{ .name }}
   {{- end }}
   selector:
     matchLabels:
