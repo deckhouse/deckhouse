@@ -263,7 +263,7 @@ func main() {
 // 			return err
 // 		}
 
-// 		var kubeConfigValuesChanged, globalConfigValuesChanged bool
+// 		var kubeConfigValuesChanged, dynamicValuesChanged bool
 
 // 		if kubeConfigValues, kubeConfigValuesChanged, err = ApplyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
 // 			return err
@@ -273,11 +273,11 @@ func main() {
 // 			return err
 // 		}
 
-// 		if dynamicValues, globalConfigValuesChanged, err = ApplyJsonMergeAndPatch(globalConfigValues, dynamicVJMV, dynamicVJPV); err != nil {
+// 		if dynamicValues, dynamicValuesChanged, err = ApplyJsonMergeAndPatch(dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
 // 			return err
 // 		}
 
-// 		valuesChanged = valuesChanged || kubeConfigValuesChanged || globalConfigValuesChanged
+// 		valuesChanged = valuesChanged || kubeConfigValuesChanged || dynamicValuesChanged
 // 	}
 
 // 	return nil
