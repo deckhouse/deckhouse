@@ -19,7 +19,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
 	_ "github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
 	_ "github.com/deckhouse/deckhouse/antiopa/merge_values"
-	_ "github.com/deckhouse/deckhouse/antiopa/module_manager"
+	_ "github.com/deckhouse/deckhouse/antiopa/module"
 	_ "github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
@@ -31,11 +31,47 @@ var (
 	Hostname string
 )
 
+func Init() {
+  /*
+    GetModuleNamesInOrder.each {
+        GetModuleHooksInOrder(moduleName, module.Schedule).each {
+            schedule.add hook // регистрация binding
+        }
+        
+        GetModuleHooksInOrder(moduleName, module.OnKubeNodeChange).each {
+            ... // регистрация binding
+        }
+    }
+    
+    GetGlobalHooksInOrder(module.OnKubeNodeChange).each {...} // регистрация binding
+    
+    GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
+  */
+}
+
+func Run() {
+    /*
+    
+    GetGlobalHooksInOrder(module.BeforeAll).each {RunGlobalHook(name)}
+    GetModuleNamesInOrder.each {RunModule(name)}
+    GetGlobalHooksInOrder(module.AfterAll).each {RunGlobalHook(name)}
+      */
+}
+
 func main() {
 	// Init()
 	// Run()
 	for {
 		time.Sleep(time.Duration(1) * time.Second)
+		
+		/*
+Initial run:
+* Append each global-hook with before-all binding to queue as separate task
+* Append each module from module.ModuleNamesOrder to queue
+    * append each before-helm module hook to queue as separate task
+    * append helm to queue as separate task
+    * append each after-helm module hook to queue as separate task
+		 */
 	}
 }
 
