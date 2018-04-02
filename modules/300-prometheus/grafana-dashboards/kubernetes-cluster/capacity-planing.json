@@ -38,7 +38,7 @@
   "gnetId": 22,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1522458923769,
+  "iteration": 1522701042628,
   "links": [],
   "panels": [
     {
@@ -424,6 +424,7 @@
         {
           "expr": "((sum(node_memory_MemTotal) - sum(node_memory_MemFree) - sum(node_memory_Buffers) - sum(node_memory_Cached)) / sum(node_memory_MemTotal)) * 100",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "metric": "",
           "refId": "A",
@@ -626,6 +627,7 @@
         {
           "expr": "(sum(node_filesystem_size{device!=\"rootfs\"}) - sum(node_filesystem_free{device!=\"rootfs\"})) / sum(node_filesystem_size{device!=\"rootfs\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "refId": "A",
           "step": 60,
@@ -985,6 +987,7 @@
         {
           "expr": "100 - (sum(kube_node_status_capacity_pods) - sum(kube_pod_info)) / sum(kube_node_status_capacity_pods) * 100",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -1060,5 +1063,5 @@
   "timezone": "browser",
   "title": "Capacity Planing",
   "uid": "Yf3tuvkik",
-  "version": 3
+  "version": 1
 }

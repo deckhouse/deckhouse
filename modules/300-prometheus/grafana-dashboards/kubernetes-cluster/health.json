@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1522459382258,
+  "iteration": 1522701105964,
   "links": [],
   "panels": [
     {
@@ -97,6 +97,7 @@
         {
           "expr": "sum(up{job=~\"kube-apiserver|kube-scheduler|kube-controller-manager\"} == 0)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -185,6 +186,7 @@
         {
           "expr": "sum(ALERTS{alertstate=\"firing\"})",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -268,6 +270,7 @@
         {
           "expr": "sum(ALERTS{alertstate=\"pending\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -351,6 +354,7 @@
         {
           "expr": "count(increase(kube_pod_container_status_restarts[$__range]) > 5)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -434,6 +438,7 @@
         {
           "expr": "sum(kube_node_status_ready{condition!=\"true\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -517,6 +522,7 @@
         {
           "expr": "sum(kube_node_status_disk_pressure{condition=\"true\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -600,6 +606,7 @@
         {
           "expr": "sum(kube_node_status_memory_pressure{condition=\"true\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -683,6 +690,7 @@
         {
           "expr": "sum(kube_node_spec_unschedulable)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -757,5 +765,5 @@
   "timezone": "",
   "title": "Health",
   "uid": "bsqtXvkmk",
-  "version": 2
+  "version": 1
 }

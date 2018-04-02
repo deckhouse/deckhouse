@@ -37,7 +37,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522511916541,
+  "iteration": 1522701280758,
   "links": [],
   "panels": [
     {
@@ -355,6 +355,7 @@
         {
           "expr": "max(kube_deployment_spec_replicas{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "metric": "kube_deployment_spec_replicas",
           "refId": "A",
@@ -439,6 +440,7 @@
         {
           "expr": "min(kube_deployment_status_replicas_available{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "refId": "A",
           "step": 600
@@ -522,6 +524,7 @@
         {
           "expr": "max(kube_deployment_status_observed_generation{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -606,6 +609,7 @@
         {
           "expr": "max(kube_deployment_metadata_generation{deployment=\"$deployment_name\",namespace=\"$deployment_namespace\"}) without (instance, pod)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -839,5 +843,5 @@
   "timezone": "browser",
   "title": "Deployment",
   "uid": "NSZGgOkmz",
-  "version": 2
+  "version": 1
 }
