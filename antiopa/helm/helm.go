@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/romana/rlog"
@@ -17,6 +18,8 @@ var (
 // InitHelm запускает установку tiller-a.
 func Init(tillerNamespace string) {
 	TillerNamespace = tillerNamespace
+
+	rlog.Info("HELM-INIT run helm init")
 
 	stdout, stderr, err := HelmCmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
 	if err != nil {
@@ -57,5 +60,63 @@ func HelmCmd(args ...string) (stdout string, stderr string, err error) {
 	stdout = strings.TrimSpace(stdoutBuf.String())
 	stderr = strings.TrimSpace(stderrBuf.String())
 
+	return
+}
+
+func HelmDeleteSingleFailedRevision(releaseName string) (err error) {
+	revision, status, err := HelmLastReleaseStatus(releaseName)
+	if err != nil {
+		if revision != "0" {
+			rlog.Infof("%v", err)
+		}
+		return err
+	}
+
+	//  No interest of revisions older than 1
+	if revision == "1" && status == "FAILED" {
+		// delete and purge!
+		err = HelmDelete(releaseName)
+		if err != nil {
+			rlog.Infof("Error deleting first failed release '%s': %v", releaseName, err)
+			return err
+		}
+		rlog.Infof("  Single failed release for '%s' deleted", releaseName)
+	} else {
+		rlog.Debugf("Release '%s' has revision '%s' with status %s", releaseName, revision, status)
+	}
+
+	return
+}
+
+// Get last known revision and status
+// helm history output:
+// REVISION	UPDATED                 	STATUS    	CHART                 	DESCRIPTION
+// 1        Fri Jul 14 18:25:00 2017	SUPERSEDED	symfony-demo-0.1.0    	Install complete
+func HelmLastReleaseStatus(releaseName string) (revision string, status string, err error) {
+	stdout, stderr, err := HelmCmd("history", releaseName)
+	if err != nil {
+		err = fmt.Errorf("Cannot get history for release '%s'\n%v %v", releaseName, stdout, stderr)
+		return
+	}
+	historyLines := strings.Split(stdout, "\n")
+	firstLine := historyLines[0]
+	if strings.Contains(firstLine, "Error:") && strings.Contains(firstLine, "not found") {
+		// Bad module name or no releases installed
+		err = fmt.Errorf("No release '%s' found\n%v %v", releaseName, stdout, stderr)
+		revision = "0"
+		return
+	}
+	lastLine := historyLines[len(historyLines)-1]
+	fields := regexp.MustCompile("\\t").Split(lastLine, 5)
+	revision = strings.TrimSpace(fields[0])
+	status = strings.TrimSpace(fields[2])
+	return
+}
+
+func HelmDelete(releaseName string) (err error) {
+	stdout, stderr, err := HelmCmd("delete", "--purge", releaseName)
+	if err != nil {
+		return fmt.Errorf("helm delete --purge %s invocation error: %v\n%v %v", releaseName, err, stdout, stderr)
+	}
 	return
 }

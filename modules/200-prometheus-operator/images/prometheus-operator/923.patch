@@ -1,0 +1,215 @@
+From 6473bce923849f6c8b683c756d20f2518561dca0 Mon Sep 17 00:00:00 2001
+From: Eirik Martiniussen Sylliaas <eirik@sylliaas.no>
+Date: Thu, 25 Jan 2018 15:59:27 +0100
+Subject: [PATCH 1/2] client: Add relabeling config
+
+Add RelabelConfigs for custom relabeling_config.
+---
+ pkg/client/monitoring/v1/types.go                 |  3 ++
+ pkg/client/monitoring/v1/zz_generated.deepcopy.go | 12 +++++++
+ pkg/prometheus/promcfg.go                         | 34 ++++++++++++++++++++
+ pkg/prometheus/promcfg_test.go                    | 38 +++++++++++++++++++++++
+ 4 files changed, 87 insertions(+)
+
+diff --git a/pkg/client/monitoring/v1/types.go b/pkg/client/monitoring/v1/types.go
+index 1933f7c7..94c2dcdb 100644
+--- a/pkg/client/monitoring/v1/types.go
++++ b/pkg/client/monitoring/v1/types.go
+@@ -294,6 +294,9 @@ type Endpoint struct {
+ 	// BasicAuth allow an endpoint to authenticate over basic authentication
+ 	// More info: https://prometheus.io/docs/operating/configuration/#endpoints
+ 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
++	// RelabelConfigs to apply before scraping.
++	// More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#<relabel_config>
++	RelabelConfigs []*RelabelConfig `json:"relabelings,omitempty"`
+ 	// MetricRelabelConfigs to apply to samples before ingestion.
+ 	MetricRelabelConfigs []*RelabelConfig `json:"metricRelabelings,omitempty"`
+ }
+diff --git a/pkg/client/monitoring/v1/zz_generated.deepcopy.go b/pkg/client/monitoring/v1/zz_generated.deepcopy.go
+index d40cde60..a710461e 100644
+--- a/pkg/client/monitoring/v1/zz_generated.deepcopy.go
++++ b/pkg/client/monitoring/v1/zz_generated.deepcopy.go
+@@ -400,6 +400,18 @@ func (in *Endpoint) DeepCopyInto(out *Endpoint) {
+ 			(*in).DeepCopyInto(*out)
+ 		}
+ 	}
++	if in.RelabelConfigs != nil {
++		in, out := &in.RelabelConfigs, &out.RelabelConfigs
++		*out = make([]*RelabelConfig, len(*in))
++		for i := range *in {
++			if (*in)[i] == nil {
++				(*out)[i] = nil
++			} else {
++				(*out)[i] = new(RelabelConfig)
++				(*in)[i].DeepCopyInto((*out)[i])
++			}
++		}
++	}
+ 	if in.MetricRelabelConfigs != nil {
+ 		in, out := &in.MetricRelabelConfigs, &out.MetricRelabelConfigs
+ 		*out = make([]*RelabelConfig, len(*in))
+diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
+index c2c2afe6..24c7fe97 100644
+--- a/pkg/prometheus/promcfg.go
++++ b/pkg/prometheus/promcfg.go
+@@ -368,6 +368,42 @@ func generateServiceMonitorConfig(version semver.Version, m *v1.ServiceMonitor,
+ 		})
+ 	}
+ 
++	if ep.RelabelConfigs != nil {
++		for _, c := range ep.RelabelConfigs {
++			relabeling := yaml.MapSlice{}
++
++			if len(c.SourceLabels) > 0 {
++				relabeling = append(relabeling, yaml.MapItem{Key: "source_labels", Value: c.SourceLabels})
++			}
++
++			if c.Separator != "" {
++				relabeling = append(relabeling, yaml.MapItem{Key: "separator", Value: c.Separator})
++			}
++
++			if c.TargetLabel != "" {
++				relabeling = append(relabeling, yaml.MapItem{Key: "target_label", Value: c.TargetLabel})
++			}
++
++			if c.Regex != "" {
++				relabeling = append(relabeling, yaml.MapItem{Key: "regex", Value: c.Regex})
++			}
++
++			if c.Modulus != uint64(0) {
++				relabeling = append(relabeling, yaml.MapItem{Key: "modulus", Value: c.Modulus})
++			}
++
++			if c.Replacement != "" {
++				relabeling = append(relabeling, yaml.MapItem{Key: "replacement", Value: c.Replacement})
++			}
++
++			if c.Action != "" {
++				relabeling = append(relabeling, yaml.MapItem{Key: "action", Value: c.Action})
++			}
++
++			relabelings = append(relabelings, relabeling)
++		}
++	}
++
+ 	cfg = append(cfg, yaml.MapItem{Key: "relabel_configs", Value: relabelings})
+ 
+ 	if ep.MetricRelabelConfigs != nil {
+diff --git a/pkg/prometheus/promcfg_test.go b/pkg/prometheus/promcfg_test.go
+index 12d758e6..d15db9e3 100644
+--- a/pkg/prometheus/promcfg_test.go
++++ b/pkg/prometheus/promcfg_test.go
+@@ -211,5 +211,43 @@ func makeServiceMonitors() map[string]*monitoringv1.ServiceMonitor {
+ 		},
+ 	}
+ 
++	res["servicemonitor5"] = &monitoringv1.ServiceMonitor{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:      "testservicemonitor5",
++			Namespace: "default",
++			Labels: map[string]string{
++				"group": "group8",
++			},
++		},
++		Spec: monitoringv1.ServiceMonitorSpec{
++			Selector: metav1.LabelSelector{
++				MatchLabels: map[string]string{
++					"group":  "group8",
++					"group3": "group9",
++				},
++			},
++			Endpoints: []monitoringv1.Endpoint{
++				monitoringv1.Endpoint{
++					Port:     "web",
++					Interval: "60s",
++					RelabelConfigs: []*monitoringv1.RelabelConfig{
++						&monitoringv1.RelabelConfig{
++							SourceLabels: []string{"__address__"},
++							TargetLabel:  "__param_target",
++						},
++						&monitoringv1.RelabelConfig{
++							SourceLabels: []string{"__param_target"},
++							TargetLabel:  "instance",
++						},
++						&monitoringv1.RelabelConfig{
++							TargetLabel: "__address__",
++							Replacement: "127.0.0.1:9115",
++						},
++					},
++				},
++			},
++		},
++	}
++
+ 	return res
+ }
+
+From 9fcbf596aac8d6f02a0039701a0e7eccff1a9d2d Mon Sep 17 00:00:00 2001
+From: Eirik Martiniussen Sylliaas <eirik@sylliaas.no>
+Date: Thu, 25 Jan 2018 16:46:18 +0100
+Subject: [PATCH 2/2] docs: Document blackbox exporter
+
+Add a documentation example of blackbox exporter scraping using the ServiceMonitor resource.
+---
+ Documentation/api.md                           |  1 +
+ Documentation/user-guides/blackbox-exporter.md | 39 ++++++++++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+ create mode 100644 Documentation/user-guides/blackbox-exporter.md
+
+diff --git a/Documentation/api.md b/Documentation/api.md
+index eee213b0..264967ff 100644
+--- a/Documentation/api.md
++++ b/Documentation/api.md
+@@ -145,6 +145,7 @@ Endpoint defines a scrapeable endpoint serving Prometheus metrics.
+ | bearerTokenFile | File to read bearer token for scraping targets. | string | false |
+ | honorLabels | HonorLabels chooses the metric's labels on collisions with target labels. | bool | false |
+ | basicAuth | BasicAuth allow an endpoint to authenticate over basic authentication More info: https://prometheus.io/docs/operating/configuration/#endpoints | *[BasicAuth](#basicauth) | false |
++| relabelings | RelabelConfigs to apply before scraping. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#<relabel_config> | []*[RelabelConfig](#relabelconfig) | false |
+ | metricRelabelings | MetricRelabelConfigs to apply to samples before ingestion. | []*[RelabelConfig](#relabelconfig) | false |
+ 
+ [Back to TOC](#table-of-contents)
+diff --git a/Documentation/user-guides/blackbox-exporter.md b/Documentation/user-guides/blackbox-exporter.md
+new file mode 100644
+index 00000000..c3d9d5cc
+--- /dev/null
++++ b/Documentation/user-guides/blackbox-exporter.md
+@@ -0,0 +1,39 @@
++<br>
++<div class="alert alert-info" role="alert">
++    <i class="fa fa-exclamation-triangle"></i><b> Note:</b> Starting with v0.12.0, Prometheus Operator requires use of Kubernetes v1.7.x and up.
++</div>
++
++# Blackbox exporter
++
++The (blackbox exporter)[https://github.com/prometheus/blackbox_exporter] needs to be
++passed the target as a parameter, relabelings can be used to label metrics with the target.
++
++
++```yaml
++apiVersion: monitoring.coreos.com/v1
++kind: ServiceMonitor
++metadata:
++  name: blackbox-exporter
++  namespace: default
++  labels:
++    app: blackbox-exporter
++spec:
++  selector:
++    matchLabels:
++      app: blackbox-exporter
++  endpoints:
++  - port: web
++    path: /probe
++    params:
++      module:
++        - http_2xx
++      target:
++        - http://domain.com
++    relabelings:
++      - sourceLabels:
++          - __param_target
++        targetLabel: target
++      - sourceLabels:
++          - __param_module
++        targetLabel: module
++```

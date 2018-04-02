@@ -54,6 +54,8 @@ func RunModuleOld(moduleName string) {
 		return
 	}
 
+  CleanupModule(moduleName)
+
 	err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
 	if err != nil {
 		rlog.Errorf("Module %s before-helm hooks error: %s", moduleName, err)
@@ -136,7 +138,31 @@ func runModuleHook(modulePath, hooksDir, hookName string, valuesPath string) (ma
 	return runHook(filepath.Join(TempDir, "values", "modules"), hookName, cmd)
 }
 
-func RunModuleHelm(moduleName string, ValuesPath string) error {
+func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
+	module, hasModule := modulesByName[moduleName]
+	if !hasModule {
+		return fmt.Errorf("no such module %s", moduleName)
+	}
+
+	rlog.Infof("Running module '%s': helm ...", module.Name)
+
+	err = CheckModuleHelmChart(moduleName)
+	if err != nil {
+		rlog.Debug("helm cannot run: %s", err)
+		return
+	}
+
+	helmReleaseName := GenerateHelmReleaseName(moduleName)
+
+	err = execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", ValuesPath}))
+	if err != nil {
+		return fmt.Errorf("helm FAILED: %s", err)
+	}
+
+	return
+}
+
+func CheckModuleHelmChart(moduleName string) (err error) {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
 		return fmt.Errorf("no such module %s", moduleName)
@@ -144,20 +170,28 @@ func RunModuleHelm(moduleName string, ValuesPath string) error {
 
 	chartPath := filepath.Join(module.Path, "Chart.yaml")
 
-	if _, err := os.Stat(chartPath); !os.IsNotExist(err) {
-		rlog.Infof("Running module %s helm ...", moduleName)
+	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
+		return fmt.Errorf("No helm chart found for module '%s' in %s", module.Name, chartPath)
+	}
+	return
+}
 
-		helmReleaseName := moduleName
+func GenerateHelmReleaseName(moduleName string) string {
+	return moduleName
+}
 
-		err := execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", ValuesPath}))
-		if err != nil {
-			return fmt.Errorf("helm FAILED: %s", err)
-		}
-	} else {
-		rlog.Debugf("No helm chart found for module %s in %s", moduleName, chartPath)
+func CleanupModule(moduleName string) {
+	rlog.Infof("Running module '%s': cleanup ...", moduleName)
+
+	err := CheckModuleHelmChart(moduleName)
+	if err != nil {
+		rlog.Debug("cleanup module: %s", err)
+		return
 	}
 
-	return nil
+	helmReleaseName := GenerateHelmReleaseName(moduleName)
+
+	helm.HelmDeleteSingleFailedRevision(helmReleaseName)
 }
 
 func runGlobalHook(hooksDir, hookName string, valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
@@ -480,4 +514,12 @@ func dumpGlobalHooksValuesYaml() (string, error) {
 }
 func prepareGlobalValues() map[interface{}]interface{} {
 	return merge_values.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues)
+}
+func readValues() (map[interface{}]interface{}, error) {
+	path := filepath.Join(WorkingDir, "modules", "values.yaml")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return make(map[interface{}]interface{}), nil
+	}
+
+	return readValuesYamlFile(path)
 }

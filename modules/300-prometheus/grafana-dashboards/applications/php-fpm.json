@@ -1,10 +1,11 @@
 {
+  "__inputs": [],
   "__requires": [
     {
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -30,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521732361442,
+  "iteration": 1522522563469,
   "links": [],
   "panels": [
     {
@@ -38,7 +39,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 9,
@@ -69,12 +70,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (pod, namespace) (irate(phpfpm_accepted_connections_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (pod, namespace) (rate(phpfpm_accepted_connections_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }}",
           "refId": "A",
           "step": 4
@@ -121,7 +122,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "description": "",
       "fill": 0,
       "gridPos": {
@@ -147,7 +148,7 @@
       "nullPointMode": "null",
       "percentage": false,
       "pointradius": 1,
-      "points": true,
+      "points": false,
       "renderer": "flot",
       "seriesOverrides": [
         {
@@ -159,7 +160,7 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (namespace, pod) (phpfpm_listen_queue_length_connections{namespace=~\"$namespace\", pod=~\"$pod\"})",
@@ -219,7 +220,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -263,7 +264,7 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (namespace, pod) (phpfpm_processes_total{namespace=~\"$namespace\", pod=~\"$pod\"})",
@@ -331,7 +332,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -364,7 +365,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace, pod) (irate(phpfpm_slow_requests_total{pod=~\"$pod\", namespace=~\"namespace\"}[5m]))",
+          "expr": "sum by (namespace, pod) (rate(phpfpm_slow_requests_total{pod=~\"$pod\", namespace=~\"namespace\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -408,7 +409,7 @@
       ]
     }
   ],
-  "refresh": "5m",
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -416,12 +417,12 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -431,7 +432,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -451,7 +452,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Controller Kind",
@@ -471,7 +472,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Controller Name",
@@ -491,7 +492,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 2,
         "includeAll": true,
         "label": "",
@@ -511,7 +512,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Pod",
@@ -531,7 +532,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -562,5 +563,5 @@
   "timezone": "browser",
   "title": "PHP-FPM",
   "uid": "YFjpuvzik",
-  "version": 2
+  "version": 4
 }

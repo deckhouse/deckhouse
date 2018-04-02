@@ -36,6 +36,7 @@ spec:
         - --kubelet-service=kube-system/kubelet
         - --config-reloader-image=quay.io/coreos/configmap-reload:v0.0.1
         image: quay.io/coreos/prometheus-operator:v0.17.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus-operator/prometheus-operator:{{ $.Values.global.modulesImages.tags.prometheusOperator.prometheusOperator }}
         name: prometheus-operator
         ports:
         - containerPort: 8080
@@ -51,6 +52,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 65534
       serviceAccountName: prometheus-operator
+      imagePullSecrets:
+      - name: antiopa-registry
 ---
 apiVersion: v1
 kind: Service
@@ -61,10 +64,12 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
     app: prometheus-operator
+    prometheus-target: prometheus-operator
 spec:
   type: ClusterIP
+  clusterIP: None
   ports:
-  - name: http
+  - name: http-metrics
     port: 8080
     targetPort: http
     protocol: TCP

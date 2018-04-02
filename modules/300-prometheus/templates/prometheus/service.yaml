@@ -8,12 +8,17 @@ metadata:
     module: {{ $.Chart.Name }}
     app: prometheus
     prometheus: main
+    prometheus-target: prometheus
 spec:
   type: ClusterIP
   clusterIP: None
   ports:
   - name: web
     port: 9090
+    protocol: TCP
+    targetPort: web
+  - name: http-metrics
+    port: 9091
     protocol: TCP
     targetPort: web
   selector:

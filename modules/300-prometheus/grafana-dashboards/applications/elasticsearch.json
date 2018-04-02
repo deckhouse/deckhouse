@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521734628515,
+  "iteration": 1522522178669,
   "links": [],
   "panels": [
     {
@@ -57,7 +57,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "none",
@@ -114,7 +114,7 @@
           "expr": "sum(elasticsearch_cluster_health_number_of_nodes{namespace=\"$namespace\", cluster=~\"$cluster\"})",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "elasticsearch_cluster_health_number_of_nodes",
           "refId": "A",
@@ -145,7 +145,7 @@
         "rgba(237, 204, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": null,
       "editable": true,
       "error": false,
@@ -203,7 +203,7 @@
           "expr": "elasticsearch_cluster_health_status{namespace=\"$namespace\", cluster=~\"$cluster\", color=\"red\"} * 4 + on (namespace)\nelasticsearch_cluster_health_status{namespace=\"$namespace\", cluster=~\"$cluster\", color=\"yellow\"} * 2 + on (namespace)\nelasticsearch_cluster_health_status{namespace=\"$namespace\", cluster=~\"$cluster\", color=\"green\"}",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "elasticsearch_cluster_health_number_of_nodes",
           "refId": "A",
@@ -244,7 +244,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -301,7 +301,7 @@
         {
           "expr": "sum(elasticsearch_jvm_memory_max_bytes{namespace=\"$namespace\", cluster=~\"$cluster\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
           "refId": "A",
@@ -330,7 +330,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -387,7 +387,7 @@
         {
           "expr": "sum(elasticsearch_jvm_memory_used_bytes{namespace=~\"$namespace\", cluster=~\"$cluster\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 240
@@ -415,7 +415,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -472,7 +472,7 @@
         {
           "expr": "sum(elasticsearch_jvm_memory_max_bytes{namespace=~\"$namespace\", cluster=~\"$cluster\"}) - sum(elasticsearch_jvm_memory_used_bytes{namespace=~\"$namespace\", cluster=~\"$cluster\"}) ",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
           "step": 240
@@ -506,7 +506,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -539,12 +539,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name) (elasticsearch_indices_docs{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{name}}",
               "refId": "A",
               "step": 20
@@ -590,7 +590,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -623,12 +623,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name) (elasticsearch_indices_store_size_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }}",
               "refId": "B",
               "step": 20
@@ -689,7 +689,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -718,7 +718,7 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "bucketAggs": [
@@ -731,9 +731,9 @@
                 }
               ],
               "dsType": "elasticsearch",
-              "expr": "avg(irate(elasticsearch_process_cpu_time_seconds_sum{namespace=~\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[5m])) by (name)",
+              "expr": "avg(rate(elasticsearch_process_cpu_time_seconds_sum{namespace=~\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv])) by (name)",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }}",
               "metric": "elasticsearch_breakers_tripped",
               "metrics": [
@@ -788,7 +788,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -821,20 +821,20 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name) (irate(elasticsearch_transport_rx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[5m]))",
+              "expr": "sum by (name) (rate(elasticsearch_transport_rx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} RX",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by (name)  (irate(elasticsearch_transport_tx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[5m])) * -1",
+              "expr": "sum by (name)  (rate(elasticsearch_transport_tx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv])) * -1",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} TX",
               "refId": "B",
               "step": 20
@@ -880,7 +880,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 0,
@@ -913,12 +913,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name) (elasticsearch_filesystem_data_free_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{name}}",
               "refId": "C",
               "step": 20
@@ -964,7 +964,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 0,
@@ -997,12 +997,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name) (elasticsearch_filesystem_data_available_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{name}}",
               "refId": "C",
               "step": 20
@@ -1063,7 +1063,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1072,7 +1072,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 17
+            "y": 10
           },
           "id": 1,
           "legend": {
@@ -1096,13 +1096,13 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name, type, cluster) (elasticsearch_thread_pool_active_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"})",
               "format": "time_series",
               "interval": "",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ type }}",
               "refId": "A",
               "step": 20
@@ -1148,13 +1148,13 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 17
+            "y": 10
           },
           "id": 70,
           "legend": {
@@ -1178,12 +1178,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name, type, cluster) (irate(elasticsearch_thread_pool_completed_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[5m]))",
+              "expr": "sum by (name, type, cluster) (rate(elasticsearch_thread_pool_completed_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ type }}",
               "refId": "A",
               "step": 20
@@ -1230,7 +1230,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1239,7 +1239,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 23
+            "y": 16
           },
           "height": "",
           "id": 64,
@@ -1271,7 +1271,7 @@
               "expr": "sum(elasticsearch_thread_pool_queue_count{name=~\"$node\", namespace=\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}) by (name, cluster, type)",
               "format": "time_series",
               "interval": "",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{type}}",
               "refId": "A",
               "step": 20
@@ -1317,7 +1317,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1326,7 +1326,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 23
+            "y": 16
           },
           "id": 66,
           "legend": {
@@ -1354,10 +1354,10 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name, type, cluster) (irate(elasticsearch_thread_pool_rejected_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[5m]))",
+              "expr": "sum by (name, type, cluster) (rate(elasticsearch_thread_pool_rejected_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[$__interval_rv]))",
               "format": "time_series",
               "interval": "",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ type }}",
               "refId": "A",
               "step": 20
@@ -1418,13 +1418,13 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 24
+            "y": 11
           },
           "id": 69,
           "legend": {
@@ -1448,12 +1448,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name) (elasticsearch_indices_translog_size_in_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }}",
               "refId": "A",
               "step": 20
@@ -1500,13 +1500,13 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 24
+            "y": 11
           },
           "id": 71,
           "legend": {
@@ -1530,12 +1530,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name) (irate(elasticsearch_indices_translog_size_in_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[5m]))",
+              "expr": "sum by (name) (rate(elasticsearch_indices_translog_size_in_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }}",
               "refId": "A",
               "step": 20
@@ -1597,7 +1597,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1606,7 +1606,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 25
+            "y": 12
           },
           "id": 65,
           "legend": {
@@ -1633,10 +1633,10 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name) (irate(elasticsearch_jvm_gc_collection_seconds_sum{cluster=~\"$cluster\", namespace=~\"$namespace\", name=~\"$node\"}[5m]))",
+              "expr": "sum by (name) (rate(elasticsearch_jvm_gc_collection_seconds_sum{cluster=~\"$cluster\", namespace=~\"$namespace\", name=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
               "interval": "",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }}",
               "refId": "A",
               "step": 10
@@ -1697,13 +1697,13 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 26
+            "y": 13
           },
           "id": 76,
           "legend": {
@@ -1727,12 +1727,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (name, breaker) (elasticsearch_breakers_limit_size_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ breaker }}",
               "refId": "A",
               "step": 30
@@ -1779,13 +1779,13 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 26
+            "y": 13
           },
           "id": 77,
           "legend": {
@@ -1814,7 +1814,7 @@
             {
               "expr": "sum by (name, breaker) (elasticsearch_breakers_estimated_size_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ breaker }}",
               "refId": "A",
               "step": 30
@@ -1861,13 +1861,13 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 26
+            "y": 13
           },
           "id": 78,
           "legend": {
@@ -1894,9 +1894,9 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name, breaker) (irate(elasticsearch_breakers_tripped{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[5m]))",
+              "expr": "sum by (name, breaker) (rate(elasticsearch_breakers_tripped{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ breaker }}",
               "refId": "A",
               "step": 30
@@ -1944,7 +1944,7 @@
       "type": "row"
     }
   ],
-  "refresh": "5m",
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -1952,12 +1952,12 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -1967,7 +1967,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -1987,7 +1987,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Cluster name",
@@ -2007,7 +2007,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Node",
@@ -2055,8 +2055,8 @@
       "30d"
     ]
   },
-  "timezone": "utc",
+  "timezone": "browser",
   "title": "Elasticsearch",
   "uid": "vS0Tevziz",
-  "version": 1
+  "version": 4
 }

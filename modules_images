@@ -124,7 +124,7 @@ EOF
     set +e
     (
       cd modules/${module_order}-${module}/images/${image}
-      if ! docker image build -t $full_image_name . ; then
+      if ! docker image build --squash -t $full_image_name . ; then
         sleep 0.1
         exit 1
       fi

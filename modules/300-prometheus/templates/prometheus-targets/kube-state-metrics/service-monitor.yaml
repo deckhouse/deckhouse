@@ -19,14 +19,40 @@ spec:
   endpoints:
   - port: https-main
     scheme: https
-    interval: 30s
     honorLabels: true
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_namespace]
+      regex: '.*()'
+      targetLabel: namespace
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      regex: '.*()'
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_service_name]
+      regex: '.*()'
+      targetLabel: service
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
+    - targetLabel: endpoint
+      replacement: main
   - port: https-self
     scheme: https
-    interval: 30s
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_namespace]
+      regex: '.*()'
+      targetLabel: namespace
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      regex: '.*()'
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_service_name]
+      regex: '.*()'
+      targetLabel: service
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
+    - targetLabel: endpoint
+      replacement: self

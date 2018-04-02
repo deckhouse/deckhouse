@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: redis
+  name: prometheus
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -20,4 +20,4 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: redis
+      prometheus-target: prometheus

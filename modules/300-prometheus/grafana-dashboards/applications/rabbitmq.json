@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 2121,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521734982665,
+  "iteration": 1522523103263,
   "links": [],
   "panels": [
     {
@@ -64,7 +64,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -119,7 +119,7 @@
         {
           "expr": "count(rabbitmq_up) >= sum (rabbitmq_up)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "rabbitmq_up",
           "refId": "A",
@@ -155,7 +155,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": 0,
       "fill": 1,
       "gridPos": {
@@ -187,12 +187,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_connectionsTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} connections",
           "metric": "rabbitmq_connectionsTotal",
           "refId": "A",
@@ -240,7 +240,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": 0,
       "fill": 1,
       "gridPos": {
@@ -271,12 +271,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_consumersTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} consumers",
           "metric": "rabbitmq_consumersTotal",
           "refId": "A",
@@ -324,7 +324,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": 0,
       "fill": 1,
       "gridPos": {
@@ -355,12 +355,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "rabbitmq_running{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{node}}",
           "metric": "rabbitmq_running",
           "refId": "A",
@@ -410,7 +410,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": 0,
       "fill": 1,
       "gridPos": {
@@ -442,12 +442,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_partitions{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "metric": "rabbitmq_consumersTotal",
           "refId": "A",
@@ -495,7 +495,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": 0,
       "fill": 1,
       "gridPos": {
@@ -526,12 +526,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_exchangesTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} exchanges",
           "metric": "rabbitmq_exchangesTotal",
           "refId": "A",
@@ -580,7 +580,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "decimals": 0,
       "fill": 1,
       "gridPos": {
@@ -611,12 +611,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_channelsTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} channels",
           "metric": "rabbitmq_channelsTotal",
           "refId": "A",
@@ -664,7 +664,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -694,12 +694,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (instance) (rabbitmq_queuesTotal{namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{instance}} queues",
           "metric": "rabbitmq_queuesTotal",
           "refId": "A",
@@ -747,7 +747,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -786,17 +786,17 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (instance) (irate(rabbitmq_exchange_messages_published_in_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum by (instance) (rate(rabbitmq_exchange_messages_published_in_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ instance }} in",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "sum by (instance) (irate(rabbitmq_exchange_messages_published_out_total{namespace=~\"$namespace\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum by (instance) (rate(rabbitmq_exchange_messages_published_out_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ instance }} out",
           "refId": "B",
           "step": 4
@@ -853,7 +853,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Sum of ready and unacknowledged messages (queue depth)",
           "fill": 1,
@@ -896,12 +896,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -910,7 +910,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_ram{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -958,7 +958,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Number of messages ready to be delivered to clients",
           "fill": 1,
@@ -1001,12 +1001,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_ready{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1015,7 +1015,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_ready_ram{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1063,7 +1063,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Number of messages delivered to clients but not yet acknowledged",
           "fill": 1,
@@ -1106,12 +1106,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_unacknowledged\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1120,7 +1120,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_messages_unacknowledged_ram\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1168,7 +1168,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Sum of the size of all message bodies in the queue. This does not include the message properties (including headers) or any overhead",
           "fill": 1,
@@ -1211,12 +1211,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1225,7 +1225,7 @@
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes_ram{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "RAM {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1273,7 +1273,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Like message_bytes but counting only those messages ready to be delivered to clients",
           "fill": 1,
@@ -1316,12 +1316,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes_ready{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1369,7 +1369,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Like message_bytes but counting only those messages delivered to clients but not yet acknowledged",
           "fill": 1,
@@ -1412,12 +1412,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_message_bytes_unacknowledged{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1465,7 +1465,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Total number of times messages have been read/written from/to the disk by this queue since it started",
           "fill": 1,
@@ -1513,21 +1513,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_disk_reads\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_disk_reads\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Reads {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_disk_writes\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_disk_writes\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Writes {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -1575,7 +1575,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Total number of persistent messages in the queue (will always be 0 for transient queues)",
           "fill": 1,
@@ -1623,12 +1623,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (queue_messages_persistent\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1676,7 +1676,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Like message_bytes but counting only those messages which are persistent",
           "fill": 1,
@@ -1724,12 +1724,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (queue_messages_persistent_bytes\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1777,7 +1777,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Bytes of memory consumed by the Erlang process associated with the queue, including stack, heap and internal structures",
           "fill": 1,
@@ -1825,12 +1825,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_memory{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Reads {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1878,7 +1878,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Number of consumers",
           "fill": 1,
@@ -1926,12 +1926,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_consumers\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -1979,7 +1979,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Fraction of the time that the queue is able to immediately deliver messages to consumers. This can be less than 1.0 if consumers are limited by network congestion or prefetch count",
           "fill": 1,
@@ -2027,12 +2027,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by(instance, durable, queue, vhost, policy) (rabbitmq_queue_consumer_utilisation\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}) * 100",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2080,7 +2080,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Count of messages published and confirmed",
           "fill": 1,
@@ -2128,21 +2128,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_published_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_published_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Published {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 10
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_confirmed_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_confirmed_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "Confirmed {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -2190,7 +2190,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Count of messages delivered in acknowledgement or no-acknowledgement mode to consumers",
           "fill": 1,
@@ -2238,21 +2238,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_delivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_delivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "ACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_delivered_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_delivered_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "noACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -2300,7 +2300,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Count of messages delivered in acknowledgement or no-acknowledgement mode in response to basic.get",
           "fill": 1,
@@ -2348,21 +2348,21 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_get_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_get_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "ACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
               "step": 20
             },
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_get_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_get_noack_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "noACK {{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "B",
@@ -2410,7 +2410,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Count of messages returned to publisher as unroutable",
           "fill": 1,
@@ -2458,12 +2458,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_returned_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_returned_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2511,7 +2511,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "decimals": 0,
           "description": "Count of subset of messages in deliver_get which had the redelivered flag set",
           "fill": 1,
@@ -2559,12 +2559,12 @@
           ],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by(instance, durable, queue, vhost, policy) (irate(rabbitmq_queue_messages_redelivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[5m]))",
+              "expr": "sum by(instance, durable, queue, vhost, policy) (rate(rabbitmq_queue_messages_redelivered_total\t{namespace=~\"$namespace\", instance=~\"$instance\", vhost=~\"$vhost\", queue=~\"$queue\"}[$__interval_rv]))",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{queue}} / Policy: {{policy}} / Durable:  {{durable}}",
               "metric": "rabbitmq_queue_messages",
               "refId": "A",
@@ -2627,7 +2627,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -2657,12 +2657,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_sockets_used{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} used",
               "metric": "",
               "refId": "A",
@@ -2671,7 +2671,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_sockets_total{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} total",
               "metric": "",
               "refId": "B",
@@ -2720,7 +2720,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -2750,12 +2750,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_node_mem_used{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} used",
               "metric": "rabbitmq_node_mem_used",
               "refId": "A",
@@ -2764,7 +2764,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_node_mem_limit{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} minimum",
               "metric": "node_mem",
               "refId": "B",
@@ -2812,7 +2812,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -2842,12 +2842,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_fd_used{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} used",
               "metric": "",
               "refId": "A",
@@ -2856,7 +2856,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_fd_total{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} total",
               "metric": "node_mem",
               "refId": "B",
@@ -2904,7 +2904,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$DS_PROMETHEUS",
+          "datasource": "$ds_prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -2934,12 +2934,12 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
-          "steppedLine": false,
+          "steppedLine": true,
           "targets": [
             {
               "expr": "sum by (instance, node) (rabbitmq_node_disk_free{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} free",
               "metric": "",
               "refId": "A",
@@ -2948,7 +2948,7 @@
             {
               "expr": "sum by (instance, node) (rabbitmq_node_disk_free_limit{namespace=~\"$namespace\", instance=~\"$instance\", node=~\"$node\"})",
               "format": "time_series",
-              "intervalFactor": 2,
+              "intervalFactor": 1,
               "legendFormat": "{{node}} minimum",
               "metric": "",
               "refId": "B",
@@ -3005,12 +3005,12 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -3020,7 +3020,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -3040,7 +3040,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Instance",
@@ -3060,7 +3060,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Node",
@@ -3080,7 +3080,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "vhost",
@@ -3100,7 +3100,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Queue",
@@ -3151,5 +3151,5 @@
   "timezone": "browser",
   "title": "RabbitMQ",
   "uid": "pZO_eDzmz",
-  "version": 1
+  "version": 5
 }

@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1521748439233,
+  "iteration": 1522523171705,
   "links": [],
   "panels": [
     {
@@ -53,7 +53,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -87,9 +87,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod, namespace) (irate(uwsgi_worker_average_response_time_seconds{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (pod, namespace) (rate(uwsgi_worker_average_response_time_seconds{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }}",
           "refId": "A",
           "step": 2
@@ -136,7 +136,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -170,9 +170,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod, namespace) (irate(uwsgi_worker_requests_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (pod, namespace) (rate(uwsgi_worker_requests_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }}",
           "refId": "A",
           "step": 2
@@ -219,7 +219,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -259,12 +259,12 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (namespace, pod) (uwsgi_worker_accepting{namespace=~\"$namespace\", pod=~\"$pod\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }} idle",
           "refId": "A",
           "step": 2
@@ -272,7 +272,7 @@
         {
           "expr": "sum by (namespace, pod) (uwsgi_workers{namespace=~\"$namespace\", pod=~\"$pod\"}) - sum by (namespace, pod) (uwsgi_worker_accepting{namespace=~\"$namespace\", pod=~\"$pod\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }} busy",
           "refId": "B",
           "step": 2
@@ -319,7 +319,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 8,
@@ -356,12 +356,12 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum by (namespace, pod) (uwsgi_socket_queue_length{namespace=~\"$namespace\", pod=~\"$pod\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }} length",
           "refId": "A",
           "step": 2
@@ -369,7 +369,7 @@
         {
           "expr": "sum by (namespace, pod) (uwsgi_socket_max_queue_length{namespace=~\"$namespace\", pod=~\"$pod\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }} max",
           "refId": "B",
           "step": 2
@@ -412,7 +412,7 @@
       ]
     }
   ],
-  "refresh": "5m",
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -425,7 +425,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -435,7 +435,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -455,7 +455,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Controller Kind",
@@ -475,7 +475,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Controller Name",
@@ -495,7 +495,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 2,
         "includeAll": true,
         "label": "",
@@ -515,7 +515,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
         "label": "Pod",
@@ -535,7 +535,7 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -566,5 +566,5 @@
   "timezone": "browser",
   "title": "uWSGI",
   "uid": "7v6fcOkmz",
-  "version": 1
+  "version": 4
 }

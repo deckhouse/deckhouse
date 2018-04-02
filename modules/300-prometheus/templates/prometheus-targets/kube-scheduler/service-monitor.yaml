@@ -12,15 +12,18 @@ spec:
   endpoints:
 {{- if not (eq .Values.global.cluster.type "Manual") }}
   - port: http-metrics
-    interval: 30s
 {{- else }}
   - port: https-metrics
     scheme: https
-    interval: 30s
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
 {{- end }}
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
   selector:
     matchLabels:
       heritage: antiopa

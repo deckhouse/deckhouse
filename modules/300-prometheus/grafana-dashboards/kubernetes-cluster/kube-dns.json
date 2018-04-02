@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 3152,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522088332939,
+  "iteration": 1522625393320,
   "links": [],
   "panels": [
     {
@@ -59,7 +59,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 7,
@@ -100,17 +100,17 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_hits{pod=~\"$pod\"}[1m]) + rate(kubedns_dnsmasq_misses{pod=~\"$pod\"}[1m])",
+          "expr": "rate(kubedns_dnsmasq_hits{job=\"kube-dns\", instance=~\"$instance\"}[1m]) + rate(kubedns_dnsmasq_misses{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_hits{pod=~\"$pod\"}[1m]) + rate(kubedns_dnsmasq_misses{pod=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", instance=~\"$instance\"}[1m]) + rate(kubedns_dnsmasq_misses{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -158,7 +158,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 3,
@@ -199,17 +199,17 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_errors{pod=~\"$pod\"}[1m])",
+          "expr": "rate(kubedns_dnsmasq_errors{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_errors{pod=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(kubedns_dnsmasq_errors{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -261,7 +261,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -313,7 +313,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(kubedns_dnsmasq_max_size{pod=~\"$pod\"})",
+          "expr": "max(kubedns_dnsmasq_max_size{job=\"kube-dns\", instance=~\"$instance\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -334,10 +334,10 @@
     },
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 6,
@@ -357,7 +357,7 @@
         "total": false,
         "values": true
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
@@ -380,17 +380,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(kubedns_dnsmasq_hits{pod=~\"$pod\"}[1m])) / (sum(rate(kubedns_dnsmasq_hits{pod=~\"$pod\"}[1m])) + sum(rate(kubedns_dnsmasq_misses{pod=~\"$pod\"}[1m])))",
+          "expr": "sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) / (sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) + sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Hits",
           "refId": "A"
         },
         {
-          "expr": " sum(rate(kubedns_dnsmasq_misses{pod=~\"$pod\"}[1m])) / (sum(rate(kubedns_dnsmasq_hits{pod=~\"$pod\"}[1m])) + sum(rate(kubedns_dnsmasq_misses{pod=~\"$pod\"}[1m])))",
+          "expr": " sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) / (sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) + sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Misses",
           "refId": "B"
@@ -438,7 +438,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 6,
@@ -478,17 +478,17 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_insertions[1m])",
+          "expr": "rate(kubedns_dnsmasq_insertions{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_insertions[1m]))",
+          "expr": "sum(rate(kubedns_dnsmasq_insertions{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -536,7 +536,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 6,
@@ -576,17 +576,17 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_evictions[1m])",
+          "expr": "rate(kubedns_dnsmasq_evictions{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_evictions[1m]))",
+          "expr": "sum(rate(kubedns_dnsmasq_evictions{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -647,7 +647,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 7,
@@ -688,19 +688,19 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_count_total{pod=~\"$pod\"}[1m])) by (pod)",
+          "expr": "sum(rate(skydns_skydns_dns_request_count_total{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "metric": "skydns_skydns_dns_request_count_total",
           "refId": "A",
           "step": 60
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_count_total{pod=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(skydns_skydns_dns_request_count_total{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -747,7 +747,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 6,
@@ -787,19 +787,19 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_error_count_total{pod=~\"$pod\"}[1m])) by (pod)",
+          "expr": "sum(rate(skydns_skydns_dns_error_count_total{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "metric": "skydns_skydns_dns_error_count_total",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_error_count_total{pod=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(skydns_skydns_dns_error_count_total{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -846,7 +846,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 4,
       "gridPos": {
         "h": 6,
@@ -886,19 +886,19 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{pod=~\"$pod\"}[1m])) by (pod)",
+          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "metric": "skydns_skydns_dns_cachemiss_count_total",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{pod=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -945,7 +945,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
         "h": 6,
@@ -974,7 +974,8 @@
       "seriesOverrides": [
         {
           "alias": "Overall",
-          "linewidth": 5,
+          "color": "#58140c",
+          "linewidth": 2,
           "steppedLine": false
         }
       ],
@@ -983,19 +984,19 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod) * 1000000",
+          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) by (instance) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) by (instance) * 1000000",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "metric": "skydns_skydns_dns_request_duration_seconds_sum",
           "refId": "A",
           "step": 60
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{pod=~\"$pod\"}[1m])) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{pod=~\"$pod\"}[1m])) * 1000000",
+          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{job=\"kube-dns\", instance=~\"$instance\"}[$__interval_rv])) * 1000000",
           "format": "time_series",
-          "interval": "30s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Overall",
           "refId": "B"
@@ -1052,7 +1053,7 @@
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -1062,14 +1063,14 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
-        "label": "Pod",
+        "label": "Instance",
         "multi": false,
-        "name": "pod",
+        "name": "instance",
         "options": [],
-        "query": "label_values(skydns_skydns_dns_cachemiss_count_total, pod)",
+        "query": "label_values(up{job=\"kube-dns\"}, instance)",
         "refresh": 2,
         "regex": "",
         "sort": 0,
@@ -1119,5 +1120,5 @@
   "timezone": "browser",
   "title": "kube-dns",
   "uid": "t8S7Kbzmk",
-  "version": 2
+  "version": 9
 }

@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.0.3"
+      "version": "5.0.4"
     },
     {
       "type": "panel",
@@ -38,7 +38,7 @@
   "gnetId": 22,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521732995625,
+  "iteration": 1522626315324,
   "links": [],
   "panels": [
     {
@@ -47,7 +47,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -79,12 +79,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - (avg by (cpu) (irate(node_cpu{mode=\"idle\", instance=\"$server\"}[5m])) * 100)",
+          "expr": "100 - (avg by (cpu) (rate(node_cpu{mode=\"idle\", instance=\"$node\"}[$__interval_rv])) * 100)",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 10,
+          "intervalFactor": 1,
           "legendFormat": "{{cpu}}",
           "refId": "A",
           "step": 50
@@ -133,7 +134,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -165,27 +166,30 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "node_load1{instance=\"$server\"}",
-          "intervalFactor": 4,
+          "expr": "node_load1{instance=\"$node\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 1m",
           "refId": "A",
           "step": 20,
           "target": ""
         },
         {
-          "expr": "node_load5{instance=\"$server\"}",
-          "intervalFactor": 4,
+          "expr": "node_load5{instance=\"$node\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 5m",
           "refId": "B",
           "step": 20,
           "target": ""
         },
         {
-          "expr": "node_load15{instance=\"$server\"}",
-          "intervalFactor": 4,
+          "expr": "node_load15{instance=\"$node\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "load 15m",
           "refId": "C",
           "step": 20,
@@ -235,7 +239,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -276,38 +280,42 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "node_memory_MemTotal{instance=\"$server\"} - node_memory_MemFree{instance=\"$server\"} - node_memory_Buffers{instance=\"$server\"} - node_memory_Cached{instance=\"$server\"}",
+          "expr": "node_memory_MemTotal{instance=\"$node\"} - node_memory_MemFree{instance=\"$node\"} - node_memory_Buffers{instance=\"$node\"} - node_memory_Cached{instance=\"$node\"}",
+          "format": "time_series",
           "hide": false,
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory used",
           "metric": "",
           "refId": "C",
           "step": 10
         },
         {
-          "expr": "node_memory_Buffers{instance=\"$server\"}",
+          "expr": "node_memory_Buffers{instance=\"$node\"}",
+          "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "memory buffers",
           "metric": "",
           "refId": "E",
           "step": 10
         },
         {
-          "expr": "node_memory_Cached{instance=\"$server\"}",
-          "intervalFactor": 2,
+          "expr": "node_memory_Cached{instance=\"$node\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "memory cached",
           "metric": "",
           "refId": "F",
           "step": 10
         },
         {
-          "expr": "node_memory_MemFree{instance=\"$server\"}",
-          "intervalFactor": 2,
+          "expr": "node_memory_MemFree{instance=\"$node\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "memory free",
           "metric": "",
           "refId": "D",
@@ -360,7 +368,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "percent",
@@ -414,8 +422,9 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "((node_memory_MemTotal{instance=\"$server\"} - node_memory_MemFree{instance=\"$server\"}  - node_memory_Buffers{instance=\"$server\"} - node_memory_Cached{instance=\"$server\"}) / node_memory_MemTotal{instance=\"$server\"}) * 100",
-          "intervalFactor": 2,
+          "expr": "((node_memory_MemTotal{instance=\"$node\"} - node_memory_MemFree{instance=\"$node\"}  - node_memory_Buffers{instance=\"$node\"} - node_memory_Cached{instance=\"$node\"}) / node_memory_MemTotal{instance=\"$node\"}) * 100",
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 60,
           "target": ""
@@ -440,7 +449,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -485,27 +494,30 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (instance) (rate(node_disk_bytes_read{instance=\"$server\"}[2m]))",
+          "expr": "sum by (instance) (rate(node_disk_bytes_read{instance=\"$node\"}[$__interval_rv]))",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 4,
+          "intervalFactor": 1,
           "legendFormat": "read",
           "refId": "A",
           "step": 20,
           "target": ""
         },
         {
-          "expr": "sum by (instance) (rate(node_disk_bytes_written{instance=\"$server\"}[2m]))",
-          "intervalFactor": 4,
+          "expr": "sum by (instance) (rate(node_disk_bytes_written{instance=\"$node\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "written",
           "refId": "B",
           "step": 20
         },
         {
-          "expr": "sum by (instance) (rate(node_disk_io_time_ms{instance=\"$server\"}[2m]))",
-          "intervalFactor": 4,
+          "expr": "sum by (instance) (rate(node_disk_io_time_ms{instance=\"$node\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
           "legendFormat": "io time",
           "refId": "C",
           "step": 20
@@ -557,7 +569,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "format": "percentunit",
@@ -611,8 +623,9 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(sum(node_filesystem_size{device!=\"rootfs\",instance=\"$server\"}) - sum(node_filesystem_free{device!=\"rootfs\",instance=\"$server\"})) / sum(node_filesystem_size{device!=\"rootfs\",instance=\"$server\"})",
-          "intervalFactor": 2,
+          "expr": "(sum(node_filesystem_size{device!=\"rootfs\",instance=\"$node\"}) - sum(node_filesystem_free{device!=\"rootfs\",instance=\"$node\"})) / sum(node_filesystem_size{device!=\"rootfs\",instance=\"$node\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
           "refId": "A",
           "step": 60,
           "target": ""
@@ -637,7 +650,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -674,12 +687,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes{instance=\"$server\",device!~\"lo\"}[5m])",
+          "expr": "rate(node_network_receive_bytes{instance=\"$node\",device!~\"lo\"}[$__interval_rv])",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{device}}",
           "refId": "A",
           "step": 10,
@@ -729,7 +743,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$DS_PROMETHEUS",
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -766,12 +780,13 @@
       ],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_transmit_bytes{instance=\"$server\",device!~\"lo\"}[5m])",
+          "expr": "rate(node_network_transmit_bytes{instance=\"$node\",device!~\"lo\"}[$__interval_rv])",
+          "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{device}}",
           "refId": "B",
           "step": 10,
@@ -816,7 +831,7 @@
       ]
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
@@ -824,12 +839,12 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "prometheus"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
-        "name": "DS_PROMETHEUS",
+        "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
@@ -839,14 +854,14 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$DS_PROMETHEUS",
+        "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": false,
-        "label": null,
+        "label": "Node",
         "multi": false,
-        "name": "server",
+        "name": "node",
         "options": [],
-        "query": "label_values(node_boot_time, instance)",
+        "query": "label_values(up{job=\"node-exporter\"}, instance)",
         "refresh": 1,
         "regex": "",
         "sort": 0,
@@ -859,7 +874,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -890,5 +905,5 @@
   "timezone": "browser",
   "title": "Nodes",
   "uid": "HB3tuvkmk",
-  "version": 2
+  "version": 8
 }

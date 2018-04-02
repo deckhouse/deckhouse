@@ -12,9 +12,21 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: http-metrics-skydns
-    interval: 30s
+    relabelings:
+    - regex: namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
+    - targetLabel: endpoint
+      replacement: skydns
   - port: http-metrics-dnsmasq
-    interval: 30s
+    relabelings:
+    - regex: namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
+    - targetLabel: endpoint
+      replacement: dnsmasq
   selector:
     matchLabels:
       heritage: antiopa
