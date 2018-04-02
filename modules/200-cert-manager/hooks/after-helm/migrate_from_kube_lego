@@ -13,7 +13,7 @@ cleanup_filter='. | del(
     .status
   )'
 
-if kubectl get ns kube-lego; then
+if kubectl get ns kube-lego > /dev/null 2> /dev/null ; then
   kubectl scale -n kube-lego --replicas=0 deployment kube-lego
 
   kubectl get secret -o json -n kube-lego --export kube-lego-account | \
@@ -24,7 +24,6 @@ if kubectl get ns kube-lego; then
   helm --tiller-namespace antiopa delete --purge kube-lego
   kubectl delete clusterrolebinding lego || true
   kubectl delete clusterrole lego        || true
-
-  kubectl scale -n kube-cert-manager --replicas=1 deployment cert-manager
-  kubectl scale -n kube-cert-manager --replicas=1 deployment cert-manager-ingress-shim
 fi
+
+kubectl scale -n kube-cert-manager --replicas=1 deployment cert-manager

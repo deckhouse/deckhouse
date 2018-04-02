@@ -6,8 +6,8 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    app: cert-manager
 spec:
+  # Миграция 2018-04-01 https://github.com/deckhouse/deckhouse/merge_requests/89
   replicas: 0
   template:
     metadata:
@@ -32,7 +32,7 @@ spec:
       serviceAccount: cert-manager
       serviceAccountName: cert-manager
       containers:
-        - name: {{ .Chart.Name }}
+        - name: cert-manager
           image: "quay.io/jetstack/cert-manager-controller:v0.2.3"
           args:
           - --cluster-resource-namespace=kube-cert-manager
@@ -41,41 +41,6 @@ spec:
             requests:
               cpu: 10m
               memory: 32Mi
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: cert-manager-ingress-shim
-  namespace: kube-cert-manager
-  labels:
-    app: cert-manager-ingress-shim
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-spec:
-  replicas: 0
-  template:
-    metadata:
-      labels:
-        app: cert-manager
-    spec:
-{{- if and (hasKey .Values.certManager "nodeSelector") (.Values.certManager.nodeSelector) }}
-      nodeSelector:
-{{ .Values.certManager.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.certManager "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.certManager "tolerations") (.Values.certManager.tolerations) }}
-      tolerations:
-{{ .Values.certManager.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.certManager "tolerations")) .Values.global.cluster.hasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
-      serviceAccount: cert-manager
-      serviceAccountName: cert-manager
-      containers:
         - name: ingress-shim
           image: "quay.io/jetstack/cert-manager-ingress-shim:v0.2.3"
           imagePullPolicy: Always
