@@ -301,96 +301,105 @@ func RunModules() {
 func RunModule(moduleName string) {
 	vals, err := PrepareModuleValues(moduleName)
 	if err != nil {
-		rlog.Errorf("Cannot prepare values for module %s: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
-	rlog.Debugf("Prepared module %s VALUES:\n%s", moduleName, valuesToString(vals))
+	rlog.Debugf("Module '%s': Prepared VALUES:\n%s", moduleName, valuesToString(vals))
 
 	valuesPath, err := dumpModuleValuesYaml(moduleName, vals)
 	if err != nil {
-		rlog.Errorf("Cannot dump values yaml for module %s: %s", moduleName, err)
+		rlog.Errorf("Module '%s': dump values yaml error: %s", moduleName, err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
 
-	CleanupModule(moduleName)
+	err = CleanupModule(moduleName)
+	if err != nil {
+		rlog.Error(err)
+		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
+		return
+	}
 
 	err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s before-helm hooks error: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
 
 	err = RunModuleHelm(moduleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s run error: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 	}
 
 	err = RunModuleAfterHelmHooks(moduleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s after-helm hooks error: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
 }
 
-func CheckModuleHelmChart(moduleName string) (err error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
-	}
-
+func CheckModuleHelmChart(module Module) (chartExists bool, err error) {
 	chartPath := filepath.Join(module.Path, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
-		return fmt.Errorf("No helm chart found for module '%s' in %s", module.Name, chartPath)
+		return false, fmt.Errorf("chart file not found '%s'", module.Name, chartPath)
 	}
-	return
+	return true, nil
 }
 
 func GenerateHelmReleaseName(moduleName string) string {
 	return moduleName
 }
 
-func CleanupModule(moduleName string) {
-	rlog.Infof("Running module '%s': cleanup ...", moduleName)
-
-	err := CheckModuleHelmChart(moduleName)
-	if err != nil {
-		rlog.Debug("cleanup module: %s", err)
-		return
+func CleanupModule(moduleName string) (err error) {
+	module, hasModule := modulesByName[moduleName]
+	if !hasModule {
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
+
+	chartExists, err := CheckModuleHelmChart(module)
+	if !chartExists {
+		if err != nil {
+			rlog.Debugf("Module '%s': cleanup not needed: %s", moduleName, err)
+			return nil
+		}
+	}
+
+	rlog.Infof("Module '%s': running cleanup ...", moduleName)
 
 	helmReleaseName := GenerateHelmReleaseName(moduleName)
 
 	HelmDeleteSingleFailedRevision(helmReleaseName)
+	return nil
 }
 
 func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 	hooksDir := filepath.Join(module.Path, "hooks", "before-helm")
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		rlog.Debugf("Module '%s': before-helm hooks not needed: %s", module.Name, err)
 		return nil
 	}
 
 	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("Module '%s': before-helm hooks find error: %s", module.Name, err)
 	}
 
 	for _, hookName := range hooksNames {
-		rlog.Infof("Running module %s before-helm hook %s ...", moduleName, hookName)
+		rlog.Infof("Module '%s': running before-helm hook '%s' ...", module.Name, hookName)
 
 		err := execCommand(makeModuleCommand(module.Path, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
 		if err != nil {
-			return fmt.Errorf("before-helm hook %s FAILED: %s", hookName, err)
+			return fmt.Errorf("Module '%s': before-helm hook '%s' FAILED: %s", module.Name, hookName, err)
 		}
 	}
 
@@ -400,26 +409,27 @@ func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
 func RunModuleAfterHelmHooks(moduleName string, ValuesPath string) error {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 
 	hooksDir := filepath.Join(module.Path, "hooks", "after-helm")
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		rlog.Debugf("Module '%s': after-helm hooks not needed: %s", module.Name, err)
 		return nil
 	}
 
 	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("Module '%s': after-helm hooks find error: %s", module.Name, err)
 	}
 
 	for _, hookName := range hooksNames {
-		rlog.Infof("Running module %s after-helm hook %s ...", moduleName, hookName)
+		rlog.Infof("Module '%s': running after-helm hook '%s' ...", module.Name, hookName)
 
 		err := execCommand(makeModuleCommand(module.Path, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
 		if err != nil {
-			return fmt.Errorf("after-helm hook %s FAILED: %s", hookName, err)
+			return fmt.Errorf("Module '%s': after-helm hook '%s' FAILED: %s", module.Name, hookName, err)
 		}
 	}
 
@@ -429,31 +439,33 @@ func RunModuleAfterHelmHooks(moduleName string, ValuesPath string) error {
 func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 
-	rlog.Infof("Running module '%s': helm ...", module.Name)
-
-	err = CheckModuleHelmChart(moduleName)
-	if err != nil {
-		rlog.Debug("helm cannot run: %s", err)
-		return
+	chartExists, err := CheckModuleHelmChart(module)
+	if !chartExists {
+		if err != nil {
+			rlog.Debugf("Module '%s': helm not needed: %s", module.Name, err)
+			return nil
+		}
 	}
 
-	helmReleaseName := GenerateHelmReleaseName(moduleName)
+	rlog.Infof("Module '%s': running helm ...", module.Name)
+
+	helmReleaseName := GenerateHelmReleaseName(module.Name)
 
 	err = execCommand(makeModuleCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
 	if err != nil {
-		return fmt.Errorf("helm FAILED: %s", err)
+		return fmt.Errorf("Module '%s': helm FAILED: %s", module.Name, err)
 	}
 
-	return
+	return nil
 }
 
 func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
-		return nil, fmt.Errorf("no such module %s", moduleName)
+		return nil, fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 
 	valuesShPath := filepath.Join(module.Path, "initial_values")
@@ -462,7 +474,7 @@ func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error)
 		// Тупой тест, что файл executable.
 		// Т.к. antiopa всегда работает под root, то этого достаточно.
 		if statRes.Mode()&0111 != 0 {
-			rlog.Debugf("Running values generator %s ...", valuesShPath)
+			rlog.Debugf("Module '%s': running values generator '%s' ...", module.Name, valuesShPath)
 
 			var valuesYamlBuffer bytes.Buffer
 			cmd := exec.Command(valuesShPath)
@@ -471,27 +483,27 @@ func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error)
 			cmd.Stdout = &valuesYamlBuffer
 			err := execCommand(cmd)
 			if err != nil {
-				return nil, fmt.Errorf("Values generator %s error: %s", valuesShPath, err)
+				return nil, fmt.Errorf("Module '%s': Values generator '%s' error: %s", module.Name, valuesShPath, err)
 			}
 
 			var generatedValues map[interface{}]interface{}
 			err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
 			if err != nil {
-				return nil, fmt.Errorf("Got bad yaml from values generator %s: %s", valuesShPath, err)
+				return nil, fmt.Errorf("Module '%s': Got bad yaml from values generator '%s': %s", module.Name, valuesShPath, err)
 			}
-			rlog.Debugf("got VALUES from initial_values:\n%s", valuesToString(generatedValues))
+			rlog.Debugf("Module '%s': got VALUES from initial_values:\n%s", module.Name, valuesToString(generatedValues))
 
-			newModuleValues := MergeValues(generatedValues, kubeModulesValues[moduleName])
+			newModuleValues := MergeValues(generatedValues, kubeModulesValues[module.Name])
 
-			rlog.Debugf("Updating module %s VALUES in ConfigMap:\n%s", moduleName, valuesToString(newModuleValues))
+			rlog.Debugf("Module '%s': Updating VALUES in ConfigMap:\n%s", module.Name, valuesToString(newModuleValues))
 
-			err = SetModuleKubeValues(moduleName, newModuleValues)
+			err = SetModuleKubeValues(module.Name, newModuleValues)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Module '%s': set kube values error: %s", module.Name, err)
 			}
-			kubeModulesValues[moduleName] = newModuleValues
+			kubeModulesValues[module.Name] = newModuleValues
 		} else {
-			rlog.Warnf("Ignoring non executable file %s", valuesShPath)
+			rlog.Warnf("Module '%s': Ignoring non executable file '%s'", module.Name, valuesShPath)
 		}
 
 	}
@@ -523,6 +535,7 @@ func execCommand(cmd *exec.Cmd) error {
 func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
 	files, err := ioutil.ReadDir(Dir)
 	if err != nil {
+		err := fmt.Errorf("readdir error: %s", err)
 		return nil, err
 	}
 
