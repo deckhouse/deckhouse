@@ -79,13 +79,17 @@ spec:
         image: quay.io/brancz/kube-rbac-proxy:v0.2.0
         args:
         - "--secure-listen-address=127.0.0.1:10365"
-        - "--upstream=http://127.0.0.1:4001/"
+        - "--upstream=http://127.0.0.1:2379/"
 {{- end }}
       volumes:
       - name: config
         configMap:
           name: kube-prometheus-kube-master-proxy
       nodeSelector:
+{{- if eq .Values.global.cluster.type "ACS" }}
+        kubernetes.io/role: master
+{{- else }}
         node-role.kubernetes.io/master: ""
+{{- end }}
       tolerations:
       - operator: Exists
