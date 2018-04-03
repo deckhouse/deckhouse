@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+# Миграция 2018-04-03: https://github.com/deckhouse/deckhouse/merge_requests/187
+if kubectl -n kube-system get ds/kube-prometheus-kube-control-plane-proxy > /dev/null 2> /dev/null ; then
+  kubectl -n kube-system delete ds/kube-prometheus-kube-control-plane-proxy
+fi

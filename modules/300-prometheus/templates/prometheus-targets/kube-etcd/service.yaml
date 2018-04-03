@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: kube-prometheus-discovery-of-kube-etcd
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    kube-master-proxy-prometheus-target: etcd
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: kube-prometheus-kube-master-proxy
+  ports:
+  - name: etcd
+    port: 10364
+    targetPort: 10364
+    protocol: TCP
+{{- if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+  - name: etcd-events
+    port: 10366
+    targetPort: 10366
+    protocol: TCP
+{{- end }}

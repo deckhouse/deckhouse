@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-prometheus-kube-master-proxy
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kube-prometheus-kube-master-proxy
+data:
+  nginx.conf: |+
+    user nginx;
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+      worker_connections 1000;
+    }
+    
+    stream {
+      allow 192.168.0.0/16;
+      allow 100.0.0.0/8;
+      allow 10.0.0.0/8;
+      allow 172.16.0.0/12;
+      allow 127.0.0.0/8;
+      deny all;
+
+{{- if eq .Values.global.cluster.type "Manual" }}
+      server {
+        listen 10360;
+        proxy_pass 127.0.0.1:10361;
+      }
+    
+      server {
+        listen 10362;
+        proxy_pass 127.0.0.1:10363;
+      }
+
+      server {
+        listen 10364;
+        proxy_pass 127.0.0.1:10365;
+      }
+{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+      server {
+        listen 10364;
+        proxy_pass 127.0.0.1:10365;
+      }
+
+      server {
+        listen 10366;
+        proxy_pass 127.0.0.1:10367;
+      }
+{{- else if eq .Values.global.cluster.type "ACS" }}
+      server {
+        listen 10364;
+        proxy_pass 127.0.0.1:10365;
+      }
+{{- end }}
+    }
