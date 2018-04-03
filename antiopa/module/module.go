@@ -41,37 +41,42 @@ func RunModules() {
 func RunModuleOld(moduleName string) {
 	vals, err := PrepareModuleValues(moduleName)
 	if err != nil {
-		rlog.Errorf("Cannot prepare values for module %s: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
-	rlog.Debugf("Prepared module %s VALUES:\n%s", moduleName, valuesToString(vals))
+	rlog.Debugf("Module '%s': Prepared VALUES:\n%s", moduleName, valuesToString(vals))
 
 	valuesPath, err := dumpModuleValuesYaml(moduleName, vals)
 	if err != nil {
-		rlog.Errorf("Cannot dump values yaml for module %s: %s", moduleName, err)
+		rlog.Errorf("Module '%s': dump values yaml error: %s", moduleName, err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
 
-  CleanupModule(moduleName)
+	err = CleanupModule(moduleName)
+	if err != nil {
+		rlog.Error(err)
+		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
+		return
+	}
 
 	err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s before-helm hooks error: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
 
 	err = RunModuleHelm(moduleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s run error: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 	}
 
 	err = RunModuleAfterHelmHooks(moduleName, valuesPath)
 	if err != nil {
-		rlog.Errorf("Module %s after-helm hooks error: %s", moduleName, err)
+		rlog.Error(err)
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 		return
 	}
@@ -88,29 +93,30 @@ func RunModuleAfterHelmHooks(moduleName string, valuesPath string) error {
 func runModuleHooks(orderType string, moduleName string, valuesPath string) error {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 
 	hooksDir := filepath.Join(module.Path, "hooks", orderType)
 
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		rlog.Debugf("Module '%s': %s hooks not needed: %s", orderType, module.Name, err)
 		return nil
 	}
 
 	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("Module '%s': %s hooks find error: %s", module.Name, orderType, err)
 	}
 
 	for _, hookName := range hooksNames {
-		rlog.Infof("Running module %s %s hook %s ...", moduleName, orderType, hookName)
+		rlog.Infof("Module '%s': running %s hook '%s' ...", module.Name, orderType, hookName)
 
 		var kubeModuleConfigValuesChanged bool
 
 		configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := runModuleHook(module.Path, hooksDir, hookName, valuesPath)
 
 		if err != nil {
-			return fmt.Errorf("%s hook %s FAILED: %s", orderType, hookName, err)
+			return fmt.Errorf("Module '%s': %s hook '%s' FAILED: %s", module.Name, orderType, hookName, err)
 		}
 
 		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
@@ -118,14 +124,16 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 		}
 
 		if kubeModuleConfigValuesChanged {
-			rlog.Debugf("Updating module %s VALUES in ConfigMap:\n%s", module.Name, valuesToString(kubeModulesConfigValues[module.Name]))
+			rlog.Debugf("Module '%s': %s hook '%s': updating VALUES in ConfigMap:\n%s", module.Name, orderType, hookName, valuesToString(kubeModulesConfigValues[module.Name]))
 			err = kube_values_manager.SetModuleKubeValues(module.Name, kubeModulesConfigValues[module.Name])
 			if err != nil {
+				err = fmt.Errorf("Module '%s': %s hook '%s': set kube values error: %s", module.Name, orderType, hookName, err)
 				return err
 			}
 		}
 
 		if modulesDynamicValues[module.Name], _, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
+			err = fmt.Errorf("Module '%s': %s hook '%s': merge values error: %s", module.Name, orderType, hookName, err)
 			return err
 		}
 	}
@@ -141,57 +149,62 @@ func runModuleHook(modulePath, hooksDir, hookName string, valuesPath string) (ma
 func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
 	module, hasModule := modulesByName[moduleName]
 	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 
-	rlog.Infof("Running module '%s': helm ...", module.Name)
-
-	err = CheckModuleHelmChart(moduleName)
-	if err != nil {
-		rlog.Debug("helm cannot run: %s", err)
-		return
+	chartExists, err := CheckModuleHelmChart(module)
+	if !chartExists {
+		if err != nil {
+			rlog.Debugf("Module '%s': helm not needed: %s", module.Name, err)
+			return nil
+		}
 	}
+
+	rlog.Infof("Module '%s': running helm ...", module.Name)
 
 	helmReleaseName := GenerateHelmReleaseName(moduleName)
 
 	err = execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", ValuesPath}))
 	if err != nil {
-		return fmt.Errorf("helm FAILED: %s", err)
+		return fmt.Errorf("Module '%s': helm FAILED: %s", module.Name, err)
 	}
 
 	return
 }
 
-func CheckModuleHelmChart(moduleName string) (err error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("no such module %s", moduleName)
-	}
-
+func CheckModuleHelmChart(module Module) (chartExists bool, err error) {
 	chartPath := filepath.Join(module.Path, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
-		return fmt.Errorf("No helm chart found for module '%s' in %s", module.Name, chartPath)
+		return false, fmt.Errorf("chart file not found '%s'", module.Name, chartPath)
 	}
-	return
+	return true, nil
 }
 
 func GenerateHelmReleaseName(moduleName string) string {
 	return moduleName
 }
 
-func CleanupModule(moduleName string) {
-	rlog.Infof("Running module '%s': cleanup ...", moduleName)
-
-	err := CheckModuleHelmChart(moduleName)
-	if err != nil {
-		rlog.Debug("cleanup module: %s", err)
-		return
+func CleanupModule(moduleName string) (err error) {
+	module, hasModule := modulesByName[moduleName]
+	if !hasModule {
+		return fmt.Errorf("Module '%s': no such module", moduleName)
 	}
+
+	chartExists, err := CheckModuleHelmChart(module)
+	if !chartExists {
+		if err != nil {
+			rlog.Debugf("Module '%s': cleanup not needed: %s", moduleName, err)
+			return nil
+		}
+	}
+
+	rlog.Infof("Module '%s': running cleanup ...", moduleName)
 
 	helmReleaseName := GenerateHelmReleaseName(moduleName)
 
 	helm.HelmDeleteSingleFailedRevision(helmReleaseName)
+	return nil
 }
 
 func runGlobalHook(hooksDir, hookName string, valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
@@ -201,7 +214,7 @@ func runGlobalHook(hooksDir, hookName string, valuesPath string) (map[string]int
 
 func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
 	if _, hasModule := modulesByName[moduleName]; !hasModule {
-		return nil, fmt.Errorf("no such module %s", moduleName)
+		return nil, fmt.Errorf("Module '%s': no such module", moduleName)
 	}
 	return merge_values.MergeValues(globalConfigValues, globalModulesConfigValues[moduleName], kubeConfigValues, kubeModulesConfigValues[moduleName], dynamicValues, modulesDynamicValues[moduleName]), nil
 }
