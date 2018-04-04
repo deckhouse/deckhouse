@@ -27,10 +27,6 @@ type Module struct {
 	Path          string
 }
 
-type Hook struct {
-	Name string
-}
-
 func RunModules() {
 	retryModulesNamesQueue = make([]string, 0)
 	for _, moduleName := range modulesOrder {
@@ -172,7 +168,7 @@ func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
 	return
 }
 
-func CheckModuleHelmChart(module Module) (chartExists bool, err error) {
+func CheckModuleHelmChart(module *Module) (chartExists bool, err error) {
 	chartPath := filepath.Join(module.Path, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
@@ -321,7 +317,7 @@ func dumpModuleValuesYaml(moduleName string, values map[interface{}]interface{})
 	return dumpValuesYaml(fmt.Sprintf("%s.yaml", moduleName), values)
 }
 
-func readModuleValues(module Module) (map[interface{}]interface{}, error) {
+func readModuleValues(module *Module) (map[interface{}]interface{}, error) {
 	path := filepath.Join(module.Path, "values.yaml")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, nil
