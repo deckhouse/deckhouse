@@ -1,6 +1,7 @@
 package module
 
 import (
+	"encoding/json"
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -55,34 +56,50 @@ type Event struct {
 }
 
 type GlobalHook struct {
-	Hook
+	*Hook
 	Name string
 }
 
-func addGlobalHook(name string, config *GlobalHookConfig) {
-	globalHook := &GlobalHook{Hook{}, name}
+func NewGlobalHook() *GlobalHook {
+	globalHook := &GlobalHook{}
+	globalHook.Hook = NewHook()
+	return globalHook
+}
+
+func addGlobalHook(name string, config *GlobalHookConfig) (err error) {
+	var ok bool
+	globalHook := NewGlobalHook()
+	globalHook.Name = name
 
 	if config.BeforeAll != nil {
-		globalHook.Binding = append(globalHook.Binding, BeforeHelm)
-		globalHook.OrderByBinding[BeforeAll] = *config.BeforeAll
+		globalHook.Binding = append(globalHook.Binding, BeforeAll)
+		if globalHook.OrderByBinding[BeforeAll], ok = config.BeforeAll.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.BeforeAll, BeforeAll)
+		}
 		globalHooksOrder[BeforeAll] = append(globalHooksOrder[BeforeAll], globalHook)
 	}
 
 	if config.AfterAll != nil {
 		globalHook.Binding = append(globalHook.Binding, AfterAll)
-		globalHook.OrderByBinding[AfterAll] = *config.AfterAll
+		if globalHook.OrderByBinding[AfterAll], ok = config.AfterAll.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.AfterAll, AfterAll)
+		}
 		globalHooksOrder[AfterAll] = append(globalHooksOrder[AfterAll], globalHook)
 	}
 
 	if config.OnKubeNodeChange != nil {
 		globalHook.Binding = append(globalHook.Binding, OnKubeNodeChange)
-		globalHook.OrderByBinding[OnKubeNodeChange] = *config.OnKubeNodeChange
+		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnKubeNodeChange, OnKubeNodeChange)
+		}
 		globalHooksOrder[OnKubeNodeChange] = append(globalHooksOrder[OnKubeNodeChange], globalHook)
 	}
 
 	if config.OnStartup != nil {
 		globalHook.Binding = append(globalHook.Binding, OnStartup)
-		globalHook.OrderByBinding[OnStartup] = *config.OnStartup
+		if globalHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnStartup, OnStartup)
+		}
 		globalHooksOrder[OnStartup] = append(globalHooksOrder[OnStartup], globalHook)
 	}
 
@@ -93,64 +110,96 @@ func addGlobalHook(name string, config *GlobalHookConfig) {
 	}
 
 	globalHooksByName[name] = globalHook
+
+	return nil
 }
 
 type ModuleHook struct {
-	Hook
+	*Hook
 	Name string
 }
 
-func addModuleHook(moduleName, name string, config *ModuleHookConfig) {
-	moduleHook := &ModuleHook{Hook{}, name}
+func NewModuleHook() *ModuleHook {
+	moduleHook := &ModuleHook{}
+	moduleHook.Hook = NewHook()
+	return moduleHook
+}
+
+func addModuleHook(moduleName, name string, config *ModuleHookConfig) (err error) {
+	var ok bool
+	moduleHook := NewModuleHook()
+	moduleHook.Name = name
 
 	if config.BeforeHelm != nil {
 		moduleHook.Binding = append(moduleHook.Binding, BeforeHelm)
-		moduleHook.OrderByBinding[BeforeHelm] = *config.BeforeHelm
-		modulesHooksOrderByName[moduleName][BeforeHelm] = append(modulesHooksOrderByName[moduleName][BeforeHelm], moduleHook)
+		if moduleHook.OrderByBinding[BeforeHelm], ok = config.BeforeHelm.(float64); !ok {
+			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.BeforeHelm, BeforeHelm)
+		}
+
+		AddModulesHooksOrderByName(moduleName, BeforeHelm, moduleHook)
 	}
 
 	if config.AfterHelm != nil {
 		moduleHook.Binding = append(moduleHook.Binding, AfterHelm)
-		moduleHook.OrderByBinding[AfterHelm] = *config.AfterHelm
-		modulesHooksOrderByName[moduleName][AfterHelm] = append(modulesHooksOrderByName[moduleName][AfterHelm], moduleHook)
+		if moduleHook.OrderByBinding[AfterHelm], ok = config.AfterHelm.(float64); !ok {
+			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.AfterHelm, AfterHelm)
+		}
+		AddModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
 	}
 
 	if config.OnStartup != nil {
 		moduleHook.Binding = append(moduleHook.Binding, OnStartup)
-		moduleHook.OrderByBinding[OnStartup] = *config.OnStartup
-		modulesHooksOrderByName[moduleName][OnStartup] = append(modulesHooksOrderByName[moduleName][OnStartup], moduleHook)
+		if moduleHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
+			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnStartup, OnStartup)
+		}
+		AddModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
 	}
 
 	if config.Schedule != nil {
 		moduleHook.Binding = append(moduleHook.Binding, Schedule)
 		moduleHook.Schedules = config.Schedule
-		modulesHooksOrderByName[moduleName][Schedule] = append(modulesHooksOrderByName[moduleName][Schedule], moduleHook)
+		AddModulesHooksOrderByName(moduleName, Schedule, moduleHook)
 	}
 
 	modulesHooksByName[name] = moduleHook
+
+	return nil
+}
+
+func AddModulesHooksOrderByName(moduleName string, bindingType BindingType, moduleHook *ModuleHook) {
+	if modulesHooksOrderByName[moduleName] == nil {
+		modulesHooksOrderByName[moduleName] = make(map[BindingType][]*ModuleHook)
+	}
+	modulesHooksOrderByName[moduleName][bindingType] = append(modulesHooksOrderByName[moduleName][bindingType], moduleHook)
 }
 
 type Hook struct {
 	Binding        []BindingType
-	OrderByBinding map[BindingType]int
+	OrderByBinding map[BindingType]float64
 	Schedules      []ScheduleConfig
 }
 
-type GlobalHookConfig struct { // для json
-	HookConfig
-	OnKubeNodeChange *int
-	BeforeAll        *int
-	AfterAll         *int
+func NewHook() *Hook {
+	hook := &Hook{}
+	hook.OrderByBinding = make(map[BindingType]float64)
+	return hook
+}
+
+type GlobalHookConfig struct {
+	HookConfig       `json:",inline"`
+	OnKubeNodeChange interface{} `json:"onKubeNodeChange"`
+	BeforeAll        interface{} `json:"beforeAll"`
+	AfterAll         interface{} `json:"afterAll"`
 }
 
 type ModuleHookConfig struct { // для json
-	HookConfig
-	BeforeHelm *int
-	AfterHelm  *int
+	HookConfig `json:",inline"`
+	BeforeHelm interface{} `json:"beforeHelm"`
+	AfterHelm  interface{} `json:"afterHelm"`
 }
 
 type HookConfig struct {
-	OnStartup *int
+	OnStartup interface{} `json:"onStartup"`
 	Schedule  []ScheduleConfig
 }
 
@@ -213,7 +262,7 @@ func GetModule(name string) (*Module, error) {
 	if exist {
 		return module, nil
 	} else {
-		return nil, nil // TODO
+		return nil, fmt.Errorf("module `%s` not found", name)
 	}
 }
 
@@ -222,7 +271,7 @@ func GetGlobalHook(name string) (*GlobalHook, error) {
 	if exist {
 		return globalHook, nil
 	} else {
-		return nil, nil // TODO
+		return nil, fmt.Errorf("global hook `%s` not found", name)
 	}
 }
 
@@ -231,7 +280,7 @@ func GetModuleHook(name string) (*ModuleHook, error) {
 	if exist {
 		return moduleHook, nil
 	} else {
-		return nil, nil // TODO
+		return nil, fmt.Errorf("module hook `%s` not found", name)
 	}
 }
 
@@ -333,7 +382,9 @@ func InitGlobalHooks() error {
 			return err
 		}
 
-		addGlobalHook(hookName, hookConfig)
+		if err := addGlobalHook(hookName, hookConfig); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -370,10 +421,11 @@ func InitModules() error {
 		if file.IsDir() {
 			matchRes := validModuleName.FindStringSubmatch(file.Name())
 			if matchRes != nil {
+				moduleName := matchRes[1]
 				modulePath := filepath.Join(modulesDir, file.Name())
 
 				module := &Module{
-					Name:          matchRes[1],
+					Name:          moduleName,
 					DirectoryName: file.Name(),
 					Path:          modulePath,
 				}
@@ -383,8 +435,8 @@ func InitModules() error {
 					return err
 				}
 
+				// TODO: change module enabled from values (global, module) logic
 				moduleValues = merge_values.MergeValues(modulesValues, moduleValues)
-
 				moduleEnabledValue := true
 				if val, exist := moduleValues[module.Name]; exist {
 					if boolVal, ok := val.(bool); ok {
@@ -430,8 +482,9 @@ func (m *Module) isEnabled() (bool, error) {
 		return false, err
 	}
 
-	// TODO: generate and pass enabled modules, modulesOrder
-	if err := execCommand(makeCommand(m.Path, "", enabledScriptPath, []string{})); err != nil {
+	// TODO: generate and pass enabled modules (modulesOrder)
+	cmd := makeCommand(m.Path, "", enabledScriptPath, []string{})
+	if err := execCommand(cmd); err != nil {
 		return false, err
 	}
 
@@ -443,11 +496,13 @@ func InitModuleHooks(module *Module) error {
 
 	err := initHooks(hooksDir, func(hookName string, output []byte) error {
 		hookConfig := &ModuleHookConfig{}
-		if err := yaml.Unmarshal(output, hookConfig); err != nil {
+		if err := json.Unmarshal(output, hookConfig); err != nil {
 			return err
 		}
 
-		addModuleHook(module.Name, hookName, hookConfig)
+		if err := addModuleHook(module.Name, hookName, hookConfig); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -464,24 +519,22 @@ func initHooks(hooksDir string, addHook func(hookName string, output []byte) err
 		return nil
 	}
 
-	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir) // returns a list of executable hooks sorted by filename
+	hooksRelativePaths, err := getExecutableFilesPaths(hooksDir) // returns a list of executable hooks sorted by filename
 	if err != nil {
 		return err
 	}
 
-	for _, hookName := range hooksNames {
-		// TODO: generate and pass values
-		cmd := makeCommand(WorkingDir, "", filepath.Join(hooksDir, hookName), []string{"--config"})
-		if err := execCommand(cmd); err != nil {
+	for _, hookPath := range hooksRelativePaths {
+		hookName := filepath.Base(hookPath)
+
+		cmd := makeCommand(WorkingDir, "", hookPath, []string{"--config"})
+		output, err := execCommandOutput(cmd)
+		if err != nil {
 			return err
 		}
 
-		if output, err := cmd.Output(); err != nil {
+		if err := addHook(hookName, output); err != nil {
 			return err
-		} else {
-			if err := addHook(hookName, output); err != nil {
-				return err
-			}
 		}
 	}
 
