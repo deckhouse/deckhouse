@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/deckhouse/deckhouse/antiopa/utils"
-	"os"
 )
 
 /*
@@ -32,9 +31,9 @@ import (
 - хэш с заданиями
 Методы:
 NewQueue — Создать новую пустую очередь
-Push — Добавить задание в конец очереди
+Add — Добавить задание в конец очереди
 Peek — Получить задание из начала очереди
-Remove — Удалить задание из начала очереди
+Pop — Удалить задание из начала очереди
 IsEmpty — Пустая ли очередь
 WithLock — произвести операцию над первым элементом с блокировкой
 IterateWithLock — произвести операцию над всеми элементами с блокировкой
@@ -44,8 +43,10 @@ IterateWithLock — произвести операцию над всеми эл
 Добавлены специфичные методы как пример:
 IncrementFailureCount — увеличить счётчик неудачных запусков
 DumpQueue — получить поток списка строк для дампа информации про таски во временный файл
-Push — переопределение, чтобы дампать актуальный список тасков в файл
+Add — переопределение, чтобы дампать актуальный список тасков в файл
 */
+
+// TODO добавить методы, чтобы отключить сигнализацию об изменениях. Чтобы добавление всех модулей не приводило к постоянной перезаписи файла.
 
 type TextDumper interface {
 	DumpAsText() string
@@ -89,25 +90,4 @@ func (tq *TasksQueue) DumpReader() io.Reader {
 		return fmt.Sprintf("task %d: %+v", index, task)
 	})
 	return io.MultiReader(&buf, iterateBuf)
-}
-
-// Переопределение Push, чтобы дампать новое состояние
-// TODO реализовать через канал?
-func (tq *TasksQueue) Push(task interface{}) {
-	fmt.Println("Push detected")
-
-	tq.Queue.Push(task)
-
-	f, err := os.Create(tq.DumpFileName)
-	if err != nil {
-		fmt.Printf("Cannot open %s: %s\n", tq.DumpFileName, err)
-	}
-	_, err = io.Copy(f, tq.DumpReader())
-	if err != nil {
-		fmt.Printf("Cannot dump tasks to %s: %s\n", tq.DumpFileName, err)
-	}
-	f.Close()
-	if err != nil {
-		fmt.Printf("Cannot close %s: %s\n", tq.DumpFileName, err)
-	}
 }

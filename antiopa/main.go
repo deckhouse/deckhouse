@@ -2,25 +2,32 @@ package main
 
 import (
 	_ "encoding/json"
-	_ "fmt"
 	_ "github.com/evanphx/json-patch"
-	_ "github.com/romana/rlog"
 	_ "gopkg.in/yaml.v2"
-	_ "io/ioutil"
-	_ "os"
 	_ "os/exec"
 	_ "path/filepath"
 	_ "strings"
+
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"time"
 
-	_ "github.com/deckhouse/deckhouse/antiopa/docker_registry_manager"
-	_ "github.com/deckhouse/deckhouse/antiopa/helm"
-	_ "github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
-	_ "github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
-	_ "github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
-	_ "github.com/deckhouse/deckhouse/antiopa/merge_values"
-	_ "github.com/deckhouse/deckhouse/antiopa/module"
-	_ "github.com/deckhouse/deckhouse/antiopa/utils"
+	"github.com/deckhouse/deckhouse/antiopa/docker_registry_manager"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/docker_registry_manager"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/helm"
+	"github.com/deckhouse/deckhouse/antiopa/kube"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/merge_values"
+	"github.com/deckhouse/deckhouse/antiopa/module"
+	//	_ "github.com/deckhouse/deckhouse/antiopa/module"
+	"github.com/deckhouse/deckhouse/antiopa/helm"
+	"github.com/deckhouse/deckhouse/antiopa/task"
+
+	"github.com/romana/rlog"
 )
 
 var (
@@ -29,50 +36,297 @@ var (
 
 	// Имя хоста совпадает с именем пода. Можно использовать для запросов API
 	Hostname string
+
+	// Имя файла, в который будет сбрасываться очередь
+	TasksQueueDumpFilePath string
+
+	// Очередь задач
+	TasksQueue *task.TasksQueue
 )
 
+// Задержки при обработке тасков из очереди
+const (
+	EmptyQueueDelay   = time.Duration(5 * time.Second)
+	FailedHookDelay   = time.Duration(5 * time.Second)
+	FailedModuleDelay = time.Duration(5 * time.Second)
+)
+
+// Собрать настройки - директории, имя хоста, файл с дампом, namespace для tiller
+// Проинициализировать все нужные объекты: helm, registry manager, module manager,
+// kube events manager
+// Создать пустую очередь с заданиями.
 func Init() {
-  /*
-    GetModuleNamesInOrder.each {
-        GetModuleHooksInOrder(moduleName, module.Schedule).each {
-            schedule.add hook // регистрация binding
-        }
-        
-        GetModuleHooksInOrder(moduleName, module.OnKubeNodeChange).each {
-            ... // регистрация binding
-        }
-    }
-    
-    GetGlobalHooksInOrder(module.OnKubeNodeChange).each {...} // регистрация binding
-    
-    GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
-  */
+	rlog.Debug("Init")
+
+	var err error
+
+	WorkingDir, err = os.Getwd()
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot determine antiopa working dir: %s", err)
+		os.Exit(1)
+	}
+	rlog.Debugf("Antiopa working dir: %s", WorkingDir)
+
+	TempDir, err = ioutil.TempDir("", "antiopa-")
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot create antiopa temporary dir: %s", err)
+		os.Exit(1)
+	}
+	rlog.Debugf("Antiopa temporary dir: %s", TempDir)
+
+	Hostname, err = os.Hostname()
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %s", err)
+		os.Exit(1)
+	}
+	rlog.Debugf("Antiopa hostname: %s", Hostname)
+
+	// Инициализация слежения за образом
+	// TODO Antiopa может и не следить, если кластер заморожен?
+	err = docker_registry_manager.InitRegistryManager(Hostname)
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot initialize registry manager: %s", err)
+		os.Exit(1)
+	}
+
+	// Инициализация helm — установка tiller, если его нет
+	// TODO как получить tiller namespace?
+	tillerNamespace := ""
+	rlog.Debugf("Antiopa tiller namespace: %s", tillerNamespace)
+	helm.Init(tillerNamespace)
+
+	// Инициализация слежения за конфигом и за values
+	err = module.Init(WorkingDir, TempDir)
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot initialize module manager: %s", err)
+		os.Exit(1)
+	}
+
+	// TODO Инициализация слежения за событиями из kube
+	// нужно по конфигам хуков создать настройки в менеджере
+	// связать настройку и имя хука
+	// потом, когда от менеджера придёт id настройки,
+	// найти по id нужные имена хуков и добавить их запуск в очередь
+	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
+	   GetModuleNamesInOrder.each {
+	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
+	           schedule.add hook // регистрация binding
+	       }
+
+	       GetModuleHooksInOrder(moduleName, module.OnKubeNodeChange).each {
+	           ... // регистрация binding
+	       }
+	   }
+
+	   GetGlobalHooksInOrder(module.OnKubeNodeChange).each {...} // регистрация binding
+
+	   GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
+	*/
+
+	// Пустая очередь задач
+	TasksQueue = task.NewTasksQueue(TasksQueueDumpFilePath)
 }
 
+// Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
+// Основной процесс блокируется for-select-ом в обработчике очереди.
 func Run() {
-    /*
-    
-    GetGlobalHooksInOrder(module.BeforeAll).each {RunGlobalHook(name)}
-    GetModuleNamesInOrder.each {RunModule(name)}
-    GetGlobalHooksInOrder(module.AfterAll).each {RunGlobalHook(name)}
-      */
+	rlog.Info("MAIN: run main loop")
+
+	// слежение за изменениями в очереди - сброс дампа в файл
+	go TasksQueueDumper()
+
+	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
+	go docker_registry_manager.RunRegistryManager()
+	go module.RunModuleManager()
+
+	// обработчик событий от менеджеров — события превращаются в таски и
+	// добавляются в очередь
+	go ManagersEventsHandler()
+
+	// TasksRunner не запускается go-рутиной, т.к. в main нет блокировки.
+	// Можно в main добавить блокировку, например, от сигнала SIGTERM, тогда тут будет go-рутина.
+	TasksRunner()
+
+	/* TODO Первый запуск - добавление в очередь хуков on startup, добавление хуков beforeAll, после чего добавление всех модулей
+			GetGlobalHooksInOrder(module.onstartup).each{RunGlobalHook(name)}
+	   	   GetGlobalHooksInOrder(module.BeforeAll).each {RunGlobalHook(name)}
+		   GetModuleNamesInOrder.each {RunModule(name)}
+		   GetGlobalHooksInOrder(module.AfterAll).each {RunGlobalHook(name)}
+	*/
+}
+
+func ManagersEventsHandler() {
+	for {
+		select {
+		// Образ antiopa изменился, нужен рестарт деплоймента (можно и не выходить)
+		case newImageId := <-docker_registry_manager.ImageUpdated:
+			err := kube.KubeUpdateDeployment(newImageId)
+			if err == nil {
+				rlog.Infof("KUBE deployment update successful, exiting ...")
+				os.Exit(1)
+			} else {
+				rlog.Errorf("KUBE deployment update error: %s", err)
+			}
+		// пришло событие от module_manager → перезапуск модулей или всего
+		case moduleEvent := <-module.EventCh:
+			switch moduleEvent.Type {
+			// Изменились отдельные модули
+			case module.ModulesChanged:
+				rlog.Debug("main got ModulesChanged event")
+				for _, moduleChange := range moduleEvent.ModulesChanges {
+					switch moduleChange.ChangeType {
+					case module.Enabled:
+						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
+						TasksQueue.Add(newTask)
+					case module.Disabled:
+						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
+						TasksQueue.Add(newTask)
+					case module.Changed:
+						newTask := task.NewTask(task.ModuleUpgrade, moduleChange.Name)
+						TasksQueue.Add(newTask)
+					}
+				}
+			// Изменились глобальные values, нужен рестарт всех модулей
+			case module.GlobalChanged:
+				rlog.Debug("main got GlobalChanged event")
+				moduleNames := module.GetModuleNamesInOrder()
+				// TODO добавить beforeAll, afterAll!!!
+				for _, moduleName := range moduleNames {
+					newTask := task.NewTask(task.ModuleRun, moduleName)
+					TasksQueue.Add(newTask)
+				}
+			}
+		}
+	}
+}
+
+// Обработчик один на очередь.
+// Обработчик может отложить обработку следующего таска с помощью пуша в начало очереди таска задержки
+func TasksRunner() {
+	for {
+		if TasksQueue.IsEmpty() {
+			TasksQueue.Push(task.NewTaskDelay(EmptyQueueDelay))
+			continue
+		}
+		headTask, _ := TasksQueue.Peek()
+		if t, ok := headTask.(task.Task); ok {
+			switch t.Type {
+			case task.Module:
+				// TODO реализовать RunModule
+				err := RunModule(t.Name)
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModuleRun:
+				// TODO реализовать RunModule
+				err := RunModule(t.Name)
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModuleDelete:
+				// TODO реализовать RunModule
+				err := DeleteModule(t.Name)
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModuleUpgrade:
+				// TODO реализовать RunModule
+				err := UpgradeModule(t.Name)
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.Hook:
+				// TODO реализовать RunHook
+				err := RunHook(t.Name)
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
+					TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.Delay:
+				td := headTask.(task.TaskDelay)
+				time.Sleep(td.Delay)
+				TasksQueue.Pop()
+			}
+		}
+	}
+}
+
+// Дампер очереди в файл. Пока получается синхронно всё: Изменилась очередь, ждём, пока сдампается в файл.
+func TasksQueueDumper() {
+	for {
+		select {
+		case <-TasksQueue.EventCh():
+			// Сдампить очередь в файл
+			f, err := os.Create(TasksQueue.DumpFileName)
+			if err != nil {
+				fmt.Printf("Cannot open %s: %s\n", TasksQueue.DumpFileName, err)
+			}
+			_, err = io.Copy(f, TasksQueue.DumpReader())
+			if err != nil {
+				fmt.Printf("Cannot dump tasks to %s: %s\n", TasksQueue.DumpFileName, err)
+			}
+			f.Close()
+			if err != nil {
+				fmt.Printf("Cannot close %s: %s\n", TasksQueue.DumpFileName, err)
+			}
+		}
+	}
+}
+
+func RunModule(moduleName string) (err error) {
+	rlog.Infof("Module '%s': RUN", moduleName)
+	return
+}
+
+func DeleteModule(moduleName string) (err error) {
+	rlog.Infof("Module '%s': DELETE", moduleName)
+	return
+}
+
+func UpgradeModule(moduleName string) (err error) {
+	rlog.Infof("Module '%s': UPGRADE", moduleName)
+	return
+}
+
+func RunHook(hookName string) (err error) {
+	rlog.Infof("Hook '%s': RUN", hookName)
+	return
 }
 
 func main() {
-	// Init()
-	// Run()
-	for {
-		time.Sleep(time.Duration(1) * time.Second)
-		
-		/*
-Initial run:
-* Append each global-hook with before-all binding to queue as separate task
-* Append each module from module.ModuleNamesOrder to queue
-    * append each before-helm module hook to queue as separate task
-    * append helm to queue as separate task
-    * append each after-helm module hook to queue as separate task
-		 */
-	}
+	Init()
+	Run()
+	//for {
+	//	time.Sleep(time.Duration(1) * time.Second)
+	//
+	//	/*
+	//		Initial run:
+	//		* Append each global-hook with before-all binding to queue as separate task
+	//		* Append each module from module.ModuleNamesOrder to queue
+	//		    * append each before-helm module hook to queue as separate task
+	//		    * append helm to queue as separate task
+	//		    * append each after-helm module hook to queue as separate task
+	//	*/
+	//}
 }
 
 // func OnKubeNodeChanged() {
@@ -318,4 +572,3 @@ Initial run:
 
 // 	return nil
 // }
-

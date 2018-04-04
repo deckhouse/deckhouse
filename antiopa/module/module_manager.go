@@ -560,7 +560,8 @@ func initHooks(hooksDir string, addHook func(hookName string, output []byte) err
 	return nil
 }
 
-func Run() {
+// Module manager loop
+func RunModuleManager() {
 	for {
 		time.Sleep(time.Duration(1) * time.Second)
 

@@ -17,7 +17,7 @@ func FillQueue(tq *task.TasksQueue, ch chan int) {
 		}
 		t := task.NewTask(cfg)
 
-		tq.Push(t)
+		tq.Add(t)
 		time.Sleep(time.Second)
 	}
 

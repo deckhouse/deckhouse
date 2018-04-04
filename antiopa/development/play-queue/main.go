@@ -29,7 +29,7 @@ func FillQueue(q *TasksQueue, ch chan int) {
 }
 
 // Кривая обработка очереди, специально, чтобы в одной go-рутине
-// делался Peek, а во второй Remove того же элемента
+// делался Peek, а во второй Pop того же элемента
 func HandleQueue(q *TasksQueue, ch chan int, name string) {
 	for !q.IsEmpty() {
 		for i := 0; i < 10; i++ {
@@ -65,7 +65,7 @@ func main() {
 	fmt.Println("Start")
 	q := NewTasksQueue()
 	t := TaskModule{Name: "First one"}
-	fmt.Println("Push")
+	fmt.Println("Add")
 	q.Push(&t)
 
 	w := make(chan int, 0)

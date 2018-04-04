@@ -86,7 +86,7 @@ func RunRegistryManager() {
 		return
 	}
 
-	rlog.Debug("Run registry manager")
+	rlog.Debug("Start registry manager")
 
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 

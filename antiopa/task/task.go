@@ -3,44 +3,57 @@ package task
 import (
 	"bytes"
 	"fmt"
+	"time"
 )
 
-// TODO Тут явно что-то другое должно быть
-type UnitConfig struct {
-	Name         string
-	BeforeHelm   *int
-	AfterHelm    *int
-	Crontab      *string
-	AllowFailure bool
-}
+type TaskType string
+
+const (
+	Module        TaskType = "TASK_MODULE"
+	ModuleDelete  TaskType = "TASK_MODULE_DELETE"
+	ModuleUpgrade TaskType = "TASK_MODULE_UPGRADE"
+	ModuleRun     TaskType = "TASK_MODULE_RUN"
+	Hook          TaskType = "TASK_HOOK"
+	Delay         TaskType = "TASK_DELAY"
+)
 
 type Task struct {
-	FailureCount int
-	UnitConfig   UnitConfig
+	FailureCount int    // failed executions count
+	Name         string // name of module or hook
+	Type         TaskType
 }
 
-func NewTask(unitConfig UnitConfig) *Task {
+func NewTask(taskType TaskType, name string) *Task {
 	return &Task{
 		FailureCount: 0,
-		UnitConfig:   unitConfig,
+		Name:         name,
+		Type:         taskType,
 	}
 }
 
 func (t *Task) DumpAsText() string {
 	var buf bytes.Buffer
-	buf.WriteString(t.UnitConfig.Name)
+	buf.WriteString(fmt.Sprintf("%s '%s'", t.Type, t.Name))
 	if t.FailureCount > 0 {
-		buf.WriteString(fmt.Sprintf("failed %d times. ", t.FailureCount))
-	}
-	if t.UnitConfig.AfterHelm != nil {
-		buf.WriteString(fmt.Sprintf("afterHelm order %d ", *t.UnitConfig.AfterHelm))
-	}
-	if t.UnitConfig.BeforeHelm != nil {
-		buf.WriteString(fmt.Sprintf("beforeHelm order %d ", *t.UnitConfig.BeforeHelm))
+		buf.WriteString(fmt.Sprintf(" failed %d times. ", t.FailureCount))
 	}
 	return buf.String()
 }
 
 func (t *Task) IncrementFailureCount() {
 	t.FailureCount++
+}
+
+type TaskDelay struct {
+	Task
+	Delay time.Duration
+}
+
+func NewTaskDelay(delay time.Duration) *TaskDelay {
+	return &TaskDelay{
+		Task: Task{
+			Type: Delay,
+		},
+		Delay: delay,
+	}
 }
