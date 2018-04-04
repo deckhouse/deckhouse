@@ -3,7 +3,6 @@ package module
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -92,7 +91,7 @@ func addGlobalHook(name string, config *GlobalHookConfig) (err error) {
 	if config.BeforeAll != nil {
 		globalHook.Binding = append(globalHook.Binding, BeforeAll)
 		if globalHook.OrderByBinding[BeforeAll], ok = config.BeforeAll.(float64); !ok {
-			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.BeforeAll, BeforeAll)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.BeforeAll, BeforeAll)
 		}
 		globalHooksOrder[BeforeAll] = append(globalHooksOrder[BeforeAll], globalHook)
 	}
@@ -100,7 +99,7 @@ func addGlobalHook(name string, config *GlobalHookConfig) (err error) {
 	if config.AfterAll != nil {
 		globalHook.Binding = append(globalHook.Binding, AfterAll)
 		if globalHook.OrderByBinding[AfterAll], ok = config.AfterAll.(float64); !ok {
-			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.AfterAll, AfterAll)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.AfterAll, AfterAll)
 		}
 		globalHooksOrder[AfterAll] = append(globalHooksOrder[AfterAll], globalHook)
 	}
@@ -108,7 +107,7 @@ func addGlobalHook(name string, config *GlobalHookConfig) (err error) {
 	if config.OnKubeNodeChange != nil {
 		globalHook.Binding = append(globalHook.Binding, OnKubeNodeChange)
 		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
-			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnKubeNodeChange, OnKubeNodeChange)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.OnKubeNodeChange, OnKubeNodeChange)
 		}
 		globalHooksOrder[OnKubeNodeChange] = append(globalHooksOrder[OnKubeNodeChange], globalHook)
 	}
@@ -116,7 +115,7 @@ func addGlobalHook(name string, config *GlobalHookConfig) (err error) {
 	if config.OnStartup != nil {
 		globalHook.Binding = append(globalHook.Binding, OnStartup)
 		if globalHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
-			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnStartup, OnStartup)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.OnStartup, OnStartup)
 		}
 		globalHooksOrder[OnStartup] = append(globalHooksOrder[OnStartup], globalHook)
 	}
@@ -152,7 +151,7 @@ func addModuleHook(moduleName, name string, config *ModuleHookConfig) (err error
 	if config.BeforeHelm != nil {
 		moduleHook.Binding = append(moduleHook.Binding, BeforeHelm)
 		if moduleHook.OrderByBinding[BeforeHelm], ok = config.BeforeHelm.(float64); !ok {
-			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.BeforeHelm, BeforeHelm)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.BeforeHelm, BeforeHelm)
 		}
 
 		AddModulesHooksOrderByName(moduleName, BeforeHelm, moduleHook)
@@ -161,7 +160,7 @@ func addModuleHook(moduleName, name string, config *ModuleHookConfig) (err error
 	if config.AfterHelm != nil {
 		moduleHook.Binding = append(moduleHook.Binding, AfterHelm)
 		if moduleHook.OrderByBinding[AfterHelm], ok = config.AfterHelm.(float64); !ok {
-			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.AfterHelm, AfterHelm)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.AfterHelm, AfterHelm)
 		}
 		AddModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
 	}
@@ -169,7 +168,7 @@ func addModuleHook(moduleName, name string, config *ModuleHookConfig) (err error
 	if config.OnStartup != nil {
 		moduleHook.Binding = append(moduleHook.Binding, OnStartup)
 		if moduleHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
-			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnStartup, OnStartup)
+			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.OnStartup, OnStartup)
 		}
 		AddModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
 	}
@@ -205,21 +204,21 @@ func NewHook() *Hook {
 }
 
 type GlobalHookConfig struct {
-	HookConfig       `json:",inline"`
+	HookConfig
 	OnKubeNodeChange interface{} `json:"onKubeNodeChange"`
 	BeforeAll        interface{} `json:"beforeAll"`
 	AfterAll         interface{} `json:"afterAll"`
 }
 
-type ModuleHookConfig struct { // для json
-	HookConfig `json:",inline"`
+type ModuleHookConfig struct {
+	HookConfig
 	BeforeHelm interface{} `json:"beforeHelm"`
 	AfterHelm  interface{} `json:"afterHelm"`
 }
 
 type HookConfig struct {
-	OnStartup interface{} `json:"onStartup"`
-	Schedule  []ScheduleConfig
+	OnStartup interface{}      `json:"onStartup"`
+	Schedule  []ScheduleConfig `json:"schedule"`
 }
 
 type ScheduleConfig struct {
@@ -397,12 +396,12 @@ func InitGlobalHooks() error {
 
 	err := initHooks(hooksDir, func(hookName string, output []byte) error {
 		hookConfig := &GlobalHookConfig{}
-		if err := yaml.Unmarshal(output, hookConfig); err != nil {
-			return err
+		if err := json.Unmarshal(output, hookConfig); err != nil {
+			return fmt.Errorf("unmarshaling global hook `%s` json failed: %s", hookName, err.Error())
 		}
 
 		if err := addGlobalHook(hookName, hookConfig); err != nil {
-			return err
+			return fmt.Errorf("adding global hook `%s` failed: %s", hookName, err.Error())
 		}
 
 		return nil
@@ -516,11 +515,11 @@ func InitModuleHooks(module *Module) error {
 	err := initHooks(hooksDir, func(hookName string, output []byte) error {
 		hookConfig := &ModuleHookConfig{}
 		if err := json.Unmarshal(output, hookConfig); err != nil {
-			return err
+			return fmt.Errorf("unmarshaling module hook `%s` json failed: %s", module.Name, err.Error())
 		}
 
 		if err := addModuleHook(module.Name, hookName, hookConfig); err != nil {
-			return err
+			return fmt.Errorf("adding module hook `%s` failed: %s", module.Name, err.Error())
 		}
 
 		return nil
