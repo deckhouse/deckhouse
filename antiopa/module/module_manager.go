@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-  "time"
+	"time"
 )
 
 /*
@@ -24,64 +24,83 @@ All run:
 
 */
 
+// Типы привязок для хуков — то, от чего могут сработать хуки
 type BindingType string
 
 const (
-    BeforeHelm BindingType = "BEFORE_HELM"
-    AfterHelm BindingType = "AFTER_HELM"
-    BeforeAll BindingType = "BEFORE_ALL"
-    AfterAll BindingType = "AFTER_ALL"
-    OnKubeNodeChange BindingType = "ON_KUBE_NODE_CHANGE"
-    Schedule BindingType = "SCHEDULE"
-    OnStartup BindingType = "ON_STARTUP"
+	BeforeHelm       BindingType = "BEFORE_HELM"
+	AfterHelm        BindingType = "AFTER_HELM"
+	BeforeAll        BindingType = "BEFORE_ALL"
+	AfterAll         BindingType = "AFTER_ALL"
+	OnKubeNodeChange BindingType = "ON_KUBE_NODE_CHANGE"
+	Schedule         BindingType = "SCHEDULE"
+	OnStartup        BindingType = "ON_STARTUP"
 )
 
+// Типы событий, отправляемые в Main — либо изменились какие-то модули и нужно
+// пройти по списку и запустить/удалить/проапгрейдить модуль,
+// либо поменялись глобальные values и нужно перезапустить все модули.
 type EventType string
 
 const (
-    ModuleEnabled EventType = "MODULE_ENABLED"
-    ModuleChanged EventType = "MODULE_CHANGED"
-    ModuleDisabled EventType = "MODULE_DISABLED"
-    GlobalHooksChanged EventType = "GLOBAL_HOOKS_CHANGED"
+	ModulesChanged EventType = "MODULES_CHANGED"
+	GlobalChanged  EventType = "GLOBAL_CHANGED"
 )
 
+type ChangeType string
+
+const (
+	Enabled  ChangeType = "MODULE_ENABLED"  // модуль включился
+	Disabled ChangeType = "MODULE_DISABLED" // модуль выключился, возможно нужно запустить helm delete
+	Changed  ChangeType = "MODULE_CHANGED"  // поменялись values, нужен helm upgrade
+)
+
+// Имя модуля и вариант изменения
+type ModuleChange struct {
+	Name       string
+	ChangeType ChangeType
+}
+
+// Событие для Main
 type Event struct {
-    ModuleNames []string
-    Type EventType
+	ModulesChanges []ModuleChange
+	Type           EventType
 }
 
+// Глобальный хук — имя, список привязок и конфиг
 type GlobalHook struct {
-    Binding []BindingType
-    Name string
-    Config GlobalHookConfig
+	Binding []BindingType
+	Name    string
+	Config  GlobalHookConfig
 }
 
+// Хук модуля — имя, список привязок и конфиг
 type ModuleHook struct {
-    Binding []BindingType // TODO: выделить общую часть с GlobalHook
-    Name string
-    Config ModuleHookConfig
+	Binding []BindingType // TODO: выделить общую часть с GlobalHook
+	Name    string
+	Config  ModuleHookConfig
 }
 
 type GlobalHookConfig struct { // для json
-    //HookConfig
-    OnKubeNodeChange *int
-    BeforeAll *int
+	//HookConfig
+	OnKubeNodeChange *int
+	BeforeAll        *int
 }
 
 type ModuleHookConfig struct { // для json
-    //HookConfig
-    BeforeHelm *int
-    AfterHelm *int
+	//HookConfig
+	BeforeHelm *int
+	AfterHelm  *int
 }
 
-type HookConifig struct {
-    OnStartup *int
-    Schedule []ScheduleConfig
+type HookConfig struct {
+	OnStartup *int
+	Schedule  []ScheduleConfig
 }
 
 type ScheduleConfig struct {
-    Crontab string
-    AllowFailure bool
+	Crontab      string
+	AllowFailure bool
 }
 
 /*
@@ -95,31 +114,33 @@ type ScheduleConfig struct {
     afterAll: ORDER, // только global
     onKubeNodeChange: ORDER, // только global
     schedule:
-        - crontab: * * * * * 
+        - crontab: * * * * *
           allowFailure: true
         - crontab: *_/2 * * * *
 }
 */
 
-func GetModuleNamesInOrder() []string {return nil}
-func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {return nil, nil}
-func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {return nil,nil}
-func GetModule(name string) (*Module, error) {return nil, nil}
-func GetGlobalHook(name string) (*GlobalHook, error) {return nil,nil}
-func GetModuleHook(name string) (*ModuleHook, error) {return nil,nil}
-func RunModule(moduleName string) error {return nil} // запускает before-helm + helm + after-helm
-func RunGlobalHook(name string) error {return nil}
-func RunModuleHook(name string) error {return nil}
+func GetModuleNamesInOrder() []string                                 { return nil }
+func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) { return nil, nil }
+func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
+	return nil, nil
+}
+func GetModule(name string) (*Module, error)         { return nil, nil }
+func GetGlobalHook(name string) (*GlobalHook, error) { return nil, nil }
+func GetModuleHook(name string) (*ModuleHook, error) { return nil, nil }
+func RunModule(moduleName string) error              { return nil } // запускает before-helm + helm + after-helm
+func RunGlobalHook(name string) error                { return nil }
+func RunModuleHook(name string) error                { return nil }
 
 var (
-    EventCh <-chan Event
+	EventCh <-chan Event
 	// список имен модулей в порядке вызова
-    modulesOrder []string
+	modulesOrder []string
 
-    globalHooks map[string]*Hook // name -> Hook
-    goduleHooks map[string]*Hook // name -> Hook
+	globalHooks map[string]*Hook // name -> Hook
+	goduleHooks map[string]*Hook // name -> Hook
 
-    globalHooksOrder map[BindingType][]string // это что-то внутреннее для быстрого поиска binding -> hooks names in order, можно и по-другому сделать
+	globalHooksOrder map[BindingType][]string // это что-то внутреннее для быстрого поиска binding -> hooks names in order, можно и по-другому сделать
 
 	hooksByName                  map[string]Hook
 	beforeHelmHooksOrderByModule map[string][]string
@@ -199,15 +220,15 @@ func Init(workingDir string, tempDir string) error {
 }
 
 func Run() {
-    for {
-        time.Sleep(time.Duration(1) * time.Second)
+	for {
+		time.Sleep(time.Duration(1) * time.Second)
 
-        /*
-         * TODO: Watch kube_values_manager.ConfigUpdated
-         * TODO: Watch kube_values_manager.ModuleConfigUpdated
-         * TODO: Send events to EventCh
-         */
-    }
+		/*
+		 * TODO: Watch kube_values_manager.ConfigUpdated
+		 * TODO: Watch kube_values_manager.ModuleConfigUpdated
+		 * TODO: Send events to EventCh
+		 */
+	}
 }
 
 func isModuleEnabled(module Module) (bool, error) {
