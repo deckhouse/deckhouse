@@ -27,10 +27,6 @@ type Module struct {
 	Path          string
 }
 
-type Hook struct {
-	Name string
-}
-
 func RunModules() {
 	retryModulesNamesQueue = make([]string, 0)
 	for _, moduleName := range modulesOrder {
@@ -103,7 +99,7 @@ func runModuleHooks(orderType string, moduleName string, valuesPath string) erro
 		return nil
 	}
 
-	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
+	hooksNames, err := getExecutableFilesPaths(hooksDir)
 	if err != nil {
 		return fmt.Errorf("Module '%s': %s hooks find error: %s", module.Name, orderType, err)
 	}
@@ -172,7 +168,7 @@ func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
 	return
 }
 
-func CheckModuleHelmChart(module Module) (chartExists bool, err error) {
+func CheckModuleHelmChart(module *Module) (chartExists bool, err error) {
 	chartPath := filepath.Join(module.Path, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
@@ -321,7 +317,7 @@ func dumpModuleValuesYaml(moduleName string, values map[interface{}]interface{})
 	return dumpValuesYaml(fmt.Sprintf("%s.yaml", moduleName), values)
 }
 
-func readModuleValues(module Module) (map[interface{}]interface{}, error) {
+func readModuleValues(module *Module) (map[interface{}]interface{}, error) {
 	path := filepath.Join(module.Path, "values.yaml")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, nil
@@ -425,26 +421,32 @@ func runHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *j
 	return configValuesJsonMergeValues, configValuesJsonPatchValues, dynamicValuesJsonMergeValues, dynamicValuesJsonPatchValues, nil
 }
 
-func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
-	files, err := ioutil.ReadDir(Dir)
+func getExecutableFilesPaths(dir string) ([]string, error) {
+	paths := make([]string, 0)
+	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if f.IsDir() {
+			return nil
+		}
+
+		isExecutable := f.Mode()&0111 != 0
+		if isExecutable {
+			paths = append(paths, path)
+		} else {
+			rlog.Warnf("Ignoring non executable file %s", filepath.Join(dir, path))
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]string, 0)
-	for _, file := range files {
-		// Тупой тест, что файл executable.
-		// Т.к. antiopa всегда работает под root, то этого достаточно.
-		isExecutable := !file.IsDir() && (file.Mode()&0111 != 0)
-
-		if isExecutable {
-			res = append(res, file.Name())
-		} else {
-			rlog.Warnf("Ignoring non executable file %s", filepath.Join(Dir, file.Name()))
-		}
-	}
-
-	return res, nil
+	return paths, nil
 }
 
 func valuesToString(values map[interface{}]interface{}) string {
@@ -458,6 +460,12 @@ func valuesToString(values map[interface{}]interface{}) string {
 func execCommand(cmd *exec.Cmd) error {
 	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
 	return cmd.Run()
+}
+
+func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
+	rlog.Debugf("Executing command output in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
+	cmd.Stdout = nil
+	return cmd.Output()
 }
 
 func dumpValuesYaml(fileName string, values map[interface{}]interface{}) (string, error) {

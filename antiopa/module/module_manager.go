@@ -1,13 +1,18 @@
 package module
 
 import (
+	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 )
 
 /*
@@ -69,32 +74,151 @@ type Event struct {
 
 // Глобальный хук — имя, список привязок и конфиг
 type GlobalHook struct {
-	Binding []BindingType
-	Name    string
-	Config  GlobalHookConfig
+	*Hook
+	Name string
+}
+
+func NewGlobalHook() *GlobalHook {
+	globalHook := &GlobalHook{}
+	globalHook.Hook = NewHook()
+	return globalHook
+}
+
+func addGlobalHook(name string, config *GlobalHookConfig) (err error) {
+	var ok bool
+	globalHook := NewGlobalHook()
+	globalHook.Name = name
+
+	if config.BeforeAll != nil {
+		globalHook.Binding = append(globalHook.Binding, BeforeAll)
+		if globalHook.OrderByBinding[BeforeAll], ok = config.BeforeAll.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.BeforeAll, BeforeAll)
+		}
+		globalHooksOrder[BeforeAll] = append(globalHooksOrder[BeforeAll], globalHook)
+	}
+
+	if config.AfterAll != nil {
+		globalHook.Binding = append(globalHook.Binding, AfterAll)
+		if globalHook.OrderByBinding[AfterAll], ok = config.AfterAll.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.AfterAll, AfterAll)
+		}
+		globalHooksOrder[AfterAll] = append(globalHooksOrder[AfterAll], globalHook)
+	}
+
+	if config.OnKubeNodeChange != nil {
+		globalHook.Binding = append(globalHook.Binding, OnKubeNodeChange)
+		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnKubeNodeChange, OnKubeNodeChange)
+		}
+		globalHooksOrder[OnKubeNodeChange] = append(globalHooksOrder[OnKubeNodeChange], globalHook)
+	}
+
+	if config.OnStartup != nil {
+		globalHook.Binding = append(globalHook.Binding, OnStartup)
+		if globalHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
+			return fmt.Errorf("adding global hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnStartup, OnStartup)
+		}
+		globalHooksOrder[OnStartup] = append(globalHooksOrder[OnStartup], globalHook)
+	}
+
+	if config.Schedule != nil {
+		globalHook.Binding = append(globalHook.Binding, Schedule)
+		globalHook.Schedules = config.Schedule
+		globalHooksOrder[Schedule] = append(globalHooksOrder[Schedule], globalHook)
+	}
+
+	globalHooksByName[name] = globalHook
+
+	return nil
 }
 
 // Хук модуля — имя, список привязок и конфиг
 type ModuleHook struct {
-	Binding []BindingType // TODO: выделить общую часть с GlobalHook
-	Name    string
-	Config  ModuleHookConfig
+	*Hook
+	Name string
 }
 
-type GlobalHookConfig struct { // для json
-	//HookConfig
-	OnKubeNodeChange *int
-	BeforeAll        *int
+func NewModuleHook() *ModuleHook {
+	moduleHook := &ModuleHook{}
+	moduleHook.Hook = NewHook()
+	return moduleHook
+}
+
+func addModuleHook(moduleName, name string, config *ModuleHookConfig) (err error) {
+	var ok bool
+	moduleHook := NewModuleHook()
+	moduleHook.Name = name
+
+	if config.BeforeHelm != nil {
+		moduleHook.Binding = append(moduleHook.Binding, BeforeHelm)
+		if moduleHook.OrderByBinding[BeforeHelm], ok = config.BeforeHelm.(float64); !ok {
+			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.BeforeHelm, BeforeHelm)
+		}
+
+		AddModulesHooksOrderByName(moduleName, BeforeHelm, moduleHook)
+	}
+
+	if config.AfterHelm != nil {
+		moduleHook.Binding = append(moduleHook.Binding, AfterHelm)
+		if moduleHook.OrderByBinding[AfterHelm], ok = config.AfterHelm.(float64); !ok {
+			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.AfterHelm, AfterHelm)
+		}
+		AddModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
+	}
+
+	if config.OnStartup != nil {
+		moduleHook.Binding = append(moduleHook.Binding, OnStartup)
+		if moduleHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
+			return fmt.Errorf("adding module hook `%s` failed: unsuported value `%v` for binding `%s`", name, config.OnStartup, OnStartup)
+		}
+		AddModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
+	}
+
+	if config.Schedule != nil {
+		moduleHook.Binding = append(moduleHook.Binding, Schedule)
+		moduleHook.Schedules = config.Schedule
+		AddModulesHooksOrderByName(moduleName, Schedule, moduleHook)
+	}
+
+	modulesHooksByName[name] = moduleHook
+
+	return nil
+}
+
+func AddModulesHooksOrderByName(moduleName string, bindingType BindingType, moduleHook *ModuleHook) {
+	if modulesHooksOrderByName[moduleName] == nil {
+		modulesHooksOrderByName[moduleName] = make(map[BindingType][]*ModuleHook)
+	}
+	modulesHooksOrderByName[moduleName][bindingType] = append(modulesHooksOrderByName[moduleName][bindingType], moduleHook)
+}
+
+type Hook struct {
+	Binding        []BindingType
+	OrderByBinding map[BindingType]float64
+	Schedules      []ScheduleConfig
+}
+
+func NewHook() *Hook {
+	hook := &Hook{}
+	hook.OrderByBinding = make(map[BindingType]float64)
+	return hook
+}
+
+type GlobalHookConfig struct {
+	HookConfig       `json:",inline"`
+	OnKubeNodeChange interface{} `json:"onKubeNodeChange"`
+	BeforeAll        interface{} `json:"beforeAll"`
+	AfterAll         interface{} `json:"afterAll"`
 }
 
 type ModuleHookConfig struct { // для json
-	//HookConfig
-	BeforeHelm *int
-	AfterHelm  *int
+	HookConfig `json:",inline"`
+	BeforeHelm interface{} `json:"beforeHelm"`
+	AfterHelm  interface{} `json:"afterHelm"`
 }
 
 type HookConfig struct {
-	OnStartup *int
+	OnStartup interface{} `json:"onStartup"`
 	Schedule  []ScheduleConfig
 }
 
@@ -120,33 +244,109 @@ type ScheduleConfig struct {
 }
 */
 
-func GetModuleNamesInOrder() []string                                 { return nil }
-func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) { return nil, nil }
-func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
-	return nil, nil
+func GetModuleNamesInOrder() []string {
+	return modulesOrder
 }
-func GetModule(name string) (*Module, error)         { return nil, nil }
-func GetGlobalHook(name string) (*GlobalHook, error) { return nil, nil }
-func GetModuleHook(name string) (*ModuleHook, error) { return nil, nil }
-func RunModule(moduleName string) error              { return nil } // запускает before-helm + helm + after-helm
-func RunGlobalHook(name string) error                { return nil }
-func RunModuleHook(name string) error                { return nil }
+
+func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
+	globalHooks := globalHooksOrder[bindingType]
+	sort.Slice(globalHooks[:], func(i, j int) bool {
+		return globalHooks[i].OrderByBinding[bindingType] < globalHooks[j].OrderByBinding[bindingType]
+	})
+
+	var globalHooksNames []string
+	for _, globalHook := range globalHooks {
+		globalHooksNames = append(globalHooksNames, globalHook.Name)
+	}
+
+	return globalHooksNames, nil
+}
+
+func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
+	moduleHooks := modulesHooksOrderByName[moduleName][bindingType]
+	sort.Slice(moduleHooks[:], func(i, j int) bool {
+		return moduleHooks[i].OrderByBinding[bindingType] < moduleHooks[j].OrderByBinding[bindingType]
+	})
+
+	var moduleHooksNames []string
+	for _, moduleHook := range moduleHooks {
+		moduleHooksNames = append(moduleHooksNames, moduleHook.Name)
+	}
+
+	return moduleHooksNames, nil
+}
+
+func GetModule(name string) (*Module, error) {
+	module, exist := modulesByName[name]
+	if exist {
+		return module, nil
+	} else {
+		return nil, fmt.Errorf("module `%s` not found", name)
+	}
+}
+
+func GetGlobalHook(name string) (*GlobalHook, error) {
+	globalHook, exist := globalHooksByName[name]
+	if exist {
+		return globalHook, nil
+	} else {
+		return nil, fmt.Errorf("global hook `%s` not found", name)
+	}
+}
+
+func GetModuleHook(name string) (*ModuleHook, error) {
+	moduleHook, exist := modulesHooksByName[name]
+	if exist {
+		return moduleHook, nil
+	} else {
+		return nil, fmt.Errorf("module hook `%s` not found", name)
+	}
+}
+
+func RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
+	moduleHooksBeforeHelm, err := GetModuleHooksInOrder(moduleName, BeforeHelm)
+	if err != nil {
+		return err
+	}
+
+	for _, moduleHookName := range moduleHooksBeforeHelm {
+		if err := RunModuleHook(moduleHookName); err != nil {
+			return err
+		}
+	}
+
+	// TODO RunHelm
+
+	moduleHooksAfterHelm, err := GetModuleHooksInOrder(moduleName, AfterHelm)
+	if err != nil {
+		return err
+	}
+
+	for _, moduleHookName := range moduleHooksAfterHelm {
+		if err := RunModuleHook(moduleHookName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func RunGlobalHook(name string) error { return nil }
+func RunModuleHook(name string) error { return nil }
 
 var (
 	EventCh <-chan Event
+
+	// список модулей, найденных в инсталляции
+	modulesByName map[string]*Module
 	// список имен модулей в порядке вызова
 	modulesOrder []string
 
-	globalHooks map[string]*Hook // name -> Hook
-	goduleHooks map[string]*Hook // name -> Hook
+	globalHooksByName map[string]*GlobalHook        // name -> Hook
+	globalHooksOrder  map[BindingType][]*GlobalHook // это что-то внутреннее для быстрого поиска binding -> hooks names in order, можно и по-другому сделать
 
-	globalHooksOrder map[BindingType][]string // это что-то внутреннее для быстрого поиска binding -> hooks names in order, можно и по-другому сделать
-
-	hooksByName                  map[string]Hook
-	beforeHelmHooksOrderByModule map[string][]string
-	afterHelmHooksOrderByModule  map[string][]string
-	// список модулей, найденных в инсталляции
-	modulesByName map[string]Module
+	modulesHooksByName      map[string]*ModuleHook
+	modulesHooksOrderByName map[string]map[BindingType][]*ModuleHook
 
 	// values для всех модулей, для всех кластеров
 	globalConfigValues map[interface{}]interface{}
@@ -177,34 +377,106 @@ var (
 func Init(workingDir string, tempDir string) error {
 	TempDir = tempDir
 	WorkingDir = workingDir
+
+	if err := InitGlobalHooks(); err != nil {
+		return err
+	}
+
+	if err := InitModules(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func InitGlobalHooks() error {
+	globalHooksOrder = make(map[BindingType][]*GlobalHook)
+	globalHooksByName = make(map[string]*GlobalHook)
+
+	hooksDir := filepath.Join(WorkingDir, "global-hooks")
+
+	err := initHooks(hooksDir, func(hookName string, output []byte) error {
+		hookConfig := &GlobalHookConfig{}
+		if err := yaml.Unmarshal(output, hookConfig); err != nil {
+			return err
+		}
+
+		if err := addGlobalHook(hookName, hookConfig); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func InitModules() error {
+	modulesByName = make(map[string]*Module)
+	modulesHooksByName = make(map[string]*ModuleHook)
+	modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
+
 	modulesDir := filepath.Join(WorkingDir, "modules")
 
-	files, err := ioutil.ReadDir(modulesDir)
+	files, err := ioutil.ReadDir(modulesDir) // returns a list of modules sorted by filename
 	if err != nil {
 		return fmt.Errorf("cannot list modules directory %s: %s", modulesDir, err)
 	}
 
-	var validmoduleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
+	modulesValues, err := readModulesValues()
+	if err != nil {
+		return err
+	}
 
-	res := make([]Module, 0)
+	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
+
 	badModulesDirs := make([]string, 0)
 
 	for _, file := range files {
 		if file.IsDir() {
-			matchRes := validmoduleName.FindStringSubmatch(file.Name())
+			matchRes := validModuleName.FindStringSubmatch(file.Name())
 			if matchRes != nil {
-				module := Module{
-					Name:          matchRes[1],
+				moduleName := matchRes[1]
+				modulePath := filepath.Join(modulesDir, file.Name())
+
+				module := &Module{
+					Name:          moduleName,
 					DirectoryName: file.Name(),
-					Path:          filepath.Join(modulesDir, file.Name()),
+					Path:          modulePath,
 				}
 
-				isEnabled, err := isModuleEnabled(module)
+				moduleValues, err := readModuleValues(module)
 				if err != nil {
 					return err
 				}
-				if isEnabled {
-					res = append(res, module)
+
+				// TODO: change module enabled from values (global, module) logic
+				moduleValues = merge_values.MergeValues(modulesValues, moduleValues)
+				moduleEnabledValue := true
+				if val, exist := moduleValues[module.Name]; exist {
+					if boolVal, ok := val.(bool); ok {
+						moduleEnabledValue = boolVal
+					} else {
+						// TODO ?!
+					}
+				}
+
+				isEnabled, err := module.isEnabled()
+				if err != nil {
+					return err
+				}
+
+				if moduleEnabledValue && isEnabled {
+					modulesByName[module.Name] = module
+					modulesOrder = append(modulesOrder, module.Name)
+
+					if err = InitModuleHooks(module); err != nil {
+						return err
+					}
 				}
 			} else {
 				badModulesDirs = append(badModulesDirs, filepath.Join(modulesDir, file.Name()))
@@ -213,7 +485,76 @@ func Init(workingDir string, tempDir string) error {
 	}
 
 	if len(badModulesDirs) > 0 {
-		return fmt.Errorf("bad module directory names, must match regex `%s`: %s", validmoduleName, strings.Join(badModulesDirs, ", "))
+		return fmt.Errorf("bad module directory names, must match regex `%s`: %s", validModuleName, strings.Join(badModulesDirs, ", "))
+	}
+
+	return nil
+}
+
+func (m *Module) isEnabled() (bool, error) {
+	enabledScriptPath := filepath.Join(m.DirectoryName, "enabled")
+
+	_, err := os.Stat(enabledScriptPath)
+	if os.IsNotExist(err) {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	// TODO: generate and pass enabled modules (modulesOrder)
+	cmd := makeCommand(m.Path, "", enabledScriptPath, []string{})
+	if err := execCommand(cmd); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func InitModuleHooks(module *Module) error {
+	hooksDir := filepath.Join(module.Path, "hooks")
+
+	err := initHooks(hooksDir, func(hookName string, output []byte) error {
+		hookConfig := &ModuleHookConfig{}
+		if err := json.Unmarshal(output, hookConfig); err != nil {
+			return err
+		}
+
+		if err := addModuleHook(module.Name, hookName, hookConfig); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initHooks(hooksDir string, addHook func(hookName string, output []byte) error) error {
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	hooksRelativePaths, err := getExecutableFilesPaths(hooksDir) // returns a list of executable hooks sorted by filename
+	if err != nil {
+		return err
+	}
+
+	for _, hookPath := range hooksRelativePaths {
+		hookName := filepath.Base(hookPath)
+
+		cmd := makeCommand(WorkingDir, "", hookPath, []string{"--config"})
+		output, err := execCommandOutput(cmd)
+		if err != nil {
+			return err
+		}
+
+		if err := addHook(hookName, output); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -229,28 +570,4 @@ func Run() {
 		 * TODO: Send events to EventCh
 		 */
 	}
-}
-
-func isModuleEnabled(module Module) (bool, error) {
-	enabledScriptPath := filepath.Join(module.DirectoryName, "enabled")
-
-	_, err := os.Stat(enabledScriptPath)
-	if os.IsNotExist(err) {
-		return true, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	return true, nil
-
-	// TODO
-	// cmd := exec.Command(enabledScriptPath, args...)
-	// cmd.Env = append(cmd.Env, os.Environ()...)
-	// cmd.Env = append(
-	// 	cmd.Env,
-	// 	fmt.Sprintf("TILLER_NAMESPACE=%s", HelmTillerNamespace()),
-	// )
-	// cmd.Dir = dir
-	// cmd.Stdout = os.Stdout
-	// cmd.Stderr = os.Stderr
 }
