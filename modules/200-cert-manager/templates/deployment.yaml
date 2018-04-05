@@ -7,8 +7,7 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 spec:
-  # Миграция 2018-04-01 https://github.com/deckhouse/deckhouse/merge_requests/89
-  replicas: 0
+  replicas: 1
   template:
     metadata:
       labels:
