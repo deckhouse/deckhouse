@@ -16,7 +16,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
-	"github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
 	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )

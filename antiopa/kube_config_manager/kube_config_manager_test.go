@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 var (
@@ -98,20 +99,20 @@ userPassword: qwerty`),
 		t.Errorf("kube_config_manager initialization error: %s", err)
 	}
 
-	expectedData := map[string]map[interface{}]interface{}{
-		"global": map[interface{}]interface{}{
+	expectedData := map[string]utils.Values{
+		"global": utils.Values{
 			"project":         "someproject",
 			"clusterName":     "main",
 			"clusterHostname": "kube.domain.my",
-			"settings": map[interface{}]interface{}{
-				"count": 2,
-				"mysql": map[interface{}]interface{}{
+			"settings": map[string]interface{}{
+				"count": 2.0,
+				"mysql": map[string]interface{}{
 					"user": "myuser",
 				},
 			},
 		},
-		"nginxIngress": map[interface{}]interface{}{
-			"config": map[interface{}]interface{}{
+		"nginxIngress": utils.Values{
+			"config": map[string]interface{}{
 				"hsts": true,
 				"setRealIPFrom": []interface{}{
 					"1.1.1.1",
@@ -119,12 +120,12 @@ userPassword: qwerty`),
 				},
 			},
 		},
-		"prometheus": map[interface{}]interface{}{
+		"prometheus": utils.Values{
 			"adminPassword":            "qwerty",
-			"estimatedNumberOfMetrics": 480000,
+			"estimatedNumberOfMetrics": 480000.0,
 			"ingressHostname":          "prometheus.mysite.com",
 			"madisonAuthKey":           "70cf58be013c93b5e7960716ea8538eb877808f88303c8a08f18f16582c81b61",
-			"retentionDays":            20,
+			"retentionDays":            20.0,
 			"userPassword":             "qwerty",
 		},
 	}
@@ -147,7 +148,7 @@ userPassword: qwerty`),
 				t.Errorf("Expected %s module to be enabled", moduleConfig.ModuleName)
 			}
 			if !reflect.DeepEqual(data, moduleConfig.Values) {
-				t.Errorf("Bad %s module values: expected %v, got %v", moduleConfig.ModuleName, data, moduleConfig.Values)
+				t.Errorf("Bad %s module values: expected %+v, got %+v", moduleConfig.ModuleName, data, moduleConfig.Values)
 			}
 		}
 	}

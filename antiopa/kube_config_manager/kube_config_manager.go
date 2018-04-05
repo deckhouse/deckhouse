@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/antiopa/kube"
-	_ "github.com/deckhouse/deckhouse/antiopa/utils"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 const (
@@ -17,14 +17,8 @@ const (
 )
 
 type Config struct {
-	Values        map[interface{}]interface{}
-	ModuleConfigs map[string]ModuleConfig
-}
-
-type ModuleConfig struct {
-	ModuleName string
-	IsEnabled  bool
-	Values     map[interface{}]interface{}
+	Values        utils.Values
+	ModuleConfigs map[string]utils.ModuleConfig
 }
 
 /* TODO
@@ -33,15 +27,15 @@ SetModuleKubeValues
 
 var (
 	ConfigUpdated       <-chan Config
-	ModuleConfigUpdated <-chan ModuleConfig
+	ModuleConfigUpdated <-chan utils.ModuleConfig
 )
 
 func Init() (*Config, error) {
 	rlog.Debug("Init kube config manager")
 
 	res := &Config{
-		Values:        make(map[interface{}]interface{}),
-		ModuleConfigs: make(map[string]ModuleConfig),
+		Values:        make(utils.Values),
+		ModuleConfigs: make(map[string]utils.ModuleConfig),
 	}
 
 	secretsList, err := kube.KubernetesClient.CoreV1().Secrets(kube.KubernetesAntiopaNamespace).List(metav1.ListOptions{})
@@ -65,38 +59,31 @@ func Init() (*Config, error) {
 		}
 
 		if valuesYaml, hasKey := secret.Data[GlobalValuesKeyName]; hasKey {
-			err := yaml.Unmarshal(valuesYaml, &res.Values)
+			var values map[interface{}]interface{}
+			err := yaml.Unmarshal(valuesYaml, &values)
 			if err != nil {
 				return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s:\n%s", kube.AntiopaSecret, GlobalValuesKeyName, err, string(valuesYaml))
 			}
+			formattedValues, err := utils.FormatValues(values)
+			if err != nil {
+				return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s\n%s", kube.AntiopaSecret, GlobalValuesKeyName, err, string(valuesYaml))
+			}
+			res.Values = formattedValues
 		}
 
 		for key, value := range secret.Data {
 			if key != GlobalValuesKeyName {
-				moduleConfig := ModuleConfig{
-					ModuleName: key,
-					IsEnabled:  true,
-					Values:     make(map[interface{}]interface{}),
-				}
-
 				var valueData interface{}
-
 				err := yaml.Unmarshal(value, &valueData)
 				if err != nil {
-					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s:\n%s", kube.AntiopaSecret, moduleConfig.ModuleName, err, string(value))
+					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s:\n%s", kube.AntiopaSecret, key, err, string(value))
 				}
 
-				if moduleEnabled, isBool := valueData.(bool); isBool {
-					moduleConfig.IsEnabled = moduleEnabled
-				} else {
-					moduleValues, moduleValuesOk := valueData.(map[interface{}]interface{})
-					if !moduleValuesOk {
-						return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': expected map or bool, got: %s")
-					}
-					moduleConfig.Values = moduleValues
+				moduleConfig, err := utils.NewModuleConfig(key, valueData)
+				if err != nil {
+					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s", kube.AntiopaSecret, key, err)
 				}
-
-				res.ModuleConfigs[moduleConfig.ModuleName] = moduleConfig
+				res.ModuleConfigs[moduleConfig.ModuleName] = *moduleConfig
 			}
 		}
 	}

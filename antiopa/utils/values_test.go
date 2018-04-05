@@ -33,14 +33,24 @@ func TestModuleConfig(t *testing.T) {
 		t.Errorf("Expected module to be enabled")
 	}
 
-	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"hello": "world", 4: "123", 5: 5})
+	inputData := map[interface{}]interface{}{
+		"hello": "world", 4: "123", 5: 5,
+		"aaa": map[interface{}]interface{}{"no": []interface{}{"one", "two", "three"}},
+	}
+	expectedData := Values{
+		"hello": "world", "4": "123", "5": 5.0,
+		"aaa": map[string]interface{}{"no": []interface{}{"one", "two", "three"}},
+	}
+
+	config, err = NewModuleConfig("test-module", inputData)
 	if err != nil {
 		t.Error(err)
 	}
 	if !config.IsEnabled {
 		t.Errorf("Expected module to be enabled")
 	}
-	if !reflect.DeepEqual(config.Values, map[interface{}]interface{}{"hello": "world", "4": "123", "5": 5.0}) {
+
+	if !reflect.DeepEqual(config.Values, expectedData) {
 		t.Errorf("Got unexpected config values: %+v", config.Values)
 	}
 }

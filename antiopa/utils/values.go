@@ -3,21 +3,25 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
 )
 
+type Values map[string]interface{}
+
 type ModuleConfig struct {
 	ModuleName string
 	IsEnabled  bool
-	Values     map[interface{}]interface{}
+	Values     Values
 }
 
 func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error) {
 	moduleConfig := &ModuleConfig{
 		ModuleName: moduleName,
 		IsEnabled:  true,
-		Values:     make(map[interface{}]interface{}),
+		Values:     make(Values),
 	}
 
 	if moduleEnabled, isBool := data.(bool); isBool {
@@ -25,7 +29,7 @@ func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error)
 	} else {
 		moduleValues, moduleValuesOk := data.(map[interface{}]interface{})
 		if !moduleValuesOk {
-			return nil, fmt.Errorf("required map or bool data, got: %v", data)
+			return nil, fmt.Errorf("required map or bool data, got: %v", reflect.TypeOf(data))
 		}
 
 		formattedValues, err := FormatValues(moduleValues)
@@ -38,7 +42,7 @@ func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error)
 	return moduleConfig, nil
 }
 
-func FormatValues(values map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func FormatValues(values map[interface{}]interface{}) (Values, error) {
 	yamlDoc, err := yaml.Marshal(values)
 	if err != nil {
 		return nil, err
@@ -54,9 +58,7 @@ func FormatValues(values map[interface{}]interface{}) (map[interface{}]interface
 		return nil, err
 	}
 
-	resValues := JsonValuesToValues(jsonValues)
-
-	return resValues, nil
+	return jsonValues, nil
 }
 
 func JsonValuesToValues(jsonValues map[string]interface{}) map[interface{}]interface{} {
