@@ -27,6 +27,25 @@ type Module struct {
 	Path          string
 }
 
+func (m *Module) isEnabled() (bool, error) {
+	enabledScriptPath := filepath.Join(m.DirectoryName, "enabled")
+
+	_, err := os.Stat(enabledScriptPath)
+	if os.IsNotExist(err) {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	// TODO: generate and pass enabled modules (modulesOrder)
+	cmd := makeCommand(m.Path, "", enabledScriptPath, []string{})
+	if err := execCommand(cmd); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func RunModules() {
 	retryModulesNamesQueue = make([]string, 0)
 	for _, moduleName := range modulesOrder {
@@ -57,12 +76,12 @@ func RunModuleOld(moduleName string) {
 		return
 	}
 
-	err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
+	//err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
+	//if err != nil {
+	//	rlog.Error(err)
+	//	retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
+	//	return
+	//}
 
 	err = RunModuleHelm(moduleName, valuesPath)
 	if err != nil {
@@ -70,76 +89,12 @@ func RunModuleOld(moduleName string) {
 		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
 	}
 
-	err = RunModuleAfterHelmHooks(moduleName, valuesPath)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-}
-
-func RunModuleBeforeHelmHooks(moduleName string, valuesPath string) error {
-	return runModuleHooks("before-helm", moduleName, valuesPath)
-}
-
-func RunModuleAfterHelmHooks(moduleName string, valuesPath string) error {
-	return runModuleHooks("after-helm", moduleName, valuesPath)
-}
-
-func runModuleHooks(orderType string, moduleName string, valuesPath string) error {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	hooksDir := filepath.Join(module.Path, "hooks", orderType)
-
-	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
-		rlog.Debugf("Module '%s': %s hooks not needed: %s", orderType, module.Name, err)
-		return nil
-	}
-
-	hooksNames, err := getExecutableFilesPaths(hooksDir)
-	if err != nil {
-		return fmt.Errorf("Module '%s': %s hooks find error: %s", module.Name, orderType, err)
-	}
-
-	for _, hookName := range hooksNames {
-		rlog.Infof("Module '%s': running %s hook '%s' ...", module.Name, orderType, hookName)
-
-		var kubeModuleConfigValuesChanged bool
-
-		configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := runModuleHook(module.Path, hooksDir, hookName, valuesPath)
-
-		if err != nil {
-			return fmt.Errorf("Module '%s': %s hook '%s' FAILED: %s", module.Name, orderType, hookName, err)
-		}
-
-		if kubeModulesConfigValues[module.Name], kubeModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeModulesConfigValues[module.Name], configVJMV, configVJPV); err != nil {
-			return err
-		}
-
-		if kubeModuleConfigValuesChanged {
-			rlog.Debugf("Module '%s': %s hook '%s': updating VALUES in ConfigMap:\n%s", module.Name, orderType, hookName, valuesToString(kubeModulesConfigValues[module.Name]))
-			err = kube_values_manager.SetModuleKubeValues(module.Name, kubeModulesConfigValues[module.Name])
-			if err != nil {
-				err = fmt.Errorf("Module '%s': %s hook '%s': set kube values error: %s", module.Name, orderType, hookName, err)
-				return err
-			}
-		}
-
-		if modulesDynamicValues[module.Name], _, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[module.Name], dynamicVJMV, dynamicVJPV); err != nil {
-			err = fmt.Errorf("Module '%s': %s hook '%s': merge values error: %s", module.Name, orderType, hookName, err)
-			return err
-		}
-	}
-
-	return nil
-}
-
-func runModuleHook(modulePath, hooksDir, hookName string, valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
-	cmd := makeCommand(modulePath, valuesPath, filepath.Join(hooksDir, hookName), []string{})
-	return runHook(filepath.Join(TempDir, "values", "modules"), hookName, cmd)
+	//err = RunModuleAfterHelmHooks(moduleName, valuesPath)
+	//if err != nil {
+	//	rlog.Error(err)
+	//	retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
+	//	return
+	//}
 }
 
 func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
@@ -201,11 +156,6 @@ func CleanupModule(moduleName string) (err error) {
 
 	helm.HelmDeleteSingleFailedRevision(helmReleaseName)
 	return nil
-}
-
-func runGlobalHook(hooksDir, hookName string, valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
-	cmd := makeCommand(WorkingDir, valuesPath, filepath.Join(hooksDir, hookName), []string{})
-	return runHook(filepath.Join(TempDir, "values", "hooks"), hookName, cmd)
 }
 
 func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
@@ -362,63 +312,6 @@ func makeCommand(dir string, valuesPath string, entrypoint string, args []string
 	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
 
 	return utils.MakeCommand(dir, entrypoint, args, envs)
-}
-
-func runHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
-	configValuesJsonMergePath := filepath.Join(tmpDir, hookName, "config_values_json_merge.json")
-	if err := createResultFile(configValuesJsonMergePath); err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	configValuesJsonPatchPath := filepath.Join(tmpDir, hookName, "config_values_json_patch.json")
-	if err := createResultFile(configValuesJsonPatchPath); err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	dynamicValuesJsonMergePath := filepath.Join(tmpDir, hookName, "dynamic_values_json_merge.json")
-	if err := createResultFile(dynamicValuesJsonMergePath); err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	dynamicValuesJsonPatchPath := filepath.Join(tmpDir, hookName, "dynamic_values_json_patch.json")
-	if err := createResultFile(dynamicValuesJsonPatchPath); err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	cmd.Env = append(
-		cmd.Env,
-		fmt.Sprintf("CONFIG_VALUES_JSON_MERGE_PATH=%s", configValuesJsonMergePath),
-		fmt.Sprintf("CONFIG_VALUES_JSON_PATCH_PATH=%s", configValuesJsonPatchPath),
-		fmt.Sprintf("DYNAMIC_VALUES_JSON_MERGE_PATH=%s", dynamicValuesJsonMergePath),
-		fmt.Sprintf("DYNAMIC_VALUES_JSON_PATCH_PATH=%s", dynamicValuesJsonPatchPath),
-	)
-
-	err := execCommand(cmd)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("%s FAILED: %s", hookName, err)
-	}
-
-	configValuesJsonMergeValues, err := readValuesJsonFile(configValuesJsonMergePath)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
-	}
-
-	configValuesJsonPatchValues, err := readJsonPatchFile(configValuesJsonPatchPath)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
-	}
-
-	dynamicValuesJsonMergeValues, err := readValuesJsonFile(dynamicValuesJsonMergePath)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
-	}
-
-	dynamicValuesJsonPatchValues, err := readJsonPatchFile(dynamicValuesJsonPatchPath)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("got bad values json from hook %s: %s", hookName, err)
-	}
-
-	return configValuesJsonMergeValues, configValuesJsonPatchValues, dynamicValuesJsonMergeValues, dynamicValuesJsonPatchValues, nil
 }
 
 func getExecutableFilesPaths(dir string) ([]string, error) {
