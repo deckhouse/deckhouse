@@ -3,8 +3,6 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/evanphx/json-patch"
-	"github.com/gobwas/glob"
 	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -15,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
-	"github.com/deckhouse/deckhouse/antiopa/kube"
 	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
@@ -26,7 +23,144 @@ type Module struct {
 	Path          string
 }
 
+func (m *Module) run() error {
+	if err := m.cleanup(); err != nil {
+		return err
+	}
+
+	moduleHooksBeforeHelm, err := GetModuleHooksInOrder(m.Name, BeforeHelm)
+	if err != nil {
+		return err
+	}
+
+	for _, moduleHookName := range moduleHooksBeforeHelm {
+		moduleHook, err := GetModuleHook(moduleHookName)
+		if err != nil {
+			return err
+		}
+
+		if err := moduleHook.run(); err != nil {
+			return err
+		}
+	}
+
+	if err := m.exec(); err != nil {
+		return err
+	}
+
+	moduleHooksAfterHelm, err := GetModuleHooksInOrder(m.Name, AfterHelm)
+	if err != nil {
+		return err
+	}
+
+	for _, moduleHookName := range moduleHooksAfterHelm {
+		moduleHook, err := GetModuleHook(moduleHookName)
+		if err != nil {
+			return err
+		}
+
+		if err := moduleHook.run(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Module) cleanup() error {
+	chartExists, err := m.checkHelmChart()
+	if !chartExists {
+		if err != nil {
+			rlog.Debugf("Module '%s': cleanup not needed: %s", m.Name, err)
+			return nil
+		}
+	}
+
+	rlog.Infof("Module '%s': running cleanup ...", m.Name)
+
+	if err := helm.HelmDeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Module) exec() error {
+	chartExists, err := m.checkHelmChart()
+	if !chartExists {
+		if err != nil {
+			rlog.Debugf("Module '%s': helm not needed: %s", m.Name, err)
+			return nil
+		}
+	}
+
+	rlog.Infof("Module '%s': running helm ...", m.Name)
+
+	helmReleaseName := m.generateHelmReleaseName()
+	valuesPath, err := m.prepareValuesPath()
+	if err != nil {
+		return err
+	}
+
+	err = execCommand(makeCommand(m.Path, valuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", valuesPath}))
+	if err != nil {
+		return fmt.Errorf("module '%s': helm FAILED: %s", m.Name, err)
+	}
+
+	return nil
+}
+
+func (m *Module) setGlobalModuleConfigValues() error {
+	path := filepath.Join(m.Path, "values.yaml")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	}
+
+	values, err := readValuesYamlFile(path)
+	if err != nil {
+		return err
+	}
+
+	globalModulesConfigValues[m.Name] = values
+
+	return nil
+}
+
+func (m *Module) prepareValuesPath() (string, error) {
+	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s.yaml", m.Name), m.values())
+	if err != nil {
+		return "", err
+	}
+	return valuesPath, nil
+}
+
+func (m *Module) checkHelmChart() (bool, error) {
+	chartPath := filepath.Join(m.Path, "Chart.yaml")
+
+	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
+		return false, fmt.Errorf("module `%s` chart file not found '%s'", m.Name, chartPath)
+	}
+	return true, nil
+}
+
+func (m *Module) generateHelmReleaseName() string {
+	return m.Name
+}
+
+func (m *Module) values() map[interface{}]interface{} {
+	return merge_values.MergeValues(
+		globalConfigValues,
+		globalModulesConfigValues[m.Name],
+		kubeConfigValues,
+		kubeModulesConfigValues[m.Name],
+		dynamicValues,
+		modulesDynamicValues[m.Name])
+}
+
 func (m *Module) isEnabled() (bool, error) {
+	// moduleValues := m.values()
+	// TODO check values
+
 	enabledScriptPath := filepath.Join(m.DirectoryName, "enabled")
 
 	_, err := os.Stat(enabledScriptPath)
@@ -36,8 +170,13 @@ func (m *Module) isEnabled() (bool, error) {
 		return false, err
 	}
 
-	// TODO: generate and pass enabled modules (modulesOrder)
+	enabledModulesFilePath, err := dumpValuesJson(filepath.Join("enabled-modules", m.Name), modulesOrder)
+	if err != nil {
+		return false, err
+	}
+
 	cmd := makeCommand(m.Path, "", enabledScriptPath, []string{})
+	cmd.Env = append(cmd.Env, fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath))
 	if err := execCommand(cmd); err != nil {
 		return false, err
 	}
@@ -45,210 +184,55 @@ func (m *Module) isEnabled() (bool, error) {
 	return true, nil
 }
 
-func RunModules() {
-	retryModulesNamesQueue = make([]string, 0)
-	for _, moduleName := range modulesOrder {
-		RunModule(moduleName)
-	}
-}
+func initModules() error {
+	rlog.Debug("Init modules")
 
-func RunModuleOld(moduleName string) {
-	vals, err := PrepareModuleValues(moduleName)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-	rlog.Debugf("Module '%s': Prepared VALUES:\n%s", moduleName, valuesToString(vals))
+	modulesByName = make(map[string]*Module)
+	modulesHooksByName = make(map[string]*ModuleHook)
+	modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
 
-	valuesPath, err := dumpModuleValuesYaml(moduleName, vals)
-	if err != nil {
-		rlog.Errorf("Module '%s': dump values yaml error: %s", moduleName, err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-
-	err = CleanupModule(moduleName)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-
-	//err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
-	//if err != nil {
-	//	rlog.Error(err)
-	//	retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-	//	return
-	//}
-
-	err = RunModuleHelm(moduleName, valuesPath)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-	}
-
-	//err = RunModuleAfterHelmHooks(moduleName, valuesPath)
-	//if err != nil {
-	//	rlog.Error(err)
-	//	retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-	//	return
-	//}
-}
-
-func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	chartExists, err := CheckModuleHelmChart(module)
-	if !chartExists {
-		if err != nil {
-			rlog.Debugf("Module '%s': helm not needed: %s", module.Name, err)
-			return nil
-		}
-	}
-
-	rlog.Infof("Module '%s': running helm ...", module.Name)
-
-	helmReleaseName := GenerateHelmReleaseName(moduleName)
-
-	err = execCommand(makeCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", ValuesPath}))
-	if err != nil {
-		return fmt.Errorf("Module '%s': helm FAILED: %s", module.Name, err)
-	}
-
-	return
-}
-
-func CheckModuleHelmChart(module *Module) (chartExists bool, err error) {
-	chartPath := filepath.Join(module.Path, "Chart.yaml")
-
-	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
-		return false, fmt.Errorf("chart file not found '%s'", module.Name, chartPath)
-	}
-	return true, nil
-}
-
-func GenerateHelmReleaseName(moduleName string) string {
-	return moduleName
-}
-
-func CleanupModule(moduleName string) (err error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	chartExists, err := CheckModuleHelmChart(module)
-	if !chartExists {
-		if err != nil {
-			rlog.Debugf("Module '%s': cleanup not needed: %s", moduleName, err)
-			return nil
-		}
-	}
-
-	rlog.Infof("Module '%s': running cleanup ...", moduleName)
-
-	helmReleaseName := GenerateHelmReleaseName(moduleName)
-
-	helm.HelmDeleteSingleFailedRevision(helmReleaseName)
-	return nil
-}
-
-func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
-	if _, hasModule := modulesByName[moduleName]; !hasModule {
-		return nil, fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-	return merge_values.MergeValues(globalConfigValues, globalModulesConfigValues[moduleName], kubeConfigValues, kubeModulesConfigValues[moduleName], dynamicValues, modulesDynamicValues[moduleName]), nil
-}
-
-func matchesGlob(value string, globPattern string) bool {
-	g, err := glob.Compile(globPattern)
-	if err != nil {
-		return false
-	}
-	return g.Match(value)
-}
-
-func getEnabledModules() ([]Module, error) {
-	allModules, err := readModules()
-	if err != nil {
-		return nil, err
-	}
-
-	cm, err := kube.GetConfigMap()
-	if err != nil {
-		return nil, err
-	}
-
-	var disabledModulesNames []string
-	for _, configKey := range []string{"disable-modules", "disabled-modules"} {
-		if _, hasKey := cm.Data[configKey]; hasKey {
-			disabledModulesNames = make([]string, 0)
-			for _, moduleName := range strings.Split(cm.Data[configKey], ",") {
-				disabledModulesNames = append(disabledModulesNames, strings.TrimSpace(moduleName))
-			}
-		}
-	}
-
-	for _, disabledModuleName := range disabledModulesNames {
-		found := false
-		for _, module := range allModules {
-			if matchesGlob(module.Name, disabledModuleName) {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			rlog.Warnf("Bad value '%s' in antiopa ConfigMap disabled-modules: does not match any module", disabledModuleName)
-		}
-	}
-
-	res := make([]Module, 0)
-	for _, module := range allModules {
-		isEnabled := true
-
-		for _, disabledModuleName := range disabledModulesNames {
-			if matchesGlob(module.Name, disabledModuleName) {
-				isEnabled = false
-				break
-			}
-		}
-
-		if isEnabled {
-			res = append(res, module)
-		}
-	}
-
-	return res, nil
-}
-
-func readModules() ([]Module, error) {
 	modulesDir := filepath.Join(WorkingDir, "modules")
 
-	files, err := ioutil.ReadDir(modulesDir)
+	files, err := ioutil.ReadDir(modulesDir) // returns a list of modules sorted by filename
 	if err != nil {
-		return nil, fmt.Errorf("cannot list modules directory %s: %s", modulesDir, err)
+		return fmt.Errorf("cannot list modules directory %s: %s", modulesDir, err)
 	}
 
-	var validmoduleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
+	if err := setGlobalConfigValues(); err != nil {
+		return err
+	}
 
-	res := make([]Module, 0)
+	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
+
 	badModulesDirs := make([]string, 0)
 
 	for _, file := range files {
 		if file.IsDir() {
-			matchRes := validmoduleName.FindStringSubmatch(file.Name())
+			matchRes := validModuleName.FindStringSubmatch(file.Name())
 			if matchRes != nil {
-				module := Module{
-					Name:          matchRes[1],
+				moduleName := matchRes[1]
+				modulePath := filepath.Join(modulesDir, file.Name())
+
+				module := &Module{
+					Name:          moduleName,
 					DirectoryName: file.Name(),
-					Path:          filepath.Join(modulesDir, file.Name()),
+					Path:          modulePath,
 				}
-				res = append(res, module)
+				module.setGlobalModuleConfigValues()
+
+				isEnabled, err := module.isEnabled()
+				if err != nil {
+					return err
+				}
+
+				if isEnabled {
+					modulesByName[module.Name] = module
+					modulesOrder = append(modulesOrder, module.Name)
+
+					if err = initModuleHooks(module); err != nil {
+						return err
+					}
+				}
 			} else {
 				badModulesDirs = append(badModulesDirs, filepath.Join(modulesDir, file.Name()))
 			}
@@ -256,27 +240,18 @@ func readModules() ([]Module, error) {
 	}
 
 	if len(badModulesDirs) > 0 {
-		return nil, fmt.Errorf("bad module directory names, must match regex `%s`: %s", validmoduleName, strings.Join(badModulesDirs, ", "))
+		return fmt.Errorf("bad module directory names, must match regex `%s`: %s", validModuleName, strings.Join(badModulesDirs, ", "))
 	}
 
-	return res, nil
+	return nil
 }
 
-func dumpModuleValuesYaml(moduleName string, values map[interface{}]interface{}) (string, error) {
-	return dumpValuesYaml(fmt.Sprintf("%s.yaml", moduleName), values)
-}
-
-func readModuleValues(module *Module) (map[interface{}]interface{}, error) {
-	path := filepath.Join(module.Path, "values.yaml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, nil
-	}
-
-	values, err := readValuesYamlFile(path)
+func setGlobalConfigValues() (err error) {
+	globalConfigValues, err = readModulesValues()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return values, nil
+	return nil
 }
 
 func readModulesValues() (map[interface{}]interface{}, error) {
@@ -284,33 +259,7 @@ func readModulesValues() (map[interface{}]interface{}, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return make(map[interface{}]interface{}), nil
 	}
-
 	return readValuesYamlFile(path)
-}
-
-func readValuesYamlFile(filePath string) (map[interface{}]interface{}, error) {
-	valuesYaml, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
-	}
-
-	var res map[interface{}]interface{}
-
-	err = yaml.Unmarshal(valuesYaml, &res)
-	if err != nil {
-		return nil, fmt.Errorf("bad %s: %s", filePath, err)
-	}
-
-	return res, nil
-}
-
-func makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
-	envs := make([]string, 0)
-	envs = append(envs, os.Environ()...)
-	envs = append(envs, helm.CommandEnv()...)
-	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
-
-	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
 
 func getExecutableFilesPaths(dir string) ([]string, error) {
@@ -341,23 +290,20 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 	return paths, nil
 }
 
-func valuesToString(values map[interface{}]interface{}) string {
-	valuesYaml, err := yaml.Marshal(&values)
+func readValuesYamlFile(filePath string) (map[interface{}]interface{}, error) {
+	valuesYaml, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return fmt.Sprintf("%v", values)
+		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
 	}
-	return string(valuesYaml)
-}
 
-func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
-	return cmd.Run()
-}
+	var res map[interface{}]interface{}
 
-func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
-	rlog.Debugf("Executing command output in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
-	cmd.Stdout = nil
-	return cmd.Output()
+	err = yaml.Unmarshal(valuesYaml, &res)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+	}
+
+	return res, nil
 }
 
 func dumpValuesYaml(fileName string, values map[interface{}]interface{}) (string, error) {
@@ -367,72 +313,53 @@ func dumpValuesYaml(fileName string, values map[interface{}]interface{}) (string
 	}
 
 	filePath := filepath.Join(TempDir, fileName)
-
-	err = ioutil.WriteFile(filePath, valuesYaml, 0644)
-	if err != nil {
+	if err = dumpData(filePath, valuesYaml); err != nil {
 		return "", err
 	}
 
 	return filePath, nil
 }
-func createResultFile(filePath string) error {
-	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+
+func dumpValuesJson(fileName string, values interface{}) (string, error) {
+	valuesJson, err := json.Marshal(&values)
 	if err != nil {
-		return nil
+		return "", err
 	}
 
-	file.Close()
+	filePath := filepath.Join(TempDir, fileName)
+	if err = dumpData(filePath, valuesJson); err != nil {
+		return "", err
+	}
+
+	return filePath, nil
+}
+
+func dumpData(filePath string, data []byte) error {
+	err := ioutil.WriteFile(filePath, data, 0644)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func readValuesJsonFile(filePath string) (map[string]interface{}, error) {
-	valuesJson, err := ioutil.ReadFile(filePath)
+func valuesToString(values map[interface{}]interface{}) string {
+	valuesYaml, err := yaml.Marshal(&values)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+		return fmt.Sprintf("%v", values)
 	}
-
-	if len(valuesJson) == 0 {
-		return make(map[string]interface{}), nil
-	}
-
-	var res map[string]interface{}
-
-	err = json.Unmarshal(valuesJson, &res)
-	if err != nil {
-		return nil, fmt.Errorf("bad %s: %s", filePath, err)
-	}
-
-	return res, nil
+	return string(valuesYaml)
 }
-func readJsonPatchFile(filePath string) (*jsonpatch.Patch, error) {
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
-	}
 
-	if len(data) == 0 {
-		return nil, nil
-	}
+func makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
+	envs := make([]string, 0)
+	envs = append(envs, os.Environ()...)
+	envs = append(envs, helm.CommandEnv()...)
+	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
 
-	patch, err := jsonpatch.DecodePatch(data)
-	if err != nil {
-		return nil, fmt.Errorf("bad %s: %s", filePath, err)
-	}
-
-	return &patch, nil
+	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
-func dumpGlobalHooksValuesYaml() (string, error) {
-	return dumpValuesYaml("global-hooks.yaml", prepareGlobalValues())
-}
-func prepareGlobalValues() map[interface{}]interface{} {
-	return merge_values.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues)
-}
-func readValues() (map[interface{}]interface{}, error) {
-	path := filepath.Join(WorkingDir, "modules", "values.yaml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return make(map[interface{}]interface{}), nil
-	}
 
-	return readValuesYamlFile(path)
+func execCommand(cmd *exec.Cmd) error {
+	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
+	return cmd.Run()
 }

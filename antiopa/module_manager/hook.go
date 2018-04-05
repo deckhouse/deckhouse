@@ -1,10 +1,17 @@
 package module_manager
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
+	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 	"github.com/evanphx/json-patch"
+	"github.com/romana/rlog"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type GlobalHook struct {
@@ -164,67 +171,195 @@ func addModulesHooksOrderByName(moduleName string, bindingType BindingType, modu
 	modulesHooksOrderByName[moduleName][bindingType] = append(modulesHooksOrderByName[moduleName][bindingType], moduleHook)
 }
 
-func (h *GlobalHook) run() error { return nil }
+func (h *GlobalHook) run() error {
+	rlog.Infof("running global hook '%s' ...", h.Name)
 
-func (h *GlobalHook) exec(valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
-	cmd := makeCommand(WorkingDir, valuesPath, h.Path, []string{})
-	return execHook(filepath.Join(TempDir, "values", "hooks"), h.Name, cmd)
-}
+	configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := h.exec()
+	if err != nil {
+		return fmt.Errorf("global hook '%s' failed: %s", h.Name, err)
+	}
 
-func (h *ModuleHook) run() error {
-	//moduleName := h.Module.Name
-	//rlog.Infof("module '%s': running %s hook '%s' ...", moduleName, h.Name)
-	//
-	//configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := h.exec(valuesPath)
-	//if err != nil {
-	//	return fmt.Errorf("module '%s': hook '%s' FAILED: %s", moduleName, h.Name, err)
-	//}
-	//
-	//var kubeModuleConfigValuesChanged bool
-	//if kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
-	//	return err
-	//}
-	//
-	//if kubeModuleConfigValuesChanged {
-	//	rlog.Debugf("module '%s': hook '%s': updating VALUES in ConfigMap:\n%s", moduleName, h.Name, valuesToString(kubeModulesConfigValues[moduleName]))
-	//	err = kube_values_manager.SetModuleKubeValues(moduleName, kubeModulesConfigValues[moduleName])
-	//	if err != nil {
-	//		err = fmt.Errorf("module '%s': hook '%s': set kube values error: %s", moduleName, h.Name, err)
-	//		return err
-	//	}
-	//}
-	//
-	//if modulesDynamicValues[moduleName], _, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
-	//	err = fmt.Errorf("module '%s': hook '%s': merge values error: %s", moduleName, h.Name, err)
-	//	return err
-	//}
+	var kubeConfigValuesChanged bool
+	if kubeConfigValues, kubeConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
+		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
+	}
+
+	if kubeConfigValuesChanged {
+		rlog.Debugf("global hook '%s': updating VALUES in kubeConfigValues:\n%s", h.Name, valuesToString(kubeConfigValues))
+		if err := kube_values_manager.SetKubeValues(kubeConfigValues); err != nil {
+			return fmt.Errorf("global hook '%s': set kube values failed: %s", h.Name, err)
+		}
+	}
+
+	if dynamicValues, _, err = merge_values.ApplyJsonMergeAndPatch(dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
+		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
+	}
 
 	return nil
 }
 
-func (h *ModuleHook) exec(valuesPath string) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+func (h *GlobalHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+	valuesPath, err := h.prepareValuesPath()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	cmd := makeCommand(WorkingDir, valuesPath, h.Path, []string{})
+	return execHook(filepath.Join(TempDir, "values", "hooks"), h.Name, cmd)
+}
+
+func (h *GlobalHook) prepareValuesPath() (string, error) {
+	valuesPath, err := dumpValuesYaml("global-hooks.yaml", h.values())
+	if err != nil {
+		return "", err
+	}
+	return valuesPath, nil
+}
+
+func (h *GlobalHook) values() map[interface{}]interface{} {
+	return merge_values.MergeValues(
+		globalConfigValues,
+		kubeConfigValues,
+		dynamicValues)
+}
+
+func (h *ModuleHook) run() error {
+	moduleName := h.Module.Name
+	rlog.Infof("module '%s': running %s hook '%s' ...", moduleName, h.Name)
+
+	configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := h.exec()
+	if err != nil {
+		return fmt.Errorf("module '%s': hook '%s' failed: %s", moduleName, h.Name, err)
+	}
+
+	var kubeModuleConfigValuesChanged bool
+	if kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
+		return err
+	}
+
+	if kubeModuleConfigValuesChanged {
+		rlog.Debugf("module '%s': hook '%s': updating VALUES in kubeModulesConfigValues[%s]:\n%s", moduleName, h.Name, moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
+		err = kube_values_manager.SetModuleKubeValues(moduleName, kubeModulesConfigValues[moduleName])
+		if err != nil {
+			return fmt.Errorf("module '%s': hook '%s': set kube values failed: %s", moduleName, h.Name, err)
+		}
+	}
+
+	if modulesDynamicValues[moduleName], _, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
+		return fmt.Errorf("module '%s': hook '%s': merge values failed: %s", moduleName, h.Name, err)
+	}
+
+	return nil
+}
+
+func (h *ModuleHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+	valuesPath, err := h.prepareValuesPath()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	cmd := makeCommand(h.Module.Path, valuesPath, h.Path, []string{})
 	return execHook(filepath.Join(TempDir, "values", "modules"), h.Name, cmd)
 }
 
+func (h *ModuleHook) prepareValuesPath() (string, error) {
+	return h.Module.prepareValuesPath()
+}
+
+func initGlobalHooks() error {
+	rlog.Debug("Init global hooks")
+
+	globalHooksOrder = make(map[BindingType][]*GlobalHook)
+	globalHooksByName = make(map[string]*GlobalHook)
+
+	hooksDir := filepath.Join(WorkingDir, "global-hooks")
+
+	err := initHooks(hooksDir, func(hookName string, output []byte) error {
+		hookConfig := &GlobalHookConfig{}
+		if err := json.Unmarshal(output, hookConfig); err != nil {
+			return fmt.Errorf("unmarshaling global hook `%s` json failed: %s", hookName, err.Error())
+		}
+
+		if err := addGlobalHook(hookName, hookConfig); err != nil {
+			return fmt.Errorf("adding global hook `%s` failed: %s", hookName, err.Error())
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initModuleHooks(module *Module) error {
+	hooksDir := filepath.Join(module.Path, "hooks")
+
+	err := initHooks(hooksDir, func(hookName string, output []byte) error {
+		hookConfig := &ModuleHookConfig{}
+		if err := json.Unmarshal(output, hookConfig); err != nil {
+			return fmt.Errorf("unmarshaling module hook `%s` json failed: %s", module.Name, err.Error())
+		}
+
+		if err := addModuleHook(module.Name, hookName, hookConfig); err != nil {
+			return fmt.Errorf("adding module hook `%s` failed: %s", module.Name, err.Error())
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initHooks(hooksDir string, addHook func(hookName string, output []byte) error) error {
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	hooksRelativePaths, err := getExecutableFilesPaths(hooksDir) // returns a list of executable hooks sorted by filename
+	if err != nil {
+		return err
+	}
+
+	for _, hookPath := range hooksRelativePaths {
+		hookName := filepath.Base(hookPath)
+
+		cmd := makeCommand(WorkingDir, "", hookPath, []string{"--config"})
+		output, err := execCommandOutput(cmd)
+		if err != nil {
+			return err
+		}
+
+		if err := addHook(hookName, output); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func execHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
 	configValuesJsonMergePath := filepath.Join(tmpDir, hookName, "config_values_json_merge.json")
-	if err := createResultFile(configValuesJsonMergePath); err != nil {
+	if err := createHookResultValuesFile(configValuesJsonMergePath); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	configValuesJsonPatchPath := filepath.Join(tmpDir, hookName, "config_values_json_patch.json")
-	if err := createResultFile(configValuesJsonPatchPath); err != nil {
+	if err := createHookResultValuesFile(configValuesJsonPatchPath); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	dynamicValuesJsonMergePath := filepath.Join(tmpDir, hookName, "dynamic_values_json_merge.json")
-	if err := createResultFile(dynamicValuesJsonMergePath); err != nil {
+	if err := createHookResultValuesFile(dynamicValuesJsonMergePath); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	dynamicValuesJsonPatchPath := filepath.Join(tmpDir, hookName, "dynamic_values_json_patch.json")
-	if err := createResultFile(dynamicValuesJsonPatchPath); err != nil {
+	if err := createHookResultValuesFile(dynamicValuesJsonPatchPath); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
@@ -262,4 +397,59 @@ func execHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *
 	}
 
 	return configValuesJsonMergeValues, configValuesJsonPatchValues, dynamicValuesJsonMergeValues, dynamicValuesJsonPatchValues, nil
+}
+
+func createHookResultValuesFile(filePath string) error {
+	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return nil
+	}
+
+	file.Close()
+	return nil
+}
+
+func readValuesJsonFile(filePath string) (map[string]interface{}, error) {
+	valuesJson, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+	}
+
+	if len(valuesJson) == 0 {
+		return make(map[string]interface{}), nil
+	}
+
+	var res map[string]interface{}
+
+	err = json.Unmarshal(valuesJson, &res)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+	}
+
+	return res, nil
+}
+
+func readJsonPatchFile(filePath string) (*jsonpatch.Patch, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+	}
+
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	patch, err := jsonpatch.DecodePatch(data)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+	}
+
+	return &patch, nil
+}
+
+func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
+	rlog.Debugf("Executing command output in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
+	cmd.Stdout = nil
+	return cmd.Output()
 }
