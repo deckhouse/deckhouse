@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 )
 
