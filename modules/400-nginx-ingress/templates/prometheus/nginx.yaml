@@ -90,8 +90,7 @@ spec:
       targetLabel: service_port
 
     - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|([^\|], )*([^, \|]*)\|.*
-      replacement: $2
+      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|([^, \|]*)([^\|]*)\|.*
       targetLabel: upstream_address
     - sourceLabels: [server_zone]
       regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|()\|.*
