@@ -20,6 +20,6 @@
     {{- include "template.nginx" (dict "context" . "hostNetwork" true) }}
     {{- include "template.config" (dict "context" .) }}
     {{- include "template.nginx" (dict "context" . "suffix" "-for-direct-fallback") }}
-    {{- include "template.config" (dict "context" . "suffix" "-for-direct-fallback" "useProxyProtocol" "yes" ) }}
+    {{- include "template.config" (dict "context" . "suffix" "-for-direct-fallback" "useProxyProtocol" "true" ) }}
   {{- end }}
 {{- end }}
