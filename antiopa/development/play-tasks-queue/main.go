@@ -1,14 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"os"
-	"time"
+	_ "fmt"
+	_ "io"
+	_ "os"
+	_ "time"
 
-	"github.com/deckhouse/deckhouse/antiopa/task"
+	_ "github.com/deckhouse/deckhouse/antiopa/task"
 )
 
+/* FIXME: convert to unit-test
 func FillQueue(tq *task.TasksQueue, ch chan int) {
 	for i := 0; i < 40; i++ {
 		val := i
@@ -24,8 +25,10 @@ func FillQueue(tq *task.TasksQueue, ch chan int) {
 	fmt.Printf("Queue filled, len=%d\n", tq.Length())
 	ch <- 0
 }
+*/
 
 func main() {
+/* FIXME: convert to unit-test
 	tq := task.NewTasksQueue("/tmp/antiopa-tasks")
 
 	w := make(chan int, 0)
@@ -39,4 +42,5 @@ func main() {
 	}
 	io.Copy(f, tq.DumpReader())
 	f.Close()
+*/
 }
