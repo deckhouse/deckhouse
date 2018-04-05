@@ -8,29 +8,39 @@ import (
 	"regexp"
 
 	"github.com/romana/rlog"
-
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1beta1 "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-const KubeTokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-const KubeNamespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-const KubeDefaultNamespace = "antiopa"
-const KubeAntiopaDeploymentName = "antiopa"
-const KubeAntiopaContainerName = "antiopa"
-const AntiopaConfigMap = "antiopa"
+const (
+	KubeTokenFilePath     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	KubeNamespaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	DefaultNamespace      = "antiopa"
+	AntiopaDeploymentName = "antiopa"
+	AntiopaContainerName  = "antiopa"
+	AntiopaSecret         = "antiopa"
+	AntiopaConfigMap      = "antiopa"
+)
 
 var (
-	KubernetesClient           *kubernetes.Clientset
+	KubernetesClient           Client
 	KubernetesAntiopaNamespace string
 )
 
+type Client interface {
+	CoreV1() corev1.CoreV1Interface
+	AppsV1beta1() appsv1beta1.AppsV1beta1Interface
+}
+
 func IsRunningOutOfKubeCluster() bool {
-	_, err := os.Stat(KubeTokenFile)
+	_, err := os.Stat(KubeTokenFilePath)
 	return os.IsNotExist(err)
 }
 
@@ -67,10 +77,10 @@ func InitKube() {
 		}
 	}
 
-	if _, err := os.Stat(KubeNamespaceFile); !os.IsNotExist(err) {
-		res, err := ioutil.ReadFile(KubeNamespaceFile)
+	if _, err := os.Stat(KubeNamespaceFilePath); !os.IsNotExist(err) {
+		res, err := ioutil.ReadFile(KubeNamespaceFilePath)
 		if err != nil {
-			rlog.Errorf("KUBE-INIT Cannot read namespace from %s: %s", KubeNamespaceFile, err)
+			rlog.Errorf("KUBE-INIT Cannot read namespace from %s: %s", KubeNamespaceFilePath, err)
 			os.Exit(1)
 		}
 
@@ -80,7 +90,7 @@ func InitKube() {
 		KubernetesAntiopaNamespace = os.Getenv("ANTIOPA_NAMESPACE")
 	}
 	if KubernetesAntiopaNamespace == "" {
-		KubernetesAntiopaNamespace = KubeDefaultNamespace
+		KubernetesAntiopaNamespace = DefaultNamespace
 	}
 
 	KubernetesClient, err = kubernetes.NewForConfig(config)
@@ -93,7 +103,7 @@ func InitKube() {
 }
 
 func KubeGetDeploymentImageName() string {
-	res, err := KubernetesClient.AppsV1beta1().Deployments(KubernetesAntiopaNamespace).Get(KubeAntiopaDeploymentName, metaV1.GetOptions{})
+	res, err := KubernetesClient.AppsV1beta1().Deployments(KubernetesAntiopaNamespace).Get(AntiopaDeploymentName, metav1.GetOptions{})
 
 	if err != nil {
 		rlog.Errorf("KUBE Cannot get antiopa deployment! %v", err)
@@ -103,7 +113,7 @@ func KubeGetDeploymentImageName() string {
 	containersSpecs := res.Spec.Template.Spec.Containers
 
 	for _, spec := range containersSpecs {
-		if spec.Name == KubeAntiopaContainerName {
+		if spec.Name == AntiopaContainerName {
 			return spec.Image
 		}
 	}
@@ -112,7 +122,7 @@ func KubeGetDeploymentImageName() string {
 }
 
 func KubeGetPodImageName(podName string) string {
-	res, err := KubernetesClient.CoreV1().Pods(KubernetesAntiopaNamespace).Get(podName, metaV1.GetOptions{})
+	res, err := KubernetesClient.CoreV1().Pods(KubernetesAntiopaNamespace).Get(podName, metav1.GetOptions{})
 
 	if err != nil {
 		rlog.Errorf("KUBE Cannot get info for pod %s! %v", podName, err)
@@ -122,7 +132,7 @@ func KubeGetPodImageName(podName string) string {
 	containersSpecs := res.Spec.Containers
 
 	for _, spec := range containersSpecs {
-		if spec.Name == KubeAntiopaContainerName {
+		if spec.Name == AntiopaContainerName {
 			return spec.Image
 		}
 	}
@@ -135,7 +145,7 @@ func KubeGetPodImageName(podName string) string {
 func KubeUpdateDeployment(imageId string) error {
 	deploymentsClient := KubernetesClient.AppsV1beta1().Deployments(KubernetesAntiopaNamespace)
 
-	res, err := deploymentsClient.Get(KubeAntiopaDeploymentName, metaV1.GetOptions{})
+	res, err := deploymentsClient.Get(AntiopaDeploymentName, metav1.GetOptions{})
 
 	if err != nil {
 		return fmt.Errorf("Cannot get antiopa deployment! %v", err)
@@ -166,7 +176,7 @@ func NormalizeLabelValue(value string) string {
 }
 
 func GetConfigMap() (*v1.ConfigMap, error) {
-	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get(AntiopaConfigMap, metaV1.GetOptions{})
+	configMap, err := KubernetesClient.CoreV1().ConfigMaps(KubernetesAntiopaNamespace).Get(AntiopaConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get ConfigMap %s from namespace %s: %s", AntiopaConfigMap, KubernetesAntiopaNamespace, err)
 	}
