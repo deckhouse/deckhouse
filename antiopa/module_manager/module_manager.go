@@ -1,10 +1,13 @@
 package module_manager
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/romana/rlog"
 	"sort"
-	"time"
+
+	"github.com/deckhouse/deckhouse/antiopa/merge_values"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 /*
@@ -22,7 +25,7 @@ All run:
 */
 
 var (
-	EventCh <-chan Event
+	EventCh chan Event
 
 	// список модулей, найденных в инсталляции
 	modulesByName map[string]*Module
@@ -48,6 +51,13 @@ var (
 	// dynamic-values для конкретного модуля, для всех кластеров
 	modulesDynamicValues map[string]map[interface{}]interface{}
 
+	// Внутреннее событие: изменились values модуля.
+	// Обработка -- генерация внешнего Event со всеми связанными модулями для рестарта.
+	moduleValuesChanged chan string
+	// Внутреннее событие: изменились глобальные values.
+	// Обработка -- генерация внешнего Event для глобального рестарта всех модулей.
+	globalValuesChanged chan bool
+
 	WorkingDir string
 	TempDir    string
 )
@@ -56,9 +66,6 @@ var (
 var (
 	retryModulesNamesQueue []string
 	retryAll               bool
-
-	valuesChanged        bool
-	modulesValuesChanged map[string]bool
 )
 
 // Типы привязок для хуков — то, от чего могут сработать хуки
@@ -127,6 +134,10 @@ func Init(workingDir string, tempDir string) error {
 	TempDir = tempDir
 	WorkingDir = workingDir
 
+	EventCh = make(chan Event, 1)
+	globalValuesChanged = make(chan bool, 1)
+	moduleValuesChanged = make(chan string, 1)
+
 	if err := initGlobalHooks(); err != nil {
 		return err
 	}
@@ -141,13 +152,28 @@ func Init(workingDir string, tempDir string) error {
 // Module manager loop
 func RunModuleManager() {
 	for {
-		time.Sleep(time.Duration(1) * time.Second)
-
+		select {
 		/*
-		 * TODO: Watch kube_values_manager.ConfigUpdated
-		 * TODO: Watch kube_values_manager.ModuleConfigUpdated
-		 * TODO: Send events to EventCh
+		* TODO: Watch kube_values_manager.ConfigUpdated
+		* TODO: Watch kube_values_manager.ModuleConfigUpdated
 		 */
+
+		case <-globalValuesChanged:
+			rlog.Debugf("Module manager: global values")
+			EventCh <- Event{Type: GlobalChanged}
+		case moduleName := <-moduleValuesChanged:
+			rlog.Debugf("Module manager: module '%s' values changed", moduleName)
+
+			// Перезапускать enabled-скрипт не нужно, т.к.
+			// изменение values модуля не может вызвать
+			// изменение состояния включенности модуля
+			EventCh <- Event{
+				Type: ModulesChanged,
+				ModulesChanges: []ModuleChange{
+					ModuleChange{Name: moduleName, ChangeType: Changed},
+				},
+			}
+		}
 	}
 }
 
@@ -215,6 +241,10 @@ func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string
 	return moduleHooksNames, nil
 }
 
+/*
+ * TODO: удаляет helm release (purge)
+ * TODO: выполняет новый вид хука afterHelmDelete
+ */
 func DeleteModule(moduleName string) error { return nil }
 
 func RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
@@ -230,20 +260,39 @@ func RunModule(moduleName string) error { // запускает before-helm + he
 	return nil
 }
 
-/* TODO:
-Добавить DeleteModule(moduleName), который:
- * удаляет helm release (purge)
- * выполняет новый вид хука afterHelmDelete
-*/
+func valuesChecksum(ValuesArr ...map[interface{}]interface{}) (string, error) {
+	valuesJson, err := json.Marshal(merge_values.MergeValues(ValuesArr...))
+	if err != nil {
+		return "", err
+	}
+	return utils.CalculateChecksum(string(valuesJson)), nil
+}
 
-func RunGlobalHook(hookName string, _ BindingType) error {
+func RunGlobalHook(hookName string, binding BindingType) error {
 	globalHook, err := GetGlobalHook(hookName)
+	if err != nil {
+		return err
+	}
+
+	oldValuesChecksum, err := valuesChecksum(kubeConfigValues, dynamicValues)
 	if err != nil {
 		return err
 	}
 
 	if err := globalHook.run(); err != nil {
 		return err
+	}
+
+	newValuesChecksum, err := valuesChecksum(kubeConfigValues, dynamicValues)
+	if err != nil {
+		return err
+	}
+
+	if newValuesChecksum != oldValuesChecksum {
+		switch binding {
+		case OnKubeNodeChange:
+			globalValuesChanged <- true
+		}
 	}
 
 	return nil
@@ -255,8 +304,25 @@ func RunModuleHook(hookName string, binding BindingType) error {
 		return err
 	}
 
+	oldValuesChecksum, err := valuesChecksum(kubeModulesConfigValues[moduleHook.Module.Name], modulesDynamicValues[moduleHook.Module.Name])
+	if err != nil {
+		return err
+	}
+
 	if err := moduleHook.run(); err != nil {
 		return err
+	}
+
+	newValuesChecksum, err := valuesChecksum(kubeModulesConfigValues[moduleHook.Module.Name], modulesDynamicValues[moduleHook.Module.Name])
+	if err != nil {
+		return err
+	}
+
+	if newValuesChecksum != oldValuesChecksum {
+		switch binding {
+		case Schedule:
+			moduleValuesChanged <- moduleHook.Module.Name
+		}
 	}
 
 	return nil
