@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"time"
+
+	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 )
 
 type TaskType string
 
 const (
-	Module        TaskType = "TASK_MODULE"
 	ModuleDelete  TaskType = "TASK_MODULE_DELETE"
-	ModuleUpgrade TaskType = "TASK_MODULE_UPGRADE"
 	ModuleRun     TaskType = "TASK_MODULE_RUN"
-	Hook          TaskType = "TASK_HOOK"
+	GlobalHookRun TaskType = "TASK_GLOBAL_HOOK_RUN"
 	Delay         TaskType = "TASK_DELAY"
 )
 
@@ -21,6 +21,7 @@ type Task struct {
 	FailureCount int    // failed executions count
 	Name         string // name of module or hook
 	Type         TaskType
+	Binding      module_manager.BindingType
 }
 
 func NewTask(taskType TaskType, name string) *Task {
@@ -29,6 +30,11 @@ func NewTask(taskType TaskType, name string) *Task {
 		Name:         name,
 		Type:         taskType,
 	}
+}
+
+func (t *Task) WithBinding(binding module_manager.BindingType) *Task {
+	t.Binding = binding
+	return t
 }
 
 func (t *Task) DumpAsText() string {

@@ -39,6 +39,7 @@ var DockerRegistryInfo = map[string]map[string]string{
 }
 
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
+// TODO вытащить token и host в секрет
 func InitRegistryManager(hostname string) error {
 	if kube.IsRunningOutOfKubeCluster() {
 		return nil
