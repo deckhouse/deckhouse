@@ -7,13 +7,14 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 spec:
-  # Миграция 2018-04-01 https://github.com/deckhouse/deckhouse/merge_requests/89
-  replicas: 0
+  replicas: 1
   template:
     metadata:
       labels:
         app: cert-manager
     spec:
+      strategy:
+        type: Recreate
 {{- if and (hasKey .Values.certManager "nodeSelector") (.Values.certManager.nodeSelector) }}
       nodeSelector:
 {{ .Values.certManager.nodeSelector | toYaml | trim | indent 8 }}
@@ -36,6 +37,7 @@ spec:
           image: "quay.io/jetstack/cert-manager-controller:v0.2.3"
           args:
           - --cluster-resource-namespace=kube-cert-manager
+          - --leader-election-namespace=kube-cert-manager
           imagePullPolicy: Always
           resources:
             requests:
@@ -47,6 +49,7 @@ spec:
           args:
           - --default-issuer-name=letsencrypt
           - --default-issuer-kind=ClusterIssuer
+          - --leader-election-namespace=kube-cert-manager
           resources:
             requests:
               cpu: 10m
