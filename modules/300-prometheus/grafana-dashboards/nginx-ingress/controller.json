@@ -12,6 +12,12 @@
       "id": "graph",
       "name": "Graph",
       "version": "5.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "singlestat",
+      "name": "Singlestat",
+      "version": "5.0.0"
     }
   ],
   "annotations": {
@@ -22,7 +28,9 @@
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
+        "limit": 100,
         "name": "Annotations & Alerts",
+        "showIn": 0,
         "type": "dashboard"
       }
     ]
@@ -31,9 +39,414 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522623737433,
+  "iteration": 1522882235727,
   "links": [],
   "panels": [
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 476,
+      "title": "",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 5,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "height": "150",
+      "id": 478,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": true,
+        "rightSide": true,
+        "show": true,
+        "sideWidth": 500,
+        "sort": null,
+        "sortDesc": null,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(nginx_connections_total{type=\"active\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B",
+          "step": 10
+        },
+        {
+          "expr": "sum(nginx_connections_total{type=\"active\"}) by (instance)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Active Connections",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 479,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "rightSide": true,
+        "show": true,
+        "sort": null,
+        "sortDesc": null,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B",
+          "step": 10
+        },
+        {
+          "expr": "sum(container_memory_usage_bytes{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}) by (instance)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Memory",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 480,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "rightSide": true,
+        "show": true,
+        "sort": null,
+        "sortDesc": null,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}[$__interval_rv])) ",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B",
+          "step": 10
+        },
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}[$__interval_rv]))  by (instance)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "CPU",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "cores",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 432,
+      "panels": [],
+      "title": "",
+      "type": "row"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 14
+      },
+      "id": 26,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\"}[$__range]))",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Requests",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
     {
       "aliasColors": {},
       "bars": true,
@@ -43,26 +456,28 @@
       "decimals": 3,
       "fill": 8,
       "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 0
+        "h": 6,
+        "w": 11,
+        "x": 2,
+        "y": 14
       },
-      "height": "150",
+      "hideTimeOverride": false,
       "id": 4,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
+        "alignAsTable": false,
+        "avg": false,
         "current": false,
         "hideEmpty": false,
         "hideZero": false,
-        "max": true,
-        "min": true,
-        "rightSide": true,
-        "show": true,
-        "sideWidth": 500,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sideWidth": null,
+        "sort": null,
+        "sortDesc": null,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": false,
       "linewidth": 0,
@@ -163,28 +578,675 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", server_zone=\"upstream_response_time_hist::*\",key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", server_zone=\"upstream_response_time_hist\", key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "A",
-          "step": 10
+          "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", server_zone=\"upstream_response_time_hist::*\",key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", server_zone=\"upstream_response_time_hist\", key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "B",
-          "step": 10
+          "step": 20
         },
         {
-          "expr": "sum(rate(nginx_filterzone_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", server_zone=\"upstream_response_time_hist::*\",key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", server_zone=\"upstream_response_time_hist\", key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{key}}",
           "refId": "C",
-          "step": 10
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Upstream Response Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "transparent": false,
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": [
+          "total"
+        ]
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 3,
+      "fill": 8,
+      "gridPos": {
+        "h": 6,
+        "w": 11,
+        "x": 13,
+        "y": 14
+      },
+      "hideTimeOverride": false,
+      "id": 14,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sideWidth": null,
+        "sort": null,
+        "sortDesc": null,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 0,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "0.005",
+          "color": "#76B576"
+        },
+        {
+          "alias": "0.01",
+          "color": "#83BC6D"
+        },
+        {
+          "alias": "0.02",
+          "color": "#91C364"
+        },
+        {
+          "alias": "0.03",
+          "color": "#9FCB5B"
+        },
+        {
+          "alias": "0.04",
+          "color": "#ACD252"
+        },
+        {
+          "alias": "0.05",
+          "color": "#BADA49"
+        },
+        {
+          "alias": "0.075",
+          "color": "#C8E140"
+        },
+        {
+          "alias": "0.1",
+          "color": "#D5E837"
+        },
+        {
+          "alias": "0.2",
+          "color": "#E3F02E"
+        },
+        {
+          "alias": "0.3",
+          "color": "#F1F725"
+        },
+        {
+          "alias": "0.4",
+          "color": "#FFFF1C"
+        },
+        {
+          "alias": "0.5",
+          "color": "#FAE519"
+        },
+        {
+          "alias": "0.75",
+          "color": "#F6CC16"
+        },
+        {
+          "alias": "1.0",
+          "color": "#F2B213"
+        },
+        {
+          "alias": "1.5",
+          "color": "#EE9910"
+        },
+        {
+          "alias": "2",
+          "color": "#EA7F0E"
+        },
+        {
+          "alias": "3",
+          "color": "#E6660B"
+        },
+        {
+          "alias": "4",
+          "color": "#E24C08"
+        },
+        {
+          "alias": "5",
+          "color": "#DE3205"
+        },
+        {
+          "alias": "10",
+          "color": "#DA1902"
+        },
+        {
+          "alias": ">10",
+          "color": "#D60000"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", server_zone=\"request_time_hist\", key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", server_zone=\"request_time_hist\", key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", server_zone=\"request_time_hist\", key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "C",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Request Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": [
+          "total"
+        ]
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 0,
+      "format": "decbytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 16
+      },
+      "id": 433,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\"}[$__range]))",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Traffic",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 1,
+      "format": "percentunit",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 18
+      },
+      "id": 25,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=\"https\"}[$__interval_rv])) / (sum(increase(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\"}[$__interval_rv])) > 0)",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "HTTPS",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 30,
+      "panels": [],
+      "repeat": "instance",
+      "title": "$instance",
+      "type": "row"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 21
+      },
+      "id": 38,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Requests",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 3,
+      "fill": 8,
+      "gridPos": {
+        "h": 6,
+        "w": 11,
+        "x": 2,
+        "y": 21
+      },
+      "hideTimeOverride": false,
+      "id": 33,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sideWidth": null,
+        "sort": null,
+        "sortDesc": null,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 0,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "0.005",
+          "color": "#76B576"
+        },
+        {
+          "alias": "0.01",
+          "color": "#83BC6D"
+        },
+        {
+          "alias": "0.02",
+          "color": "#91C364"
+        },
+        {
+          "alias": "0.03",
+          "color": "#9FCB5B"
+        },
+        {
+          "alias": "0.04",
+          "color": "#ACD252"
+        },
+        {
+          "alias": "0.05",
+          "color": "#BADA49"
+        },
+        {
+          "alias": "0.075",
+          "color": "#C8E140"
+        },
+        {
+          "alias": "0.1",
+          "color": "#D5E837"
+        },
+        {
+          "alias": "0.2",
+          "color": "#E3F02E"
+        },
+        {
+          "alias": "0.3",
+          "color": "#F1F725"
+        },
+        {
+          "alias": "0.4",
+          "color": "#FFFF1C"
+        },
+        {
+          "alias": "0.5",
+          "color": "#FAE519"
+        },
+        {
+          "alias": "0.75",
+          "color": "#F6CC16"
+        },
+        {
+          "alias": "1.0",
+          "color": "#F2B213"
+        },
+        {
+          "alias": "1.5",
+          "color": "#EE9910"
+        },
+        {
+          "alias": "2",
+          "color": "#EA7F0E"
+        },
+        {
+          "alias": "3",
+          "color": "#E6660B"
+        },
+        {
+          "alias": "4",
+          "color": "#E24C08"
+        },
+        {
+          "alias": "5",
+          "color": "#DE3205"
+        },
+        {
+          "alias": "10",
+          "color": "#DA1902"
+        },
+        {
+          "alias": ">10",
+          "color": "#D60000"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", server_zone=\"upstream_response_time_hist\", key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", server_zone=\"upstream_response_time_hist\", key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", server_zone=\"upstream_response_time_hist\", key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "C",
+          "step": 20
         }
       ],
       "thresholds": [],
@@ -208,7 +1270,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "ops",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -231,33 +1293,405 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "fill": 1,
+      "decimals": 3,
+      "fill": 8,
       "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 4
+        "h": 6,
+        "w": 11,
+        "x": 13,
+        "y": 21
       },
-      "height": "150",
-      "id": 10,
+      "hideTimeOverride": false,
+      "id": 403,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "rightSide": true,
-        "show": true,
-        "sideWidth": 500,
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sideWidth": null,
         "sort": null,
         "sortDesc": null,
         "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 0,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "0.005",
+          "color": "#76B576"
+        },
+        {
+          "alias": "0.01",
+          "color": "#83BC6D"
+        },
+        {
+          "alias": "0.02",
+          "color": "#91C364"
+        },
+        {
+          "alias": "0.03",
+          "color": "#9FCB5B"
+        },
+        {
+          "alias": "0.04",
+          "color": "#ACD252"
+        },
+        {
+          "alias": "0.05",
+          "color": "#BADA49"
+        },
+        {
+          "alias": "0.075",
+          "color": "#C8E140"
+        },
+        {
+          "alias": "0.1",
+          "color": "#D5E837"
+        },
+        {
+          "alias": "0.2",
+          "color": "#E3F02E"
+        },
+        {
+          "alias": "0.3",
+          "color": "#F1F725"
+        },
+        {
+          "alias": "0.4",
+          "color": "#FFFF1C"
+        },
+        {
+          "alias": "0.5",
+          "color": "#FAE519"
+        },
+        {
+          "alias": "0.75",
+          "color": "#F6CC16"
+        },
+        {
+          "alias": "1.0",
+          "color": "#F2B213"
+        },
+        {
+          "alias": "1.5",
+          "color": "#EE9910"
+        },
+        {
+          "alias": "2",
+          "color": "#EA7F0E"
+        },
+        {
+          "alias": "3",
+          "color": "#E6660B"
+        },
+        {
+          "alias": "4",
+          "color": "#E24C08"
+        },
+        {
+          "alias": "5",
+          "color": "#DE3205"
+        },
+        {
+          "alias": "10",
+          "color": "#DA1902"
+        },
+        {
+          "alias": ">10",
+          "color": "#D60000"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", server_zone=\"request_time_hist\", key=~\"0\\\\..*|1\\\\..*\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", server_zone=\"request_time_hist\", key=~\"[2-9]\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "B",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_filterzone_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", server_zone=\"request_time_hist\", key=~\"10|>10\"}[$__interval_rv])) by (key) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{key}}",
+          "refId": "C",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Request Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": [
+          "total"
+        ]
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ]
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 0,
+      "format": "decbytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 23
+      },
+      "id": 379,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Traffic",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 1,
+      "format": "percentunit",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 0,
+        "y": 25
+      },
+      "id": 434,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=\"https\"}[$__interval_rv])) / (sum(increase(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", }[$__interval_rv])) > 0)",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "HTTPS",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 28,
+      "panels": [],
+      "title": "",
+      "type": "row"
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 28
+      },
+      "id": 399,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
         "values": true
       },
       "lines": false,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -274,26 +1708,1354 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}[$__interval_rv])) * 8",
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=~\"1xx|2xx\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
-          "refId": "A",
-          "step": 10
+          "refId": "A"
         },
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}[$__interval_rv])) by (instance) * 8",
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=~\"1xx|2xx\"}[$__interval_rv])) by (instance) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "B",
-          "step": 10
+          "step": 40
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Network Transmit",
+      "title": "1xx|2xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 28
+      },
+      "id": 10,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"3xx\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"3xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "3xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 28
+      },
+      "id": 18,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"4xx\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"4xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "4xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 28
+      },
+      "id": 17,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"5xx\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"5xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "5xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 33
+      },
+      "id": 435,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=~\"1xx|2xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "1xx|2xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 33
+      },
+      "id": 436,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"3xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "3xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 33
+      },
+      "id": 437,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"4xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "4xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 33
+      },
+      "id": 438,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", status_code=\"5xx\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "5xx",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 440,
+      "panels": [
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 25
+          },
+          "id": 441,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=~\"1xx|2xx\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=~\"1xx|2xx\"}[$__interval_rv])) by (namespace) > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{namespace}}",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "1xx|2xx",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 25
+          },
+          "id": 442,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=\"3xx\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=\"3xx\"}[$__interval_rv])) by (namespace) > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{namespace}}",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "3xx",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 25
+          },
+          "id": 443,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=\"4xx\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=\"4xx\"}[$__interval_rv])) by (namespace) > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{namespace}}",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "4xx",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 25
+          },
+          "id": 444,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=\"5xx\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(nginx_responses_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", scheme=~\"$scheme\", status_code=\"5xx\"}[$__interval_rv])) by (namespace) > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{namespace}}",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "5xx",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "repeat": "instance",
+      "title": "$instance",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 429,
+      "panels": [],
+      "title": "",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 9,
+        "x": 0,
+        "y": 39
+      },
+      "id": 1,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "total",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\"}[$__interval_rv])) by (instance) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Requests",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 9,
+        "x": 9,
+        "y": 39
+      },
+      "id": 9,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", direction=\"out\"}[$__interval_rv])) * 8",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A",
+          "step": 20
+        },
+        {
+          "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", direction=\"out\"}[$__interval_rv])) by (instance) * 8 > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Traffic",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -313,16 +3075,16 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
-          "format": "short",
+          "format": "bps",
           "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": false
+          "show": true
         }
       ]
     },
@@ -332,29 +3094,24 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "decimals": 2,
       "fill": 1,
       "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 8
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 39
       },
-      "height": "150",
-      "id": 1,
+      "id": 12,
       "legend": {
         "alignAsTable": true,
         "avg": true,
         "current": true,
-        "hideEmpty": false,
-        "hideZero": false,
         "max": true,
         "min": true,
         "rightSide": true,
-        "show": true,
-        "sideWidth": 500,
-        "sort": null,
-        "sortDesc": null,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -378,26 +3135,26 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(nginx_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", server_zone='*'}[$__interval_rv]))",
+          "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", direction=\"in\"}[$__interval_rv])) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A",
-          "step": 10
+          "step": 20
         },
         {
-          "expr": "sum(rate(nginx_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", server_zone!='*'}[$__interval_rv])) by (instance) > 0",
+          "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", direction=\"in\"}[$__interval_rv])) by (instance) * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "B",
-          "step": 10
+          "step": 20
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Requests",
+      "title": "Incoming Traffic",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -413,20 +3170,20 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "rps",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
+          "format": "bps",
           "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": false
+          "show": true
+        },
+        {
+          "format": "bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
         }
       ]
     },
@@ -436,15 +3193,189 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "fill": 5,
+      "decimals": 2,
+      "fill": 1,
       "gridPos": {
         "h": 4,
-        "w": 24,
+        "w": 9,
         "x": 0,
-        "y": 12
+        "y": 44
       },
-      "height": "150",
-      "id": 7,
+      "id": 31,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "total",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\"}[$__interval_rv])) by (instance)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Requests",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 9,
+        "y": 44
+      },
+      "id": 32,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": true,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", direction=\"out\"}[$__interval_rv])) by(instance) * 8",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Traffic",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "bps",
+          "label": null,
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 44
+      },
+      "id": 430,
       "legend": {
         "alignAsTable": true,
         "avg": true,
@@ -452,10 +3383,9 @@
         "max": true,
         "min": true,
         "rightSide": true,
-        "show": true,
-        "sideWidth": 500,
-        "sort": null,
-        "sortDesc": null,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -463,7 +3393,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "percentage": false,
+      "percentage": true,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -476,29 +3406,20 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(nginx_connections_total{type=\"active\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Total",
-          "refId": "B",
-          "step": 10
-        },
-        {
-          "expr": "sum(nginx_connections_total{type=\"active\"}) by (instance)",
+          "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", direction=\"in\"}[$__interval_rv])) by (instance) * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
-          "refId": "A",
-          "step": 10
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Active Connections",
+      "title": "Incoming Traffic",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -514,218 +3435,21 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "",
+          "decimals": 0,
+          "format": "bps",
+          "label": null,
           "logBase": 1,
-          "max": null,
+          "max": "100",
           "min": "0",
           "show": true
         },
         {
-          "format": "short",
+          "format": "bps",
           "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": false
-        }
-      ]
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fill": 1,
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 0,
-        "y": 16
-      },
-      "id": 8,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": true,
-        "min": true,
-        "rightSide": true,
-        "show": true,
-        "sort": null,
-        "sortDesc": null,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "lines": false,
-          "stack": false
-        }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": true,
-      "targets": [
-        {
-          "expr": "sum(container_memory_usage_bytes{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Total",
-          "refId": "B",
-          "step": 10
-        },
-        {
-          "expr": "sum(container_memory_usage_bytes{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}) by (instance)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
-          "refId": "A",
-          "step": 10
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Memory",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "decbytes",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
           "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
-        }
-      ]
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fill": 1,
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 16
-      },
-      "id": 9,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": true,
-        "min": true,
-        "rightSide": true,
-        "show": true,
-        "sort": null,
-        "sortDesc": null,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "lines": false,
-          "stack": false
-        }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": true,
-      "targets": [
-        {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}[$__interval_rv])) ",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Total",
-          "refId": "B",
-          "step": 10
-        },
-        {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"nginx-.*\", namespace=~\"$namespace\"}[$__interval_rv]))  by (instance)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
-          "refId": "A",
-          "step": 10
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "CPU",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "cores",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
         }
       ]
     },
@@ -735,80 +3459,75 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 48
       },
-      "id": 14,
+      "id": 427,
       "panels": [
         {
           "aliasColors": {},
-          "bars": false,
+          "bars": true,
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "decimals": 2,
           "fill": 1,
           "gridPos": {
-            "h": 4,
-            "w": 12,
+            "h": 5,
+            "w": 9,
             "x": 0,
-            "y": 21
+            "y": 52
           },
-          "id": 15,
+          "id": 375,
           "legend": {
-            "alignAsTable": true,
-            "avg": true,
+            "alignAsTable": false,
+            "avg": false,
             "current": false,
-            "max": true,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sort": null,
-            "sortDesc": null,
+            "hideEmpty": false,
+            "hideZero": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": false,
+            "sort": "total",
+            "sortDesc": true,
             "total": false,
-            "values": true
+            "values": false
           },
-          "lines": true,
+          "lines": false,
           "linewidth": 1,
           "links": [],
-          "nullPointMode": "null",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "lines": false,
-              "stack": false
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
             }
-          ],
+          },
+          "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": true,
+          "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(container_memory_usage_bytes{namespace=~\"$namespace\",pod_name=~\"direct-fallback.*\"})",
+              "expr": "sum(rate(nginx_requests_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\"}[$__interval_rv])) by (namespace) > 0",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B",
-              "step": 10
-            },
-            {
-              "expr": "sum(container_memory_usage_bytes{namespace=~\"$namespace\",pod_name=~\"direct-fallback.*\"}) by (instance)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{instance}}",
-              "refId": "A",
-              "step": 10
+              "legendFormat": "{{namespace}}",
+              "refId": "B"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Memory",
+          "title": "Requests",
           "tooltip": {
             "shared": true,
-            "sort": 0,
+            "sort": 2,
             "value_type": "individual"
           },
           "type": "graph",
@@ -821,7 +3540,8 @@
           },
           "yaxes": [
             {
-              "format": "decbytes",
+              "decimals": null,
+              "format": "ops",
               "label": "",
               "logBase": 1,
               "max": null,
@@ -829,106 +3549,7 @@
               "show": true
             },
             {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ]
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 4,
-            "w": 12,
-            "x": 12,
-            "y": 21
-          },
-          "id": 16,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": true,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sort": null,
-            "sortDesc": null,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "lines": false,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",pod_name=~\"direct-fallback.*\"}[$__interval_rv])) ",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B",
-              "step": 10
-            },
-            {
-              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",pod_name=~\"direct-fallback.*\"}[$__interval_rv]))  by (instance)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{instance}}",
-              "refId": "A",
-              "step": 10
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "CPU",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
+              "format": "ops",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -943,28 +3564,26 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "fill": 5,
+          "fill": 1,
           "gridPos": {
-            "h": 4,
-            "w": 24,
-            "x": 0,
-            "y": 25
+            "h": 5,
+            "w": 9,
+            "x": 9,
+            "y": 52
           },
-          "height": "150",
-          "id": 11,
+          "id": 376,
           "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": true,
-            "max": true,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sideWidth": 500,
-            "sort": null,
-            "sortDesc": null,
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
             "total": false,
-            "values": true
+            "values": false
           },
           "lines": false,
           "linewidth": 1,
@@ -974,38 +3593,30 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
             }
-          ],
+          },
+          "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": true,
+          "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(nginx_connections_current{state=\"active\"})",
+              "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", direction=\"out\"}[$__interval_rv])) by (namespace) * 8 > 0",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B",
-              "step": 10
-            },
-            {
-              "expr": "sum(nginx_connections_current{state=\"active\"}) by (instance)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{instance}}",
-              "refId": "A",
-              "step": 10
+              "legendFormat": "{{namespace}}",
+              "refId": "B"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Active Connections",
+          "title": "Traffic",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1021,7 +3632,8 @@
           },
           "yaxes": [
             {
-              "format": "short",
+              "decimals": null,
+              "format": "bps",
               "label": "",
               "logBase": 1,
               "max": null,
@@ -1029,7 +3641,7 @@
               "show": true
             },
             {
-              "format": "short",
+              "format": "bps",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -1044,28 +3656,26 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "fill": 5,
+          "fill": 1,
           "gridPos": {
-            "h": 4,
-            "w": 24,
-            "x": 0,
-            "y": 29
+            "h": 5,
+            "w": 6,
+            "x": 18,
+            "y": 52
           },
-          "height": "150",
-          "id": 12,
+          "id": 402,
           "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": true,
-            "max": true,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sideWidth": 500,
-            "sort": null,
-            "sortDesc": null,
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
             "total": false,
-            "values": true
+            "values": false
           },
           "lines": false,
           "linewidth": 1,
@@ -1075,38 +3685,30 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
+          "scopedVars": {
+            "instance": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
             }
-          ],
+          },
+          "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": true,
+          "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\"}[$__interval_rv]))",
+              "expr": "sum(rate(nginx_bytes_total:controller{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", scheme=~\"$scheme\", instance=~\"$instance\", direction=\"out\"}[$__interval_rv])) by (namespace) * 8 > 0",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B",
-              "step": 10
-            },
-            {
-              "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\"}[$__interval_rv])) by (instance)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{instance}}",
-              "refId": "A",
-              "step": 10
+              "legendFormat": "{{namespace}}",
+              "refId": "B"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Accepted Connections",
+          "title": "Incoming Traffic",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1122,15 +3724,16 @@
           },
           "yaxes": [
             {
-              "format": "short",
-              "label": "cps",
+              "decimals": null,
+              "format": "bps",
+              "label": "",
               "logBase": 1,
               "max": null,
               "min": "0",
               "show": true
             },
             {
-              "format": "short",
+              "format": "bps",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -1140,7 +3743,8 @@
           ]
         }
       ],
-      "title": "Direct Fallback",
+      "repeat": "instance",
+      "title": "$instance",
       "type": "row"
     }
   ],
@@ -1152,7 +3756,6 @@
     "list": [
       {
         "current": {
-          "selected": true,
           "text": "default",
           "value": "default"
         },
@@ -1166,16 +3769,16 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
+        "allValue": "",
         "current": {},
         "datasource": "$ds_prometheus",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": "Controller",
-        "multi": true,
+        "multi": false,
         "name": "controller",
         "options": [],
-        "query": "label_values(up{job=\"nginx-ingress-controller\"}, controller)\t",
+        "query": "label_values(up{job=\"nginx-ingress-controller\"}, controller)",
         "refresh": 1,
         "regex": "",
         "sort": 0,
@@ -1186,27 +3789,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
-        "current": {},
-        "datasource": "$ds_prometheus",
-        "hide": 2,
-        "includeAll": true,
-        "label": "",
-        "multi": true,
-        "name": "namespace",
-        "options": [],
-        "query": "label_values(kube_namespace_labels{namespace=~\"kube-nginx-ingress.*\", label_controller=~\"$controller\"}, namespace)",
-        "refresh": 1,
-        "regex": "",
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
+        "allValue": "",
         "current": {},
         "datasource": "$ds_prometheus",
         "hide": 0,
@@ -1227,15 +3810,68 @@
       },
       {
         "allValue": null,
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Scheme",
+        "multi": false,
+        "name": "scheme",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "http",
+            "value": "http"
+          },
+          {
+            "selected": false,
+            "text": "https",
+            "value": "https"
+          }
+        ],
+        "query": "http,https",
+        "type": "custom"
+      },
+      {
+        "allValue": null,
         "current": {},
         "datasource": "$ds_prometheus",
         "hide": 2,
         "includeAll": true,
-        "label": "",
-        "multi": true,
-        "name": "pod",
+        "label": "namespace",
+        "multi": false,
+        "name": "namespace",
         "options": [],
-        "query": "label_values(kube_pod_labels{namespace=~\"$namespace\",label_app=~\"$app\"}, pod)",
+        "query": "label_values(kube_namespace_labels{namespace=~\"kube-nginx-ingress.*\", label_controller=~\"$controller\"}, namespace)",
+        "refresh": 1,
+        "regex": "",
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "$ds_prometheus",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": false,
+        "name": "instance",
+        "options": [],
+        "query": "label_values(up{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\"}, instance)",
         "refresh": 1,
         "regex": "",
         "sort": 0,
@@ -1279,5 +3915,5 @@
   "timezone": "",
   "title": "Controller",
   "uid": "5Lg-nHkmk",
-  "version": 11
+  "version": 7
 }
