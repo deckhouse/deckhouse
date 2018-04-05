@@ -27,7 +27,12 @@ func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error)
 		if !moduleValuesOk {
 			return nil, fmt.Errorf("required map or bool data, got: %v", data)
 		}
-		moduleConfig.Values = moduleValues
+
+		formattedValues, err := FormatValues(moduleValues)
+		if err != nil {
+			return nil, err
+		}
+		moduleConfig.Values = formattedValues
 	}
 
 	return moduleConfig, nil
