@@ -13,19 +13,19 @@ type ModuleConfig struct {
 	Values     map[interface{}]interface{}
 }
 
-func NewModuleConfig(moduleName string, valuesData interface{}) (*ModuleConfig, error) {
+func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error) {
 	moduleConfig := &ModuleConfig{
 		ModuleName: moduleName,
 		IsEnabled:  true,
 		Values:     make(map[interface{}]interface{}),
 	}
 
-	if moduleEnabled, isBool := valuesData.(bool); isBool {
+	if moduleEnabled, isBool := data.(bool); isBool {
 		moduleConfig.IsEnabled = moduleEnabled
 	} else {
-		moduleValues, moduleValuesOk := valuesData.(map[interface{}]interface{})
+		moduleValues, moduleValuesOk := data.(map[interface{}]interface{})
 		if !moduleValuesOk {
-			return nil, fmt.Errorf("expected map or bool, got: %v", valuesData)
+			return nil, fmt.Errorf("required map or bool data, got: %v", data)
 		}
 		moduleConfig.Values = moduleValues
 	}
