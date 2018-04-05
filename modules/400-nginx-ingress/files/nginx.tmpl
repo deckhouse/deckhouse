@@ -759,6 +759,7 @@ stream {
             vhost_traffic_status_filter_by_set_key $request_time_hist request_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|$upstream_addr|$location_path;
             {{ end }}
 
+{{ if not (hasPrefix $path "/.well-known/acme-challenge/") }}
             {{/* redirect to HTTPS can be achieved forcing the redirect or having a SSL Certificate configured for the server */}}
             {{ if (or $location.Rewrite.ForceSSLRedirect (and (not (empty $server.SSLCertificate)) $location.Rewrite.SSLRedirect)) }}
             # enforce ssl on server side
@@ -774,6 +775,7 @@ stream {
                 {{ end }}
             }
             {{ end }}
+{{ end }}
 
             {{ if $all.Cfg.EnableModsecurity }}
             modsecurity on;
@@ -785,12 +787,15 @@ stream {
             {{ end }}
 
             {{ if isLocationAllowed $location }}
+{{ if not (hasPrefix $path "/.well-known/acme-challenge/") }}
             {{ if gt (len $location.Whitelist.CIDR) 0 }}
             if ({{ buildDenyVariable (print $server.Hostname "_"  $path) }}) {
                 return 403;
             }
             {{ end }}
+{{ end }}
 
+{{ if not (hasPrefix $path "/.well-known/acme-challenge/") }}
             {{ if $authPath }}
             # this location requires authentication
             auth_request        {{ $authPath }};
@@ -804,12 +809,14 @@ stream {
             {{ if $location.ExternalAuth.SigninURL }}
             error_page 401 = {{ buildAuthSignURL $location.ExternalAuth.SigninURL }};
             {{ end }}
+{{ end }}
 
             {{/* if the location contains a rate limit annotation, create one */}}
             {{ $limits := buildRateLimit $location }}
             {{ range $limit := $limits }}
             {{ $limit }}{{ end }}
 
+{{ if not (hasPrefix $path "/.well-known/acme-challenge/") }}
             {{ if $location.BasicDigestAuth.Secured }}
             {{ if eq $location.BasicDigestAuth.Type "basic" }}
             auth_basic "{{ $location.BasicDigestAuth.Realm }}";
@@ -820,6 +827,8 @@ stream {
             {{ end }}
             proxy_set_header Authorization "";
             {{ end }}
+{{ end }}
+
 
             {{ if $location.CorsConfig.CorsEnabled }}
             {{ template "CORS" $location }}
