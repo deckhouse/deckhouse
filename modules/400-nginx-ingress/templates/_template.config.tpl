@@ -26,6 +26,7 @@ data:
   variables-hash-bucket-size: "256"
   enable-vts-status: "true"
   vts-status-zone-size: "20m"
+  vts-default-filter-key: "$geoip_country_code overall_country"
   use-proxy-protocol: {{ $useProxyProtocol | quote }}
     {{- if $useProxyProtocol }}
   proxy-real-ip-cidr: "0.0.0.0/0"
@@ -48,7 +49,6 @@ data:
     "path": "$uri",
     "request_query": "$args",
     "request_length": $request_length,
-    "duration": $request_time,
     "method": "$request_method",
     "http_referrer": "$http_referer",
     "http_user_agent": "$http_user_agent",

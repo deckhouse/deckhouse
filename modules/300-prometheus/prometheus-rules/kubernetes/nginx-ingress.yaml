@@ -1,0 +1,45 @@
+groups:
+- name: kubernetes.nginx-ingress.overview
+  rules:
+  - record: nginx_requests_total:overview
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, namespace, scheme, server_name)
+  - record: nginx_responses_total:overview
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, namespace, scheme, server_name, status_code)
+  - record: nginx_bytes_total:overview
+    expr: sum(nginx_filterzone_bytes_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, namespace, scheme, server_name, direction)
+  - record: nginx_filterzone_responses_total:overview
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller"}) by (job, namespace, scheme, hostname, server_zone, key)
+
+  # namespace rates
+  - record: nginx_ingress:namespace:request_rate
+    expr: sum(irate(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}[1h])) by (job, namespace)
+  - record: nginx_ingress:namespace:traffic_bytes_rate
+    expr: sum(irate(nginx_filterzone_bytes_total{job="nginx-ingress-controller", server_zone="request_time_hist"}[1h])) by (job, namespace, direction)
+
+  # server_name rates
+  - record: nginx_ingress:server_name:request_rate
+    expr: sum(irate(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}[1h])) by (job, server_name)
+  - record: nginx_ingress:server_name:traffic_bytes_rate
+    expr: sum(irate(nginx_filterzone_bytes_total{job="nginx-ingress-controller", server_zone="request_time_hist"}[1h])) by (job, server_name, direction)
+
+- name: kubernetes.nginx-ingress.details
+  rules:
+  - record: nginx_requests_total:details
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) without (app, controller, instance, server_zone, key, status_code)
+  - record: nginx_responses_total:details
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) without (app, controller, instance, server_zone, key)
+  - record: nginx_bytes_total:details
+    expr: sum(nginx_filterzone_bytes_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) without (app, controller, instance, server_zone, key, status_code)
+  - record: nginx_filterzone_responses_total:details
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller"}) without (app, controller, instance)
+
+- name: kubernetes.nginx-ingress.controller
+  rules:
+  - record: nginx_requests_total:controller
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, controller, app, instance, namespace, scheme)
+  - record: nginx_responses_total:controller
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, controller, app, instance, namespace, scheme, status_code)
+  - record: nginx_bytes_total:controller
+    expr: sum(nginx_filterzone_bytes_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, controller, app, instance, namespace, scheme, direction)
+  - record: nginx_filterzone_responses_total:controller
+    expr: sum(nginx_filterzone_responses_total{job="nginx-ingress-controller"}) by (job, controller, app, instance, namespace, scheme, server_zone, key)

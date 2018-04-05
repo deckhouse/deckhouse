@@ -1,4 +1,5 @@
-{{- range (tuple "coreos") }}
+{{- range (tuple "coreos" "kubernetes") }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
