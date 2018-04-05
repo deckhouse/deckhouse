@@ -22,7 +22,7 @@ import (
 	//	_ "github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
 	//	_ "github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
 	//	_ "github.com/deckhouse/deckhouse/antiopa/merge_values"
-	"github.com/deckhouse/deckhouse/antiopa/module"
+	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	//	_ "github.com/deckhouse/deckhouse/antiopa/module"
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/task"
@@ -96,7 +96,7 @@ func Init() {
 	helm.Init(tillerNamespace)
 
 	// Инициализация слежения за конфигом и за values
-	err = module.Init(WorkingDir, TempDir)
+	err = module_manager.Init(WorkingDir, TempDir)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize module manager: %s", err)
 		os.Exit(1)
@@ -137,7 +137,7 @@ func Run() {
 
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
 	go docker_registry_manager.RunRegistryManager()
-	go module.RunModuleManager()
+	go module_manager.RunModuleManager()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
 	// добавляются в очередь
@@ -168,28 +168,28 @@ func ManagersEventsHandler() {
 				rlog.Errorf("KUBE deployment update error: %s", err)
 			}
 		// пришло событие от module_manager → перезапуск модулей или всего
-		case moduleEvent := <-module.EventCh:
+		case moduleEvent := <-module_manager.EventCh:
 			switch moduleEvent.Type {
 			// Изменились отдельные модули
-			case module.ModulesChanged:
+			case module_manager.ModulesChanged:
 				rlog.Debug("main got ModulesChanged event")
 				for _, moduleChange := range moduleEvent.ModulesChanges {
 					switch moduleChange.ChangeType {
-					case module.Enabled:
+					case module_manager.Enabled:
 						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
 						TasksQueue.Add(newTask)
-					case module.Disabled:
+					case module_manager.Disabled:
 						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
 						TasksQueue.Add(newTask)
-					case module.Changed:
+					case module_manager.Changed:
 						newTask := task.NewTask(task.ModuleUpgrade, moduleChange.Name)
 						TasksQueue.Add(newTask)
 					}
 				}
 			// Изменились глобальные values, нужен рестарт всех модулей
-			case module.GlobalChanged:
+			case module_manager.GlobalChanged:
 				rlog.Debug("main got GlobalChanged event")
-				moduleNames := module.GetModuleNamesInOrder()
+				moduleNames := module_manager.GetModuleNamesInOrder()
 				// TODO добавить beforeAll, afterAll!!!
 				for _, moduleName := range moduleNames {
 					newTask := task.NewTask(task.ModuleRun, moduleName)

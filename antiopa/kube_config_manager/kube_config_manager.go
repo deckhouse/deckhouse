@@ -27,6 +27,10 @@ type ModuleConfig struct {
 	Values     map[interface{}]interface{}
 }
 
+/* TODO
+SetModuleKubeValues
+*/
+
 var (
 	ConfigUpdated       <-chan Config
 	ModuleConfigUpdated <-chan ModuleConfig

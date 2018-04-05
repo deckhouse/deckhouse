@@ -1,4 +1,4 @@
-package module
+package module_manager
 
 import (
 	"encoding/json"
@@ -302,6 +302,8 @@ func GetModuleHook(name string) (*ModuleHook, error) {
 	}
 }
 
+func DeleteModule(moduleName string) error { return nil }
+
 func RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
 	moduleHooksBeforeHelm, err := GetModuleHooksInOrder(moduleName, BeforeHelm)
 	if err != nil {
@@ -309,7 +311,7 @@ func RunModule(moduleName string) error { // запускает before-helm + he
 	}
 
 	for _, moduleHookName := range moduleHooksBeforeHelm {
-		if err := RunModuleHook(moduleHookName); err != nil {
+		if err := runModuleHook2(moduleHookName); err != nil {
 			return err
 		}
 	}
@@ -322,7 +324,7 @@ func RunModule(moduleName string) error { // запускает before-helm + he
 	}
 
 	for _, moduleHookName := range moduleHooksAfterHelm {
-		if err := RunModuleHook(moduleHookName); err != nil {
+		if err := runModuleHook2(moduleHookName); err != nil {
 			return err
 		}
 	}
@@ -330,8 +332,17 @@ func RunModule(moduleName string) error { // запускает before-helm + he
 	return nil
 }
 
-func RunGlobalHook(name string) error { return nil }
-func RunModuleHook(name string) error { return nil }
+/* TODO:
+Добавить DeleteModule(moduleName), который:
+ * удаляет helm release (purge)
+ * выполняет новый вид хука afterHelmDelete
+*/
+
+func RunGlobalHook(name string, binding BindingType) error { return nil }
+func RunModuleHook(name string, binding BindingType) error { return nil }
+
+func runModuleHook2(name string) error { return nil }
+func runGlobalHook2(name string) error { return nil }
 
 var (
 	EventCh <-chan Event
