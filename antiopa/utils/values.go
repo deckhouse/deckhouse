@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
+	ghodssyaml "github.com/ghodss/yaml"
+	"github.com/go-yaml/yaml"
 )
 
 type ModuleConfig struct {
@@ -30,4 +33,44 @@ func NewModuleConfig(moduleName string, valuesData interface{}) (*ModuleConfig, 
 	return moduleConfig, nil
 }
 
-func FormatValues(map[interface{}]interface{}) (map[interface{}]interface{}, error) { return nil, nil }
+func FormatValues(values map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	yamlDoc, err := yaml.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonDoc, err := ghodssyaml.YAMLToJSON(yamlDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonValues := make(map[string]interface{})
+	if err := json.Unmarshal(jsonDoc, &jsonValues); err != nil {
+		return nil, err
+	}
+
+	resValues := JsonValuesToValues(jsonValues)
+
+	return resValues, nil
+}
+
+func JsonValuesToValues(jsonValues map[string]interface{}) map[interface{}]interface{} {
+	values := make(map[interface{}]interface{})
+	for key, value := range jsonValues {
+		values[key] = value
+	}
+	return values
+}
+
+func ValuesToJsonValues(values map[interface{}]interface{}) (map[string]interface{}, error) {
+	jsonValues := make(map[string]interface{})
+	for key, value := range values {
+		stringKey, ok := key.(string)
+		if ok {
+			jsonValues[stringKey] = value
+		} else {
+			return nil, fmt.Errorf("function ValuesToJsonValues failed: unexpected key `%v`", key)
+		}
+	}
+	return jsonValues, nil
+}

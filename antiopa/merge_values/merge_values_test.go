@@ -56,3 +56,5 @@ func TestMergeValues(t *testing.T) {
 		t.Errorf("MergeValues FAILED: function changed input params\noriginal map b:\n%v\nmap b after call:\n%v", data["original-b"], data["b"])
 	}
 }
+
+// TODO TestApplyJsonMergeAndPatch

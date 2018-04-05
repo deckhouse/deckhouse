@@ -2,10 +2,9 @@ package merge_values
 
 import (
 	"encoding/json"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 	"github.com/evanphx/json-patch"
-	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/mohae/deepcopy"
-	"gopkg.in/yaml.v2"
 	"reflect"
 )
 
@@ -20,7 +19,7 @@ func mergeTwoValues(A map[interface{}]interface{}, B map[interface{}]interface{}
 		res[key] = value
 	}
 
-	queue := []mergeValuesPair{mergeValuesPair{A: res, B: B}}
+	queue := []mergeValuesPair{{A: res, B: B}}
 
 	for len(queue) > 0 {
 		pair := queue[0]
@@ -81,15 +80,11 @@ func MergeValues(ValuesArr ...map[interface{}]interface{}) map[interface{}]inter
 }
 
 func ApplyJsonMergeAndPatch(values map[interface{}]interface{}, jsonValuesToMerge map[string]interface{}, patch *jsonpatch.Patch) (map[interface{}]interface{}, bool, error) {
-	regeneratedValues, err := regenerateValues(values)
-	if err != nil {
-		return nil, false, err
-	}
-
-	resValues := deepcopy.Copy(regeneratedValues).(map[interface{}]interface{})
+	var err error
+	resValues := deepcopy.Copy(values).(map[interface{}]interface{})
 
 	if jsonValuesToMerge != nil {
-		resValues = MergeValues(resValues, jsonValuesToValues(jsonValuesToMerge))
+		resValues = MergeValues(resValues, utils.JsonValuesToValues(jsonValuesToMerge))
 	}
 
 	if patch != nil {
@@ -98,11 +93,16 @@ func ApplyJsonMergeAndPatch(values map[interface{}]interface{}, jsonValuesToMerg
 		}
 	}
 
-	return resValues, !reflect.DeepEqual(regeneratedValues, resValues), nil
+	return resValues, !reflect.DeepEqual(values, resValues), nil
 }
 
 func applyJsonPatch(values map[interface{}]interface{}, patch *jsonpatch.Patch) (map[interface{}]interface{}, error) {
-	jsonDoc, err := json.Marshal(valuesToJsonValues(values))
+	jsonValues, err := utils.ValuesToJsonValues(values)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonDoc, err := json.Marshal(jsonValues)
 	if err != nil {
 		return nil, err
 	}
@@ -117,42 +117,7 @@ func applyJsonPatch(values map[interface{}]interface{}, patch *jsonpatch.Patch) 
 		return nil, err
 	}
 
-	resValues := jsonValuesToValues(resJsonValues)
+	resValues := utils.JsonValuesToValues(resJsonValues)
 
 	return resValues, nil
-}
-
-func regenerateValues(values map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	yamlDoc, err := yaml.Marshal(values)
-	if err != nil {
-		return nil, err
-	}
-
-	jsonDoc, err := ghodssyaml.YAMLToJSON(yamlDoc)
-	if err != nil {
-		return nil, err
-	}
-
-	jsonValues := make(map[string]interface{})
-	if err := json.Unmarshal(jsonDoc, &jsonValues); err != nil {
-		return nil, err
-	}
-
-	return jsonValuesToValues(jsonValues), nil
-}
-
-func jsonValuesToValues(jsonValues map[string]interface{}) map[interface{}]interface{} {
-	values := make(map[interface{}]interface{})
-	for key, value := range jsonValues {
-		values[key] = value
-	}
-	return values
-}
-
-func valuesToJsonValues(values map[interface{}]interface{}) map[string]interface{} {
-	jsonValues := make(map[string]interface{})
-	for key, value := range values {
-		jsonValues[key.(string)] = value
-	}
-	return jsonValues
 }
