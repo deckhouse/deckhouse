@@ -76,7 +76,9 @@ func ApplyJsonMergeAndPatch(values Values, valuesToMerge Values, patch *jsonpatc
 		}
 	}
 
-	return resValues, !reflect.DeepEqual(values, resValues), nil
+	valuesChanged := !reflect.DeepEqual(values, resValues)
+
+	return resValues, valuesChanged, nil
 }
 
 func applyJsonPatch(values Values, patch *jsonpatch.Patch) (Values, error) {

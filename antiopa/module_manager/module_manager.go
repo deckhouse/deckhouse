@@ -128,7 +128,7 @@ type Event struct {
 */
 
 func Init(workingDir string, tempDir string) error {
-	rlog.Debug("Init module manager")
+	rlog.Info("Initializing module manager ...")
 
 	TempDir = tempDir
 	WorkingDir = workingDir
@@ -136,6 +136,11 @@ func Init(workingDir string, tempDir string) error {
 	EventCh = make(chan Event, 1)
 	globalValuesChanged = make(chan bool, 1)
 	moduleValuesChanged = make(chan string, 1)
+
+	kubeConfigValues = make(utils.Values) // TODO
+	rlog.Debugf("Set kubeConfigValues:\n%s", valuesToString(kubeConfigValues))
+
+	dynamicValues = make(utils.Values)
 
 	if err := initGlobalHooks(); err != nil {
 		return err
@@ -169,7 +174,7 @@ func RunModuleManager() {
 			EventCh <- Event{
 				Type: ModulesChanged,
 				ModulesChanges: []ModuleChange{
-					ModuleChange{Name: moduleName, ChangeType: Changed},
+					{Name: moduleName, ChangeType: Changed},
 				},
 			}
 		}
