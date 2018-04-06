@@ -31,7 +31,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522512240207,
+  "iteration": 1523019027802,,
   "links": [],
   "panels": [
     {
@@ -388,12 +388,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(container_name, pod_name, namespace) (container_memory_usage_bytes{pod_name=~\"$pod\", container_name!=\"POD\", pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"})",
+          "expr": "sum by(container_name, pod_name, namespace) (container_memory_rss{pod_name=~\"$pod\", container_name!=\"POD\", pod_name=~\"$pod\", namespace=~\"$namespace\", container_name=~\"$container\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current: {{ namespace }} / {{ pod_name }} / {{ container_name }}",
-          "metric": "container_memory_usage_bytes",
+          "metric": "container_memory_rss",
           "refId": "A",
           "step": 8
         },
