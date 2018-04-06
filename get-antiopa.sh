@@ -307,14 +307,15 @@ data:
     Add <module>-values key to define values yaml for module
     Add disable-modules to specify disabled modules (comma separated, may be globs), for example "disable-modules: test*, kube-dashboard"
   values: |
-    project: "${PROJECT}"
-    clusterName: "${CLUSTER_NAME}"
+    global:
+      project: "${PROJECT}"
+      clusterName: "${CLUSTER_NAME}"
 YAML
 )
   if [[ "x$CLUSTER_HOSTNAME" != "x" ]] ; then
     VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
 
-    clusterHostname: "${CLUSTER_HOSTNAME}"
+      clusterHostname: "${CLUSTER_HOSTNAME}"
 YAML
 )
   fi
