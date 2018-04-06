@@ -1,11 +1,11 @@
-package merge_values
+package utils
 
 import (
 	"reflect"
 	"testing"
 )
 
-func TestMergeValues(t *testing.T) {
+func TestDeepMerge(t *testing.T) {
 	data := make(map[string]map[interface{}]interface{})
 	for _, key := range []string{"a", "original-a"} {
 		data[key] = map[interface{}]interface{}{
@@ -42,19 +42,17 @@ func TestMergeValues(t *testing.T) {
 		"array": []int{1, 2, 3},
 	}
 
-	res := MergeValues(data["a"], data["b"])
+	res := DeepMerge(data["a"], data["b"])
 
 	if !reflect.DeepEqual(res, expectedRes) {
-		t.Errorf("MergeValues FAILED\nmap-1:\n%v\nmap-2:\n%v\nEXPECTED:\n%v\nGOT:\n%v", data["a"], data["b"], expectedRes, res)
+		t.Errorf("DeepMerge FAILED\nmap-1:\n%v\nmap-2:\n%v\nEXPECTED:\n%v\nGOT:\n%v", data["a"], data["b"], expectedRes, res)
 	}
 
-	// Проверяем, что функция MergeValues не меняет входные данные-параметры
+	// Проверяем, что функция DeepMerge не меняет входные данные-параметры
 	if !reflect.DeepEqual(data["a"], data["original-a"]) {
-		t.Errorf("MergeValues FAILED: function changed input params\noriginal map a:\n%v\nmap a after call:\n%v", data["original-a"], data["a"])
+		t.Errorf("DeepMerge FAILED: function changed input params\noriginal map a:\n%v\nmap a after call:\n%v", data["original-a"], data["a"])
 	}
 	if !reflect.DeepEqual(data["b"], data["original-b"]) {
-		t.Errorf("MergeValues FAILED: function changed input params\noriginal map b:\n%v\nmap b after call:\n%v", data["original-b"], data["b"])
+		t.Errorf("DeepMerge FAILED: function changed input params\noriginal map b:\n%v\nmap b after call:\n%v", data["original-b"], data["b"])
 	}
 }
-
-// TODO TestApplyJsonMergeAndPatch
