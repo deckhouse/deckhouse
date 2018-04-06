@@ -150,7 +150,7 @@ func Run() {
 
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
 	go docker_registry_manager.RunRegistryManager()
-	go module_manager.RunModuleManager()
+	go module_manager.Run()
 	go kube_node_manager.RunKubeNodeManager()
 
 	// обработчик событий от менеджеров — события превращаются в таски и

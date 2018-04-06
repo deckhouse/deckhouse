@@ -154,7 +154,8 @@ func (m *Module) isEnabled() (bool, error) {
 		return false, err
 	}
 
-	enabledModulesFilePath, err := dumpValuesJson(filepath.Join("enabled-modules", m.Name), modulesOrder)
+	// FIXME: динамический рассчет enabled-модулей
+	enabledModulesFilePath, err := dumpValuesJson(filepath.Join("enabled-modules", m.Name), allModuleNamesInOrder)
 	if err != nil {
 		return false, err
 	}
@@ -226,7 +227,7 @@ func initModules() error {
 
 					if moduleIsEnabled {
 						modulesByName[module.Name] = module
-						modulesOrder = append(modulesOrder, module.Name)
+						allModuleNamesInOrder = append(allModuleNamesInOrder, module.Name)
 
 						if moduleConfig != nil {
 							globalModulesConfigValues[moduleName] = moduleConfig.Values
