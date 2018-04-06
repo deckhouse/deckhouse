@@ -435,7 +435,11 @@ func GetModuleHook(name string) (*ModuleHook, error) {
 }
 
 func GetGlobalHooksInOrder(bindingType BindingType) []string {
-	globalHooks := globalHooksOrder[bindingType]
+	globalHooks, ok := globalHooksOrder[bindingType]
+	if !ok {
+		return []string{}
+	}
+
 	sort.Slice(globalHooks[:], func(i, j int) bool {
 		return globalHooks[i].OrderByBinding[bindingType] < globalHooks[j].OrderByBinding[bindingType]
 	})
@@ -448,12 +452,21 @@ func GetGlobalHooksInOrder(bindingType BindingType) []string {
 	return globalHooksNames
 }
 
-func GetModuleHooksInOrder(moduleName string, bindingType BindingType) []string {
+func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
+	_, err := GetModule(moduleName)
+	if err != nil {
+		return nil, err
+	}
+
 	moduleHooksByBinding, ok := modulesHooksOrderByName[moduleName]
 	if !ok {
-		return []string{}
+		return []string{}, nil
 	}
-	moduleBindingHooks := moduleHooksByBinding[bindingType]
+
+	moduleBindingHooks, ok := moduleHooksByBinding[bindingType]
+	if !ok {
+		return []string{}, nil
+	}
 
 	sort.Slice(moduleBindingHooks[:], func(i, j int) bool {
 		return moduleBindingHooks[i].OrderByBinding[bindingType] < moduleBindingHooks[j].OrderByBinding[bindingType]
@@ -464,7 +477,7 @@ func GetModuleHooksInOrder(moduleName string, bindingType BindingType) []string 
 		moduleHooksNames = append(moduleHooksNames, moduleHook.Name)
 	}
 
-	return moduleHooksNames
+	return moduleHooksNames, nil
 }
 
 /*

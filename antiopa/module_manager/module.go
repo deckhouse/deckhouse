@@ -139,7 +139,10 @@ func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName strin
 }
 
 func (m *Module) runHooksByBinding(binding BindingType) error {
-	moduleHooksAfterHelm := GetModuleHooksInOrder(m.Name, binding)
+	moduleHooksAfterHelm, err := GetModuleHooksInOrder(m.Name, binding)
+	if err != nil {
+		return err
+	}
 
 	for _, moduleHookName := range moduleHooksAfterHelm {
 		moduleHook, err := GetModuleHook(moduleHookName)
@@ -274,6 +277,7 @@ func initModulesIndex() error {
 					}
 
 					kubeModulesConfigValues[moduleName] = make(utils.Values)
+					modulesDynamicValues[moduleName] = make(utils.Values)
 
 					if err = initModuleHooks(module); err != nil {
 						return err
