@@ -47,7 +47,7 @@ spec:
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
 {{ include "helper.nodeSelector" . | indent 6 }}
-{{ include "helper.tolerations" . | indent 6 }}
+{{ include "helper.tolerationsForDirectFallback" . | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
