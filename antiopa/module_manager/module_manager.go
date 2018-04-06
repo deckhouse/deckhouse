@@ -186,7 +186,7 @@ func GetModule(name string) (*Module, error) {
 	if exist {
 		return module, nil
 	} else {
-		return nil, fmt.Errorf("module `%s` not found", name)
+		return nil, fmt.Errorf("module '%s' not found", name)
 	}
 }
 
@@ -199,7 +199,7 @@ func GetGlobalHook(name string) (*GlobalHook, error) {
 	if exist {
 		return globalHook, nil
 	} else {
-		return nil, fmt.Errorf("global hook `%s` not found", name)
+		return nil, fmt.Errorf("global hook '%s' not found", name)
 	}
 }
 
@@ -208,7 +208,7 @@ func GetModuleHook(name string) (*ModuleHook, error) {
 	if exist {
 		return moduleHook, nil
 	} else {
-		return nil, fmt.Errorf("module hook `%s` not found", name)
+		return nil, fmt.Errorf("module hook '%s' not found", name)
 	}
 }
 
@@ -229,7 +229,7 @@ func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
 func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
 	moduleHooksByBinding, ok := modulesHooksOrderByName[moduleName]
 	if !ok {
-		return nil, fmt.Errorf("module `%s` not found", moduleName)
+		return nil, fmt.Errorf("module '%s' not found", moduleName)
 	}
 	moduleBindingHooks := moduleHooksByBinding[bindingType]
 
@@ -283,7 +283,7 @@ func RunGlobalHook(hookName string, binding BindingType) error {
 		return err
 	}
 
-	if err := globalHook.run(); err != nil {
+	if err := globalHook.run(binding); err != nil {
 		return err
 	}
 
@@ -313,7 +313,7 @@ func RunModuleHook(hookName string, binding BindingType) error {
 		return err
 	}
 
-	if err := moduleHook.run(); err != nil {
+	if err := moduleHook.run(binding); err != nil {
 		return err
 	}
 

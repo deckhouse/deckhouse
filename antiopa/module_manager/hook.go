@@ -81,7 +81,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	if config.BeforeAll != nil {
 		globalHook.Bindings = append(globalHook.Bindings, BeforeAll)
 		if globalHook.OrderByBinding[BeforeAll], ok = config.BeforeAll.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.BeforeAll, BeforeAll)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.BeforeAll, BeforeAll)
 		}
 		globalHooksOrder[BeforeAll] = append(globalHooksOrder[BeforeAll], globalHook)
 	}
@@ -89,7 +89,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	if config.AfterAll != nil {
 		globalHook.Bindings = append(globalHook.Bindings, AfterAll)
 		if globalHook.OrderByBinding[AfterAll], ok = config.AfterAll.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.AfterAll, AfterAll)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterAll, AfterAll)
 		}
 		globalHooksOrder[AfterAll] = append(globalHooksOrder[AfterAll], globalHook)
 	}
@@ -97,7 +97,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	if config.OnKubeNodeChange != nil {
 		globalHook.Bindings = append(globalHook.Bindings, OnKubeNodeChange)
 		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.OnKubeNodeChange, OnKubeNodeChange)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnKubeNodeChange, OnKubeNodeChange)
 		}
 		globalHooksOrder[OnKubeNodeChange] = append(globalHooksOrder[OnKubeNodeChange], globalHook)
 	}
@@ -105,7 +105,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	if config.OnStartup != nil {
 		globalHook.Bindings = append(globalHook.Bindings, OnStartup)
 		if globalHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.OnStartup, OnStartup)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnStartup, OnStartup)
 		}
 		globalHooksOrder[OnStartup] = append(globalHooksOrder[OnStartup], globalHook)
 	}
@@ -134,7 +134,7 @@ func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err
 	if config.BeforeHelm != nil {
 		moduleHook.Bindings = append(moduleHook.Bindings, BeforeHelm)
 		if moduleHook.OrderByBinding[BeforeHelm], ok = config.BeforeHelm.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.BeforeHelm, BeforeHelm)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.BeforeHelm, BeforeHelm)
 		}
 
 		addModulesHooksOrderByName(moduleName, BeforeHelm, moduleHook)
@@ -143,7 +143,7 @@ func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err
 	if config.AfterHelm != nil {
 		moduleHook.Bindings = append(moduleHook.Bindings, AfterHelm)
 		if moduleHook.OrderByBinding[AfterHelm], ok = config.AfterHelm.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.AfterHelm, AfterHelm)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterHelm, AfterHelm)
 		}
 		addModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
 	}
@@ -151,7 +151,7 @@ func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err
 	if config.OnStartup != nil {
 		moduleHook.Bindings = append(moduleHook.Bindings, OnStartup)
 		if moduleHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
-			return fmt.Errorf("unsuported value `%v` for binding `%s`", config.OnStartup, OnStartup)
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnStartup, OnStartup)
 		}
 		addModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
 	}
@@ -174,8 +174,8 @@ func addModulesHooksOrderByName(moduleName string, bindingType BindingType, modu
 	modulesHooksOrderByName[moduleName][bindingType] = append(modulesHooksOrderByName[moduleName][bindingType], moduleHook)
 }
 
-func (h *GlobalHook) run() error {
-	rlog.Infof("Running global hook '%s' ...", h.Name)
+func (h *GlobalHook) run(bindingType BindingType) error {
+	rlog.Infof("Running global hook '%s' binding '%s' ...", h.Name, bindingType)
 
 	configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := h.exec()
 	if err != nil {
@@ -227,13 +227,13 @@ func (h *GlobalHook) values() utils.Values {
 	return utils.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues)
 }
 
-func (h *ModuleHook) run() error {
+func (h *ModuleHook) run(bindingType BindingType) error {
 	moduleName := h.Module.Name
-	rlog.Infof("Module '%s': running hook '%s' ...", moduleName, h.Name)
+	rlog.Infof("Running hook '%s' binding '%s' ...", h.Name, bindingType)
 
 	configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := h.exec()
 	if err != nil {
-		return fmt.Errorf("module '%s': hook '%s' failed: %s", moduleName, h.Name, err)
+		return fmt.Errorf("hook '%s' failed: %s", h.Name, err)
 	}
 
 	var kubeModuleConfigValuesChanged, moduleDynamicValuesChanged bool
@@ -243,19 +243,19 @@ func (h *ModuleHook) run() error {
 	}
 
 	if kubeModuleConfigValuesChanged {
-		rlog.Debugf("Module '%s': hook '%s': updating kubeModulesConfigValues[%s]:\n%s", moduleName, h.Name, moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
+		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
 		err = kube_values_manager.SetModuleKubeValues(moduleName, kubeModulesConfigValues[moduleName])
 		if err != nil {
-			return fmt.Errorf("module '%s': hook '%s': set kube values failed: %s", moduleName, h.Name, err)
+			return fmt.Errorf("hook '%s': set kube values failed: %s", h.Name, err)
 		}
 	}
 
 	if modulesDynamicValues[moduleName], moduleDynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
-		return fmt.Errorf("module '%s': hook '%s': merge values failed: %s", moduleName, h.Name, err)
+		return fmt.Errorf("hook '%s': merge values failed: %s", h.Name, err)
 	}
 
 	if moduleDynamicValuesChanged {
-		rlog.Debugf("Module '%s': hook '%s': updating modulesDynamicValues[%s]:\n%s", moduleName, h.Name, moduleName, valuesToString(modulesDynamicValues[moduleName]))
+		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, valuesToString(modulesDynamicValues[moduleName]))
 	}
 
 	return nil
@@ -283,16 +283,21 @@ func initGlobalHooks() error {
 
 	hooksDir := filepath.Join(WorkingDir, "global-hooks")
 
-	err := initHooks(hooksDir, func(hookName, hookPath string, output []byte) error {
-		rlog.Infof("Initializing global hook `%s` ...", hookName)
+	err := initHooks(hooksDir, func(hookPath string, output []byte) error {
+		hookName, err := filepath.Rel(WorkingDir, hookPath)
+		if err != nil {
+			return err
+		}
+
+		rlog.Infof("Initializing global hook '%s' ...", hookName)
 
 		hookConfig := &GlobalHookConfig{}
 		if err := json.Unmarshal(output, hookConfig); err != nil {
-			return fmt.Errorf("unmarshaling global hook `%s` json failed: %s", hookName, err.Error())
+			return fmt.Errorf("unmarshaling global hook '%s' json failed: %s", hookName, err.Error())
 		}
 
 		if err := addGlobalHook(hookName, hookPath, hookConfig); err != nil {
-			return fmt.Errorf("adding global hook `%s` failed: %s", hookName, err.Error())
+			return fmt.Errorf("adding global hook '%s' failed: %s", hookName, err.Error())
 		}
 
 		return nil
@@ -306,20 +311,25 @@ func initGlobalHooks() error {
 }
 
 func initModuleHooks(module *Module) error {
-	rlog.Infof("Initializing module `%s` hooks ...", module.Name)
+	rlog.Infof("Initializing module '%s' hooks ...", module.Name)
 
 	hooksDir := filepath.Join(module.Path, "hooks")
 
-	err := initHooks(hooksDir, func(hookName, hookPath string, output []byte) error {
-		rlog.Infof("Initializing module `%s` hook `%s` ...", module.Name, hookName)
+	err := initHooks(hooksDir, func(hookPath string, output []byte) error {
+		hookName, err := filepath.Rel(filepath.Dir(module.Path), hookPath)
+		if err != nil {
+			return err
+		}
+
+		rlog.Infof("Initializing hook '%s' ...", hookName)
 
 		hookConfig := &ModuleHookConfig{}
 		if err := json.Unmarshal(output, hookConfig); err != nil {
-			return fmt.Errorf("unmarshaling module hook `%s` json failed: %s", module.Name, err.Error())
+			return fmt.Errorf("unmarshaling module hook '%s' json failed: %s", hookName, err.Error())
 		}
 
 		if err := addModuleHook(module.Name, hookName, hookPath, hookConfig); err != nil {
-			return fmt.Errorf("adding module hook `%s` failed: %s", module.Name, err.Error())
+			return fmt.Errorf("adding module hook '%s' failed: %s", hookName, err.Error())
 		}
 
 		return nil
@@ -332,7 +342,7 @@ func initModuleHooks(module *Module) error {
 	return nil
 }
 
-func initHooks(hooksDir string, addHook func(hookName, hookPath string, output []byte) error) error {
+func initHooks(hooksDir string, addHook func(hookPath string, output []byte) error) error {
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 		return nil
 	}
@@ -343,15 +353,13 @@ func initHooks(hooksDir string, addHook func(hookName, hookPath string, output [
 	}
 
 	for _, hookPath := range hooksRelativePaths {
-		hookName := filepath.Base(hookPath)
-
 		cmd := makeCommand(WorkingDir, "", hookPath, []string{"--config"})
 		output, err := execCommandOutput(cmd)
 		if err != nil {
 			return err
 		}
 
-		if err := addHook(hookName, hookPath, output); err != nil {
+		if err := addHook(hookPath, output); err != nil {
 			return err
 		}
 	}
@@ -466,7 +474,7 @@ func readJsonPatchFile(filePath string) (*jsonpatch.Patch, error) {
 }
 
 func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
-	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
+	rlog.Debugf("Executing command in %s: '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
 	cmd.Stdout = nil
 
 	output, err := cmd.Output()
@@ -474,7 +482,7 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 		return nil, err
 	}
 
-	rlog.Debugf("Command `%s` output:\n%s", strings.Join(cmd.Args, " "), string(output))
+	rlog.Debugf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
 
 	return output, nil
 }

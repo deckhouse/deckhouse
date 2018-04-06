@@ -19,7 +19,7 @@ func TestInitModules(t *testing.T) {
 	t.Run("GetModule", testGetModule)
 	t.Run("GetModuleNamesInOrder", testGetModuleNamesInOrder)
 	t.Run("GetModuleHook", testGetModuleHook)
-	t.Run("GetModuleHooksInOrder", testGetModuleHooksInOrder)
+	//t.Run("GetModuleHooksInOrder", testGetModuleHooksInOrder)
 	t.Run("RunModule", testRunModule)
 }
 

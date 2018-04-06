@@ -40,7 +40,7 @@ func (m *Module) run() error {
 			return err
 		}
 
-		if err := moduleHook.run(); err != nil {
+		if err := moduleHook.run(BeforeHelm); err != nil {
 			return err
 		}
 	}
@@ -60,7 +60,7 @@ func (m *Module) run() error {
 			return err
 		}
 
-		if err := moduleHook.run(); err != nil {
+		if err := moduleHook.run(AfterHelm); err != nil {
 			return err
 		}
 	}
@@ -123,7 +123,7 @@ func (m *Module) checkHelmChart() (bool, error) {
 	chartPath := filepath.Join(m.Path, "Chart.yaml")
 
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
-		return false, fmt.Errorf("module `%s` chart file not found '%s'", m.Name, chartPath)
+		return false, fmt.Errorf("module '%s' chart file not found '%s'", m.Name, chartPath)
 	}
 	return true, nil
 }
@@ -179,7 +179,7 @@ func initModules() error {
 
 	files, err := ioutil.ReadDir(modulesDir) // returns a list of modules sorted by filename
 	if err != nil {
-		return fmt.Errorf("cannot list modules directory %s: %s", modulesDir, err)
+		return fmt.Errorf("cannot list modules directory '%s': %s", modulesDir, err)
 	}
 
 	if err := setGlobalConfigValues(); err != nil {
@@ -203,7 +203,7 @@ func initModules() error {
 			matchRes := validModuleName.FindStringSubmatch(file.Name())
 			if matchRes != nil {
 				moduleName := matchRes[1]
-				rlog.Infof("Initializing module `%s` ...", moduleName)
+				rlog.Infof("Initializing module '%s' ...", moduleName)
 
 				modulePath := filepath.Join(modulesDir, file.Name())
 
@@ -247,7 +247,7 @@ func initModules() error {
 	}
 
 	if len(badModulesDirs) > 0 {
-		return fmt.Errorf("bad module directory names, must match regex `%s`: %s", validModuleName, strings.Join(badModulesDirs, ", "))
+		return fmt.Errorf("bad module directory names, must match regex '%s': %s", validModuleName, strings.Join(badModulesDirs, ", "))
 	}
 
 	return nil
@@ -271,13 +271,13 @@ func getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
 
 	data, err := ioutil.ReadFile(valuesYamlPath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %s", modulePath, err)
+		return nil, fmt.Errorf("cannot read '%s': %s", modulePath, err)
 	}
 
 	var res interface{}
 	err = yaml.Unmarshal(data, &res)
 	if err != nil {
-		return nil, fmt.Errorf("bad %s: %s", modulePath, err)
+		return nil, fmt.Errorf("bad '%s': %s", modulePath, err)
 	}
 
 	moduleConfig, err := utils.NewModuleConfig(moduleName, data)
@@ -311,7 +311,7 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 		if isExecutable {
 			paths = append(paths, path)
 		} else {
-			rlog.Warnf("Ignoring non executable file %s", filepath.Join(dir, path))
+			rlog.Warnf("Ignoring non executable file '%s'", filepath.Join(dir, path))
 		}
 
 		return nil
@@ -327,14 +327,14 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 func readValuesYamlFile(filePath string) (utils.Values, error) {
 	valuesYaml, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
+		return nil, fmt.Errorf("cannot read '%s': %s", filePath, err)
 	}
 
 	var res map[interface{}]interface{}
 
 	err = yaml.Unmarshal(valuesYaml, &res)
 	if err != nil {
-		return nil, fmt.Errorf("bad %s: %s", filePath, err)
+		return nil, fmt.Errorf("bad '%s': %s", filePath, err)
 	}
 
 	values, err := utils.FormatValues(res)
@@ -399,6 +399,6 @@ func makeCommand(dir string, valuesPath string, entrypoint string, args []string
 }
 
 func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
+	rlog.Debugf("Executing command in '%s': '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
 	return cmd.Run()
 }
