@@ -3,7 +3,6 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -13,8 +12,10 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
-	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
+
+	"github.com/romana/rlog"
+	"github.com/segmentio/go-camelcase"
 )
 
 type Module struct {
@@ -110,22 +111,6 @@ func (m *Module) exec() error {
 	return nil
 }
 
-func (m *Module) setGlobalModuleConfigValues() error {
-	path := filepath.Join(m.Path, "values.yaml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
-	}
-
-	values, err := readValuesYamlFile(path)
-	if err != nil {
-		return err
-	}
-
-	globalModulesConfigValues[m.Name] = values
-
-	return nil
-}
-
 func (m *Module) prepareValuesPath() (string, error) {
 	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s.yaml", m.Name), m.values())
 	if err != nil {
@@ -147,20 +132,19 @@ func (m *Module) generateHelmReleaseName() string {
 	return m.Name
 }
 
-func (m *Module) values() map[interface{}]interface{} {
-	return merge_values.MergeValues(
-		globalConfigValues,
-		globalModulesConfigValues[m.Name],
-		kubeConfigValues,
-		kubeModulesConfigValues[m.Name],
-		dynamicValues,
-		modulesDynamicValues[m.Name])
+func (m *Module) values() utils.Values {
+	values := utils.Values{
+		"global":          utils.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues),
+		m.camelcaseName(): utils.MergeValues(globalModulesConfigValues[m.Name], kubeModulesConfigValues[m.Name], modulesDynamicValues[m.Name]),
+	}
+	return values
+}
+
+func (m *Module) camelcaseName() string {
+	return camelcase.Camelcase(m.Name)
 }
 
 func (m *Module) isEnabled() (bool, error) {
-	// moduleValues := m.values()
-	// TODO check values
-
 	enabledScriptPath := filepath.Join(m.DirectoryName, "enabled")
 
 	_, err := os.Stat(enabledScriptPath)
@@ -218,19 +202,29 @@ func initModules() error {
 					DirectoryName: file.Name(),
 					Path:          modulePath,
 				}
-				module.setGlobalModuleConfigValues()
 
-				isEnabled, err := module.isEnabled()
+				moduleConfig, err := getModuleConfig(modulePath)
 				if err != nil {
 					return err
 				}
 
-				if isEnabled {
-					modulesByName[module.Name] = module
-					modulesOrder = append(modulesOrder, module.Name)
-
-					if err = initModuleHooks(module); err != nil {
+				if moduleConfig == nil || moduleConfig.IsEnabled {
+					moduleIsEnabled, err := module.isEnabled()
+					if err != nil {
 						return err
+					}
+
+					if moduleIsEnabled {
+						modulesByName[module.Name] = module
+						modulesOrder = append(modulesOrder, module.Name)
+
+						if moduleConfig != nil {
+							globalModulesConfigValues[moduleName] = moduleConfig.Values
+						}
+
+						if err = initModuleHooks(module); err != nil {
+							return err
+						}
 					}
 				}
 			} else {
@@ -254,10 +248,37 @@ func setGlobalConfigValues() (err error) {
 	return nil
 }
 
-func readModulesValues() (map[interface{}]interface{}, error) {
+func getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
+	moduleName := filepath.Base(modulePath)
+	valuesYamlPath := filepath.Join(modulePath, "values.yaml")
+
+	if _, err := os.Stat(valuesYamlPath); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	data, err := ioutil.ReadFile(valuesYamlPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %s", modulePath, err)
+	}
+
+	var res interface{}
+	err = yaml.Unmarshal(data, &res)
+	if err != nil {
+		return nil, fmt.Errorf("bad %s: %s", modulePath, err)
+	}
+
+	moduleConfig, err := utils.NewModuleConfig(moduleName, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return moduleConfig, nil
+}
+
+func readModulesValues() (utils.Values, error) {
 	path := filepath.Join(WorkingDir, "modules", "values.yaml")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return make(map[interface{}]interface{}), nil
+		return make(utils.Values), nil
 	}
 	return readValuesYamlFile(path)
 }
@@ -290,7 +311,7 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 	return paths, nil
 }
 
-func readValuesYamlFile(filePath string) (map[interface{}]interface{}, error) {
+func readValuesYamlFile(filePath string) (utils.Values, error) {
 	valuesYaml, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
@@ -303,10 +324,15 @@ func readValuesYamlFile(filePath string) (map[interface{}]interface{}, error) {
 		return nil, fmt.Errorf("bad %s: %s", filePath, err)
 	}
 
-	return res, nil
+	values, err := utils.FormatValues(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return values, nil
 }
 
-func dumpValuesYaml(fileName string, values map[interface{}]interface{}) (string, error) {
+func dumpValuesYaml(fileName string, values utils.Values) (string, error) {
 	valuesYaml, err := yaml.Marshal(&values)
 	if err != nil {
 		return "", err
@@ -342,7 +368,7 @@ func dumpData(filePath string, data []byte) error {
 	return nil
 }
 
-func valuesToString(values map[interface{}]interface{}) string {
+func valuesToString(values utils.Values) string {
 	valuesYaml, err := yaml.Marshal(&values)
 	if err != nil {
 		return fmt.Sprintf("%v", values)

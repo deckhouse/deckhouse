@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/deckhouse/deckhouse/antiopa/kube_values_manager"
-	"github.com/deckhouse/deckhouse/antiopa/merge_values"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 	"github.com/evanphx/json-patch"
 	"github.com/romana/rlog"
 	"io/ioutil"
@@ -180,7 +180,7 @@ func (h *GlobalHook) run() error {
 	}
 
 	var kubeConfigValuesChanged bool
-	if kubeConfigValues, kubeConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
+	if kubeConfigValues, kubeConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
 		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
 	}
 
@@ -191,7 +191,7 @@ func (h *GlobalHook) run() error {
 		}
 	}
 
-	if dynamicValues, _, err = merge_values.ApplyJsonMergeAndPatch(dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
+	if dynamicValues, _, err = utils.ApplyJsonMergeAndPatch(dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
 		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
 	}
 
@@ -215,11 +215,8 @@ func (h *GlobalHook) prepareValuesPath() (string, error) {
 	return valuesPath, nil
 }
 
-func (h *GlobalHook) values() map[interface{}]interface{} {
-	return merge_values.MergeValues(
-		globalConfigValues,
-		kubeConfigValues,
-		dynamicValues)
+func (h *GlobalHook) values() utils.Values {
+	return utils.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues)
 }
 
 func (h *ModuleHook) run() error {
@@ -232,7 +229,7 @@ func (h *ModuleHook) run() error {
 	}
 
 	var kubeModuleConfigValuesChanged bool
-	if kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = merge_values.ApplyJsonMergeAndPatch(kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
+	if kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
 		return err
 	}
 
@@ -244,7 +241,7 @@ func (h *ModuleHook) run() error {
 		}
 	}
 
-	if modulesDynamicValues[moduleName], _, err = merge_values.ApplyJsonMergeAndPatch(modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
+	if modulesDynamicValues[moduleName], _, err = utils.ApplyJsonMergeAndPatch(modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
 		return fmt.Errorf("module '%s': hook '%s': merge values failed: %s", moduleName, h.Name, err)
 	}
 

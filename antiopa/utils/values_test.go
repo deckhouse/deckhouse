@@ -54,3 +54,5 @@ func TestModuleConfig(t *testing.T) {
 		t.Errorf("Got unexpected config values: %+v", config.Values)
 	}
 }
+
+// TODO TestApplyJsonMergeAndPatch

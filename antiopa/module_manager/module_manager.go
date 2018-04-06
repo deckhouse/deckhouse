@@ -6,7 +6,6 @@ import (
 	"github.com/romana/rlog"
 	"sort"
 
-	"github.com/deckhouse/deckhouse/antiopa/merge_values"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
@@ -39,17 +38,17 @@ var (
 	modulesHooksOrderByName map[string]map[BindingType][]*ModuleHook
 
 	// values для всех модулей, для всех кластеров
-	globalConfigValues map[interface{}]interface{}
+	globalConfigValues utils.Values
 	// values для конкретного модуля, для всех кластеров
-	globalModulesConfigValues map[string]map[interface{}]interface{}
+	globalModulesConfigValues map[string]utils.Values
 	// values для всех модулей, для конкретного кластера
-	kubeConfigValues map[interface{}]interface{}
+	kubeConfigValues utils.Values
 	// values для конкретного модуля, для конкретного кластера
-	kubeModulesConfigValues map[string]map[interface{}]interface{}
+	kubeModulesConfigValues map[string]utils.Values
 	// dynamic-values для всех модулей, для всех кластеров
-	dynamicValues map[interface{}]interface{}
+	dynamicValues utils.Values
 	// dynamic-values для конкретного модуля, для всех кластеров
-	modulesDynamicValues map[string]map[interface{}]interface{}
+	modulesDynamicValues map[string]utils.Values
 
 	// Внутреннее событие: изменились values модуля.
 	// Обработка -- генерация внешнего Event со всеми связанными модулями для рестарта.
@@ -260,8 +259,8 @@ func RunModule(moduleName string) error { // запускает before-helm + he
 	return nil
 }
 
-func valuesChecksum(ValuesArr ...map[interface{}]interface{}) (string, error) {
-	valuesJson, err := json.Marshal(merge_values.MergeValues(ValuesArr...))
+func valuesChecksum(valuesArr ...utils.Values) (string, error) {
+	valuesJson, err := json.Marshal(utils.MergeValues(valuesArr...))
 	if err != nil {
 		return "", err
 	}

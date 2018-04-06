@@ -47,11 +47,11 @@ type KubeValues struct {
 	ModulesValues map[string]map[interface{}]interface{}
 }
 
-func SetKubeValues(_ map[interface{}]interface{}) error {
+func SetKubeValues(_ utils.Values) error {
 	return nil
 }
 
-func SetModuleKubeValues(ModuleName string, Values map[interface{}]interface{}) error {
+func SetModuleKubeValues(ModuleName string, Values utils.Values) error {
 	/*
 	* Читаем текущий ConfigMap, создать если нету
 	* Обновляем <module-name>-values + <module-name>-checksum (md5 от yaml-values)
