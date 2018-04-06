@@ -42,45 +42,45 @@ groups:
       1e+06
     labels:
       quantile: "0.5"
-  - alert: APIServerLatencyHigh
-    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
-      > 1
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: the API server has a 99th percentile latency of {{ $value }} seconds
-        for {{$labels.verb}} {{$labels.resource}}
-      summary: API server high latency
-  - alert: APIServerLatencyHigh
-    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
-      > 4
-    for: 10m
-    labels:
-      severity: critical
-    annotations:
-      description: the API server has a 99th percentile latency of {{ $value }} seconds
-        for {{$labels.verb}} {{$labels.resource}}
-      summary: API server high latency
-  - alert: APIServerErrorsHigh
-    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
-      * 100 > 2
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: API server returns errors for {{ $value }}% of requests
-        for {{$labels.verb}} {{$labels.resource}}
-      summary: API server request errors
-  - alert: APIServerErrorsHigh
-    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
-      * 100 > 5
-    for: 10m
-    labels:
-      severity: critical
-    annotations:
-      description: API server returns errors for {{ $value }}% of requests
-        for {{$labels.verb}} {{$labels.resource}}
+#  - alert: APIServerLatencyHigh
+#    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
+#      > 1
+#    for: 10m
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: the API server has a 99th percentile latency of {{ $value }} seconds
+#        for {{$labels.verb}} {{$labels.resource}}
+#      summary: API server high latency
+#  - alert: APIServerLatencyHigh
+#    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
+#      > 4
+#    for: 10m
+#    labels:
+#      severity: critical
+#    annotations:
+#      description: the API server has a 99th percentile latency of {{ $value }} seconds
+#        for {{$labels.verb}} {{$labels.resource}}
+#      summary: API server high latency
+#  - alert: APIServerErrorsHigh
+#    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
+#      * 100 > 2
+#    for: 10m
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: API server returns errors for {{ $value }}% of requests
+#        for {{$labels.verb}} {{$labels.resource}}
+#      summary: API server request errors
+#  - alert: APIServerErrorsHigh
+#    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
+#      * 100 > 5
+#    for: 10m
+#    labels:
+#      severity: critical
+#    annotations:
+#      description: API server returns errors for {{ $value }}% of requests
+#        for {{$labels.verb}} {{$labels.resource}}
   - alert: K8SApiserverDown
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 20m

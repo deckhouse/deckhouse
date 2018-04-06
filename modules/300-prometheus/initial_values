@@ -1,5 +1,29 @@
-#!/bin/bash
+#!/bin/bash -e
 
 echo 'prometheus:'
 echo '  adminPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
 echo '  userPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
+
+
+###############################################################################
+# TODO переделать, когда появятся более лучшие хуки
+#   * Читать значения из настоящих values, а не черт знает откуда
+#   * Учесть наличине/отсутствие clusterHostname
+#   * Учесть ingressACME
+#   * Утащить в отдельный файл
+global_values=$(kubectl -n antiopa get cm/antiopa -o json | jq '.data.values' -r)
+project=$(echo "$global_values" | grep '^  project:' | sed 's/^  project: //')
+cluster_name=$(echo "$global_values" | grep '^  clusterName:' | sed 's/^  clusterName: //')
+cluster_hostname=$(echo "$global_values" | grep '^  clusterHostname:' | sed 's/^  clusterHostname: //')
+madison_auth_key=$(kubectl -n antiopa get cm/antiopa -o json | jq '.data."prometheus-values"' -r | grep '^  madisonAuthKey:' | sed 's/^  madisonAuthKey: //')
+if [[ -z "$project" || -z "$cluster_name" ]] ; then
+  >&2 echo "Failed to extract project or clusterName from global values"
+  exit 1
+fi
+if [[ -z $madison_auth_key ]] ; then
+  madison_auth_key=$(curl -s -H "Content-Type: application/json" -X POST -d '{"type":"prometheus","name":"kubernetes-'$cluster_name'","prometheus_url":"https://prometheus.'$cluster_hostname'/prometheus/","grafana_url":"https://prometheus.'$cluster_hostname'/"}' https://madison.flant.com/api/$project/self_setup/***REMOVED*** | jq .auth_key -r)
+else
+  curl -s -H "Content-Type: application/json" -X PUT -d '{"name":"kubernetes-'$cluster_name'","prometheus_url":"https://prometheus.'$cluster_hostname'/prometheus/","grafana_url":"https://prometheus.'$cluster_hostname'/"}' https://madison.flant.com/api/$project/self_update/$madison_auth_key > /dev/null
+fi
+echo '  madisonAuthKey: '$madison_auth_key
+###############################################################################
