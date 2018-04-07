@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+echo 'dashboard:'
+
+if [[ "$(kubectl get ns kube-dashboard -o json |jq .metadata.labels.heritage -r)" != "antiopa" ]]; then
+  gitlab_base_url=$(kubectl get deploy -nkube-dashboard oauth2-proxy -o json |jq .spec.template.spec.containers[0].args |grep "login-url" |  sed -e 's/.*=//;s#/oauth/authorize.*##')
+  oauth2_proxy_client_id=$(kubectl get deploy -nkube-dashboard oauth2-proxy -o json |jq '.spec.template.spec.containers[0].env[]  | select(.name=="OAUTH2_PROXY_CLIENT_ID") | .value' -r)
+  oauth2_proxy_client_secret=$(kubectl get deploy -nkube-dashboard oauth2-proxy -o json |jq '.spec.template.spec.containers[0].env[]  | select(.name=="OAUTH2_PROXY_CLIENT_SECRET") | .value' -r)
+  oauth2_proxy_cookie_secret=$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 16)
+  if [[ -n $gitlab_base_url ]] ; then
+    echo "  gitlabBaseUrl: \"$gitlab_base_url\""
+    echo "  oauth2ProxyClientId: \"$oauth2_proxy_client_id\""
+    echo "  oauth2ProxyClientSecret: \"$oauth2_proxy_client_secret\""
+  fi
+  echo "  oauth2ProxyCookieSecret: \"$oauth2_proxy_cookie_secret\""
+fi
+
+http_password=$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)
+
+echo "  password: \"$http_password\""
+

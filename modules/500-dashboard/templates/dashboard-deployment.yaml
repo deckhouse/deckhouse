@@ -1,0 +1,66 @@
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kube-dashboard
+  name: kube-dashboard
+  namespace: kube-dashboard
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: kube-dashboard
+  template:
+    metadata:
+      labels:
+        app: kube-dashboard
+    spec:
+{{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
+      nodeSelector:
+{{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
+      tolerations:
+{{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.cluster.hasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      containers:
+      - name: kube-dashboard
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.8.3
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        args:
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9090
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        volumeMounts:
+        - name: kube-dashboard-certs
+          mountPath: /certs
+        - mountPath: /tmp
+          name: tmp-volume
+      volumes:
+      - name: kube-dashboard-certs
+        secret:
+          secretName: kube-dashboard-certs
+      - name: tmp-volume
+        emptyDir: {}
+      serviceAccountName: kube-dashboard
+

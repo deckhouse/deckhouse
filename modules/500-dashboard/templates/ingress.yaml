@@ -1,0 +1,62 @@
+{{- if .Values.global.clusterHostname }}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+{{- if .Values.dashboard.gitlabBaseUrl }}
+    ingress.kubernetes.io/auth-signin: https://$host/oauth2/sign_in
+    ingress.kubernetes.io/auth-url: http://oauth2-proxy.kube-dashboard.svc.cluster.local:4180/oauth2/auth
+{{- else }}
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: basic-auth
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+{{- end }}
+  name: dashboard
+  namespace: kube-dashboard
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  rules:
+  - host: dashboard.{{ .Values.global.clusterHostname }}
+    http:
+      paths:
+      - backend:
+          serviceName: kube-dashboard
+          servicePort: 80
+        path: /
+
+  tls:
+  - hosts:
+      - dashboard.{{ .Values.global.clusterHostname }}
+    secretName: kube-dashboard-tls
+
+{{- if .Values.dashboard.gitlabBaseUrl }}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+  name: oauth2-proxy
+  namespace: kube-dashboard
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  rules:
+  - host: dashboard.{{ .Values.global.clusterHostname }}
+    http:
+      paths:
+      - backend:
+          serviceName: oauth2-proxy
+          servicePort: 4180
+        path: /oauth2
+  tls:
+  - hosts:
+      - dashboard.{{ .Values.global.clusterHostname }}
+    secretName: kube-dashboard-tls
+{{- end }}
+{{- end }}
