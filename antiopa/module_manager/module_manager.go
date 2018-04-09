@@ -4,32 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/romana/rlog"
+	"reflect"
 	"sort"
 
+	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
-
-/*
-
-Module run:
-* before-helm
-* helm
-* after-helm
-
-All run:
-* before-all
-* run modules
-* after-all
-
-*/
 
 var (
 	EventCh chan Event
 
-	// список модулей, найденных в инсталляции
+	// Список модулей, найденных в инсталляции
 	modulesByName map[string]*Module
-	// список имен модулей в порядке вызова
-	modulesOrder []string
+	// Список имен модулей найденных в файловой системе и включенных согласно yaml-файлам модулей в порядке вызова.
+	// Модули существующие в файловой системе но выключенные в yaml-файле не зарегистрированы в module_manager.
+	allModuleNamesInOrder []string
+	// Список имен модулей выключенных в kube-config
+	kubeDisabledModules []string
+	// Результирующий список имен включенных модулей в порядке вызова.
+	// С учетом скрипта enabled, kube-config и yaml-файла для модуля.
+	// Список меняется во время работы antiopa по мере возникновения событий
+	// включения/выключения модулей от kube-config.
+	enabledModulesInOrder []string
 
 	globalHooksByName map[string]*GlobalHook        // name -> Hook
 	globalHooksOrder  map[BindingType][]*GlobalHook // это что-то внутреннее для быстрого поиска binding -> hooks names in order, можно и по-другому сделать
@@ -59,12 +55,6 @@ var (
 
 	WorkingDir string
 	TempDir    string
-)
-
-// TODO: remove this
-var (
-	retryModulesNamesQueue []string
-	retryAll               bool
 )
 
 // Типы привязок для хуков — то, от чего могут сработать хуки
@@ -150,21 +140,210 @@ func Init(workingDir string, tempDir string) error {
 		return err
 	}
 
+	kubeConfig, err := kube_config_manager.Init()
+	if err != nil {
+		return err
+	}
+	setKubeConfig(kubeConfig)
+
 	return nil
 }
 
+func setKubeConfig(kubeConfig *kube_config_manager.Config) {
+
+}
+
+func getEnabledModulesInOrder(kubeDisabledModules []string) ([]string, error) {
+	res := make([]string, 0)
+	for _, name := range allModuleNamesInOrder {
+		for _, disabled := range kubeDisabledModules {
+			if name != disabled {
+				res = append(res, name)
+			}
+		}
+	}
+
+	// TODO: check enabled script
+
+	return res, nil
+}
+
+func getModulesToEnable(oldEnabledModules []string, newEnabledModules []string) []string {
+	res := make([]string, 0)
+
+SearchModulesToEnable:
+	for _, newModule := range newEnabledModules {
+		for _, oldModule := range enabledModulesInOrder {
+			if oldModule == newModule {
+				continue SearchModulesToEnable
+			}
+		}
+		res = append(res, newModule)
+	}
+
+	return res
+}
+
+func getModulesToDisable(oldEnabledModules []string, newEnabledModules []string) []string {
+	res := make([]string, 0)
+
+SearchModulesToDisable:
+	for _, oldModule := range enabledModulesInOrder {
+		for _, newModule := range newEnabledModules {
+			if newModule == oldModule {
+				continue SearchModulesToDisable
+			}
+		}
+		res = append(res, oldModule)
+	}
+
+	return res
+}
+
+func handleNewEnabledModules(oldEnabledModules []string, newEnabledModules []string) []Event {
+	modulesToEnable := getModulesToEnable(oldEnabledModules, newEnabledModules)
+	modulesToDisable := getModulesToDisable(oldEnabledModules, newEnabledModules)
+
+	event := Event{
+		Type:           ModulesChanged,
+		ModulesChanges: make([]ModuleChange, 0),
+	}
+
+	for _, disableModule := range modulesToDisable {
+		event.ModulesChanges = append(event.ModulesChanges, ModuleChange{
+			Name:       disableModule,
+			ChangeType: Disabled,
+		})
+	}
+
+	for _, enableModule := range modulesToEnable {
+		event.ModulesChanges = append(event.ModulesChanges, ModuleChange{
+			Name:       enableModule,
+			ChangeType: Enabled,
+		})
+	}
+
+	return []Event{event}
+}
+
+type kubeUpdate struct {
+	EnabledModules          []string
+	KubeConfigValues        utils.Values
+	KubeDisabledModules     []string
+	KubeModulesConfigValues map[string]utils.Values
+	Events                  []Event
+}
+
+func applyKubeUpdate(kubeUpdate kubeUpdate) error {
+	kubeConfigValues = kubeUpdate.KubeConfigValues
+	kubeModulesConfigValues = kubeUpdate.KubeModulesConfigValues
+	kubeDisabledModules = kubeUpdate.KubeDisabledModules
+	enabledModulesInOrder = kubeUpdate.EnabledModules
+
+	for _, event := range kubeUpdate.Events {
+		EventCh <- event
+	}
+
+	return nil
+}
+
+func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, error) {
+	res := kubeUpdate{
+		EnabledModules:          make([]string, 0),
+		KubeConfigValues:        newConfig.Values,
+		KubeDisabledModules:     make([]string, 0),
+		KubeModulesConfigValues: make(map[string]utils.Values),
+		Events:                  make([]Event, 0),
+	}
+
+	for _, moduleConfig := range newConfig.ModuleConfigs {
+		if !moduleConfig.IsEnabled {
+			res.KubeDisabledModules = append(res.KubeDisabledModules, moduleConfig.ModuleName)
+			continue
+		}
+		res.KubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
+	}
+
+	if !reflect.DeepEqual(kubeDisabledModules, res.KubeDisabledModules) {
+		newEnabledModules, err := getEnabledModulesInOrder(res.KubeDisabledModules)
+		if err != nil {
+			return kubeUpdate{}, err
+		}
+
+		res.EnabledModules = newEnabledModules
+		res.Events = append(res.Events, handleNewEnabledModules(enabledModulesInOrder, newEnabledModules)...)
+	}
+
+	res.Events = append(res.Events, Event{Type: GlobalChanged})
+
+	return res, nil
+}
+
+func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, error) {
+	res := kubeUpdate{
+		EnabledModules:          enabledModulesInOrder,
+		Events:                  make([]Event, 0),
+		KubeConfigValues:        kubeConfigValues,
+		KubeDisabledModules:     make([]string, 0),
+		KubeModulesConfigValues: make(map[string]utils.Values),
+	}
+
+	for _, disabledModuleName := range kubeDisabledModules {
+		if (disabledModuleName != newModuleConfig.ModuleName) || !newModuleConfig.IsEnabled {
+			res.KubeDisabledModules = append(res.KubeDisabledModules, disabledModuleName)
+		}
+	}
+
+	for moduleName, moduleValues := range kubeModulesConfigValues {
+		if moduleName != newModuleConfig.ModuleName {
+			res.KubeModulesConfigValues[moduleName] = moduleValues
+		} else if newModuleConfig.IsEnabled {
+			res.KubeModulesConfigValues[newModuleConfig.ModuleName] = newModuleConfig.Values
+		}
+	}
+
+	wasEnabled := true
+	for _, disabledModuleName := range kubeDisabledModules {
+		if disabledModuleName == newModuleConfig.ModuleName {
+			wasEnabled = false
+		}
+	}
+	if (!wasEnabled && newModuleConfig.IsEnabled) || (wasEnabled && !newModuleConfig.IsEnabled) {
+		newEnabledModules, err := getEnabledModulesInOrder(kubeDisabledModules)
+		if err != nil {
+			return kubeUpdate{}, err
+		}
+
+		res.EnabledModules = newEnabledModules
+		res.Events = append(res.Events, handleNewEnabledModules(enabledModulesInOrder, newEnabledModules)...)
+	}
+
+	if !wasEnabled && !newModuleConfig.IsEnabled {
+		rlog.Debugf("Module manager: module %s remains in disabled state: ignoring update")
+	} else {
+		res.Events = append(res.Events, Event{
+			Type: ModulesChanged,
+			ModulesChanges: []ModuleChange{
+				ModuleChange{Name: newModuleConfig.ModuleName, ChangeType: Changed},
+			},
+		})
+	}
+
+	return res, nil
+}
+
 // Module manager loop
-func RunModuleManager() {
+func Run() {
 	for {
 		select {
 		/*
-		* TODO: Watch kube_values_manager.ConfigUpdated
-		* TODO: Watch kube_values_manager.ModuleConfigUpdated
+		 * TODO: filter out unknown modules
 		 */
 
 		case <-globalValuesChanged:
 			rlog.Debugf("Module manager: global values")
 			EventCh <- Event{Type: GlobalChanged}
+
 		case moduleName := <-moduleValuesChanged:
 			rlog.Debugf("Module manager: module '%s' values changed", moduleName)
 
@@ -176,6 +355,26 @@ func RunModuleManager() {
 				ModulesChanges: []ModuleChange{
 					{Name: moduleName, ChangeType: Changed},
 				},
+			}
+
+		case newKubeConfig := <-kube_config_manager.ConfigUpdated:
+			handleRes, err := handleNewKubeConfig(newKubeConfig)
+			if err != nil {
+				rlog.Errorf("Module manager: unable to handle kube config update: %s", err)
+			}
+			err = applyKubeUpdate(handleRes)
+			if err != nil {
+				rlog.Errorf("Module manager: cannot apply kube config update: %s", err)
+			}
+
+		case newModuleConfig := <-kube_config_manager.ModuleConfigUpdated:
+			handleRes, err := handleNewKubeModuleConfig(newModuleConfig)
+			if err != nil {
+				rlog.Errorf("Module manager: unable to handle module '%s' kube config update: %s", newModuleConfig.ModuleName, err)
+			}
+			err = applyKubeUpdate(handleRes)
+			if err != nil {
+				rlog.Errorf("Module manager: cannot apply module '%s' kube config update: %s", newModuleConfig.ModuleName, err)
 			}
 		}
 	}
@@ -191,7 +390,7 @@ func GetModule(name string) (*Module, error) {
 }
 
 func GetModuleNamesInOrder() []string {
-	return modulesOrder
+	return allModuleNamesInOrder
 }
 
 func GetGlobalHook(name string) (*GlobalHook, error) {
