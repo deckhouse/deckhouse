@@ -267,13 +267,7 @@ func getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
 		return nil, fmt.Errorf("cannot read '%s': %s", modulePath, err)
 	}
 
-	var res interface{}
-	err = yaml.Unmarshal(data, &res)
-	if err != nil {
-		return nil, fmt.Errorf("bad '%s': %s", modulePath, err)
-	}
-
-	moduleConfig, err := utils.NewModuleConfig(moduleName, data)
+	moduleConfig, err := utils.NewModuleConfigByYamlData(moduleName, data)
 	if err != nil {
 		return nil, err
 	}

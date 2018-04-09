@@ -20,6 +20,22 @@ type ModuleConfig struct {
 	Values     Values
 }
 
+func NewModuleConfigByYamlData(moduleName string, data []byte) (*ModuleConfig, error) {
+	b, err := strconv.ParseBool(strings.TrimSpace(string(data)))
+	if err != nil {
+		var res map[interface{}]interface{}
+		err = yaml.Unmarshal(data, &res)
+
+		if err != nil {
+			return nil, fmt.Errorf("unsupported value '%s': %s", string(data), err)
+		}
+
+		return NewModuleConfig(moduleName, res)
+	} else {
+		return NewModuleConfig(moduleName, b)
+	}
+}
+
 func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error) {
 	moduleConfig := &ModuleConfig{
 		ModuleName: moduleName,
@@ -29,16 +45,10 @@ func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error)
 
 	if moduleEnabled, isBool := data.(bool); isBool {
 		moduleConfig.IsEnabled = moduleEnabled
-	} else if bytes, isBytes := data.([]byte); isBytes {
-		b, err := strconv.ParseBool(strings.TrimSpace(string(bytes)))
-		if err != nil {
-			return nil, fmt.Errorf("unsupported value '%s': %s", string(bytes), err.Error())
-		}
-		moduleConfig.IsEnabled = b
 	} else {
 		moduleValues, moduleValuesOk := data.(map[interface{}]interface{})
 		if !moduleValuesOk {
-			return nil, fmt.Errorf("required map, bool or bytes array data, got: %v", reflect.TypeOf(data))
+			return nil, fmt.Errorf("required map or bool data, got: %v", reflect.TypeOf(data))
 		}
 
 		formattedValues, err := FormatValues(moduleValues)
