@@ -13,7 +13,7 @@ func TestModuleConfig(t *testing.T) {
 	config, err = NewModuleConfig("test-module", 1234)
 	if err == nil {
 		t.Errorf("Expected error, got ModuleConfig: %v", config)
-	} else if !strings.HasPrefix(err.Error(), "required map or bool data") {
+	} else if !strings.HasPrefix(err.Error(), "required map, bool or bytes array data") {
 		t.Errorf("Got unexpected error: %s", err)
 	}
 
@@ -52,6 +52,20 @@ func TestModuleConfig(t *testing.T) {
 
 	if !reflect.DeepEqual(config.Values, expectedData) {
 		t.Errorf("Got unexpected config values: %+v", config.Values)
+	}
+
+	config, err = NewModuleConfig("test-module", []byte("false"))
+	if err != nil {
+		t.Error(err)
+	}
+	if config.IsEnabled {
+		t.Errorf("Expected module to be disabled")
+	}
+
+	config, err = NewModuleConfig("test-module", []byte("falsee"))
+
+	if !strings.HasPrefix(err.Error(), "unsupported value") {
+		t.Errorf("Got unexpected error: %s", err.Error())
 	}
 }
 

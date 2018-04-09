@@ -8,6 +8,7 @@ import (
 	"github.com/evanphx/json-patch"
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
+	"strconv"
 )
 
 type Values map[string]interface{}
@@ -27,10 +28,16 @@ func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error)
 
 	if moduleEnabled, isBool := data.(bool); isBool {
 		moduleConfig.IsEnabled = moduleEnabled
+	} else if bytes, isBytes := data.([]byte); isBytes {
+		b, err := strconv.ParseBool(string(bytes))
+		if err != nil {
+			return nil, fmt.Errorf("unsupported value '%s': %s", string(bytes), err.Error())
+		}
+		moduleConfig.IsEnabled = b
 	} else {
 		moduleValues, moduleValuesOk := data.(map[interface{}]interface{})
 		if !moduleValuesOk {
-			return nil, fmt.Errorf("required map or bool data, got: %v", reflect.TypeOf(data))
+			return nil, fmt.Errorf("required map, bool or bytes array data, got: %v", reflect.TypeOf(data))
 		}
 
 		formattedValues, err := FormatValues(moduleValues)
