@@ -127,9 +127,6 @@ func Init(workingDir string, tempDir string) error {
 	globalValuesChanged = make(chan bool, 1)
 	moduleValuesChanged = make(chan string, 1)
 
-	kubeConfigValues = make(utils.Values) // TODO
-	rlog.Debugf("Set kubeConfigValues:\n%s", valuesToString(kubeConfigValues))
-
 	dynamicValues = make(utils.Values)
 
 	if err := initGlobalHooks(); err != nil {
@@ -148,10 +145,14 @@ func Init(workingDir string, tempDir string) error {
 	kubeModulesConfigValues = make(map[string]utils.Values)
 	kubeDisabledModules = make([]string, 0)
 	for _, moduleConfig := range kubeConfig.ModuleConfigs {
-		if moduleConfig.IsEnabled {
-			kubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
+		if _, hasKey := modulesByName[moduleConfig.ModuleName]; hasKey {
+			if moduleConfig.IsEnabled {
+				kubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
+			} else {
+				kubeDisabledModules = append(kubeDisabledModules, moduleConfig.ModuleName)
+			}
 		} else {
-			kubeDisabledModules = append(kubeDisabledModules, moduleConfig.ModuleName)
+			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
 		}
 	}
 
@@ -274,11 +275,15 @@ func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, erro
 	}
 
 	for _, moduleConfig := range newConfig.ModuleConfigs {
-		if !moduleConfig.IsEnabled {
-			res.KubeDisabledModules = append(res.KubeDisabledModules, moduleConfig.ModuleName)
-			continue
+		if _, hasKey := modulesByName[moduleConfig.ModuleName]; hasKey {
+			if !moduleConfig.IsEnabled {
+				res.KubeDisabledModules = append(res.KubeDisabledModules, moduleConfig.ModuleName)
+				continue
+			}
+			res.KubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
+		} else {
+			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
 		}
-		res.KubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
 	}
 
 	if !reflect.DeepEqual(kubeDisabledModules, res.KubeDisabledModules) {
@@ -297,6 +302,18 @@ func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, erro
 }
 
 func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, error) {
+	if _, hasKey := modulesByName[newModuleConfig.ModuleName]; !hasKey {
+		rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", newModuleConfig.ModuleName, valuesToString(newModuleConfig.Values))
+
+		return kubeUpdate{
+			EnabledModules:          enabledModulesInOrder,
+			Events:                  make([]Event, 0),
+			KubeConfigValues:        kubeConfigValues,
+			KubeDisabledModules:     kubeDisabledModules,
+			KubeModulesConfigValues: kubeModulesConfigValues,
+		}, nil
+	}
+
 	res := kubeUpdate{
 		EnabledModules:          enabledModulesInOrder,
 		Events:                  make([]Event, 0),
@@ -336,7 +353,7 @@ func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, 
 	}
 
 	if !wasEnabled && !newModuleConfig.IsEnabled {
-		rlog.Debugf("Module manager: module %s remains in disabled state: ignoring update")
+		rlog.Debugf("Module manager: module '%s' remains in disabled state: ignoring update", newModuleConfig.ModuleName)
 	} else {
 		res.Events = append(res.Events, Event{
 			Type: ModulesChanged,
@@ -353,10 +370,6 @@ func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, 
 func Run() {
 	for {
 		select {
-		/*
-		 * TODO: filter out unknown modules
-		 */
-
 		case <-globalValuesChanged:
 			rlog.Debugf("Module manager: global values")
 			EventCh <- Event{Type: GlobalChanged}

@@ -187,11 +187,6 @@ func initModulesIndex() error {
 	}
 	rlog.Debugf("Set globalConfigValues:\n%s", valuesToString(globalConfigValues))
 
-	kubeModulesConfigValues = make(map[string]utils.Values) // TODO
-	for moduleName, kubeModuleValues := range kubeModulesConfigValues {
-		rlog.Debugf("Set kubeModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModuleValues))
-	}
-
 	modulesDynamicValues = make(map[string]utils.Values)
 
 	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
@@ -224,10 +219,8 @@ func initModulesIndex() error {
 
 					if moduleConfig != nil {
 						globalModulesConfigValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
+						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(globalModulesConfigValues[moduleName]))
 					}
-
-					kubeModulesConfigValues[moduleName] = make(utils.Values)
 
 					if err = initModuleHooks(module); err != nil {
 						return err
