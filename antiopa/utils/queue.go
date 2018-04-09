@@ -32,8 +32,8 @@ func NewQueue() *Queue {
 // Add last element
 func (q *Queue) Add(task interface{}) {
 	q.m.Lock()
-	defer q.m.Unlock()
 	q.items = append(q.items, task)
+	q.m.Unlock()
 	q.queueChanged()
 }
 
@@ -48,12 +48,13 @@ func (q *Queue) Peek() (task interface{}, err error) {
 // Pop first element (delete)
 func (q *Queue) Pop() (task interface{}) {
 	q.m.Lock()
-	defer q.m.Unlock()
 	if q.isEmpty() {
+		q.m.Unlock()
 		return
 	}
 	task = q.items[0]
 	q.items = q.items[1:]
+	q.m.Unlock()
 	q.queueChanged()
 	return task
 }
@@ -61,8 +62,8 @@ func (q *Queue) Pop() (task interface{}) {
 // Add first element
 func (q *Queue) Push(task interface{}) {
 	q.m.Lock()
-	defer q.m.Unlock()
-	q.items = append([]interface{}{task}, q.items)
+	q.items = append([]interface{}{task}, q.items...)
+	q.m.Unlock()
 	q.queueChanged()
 }
 

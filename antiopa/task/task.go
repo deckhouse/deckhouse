@@ -13,6 +13,7 @@ type TaskType string
 const (
 	ModuleDelete  TaskType = "TASK_MODULE_DELETE"
 	ModuleRun     TaskType = "TASK_MODULE_RUN"
+	ModuleHookRun TaskType = "TASK_MODULE_HOOK_RUN"
 	GlobalHookRun TaskType = "TASK_GLOBAL_HOOK_RUN"
 	Delay         TaskType = "TASK_DELAY"
 )
@@ -22,6 +23,7 @@ type Task struct {
 	Name         string // name of module or hook
 	Type         TaskType
 	Binding      module_manager.BindingType
+	AllowFailure bool // task considered ok if hook failed. false by default. can be true for some schedule hooks
 }
 
 func NewTask(taskType TaskType, name string) *Task {
@@ -29,11 +31,17 @@ func NewTask(taskType TaskType, name string) *Task {
 		FailureCount: 0,
 		Name:         name,
 		Type:         taskType,
+		AllowFailure: false,
 	}
 }
 
 func (t *Task) WithBinding(binding module_manager.BindingType) *Task {
 	t.Binding = binding
+	return t
+}
+
+func (t *Task) WithAllowFailure(allowFailure bool) *Task {
+	t.AllowFailure = allowFailure
 	return t
 }
 

@@ -29,16 +29,17 @@ var (
 	// Очередь задач
 	TasksQueue *task.TasksQueue
 
-	// Канал событий о заполнении очереди
-	TasksQueueFullnessCh chan struct{}
+	// TODO Когда будет schedule_manager - удалить
+	schedule_manager_ScheduleEventCh chan struct{}
 )
 
 const DefaultTasksQueueDumpFilePath = "/tmp/antiopa-tasks-queue"
 
 // Задержки при обработке тасков из очереди
 const (
-	FailedHookDelay   = time.Duration(5 * time.Second)
-	FailedModuleDelay = time.Duration(5 * time.Second)
+	QueueIsEmptyDelay = 3 * time.Second
+	FailedHookDelay   = 5 * time.Second
+	FailedModuleDelay = 5 * time.Second
 )
 
 // Собрать настройки - директории, имя хоста, файл с дампом, namespace для tiller
@@ -105,11 +106,6 @@ func Init() {
 	queueWatcher := task.NewTasksQueueDumper(TasksQueueDumpFilePath, TasksQueue)
 	TasksQueue.AddWatcher(queueWatcher)
 
-	// Слежение за заполненной очередью — если очередь пуста, то TasksRunner может просто заснуть (вместо поллинга)
-	queueFullnessWatcher := task.NewTasksQueueFullnessWatcher(TasksQueue)
-	TasksQueueFullnessCh = queueFullnessWatcher.EventCh()
-	TasksQueue.AddWatcher(queueFullnessWatcher)
-
 	// Инициализация слежения за событиями onKubeNodeChange (пока нет kube_event_manager)
 	kube_node_manager.InitKubeNodeManager()
 
@@ -133,6 +129,12 @@ func Init() {
 
 	   GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
 	*/
+
+	// Инициализация хуков по расписанию - карта scheduleId → []ScheduleHook
+	schedule_manager_ScheduleEventCh = make(chan struct{}, 1)
+	RegisterScheduleHooks()
+	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
+	// RegisterKubeEventHooks()
 }
 
 // Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
@@ -176,6 +178,10 @@ func ManagersEventsHandler() {
 			}
 		// пришло событие от module_manager → перезапуск модулей или всего
 		case moduleEvent := <-module_manager.EventCh:
+			// событие от module_manager может прийти, если изменился состав модулей
+			// поэтому нужно заново зарегистрировать событийные хуки
+			// RegisterScheduledHooks()
+			// RegisterKubeEventHooks()
 			switch moduleEvent.Type {
 			// Изменились отдельные модули
 			case module_manager.ModulesChanged:
@@ -210,19 +216,49 @@ func ManagersEventsHandler() {
 				rlog.Debugf("KubeNodeChange: queued global hook '%s'", hookName)
 			}
 			TasksQueue.ChangesEnable(true)
+		// TODO поменять, когда появится schedule_manager
+		//case scheduleId := <-schedule_manager.ScheduleEventCh:
+		case scheduleId := <-schedule_manager_ScheduleEventCh:
+			scheduleHooks := GetScheduleHooks(scheduleId)
+			for _, hook := range scheduleHooks {
+				var getHookErr error
 
+				_, getHookErr = module_manager.GetGlobalHook(hook.Name)
+				if getHookErr == nil {
+					newTask := task.NewTask(task.GlobalHookRun, hook.Name).
+						WithBinding(module_manager.Schedule).
+						WithAllowFailure(hook.Schedule.AllowFailure)
+					rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
+					TasksQueue.Add(newTask)
+					break
+				}
+
+				_, getHookErr = module_manager.GetModuleHook(hook.Name)
+				if getHookErr == nil {
+					newTask := task.NewTask(task.ModuleHookRun, hook.Name).
+						WithBinding(module_manager.Schedule).
+						WithAllowFailure(hook.Schedule.AllowFailure)
+					rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
+					TasksQueue.Add(newTask)
+					break
+				}
+
+				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
+			}
 		}
 	}
 }
 
 // Обработчик один на очередь.
 // Обработчик может отложить обработку следующего таска с помощью пуша в начало очереди таска задержки
-// TODO добавить поддержку AllowFailure
+// TODO пока только один обработчик, всё ок. Но лучше, чтобы очередь позволяла удалять только то, чему ранее был сделан peek.
+// Т.е. кто взял в обработку задание, тот его и удалил из очереди. Сейчас Peek-нуть может одна го-рутина, другая добавит,
+// первая Pop-нет задание — новое задание пропало, второй раз будет обработано одно и тоже.
 func TasksRunner() {
 	for {
 		if TasksQueue.IsEmpty() {
 			rlog.Debugf("TasksRunner: queue is empty. Wait for tasks.")
-			<-TasksQueueFullnessCh
+			time.Sleep(QueueIsEmptyDelay)
 		}
 		for {
 			headTask, _ := TasksQueue.Peek()
@@ -249,9 +285,18 @@ func TasksRunner() {
 					} else {
 						TasksQueue.Pop()
 					}
+				case task.ModuleHookRun:
+					err := module_manager.RunModuleHook(t.Name, t.Binding)
+					if err != nil && !t.AllowFailure {
+						t.IncrementFailureCount()
+						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
+						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+					} else {
+						TasksQueue.Pop()
+					}
 				case task.GlobalHookRun:
 					err := module_manager.RunGlobalHook(t.Name, t.Binding)
-					if err != nil {
+					if err != nil && !t.AllowFailure {
 						t.IncrementFailureCount()
 						rlog.Debugf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.Binding, t.FailureCount)
 						TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
@@ -264,8 +309,40 @@ func TasksRunner() {
 					TasksQueue.Pop()
 				}
 			}
+			// break if empty to prevent infinity loop
+			if TasksQueue.IsEmpty() {
+				break
+			}
 		}
 	}
+}
+
+// Работа с событийными хуками
+
+type ScheduleIdType struct{}
+
+type ScheduleHook struct {
+	Name     string
+	Schedule module_manager.ScheduleConfig
+}
+
+type KubeEventHook struct {
+	Name           string
+	OnCreateConfig struct{}
+	OnChangeConfig struct{}
+}
+
+var ScheduleHooks map[ScheduleIdType][]*ScheduleHook
+
+func GetScheduleHooks(scheduleId ScheduleIdType) []*ScheduleHook {
+	return ScheduleHooks[scheduleId]
+}
+
+func RegisterScheduleHooks() {
+	ScheduleHooks = make(map[ScheduleIdType][]*ScheduleHook)
+	// Примерный алгоритм
+
+	return
 }
 
 /*
