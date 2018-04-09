@@ -136,7 +136,7 @@ func Init(workingDir string, tempDir string) error {
 		return err
 	}
 
-	if err := initModules(); err != nil {
+	if err := initModulesIndex(); err != nil {
 		return err
 	}
 
@@ -144,26 +144,43 @@ func Init(workingDir string, tempDir string) error {
 	if err != nil {
 		return err
 	}
-	setKubeConfig(kubeConfig)
+	kubeConfigValues = kubeConfig.Values
+	kubeModulesConfigValues = make(map[string]utils.Values)
+	kubeDisabledModules = make([]string, 0)
+	for _, moduleConfig := range kubeConfig.ModuleConfigs {
+		if moduleConfig.IsEnabled {
+			kubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
+		} else {
+			kubeDisabledModules = append(kubeDisabledModules, moduleConfig.ModuleName)
+		}
+	}
+
+	enabledModules, err := getEnabledModulesInOrder(kubeDisabledModules)
+	if err != nil {
+		return err
+	}
+	enabledModulesInOrder = enabledModules
 
 	return nil
 }
 
-func setKubeConfig(kubeConfig *kube_config_manager.Config) {
-
-}
-
-func getEnabledModulesInOrder(kubeDisabledModules []string) ([]string, error) {
+func getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
 	res := make([]string, 0)
 	for _, name := range allModuleNamesInOrder {
-		for _, disabled := range kubeDisabledModules {
+		for _, disabled := range disabledModules {
 			if name != disabled {
-				res = append(res, name)
+				// module should exist in modulesByName by invariant
+				moduleIsEnabled, err := modulesByName[name].checkIsEnabledByScript(res)
+				if err != nil {
+					return nil, err
+				}
+
+				if moduleIsEnabled {
+					res = append(res, name)
+				}
 			}
 		}
 	}
-
-	// TODO: check enabled script
 
 	return res, nil
 }

@@ -144,7 +144,7 @@ func (m *Module) camelcaseName() string {
 	return camelcase.Camelcase(m.Name)
 }
 
-func (m *Module) isEnabled() (bool, error) {
+func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool, error) {
 	enabledScriptPath := filepath.Join(m.DirectoryName, "enabled")
 
 	_, err := os.Stat(enabledScriptPath)
@@ -154,8 +154,7 @@ func (m *Module) isEnabled() (bool, error) {
 		return false, err
 	}
 
-	// FIXME: динамический рассчет enabled-модулей
-	enabledModulesFilePath, err := dumpValuesJson(filepath.Join("enabled-modules", m.Name), allModuleNamesInOrder)
+	enabledModulesFilePath, err := dumpValuesJson(filepath.Join("enabled-modules", m.Name), precedingEnabledModules)
 	if err != nil {
 		return false, err
 	}
@@ -169,7 +168,7 @@ func (m *Module) isEnabled() (bool, error) {
 	return true, nil
 }
 
-func initModules() error {
+func initModulesIndex() error {
 	rlog.Info("Initializing modules ...")
 
 	modulesByName = make(map[string]*Module)
@@ -220,25 +219,18 @@ func initModules() error {
 				}
 
 				if moduleConfig == nil || moduleConfig.IsEnabled {
-					moduleIsEnabled, err := module.isEnabled()
-					if err != nil {
-						return err
+					modulesByName[module.Name] = module
+					allModuleNamesInOrder = append(allModuleNamesInOrder, module.Name)
+
+					if moduleConfig != nil {
+						globalModulesConfigValues[moduleName] = moduleConfig.Values
+						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
 					}
 
-					if moduleIsEnabled {
-						modulesByName[module.Name] = module
-						allModuleNamesInOrder = append(allModuleNamesInOrder, module.Name)
+					kubeModulesConfigValues[moduleName] = make(utils.Values)
 
-						if moduleConfig != nil {
-							globalModulesConfigValues[moduleName] = moduleConfig.Values
-							rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
-						}
-
-						kubeModulesConfigValues[moduleName] = make(utils.Values)
-
-						if err = initModuleHooks(module); err != nil {
-							return err
-						}
+					if err = initModuleHooks(module); err != nil {
+						return err
 					}
 				}
 			} else {
