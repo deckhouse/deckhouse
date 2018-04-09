@@ -54,7 +54,7 @@ func TestModuleConfig(t *testing.T) {
 		t.Errorf("Got unexpected config values: %+v", config.Values)
 	}
 
-	config, err = NewModuleConfig("test-module", []byte("false"))
+	config, err = NewModuleConfig("test-module", []byte("false\t\n"))
 	if err != nil {
 		t.Error(err)
 	}
