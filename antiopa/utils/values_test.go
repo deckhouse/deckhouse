@@ -13,7 +13,7 @@ func TestModuleConfig(t *testing.T) {
 	config, err = NewModuleConfig("test-module", 1234)
 	if err == nil {
 		t.Errorf("Expected error, got ModuleConfig: %v", config)
-	} else if !strings.HasPrefix(err.Error(), "required map, bool or bytes array data") {
+	} else if !strings.HasPrefix(err.Error(), "required map or bool data") {
 		t.Errorf("Got unexpected error: %s", err)
 	}
 
@@ -53,8 +53,22 @@ func TestModuleConfig(t *testing.T) {
 	if !reflect.DeepEqual(config.Values, expectedData) {
 		t.Errorf("Got unexpected config values: %+v", config.Values)
 	}
+}
 
-	config, err = NewModuleConfig("test-module", []byte("false\t\n"))
+func TestNewModuleConfigByYamlData(t *testing.T) {
+	expectedData := Values{"a": 1.0, "b": 2.0}
+	config, err := NewModuleConfigByYamlData("test-module", []byte("a: 1\nb: 2"))
+	if err != nil {
+		t.Error(err)
+	}
+	if !config.IsEnabled {
+		t.Errorf("Expected module to be enabled")
+	}
+	if !reflect.DeepEqual(config.Values, expectedData) {
+		t.Errorf("Got unexpected config values: %+v", config.Values)
+	}
+
+	config, err = NewModuleConfigByYamlData("test-module", []byte("false\t\n"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,11 +76,8 @@ func TestModuleConfig(t *testing.T) {
 		t.Errorf("Expected module to be disabled")
 	}
 
-	config, err = NewModuleConfig("test-module", []byte("falsee"))
-
+	config, err = NewModuleConfigByYamlData("test-module", []byte("falsee"))
 	if !strings.HasPrefix(err.Error(), "unsupported value") {
 		t.Errorf("Got unexpected error: %s", err.Error())
 	}
 }
-
-// TODO TestApplyJsonMergeAndPatch

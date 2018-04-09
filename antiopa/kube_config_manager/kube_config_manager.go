@@ -73,13 +73,7 @@ func Init() (*Config, error) {
 
 		for key, value := range secret.Data {
 			if key != GlobalValuesKeyName {
-				var valueData interface{}
-				err := yaml.Unmarshal(value, &valueData)
-				if err != nil {
-					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s:\n%s", kube.AntiopaSecret, key, err, string(value))
-				}
-
-				moduleConfig, err := utils.NewModuleConfig(key, valueData)
+				moduleConfig, err := utils.NewModuleConfigByYamlData(key, value)
 				if err != nil {
 					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s", kube.AntiopaSecret, key, err)
 				}
