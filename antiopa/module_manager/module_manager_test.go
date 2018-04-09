@@ -12,7 +12,7 @@ func TestInitModules(t *testing.T) {
 	testDirectory := filepath.Dir(testFile)
 	WorkingDir = filepath.Join(testDirectory, "testdata")
 
-	if err := initModules(); err != nil {
+	if err := initModulesIndex(); err != nil {
 		t.Fatal(err)
 	}
 
