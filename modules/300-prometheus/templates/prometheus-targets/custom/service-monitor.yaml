@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: custom
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  endpoints:
+  - port: http-metrics
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      replacement: custom-$1
+      targetLabel: job
+    - regex: endpoint|pod
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+    - key: prometheus-custom-target
+      operator: Exists
