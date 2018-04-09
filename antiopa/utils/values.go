@@ -9,6 +9,7 @@ import (
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
 	"strconv"
+	"strings"
 )
 
 type Values map[string]interface{}
@@ -29,7 +30,7 @@ func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error)
 	if moduleEnabled, isBool := data.(bool); isBool {
 		moduleConfig.IsEnabled = moduleEnabled
 	} else if bytes, isBytes := data.([]byte); isBytes {
-		b, err := strconv.ParseBool(string(bytes))
+		b, err := strconv.ParseBool(strings.TrimSpace(string(bytes)))
 		if err != nil {
 			return nil, fmt.Errorf("unsupported value '%s': %s", string(bytes), err.Error())
 		}
