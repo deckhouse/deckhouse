@@ -6,7 +6,7 @@ stages:
 Build:
   stage: build
   script:
-    - ./modules_images bp --write-tags=modules/images_tags.yaml
+    - ./modules_images bp --write-tags=modules/images_tags.json
     - source dapp_use 0.27
     - dapp --version
     - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}/dev

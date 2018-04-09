@@ -1,7 +1,0 @@
-#!/bin/bash -e
-
-if kubectl -n kube-prometheus-operator get svc/prometheus-operator > /dev/null 2> /dev/null ; then
-  if [[ "$(kubectl -n kube-prometheus-operator get svc/prometheus-operator -o json | jq .spec.clusterIP -r)" != "None" ]] ; then
-    kubectl -n kube-prometheus-operator delete svc/prometheus-operator
-  fi
-fi
