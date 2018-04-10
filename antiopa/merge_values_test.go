@@ -56,3 +56,25 @@ func TestMergeValues(t *testing.T) {
 		t.Errorf("MergeValues FAILED: function changed input params\noriginal map b:\n%v\nmap b after call:\n%v", data["original-b"], data["b"])
 	}
 }
+
+func TestMergeValuesWithNullValue(t *testing.T) {
+	res := MergeValues(
+		map[interface{}]interface{}{
+			"hello": map[interface{}]interface{}{
+				"bbb": nil,
+			},
+		},
+		map[interface{}]interface{}{
+			"hello": map[interface{}]interface{}{
+				"bbb": nil,
+			},
+		})
+
+	if !reflect.DeepEqual(res, map[interface{}]interface{}{
+		"hello": map[interface{}]interface{}{
+			"bbb": nil,
+		},
+	}) {
+		t.Errorf("MergeValues FAILED: got unexpected merge result: %v", res)
+	}
+}
