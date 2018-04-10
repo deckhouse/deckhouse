@@ -20,33 +20,33 @@ groups:
 #    annotations:
 #      description: Replicas are not updated and available for deployment {{$labels.namespace}}/{{$labels.deployment}}
 #      summary: Deployment replicas are outdated
-  - alert: DaemonSetRolloutStuck
-    expr: max(kube_daemonset_status_number_ready / kube_daemonset_status_desired_number_scheduled) by (namespace, daemonset)
-      * 100 < 100
-    for: 15m
-    labels:
-      severity: warning
-    annotations:
-      description: Only {{$value}}% of desired pods scheduled and ready for daemon
-        set {{$labels.namespace}}/{{$labels.daemonset}}
-      summary: DaemonSet is missing pods
-  - alert: K8SDaemonSetsNotScheduled
-    expr: max(kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_current_number_scheduled) by (namespace, daemonset)
-      > 0
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: '{{$value}} of desired pods are not scheduled for daemon set {{$labels.namespace}}/{{$labels.daemonset}}'
-      summary: Daemonsets are not scheduled correctly
-  - alert: DaemonSetsMissScheduled
-    expr: max(kube_daemonset_status_number_misscheduled) by (namespace, daemonset) > 0
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: '{{$value}} pods of daemon set {{$labels.namespace}}/{{$labels.daemonset}} are running where they are not supposed to run.'
-      summary: Daemonsets are not scheduled correctly
+#  - alert: DaemonSetRolloutStuck
+#    expr: max(kube_daemonset_status_number_ready / kube_daemonset_status_desired_number_scheduled) by (namespace, daemonset)
+#      * 100 < 100
+#    for: 15m
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: Only {{$value}}% of desired pods scheduled and ready for daemon
+#        set {{$labels.namespace}}/{{$labels.daemonset}}
+#      summary: DaemonSet is missing pods
+#  - alert: K8SDaemonSetsNotScheduled
+#    expr: max(kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_current_number_scheduled) by (namespace, daemonset)
+#      > 0
+#    for: 10m
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: '{{$value}} of desired pods are not scheduled for daemon set {{$labels.namespace}}/{{$labels.daemonset}}'
+#      summary: Daemonsets are not scheduled correctly
+#  - alert: DaemonSetsMissScheduled
+#    expr: max(kube_daemonset_status_number_misscheduled) by (namespace, daemonset) > 0
+#    for: 10m
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: '{{$value}} pods of daemon set {{$labels.namespace}}/{{$labels.daemonset}} are running where they are not supposed to run.'
+#      summary: Daemonsets are not scheduled correctly
 #  - alert: PodFrequentlyRestarting
 #    expr: max(increase(kube_pod_container_status_restarts_total[1h])) by (namespace, pod) > 5
 #    for: 10m
