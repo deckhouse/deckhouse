@@ -6,7 +6,7 @@
 #     modules/*/images/*/
 #   * Умно тегирует образы на основании контрольной суммы содержимого
 #     директории образа (content-addressable)
-#   * Генерирует YAML-файл с маппингом имени модуля и имени образа в актуальный
+#   * Генерирует JSON-файл с маппингом имени модуля и имени образа в актуальный
 #     тег
 #   * Умеет очищать все не используемые теги (те теги, на которые не ссылается
 #     ни один акутальный тег)
@@ -21,7 +21,7 @@ Usage: modules_images bp [OPTION]...
 Build and push all modules images
 
 Optional arguments:
-  --write-tags=PATH            write info about tags in YAML format
+  --write-tags=PATH            write info about tags in JSON format
   --registry=REGISTRY          the address of the registry
                                (default: $CI_REGISTRY_IMAGE)
   --registry-user=USER         the username to use to push containers to registry
@@ -35,7 +35,7 @@ EOF
 
   eval set -- "$temp"
 
-  TAGS_YAML_FILE=""
+  TAGS_JSON_FILE=""
   REGISTRY=$CI_REGISTRY_IMAGE
   REGISTRY_USER=$CI_REGISTRY_USER
   REGISTRY_PASSWORD=$CI_REGISTRY_PASSWORD
@@ -43,7 +43,7 @@ EOF
   while true ; do
     case "$1" in
       --write-tags )
-        TAGS_YAML_FILE=$2; shift 2;;
+        TAGS_JSON_FILE=$2; shift 2;;
       --registry )
         REGISTRY=$2; shift 2;;
       --registry-user )
@@ -58,6 +58,8 @@ EOF
         break ;;
     esac
   done
+
+  TAGS_YAML_FILE=$(echo $TAGS_JSON_FILE | sed 's/\.json$/.yaml/')
 
   if [[ $# -ne 0 ]] ; then
     echo "$HELP_STRING"
@@ -80,23 +82,31 @@ EOF
   # Получаем тег для каждого образа каждого модуля
   modules_images_with_tags=$(git ls-tree @ -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/([0-9]{3})-([^\/]+)\/images\/([^\/]+)$/\2:\3:\4:\1/' | sort)
 
-  previous_module_in_tags_yaml_file=''
+  previous_module_in_tags_json_file=''
   previous_module=''
   # Проходим по каждому образу каждого тега
   echo "$modules_images_with_tags" | while IFS=':' read -r module_order module image tag ; do
     full_image_name=$REGISTRY/$module/$image:$tag
 
-    # Генерируем запись в YAML файл
-    if [[ -n $TAGS_YAML_FILE ]] ; then
-      if [[ $module != $previous_module_in_tags_yaml_file ]] ; then
-        if [[ -z $previous_module_in_tags_yaml_file ]] ; then
+    # Генерируем запись в JSON файл
+    if [[ -n $TAGS_JSON_FILE ]] ; then
+      if [[ $module != $previous_module_in_tags_json_file ]] ; then
+        if [[ -z $previous_module_in_tags_json_file ]] ; then
+          rm -f $TAGS_JSON_FILE
           rm -f $TAGS_YAML_FILE
+          echo -n '{' >> $TAGS_JSON_FILE
+        else
+          echo -n '},' >> $TAGS_JSON_FILE
         fi
 
+        echo -n '"'$(echo $module | sed -E 's/-(.)/\U\1/g')'":{' >> $TAGS_JSON_FILE
         echo $module: | sed -E 's/-(.)/\U\1/g' >> $TAGS_YAML_FILE
-        previous_module_in_tags_yaml_file=$module
+        previous_module_in_tags_json_file=$module
+      else
+        echo -n ',' >> $TAGS_JSON_FILE
       fi
 
+      echo -n '"'$(echo $image | sed -E 's/-(.)/\U\1/g')'":"'$tag'"' >> $TAGS_JSON_FILE
       echo '  '$image': "'$tag'"' | sed -E 's/-(.)/\U\1/g' >> $TAGS_YAML_FILE
     fi
 
@@ -146,6 +156,10 @@ EOF
 
     set -e
   done
+
+  if [[ -n $TAGS_JSON_FILE ]] ; then
+    echo '}}' >> $TAGS_JSON_FILE
+  fi
 }
 
 

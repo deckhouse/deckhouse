@@ -47,10 +47,18 @@ ansible:
       dest: /usr/local/bin
   - raw: helm init --client-only
 
+  # Зависимости хуков (из edge/testing)
+  - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
+
   # Чистим кеш
   - raw: rm -rf /var/cache/apk/*
 
   setup:
+  - name: "Add modules images tags.json"
+    copy:
+      content: |
+{{ .Files.Get "modules/images_tags.json" | indent 8 }}
+      dest: /antiopa/modules/images_tags.json
   - name: "Add modules images tags.yaml"
     copy:
       content: |
