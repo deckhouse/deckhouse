@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/romana/rlog"
+	"os"
+	"os/exec"
 	"reflect"
 	"sort"
 
+	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
@@ -64,6 +67,8 @@ type MainModuleManager struct {
 	// Внутреннее событие: изменились глобальные values.
 	// Обработка -- генерация внешнего Event для глобального рестарта всех модулей.
 	globalValuesChanged chan bool
+
+	helm helm.HelmClient
 }
 
 var (
@@ -132,7 +137,7 @@ type Event struct {
 }
 */
 
-func Init(workingDir string, tempDir string) (ModuleManager, error) {
+func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (ModuleManager, error) {
 	rlog.Info("Initializing module manager ...")
 
 	TempDir = tempDir
@@ -141,6 +146,7 @@ func Init(workingDir string, tempDir string) (ModuleManager, error) {
 
 	mm := &MainModuleManager{}
 
+	mm.helm = helmClient
 	mm.globalValuesChanged = make(chan bool, 1)
 	mm.moduleValuesChanged = make(chan string, 1)
 	mm.dynamicValues = make(utils.Values)
@@ -577,4 +583,13 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 	}
 
 	return nil
+}
+
+func (mm *MainModuleManager) makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
+	envs := make([]string, 0)
+	envs = append(envs, os.Environ()...)
+	envs = append(envs, mm.helm.CommandEnv()...)
+	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
+
+	return utils.MakeCommand(dir, entrypoint, args, envs)
 }

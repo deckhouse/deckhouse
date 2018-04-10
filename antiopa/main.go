@@ -34,6 +34,9 @@ var (
 
 	// module manager object
 	ModuleManager module_manager.ModuleManager
+
+	// helm client object
+	HelmClient helm.HelmClient
 )
 
 const DefaultTasksQueueDumpFilePath = "/tmp/antiopa-tasks-queue"
@@ -90,10 +93,14 @@ func Init() {
 	// TODO KubernetesAntiopaNamespace — имя поменяется, это старая переменная
 	tillerNamespace := kube.KubernetesAntiopaNamespace
 	rlog.Debugf("Antiopa tiller namespace: %s", tillerNamespace)
-	helm.Init(tillerNamespace)
+	HelmClient, err := helm.Init(tillerNamespace)
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: cannot initialize helm: %s", err)
+		os.Exit(1)
+	}
 
 	// Инициализация слежения за конфигом и за values
-	ModuleManager, err = module_manager.Init(WorkingDir, TempDir)
+	ModuleManager, err = module_manager.Init(WorkingDir, TempDir, HelmClient)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize module manager: %s", err)
 		os.Exit(1)
