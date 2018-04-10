@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 
 	"github.com/romana/rlog"
@@ -81,7 +80,7 @@ func (m *Module) cleanup() error {
 
 	rlog.Infof("Module '%s': running cleanup ...", m.Name)
 
-	if err := helm.HelmDeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
+	if err := m.moduleManager.helm.DeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
 
@@ -105,7 +104,7 @@ func (m *Module) exec() error {
 		return err
 	}
 
-	err = execCommand(makeCommand(m.Path, valuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", valuesPath}))
+	err = execCommand(m.moduleManager.makeCommand(m.Path, valuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", m.moduleManager.helm.TillerNamespace(), "--values", valuesPath}))
 	if err != nil {
 		return fmt.Errorf("module '%s': helm FAILED: %s", m.Name, err)
 	}
@@ -161,7 +160,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	cmd := makeCommand(m.Path, "", enabledScriptPath, []string{})
+	cmd := m.moduleManager.makeCommand(m.Path, "", enabledScriptPath, []string{})
 	cmd.Env = append(cmd.Env, fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath))
 	if err := execCommand(cmd); err != nil {
 		return false, err
@@ -369,15 +368,6 @@ func valuesToString(values utils.Values) string {
 		return fmt.Sprintf("%v", values)
 	}
 	return string(valuesYaml)
-}
-
-func makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
-	envs := make([]string, 0)
-	envs = append(envs, os.Environ()...)
-	envs = append(envs, helm.CommandEnv()...)
-	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
-
-	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
 
 func execCommand(cmd *exec.Cmd) error {

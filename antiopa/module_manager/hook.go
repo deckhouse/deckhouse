@@ -216,7 +216,7 @@ func (h *GlobalHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[strin
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	cmd := makeCommand(WorkingDir, valuesPath, h.Path, []string{})
+	cmd := h.moduleManager.makeCommand(WorkingDir, valuesPath, h.Path, []string{})
 	return h.moduleManager.execHook(filepath.Join(TempDir, "values", "hooks"), h.Name, cmd)
 }
 
@@ -276,7 +276,7 @@ func (h *ModuleHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[strin
 		return nil, nil, nil, nil, err
 	}
 
-	cmd := makeCommand(WorkingDir, valuesPath, h.Path, []string{})
+	cmd := h.moduleManager.makeCommand(WorkingDir, valuesPath, h.Path, []string{})
 	return h.moduleManager.execHook(filepath.Join(TempDir, "values", "modules"), h.Name, cmd)
 }
 
@@ -362,7 +362,7 @@ func (mm *MainModuleManager) initHooks(hooksDir string, addHook func(hookPath st
 	}
 
 	for _, hookPath := range hooksRelativePaths {
-		cmd := makeCommand(WorkingDir, "", hookPath, []string{"--config"})
+		cmd := mm.makeCommand(WorkingDir, "", hookPath, []string{"--config"})
 		output, err := execCommandOutput(cmd)
 		if err != nil {
 			return err

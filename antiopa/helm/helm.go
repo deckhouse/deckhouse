@@ -11,45 +11,58 @@ import (
 	"github.com/romana/rlog"
 )
 
-var (
-	TillerNamespace string
-)
+type HelmClient interface {
+	TillerNamespace() string
+	CommandEnv() []string
+	Cmd(args ...string) (string, string, error)
+	DeleteSingleFailedRevision(releaseName string) error
+	LastReleaseStatus(releaseName string) (string, string, error)
+	DeleteRelease(releaseName string) error
+}
+
+type CliHelm struct {
+	tillerNamespace string
+}
 
 // InitHelm запускает установку tiller-a.
-func Init(tillerNamespace string) {
-	TillerNamespace = tillerNamespace
-
+func Init(tillerNamespace string) (HelmClient, error) {
 	rlog.Info("HELM-INIT run helm init")
 
-	stdout, stderr, err := HelmCmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
+	helm := &CliHelm{tillerNamespace: tillerNamespace}
+
+	stdout, stderr, err := helm.Cmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
 	if err != nil {
-		rlog.Errorf("HELM-INIT: %s\n%s %s", err, stdout, stderr)
-		os.Exit(1)
+		return nil, fmt.Errorf("%s\n%s %s", err, stdout, stderr)
 	}
 	rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
 
-	stdout, stderr, err = HelmCmd("version")
+	stdout, stderr, err = helm.Cmd("version")
 	if err != nil {
-		rlog.Errorf("HELM-INIT Unable to get helm version: %v\n%v %v", err, stdout, stderr)
-		os.Exit(1)
+		return nil, fmt.Errorf("unable to get helm version: %v\n%v %v", err, stdout, stderr)
 	}
 	rlog.Infof("HELM-INIT helm version:\n%v %v", stdout, stderr)
 
 	rlog.Info("HELM-INIT Successfully initialized")
+
+	return helm, nil
 }
 
-func CommandEnv() []string {
+func (helm *CliHelm) TillerNamespace() string {
+	return helm.tillerNamespace
+}
+
+func (helm *CliHelm) CommandEnv() []string {
 	res := make([]string, 0)
-	res = append(res, fmt.Sprintf("TILLER_NAMESPACE=%s", TillerNamespace))
+	res = append(res, fmt.Sprintf("TILLER_NAMESPACE=%s", helm.TillerNamespace()))
 	return res
 }
 
-// HelmCmd запускает helm с переданными аргументами
-// Перед запуском устанавливает переменную среды TILLER_NAMESPACE
-// чтобы antiopa работала со своим tiller-ом
-func HelmCmd(args ...string) (stdout string, stderr string, err error) {
+// Запускает helm с переданными аргументами.
+// Перед запуском устанавливает переменную среды TILLER_NAMESPACE,
+// чтобы antiopa работала со своим tiller-ом.
+func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err error) {
 	cmd := exec.Command("/usr/local/bin/helm", args...)
-	cmd.Env = append(os.Environ(), CommandEnv()...)
+	cmd.Env = append(os.Environ(), helm.CommandEnv()...)
 
 	var stdoutBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
@@ -63,8 +76,8 @@ func HelmCmd(args ...string) (stdout string, stderr string, err error) {
 	return
 }
 
-func HelmDeleteSingleFailedRevision(releaseName string) (err error) {
-	revision, status, err := HelmLastReleaseStatus(releaseName)
+func (helm *CliHelm) DeleteSingleFailedRevision(releaseName string) (err error) {
+	revision, status, err := helm.LastReleaseStatus(releaseName)
 	if err != nil {
 		if revision != "0" {
 			rlog.Infof("%v", err)
@@ -75,7 +88,7 @@ func HelmDeleteSingleFailedRevision(releaseName string) (err error) {
 	//  No interest of revisions older than 1
 	if revision == "1" && status == "FAILED" {
 		// delete and purge!
-		err = HelmDelete(releaseName)
+		err = helm.DeleteRelease(releaseName)
 		if err != nil {
 			rlog.Infof("Error deleting first failed release '%s': %v", releaseName, err)
 			return err
@@ -92,8 +105,8 @@ func HelmDeleteSingleFailedRevision(releaseName string) (err error) {
 // helm history output:
 // REVISION	UPDATED                 	STATUS    	CHART                 	DESCRIPTION
 // 1        Fri Jul 14 18:25:00 2017	SUPERSEDED	symfony-demo-0.1.0    	Install complete
-func HelmLastReleaseStatus(releaseName string) (revision string, status string, err error) {
-	stdout, stderr, err := HelmCmd("history", releaseName)
+func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, status string, err error) {
+	stdout, stderr, err := helm.Cmd("history", releaseName)
 	if err != nil {
 		err = fmt.Errorf("Cannot get history for release '%s'\n%v %v", releaseName, stdout, stderr)
 		return
@@ -113,8 +126,8 @@ func HelmLastReleaseStatus(releaseName string) (revision string, status string, 
 	return
 }
 
-func HelmDelete(releaseName string) (err error) {
-	stdout, stderr, err := HelmCmd("delete", "--purge", releaseName)
+func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {
+	stdout, stderr, err := helm.Cmd("delete", "--purge", releaseName)
 	if err != nil {
 		return fmt.Errorf("helm delete --purge %s invocation error: %v\n%v %v", releaseName, err, stdout, stderr)
 	}
