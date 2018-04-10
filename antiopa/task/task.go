@@ -16,6 +16,7 @@ const (
 	ModuleHookRun TaskType = "TASK_MODULE_HOOK_RUN"
 	GlobalHookRun TaskType = "TASK_GLOBAL_HOOK_RUN"
 	Delay         TaskType = "TASK_DELAY"
+	Stop          TaskType = "TASK_STOP"
 )
 
 type Task struct {

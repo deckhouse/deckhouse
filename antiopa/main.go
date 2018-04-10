@@ -31,6 +31,9 @@ var (
 
 	// TODO Когда будет schedule_manager - удалить
 	schedule_manager_ScheduleEventCh chan struct{}
+
+	// module manager object
+	ModuleManager module_manager.ModuleManager
 )
 
 const DefaultTasksQueueDumpFilePath = "/tmp/antiopa-tasks-queue"
@@ -90,7 +93,7 @@ func Init() {
 	helm.Init(tillerNamespace)
 
 	// Инициализация слежения за конфигом и за values
-	_, err = module_manager.Init(WorkingDir, TempDir)
+	ModuleManager, err = module_manager.Init(WorkingDir, TempDir)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize module manager: %s", err)
 		os.Exit(1)
@@ -152,7 +155,7 @@ func Run() {
 
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
 	go docker_registry_manager.RunRegistryManager()
-	go module_manager.Run()
+	go ModuleManager.Run()
 	go kube_node_manager.RunKubeNodeManager()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
@@ -206,7 +209,7 @@ func ManagersEventsHandler() {
 		case <-kube_node_manager.KubeNodeChanged:
 			// Добавить выполнение глобальных хуков по событию KubeNodeChange
 			TasksQueue.ChangesDisable()
-			hookNames, err := module_manager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
+			hookNames, err := ModuleManager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
 			if err != nil {
 				rlog.Errorf("KubeNodeChange tasks: cannot get global hooks: %s", err)
 			}
@@ -223,7 +226,7 @@ func ManagersEventsHandler() {
 			for _, hook := range scheduleHooks {
 				var getHookErr error
 
-				_, getHookErr = module_manager.GetGlobalHook(hook.Name)
+				_, getHookErr = ModuleManager.GetGlobalHook(hook.Name)
 				if getHookErr == nil {
 					newTask := task.NewTask(task.GlobalHookRun, hook.Name).
 						WithBinding(module_manager.Schedule).
@@ -233,7 +236,7 @@ func ManagersEventsHandler() {
 					break
 				}
 
-				_, getHookErr = module_manager.GetModuleHook(hook.Name)
+				_, getHookErr = ModuleManager.GetModuleHook(hook.Name)
 				if getHookErr == nil {
 					newTask := task.NewTask(task.ModuleHookRun, hook.Name).
 						WithBinding(module_manager.Schedule).
@@ -268,7 +271,7 @@ func TasksRunner() {
 			if t, ok := headTask.(task.Task); ok {
 				switch t.Type {
 				case task.ModuleRun:
-					err := module_manager.RunModule(t.Name)
+					err := ModuleManager.RunModule(t.Name)
 					if err != nil {
 						t.IncrementFailureCount()
 						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
@@ -277,7 +280,7 @@ func TasksRunner() {
 						TasksQueue.Pop()
 					}
 				case task.ModuleDelete:
-					err := module_manager.DeleteModule(t.Name)
+					err := ModuleManager.DeleteModule(t.Name)
 					if err != nil {
 						t.IncrementFailureCount()
 						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
@@ -286,7 +289,7 @@ func TasksRunner() {
 						TasksQueue.Pop()
 					}
 				case task.ModuleHookRun:
-					err := module_manager.RunModuleHook(t.Name, t.Binding)
+					err := ModuleManager.RunModuleHook(t.Name, t.Binding)
 					if err != nil && !t.AllowFailure {
 						t.IncrementFailureCount()
 						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
@@ -295,7 +298,7 @@ func TasksRunner() {
 						TasksQueue.Pop()
 					}
 				case task.GlobalHookRun:
-					err := module_manager.RunGlobalHook(t.Name, t.Binding)
+					err := ModuleManager.RunGlobalHook(t.Name, t.Binding)
 					if err != nil && !t.AllowFailure {
 						t.IncrementFailureCount()
 						rlog.Debugf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.Binding, t.FailureCount)
@@ -307,6 +310,9 @@ func TasksRunner() {
 					td := headTask.(task.TaskDelay)
 					time.Sleep(td.Delay)
 					TasksQueue.Pop()
+				case task.Stop:
+					TasksQueue.Pop()
+					return
 				}
 			}
 			// break if empty to prevent infinity loop
@@ -360,7 +366,7 @@ func RegisterScheduleHooks() {
 		    * append each after-helm module hook to queue as separate task
 */
 func CreateOnStartupTasks() {
-	onStartupHooks, err := module_manager.GetGlobalHooksInOrder(module_manager.OnStartup)
+	onStartupHooks, err := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
 	if err != nil {
 		rlog.Errorf("OnStartup tasks: cannot get global hooks: %s", err)
 	}
@@ -376,7 +382,7 @@ func CreateOnStartupTasks() {
 
 func CreateReloadAllTasks() {
 	// Queue beforeAll global hooks
-	beforeAllHooks, err := module_manager.GetGlobalHooksInOrder(module_manager.BeforeAll)
+	beforeAllHooks, err := ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll)
 	if err != nil {
 		rlog.Errorf("ReloadAll BeforeAll tasks: cannot get global hooks: %s", err)
 	}
@@ -388,7 +394,7 @@ func CreateReloadAllTasks() {
 	}
 
 	// Queue modules
-	moduleNames := module_manager.GetModuleNamesInOrder()
+	moduleNames := ModuleManager.GetModuleNamesInOrder()
 	for _, moduleName := range moduleNames {
 		newTask := task.NewTask(task.ModuleRun, moduleName)
 		rlog.Debugf("ReloadAll Module: queued module '%s'", moduleName)
@@ -396,7 +402,7 @@ func CreateReloadAllTasks() {
 	}
 
 	// Queue afterAll global hooks
-	afterAllHooks, err := module_manager.GetGlobalHooksInOrder(module_manager.AfterAll)
+	afterAllHooks, err := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
 	if err != nil {
 		rlog.Errorf("ReloadAll AfterAll tasks: cannot get global hooks: %s", err)
 	}
