@@ -11,10 +11,6 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
-func Init(workingDir string, tempDir string) (*ModuleManager, error) {
-	return nil, nil // FIXME
-}
-
 type ModuleManager interface {
 	Run()
 	GetModule(name string) (*Module, error)
@@ -29,9 +25,7 @@ type ModuleManager interface {
 	RunModuleHook(hookName string, binding BindingType) error
 }
 
-var (
-	EventCh chan Event
-
+type MainModuleManager struct {
 	// Список модулей, найденных в инсталляции
 	modulesByName map[string]*Module
 	// Список имен модулей найденных в файловой системе и включенных согласно yaml-файлам модулей в порядке вызова.
@@ -70,7 +64,10 @@ var (
 	// Внутреннее событие: изменились глобальные values.
 	// Обработка -- генерация внешнего Event для глобального рестарта всех модулей.
 	globalValuesChanged chan bool
+}
 
+var (
+	EventCh    chan Event
 	WorkingDir string
 	TempDir    string
 )
@@ -127,7 +124,7 @@ type Event struct {
     afterHelm: ORDER, // только module
     beforeAll: ORDER, // только global
     afterAll: ORDER, // только global
-    onKubeNodeChange: ORDER, // только global
+	onKubeNodeChange: ORDER, // только global
     schedule:
         - crontab: * * * * *
           allowFailure: true
@@ -135,61 +132,62 @@ type Event struct {
 }
 */
 
-func oldInit(workingDir string, tempDir string) error {
+func Init(workingDir string, tempDir string) (ModuleManager, error) {
 	rlog.Info("Initializing module manager ...")
 
 	TempDir = tempDir
 	WorkingDir = workingDir
-
 	EventCh = make(chan Event, 1)
-	globalValuesChanged = make(chan bool, 1)
-	moduleValuesChanged = make(chan string, 1)
 
-	dynamicValues = make(utils.Values)
+	mm := &MainModuleManager{}
 
-	if err := initGlobalHooks(); err != nil {
-		return err
+	mm.globalValuesChanged = make(chan bool, 1)
+	mm.moduleValuesChanged = make(chan string, 1)
+	mm.dynamicValues = make(utils.Values)
+
+	if err := mm.initGlobalHooks(); err != nil {
+		return nil, err
 	}
 
-	if err := initModulesIndex(); err != nil {
-		return err
+	if err := mm.initModulesIndex(); err != nil {
+		return nil, err
 	}
 
 	kubeConfig, err := kube_config_manager.Init()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	kubeConfigValues = kubeConfig.Values
-	kubeModulesConfigValues = make(map[string]utils.Values)
-	kubeDisabledModules = make([]string, 0)
+	mm.kubeConfigValues = kubeConfig.Values
+	mm.kubeModulesConfigValues = make(map[string]utils.Values)
+	mm.kubeDisabledModules = make([]string, 0)
 	for _, moduleConfig := range kubeConfig.ModuleConfigs {
-		if _, hasKey := modulesByName[moduleConfig.ModuleName]; hasKey {
+		if _, hasKey := mm.modulesByName[moduleConfig.ModuleName]; hasKey {
 			if moduleConfig.IsEnabled {
-				kubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
+				mm.kubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
 			} else {
-				kubeDisabledModules = append(kubeDisabledModules, moduleConfig.ModuleName)
+				mm.kubeDisabledModules = append(mm.kubeDisabledModules, moduleConfig.ModuleName)
 			}
 		} else {
 			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
 		}
 	}
 
-	enabledModules, err := getEnabledModulesInOrder(kubeDisabledModules)
+	enabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	enabledModulesInOrder = enabledModules
+	mm.enabledModulesInOrder = enabledModules
 
-	return nil
+	return mm, nil
 }
 
-func getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
+func (mm *MainModuleManager) getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
 	res := make([]string, 0)
-	for _, name := range allModuleNamesInOrder {
+	for _, name := range mm.allModuleNamesInOrder {
 		for _, disabled := range disabledModules {
 			if name != disabled {
-				// module should exist in modulesByName by invariant
-				moduleIsEnabled, err := modulesByName[name].checkIsEnabledByScript(res)
+				// module should exist in mm.modulesByName by invariant
+				moduleIsEnabled, err := mm.modulesByName[name].checkIsEnabledByScript(res)
 				if err != nil {
 					return nil, err
 				}
@@ -204,12 +202,12 @@ func getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
 	return res, nil
 }
 
-func getModulesToEnable(oldEnabledModules []string, newEnabledModules []string) []string {
+func (mm *MainModuleManager) getModulesToEnable(oldEnabledModules []string, newEnabledModules []string) []string {
 	res := make([]string, 0)
 
 SearchModulesToEnable:
 	for _, newModule := range newEnabledModules {
-		for _, oldModule := range enabledModulesInOrder {
+		for _, oldModule := range mm.enabledModulesInOrder {
 			if oldModule == newModule {
 				continue SearchModulesToEnable
 			}
@@ -220,11 +218,11 @@ SearchModulesToEnable:
 	return res
 }
 
-func getModulesToDisable(oldEnabledModules []string, newEnabledModules []string) []string {
+func (mm *MainModuleManager) getModulesToDisable(oldEnabledModules []string, newEnabledModules []string) []string {
 	res := make([]string, 0)
 
 SearchModulesToDisable:
-	for _, oldModule := range enabledModulesInOrder {
+	for _, oldModule := range mm.enabledModulesInOrder {
 		for _, newModule := range newEnabledModules {
 			if newModule == oldModule {
 				continue SearchModulesToDisable
@@ -236,9 +234,9 @@ SearchModulesToDisable:
 	return res
 }
 
-func handleNewEnabledModules(oldEnabledModules []string, newEnabledModules []string) []Event {
-	modulesToEnable := getModulesToEnable(oldEnabledModules, newEnabledModules)
-	modulesToDisable := getModulesToDisable(oldEnabledModules, newEnabledModules)
+func (mm *MainModuleManager) handleNewEnabledModules(oldEnabledModules []string, newEnabledModules []string) []Event {
+	modulesToEnable := mm.getModulesToEnable(oldEnabledModules, newEnabledModules)
+	modulesToDisable := mm.getModulesToDisable(oldEnabledModules, newEnabledModules)
 
 	event := Event{
 		Type:           ModulesChanged,
@@ -270,11 +268,11 @@ type kubeUpdate struct {
 	Events                  []Event
 }
 
-func applyKubeUpdate(kubeUpdate kubeUpdate) error {
-	kubeConfigValues = kubeUpdate.KubeConfigValues
-	kubeModulesConfigValues = kubeUpdate.KubeModulesConfigValues
-	kubeDisabledModules = kubeUpdate.KubeDisabledModules
-	enabledModulesInOrder = kubeUpdate.EnabledModules
+func (mm *MainModuleManager) applyKubeUpdate(kubeUpdate kubeUpdate) error {
+	mm.kubeConfigValues = kubeUpdate.KubeConfigValues
+	mm.kubeModulesConfigValues = kubeUpdate.KubeModulesConfigValues
+	mm.kubeDisabledModules = kubeUpdate.KubeDisabledModules
+	mm.enabledModulesInOrder = kubeUpdate.EnabledModules
 
 	for _, event := range kubeUpdate.Events {
 		EventCh <- event
@@ -283,7 +281,7 @@ func applyKubeUpdate(kubeUpdate kubeUpdate) error {
 	return nil
 }
 
-func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, error) {
+func (mm *MainModuleManager) handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, error) {
 	res := kubeUpdate{
 		EnabledModules:          make([]string, 0),
 		KubeConfigValues:        newConfig.Values,
@@ -293,7 +291,7 @@ func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, erro
 	}
 
 	for _, moduleConfig := range newConfig.ModuleConfigs {
-		if _, hasKey := modulesByName[moduleConfig.ModuleName]; hasKey {
+		if _, hasKey := mm.modulesByName[moduleConfig.ModuleName]; hasKey {
 			if !moduleConfig.IsEnabled {
 				res.KubeDisabledModules = append(res.KubeDisabledModules, moduleConfig.ModuleName)
 				continue
@@ -304,14 +302,14 @@ func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, erro
 		}
 	}
 
-	if !reflect.DeepEqual(kubeDisabledModules, res.KubeDisabledModules) {
-		newEnabledModules, err := getEnabledModulesInOrder(res.KubeDisabledModules)
+	if !reflect.DeepEqual(mm.kubeDisabledModules, res.KubeDisabledModules) {
+		newEnabledModules, err := mm.getEnabledModulesInOrder(res.KubeDisabledModules)
 		if err != nil {
 			return kubeUpdate{}, err
 		}
 
 		res.EnabledModules = newEnabledModules
-		res.Events = append(res.Events, handleNewEnabledModules(enabledModulesInOrder, newEnabledModules)...)
+		res.Events = append(res.Events, mm.handleNewEnabledModules(mm.enabledModulesInOrder, newEnabledModules)...)
 	}
 
 	res.Events = append(res.Events, Event{Type: GlobalChanged})
@@ -319,34 +317,34 @@ func handleNewKubeConfig(newConfig kube_config_manager.Config) (kubeUpdate, erro
 	return res, nil
 }
 
-func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, error) {
-	if _, hasKey := modulesByName[newModuleConfig.ModuleName]; !hasKey {
+func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, error) {
+	if _, hasKey := mm.modulesByName[newModuleConfig.ModuleName]; !hasKey {
 		rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", newModuleConfig.ModuleName, valuesToString(newModuleConfig.Values))
 
 		return kubeUpdate{
-			EnabledModules:          enabledModulesInOrder,
+			EnabledModules:          mm.enabledModulesInOrder,
 			Events:                  make([]Event, 0),
-			KubeConfigValues:        kubeConfigValues,
-			KubeDisabledModules:     kubeDisabledModules,
-			KubeModulesConfigValues: kubeModulesConfigValues,
+			KubeConfigValues:        mm.kubeConfigValues,
+			KubeDisabledModules:     mm.kubeDisabledModules,
+			KubeModulesConfigValues: mm.kubeModulesConfigValues,
 		}, nil
 	}
 
 	res := kubeUpdate{
-		EnabledModules:          enabledModulesInOrder,
+		EnabledModules:          mm.enabledModulesInOrder,
 		Events:                  make([]Event, 0),
-		KubeConfigValues:        kubeConfigValues,
+		KubeConfigValues:        mm.kubeConfigValues,
 		KubeDisabledModules:     make([]string, 0),
 		KubeModulesConfigValues: make(map[string]utils.Values),
 	}
 
-	for _, disabledModuleName := range kubeDisabledModules {
+	for _, disabledModuleName := range mm.kubeDisabledModules {
 		if (disabledModuleName != newModuleConfig.ModuleName) || !newModuleConfig.IsEnabled {
 			res.KubeDisabledModules = append(res.KubeDisabledModules, disabledModuleName)
 		}
 	}
 
-	for moduleName, moduleValues := range kubeModulesConfigValues {
+	for moduleName, moduleValues := range mm.kubeModulesConfigValues {
 		if moduleName != newModuleConfig.ModuleName {
 			res.KubeModulesConfigValues[moduleName] = moduleValues
 		} else if newModuleConfig.IsEnabled {
@@ -355,19 +353,19 @@ func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, 
 	}
 
 	wasEnabled := true
-	for _, disabledModuleName := range kubeDisabledModules {
+	for _, disabledModuleName := range mm.kubeDisabledModules {
 		if disabledModuleName == newModuleConfig.ModuleName {
 			wasEnabled = false
 		}
 	}
 	if (!wasEnabled && newModuleConfig.IsEnabled) || (wasEnabled && !newModuleConfig.IsEnabled) {
-		newEnabledModules, err := getEnabledModulesInOrder(kubeDisabledModules)
+		newEnabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
 		if err != nil {
 			return kubeUpdate{}, err
 		}
 
 		res.EnabledModules = newEnabledModules
-		res.Events = append(res.Events, handleNewEnabledModules(enabledModulesInOrder, newEnabledModules)...)
+		res.Events = append(res.Events, mm.handleNewEnabledModules(mm.enabledModulesInOrder, newEnabledModules)...)
 	}
 
 	if !wasEnabled && !newModuleConfig.IsEnabled {
@@ -385,16 +383,16 @@ func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, 
 }
 
 // Module manager loop
-func Run() {
+func (mm *MainModuleManager) Run() {
 	go kube_config_manager.Run()
 
 	for {
 		select {
-		case <-globalValuesChanged:
+		case <-mm.globalValuesChanged:
 			rlog.Debugf("Module manager: global values")
 			EventCh <- Event{Type: GlobalChanged}
 
-		case moduleName := <-moduleValuesChanged:
+		case moduleName := <-mm.moduleValuesChanged:
 			rlog.Debugf("Module manager: module '%s' values changed", moduleName)
 
 			// Перезапускать enabled-скрипт не нужно, т.к.
@@ -408,21 +406,21 @@ func Run() {
 			}
 
 		case newKubeConfig := <-kube_config_manager.ConfigUpdated:
-			handleRes, err := handleNewKubeConfig(newKubeConfig)
+			handleRes, err := mm.handleNewKubeConfig(newKubeConfig)
 			if err != nil {
 				rlog.Errorf("Module manager: unable to handle kube config update: %s", err)
 			}
-			err = applyKubeUpdate(handleRes)
+			err = mm.applyKubeUpdate(handleRes)
 			if err != nil {
 				rlog.Errorf("Module manager: cannot apply kube config update: %s", err)
 			}
 
 		case newModuleConfig := <-kube_config_manager.ModuleConfigUpdated:
-			handleRes, err := handleNewKubeModuleConfig(newModuleConfig)
+			handleRes, err := mm.handleNewKubeModuleConfig(newModuleConfig)
 			if err != nil {
 				rlog.Errorf("Module manager: unable to handle module '%s' kube config update: %s", newModuleConfig.ModuleName, err)
 			}
-			err = applyKubeUpdate(handleRes)
+			err = mm.applyKubeUpdate(handleRes)
 			if err != nil {
 				rlog.Errorf("Module manager: cannot apply module '%s' kube config update: %s", newModuleConfig.ModuleName, err)
 			}
@@ -430,8 +428,8 @@ func Run() {
 	}
 }
 
-func GetModule(name string) (*Module, error) {
-	module, exist := modulesByName[name]
+func (mm *MainModuleManager) GetModule(name string) (*Module, error) {
+	module, exist := mm.modulesByName[name]
 	if exist {
 		return module, nil
 	} else {
@@ -439,12 +437,12 @@ func GetModule(name string) (*Module, error) {
 	}
 }
 
-func GetModuleNamesInOrder() []string {
-	return allModuleNamesInOrder
+func (mm *MainModuleManager) GetModuleNamesInOrder() []string {
+	return mm.allModuleNamesInOrder
 }
 
-func GetGlobalHook(name string) (*GlobalHook, error) {
-	globalHook, exist := globalHooksByName[name]
+func (mm *MainModuleManager) GetGlobalHook(name string) (*GlobalHook, error) {
+	globalHook, exist := mm.globalHooksByName[name]
 	if exist {
 		return globalHook, nil
 	} else {
@@ -452,8 +450,8 @@ func GetGlobalHook(name string) (*GlobalHook, error) {
 	}
 }
 
-func GetModuleHook(name string) (*ModuleHook, error) {
-	moduleHook, exist := modulesHooksByName[name]
+func (mm *MainModuleManager) GetModuleHook(name string) (*ModuleHook, error) {
+	moduleHook, exist := mm.modulesHooksByName[name]
 	if exist {
 		return moduleHook, nil
 	} else {
@@ -461,8 +459,8 @@ func GetModuleHook(name string) (*ModuleHook, error) {
 	}
 }
 
-func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
-	globalHooks := globalHooksOrder[bindingType]
+func (mm *MainModuleManager) GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
+	globalHooks := mm.globalHooksOrder[bindingType]
 	sort.Slice(globalHooks[:], func(i, j int) bool {
 		return globalHooks[i].OrderByBinding[bindingType] < globalHooks[j].OrderByBinding[bindingType]
 	})
@@ -475,8 +473,8 @@ func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
 	return globalHooksNames, nil
 }
 
-func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
-	moduleHooksByBinding, ok := modulesHooksOrderByName[moduleName]
+func (mm *MainModuleManager) GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
+	moduleHooksByBinding, ok := mm.modulesHooksOrderByName[moduleName]
 	if !ok {
 		return nil, fmt.Errorf("module '%s' not found", moduleName)
 	}
@@ -498,10 +496,10 @@ func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string
  * TODO: удаляет helm release (purge)
  * TODO: выполняет новый вид хука afterHelmDelete
  */
-func DeleteModule(moduleName string) error { return nil }
+func (mm *MainModuleManager) DeleteModule(moduleName string) error { return nil }
 
-func RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
-	module, err := GetModule(moduleName)
+func (mm *MainModuleManager) RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
+	module, err := mm.GetModule(moduleName)
 	if err != nil {
 		return err
 	}
@@ -521,13 +519,13 @@ func valuesChecksum(valuesArr ...utils.Values) (string, error) {
 	return utils.CalculateChecksum(string(valuesJson)), nil
 }
 
-func RunGlobalHook(hookName string, binding BindingType) error {
-	globalHook, err := GetGlobalHook(hookName)
+func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType) error {
+	globalHook, err := mm.GetGlobalHook(hookName)
 	if err != nil {
 		return err
 	}
 
-	oldValuesChecksum, err := valuesChecksum(kubeConfigValues, dynamicValues)
+	oldValuesChecksum, err := valuesChecksum(mm.kubeConfigValues, mm.dynamicValues)
 	if err != nil {
 		return err
 	}
@@ -536,7 +534,7 @@ func RunGlobalHook(hookName string, binding BindingType) error {
 		return err
 	}
 
-	newValuesChecksum, err := valuesChecksum(kubeConfigValues, dynamicValues)
+	newValuesChecksum, err := valuesChecksum(mm.kubeConfigValues, mm.dynamicValues)
 	if err != nil {
 		return err
 	}
@@ -544,20 +542,20 @@ func RunGlobalHook(hookName string, binding BindingType) error {
 	if newValuesChecksum != oldValuesChecksum {
 		switch binding {
 		case OnKubeNodeChange:
-			globalValuesChanged <- true
+			mm.globalValuesChanged <- true
 		}
 	}
 
 	return nil
 }
 
-func RunModuleHook(hookName string, binding BindingType) error {
-	moduleHook, err := GetModuleHook(hookName)
+func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType) error {
+	moduleHook, err := mm.GetModuleHook(hookName)
 	if err != nil {
 		return err
 	}
 
-	oldValuesChecksum, err := valuesChecksum(kubeModulesConfigValues[moduleHook.Module.Name], modulesDynamicValues[moduleHook.Module.Name])
+	oldValuesChecksum, err := valuesChecksum(mm.kubeModulesConfigValues[moduleHook.Module.Name], mm.modulesDynamicValues[moduleHook.Module.Name])
 	if err != nil {
 		return err
 	}
@@ -566,7 +564,7 @@ func RunModuleHook(hookName string, binding BindingType) error {
 		return err
 	}
 
-	newValuesChecksum, err := valuesChecksum(kubeModulesConfigValues[moduleHook.Module.Name], modulesDynamicValues[moduleHook.Module.Name])
+	newValuesChecksum, err := valuesChecksum(mm.kubeModulesConfigValues[moduleHook.Module.Name], mm.modulesDynamicValues[moduleHook.Module.Name])
 	if err != nil {
 		return err
 	}
@@ -574,7 +572,7 @@ func RunModuleHook(hookName string, binding BindingType) error {
 	if newValuesChecksum != oldValuesChecksum {
 		switch binding {
 		case Schedule:
-			moduleValuesChanged <- moduleHook.Module.Name
+			mm.moduleValuesChanged <- moduleHook.Module.Name
 		}
 	}
 
