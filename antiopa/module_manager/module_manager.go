@@ -11,6 +11,24 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
+func Init(workingDir string, tempDir string) (*ModuleManager, error) {
+	return nil, nil // FIXME
+}
+
+type ModuleManager interface {
+	Run()
+	GetModule(name string) (*Module, error)
+	GetModuleNamesInOrder() []string
+	GetGlobalHook(name string) (*GlobalHook, error)
+	GetModuleHook(name string) (*ModuleHook, error)
+	GetGlobalHooksInOrder(bindingType BindingType) ([]string, error)
+	GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error)
+	DeleteModule(moduleName string) error
+	RunModule(moduleName string) error
+	RunGlobalHook(hookName string, binding BindingType) error
+	RunModuleHook(hookName string, binding BindingType) error
+}
+
 var (
 	EventCh chan Event
 
@@ -117,7 +135,7 @@ type Event struct {
 }
 */
 
-func Init(workingDir string, tempDir string) error {
+func oldInit(workingDir string, tempDir string) error {
 	rlog.Info("Initializing module manager ...")
 
 	TempDir = tempDir

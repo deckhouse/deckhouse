@@ -90,7 +90,7 @@ func Init() {
 	helm.Init(tillerNamespace)
 
 	// Инициализация слежения за конфигом и за values
-	err = module_manager.Init(WorkingDir, TempDir)
+	_, err = module_manager.Init(WorkingDir, TempDir)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize module manager: %s", err)
 		os.Exit(1)
