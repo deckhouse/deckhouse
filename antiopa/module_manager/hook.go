@@ -29,6 +29,8 @@ type Hook struct {
 	Bindings       []BindingType
 	OrderByBinding map[BindingType]float64
 	Schedules      []ScheduleConfig
+
+	moduleManager *MainModuleManager
 }
 
 type GlobalHookConfig struct {
@@ -54,27 +56,28 @@ type ScheduleConfig struct {
 	AllowFailure bool
 }
 
-func newGlobalHook() *GlobalHook {
+func (mm *MainModuleManager) newGlobalHook() *GlobalHook {
 	globalHook := &GlobalHook{}
-	globalHook.Hook = newHook()
+	globalHook.Hook = mm.newHook()
 	return globalHook
 }
 
-func newHook() *Hook {
+func (mm *MainModuleManager) newHook() *Hook {
 	hook := &Hook{}
+	hook.moduleManager = mm
 	hook.OrderByBinding = make(map[BindingType]float64)
 	return hook
 }
 
-func newModuleHook() *ModuleHook {
+func (mm *MainModuleManager) newModuleHook() *ModuleHook {
 	moduleHook := &ModuleHook{}
-	moduleHook.Hook = newHook()
+	moduleHook.Hook = mm.newHook()
 	return moduleHook
 }
 
-func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
+func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	var ok bool
-	globalHook := newGlobalHook()
+	globalHook := mm.newGlobalHook()
 	globalHook.Name = name
 	globalHook.Path = path
 
@@ -83,7 +86,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 		if globalHook.OrderByBinding[BeforeAll], ok = config.BeforeAll.(float64); !ok {
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.BeforeAll, BeforeAll)
 		}
-		globalHooksOrder[BeforeAll] = append(globalHooksOrder[BeforeAll], globalHook)
+		mm.globalHooksOrder[BeforeAll] = append(mm.globalHooksOrder[BeforeAll], globalHook)
 	}
 
 	if config.AfterAll != nil {
@@ -91,7 +94,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 		if globalHook.OrderByBinding[AfterAll], ok = config.AfterAll.(float64); !ok {
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterAll, AfterAll)
 		}
-		globalHooksOrder[AfterAll] = append(globalHooksOrder[AfterAll], globalHook)
+		mm.globalHooksOrder[AfterAll] = append(mm.globalHooksOrder[AfterAll], globalHook)
 	}
 
 	if config.OnKubeNodeChange != nil {
@@ -99,7 +102,7 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnKubeNodeChange, OnKubeNodeChange)
 		}
-		globalHooksOrder[OnKubeNodeChange] = append(globalHooksOrder[OnKubeNodeChange], globalHook)
+		mm.globalHooksOrder[OnKubeNodeChange] = append(mm.globalHooksOrder[OnKubeNodeChange], globalHook)
 	}
 
 	if config.OnStartup != nil {
@@ -107,27 +110,27 @@ func addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 		if globalHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnStartup, OnStartup)
 		}
-		globalHooksOrder[OnStartup] = append(globalHooksOrder[OnStartup], globalHook)
+		mm.globalHooksOrder[OnStartup] = append(mm.globalHooksOrder[OnStartup], globalHook)
 	}
 
 	if config.Schedule != nil {
 		globalHook.Bindings = append(globalHook.Bindings, Schedule)
 		globalHook.Schedules = config.Schedule
-		globalHooksOrder[Schedule] = append(globalHooksOrder[Schedule], globalHook)
+		mm.globalHooksOrder[Schedule] = append(mm.globalHooksOrder[Schedule], globalHook)
 	}
 
-	globalHooksByName[name] = globalHook
+	mm.globalHooksByName[name] = globalHook
 
 	return nil
 }
 
-func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err error) {
+func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err error) {
 	var ok bool
-	moduleHook := newModuleHook()
+	moduleHook := mm.newModuleHook()
 	moduleHook.Name = name
 	moduleHook.Path = path
 
-	if moduleHook.Module, err = GetModule(moduleName); err != nil {
+	if moduleHook.Module, err = mm.GetModule(moduleName); err != nil {
 		return err
 	}
 
@@ -137,7 +140,7 @@ func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.BeforeHelm, BeforeHelm)
 		}
 
-		addModulesHooksOrderByName(moduleName, BeforeHelm, moduleHook)
+		mm.addModulesHooksOrderByName(moduleName, BeforeHelm, moduleHook)
 	}
 
 	if config.AfterHelm != nil {
@@ -145,7 +148,7 @@ func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err
 		if moduleHook.OrderByBinding[AfterHelm], ok = config.AfterHelm.(float64); !ok {
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterHelm, AfterHelm)
 		}
-		addModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
+		mm.addModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
 	}
 
 	if config.OnStartup != nil {
@@ -153,25 +156,25 @@ func addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err
 		if moduleHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnStartup, OnStartup)
 		}
-		addModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
+		mm.addModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
 	}
 
 	if config.Schedule != nil {
 		moduleHook.Bindings = append(moduleHook.Bindings, Schedule)
 		moduleHook.Schedules = config.Schedule
-		addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
+		mm.addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
 	}
 
-	modulesHooksByName[name] = moduleHook
+	mm.modulesHooksByName[name] = moduleHook
 
 	return nil
 }
 
-func addModulesHooksOrderByName(moduleName string, bindingType BindingType, moduleHook *ModuleHook) {
-	if modulesHooksOrderByName[moduleName] == nil {
-		modulesHooksOrderByName[moduleName] = make(map[BindingType][]*ModuleHook)
+func (mm *MainModuleManager) addModulesHooksOrderByName(moduleName string, bindingType BindingType, moduleHook *ModuleHook) {
+	if mm.modulesHooksOrderByName[moduleName] == nil {
+		mm.modulesHooksOrderByName[moduleName] = make(map[BindingType][]*ModuleHook)
 	}
-	modulesHooksOrderByName[moduleName][bindingType] = append(modulesHooksOrderByName[moduleName][bindingType], moduleHook)
+	mm.modulesHooksOrderByName[moduleName][bindingType] = append(mm.modulesHooksOrderByName[moduleName][bindingType], moduleHook)
 }
 
 func (h *GlobalHook) run(bindingType BindingType) error {
@@ -184,23 +187,25 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 
 	var kubeConfigValuesChanged, dynamicValuesChanged bool
 
-	if kubeConfigValues, kubeConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(kubeConfigValues, configVJMV, configVJPV); err != nil {
+	if h.moduleManager.kubeConfigValues, kubeConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.kubeConfigValues, configVJMV, configVJPV); err != nil {
 		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
 	}
 
 	if kubeConfigValuesChanged {
-		rlog.Debugf("Global hook '%s': updating kubeConfigValues:\n%s", h.Name, valuesToString(kubeConfigValues))
-		if err := kube_config_manager.SetKubeValues(kubeConfigValues); err != nil {
+		rlog.Debugf("Global hook '%s': updating mm.kubeConfigValues:\n%s", h.Name, valuesToString(h.moduleManager.kubeConfigValues))
+		if err := kube_config_manager.SetKubeValues(h.moduleManager.kubeConfigValues); err != nil {
 			return fmt.Errorf("global hook '%s': set kube values failed: %s", h.Name, err)
 		}
 	}
 
-	if dynamicValues, dynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
+	if h.moduleManager.dynamicValues, dynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
+		// FIXME: нельзя обновлять dynamicValues, пока не проверили error!
 		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
 	}
 
 	if dynamicValuesChanged {
-		rlog.Debugf("Global hook '%s': updating dynamicValues:\n%s", h.Name, valuesToString(dynamicValues))
+		// FIXME: выпилить, все события в RunModuleHook/RunGlobalHook
+		rlog.Debugf("Global hook '%s': updating dynamicValues:\n%s", h.Name, valuesToString(h.moduleManager.dynamicValues))
 	}
 
 	return nil
@@ -212,7 +217,7 @@ func (h *GlobalHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[strin
 		return nil, nil, nil, nil, err
 	}
 	cmd := makeCommand(WorkingDir, valuesPath, h.Path, []string{})
-	return execHook(filepath.Join(TempDir, "values", "hooks"), h.Name, cmd)
+	return h.moduleManager.execHook(filepath.Join(TempDir, "values", "hooks"), h.Name, cmd)
 }
 
 func (h *GlobalHook) prepareValuesPath() (string, error) {
@@ -224,7 +229,7 @@ func (h *GlobalHook) prepareValuesPath() (string, error) {
 }
 
 func (h *GlobalHook) values() utils.Values {
-	return utils.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues)
+	return utils.MergeValues(h.moduleManager.globalConfigValues, h.moduleManager.kubeConfigValues, h.moduleManager.dynamicValues)
 }
 
 func (h *ModuleHook) run(bindingType BindingType) error {
@@ -238,24 +243,25 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 
 	var kubeModuleConfigValuesChanged, moduleDynamicValuesChanged bool
 
-	if kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
+	if h.moduleManager.kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
+		// FIXME: нельзя обновлять переменные не проверив error!
 		return err
 	}
 
 	if kubeModuleConfigValuesChanged {
-		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
-		err = kube_config_manager.SetModuleKubeValues(moduleName, kubeModulesConfigValues[moduleName])
+		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
+		err = kube_config_manager.SetModuleKubeValues(moduleName, h.moduleManager.kubeModulesConfigValues[moduleName])
 		if err != nil {
 			return fmt.Errorf("hook '%s': set kube values failed: %s", h.Name, err)
 		}
 	}
 
-	if modulesDynamicValues[moduleName], moduleDynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
+	if h.moduleManager.modulesDynamicValues[moduleName], moduleDynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
 		return fmt.Errorf("hook '%s': merge values failed: %s", h.Name, err)
 	}
 
 	if moduleDynamicValuesChanged {
-		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, valuesToString(modulesDynamicValues[moduleName]))
+		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.modulesDynamicValues[moduleName]))
 	}
 
 	return nil
@@ -268,22 +274,22 @@ func (h *ModuleHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[strin
 	}
 
 	cmd := makeCommand(WorkingDir, valuesPath, h.Path, []string{})
-	return execHook(filepath.Join(TempDir, "values", "modules"), h.Name, cmd)
+	return h.moduleManager.execHook(filepath.Join(TempDir, "values", "modules"), h.Name, cmd)
 }
 
 func (h *ModuleHook) prepareValuesPath() (string, error) {
 	return h.Module.prepareValuesPath()
 }
 
-func initGlobalHooks() error {
+func (mm *MainModuleManager) initGlobalHooks() error {
 	rlog.Info("Initializing global hooks ...")
 
-	globalHooksOrder = make(map[BindingType][]*GlobalHook)
-	globalHooksByName = make(map[string]*GlobalHook)
+	mm.globalHooksOrder = make(map[BindingType][]*GlobalHook)
+	mm.globalHooksByName = make(map[string]*GlobalHook)
 
 	hooksDir := filepath.Join(WorkingDir, "global-hooks")
 
-	err := initHooks(hooksDir, func(hookPath string, output []byte) error {
+	err := mm.initHooks(hooksDir, func(hookPath string, output []byte) error {
 		hookName, err := filepath.Rel(WorkingDir, hookPath)
 		if err != nil {
 			return err
@@ -296,7 +302,7 @@ func initGlobalHooks() error {
 			return fmt.Errorf("unmarshaling global hook '%s' json failed: %s", hookName, err.Error())
 		}
 
-		if err := addGlobalHook(hookName, hookPath, hookConfig); err != nil {
+		if err := mm.addGlobalHook(hookName, hookPath, hookConfig); err != nil {
 			return fmt.Errorf("adding global hook '%s' failed: %s", hookName, err.Error())
 		}
 
@@ -310,12 +316,12 @@ func initGlobalHooks() error {
 	return nil
 }
 
-func initModuleHooks(module *Module) error {
+func (mm *MainModuleManager) initModuleHooks(module *Module) error {
 	rlog.Infof("Initializing module '%s' hooks ...", module.Name)
 
 	hooksDir := filepath.Join(module.Path, "hooks")
 
-	err := initHooks(hooksDir, func(hookPath string, output []byte) error {
+	err := mm.initHooks(hooksDir, func(hookPath string, output []byte) error {
 		hookName, err := filepath.Rel(filepath.Dir(module.Path), hookPath)
 		if err != nil {
 			return err
@@ -328,7 +334,7 @@ func initModuleHooks(module *Module) error {
 			return fmt.Errorf("unmarshaling module hook '%s' json failed: %s", hookName, err.Error())
 		}
 
-		if err := addModuleHook(module.Name, hookName, hookPath, hookConfig); err != nil {
+		if err := mm.addModuleHook(module.Name, hookName, hookPath, hookConfig); err != nil {
 			return fmt.Errorf("adding module hook '%s' failed: %s", hookName, err.Error())
 		}
 
@@ -342,7 +348,7 @@ func initModuleHooks(module *Module) error {
 	return nil
 }
 
-func initHooks(hooksDir string, addHook func(hookPath string, output []byte) error) error {
+func (mm *MainModuleManager) initHooks(hooksDir string, addHook func(hookPath string, output []byte) error) error {
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 		return nil
 	}
@@ -367,7 +373,7 @@ func initHooks(hooksDir string, addHook func(hookPath string, output []byte) err
 	return nil
 }
 
-func execHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
+func (mm *MainModuleManager) execHook(tmpDir, hookName string, cmd *exec.Cmd) (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
 	configValuesJsonMergePath := filepath.Join(tmpDir, hookName, "config_values_json_merge.json")
 	if err := createHookResultValuesFile(configValuesJsonMergePath); err != nil {
 		return nil, nil, nil, nil, err

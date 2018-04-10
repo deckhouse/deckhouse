@@ -22,6 +22,8 @@ type Module struct {
 	Name          string
 	DirectoryName string
 	Path          string
+
+	moduleManager *MainModuleManager
 }
 
 func (m *Module) run() error {
@@ -29,13 +31,13 @@ func (m *Module) run() error {
 		return err
 	}
 
-	moduleHooksBeforeHelm, err := GetModuleHooksInOrder(m.Name, BeforeHelm)
+	moduleHooksBeforeHelm, err := m.moduleManager.GetModuleHooksInOrder(m.Name, BeforeHelm)
 	if err != nil {
 		return err
 	}
 
 	for _, moduleHookName := range moduleHooksBeforeHelm {
-		moduleHook, err := GetModuleHook(moduleHookName)
+		moduleHook, err := m.moduleManager.GetModuleHook(moduleHookName)
 		if err != nil {
 			return err
 		}
@@ -49,13 +51,13 @@ func (m *Module) run() error {
 		return err
 	}
 
-	moduleHooksAfterHelm, err := GetModuleHooksInOrder(m.Name, AfterHelm)
+	moduleHooksAfterHelm, err := m.moduleManager.GetModuleHooksInOrder(m.Name, AfterHelm)
 	if err != nil {
 		return err
 	}
 
 	for _, moduleHookName := range moduleHooksAfterHelm {
-		moduleHook, err := GetModuleHook(moduleHookName)
+		moduleHook, err := m.moduleManager.GetModuleHook(moduleHookName)
 		if err != nil {
 			return err
 		}
@@ -134,8 +136,8 @@ func (m *Module) generateHelmReleaseName() string {
 
 func (m *Module) values() utils.Values {
 	values := utils.Values{
-		"global":          utils.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues),
-		m.camelcaseName(): utils.MergeValues(globalModulesConfigValues[m.Name], kubeModulesConfigValues[m.Name], modulesDynamicValues[m.Name]),
+		"global":          utils.MergeValues(m.moduleManager.globalConfigValues, m.moduleManager.kubeConfigValues, m.moduleManager.dynamicValues),
+		m.camelcaseName(): utils.MergeValues(m.moduleManager.globalModulesConfigValues[m.Name], m.moduleManager.kubeModulesConfigValues[m.Name], m.moduleManager.modulesDynamicValues[m.Name]),
 	}
 	return values
 }
@@ -168,12 +170,12 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 	return true, nil
 }
 
-func initModulesIndex() error {
+func (mm *MainModuleManager) initModulesIndex() error {
 	rlog.Info("Initializing modules ...")
 
-	modulesByName = make(map[string]*Module)
-	modulesHooksByName = make(map[string]*ModuleHook)
-	modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
+	mm.modulesByName = make(map[string]*Module)
+	mm.modulesHooksByName = make(map[string]*ModuleHook)
+	mm.modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
 
 	modulesDir := filepath.Join(WorkingDir, "modules")
 
@@ -182,12 +184,12 @@ func initModulesIndex() error {
 		return fmt.Errorf("cannot list modules directory '%s': %s", modulesDir, err)
 	}
 
-	if err := setGlobalConfigValues(); err != nil {
+	if err := mm.setGlobalConfigValues(); err != nil {
 		return err
 	}
-	rlog.Debugf("Set globalConfigValues:\n%s", valuesToString(globalConfigValues))
+	rlog.Debugf("Set mm.globalConfigValues:\n%s", valuesToString(mm.globalConfigValues))
 
-	modulesDynamicValues = make(map[string]utils.Values)
+	mm.modulesDynamicValues = make(map[string]utils.Values)
 
 	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
 
@@ -208,21 +210,21 @@ func initModulesIndex() error {
 					Path:          modulePath,
 				}
 
-				moduleConfig, err := getModuleConfig(modulePath)
+				moduleConfig, err := mm.getModuleConfig(modulePath)
 				if err != nil {
 					return err
 				}
 
 				if moduleConfig == nil || moduleConfig.IsEnabled {
-					modulesByName[module.Name] = module
-					allModuleNamesInOrder = append(allModuleNamesInOrder, module.Name)
+					mm.modulesByName[module.Name] = module
+					mm.allModuleNamesInOrder = append(mm.allModuleNamesInOrder, module.Name)
 
 					if moduleConfig != nil {
-						globalModulesConfigValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(globalModulesConfigValues[moduleName]))
+						mm.globalModulesConfigValues[moduleName] = moduleConfig.Values
+						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(mm.globalModulesConfigValues[moduleName]))
 					}
 
-					if err = initModuleHooks(module); err != nil {
+					if err = mm.initModuleHooks(module); err != nil {
 						return err
 					}
 				}
@@ -239,15 +241,15 @@ func initModulesIndex() error {
 	return nil
 }
 
-func setGlobalConfigValues() (err error) {
-	globalConfigValues, err = readModulesValues()
+func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
+	mm.globalConfigValues, err = readModulesValues()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
+func (mm *MainModuleManager) getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
 	moduleName := filepath.Base(modulePath)
 	valuesYamlPath := filepath.Join(modulePath, "values.yaml")
 
