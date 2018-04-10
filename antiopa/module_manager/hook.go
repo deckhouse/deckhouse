@@ -192,19 +192,19 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 	}
 
 	if kubeConfigValuesChanged {
-		rlog.Debugf("Global hook '%s': updating mm.kubeConfigValues:\n%s", h.Name, valuesToString(h.moduleManager.kubeConfigValues))
+		rlog.Debugf("Global hook '%s': updating kube config values:\n%s", h.Name, valuesToString(h.moduleManager.kubeConfigValues))
 		if err := kube_config_manager.SetKubeValues(h.moduleManager.kubeConfigValues); err != nil {
-			return fmt.Errorf("global hook '%s': set kube values failed: %s", h.Name, err)
+			return fmt.Errorf("global hook '%s': set kube config failed: %s", h.Name, err)
 		}
 	}
 
-	if h.moduleManager.dynamicValues, dynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.dynamicValues, dynamicVJMV, dynamicVJPV); err != nil {
-		// FIXME: нельзя обновлять dynamicValues, пока не проверили error!
+	newDynamicValues, dynamicValuesChanged, err := utils.ApplyJsonMergeAndPatch(h.moduleManager.dynamicValues, dynamicVJMV, dynamicVJPV)
+	if err != nil {
 		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
 	}
+	h.moduleManager.dynamicValues = newDynamicValues
 
 	if dynamicValuesChanged {
-		// FIXME: выпилить, все события в RunModuleHook/RunGlobalHook
 		rlog.Debugf("Global hook '%s': updating dynamicValues:\n%s", h.Name, valuesToString(h.moduleManager.dynamicValues))
 	}
 
@@ -243,10 +243,11 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 
 	var kubeModuleConfigValuesChanged, moduleDynamicValuesChanged bool
 
-	if h.moduleManager.kubeModulesConfigValues[moduleName], kubeModuleConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.kubeModulesConfigValues[moduleName], configVJMV, configVJPV); err != nil {
-		// FIXME: нельзя обновлять переменные не проверив error!
+	newModuleConfigValues, kubeModuleConfigValuesChanged, err := utils.ApplyJsonMergeAndPatch(h.moduleManager.kubeModulesConfigValues[moduleName], configVJMV, configVJPV)
+	if err != nil {
 		return err
 	}
+	h.moduleManager.kubeModulesConfigValues[moduleName] = newModuleConfigValues
 
 	if kubeModuleConfigValuesChanged {
 		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
@@ -256,9 +257,11 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 		}
 	}
 
-	if h.moduleManager.modulesDynamicValues[moduleName], moduleDynamicValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV); err != nil {
+	newModuleDynamicValues, moduleDynamicValuesChanged, err := utils.ApplyJsonMergeAndPatch(h.moduleManager.modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV)
+	if err != nil {
 		return fmt.Errorf("hook '%s': merge values failed: %s", h.Name, err)
 	}
+	h.moduleManager.modulesDynamicValues[moduleName] = newModuleDynamicValues
 
 	if moduleDynamicValuesChanged {
 		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.modulesDynamicValues[moduleName]))
