@@ -275,7 +275,7 @@ func TasksRunner() {
 			if headTask == nil {
 				break
 			}
-			if t, ok := headTask.(task.Task); ok {
+			if t, ok := headTask.(*task.Task); ok {
 				switch t.Type {
 				case task.ModuleRun:
 					err := ModuleManager.RunModule(t.Name)
@@ -314,7 +314,7 @@ func TasksRunner() {
 						TasksQueue.Pop()
 					}
 				case task.Delay:
-					td := headTask.(task.TaskDelay)
+					td := headTask.(*task.TaskDelay)
 					time.Sleep(td.Delay)
 					TasksQueue.Pop()
 				case task.Stop:
