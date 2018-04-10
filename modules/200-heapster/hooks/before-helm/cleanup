@@ -2,7 +2,6 @@
 
 source /antiopa/shell_lib.sh
 
-
 function __config__() {
   jo -p beforeHelm=10
 }
