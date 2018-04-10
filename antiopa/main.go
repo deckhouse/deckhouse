@@ -35,6 +35,9 @@ var (
 	// module manager object
 	ModuleManager module_manager.ModuleManager
 
+	// chan for stopping ManagersEventsHandler infinite loop
+	ManagersEventsHandlerStopCh chan struct{}
+
 	// helm client object
 	HelmClient helm.HelmClient
 )
@@ -255,6 +258,8 @@ func ManagersEventsHandler() {
 
 				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
 			}
+		case <-ManagersEventsHandlerStopCh:
+			return
 		}
 	}
 }

@@ -8,29 +8,30 @@ import (
 	"fmt"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
+	"time"
 )
 
 type ModuleManagerMock struct {
 }
 
 func (m *ModuleManagerMock) Run() {
-	panic("implement me")
+	panic("implement Run")
 }
 
 func (m *ModuleManagerMock) GetModule(name string) (*module_manager.Module, error) {
-	panic("implement me")
+	panic("implement GetModule")
 }
 
 func (m *ModuleManagerMock) GetModuleNamesInOrder() []string {
-	panic("implement me")
+	panic("implement GetModuleNamesInOrder")
 }
 
 func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHook, error) {
-	panic("implement me")
+	panic("implement GetGlobalHook")
 }
 
 func (m *ModuleManagerMock) GetModuleHook(name string) (*module_manager.ModuleHook, error) {
-	panic("implement me")
+	panic("implement GetModuleHook")
 }
 
 func (m *ModuleManagerMock) GetGlobalHooksInOrder(bindingType module_manager.BindingType) ([]string, error) {
@@ -38,15 +39,15 @@ func (m *ModuleManagerMock) GetGlobalHooksInOrder(bindingType module_manager.Bin
 }
 
 func (m *ModuleManagerMock) GetModuleHooksInOrder(moduleName string, bindingType module_manager.BindingType) ([]string, error) {
-	panic("implement me")
+	panic("implement GetModuleHooksInOrder")
 }
 
 func (m *ModuleManagerMock) DeleteModule(moduleName string) error {
-	panic("implement me")
+	panic("implement DeleteModule")
 }
 
 func (m *ModuleManagerMock) RunModule(moduleName string) error {
-	panic("implement me")
+	panic("implement RunModule")
 }
 
 func (m *ModuleManagerMock) RunGlobalHook(hookName string, binding module_manager.BindingType) error {
@@ -55,7 +56,7 @@ func (m *ModuleManagerMock) RunGlobalHook(hookName string, binding module_manage
 }
 
 func (m *ModuleManagerMock) RunModuleHook(hookName string, binding module_manager.BindingType) error {
-	panic("implement me")
+	panic("implement RunModuleHook")
 }
 
 type QueueDumperTest struct {
@@ -94,5 +95,31 @@ func TestMain_TaskRunner(t *testing.T) {
 }
 
 func TestMain_ModulesEventsHandler(t *testing.T) {
-	assert.Equal(t, 0, 0)
+	module_manager.EventCh = make(chan module_manager.Event, 1)
+	ManagersEventsHandlerStopCh = make(chan struct{}, 1)
+
+	TasksQueue = task.NewTasksQueue()
+
+	go func(ch chan module_manager.Event) {
+		ch <- module_manager.Event{
+			Type: module_manager.ModulesChanged,
+			ModulesChanges: []module_manager.ModuleChange{
+				{
+					Name:       "test_module_1",
+					ChangeType: module_manager.Changed,
+				},
+				{
+					Name:       "test_module_2",
+					ChangeType: module_manager.Disabled,
+				},
+			},
+		}
+	}(module_manager.EventCh)
+
+	go ManagersEventsHandler()
+
+	time.Sleep(100 * time.Millisecond)
+	ManagersEventsHandlerStopCh <- struct{}{}
+
+	assert.Equal(t, 2, TasksQueue.Length())
 }
