@@ -190,6 +190,8 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	}
 	mm.enabledModulesInOrder = enabledModules
 
+	// TODO: get modules to delete
+
 	return mm, nil
 }
 
