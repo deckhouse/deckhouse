@@ -28,7 +28,7 @@ func mergeTwoValues(A map[interface{}]interface{}, B map[interface{}]interface{}
 				v1Type := reflect.TypeOf(v1)
 				v2Type := reflect.TypeOf(v2)
 
-				if v1Type == v2Type {
+				if (v1Type == v2Type) && (v1Type != nil) {
 					switch v1Type.Kind() {
 					case reflect.Map:
 						resMap := make(map[interface{}]interface{})
