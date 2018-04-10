@@ -368,6 +368,8 @@ func handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, 
 
 // Module manager loop
 func Run() {
+	go kube_config_manager.Run()
+
 	for {
 		select {
 		case <-globalValuesChanged:
