@@ -45,7 +45,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522871682676,
+  "iteration": 1523484607764,
   "links": [],
   "panels": [
     {
@@ -340,7 +340,7 @@
           "pattern": "Value #P",
           "thresholds": [],
           "type": "number",
-          "unit": "percentunit"
+          "unit": "bps"
         },
         {
           "alias": "",
@@ -3158,7 +3158,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 31
       },
       "id": 254,
       "panels": [
@@ -3347,7 +3347,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 32
       },
       "id": 40,
       "panels": [
@@ -4194,7 +4194,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 125
+        "y": 33
       },
       "id": 252,
       "panels": [],
@@ -4224,7 +4224,7 @@
         "h": 2,
         "w": 2,
         "x": 0,
-        "y": 126
+        "y": 34
       },
       "id": 51,
       "interval": null,
@@ -4295,7 +4295,7 @@
         "h": 4,
         "w": 11,
         "x": 2,
-        "y": 126
+        "y": 34
       },
       "id": 31,
       "legend": {
@@ -4383,7 +4383,7 @@
         "h": 4,
         "w": 11,
         "x": 13,
-        "y": 126
+        "y": 34
       },
       "id": 32,
       "legend": {
@@ -4481,7 +4481,7 @@
         "h": 2,
         "w": 2,
         "x": 0,
-        "y": 128
+        "y": 36
       },
       "id": 97,
       "interval": null,
@@ -4546,7 +4546,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 130
+        "y": 38
       },
       "id": 30,
       "panels": [
@@ -4606,8 +4606,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "sparkline": {
@@ -4695,8 +4695,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "sparkline": {
@@ -4771,8 +4771,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "seriesOverrides": [
@@ -4969,8 +4969,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "seriesOverrides": [],
@@ -5079,8 +5079,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "sparkline": {
@@ -5168,8 +5168,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "sparkline": {
@@ -5239,8 +5239,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "seriesOverrides": [],
@@ -5349,8 +5349,8 @@
           "scopedVars": {
             "upstream_address": {
               "selected": false,
-              "text": "10.244.0.84:80",
-              "value": "10.244.0.84:80"
+              "text": "10.244.0.89:80",
+              "value": "10.244.0.89:80"
             }
           },
           "sparkline": {
@@ -5396,7 +5396,6 @@
     "list": [
       {
         "current": {
-          "selected": true,
           "text": "default",
           "value": "default"
         },
@@ -5590,5 +5589,5 @@
   "timezone": "",
   "title": "Namespace",
   "uid": "pCXP8Diiz",
-  "version": 11
+  "version": 1
 }

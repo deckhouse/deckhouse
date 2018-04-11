@@ -45,7 +45,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522871634297,
+  "iteration": 1523484442080,
   "links": [],
   "panels": [
     {
@@ -340,7 +340,7 @@
           "pattern": "Value #P",
           "thresholds": [],
           "type": "number",
-          "unit": "percentunit"
+          "unit": "bps"
         },
         {
           "alias": "",
@@ -1993,5 +1993,5 @@
   "timezone": "",
   "title": "Overview by Namespaces",
   "uid": "TOLroDimz",
-  "version": 3
+  "version": 1
 }

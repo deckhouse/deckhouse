@@ -45,7 +45,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522883925606,
+  "iteration": 1523484755086,
   "links": [],
   "panels": [
     {
@@ -340,7 +340,7 @@
           "pattern": "Value #P",
           "thresholds": [],
           "type": "number",
-          "unit": "percentunit"
+          "unit": "bps"
         },
         {
           "alias": "",
@@ -2718,5 +2718,5 @@
   "timezone": "",
   "title": "Server Name",
   "uid": "rsTVVciiz",
-  "version": 3
+  "version": 1
 }
