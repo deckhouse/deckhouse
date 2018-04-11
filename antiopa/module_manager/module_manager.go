@@ -63,6 +63,7 @@ type BindingType string
 const (
 	BeforeHelm       BindingType = "BEFORE_HELM"
 	AfterHelm        BindingType = "AFTER_HELM"
+	AfterDeleteHelm  BindingType = "AFTER_DELETE_HELM"
 	BeforeAll        BindingType = "BEFORE_ALL"
 	AfterAll         BindingType = "AFTER_ALL"
 	OnKubeNodeChange BindingType = "ON_KUBE_NODE_CHANGE"
@@ -428,7 +429,7 @@ func GetModuleHook(name string) (*ModuleHook, error) {
 	}
 }
 
-func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
+func GetGlobalHooksInOrder(bindingType BindingType) []string {
 	globalHooks := globalHooksOrder[bindingType]
 	sort.Slice(globalHooks[:], func(i, j int) bool {
 		return globalHooks[i].OrderByBinding[bindingType] < globalHooks[j].OrderByBinding[bindingType]
@@ -439,13 +440,13 @@ func GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
 		globalHooksNames = append(globalHooksNames, globalHook.Name)
 	}
 
-	return globalHooksNames, nil
+	return globalHooksNames
 }
 
-func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
+func GetModuleHooksInOrder(moduleName string, bindingType BindingType) []string {
 	moduleHooksByBinding, ok := modulesHooksOrderByName[moduleName]
 	if !ok {
-		return nil, fmt.Errorf("module '%s' not found", moduleName)
+		return []string{}
 	}
 	moduleBindingHooks := moduleHooksByBinding[bindingType]
 
@@ -458,7 +459,7 @@ func GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string
 		moduleHooksNames = append(moduleHooksNames, moduleHook.Name)
 	}
 
-	return moduleHooksNames, nil
+	return moduleHooksNames
 }
 
 /*

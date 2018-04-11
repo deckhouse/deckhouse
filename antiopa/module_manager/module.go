@@ -29,40 +29,16 @@ func (m *Module) run() error {
 		return err
 	}
 
-	moduleHooksBeforeHelm, err := GetModuleHooksInOrder(m.Name, BeforeHelm)
-	if err != nil {
+	if err := m.runHooksByBinding(BeforeHelm); err != nil {
 		return err
 	}
 
-	for _, moduleHookName := range moduleHooksBeforeHelm {
-		moduleHook, err := GetModuleHook(moduleHookName)
-		if err != nil {
-			return err
-		}
-
-		if err := moduleHook.run(BeforeHelm); err != nil {
-			return err
-		}
-	}
-
-	if err := m.exec(); err != nil {
+	if err := m.execRun(); err != nil {
 		return err
 	}
 
-	moduleHooksAfterHelm, err := GetModuleHooksInOrder(m.Name, AfterHelm)
-	if err != nil {
+	if err := m.runHooksByBinding(AfterHelm); err != nil {
 		return err
-	}
-
-	for _, moduleHookName := range moduleHooksAfterHelm {
-		moduleHook, err := GetModuleHook(moduleHookName)
-		if err != nil {
-			return err
-		}
-
-		if err := moduleHook.run(AfterHelm); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -86,7 +62,26 @@ func (m *Module) cleanup() error {
 	return nil
 }
 
-func (m *Module) exec() error {
+func (m *Module) execRun() error {
+	err := m.execHelm(func(valuesPath, helmReleaseName string) []string {
+		return []string{
+			"upgrade",
+			helmReleaseName,
+			".",
+			"--install",
+			"--namespace", helm.TillerNamespace,
+			"--values", valuesPath,
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName string) []string) error {
 	chartExists, err := m.checkHelmChart()
 	if !chartExists {
 		if err != nil {
@@ -103,9 +98,28 @@ func (m *Module) exec() error {
 		return err
 	}
 
-	err = execCommand(makeCommand(m.Path, valuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", helm.TillerNamespace, "--values", valuesPath}))
+	cmd := makeCommand(m.Path, valuesPath, "helm", []string{})
+	cmd.Args = prepareHelmArgs(valuesPath, helmReleaseName)
+	err = execCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("module '%s': helm FAILED: %s", m.Name, err)
+	}
+
+	return nil
+}
+
+func (m *Module) runHooksByBinding(binding BindingType) error {
+	moduleHooksAfterHelm := GetModuleHooksInOrder(m.Name, binding)
+
+	for _, moduleHookName := range moduleHooksAfterHelm {
+		moduleHook, err := GetModuleHook(moduleHookName)
+		if err != nil {
+			return err
+		}
+
+		if err := moduleHook.run(binding); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -186,6 +200,8 @@ func initModulesIndex() error {
 		return err
 	}
 	rlog.Debugf("Set globalConfigValues:\n%s", valuesToString(globalConfigValues))
+
+	globalModulesConfigValues = make(map[string]utils.Values)
 
 	kubeModulesConfigValues = make(map[string]utils.Values) // TODO
 	for moduleName, kubeModuleValues := range kubeModulesConfigValues {
