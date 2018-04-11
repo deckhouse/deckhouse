@@ -159,6 +159,7 @@ func Run() {
 	// слежение за измененияи включить только после всей загрузки
 	rlog.Info("MAIN: add onStartup, beforeAll, module and afterAll tasks")
 	TasksQueue.ChangesDisable()
+	CreateAfterInitTasks()
 	CreateOnStartupTasks()
 	CreateReloadAllTasks()
 	TasksQueue.ChangesEnable(true)
@@ -331,6 +332,7 @@ func TasksRunner() {
 					time.Sleep(td.Delay)
 					TasksQueue.Pop()
 				case task.Stop:
+					rlog.Infof("TaskRunner got stop task. Exiting runner loop.")
 					TasksQueue.Pop()
 					return
 				}
@@ -369,6 +371,24 @@ func RegisterScheduleHooks() {
 	// Примерный алгоритм
 
 	return
+}
+
+func CreateAfterInitTasks() {
+	purgeModules := ModuleManager.GetModulesToPurgeOnInit()
+
+	for _, moduleName := range purgeModules {
+		newTask := task.NewTask(task.ModulePurge, moduleName)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("AfterInit: queued module purge '%s'")
+	}
+
+	deleteModules := ModuleManager.GetModulesToDisableOnInit()
+
+	for _, moduleName := range deleteModules {
+		newTask := task.NewTask(task.ModuleDelete, moduleName)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("AfterInit: queued module delete '%s'")
+	}
 }
 
 /*
@@ -411,7 +431,7 @@ func CreateReloadAllTasks() {
 	moduleNames := ModuleManager.GetModuleNamesInOrder()
 	for _, moduleName := range moduleNames {
 		newTask := task.NewTask(task.ModuleRun, moduleName)
-		rlog.Debugf("ReloadAll Module: queued module '%s'", moduleName)
+		rlog.Debugf("ReloadAll Module: queued module run '%s'", moduleName)
 		TasksQueue.Add(newTask)
 	}
 
