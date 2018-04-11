@@ -25,6 +25,12 @@ type Module struct {
 	moduleManager *MainModuleManager
 }
 
+func (mm *MainModuleManager) NewModule() *Module {
+	module := &Module{}
+	module.moduleManager = mm
+	return module
+}
+
 func (m *Module) run() error {
 	if err := m.cleanup(); err != nil {
 		return err
@@ -257,11 +263,10 @@ func (mm *MainModuleManager) initModulesIndex() error {
 
 				modulePath := filepath.Join(modulesDir, file.Name())
 
-				module := &Module{
-					Name:          moduleName,
-					DirectoryName: file.Name(),
-					Path:          modulePath,
-				}
+				module := mm.NewModule()
+				module.Name = moduleName
+				module.DirectoryName = file.Name()
+				module.Path = modulePath
 
 				moduleConfig, err := mm.getModuleConfig(modulePath)
 				if err != nil {
@@ -349,7 +354,7 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 		if isExecutable {
 			paths = append(paths, path)
 		} else {
-			rlog.Warnf("Ignoring non executable file '%s'", filepath.Join(dir, path))
+			rlog.Warnf("Ignoring non executable file '%s'", path)
 		}
 
 		return nil
