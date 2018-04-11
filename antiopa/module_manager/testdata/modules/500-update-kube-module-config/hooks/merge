@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"beforeHelm\": 1
+}
+"
+else
+    cat << 'EOF' > "$CONFIG_VALUES_JSON_MERGE_PATH"
+{
+    "x": 1
+}
+EOF
+fi

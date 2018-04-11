@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"afterHelm\": 2
+}
+"
+fi

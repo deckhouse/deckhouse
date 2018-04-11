@@ -490,8 +490,7 @@ func (mm *MainModuleManager) GetGlobalHooksInOrder(bindingType BindingType) []st
 }
 
 func (mm *MainModuleManager) GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
-	_, err := mm.GetModule(moduleName)
-	if err != nil {
+	if _, err := mm.GetModule(moduleName); err != nil {
 		return nil, err
 	}
 

@@ -34,8 +34,8 @@ func (m *ModuleManagerMock) GetModuleHook(name string) (*module_manager.ModuleHo
 	panic("implement GetModuleHook")
 }
 
-func (m *ModuleManagerMock) GetGlobalHooksInOrder(bindingType module_manager.BindingType) ([]string, error) {
-	return []string{"hook_1", "hook_2"}, nil
+func (m *ModuleManagerMock) GetGlobalHooksInOrder(bindingType module_manager.BindingType) []string {
+	return []string{"hook_1", "hook_2"}
 }
 
 func (m *ModuleManagerMock) GetModuleHooksInOrder(moduleName string, bindingType module_manager.BindingType) ([]string, error) {
