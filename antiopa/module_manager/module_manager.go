@@ -249,19 +249,23 @@ SearchModulesToDisable:
 
 func (mm *MainModuleManager) getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
 	res := make([]string, 0)
+
+SearchEnabledModules:
 	for _, name := range mm.allModuleNamesInOrder {
 		for _, disabled := range disabledModules {
-			if name != disabled {
-				// module should exist in mm.modulesByName by invariant
-				moduleIsEnabled, err := mm.modulesByName[name].checkIsEnabledByScript(res)
-				if err != nil {
-					return nil, err
-				}
-
-				if moduleIsEnabled {
-					res = append(res, name)
-				}
+			if name == disabled {
+				continue SearchEnabledModules
 			}
+		}
+
+		// module should exist in mm.modulesByName by invariant
+		moduleIsEnabled, err := mm.modulesByName[name].checkIsEnabledByScript(res)
+		if err != nil {
+			return nil, err
+		}
+
+		if moduleIsEnabled {
+			res = append(res, name)
 		}
 	}
 

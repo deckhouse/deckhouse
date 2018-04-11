@@ -2,9 +2,14 @@ package module_manager
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/antiopa/helm"
 )
 
 func TestGetModule(t *testing.T) {
@@ -241,5 +246,61 @@ func TestModulesToPurgeAndDisableOnInit(t *testing.T) {
 	toDisable := mm.getReleasedModulesToDisable(releasedModules, kubeDisabledModules)
 	if !reflect.DeepEqual([]string{"module-3", "module-9"}, toDisable) {
 		t.Errorf("Got unexpected released modules to disable list: %+v", toDisable)
+	}
+}
+
+func checkEnabledModules(mm *MainModuleManager, kubeDisabledModules []string, expectedEnabledModulesList []string) error {
+	enabledModules, err := mm.getEnabledModulesInOrder(kubeDisabledModules)
+	if err != nil {
+		return err
+	}
+
+	if !reflect.DeepEqual(enabledModules, expectedEnabledModulesList) {
+		return fmt.Errorf("Expected %+v enabled modules list, got %+v", expectedEnabledModulesList, enabledModules)
+	}
+
+	return nil
+}
+
+func TestEnabledModules(t *testing.T) {
+	_, testFile, _, _ := runtime.Caller(0)
+	testDirectory := filepath.Dir(testFile)
+	WorkingDir = filepath.Join(testDirectory, "test_enabled_modules")
+
+	var err error
+	TempDir, err = ioutil.TempDir("", "antiopa-")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mm := &MainModuleManager{}
+	mm.helm = &helm.HelmClientProto{}
+
+	if err = mm.initModulesIndex(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = checkEnabledModules(mm, []string{}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
+		t.Error(err)
+	}
+
+	if err = checkEnabledModules(mm, []string{"beta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
+		t.Error(err)
+	}
+
+	if err = checkEnabledModules(mm, []string{"beta", "eta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta"}); err != nil {
+		t.Error(err)
+	}
+
+	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon"}, []string{"alpha", "gamma", "delta"}); err != nil {
+		t.Error(err)
+	}
+
+	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon", "alpha"}, []string{}); err != nil {
+		t.Error(err)
+	}
+
+	if err = checkEnabledModules(mm, []string{"alpha"}, []string{"epsilon", "eta"}); err != nil {
+		t.Error(err)
 	}
 }

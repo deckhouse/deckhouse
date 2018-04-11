@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# dependency: alpha
+
+c=$(cat ${ENABLED_MODULES_PATH:-/dev/null} | jq .[] | grep '"alpha"' | wc -l)
+if [ "$c" == "1" ] ; then
+  exit 0
+fi
+
+exit 1

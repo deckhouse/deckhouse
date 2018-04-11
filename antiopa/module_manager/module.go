@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 
@@ -70,11 +71,11 @@ func (m *Module) cleanup() error {
 }
 
 func (m *Module) execRun() error {
-	err := m.execHelm(func(valuesPath, helmReleaseName string) []string {
+	err := m.execHelm(func(modulePath, valuesPath, helmReleaseName string) []string {
 		return []string{
 			"upgrade",
 			helmReleaseName,
-			".",
+			modulePath,
 			"--install",
 			"--namespace", m.moduleManager.helm.TillerNamespace(),
 			"--values", valuesPath,
@@ -101,7 +102,7 @@ func (m *Module) delete() error {
 }
 
 func (m *Module) execDelete() error {
-	err := m.execHelm(func(valuesPath, helmReleaseName string) []string {
+	err := m.execHelm(func(modulePath, valuesPath, helmReleaseName string) []string {
 		return []string{
 			"delete",
 			helmReleaseName,
@@ -118,7 +119,7 @@ func (m *Module) execDelete() error {
 	return nil
 }
 
-func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName string) []string) error {
+func (m *Module) execHelm(prepareHelmArgs func(modulePath, valuesPath, helmReleaseName string) []string) error {
 	chartExists, err := m.checkHelmChart()
 	if !chartExists {
 		if err != nil {
@@ -135,8 +136,8 @@ func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName strin
 		return err
 	}
 
-	cmd := m.moduleManager.makeCommand(m.Path, valuesPath, "helm", []string{})
-	cmd.Args = prepareHelmArgs(valuesPath, helmReleaseName)
+	cmd := m.moduleManager.makeCommand(WorkingDir, valuesPath, "helm", []string{})
+	cmd.Args = prepareHelmArgs(m.Path, valuesPath, helmReleaseName)
 	err = execCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("module '%s': helm FAILED: %s", m.Name, err)
@@ -199,7 +200,7 @@ func (m *Module) camelcaseName() string {
 }
 
 func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool, error) {
-	enabledScriptPath := filepath.Join(m.DirectoryName, "enabled")
+	enabledScriptPath := filepath.Join(m.Path, "enabled")
 
 	_, err := os.Stat(enabledScriptPath)
 	if os.IsNotExist(err) {
@@ -208,15 +209,23 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	enabledModulesFilePath, err := dumpValuesJson(filepath.Join("enabled-modules", m.Name), precedingEnabledModules)
+	enabledModulesFilePath, err := dumpValuesJson(fmt.Sprintf("%s-preceding-enabled-modules", m.Name), precedingEnabledModules)
 	if err != nil {
 		return false, err
 	}
 
-	cmd := m.moduleManager.makeCommand(m.Path, "", enabledScriptPath, []string{})
+	cmd := m.moduleManager.makeCommand(WorkingDir, "", enabledScriptPath, []string{})
 	cmd.Env = append(cmd.Env, fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath))
 	if err := execCommand(cmd); err != nil {
-		return false, err
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.Sys().(syscall.WaitStatus).ExitStatus() == 1 {
+				return false, nil
+			} else {
+				return false, err
+			}
+		} else {
+			return false, err
+		}
 	}
 
 	return true, nil

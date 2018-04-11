@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# dependency: gamma
+# dependency: epsilon
+
+c=$(cat ${ENABLED_MODULES_PATH:-/dev/null} | jq .[] | grep -P '"gamma"|"epsilon"' | wc -l)
+if [ "$c" == "2" ] ; then
+  exit 0
+fi
+
+exit 1
