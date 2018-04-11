@@ -8,6 +8,10 @@ git:
   - global-hooks
   - shell_lib.sh
   - shell_lib
+  excludePaths:
+  - modules/*/images
+  - modules/*/docs
+  - modules/*/README.md
 import:
 - artifact: antiopa
   add: /go/src/github.com/deckhouse/deckhouse/antiopa
