@@ -8,12 +8,13 @@ import (
 )
 
 func TestGetModule(t *testing.T) {
-	modulesByName = make(map[string]*Module)
+	mm := &MainModuleManager{}
+	mm.modulesByName = make(map[string]*Module)
 
 	expectedModule := &Module{Name: "module"}
-	modulesByName["module"] = expectedModule
+	mm.modulesByName["module"] = expectedModule
 
-	module, err := GetModule("module")
+	module, err := mm.GetModule("module")
 	if err != nil {
 		t.Error(err)
 	}
@@ -21,7 +22,7 @@ func TestGetModule(t *testing.T) {
 		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModule, module)
 	}
 
-	module, err = GetModule("non-exist")
+	module, err = mm.GetModule("non-exist")
 	if err == nil {
 		t.Error("Expected error!")
 	} else if !strings.HasPrefix(err.Error(), "module 'non-exist' not found") {
@@ -30,11 +31,12 @@ func TestGetModule(t *testing.T) {
 }
 
 func TestGetModuleHook(t *testing.T) {
-	modulesHooksByName = make(map[string]*ModuleHook)
+	mm := &MainModuleManager{}
+	mm.modulesHooksByName = make(map[string]*ModuleHook)
 	expectedModuleHook := &ModuleHook{Hook: &Hook{Name: "hook"}}
-	modulesHooksByName["hook"] = expectedModuleHook
+	mm.modulesHooksByName["hook"] = expectedModuleHook
 
-	moduleHook, err := GetModuleHook("hook")
+	moduleHook, err := mm.GetModuleHook("hook")
 	if err != nil {
 		t.Error(err)
 	}
@@ -42,7 +44,7 @@ func TestGetModuleHook(t *testing.T) {
 		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleHook, moduleHook)
 	}
 
-	moduleHook, err = GetModuleHook("non-exist")
+	moduleHook, err = mm.GetModuleHook("non-exist")
 	if err == nil {
 		t.Error("Expected error!")
 	} else if !strings.HasPrefix(err.Error(), "module hook 'non-exist' not found") {
@@ -51,18 +53,20 @@ func TestGetModuleHook(t *testing.T) {
 }
 
 func TestGetModuleNamesInOrder(t *testing.T) {
+	mm := &MainModuleManager{}
 	expectedModuleNamesInOrder := []string{"4", "3", "1", "2"}
-	allModuleNamesInOrder = expectedModuleNamesInOrder
+	mm.allModuleNamesInOrder = expectedModuleNamesInOrder
 
-	if !reflect.DeepEqual(expectedModuleNamesInOrder, allModuleNamesInOrder) {
-		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleNamesInOrder, allModuleNamesInOrder)
+	if !reflect.DeepEqual(expectedModuleNamesInOrder, mm.allModuleNamesInOrder) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleNamesInOrder, mm.allModuleNamesInOrder)
 	}
 }
 
 func TestGetModuleHooksInOrder(t *testing.T) {
-	modulesByName = map[string]*Module{"module": {Name: "module"}}
+	mm := &MainModuleManager{}
+	mm.modulesByName = map[string]*Module{"module": {Name: "module"}}
 
-	modulesHooksOrderByName = map[string]map[BindingType][]*ModuleHook{
+	mm.modulesHooksOrderByName = map[string]map[BindingType][]*ModuleHook{
 		"module": {
 			BeforeHelm: []*ModuleHook{
 				{
@@ -106,7 +110,7 @@ func TestGetModuleHooksInOrder(t *testing.T) {
 
 	for _, expectation := range expectations {
 		t.Run(fmt.Sprintf("(%s, %s)", expectation.moduleName, expectation.binding), func(t *testing.T) {
-			moduleHooksInOrder, err := GetModuleHooksInOrder(expectation.moduleName, expectation.binding)
+			moduleHooksInOrder, err := mm.GetModuleHooksInOrder(expectation.moduleName, expectation.binding)
 
 			if err != nil {
 				t.Errorf("Got unexpected error: %s", err)
@@ -129,7 +133,7 @@ func TestGetModuleHooksInOrder(t *testing.T) {
 	}
 
 	t.Run(fmt.Sprintf("(%s, %s)", "non-exist", BeforeHelm), func(t *testing.T) {
-		moduleHooksInOrder, err := GetModuleHooksInOrder(expectation.moduleName, expectation.binding)
+		moduleHooksInOrder, err := mm.GetModuleHooksInOrder(expectation.moduleName, expectation.binding)
 
 		if err.Error() != "module 'non-exist' not found" {
 			t.Errorf("Got unexpected error: %s", err)
@@ -142,11 +146,12 @@ func TestGetModuleHooksInOrder(t *testing.T) {
 }
 
 func TestGetGlobalHook(t *testing.T) {
-	globalHooksByName = make(map[string]*GlobalHook)
+	mm := &MainModuleManager{}
+	mm.globalHooksByName = make(map[string]*GlobalHook)
 	expectedGlobalHook := &GlobalHook{Hook: &Hook{Name: "hook"}}
-	globalHooksByName["hook"] = expectedGlobalHook
+	mm.globalHooksByName["hook"] = expectedGlobalHook
 
-	moduleHook, err := GetGlobalHook("hook")
+	moduleHook, err := mm.GetGlobalHook("hook")
 	if err != nil {
 		t.Error(err)
 	}
@@ -154,7 +159,7 @@ func TestGetGlobalHook(t *testing.T) {
 		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedGlobalHook, moduleHook)
 	}
 
-	moduleHook, err = GetGlobalHook("non-exist")
+	moduleHook, err = mm.GetGlobalHook("non-exist")
 	if err == nil {
 		t.Error("Expected error!")
 	} else if !strings.HasPrefix(err.Error(), "global hook 'non-exist' not found") {
@@ -163,7 +168,8 @@ func TestGetGlobalHook(t *testing.T) {
 }
 
 func TestGetGlobalHooksInOrder(t *testing.T) {
-	globalHooksOrder = map[BindingType][]*GlobalHook{
+	mm := &MainModuleManager{}
+	mm.globalHooksOrder = map[BindingType][]*GlobalHook{
 		BeforeHelm: {
 			{
 				Hook: &Hook{
@@ -202,7 +208,7 @@ func TestGetGlobalHooksInOrder(t *testing.T) {
 
 	for _, expectation := range expectations {
 		t.Run(fmt.Sprintf("(%s)", expectation.binding), func(t *testing.T) {
-			resGlobalHooksInOrder := GetGlobalHooksInOrder(expectation.binding)
+			resGlobalHooksInOrder := mm.GetGlobalHooksInOrder(expectation.binding)
 			if !reflect.DeepEqual(expectation.expectedGlobalHooksInOrder, resGlobalHooksInOrder) {
 				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedGlobalHooksInOrder, resGlobalHooksInOrder)
 			}

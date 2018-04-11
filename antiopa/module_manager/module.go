@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 
 	"github.com/romana/rlog"
@@ -22,6 +21,8 @@ type Module struct {
 	Name          string
 	DirectoryName string
 	Path          string
+
+	moduleManager *MainModuleManager
 }
 
 func (m *Module) run() error {
@@ -55,7 +56,7 @@ func (m *Module) cleanup() error {
 
 	rlog.Infof("Module '%s': running cleanup ...", m.Name)
 
-	if err := helm.HelmDeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
+	if err := m.moduleManager.helm.DeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
 
@@ -69,7 +70,7 @@ func (m *Module) execRun() error {
 			helmReleaseName,
 			".",
 			"--install",
-			"--namespace", helm.TillerNamespace,
+			"--namespace", m.moduleManager.helm.TillerNamespace(),
 			"--values", valuesPath,
 		}
 	})
@@ -99,7 +100,7 @@ func (m *Module) execDelete() error {
 			"delete",
 			helmReleaseName,
 			"--purge",
-			"--namespace", helm.TillerNamespace,
+			"--namespace", m.moduleManager.helm.TillerNamespace(),
 			"--values", valuesPath,
 		}
 	})
@@ -128,7 +129,7 @@ func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName strin
 		return err
 	}
 
-	cmd := makeCommand(m.Path, valuesPath, "helm", []string{})
+	cmd := m.moduleManager.makeCommand(m.Path, valuesPath, "helm", []string{})
 	cmd.Args = prepareHelmArgs(valuesPath, helmReleaseName)
 	err = execCommand(cmd)
 	if err != nil {
@@ -139,13 +140,13 @@ func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName strin
 }
 
 func (m *Module) runHooksByBinding(binding BindingType) error {
-	moduleHooksAfterHelm, err := GetModuleHooksInOrder(m.Name, binding)
+	moduleHooksAfterHelm, err := m.moduleManager.GetModuleHooksInOrder(m.Name, binding)
 	if err != nil {
 		return err
 	}
 
 	for _, moduleHookName := range moduleHooksAfterHelm {
-		moduleHook, err := GetModuleHook(moduleHookName)
+		moduleHook, err := m.moduleManager.GetModuleHook(moduleHookName)
 		if err != nil {
 			return err
 		}
@@ -181,8 +182,8 @@ func (m *Module) generateHelmReleaseName() string {
 
 func (m *Module) values() utils.Values {
 	values := utils.Values{
-		"global":          utils.MergeValues(globalConfigValues, kubeConfigValues, dynamicValues),
-		m.camelcaseName(): utils.MergeValues(globalModulesConfigValues[m.Name], kubeModulesConfigValues[m.Name], modulesDynamicValues[m.Name]),
+		"global":          utils.MergeValues(m.moduleManager.globalConfigValues, m.moduleManager.kubeConfigValues, m.moduleManager.dynamicValues),
+		m.camelcaseName(): utils.MergeValues(m.moduleManager.globalModulesConfigValues[m.Name], m.moduleManager.kubeModulesConfigValues[m.Name], m.moduleManager.modulesDynamicValues[m.Name]),
 	}
 	return values
 }
@@ -206,7 +207,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	cmd := makeCommand(m.Path, "", enabledScriptPath, []string{})
+	cmd := m.moduleManager.makeCommand(m.Path, "", enabledScriptPath, []string{})
 	cmd.Env = append(cmd.Env, fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath))
 	if err := execCommand(cmd); err != nil {
 		return false, err
@@ -215,12 +216,12 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 	return true, nil
 }
 
-func initModulesIndex() error {
+func (mm *MainModuleManager) initModulesIndex() error {
 	rlog.Info("Initializing modules ...")
 
-	modulesByName = make(map[string]*Module)
-	modulesHooksByName = make(map[string]*ModuleHook)
-	modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
+	mm.modulesByName = make(map[string]*Module)
+	mm.modulesHooksByName = make(map[string]*ModuleHook)
+	mm.modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
 
 	modulesDir := filepath.Join(WorkingDir, "modules")
 
@@ -229,19 +230,19 @@ func initModulesIndex() error {
 		return fmt.Errorf("cannot list modules directory '%s': %s", modulesDir, err)
 	}
 
-	if err := setGlobalConfigValues(); err != nil {
+	if err := mm.setGlobalConfigValues(); err != nil {
 		return err
 	}
-	rlog.Debugf("Set globalConfigValues:\n%s", valuesToString(globalConfigValues))
+	rlog.Debugf("Set mm.globalConfigValues:\n%s", valuesToString(mm.globalConfigValues))
 
-	globalModulesConfigValues = make(map[string]utils.Values)
+	mm.globalModulesConfigValues = make(map[string]utils.Values)
 
-	kubeModulesConfigValues = make(map[string]utils.Values) // TODO
-	for moduleName, kubeModuleValues := range kubeModulesConfigValues {
+	mm.kubeModulesConfigValues = make(map[string]utils.Values) // TODO
+	for moduleName, kubeModuleValues := range mm.kubeModulesConfigValues {
 		rlog.Debugf("Set kubeModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModuleValues))
 	}
 
-	modulesDynamicValues = make(map[string]utils.Values)
+	mm.modulesDynamicValues = make(map[string]utils.Values)
 
 	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
 
@@ -262,24 +263,24 @@ func initModulesIndex() error {
 					Path:          modulePath,
 				}
 
-				moduleConfig, err := getModuleConfig(modulePath)
+				moduleConfig, err := mm.getModuleConfig(modulePath)
 				if err != nil {
 					return err
 				}
 
 				if moduleConfig == nil || moduleConfig.IsEnabled {
-					modulesByName[module.Name] = module
-					allModuleNamesInOrder = append(allModuleNamesInOrder, module.Name)
+					mm.modulesByName[module.Name] = module
+					mm.allModuleNamesInOrder = append(mm.allModuleNamesInOrder, module.Name)
 
 					if moduleConfig != nil {
-						globalModulesConfigValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModulesConfigValues[moduleName]))
+						mm.globalModulesConfigValues[moduleName] = moduleConfig.Values
+						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(mm.globalModulesConfigValues[moduleName]))
 					}
 
-					kubeModulesConfigValues[moduleName] = make(utils.Values)
-					modulesDynamicValues[moduleName] = make(utils.Values)
+					mm.kubeModulesConfigValues[moduleName] = make(utils.Values)
+					mm.modulesDynamicValues[moduleName] = make(utils.Values)
 
-					if err = initModuleHooks(module); err != nil {
+					if err = mm.initModuleHooks(module); err != nil {
 						return err
 					}
 				}
@@ -296,15 +297,15 @@ func initModulesIndex() error {
 	return nil
 }
 
-func setGlobalConfigValues() (err error) {
-	globalConfigValues, err = readModulesValues()
+func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
+	mm.globalConfigValues, err = readModulesValues()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
+func (mm *MainModuleManager) getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
 	moduleName := filepath.Base(modulePath)
 	valuesYamlPath := filepath.Join(modulePath, "values.yaml")
 
@@ -424,15 +425,6 @@ func valuesToString(values utils.Values) string {
 		return fmt.Sprintf("%v", values)
 	}
 	return string(valuesYaml)
-}
-
-func makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
-	envs := make([]string, 0)
-	envs = append(envs, os.Environ()...)
-	envs = append(envs, helm.CommandEnv()...)
-	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
-
-	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
 
 func execCommand(cmd *exec.Cmd) error {
