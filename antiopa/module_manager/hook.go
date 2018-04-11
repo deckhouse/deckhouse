@@ -371,7 +371,7 @@ func (mm *MainModuleManager) initHooks(hooksDir string, addHook func(hookPath st
 	}
 
 	for _, hookPath := range hooksRelativePaths {
-		cmd := mm.makeCommand(WorkingDir, "", hookPath, []string{"--config"})
+		cmd := makeCommand(WorkingDir, hookPath, []string{}, []string{"--config"})
 		output, err := execCommandOutput(cmd)
 		if err != nil {
 			return err
@@ -489,6 +489,11 @@ func readJsonPatchFile(filePath string) (*jsonpatch.Patch, error) {
 	}
 
 	return &patch, nil
+}
+
+func makeCommand(dir string, entrypoint string, envs []string, args []string) *exec.Cmd {
+	envs = append(os.Environ(), envs...)
+	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
 
 func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
