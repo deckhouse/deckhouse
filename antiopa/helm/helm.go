@@ -3,12 +3,16 @@ package helm
 import (
 	"bytes"
 	"fmt"
+	"github.com/romana/rlog"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
-	"github.com/romana/rlog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kblabels "k8s.io/apimachinery/pkg/labels"
+
+	"github.com/deckhouse/deckhouse/antiopa/kube"
 )
 
 type HelmClient interface {
@@ -18,6 +22,8 @@ type HelmClient interface {
 	DeleteSingleFailedRevision(releaseName string) error
 	LastReleaseStatus(releaseName string) (string, string, error)
 	DeleteRelease(releaseName string) error
+	ListReleases() ([]string, error)
+	IsReleaseExists(releaseName string) (bool, error)
 }
 
 type CliHelm struct {
@@ -106,19 +112,22 @@ func (helm *CliHelm) DeleteSingleFailedRevision(releaseName string) (err error) 
 // REVISION	UPDATED                 	STATUS    	CHART                 	DESCRIPTION
 // 1        Fri Jul 14 18:25:00 2017	SUPERSEDED	symfony-demo-0.1.0    	Install complete
 func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, status string, err error) {
-	stdout, stderr, err := helm.Cmd("history", releaseName)
+	stdout, stderr, err := helm.Cmd("history", releaseName, "--max", "1")
+
 	if err != nil {
+		errLine := strings.Split(stderr, "\n")[0]
+		if strings.Contains(errLine, "Error:") && strings.Contains(errLine, "not found") {
+			// Bad module name or no releases installed
+			err = fmt.Errorf("No release '%s' found\n%v %v", releaseName, stdout, stderr)
+			revision = "0"
+			return
+		}
+
 		err = fmt.Errorf("Cannot get history for release '%s'\n%v %v", releaseName, stdout, stderr)
 		return
 	}
+
 	historyLines := strings.Split(stdout, "\n")
-	firstLine := historyLines[0]
-	if strings.Contains(firstLine, "Error:") && strings.Contains(firstLine, "not found") {
-		// Bad module name or no releases installed
-		err = fmt.Errorf("No release '%s' found\n%v %v", releaseName, stdout, stderr)
-		revision = "0"
-		return
-	}
 	lastLine := historyLines[len(historyLines)-1]
 	fields := regexp.MustCompile("\\t").Split(lastLine, 5)
 	revision = strings.TrimSpace(fields[0])
@@ -132,4 +141,43 @@ func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {
 		return fmt.Errorf("helm delete --purge %s invocation error: %v\n%v %v", releaseName, err, stdout, stderr)
 	}
 	return
+}
+
+func (helm *CliHelm) IsReleaseExists(releaseName string) (bool, error) {
+	revision, _, err := helm.LastReleaseStatus(releaseName)
+	if err != nil && revision == "0" {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// helm ищет ConfigMap-ы по лейблу OWNER=TILLER и получает данные о релизе из ключа "release"
+// https://github.com/kubernetes/helm/blob/8981575082ea6fc2a670f81fb6ca5b560c4f36a7/pkg/storage/driver/cfgmaps.go#L88
+func (helm *CliHelm) ListReleases() ([]string, error) {
+	lsel := kblabels.Set{"OWNER": "TILLER"}.AsSelector()
+	cmList, err := kube.KubernetesClient.CoreV1().
+		ConfigMaps(kube.KubernetesAntiopaNamespace).
+		List(metav1.ListOptions{LabelSelector: lsel.String()})
+	if err != nil {
+		rlog.Debugf("helm releases ConfigMaps list failed: %s", err)
+		return nil, err
+	}
+
+	var releaseCmNamePattern = regexp.MustCompile(`^(.*).v[0-9]+$`)
+
+	releases := make([]string, 0)
+	for _, cm := range cmList.Items {
+		matchRes := releaseCmNamePattern.FindStringSubmatch(cm.Name)
+		if matchRes != nil {
+			if _, has_key := cm.Data["release"]; has_key {
+				releaseName := matchRes[1]
+				releases = append(releases, releaseName)
+			}
+		}
+	}
+
+	return releases, nil
 }

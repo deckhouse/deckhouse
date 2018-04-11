@@ -26,6 +26,8 @@ type ModuleManager interface {
 	RunModule(moduleName string) error
 	RunGlobalHook(hookName string, binding BindingType) error
 	RunModuleHook(hookName string, binding BindingType) error
+	GetModulesToDisableOnInit() []string
+	GetModulesToPurgeOnInit() []string
 }
 
 type MainModuleManager struct {
@@ -36,6 +38,10 @@ type MainModuleManager struct {
 	allModuleNamesInOrder []string
 	// Список имен модулей выключенных в kube-config
 	kubeDisabledModules []string
+	// Список имен модулей, для которых есть файлы, они выключены в kube-config, но для которых есть helm релиз — их нужно удалить.
+	releasedModulesToDisable []string
+	// Список имен модулей, у которых отсутствуют файлы, но для которых есть helm релиз — их нужно удалить.
+	releasedModulesToPurge []string
 	// Результирующий список имен включенных модулей в порядке вызова.
 	// С учетом скрипта enabled, kube-config и yaml-файла для модуля.
 	// Список меняется во время работы antiopa по мере возникновения событий
@@ -107,6 +113,7 @@ const (
 	Enabled  ChangeType = "MODULE_ENABLED"  // модуль включился
 	Disabled ChangeType = "MODULE_DISABLED" // модуль выключился, возможно нужно запустить helm delete
 	Changed  ChangeType = "MODULE_CHANGED"  // поменялись values, нужен helm upgrade
+	Purged   ChangeType = "MODULE_PURGED"   // удалились файлы о модуле, нужно просто удалить helm релиз
 )
 
 // Имя модуля и вариант изменения
@@ -190,7 +197,54 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	}
 	mm.enabledModulesInOrder = enabledModules
 
+	releasedModules, err := mm.helm.ListReleases()
+	if err != nil {
+		return nil, err
+	}
+
+	mm.releasedModulesToPurge = mm.getReleasedModulesToPurge(releasedModules)
+	mm.releasedModulesToDisable = mm.getReleasedModulesToDisable(releasedModules, mm.kubeDisabledModules)
+
 	return mm, nil
+}
+
+func (mm *MainModuleManager) GetModulesToDisableOnInit() []string {
+	return mm.releasedModulesToDisable
+}
+
+func (mm *MainModuleManager) GetModulesToPurgeOnInit() []string {
+	return mm.releasedModulesToPurge
+}
+
+func (mm *MainModuleManager) getReleasedModulesToPurge(releasedModules []string) []string {
+	res := make([]string, 0)
+
+	for _, releasedModule := range releasedModules {
+		if _, hasKey := mm.modulesByName[releasedModule]; !hasKey {
+			res = append(res, releasedModule)
+		}
+	}
+
+	return res
+}
+
+func (mm *MainModuleManager) getReleasedModulesToDisable(releasedModules []string, disabledModules []string) []string {
+	res := make([]string, 0)
+
+SearchModulesToDisable:
+	for _, releasedModule := range releasedModules {
+		if _, hasKey := mm.modulesByName[releasedModule]; !hasKey {
+			continue
+		}
+		for _, disabledModule := range disabledModules {
+			if disabledModule == releasedModule {
+				res = append(res, releasedModule)
+				continue SearchModulesToDisable
+			}
+		}
+	}
+
+	return res
 }
 
 func (mm *MainModuleManager) getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
