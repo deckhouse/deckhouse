@@ -111,10 +111,15 @@ type Event struct {
     beforeAll: ORDER, // только global
     afterAll: ORDER, // только global
     onKubeNodeChange: ORDER, // только global
-    schedule:
-        - crontab: * * * * *
-          allowFailure: true
-        - crontab: *_/2 * * * *
+    schedule:  [
+		{
+			crontab: "* * * * *",
+			allowFailure: true
+		},
+        {
+			crontab: "*_/2 * * * *",
+		}
+	]
 }
 */
 
@@ -466,7 +471,18 @@ func GetModuleHooksInOrder(moduleName string, bindingType BindingType) []string 
  * TODO: удаляет helm release (purge)
  * TODO: выполняет новый вид хука afterHelmDelete
  */
-func DeleteModule(moduleName string) error { return nil }
+func DeleteModule(moduleName string) error {
+	module, err := GetModule(moduleName)
+	if err != nil {
+		return err
+	}
+
+	if err := module.delete(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
 	module, err := GetModule(moduleName)

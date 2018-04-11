@@ -81,6 +81,36 @@ func (m *Module) execRun() error {
 	return nil
 }
 
+func (m *Module) delete() error {
+	if err := m.execDelete(); err != nil {
+		return err
+	}
+
+	if err := m.runHooksByBinding(AfterDeleteHelm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Module) execDelete() error {
+	err := m.execHelm(func(valuesPath, helmReleaseName string) []string {
+		return []string{
+			"delete",
+			helmReleaseName,
+			"--purge",
+			"--namespace", helm.TillerNamespace,
+			"--values", valuesPath,
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName string) []string) error {
 	chartExists, err := m.checkHelmChart()
 	if !chartExists {
