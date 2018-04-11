@@ -215,3 +215,31 @@ func TestGetGlobalHooksInOrder(t *testing.T) {
 		})
 	}
 }
+
+func TestModulesToPurgeAndDisableOnInit(t *testing.T) {
+	mm := MainModuleManager{}
+
+	releasedModules := []string{"module-1", "module-2", "module-3", "module-5", "module-6", "module-9"}
+
+	mm.modulesByName = make(map[string]*Module)
+	mm.modulesByName["module-1"] = &Module{Name: "module-1", DirectoryName: "001-module-1", Path: "some/path/001-module-1"}
+	mm.modulesByName["module-3"] = &Module{Name: "module-3", DirectoryName: "003-module-3", Path: "some/path/003-module-3"}
+	mm.modulesByName["module-4"] = &Module{Name: "module-4", DirectoryName: "004-module-4", Path: "some/path/004-module-4"}
+	mm.modulesByName["module-7"] = &Module{Name: "module-7", DirectoryName: "007-module-7", Path: "some/path/007-module-7"}
+	mm.modulesByName["module-8"] = &Module{Name: "module-8", DirectoryName: "008-module-8", Path: "some/path/008-module-8"}
+	mm.modulesByName["module-9"] = &Module{Name: "module-9", DirectoryName: "009-module-9", Path: "some/path/009-module-9"}
+	mm.allModuleNamesInOrder = []string{"module-1", "module-3", "module-4", "module-7", "module-8", "module-9"}
+
+	kubeDisabledModules := []string{"module-3", "module-5", "module-7", "module-9"}
+	_ = kubeDisabledModules
+
+	toPurge := mm.getReleasedModulesToPurge(releasedModules)
+	if !reflect.DeepEqual([]string{"module-2", "module-5", "module-6"}, toPurge) {
+		t.Errorf("Got unexpected released modules to purge list: %+v", toPurge)
+	}
+
+	toDisable := mm.getReleasedModulesToDisable(releasedModules, kubeDisabledModules)
+	if !reflect.DeepEqual([]string{"module-3", "module-9"}, toDisable) {
+		t.Errorf("Got unexpected released modules to disable list: %+v", toDisable)
+	}
+}
