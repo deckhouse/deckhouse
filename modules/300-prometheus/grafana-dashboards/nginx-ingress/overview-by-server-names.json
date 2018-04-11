@@ -45,7 +45,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522884999240,
+  "iteration": 1523484541421,
   "links": [],
   "panels": [
     {
@@ -340,7 +340,7 @@
           "pattern": "Value #P",
           "thresholds": [],
           "type": "number",
-          "unit": "percentunit"
+          "unit": "bps"
         },
         {
           "alias": "",
@@ -1993,5 +1993,5 @@
   "timezone": "",
   "title": "Overview by Server Names",
   "uid": "-W0EPvmmk",
-  "version": 9
+  "version": 1
 }
