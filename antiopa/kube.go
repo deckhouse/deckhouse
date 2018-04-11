@@ -4,18 +4,20 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"github.com/romana/rlog"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
+
+	"github.com/romana/rlog"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const KubeTokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -177,6 +179,7 @@ func GetConfigMap() (*v1.ConfigMap, error) {
 
 func calculateChecksum(Values ...string) string {
 	hasher := md5.New()
+	sort.Strings(Values)
 	for _, value := range Values {
 		hasher.Write([]byte(value))
 	}

@@ -168,7 +168,7 @@ func Run() {
 			if _, hasKey := modulesByName[moduleValuesUpdate.ModuleName]; hasKey {
 				kubeModulesValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
 
-				rlog.Infof("Module %s kube values has been updated, rerun ...", moduleValuesUpdate.ModuleName)
+				rlog.Infof("Module '%s' kube values has been updated, rerun ...", moduleValuesUpdate.ModuleName)
 
 				RunModule(moduleValuesUpdate.ModuleName)
 			}
@@ -187,7 +187,7 @@ func Run() {
 				retryModuleName := retryModulesNamesQueue[0]
 				retryModulesNamesQueue = retryModulesNamesQueue[1:]
 
-				rlog.Infof("Retrying module %s ...", retryModuleName)
+				rlog.Infof("Retrying module '%s' ...", retryModuleName)
 
 				RunModule(retryModuleName)
 			}
