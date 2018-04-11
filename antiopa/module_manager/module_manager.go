@@ -234,7 +234,7 @@ func (mm *MainModuleManager) getReleasedModulesToDisable(releasedModules []strin
 SearchModulesToDisable:
 	for _, releasedModule := range releasedModules {
 		if _, hasKey := mm.modulesByName[releasedModule]; !hasKey {
-			continue
+			continue SearchModulesToDisable
 		}
 		for _, disabledModule := range disabledModules {
 			if disabledModule == releasedModule {
