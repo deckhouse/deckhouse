@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kblabels "k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 )
@@ -153,11 +154,15 @@ func (helm *CliHelm) IsReleaseExists(releaseName string) (bool, error) {
 	return true, nil
 }
 
+// helm ищет ConfigMap-ы по лейблу OWNER=TILLER и получает данные о релизе из ключа "release"
+// https://github.com/kubernetes/helm/blob/8981575082ea6fc2a670f81fb6ca5b560c4f36a7/pkg/storage/driver/cfgmaps.go#L88
 func (helm *CliHelm) ListReleases() ([]string, error) {
+	lsel := kblabels.Set{"OWNER": "TILLER"}.AsSelector()
 	cmList, err := kube.KubernetesClient.CoreV1().
 		ConfigMaps(kube.KubernetesAntiopaNamespace).
-		List(metav1.ListOptions{})
+		List(metav1.ListOptions{LabelSelector: lsel.String()})
 	if err != nil {
+		rlog.Debugf("helm releases ConfigMaps list failed: %s", err)
 		return nil, err
 	}
 
@@ -167,8 +172,10 @@ func (helm *CliHelm) ListReleases() ([]string, error) {
 	for _, cm := range cmList.Items {
 		matchRes := releaseCmNamePattern.FindStringSubmatch(cm.Name)
 		if matchRes != nil {
-			releaseName := matchRes[1]
-			releases = append(releases, releaseName)
+			if _, has_key := cm.Data["release"]; has_key {
+				releaseName := matchRes[1]
+				releases = append(releases, releaseName)
+			}
 		}
 	}
 

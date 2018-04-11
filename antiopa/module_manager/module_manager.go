@@ -12,6 +12,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
+	"github.com/prometheus/prometheus/util/cli"
 )
 
 type ModuleManager interface {
@@ -36,6 +37,8 @@ type MainModuleManager struct {
 	allModuleNamesInOrder []string
 	// Список имен модулей выключенных в kube-config
 	kubeDisabledModules []string
+	// Список имен модулей, которые выключены или у которых отсутствуют файлы, но для которых есть helm релиз — их нужно удалить.
+	purgeOnInitModules []string
 	// Результирующий список имен включенных модулей в порядке вызова.
 	// С учетом скрипта enabled, kube-config и yaml-файла для модуля.
 	// Список меняется во время работы antiopa по мере возникновения событий
@@ -107,6 +110,7 @@ const (
 	Enabled  ChangeType = "MODULE_ENABLED"  // модуль включился
 	Disabled ChangeType = "MODULE_DISABLED" // модуль выключился, возможно нужно запустить helm delete
 	Changed  ChangeType = "MODULE_CHANGED"  // поменялись values, нужен helm upgrade
+	Purged   ChangeType = "MODULE_PURGED"   // удалились файлы о модуле, нужно просто удалить helm релиз
 )
 
 // Имя модуля и вариант изменения
@@ -191,6 +195,30 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	mm.enabledModulesInOrder = enabledModules
 
 	// TODO: get modules to delete
+	//mm.calculatePurgedModules()
+	mm.purgeOnInitModules = []string{}
+	modulesReleases, err := mm.helm.ListReleases()
+	if err != nil {
+		rlog.Errorf("Cannot get helm releases for modules. %s", err)
+	} else {
+		kubeDisabledModulesMap := map[string]bool{}
+		for _, modName := range mm.kubeDisabledModules {
+			kubeDisabledModulesMap[modName] = true
+		}
+		for _, moduleName := range modulesReleases {
+			if _, hasKey := mm.modulesByName[moduleName]; hasKey {
+				// если модуль выключен, а он есть среди релизов Helm, то удалить.
+				// TODO тут похоже надо делать нормальное удаление? конфиг модуля есть.
+				if _, disabled := kubeDisabledModulesMap[moduleName]; disabled {
+					mm.purgeOnInitModules = append(mm.purgeOnInitModules, moduleName)
+					continue
+				}
+			} else {
+				// если модуля нет среди модулей с конфигом — удалить
+				mm.purgeOnInitModules = append(mm.purgeOnInitModules, moduleName)
+			}
+		}
+	}
 
 	return mm, nil
 }
@@ -398,6 +426,9 @@ func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.Mod
 
 // Module manager loop
 func (mm *MainModuleManager) Run() {
+	// отослать события про удаление ненужных модулей
+	go mm.sendPurgedOnInitModules()
+
 	go kube_config_manager.Run()
 
 	for {
@@ -623,4 +654,20 @@ func (mm *MainModuleManager) makeCommand(dir string, valuesPath string, entrypoi
 	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
 
 	return utils.MakeCommand(dir, entrypoint, args, envs)
+}
+
+// Отослать событие об удалении ненужных модулей
+func (mm *MainModuleManager) sendPurgedOnInitModules() {
+	ev := Event{
+		Type:           ModulesChanged,
+		ModulesChanges: make([]ModuleChange, len(mm.purgeOnInitModules)),
+	}
+	for _, moduleName := range mm.purgeOnInitModules {
+		rlog.Debugf("Send ModulesChanged.Purged event for module '%s' ")
+		ev.ModulesChanges = append(ev.ModulesChanges, ModuleChange{
+			Name:       moduleName,
+			ChangeType: Purged,
+		})
+	}
+	EventCh <- ev
 }

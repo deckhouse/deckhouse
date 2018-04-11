@@ -15,8 +15,11 @@ const (
 	ModuleRun     TaskType = "TASK_MODULE_RUN"
 	ModuleHookRun TaskType = "TASK_MODULE_HOOK_RUN"
 	GlobalHookRun TaskType = "TASK_GLOBAL_HOOK_RUN"
-	Delay         TaskType = "TASK_DELAY"
-	Stop          TaskType = "TASK_STOP"
+	// удаление релиза без сведений о модуле
+	ModulePurge TaskType = "TASK_MODULE_PURGE"
+	// вспомогательные задачи: задержка и остановка обработки
+	Delay TaskType = "TASK_DELAY"
+	Stop  TaskType = "TASK_STOP"
 )
 
 type Task struct {

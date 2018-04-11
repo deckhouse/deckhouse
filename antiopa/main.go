@@ -207,6 +207,9 @@ func ManagersEventsHandler() {
 					case module_manager.Disabled:
 						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
 						TasksQueue.Add(newTask)
+					case module_manager.Purged:
+						newTask := task.NewTask(task.ModulePurge, moduleChange.Name)
+						TasksQueue.Add(newTask)
 					}
 				}
 			// Изменились глобальные values, нужен рестарт всех модулей
@@ -315,6 +318,14 @@ func TasksRunner() {
 					} else {
 						TasksQueue.Pop()
 					}
+				case task.ModulePurge:
+					// если вызван purge, то про модуль ничего неизвестно, поэтому ошибку
+					// удаления достаточно записать в лог
+					err := HelmClient.DeleteRelease(t.Name)
+					if err != nil {
+						rlog.Errorf("Module purge for '%s' failed.", t.Name)
+					}
+					TasksQueue.Pop()
 				case task.Delay:
 					td := headTask.(*task.TaskDelay)
 					time.Sleep(td.Delay)
