@@ -219,10 +219,7 @@ func ManagersEventsHandler() {
 		case <-kube_node_manager.KubeNodeChanged:
 			// Добавить выполнение глобальных хуков по событию KubeNodeChange
 			TasksQueue.ChangesDisable()
-			hookNames, err := ModuleManager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
-			if err != nil {
-				rlog.Errorf("KubeNodeChange tasks: cannot get global hooks: %s", err)
-			}
+			hookNames := ModuleManager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
 			for _, hookName := range hookNames {
 				newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnKubeNodeChange)
 				TasksQueue.Add(newTask)
@@ -378,10 +375,7 @@ func RegisterScheduleHooks() {
 		    * append each after-helm module hook to queue as separate task
 */
 func CreateOnStartupTasks() {
-	onStartupHooks, err := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
-	if err != nil {
-		rlog.Errorf("OnStartup tasks: cannot get global hooks: %s", err)
-	}
+	onStartupHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
 
 	for _, hookName := range onStartupHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnStartup)
@@ -394,10 +388,7 @@ func CreateOnStartupTasks() {
 
 func CreateReloadAllTasks() {
 	// Queue beforeAll global hooks
-	beforeAllHooks, err := ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll)
-	if err != nil {
-		rlog.Errorf("ReloadAll BeforeAll tasks: cannot get global hooks: %s", err)
-	}
+	beforeAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll)
 
 	for _, hookName := range beforeAllHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.BeforeAll)
@@ -414,10 +405,7 @@ func CreateReloadAllTasks() {
 	}
 
 	// Queue afterAll global hooks
-	afterAllHooks, err := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
-	if err != nil {
-		rlog.Errorf("ReloadAll AfterAll tasks: cannot get global hooks: %s", err)
-	}
+	afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
 
 	for _, hookName := range afterAllHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)

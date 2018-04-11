@@ -20,7 +20,7 @@ type ModuleManager interface {
 	GetModuleNamesInOrder() []string
 	GetGlobalHook(name string) (*GlobalHook, error)
 	GetModuleHook(name string) (*ModuleHook, error)
-	GetGlobalHooksInOrder(bindingType BindingType) ([]string, error)
+	GetGlobalHooksInOrder(bindingType BindingType) []string
 	GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error)
 	DeleteModule(moduleName string) error
 	RunModule(moduleName string) error
@@ -83,6 +83,7 @@ type BindingType string
 const (
 	BeforeHelm       BindingType = "BEFORE_HELM"
 	AfterHelm        BindingType = "AFTER_HELM"
+	AfterDeleteHelm  BindingType = "AFTER_DELETE_HELM"
 	BeforeAll        BindingType = "BEFORE_ALL"
 	AfterAll         BindingType = "AFTER_ALL"
 	OnKubeNodeChange BindingType = "ON_KUBE_NODE_CHANGE"
@@ -129,11 +130,16 @@ type Event struct {
     afterHelm: ORDER, // только module
     beforeAll: ORDER, // только global
     afterAll: ORDER, // только global
-	onKubeNodeChange: ORDER, // только global
-    schedule:
-        - crontab: * * * * *
-          allowFailure: true
-        - crontab: *_/2 * * * *
+    onKubeNodeChange: ORDER, // только global
+    schedule:  [
+		{
+			crontab: "* * * * *",
+			allowFailure: true
+		},
+        {
+			crontab: "*_/2 * * * *",
+		}
+	]
 }
 */
 
@@ -465,8 +471,12 @@ func (mm *MainModuleManager) GetModuleHook(name string) (*ModuleHook, error) {
 	}
 }
 
-func (mm *MainModuleManager) GetGlobalHooksInOrder(bindingType BindingType) ([]string, error) {
-	globalHooks := mm.globalHooksOrder[bindingType]
+func (mm *MainModuleManager) GetGlobalHooksInOrder(bindingType BindingType) []string {
+	globalHooks, ok := mm.globalHooksOrder[bindingType]
+	if !ok {
+		return []string{}
+	}
+
 	sort.Slice(globalHooks[:], func(i, j int) bool {
 		return globalHooks[i].OrderByBinding[bindingType] < globalHooks[j].OrderByBinding[bindingType]
 	})
@@ -476,15 +486,24 @@ func (mm *MainModuleManager) GetGlobalHooksInOrder(bindingType BindingType) ([]s
 		globalHooksNames = append(globalHooksNames, globalHook.Name)
 	}
 
-	return globalHooksNames, nil
+	return globalHooksNames
 }
 
 func (mm *MainModuleManager) GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error) {
+	_, err := mm.GetModule(moduleName)
+	if err != nil {
+		return nil, err
+	}
+
 	moduleHooksByBinding, ok := mm.modulesHooksOrderByName[moduleName]
 	if !ok {
-		return nil, fmt.Errorf("module '%s' not found", moduleName)
+		return []string{}, nil
 	}
-	moduleBindingHooks := moduleHooksByBinding[bindingType]
+
+	moduleBindingHooks, ok := moduleHooksByBinding[bindingType]
+	if !ok {
+		return []string{}, nil
+	}
 
 	sort.Slice(moduleBindingHooks[:], func(i, j int) bool {
 		return moduleBindingHooks[i].OrderByBinding[bindingType] < moduleBindingHooks[j].OrderByBinding[bindingType]
@@ -502,7 +521,18 @@ func (mm *MainModuleManager) GetModuleHooksInOrder(moduleName string, bindingTyp
  * TODO: удаляет helm release (purge)
  * TODO: выполняет новый вид хука afterHelmDelete
  */
-func (mm *MainModuleManager) DeleteModule(moduleName string) error { return nil }
+func (mm *MainModuleManager) DeleteModule(moduleName string) error {
+	module, err := mm.GetModule(moduleName)
+	if err != nil {
+		return err
+	}
+
+	if err := module.delete(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func (mm *MainModuleManager) RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
 	module, err := mm.GetModule(moduleName)

@@ -42,8 +42,9 @@ type GlobalHookConfig struct {
 
 type ModuleHookConfig struct {
 	HookConfig
-	BeforeHelm interface{} `json:"beforeHelm"`
-	AfterHelm  interface{} `json:"afterHelm"`
+	BeforeHelm      interface{} `json:"beforeHelm"`
+	AfterHelm       interface{} `json:"afterHelm"`
+	AfterDeleteHelm interface{} `json:"afterDeleteHelm"`
 }
 
 type HookConfig struct {
@@ -52,8 +53,8 @@ type HookConfig struct {
 }
 
 type ScheduleConfig struct {
-	Crontab      string
-	AllowFailure bool
+	Crontab      string `json:"crontab"`
+	AllowFailure bool   `json:"allowFailure"`
 }
 
 func (mm *MainModuleManager) newGlobalHook() *GlobalHook {
@@ -149,6 +150,14 @@ func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterHelm, AfterHelm)
 		}
 		mm.addModulesHooksOrderByName(moduleName, AfterHelm, moduleHook)
+	}
+
+	if config.AfterDeleteHelm != nil {
+		moduleHook.Bindings = append(moduleHook.Bindings, AfterDeleteHelm)
+		if moduleHook.OrderByBinding[AfterDeleteHelm], ok = config.AfterDeleteHelm.(float64); !ok {
+			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterDeleteHelm, AfterDeleteHelm)
+		}
+		mm.addModulesHooksOrderByName(moduleName, AfterDeleteHelm, moduleHook)
 	}
 
 	if config.OnStartup != nil {

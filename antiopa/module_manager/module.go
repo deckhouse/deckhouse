@@ -30,40 +30,16 @@ func (m *Module) run() error {
 		return err
 	}
 
-	moduleHooksBeforeHelm, err := m.moduleManager.GetModuleHooksInOrder(m.Name, BeforeHelm)
-	if err != nil {
+	if err := m.runHooksByBinding(BeforeHelm); err != nil {
 		return err
 	}
 
-	for _, moduleHookName := range moduleHooksBeforeHelm {
-		moduleHook, err := m.moduleManager.GetModuleHook(moduleHookName)
-		if err != nil {
-			return err
-		}
-
-		if err := moduleHook.run(BeforeHelm); err != nil {
-			return err
-		}
-	}
-
-	if err := m.exec(); err != nil {
+	if err := m.execRun(); err != nil {
 		return err
 	}
 
-	moduleHooksAfterHelm, err := m.moduleManager.GetModuleHooksInOrder(m.Name, AfterHelm)
-	if err != nil {
+	if err := m.runHooksByBinding(AfterHelm); err != nil {
 		return err
-	}
-
-	for _, moduleHookName := range moduleHooksAfterHelm {
-		moduleHook, err := m.moduleManager.GetModuleHook(moduleHookName)
-		if err != nil {
-			return err
-		}
-
-		if err := moduleHook.run(AfterHelm); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -87,7 +63,56 @@ func (m *Module) cleanup() error {
 	return nil
 }
 
-func (m *Module) exec() error {
+func (m *Module) execRun() error {
+	err := m.execHelm(func(valuesPath, helmReleaseName string) []string {
+		return []string{
+			"upgrade",
+			helmReleaseName,
+			".",
+			"--install",
+			"--namespace", m.moduleManager.helm.TillerNamespace(),
+			"--values", valuesPath,
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Module) delete() error {
+	if err := m.execDelete(); err != nil {
+		return err
+	}
+
+	if err := m.runHooksByBinding(AfterDeleteHelm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Module) execDelete() error {
+	err := m.execHelm(func(valuesPath, helmReleaseName string) []string {
+		return []string{
+			"delete",
+			helmReleaseName,
+			"--purge",
+			"--namespace", m.moduleManager.helm.TillerNamespace(),
+			"--values", valuesPath,
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Module) execHelm(prepareHelmArgs func(valuesPath, helmReleaseName string) []string) error {
 	chartExists, err := m.checkHelmChart()
 	if !chartExists {
 		if err != nil {
@@ -104,9 +129,31 @@ func (m *Module) exec() error {
 		return err
 	}
 
-	err = execCommand(m.moduleManager.makeCommand(m.Path, valuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", m.moduleManager.helm.TillerNamespace(), "--values", valuesPath}))
+	cmd := m.moduleManager.makeCommand(m.Path, valuesPath, "helm", []string{})
+	cmd.Args = prepareHelmArgs(valuesPath, helmReleaseName)
+	err = execCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("module '%s': helm FAILED: %s", m.Name, err)
+	}
+
+	return nil
+}
+
+func (m *Module) runHooksByBinding(binding BindingType) error {
+	moduleHooksAfterHelm, err := m.moduleManager.GetModuleHooksInOrder(m.Name, binding)
+	if err != nil {
+		return err
+	}
+
+	for _, moduleHookName := range moduleHooksAfterHelm {
+		moduleHook, err := m.moduleManager.GetModuleHook(moduleHookName)
+		if err != nil {
+			return err
+		}
+
+		if err := moduleHook.run(binding); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -188,6 +235,13 @@ func (mm *MainModuleManager) initModulesIndex() error {
 	}
 	rlog.Debugf("Set mm.globalConfigValues:\n%s", valuesToString(mm.globalConfigValues))
 
+	mm.globalModulesConfigValues = make(map[string]utils.Values)
+
+	mm.kubeModulesConfigValues = make(map[string]utils.Values) // TODO
+	for moduleName, kubeModuleValues := range mm.kubeModulesConfigValues {
+		rlog.Debugf("Set kubeModulesConfigValues[%s]:\n%s", moduleName, valuesToString(kubeModuleValues))
+	}
+
 	mm.modulesDynamicValues = make(map[string]utils.Values)
 
 	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
@@ -222,6 +276,9 @@ func (mm *MainModuleManager) initModulesIndex() error {
 						mm.globalModulesConfigValues[moduleName] = moduleConfig.Values
 						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(mm.globalModulesConfigValues[moduleName]))
 					}
+
+					mm.kubeModulesConfigValues[moduleName] = make(utils.Values)
+					mm.modulesDynamicValues[moduleName] = make(utils.Values)
 
 					if err = mm.initModuleHooks(module); err != nil {
 						return err
