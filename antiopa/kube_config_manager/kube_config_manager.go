@@ -18,6 +18,17 @@ const (
 	SecretName          = "antiopa"
 )
 
+type KubeConfigManager interface {
+	SetKubeValues(values utils.Values) error
+	SetModuleKubeValues(moduleName string, values utils.Values) error
+	Run()
+	InitialConfig() *Config
+}
+
+type MainKubeConfigManager struct {
+	initialConfig *Config
+}
+
 type Config struct {
 	Values        utils.Values
 	ModuleConfigs map[string]utils.ModuleConfig
@@ -35,7 +46,7 @@ func simpleMergeConfigData(data map[string][]byte, newData map[string][]byte) ma
 	return data
 }
 
-func setConfigSecretData(mergeData map[string][]byte) (*v1.Secret, error) {
+func (kcm *MainKubeConfigManager) setConfigSecretData(mergeData map[string][]byte) (*v1.Secret, error) {
 	secretsList, err := kube.KubernetesClient.CoreV1().
 		Secrets(kube.KubernetesAntiopaNamespace).
 		List(metav1.ListOptions{})
@@ -78,14 +89,14 @@ func setConfigSecretData(mergeData map[string][]byte) (*v1.Secret, error) {
 	}
 }
 
-func SetKubeValues(values utils.Values) error {
+func (kcm *MainKubeConfigManager) SetKubeValues(values utils.Values) error {
 	valuesYaml, err := yaml.Marshal(&values)
 	if err != nil {
 		return err
 	}
 
 	// TODO: store checksum in Secret
-	_, err = setConfigSecretData(map[string][]byte{GlobalValuesKeyName: valuesYaml})
+	_, err = kcm.setConfigSecretData(map[string][]byte{GlobalValuesKeyName: valuesYaml})
 	if err != nil {
 		return err
 	}
@@ -94,7 +105,7 @@ func SetKubeValues(values utils.Values) error {
 	return nil
 }
 
-func SetModuleKubeValues(moduleName string, values utils.Values) error {
+func (kcm *MainKubeConfigManager) SetModuleKubeValues(moduleName string, values utils.Values) error {
 	valuesYaml, err := yaml.Marshal(&values)
 	if err != nil {
 		return err
@@ -102,7 +113,7 @@ func SetModuleKubeValues(moduleName string, values utils.Values) error {
 
 	// TODO: store checksum in Secret
 	// FIXME: camelcase module name
-	_, err = setConfigSecretData(map[string][]byte{moduleName: valuesYaml})
+	_, err = kcm.setConfigSecretData(map[string][]byte{moduleName: valuesYaml})
 	if err != nil {
 		return err
 	}
@@ -111,10 +122,15 @@ func SetModuleKubeValues(moduleName string, values utils.Values) error {
 	return nil
 }
 
-func Init() (*Config, error) {
+func (kcm *MainKubeConfigManager) InitialConfig() *Config {
+	return kcm.initialConfig
+}
+
+func Init() (KubeConfigManager, error) {
 	rlog.Debug("Init kube config manager")
 
-	res := &Config{
+	kcm := &MainKubeConfigManager{}
+	kcm.initialConfig = &Config{
 		Values:        make(utils.Values),
 		ModuleConfigs: make(map[string]utils.ModuleConfig),
 	}
@@ -151,7 +167,7 @@ func Init() (*Config, error) {
 			if err != nil {
 				return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s\n%s", SecretName, GlobalValuesKeyName, err, string(valuesYaml))
 			}
-			res.Values = formattedValues
+			kcm.initialConfig.Values = formattedValues
 		}
 
 		for key, value := range secret.Data {
@@ -160,15 +176,15 @@ func Init() (*Config, error) {
 				if err != nil {
 					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s", SecretName, key, err)
 				}
-				res.ModuleConfigs[moduleConfig.ModuleName] = *moduleConfig
+				kcm.initialConfig.ModuleConfigs[moduleConfig.ModuleName] = *moduleConfig
 			}
 		}
 	}
 
-	return res, nil
+	return kcm, nil
 }
 
-func Run() {
+func (kcm *MainKubeConfigManager) Run() {
 	rlog.Debugf("Run kube config manager")
 
 	for {

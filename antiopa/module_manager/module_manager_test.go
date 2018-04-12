@@ -236,7 +236,6 @@ func TestModulesToPurgeAndDisableOnInit(t *testing.T) {
 	mm.allModuleNamesInOrder = []string{"module-1", "module-3", "module-4", "module-7", "module-8", "module-9"}
 
 	kubeDisabledModules := []string{"module-3", "module-5", "module-7", "module-9"}
-	_ = kubeDisabledModules
 
 	toPurge := mm.getReleasedModulesToPurge(releasedModules)
 	if !reflect.DeepEqual([]string{"module-2", "module-5", "module-6"}, toPurge) {
