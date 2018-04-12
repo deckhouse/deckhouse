@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/deckhouse/deckhouse/antiopa/helm"
 )
 
 func TestGetModule(t *testing.T) {
@@ -273,7 +271,7 @@ func TestEnabledModules(t *testing.T) {
 	}
 
 	mm := &MainModuleManager{}
-	mm.helm = &helm.HelmClientProto{}
+	mm.helm = &MockHelmClient{}
 
 	if err = mm.initModulesIndex(); err != nil {
 		t.Fatal(err)
