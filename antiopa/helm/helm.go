@@ -21,69 +21,10 @@ type HelmClient interface {
 	Cmd(args ...string) (string, string, error)
 	DeleteSingleFailedRevision(releaseName string) error
 	LastReleaseStatus(releaseName string) (string, string, error)
+	UpgradeRelease(releaseName string, chartPath string, valuesPaths []string) error
 	DeleteRelease(releaseName string) error
 	ListReleases() ([]string, error)
 	IsReleaseExists(releaseName string) (bool, error)
-}
-
-type HelmClientProto struct {
-	tillerNamespaceFunc            func() string
-	commandEnvFunc                 func() []string
-	cmdFunc                        func(args ...string) (string, string, error)
-	deleteSingleFailedRevisionFunc func(releaseName string) error
-	lastReleaseStatusFunc          func(releaseName string) (string, string, error)
-	deleteReleaseFunc              func(releaseName string) error
-	listReleasesFunc               func() ([]string, error)
-	isReleaseExistsFunc            func(releaseName string) (bool, error)
-}
-
-func (h *HelmClientProto) TillerNamespace() string {
-	if h.tillerNamespaceFunc != nil {
-		return h.tillerNamespaceFunc()
-	}
-	return ""
-}
-func (h *HelmClientProto) CommandEnv() []string {
-	if h.commandEnvFunc != nil {
-		return h.commandEnvFunc()
-	}
-	return nil
-}
-func (h *HelmClientProto) Cmd(args ...string) (string, string, error) {
-	if h.cmdFunc != nil {
-		return h.cmdFunc(args...)
-	}
-	return "", "", nil
-}
-func (h *HelmClientProto) DeleteSingleFailedRevision(releaseName string) error {
-	if h.deleteSingleFailedRevisionFunc != nil {
-		return h.deleteSingleFailedRevisionFunc(releaseName)
-	}
-	return nil
-}
-func (h *HelmClientProto) LastReleaseStatus(releaseName string) (string, string, error) {
-	if h.lastReleaseStatusFunc != nil {
-		return h.lastReleaseStatusFunc(releaseName)
-	}
-	return "", "", nil
-}
-func (h *HelmClientProto) DeleteRelease(releaseName string) error {
-	if h.deleteReleaseFunc != nil {
-		return h.deleteReleaseFunc(releaseName)
-	}
-	return nil
-}
-func (h *HelmClientProto) ListReleases() ([]string, error) {
-	if h.listReleasesFunc != nil {
-		return h.listReleasesFunc()
-	}
-	return nil, nil
-}
-func (h *HelmClientProto) IsReleaseExists(releaseName string) (bool, error) {
-	if h.isReleaseExistsFunc != nil {
-		return h.isReleaseExistsFunc(releaseName)
-	}
-	return false, nil
 }
 
 type CliHelm struct {
@@ -193,6 +134,10 @@ func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, sta
 	revision = strings.TrimSpace(fields[0])
 	status = strings.TrimSpace(fields[2])
 	return
+}
+
+func (helm *CliHelm) UpgradeRelease(releaseName string, chartPath string, valuesPaths []string) error {
+	return nil
 }
 
 func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {
