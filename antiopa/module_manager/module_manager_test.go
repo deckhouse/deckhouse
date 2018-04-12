@@ -277,27 +277,27 @@ func TestEnabledModules(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
+	if err = checkEnabledModules(mm, []string{}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta", "theta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
+	if err = checkEnabledModules(mm, []string{"beta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta", "theta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta", "eta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta"}); err != nil {
+	if err = checkEnabledModules(mm, []string{"beta", "eta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "theta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon"}, []string{"alpha", "gamma", "delta"}); err != nil {
+	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon"}, []string{"alpha", "gamma", "delta", "theta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon", "alpha"}, []string{}); err != nil {
+	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon", "alpha", "theta"}, []string{}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"alpha"}, []string{"epsilon", "eta"}); err != nil {
+	if err = checkEnabledModules(mm, []string{"alpha"}, []string{"epsilon", "eta", "theta"}); err != nil {
 		t.Error(err)
 	}
 }

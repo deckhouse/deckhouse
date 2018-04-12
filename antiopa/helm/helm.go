@@ -196,6 +196,8 @@ func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, sta
 }
 
 func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {
+	rlog.Debugf("Running helm delete --purge for '%s' release", releaseName)
+
 	stdout, stderr, err := helm.Cmd("delete", "--purge", releaseName)
 	if err != nil {
 		return fmt.Errorf("helm delete --purge %s invocation error: %v\n%v %v", releaseName, err, stdout, stderr)

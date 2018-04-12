@@ -177,8 +177,9 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	if err != nil {
 		return nil, err
 	}
+	mm.kubeConfigManager = kcm
 
-	kubeConfig := kcm.InitialConfig()
+	kubeConfig := mm.kubeConfigManager.InitialConfig()
 	mm.kubeConfigValues = kubeConfig.Values
 	mm.kubeModulesConfigValues = make(map[string]utils.Values)
 	mm.kubeDisabledModules = make([]string, 0)
