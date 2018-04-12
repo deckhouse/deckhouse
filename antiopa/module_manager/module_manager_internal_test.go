@@ -20,7 +20,7 @@ func (h MockHelmClient) CommandEnv() []string {
 	return []string{}
 }
 
-func testInit(t *testing.T) {
+func beforeTest(t *testing.T) {
 	_, testFile, _, _ := runtime.Caller(0)
 	testDirectory := filepath.Dir(testFile)
 	WorkingDir = filepath.Join(testDirectory, "testdata")
@@ -33,7 +33,7 @@ func testInit(t *testing.T) {
 }
 
 func TestInit_initModulesIndex(t *testing.T) {
-	testInit(t)
+	beforeTest(t)
 
 	mm := &MainModuleManager{}
 	mm.helm = MockHelmClient{}
@@ -291,7 +291,7 @@ func testRunModuleHook(_ *MainModuleManager) func(t *testing.T) {
 }
 
 func TestInit_initGlobalHooks(t *testing.T) {
-	testInit(t)
+	beforeTest(t)
 
 	mm := &MainModuleManager{}
 	mm.helm = MockHelmClient{}

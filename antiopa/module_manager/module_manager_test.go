@@ -8,10 +8,9 @@ import (
 )
 
 func TestGetModule(t *testing.T) {
+	expectedModule := &Module{Name: "module"}
 	mm := &MainModuleManager{}
 	mm.modulesByName = make(map[string]*Module)
-
-	expectedModule := &Module{Name: "module"}
 	mm.modulesByName["module"] = expectedModule
 
 	module, err := mm.GetModule("module")
@@ -31,9 +30,9 @@ func TestGetModule(t *testing.T) {
 }
 
 func TestGetModuleHook(t *testing.T) {
+	expectedModuleHook := &ModuleHook{Hook: &Hook{Name: "hook"}}
 	mm := &MainModuleManager{}
 	mm.modulesHooksByName = make(map[string]*ModuleHook)
-	expectedModuleHook := &ModuleHook{Hook: &Hook{Name: "hook"}}
 	mm.modulesHooksByName["hook"] = expectedModuleHook
 
 	moduleHook, err := mm.GetModuleHook("hook")
@@ -53,19 +52,20 @@ func TestGetModuleHook(t *testing.T) {
 }
 
 func TestGetModuleNamesInOrder(t *testing.T) {
-	mm := &MainModuleManager{}
 	expectedModuleNamesInOrder := []string{"4", "3", "1", "2"}
+	mm := &MainModuleManager{}
 	mm.allModuleNamesInOrder = expectedModuleNamesInOrder
 
-	if !reflect.DeepEqual(expectedModuleNamesInOrder, mm.allModuleNamesInOrder) {
-		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleNamesInOrder, mm.allModuleNamesInOrder)
+	moduleNamesInOrder := mm.GetModuleNamesInOrder()
+
+	if !reflect.DeepEqual(expectedModuleNamesInOrder, moduleNamesInOrder) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleNamesInOrder, moduleNamesInOrder)
 	}
 }
 
 func TestGetModuleHooksInOrder(t *testing.T) {
 	mm := &MainModuleManager{}
 	mm.modulesByName = map[string]*Module{"module": {Name: "module"}}
-
 	mm.modulesHooksOrderByName = map[string]map[BindingType][]*ModuleHook{
 		"module": {
 			BeforeHelm: []*ModuleHook{
@@ -146,9 +146,9 @@ func TestGetModuleHooksInOrder(t *testing.T) {
 }
 
 func TestGetGlobalHook(t *testing.T) {
+	expectedGlobalHook := &GlobalHook{Hook: &Hook{Name: "hook"}}
 	mm := &MainModuleManager{}
 	mm.globalHooksByName = make(map[string]*GlobalHook)
-	expectedGlobalHook := &GlobalHook{Hook: &Hook{Name: "hook"}}
 	mm.globalHooksByName["hook"] = expectedGlobalHook
 
 	moduleHook, err := mm.GetGlobalHook("hook")
