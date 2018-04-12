@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+
+# Минимальное количество свободной памяти в sharedZones, при котором будет произведено удаление всего из VTS
+minSize=1043576 # 1mb
+
+# Данный скрипт проверяет потребленное количество памяти под VTS зону и количество свободной памяти менее 1мб.
+# удаляет всю информацию из VTS зоны (апстримы, фильтры, кеши). Таким образом, когда VTS зона разъелась, она
+# очищается, и вся информация начинает собираться сначала, при поступлении трафика. Поэтому мы можем потерять
+# данные за 30 секунд перед очисткой, что не должно приводить к сильным проблемам на графике
+
+while true; do
+  # Получаем значение максиммального количества доступой памяти для VTS зоны из параметра vts-status-zone-size
+  maxSize=$(curl -s '127.0.0.1:18080/nginx_status/format/json' | jq '.sharedZones.maxSize')
+  # Получаем значение выделенной памяти для VTS зоны
+  usedSize=$(curl -s '127.0.0.1:18080/nginx_status/format/json' | jq '.sharedZones.usedSize')
+  # Если количество свободной памяти менее 1 мегабайта, то удаляем все из VTS зоны
+  if [ $(expr $maxSize - $usedSize) -lt $minSize ]; then
+    # Непосредственная очистка VTS зоны: https://github.com/vozlt/nginx-module-vts#to-delete-traffic-zones-on-the-fly
+    curl -s '127.0.0.1:18080/nginx_status/control?cmd=delete&group=*&zone=vhost_traffic_status' >/dev/null
+    # Выводим информацию в лог о том, что была очищена VTS зона
+    echo "$(date --rfc-3339=seconds) : VTS zone deleted"
+  fi
+  # Выполняем данную проверку каждые 5 минут
+  sleep 300
+done

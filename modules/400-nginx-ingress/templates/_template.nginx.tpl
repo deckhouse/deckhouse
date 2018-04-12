@@ -38,6 +38,8 @@ spec:
       dnsPolicy: ClusterFirst
     {{- end }}
       terminationGracePeriodSeconds: 300
+      imagePullSecrets:
+      - name: registry
       containers:
       - image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.11.0
         name: nginx
@@ -92,6 +94,9 @@ spec:
           name: scgi-temp-path
         - mountPath: /var/lib/nginx/uwsgi
           name: uwsgi-temp-path
+      - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/vts-memory-cleaner:{{ .Values.global.modulesImages.tags.nginxIngress.vtsMemoryCleaner }}
+        name: vts-memory-cleaner
+        imagePullPolicy: Always
       volumes:
       - name: nginx-config-template
         configMap:
