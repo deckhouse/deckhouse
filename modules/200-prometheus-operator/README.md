@@ -3,6 +3,7 @@
 
 Модуль устанавливает [prometheus operator](https://github.com/coreos/prometheus-operator).
 
+Как работает вся связка Prometheus и Prometheus Operator можно посмотреть в документации по [внутреннему устройству](docs/INTERNALS.md).
 
 Конфигурация
 ------------
