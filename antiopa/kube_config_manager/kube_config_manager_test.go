@@ -94,10 +94,11 @@ userPassword: qwerty`),
 
 	kube.KubernetesClient = &MockKubernetesClientset{}
 
-	config, err := Init()
+	kcm, err := Init()
 	if err != nil {
 		t.Errorf("kube_config_manager initialization error: %s", err)
 	}
+	config := kcm.InitialConfig()
 
 	expectedData := map[string]utils.Values{
 		"global": utils.Values{
