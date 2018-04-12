@@ -210,8 +210,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 	}
 
 	if !utils.IsFileExecutable(f) {
-		rlog.Warnf("Ignoring non-executable enable script '%s': assuming module is enabled", enabledScriptPath)
-		return true, nil
+		return false, fmt.Errorf("cannot execute non-executable enable script '%s'", enabledScriptPath)
 	}
 
 	enabledModulesFilePath, err := dumpValuesJson(fmt.Sprintf("%s-preceding-enabled-modules", m.Name), precedingEnabledModules)
@@ -353,7 +352,7 @@ func readModulesValues() (utils.Values, error) {
 	return readValuesYamlFile(path)
 }
 
-func getExecutableFilesPaths(dir string) ([]string, error) {
+func getExecutableHooksFilesPaths(dir string) ([]string, error) {
 	paths := make([]string, 0)
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
@@ -367,7 +366,7 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 		if utils.IsFileExecutable(f) {
 			paths = append(paths, path)
 		} else {
-			rlog.Warnf("Ignoring non-executable file '%s'", path)
+			return fmt.Errorf("found non-executable hook file '%s'", path)
 		}
 
 		return nil

@@ -364,7 +364,7 @@ func (mm *MainModuleManager) initHooks(hooksDir string, addHook func(hookPath st
 		return nil
 	}
 
-	hooksRelativePaths, err := getExecutableFilesPaths(hooksDir) // returns a list of executable hooks sorted by filename
+	hooksRelativePaths, err := getExecutableHooksFilesPaths(hooksDir) // returns a list of executable hooks sorted by filename
 	if err != nil {
 		return err
 	}
@@ -373,7 +373,7 @@ func (mm *MainModuleManager) initHooks(hooksDir string, addHook func(hookPath st
 		cmd := makeCommand(WorkingDir, hookPath, []string{}, []string{"--config"})
 		output, err := execCommandOutput(cmd)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot get config for hook '%s': %s", hookPath, err)
 		}
 
 		if err := addHook(hookPath, output); err != nil {
@@ -501,7 +501,8 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		rlog.Errorf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
+		return output, err
 	}
 
 	rlog.Debugf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
