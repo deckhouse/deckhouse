@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"beforeAll\": 1
+}
+"
+else
+    cat << 'EOF' > "$CONFIG_VALUES_JSON_MERGE_PATH"
+{
+    "a": 1,
+    "b": 2
+}
+EOF
+    cat << 'EOF' > "$CONFIG_VALUES_JSON_PATCH_PATH"
+[
+    { "op": "replace", "path": "/a", "value": 2 },
+    { "op": "remove", "path": "/b"},
+    { "op": "add", "path": "/c", "value": [3] }
+]
+EOF
+fi

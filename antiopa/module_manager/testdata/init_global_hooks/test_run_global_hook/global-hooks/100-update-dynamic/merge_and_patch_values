@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"beforeAll\": 1
+}
+"
+else
+    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_MERGE_PATH"
+{
+    "a": 5,
+    "b": 6
+}
+EOF
+    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_PATCH_PATH"
+[
+    { "op": "replace", "path": "/a", "value": 9 },
+    { "op": "remove", "path": "/b"},
+    { "op": "add", "path": "/c", "value": "10" }
+]
+EOF
+fi
