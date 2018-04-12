@@ -2,15 +2,12 @@ package module_manager
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestGetModule(t *testing.T) {
+func TestMainModuleManager_GetModule(t *testing.T) {
 	expectedModule := &Module{Name: "module"}
 	mm := &MainModuleManager{}
 	mm.modulesByName = make(map[string]*Module)
@@ -32,7 +29,7 @@ func TestGetModule(t *testing.T) {
 	}
 }
 
-func TestGetModuleHook(t *testing.T) {
+func TestMainModuleManager_GetModuleHook(t *testing.T) {
 	expectedModuleHook := &ModuleHook{Hook: &Hook{Name: "hook"}}
 	mm := &MainModuleManager{}
 	mm.modulesHooksByName = make(map[string]*ModuleHook)
@@ -54,7 +51,7 @@ func TestGetModuleHook(t *testing.T) {
 	}
 }
 
-func TestGetModuleNamesInOrder(t *testing.T) {
+func TestMainModuleManager_GetModuleNamesInOrder(t *testing.T) {
 	expectedModuleNamesInOrder := []string{"4", "3", "1", "2"}
 	mm := &MainModuleManager{}
 	mm.allModuleNamesInOrder = expectedModuleNamesInOrder
@@ -66,7 +63,7 @@ func TestGetModuleNamesInOrder(t *testing.T) {
 	}
 }
 
-func TestGetModuleHooksInOrder(t *testing.T) {
+func TestMainModuleManager_GetModuleHooksInOrder(t *testing.T) {
 	mm := &MainModuleManager{}
 	mm.modulesByName = map[string]*Module{"module": {Name: "module"}}
 	mm.modulesHooksOrderByName = map[string]map[BindingType][]*ModuleHook{
@@ -148,7 +145,7 @@ func TestGetModuleHooksInOrder(t *testing.T) {
 	})
 }
 
-func TestGetGlobalHook(t *testing.T) {
+func TestMainModuleManager_GetGlobalHook(t *testing.T) {
 	expectedGlobalHook := &GlobalHook{Hook: &Hook{Name: "hook"}}
 	mm := &MainModuleManager{}
 	mm.globalHooksByName = make(map[string]*GlobalHook)
@@ -170,26 +167,26 @@ func TestGetGlobalHook(t *testing.T) {
 	}
 }
 
-func TestGetGlobalHooksInOrder(t *testing.T) {
+func TestMainModuleManager_GetGlobalHooksInOrder(t *testing.T) {
 	mm := &MainModuleManager{}
 	mm.globalHooksOrder = map[BindingType][]*GlobalHook{
-		BeforeHelm: {
+		BeforeAll: {
 			{
 				Hook: &Hook{
 					Name:           "hook-1",
-					OrderByBinding: map[BindingType]float64{BeforeHelm: 3},
+					OrderByBinding: map[BindingType]float64{BeforeAll: 3},
 				},
 			},
 			{
 				Hook: &Hook{
 					Name:           "hook-2",
-					OrderByBinding: map[BindingType]float64{BeforeHelm: 1},
+					OrderByBinding: map[BindingType]float64{BeforeAll: 1},
 				},
 			},
 			{
 				Hook: &Hook{
 					Name:           "hook-3",
-					OrderByBinding: map[BindingType]float64{BeforeHelm: 2},
+					OrderByBinding: map[BindingType]float64{BeforeAll: 2},
 				},
 			},
 		},
@@ -200,11 +197,11 @@ func TestGetGlobalHooksInOrder(t *testing.T) {
 		expectedGlobalHooksInOrder []string
 	}{
 		{
-			BeforeHelm,
+			BeforeAll,
 			[]string{"hook-2", "hook-3", "hook-1"},
 		},
 		{
-			AfterHelm,
+			AfterAll,
 			[]string{},
 		},
 	}
@@ -219,7 +216,7 @@ func TestGetGlobalHooksInOrder(t *testing.T) {
 	}
 }
 
-func TestModulesToPurgeAndDisableOnInit(t *testing.T) {
+func TestMainModuleManager_GetModulesToPurgeAndDisableOnInit(t *testing.T) {
 	mm := MainModuleManager{}
 
 	releasedModules := []string{"module-1", "module-2", "module-3", "module-5", "module-6", "module-9"}
@@ -260,44 +257,36 @@ func checkEnabledModules(mm *MainModuleManager, kubeDisabledModules []string, ex
 }
 
 func TestEnabledModules(t *testing.T) {
-	_, testFile, _, _ := runtime.Caller(0)
-	testDirectory := filepath.Dir(testFile)
-	WorkingDir = filepath.Join(testDirectory, "test_enabled_modules")
-
-	var err error
-	TempDir, err = ioutil.TempDir("", "antiopa-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	initTempAndWorkingDirectories(t, "test_enabled_modules")
 
 	mm := &MainModuleManager{}
 	mm.helm = &MockHelmClient{}
 
-	if err = mm.initModulesIndex(); err != nil {
+	if err := mm.initModulesIndex(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
+	if err := checkEnabledModules(mm, []string{}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
+	if err := checkEnabledModules(mm, []string{"beta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta", "eta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta", "eta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta"}); err != nil {
+	if err := checkEnabledModules(mm, []string{"beta", "eta"}, []string{"alpha", "gamma", "delta", "epsilon", "zeta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon"}, []string{"alpha", "gamma", "delta"}); err != nil {
+	if err := checkEnabledModules(mm, []string{"beta", "eta", "epsilon"}, []string{"alpha", "gamma", "delta"}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"beta", "eta", "epsilon", "alpha"}, []string{}); err != nil {
+	if err := checkEnabledModules(mm, []string{"beta", "eta", "epsilon", "alpha"}, []string{}); err != nil {
 		t.Error(err)
 	}
 
-	if err = checkEnabledModules(mm, []string{"alpha"}, []string{"epsilon", "eta"}); err != nil {
+	if err := checkEnabledModules(mm, []string{"alpha"}, []string{"epsilon", "eta"}); err != nil {
 		t.Error(err)
 	}
 }

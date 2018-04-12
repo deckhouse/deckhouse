@@ -3,7 +3,7 @@
 if [[ "$1" == "--config" ]]; then
     echo "
 {
-    \"afterHelm\": 1
+    \"beforeAll\": 1
 }
 "
 fi
