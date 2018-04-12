@@ -3,7 +3,6 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 	"github.com/evanphx/json-patch"
 	"github.com/romana/rlog"
@@ -202,7 +201,7 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 
 	if kubeConfigValuesChanged {
 		rlog.Debugf("Global hook '%s': updating kube config values:\n%s", h.Name, valuesToString(h.moduleManager.kubeConfigValues))
-		if err := kube_config_manager.SetKubeValues(h.moduleManager.kubeConfigValues); err != nil {
+		if err := h.moduleManager.kubeConfigManager.SetKubeValues(h.moduleManager.kubeConfigValues); err != nil {
 			return fmt.Errorf("global hook '%s': set kube config failed: %s", h.Name, err)
 		}
 	}
@@ -260,7 +259,7 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 
 	if kubeModuleConfigValuesChanged {
 		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
-		err = kube_config_manager.SetModuleKubeValues(moduleName, h.moduleManager.kubeModulesConfigValues[moduleName])
+		err = h.moduleManager.kubeConfigManager.SetModuleKubeValues(moduleName, h.moduleManager.kubeModulesConfigValues[moduleName])
 		if err != nil {
 			return fmt.Errorf("hook '%s': set kube values failed: %s", h.Name, err)
 		}

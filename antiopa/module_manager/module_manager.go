@@ -74,7 +74,8 @@ type MainModuleManager struct {
 	// Обработка -- генерация внешнего Event для глобального рестарта всех модулей.
 	globalValuesChanged chan bool
 
-	helm helm.HelmClient
+	helm              helm.HelmClient
+	kubeConfigManager kube_config_manager.KubeConfigManager
 }
 
 var (
@@ -172,10 +173,12 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 		return nil, err
 	}
 
-	kubeConfig, err := kube_config_manager.Init()
+	kcm, err := kube_config_manager.Init()
 	if err != nil {
 		return nil, err
 	}
+
+	kubeConfig := kcm.InitialConfig()
 	mm.kubeConfigValues = kubeConfig.Values
 	mm.kubeModulesConfigValues = make(map[string]utils.Values)
 	mm.kubeDisabledModules = make([]string, 0)
@@ -454,7 +457,7 @@ func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.Mod
 
 // Module manager loop
 func (mm *MainModuleManager) Run() {
-	go kube_config_manager.Run()
+	go mm.kubeConfigManager.Run()
 
 	for {
 		select {
