@@ -202,11 +202,16 @@ func (m *Module) camelcaseName() string {
 func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool, error) {
 	enabledScriptPath := filepath.Join(m.Path, "enabled")
 
-	_, err := os.Stat(enabledScriptPath)
+	f, err := os.Stat(enabledScriptPath)
 	if os.IsNotExist(err) {
 		return true, nil
 	} else if err != nil {
 		return false, err
+	}
+
+	if !utils.IsFileExecutable(f) {
+		rlog.Warnf("Ignoring non-executable enable script '%s': assuming module is enabled", enabledScriptPath)
+		return true, nil
 	}
 
 	enabledModulesFilePath, err := dumpValuesJson(fmt.Sprintf("%s-preceding-enabled-modules", m.Name), precedingEnabledModules)
@@ -359,11 +364,10 @@ func getExecutableFilesPaths(dir string) ([]string, error) {
 			return nil
 		}
 
-		isExecutable := f.Mode()&0111 != 0
-		if isExecutable {
+		if utils.IsFileExecutable(f) {
 			paths = append(paths, path)
 		} else {
-			rlog.Warnf("Ignoring non executable file '%s'", path)
+			rlog.Warnf("Ignoring non-executable file '%s'", path)
 		}
 
 		return nil

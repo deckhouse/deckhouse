@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Not an executable file, should be ignored. Module should be enabled."
+
+exit 1

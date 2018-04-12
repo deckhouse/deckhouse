@@ -96,7 +96,7 @@ func Init() {
 	// TODO KubernetesAntiopaNamespace — имя поменяется, это старая переменная
 	tillerNamespace := kube.KubernetesAntiopaNamespace
 	rlog.Debugf("Antiopa tiller namespace: %s", tillerNamespace)
-	HelmClient, err := helm.Init(tillerNamespace)
+	HelmClient, err = helm.Init(tillerNamespace)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: cannot initialize helm: %s", err)
 		os.Exit(1)
@@ -379,7 +379,7 @@ func CreateAfterInitTasks() {
 	for _, moduleName := range purgeModules {
 		newTask := task.NewTask(task.ModulePurge, moduleName)
 		TasksQueue.Add(newTask)
-		rlog.Debugf("AfterInit: queued module purge '%s'")
+		rlog.Debugf("AfterInit: queued module purge '%s'", moduleName)
 	}
 
 	deleteModules := ModuleManager.GetModulesToDisableOnInit()
@@ -387,7 +387,7 @@ func CreateAfterInitTasks() {
 	for _, moduleName := range deleteModules {
 		newTask := task.NewTask(task.ModuleDelete, moduleName)
 		TasksQueue.Add(newTask)
-		rlog.Debugf("AfterInit: queued module delete '%s'")
+		rlog.Debugf("AfterInit: queued module delete '%s'", moduleName)
 	}
 }
 
