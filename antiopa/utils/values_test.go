@@ -81,3 +81,47 @@ func TestNewModuleConfigByYamlData(t *testing.T) {
 		t.Errorf("Got unexpected error: %s", err.Error())
 	}
 }
+
+func TestMergeValues(t *testing.T) {
+	expectations := []struct {
+		testName       string
+		values1        Values
+		values2        Values
+		expectedValues Values
+	}{
+		{
+			"simple",
+			Values{"a": 1, "b": 2},
+			Values{"b": 3, "c": 4},
+			Values{"a": 1, "b": 3, "c": 4},
+		},
+		{
+			"array",
+			Values{"a": []interface{}{1}},
+			Values{"a": []interface{}{2}},
+			Values{"a": []interface{}{1, 2}},
+		},
+		{
+			"map",
+			Values{"a": map[interface{}]interface{}{"a": 1, "b": 2}},
+			Values{"a": map[interface{}]interface{}{"b": 3, "c": 4}},
+			Values{"a": map[interface{}]interface{}{"a": 1, "b": 3, "c": 4}},
+		},
+		{
+			"mixed-map",
+			Values{"a": map[interface{}]interface{}{1: "a", 2: "b"}},
+			Values{"a": map[interface{}]interface{}{"1": "c"}},
+			Values{"a": map[interface{}]interface{}{1: "a", 2: "b", "1": "c"}},
+		},
+	}
+
+	for _, expectation := range expectations {
+		t.Run(expectation.testName, func(t *testing.T) {
+			values := MergeValues(expectation.values1, expectation.values2)
+
+			if !reflect.DeepEqual(expectation.expectedValues, values) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedValues, values)
+			}
+		})
+	}
+}
