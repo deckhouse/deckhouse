@@ -1,3 +1,4 @@
+{{- if not (eq .Values.global.cluster.type "ACS") }}
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -13,3 +14,4 @@ subjects:
 - kind: ServiceAccount
   name: heapster
   namespace: kube-system
+{{- end }}
