@@ -40,7 +40,7 @@ func Init(tillerNamespace string) (HelmClient, error) {
 
 	stdout, stderr, err := helm.Cmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
 	if err != nil {
-		return nil, fmt.Errorf("%s\n%s %s", err, stdout, stderr)
+		return nil, fmt.Errorf("%s\n%s\n%s", err, stdout, stderr)
 	}
 	rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
 

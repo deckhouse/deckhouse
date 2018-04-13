@@ -248,6 +248,10 @@ func (h *MockHelmClient) CommandEnv() []string {
 	return []string{}
 }
 
+func (h *MockHelmClient) TillerNamespace() string {
+	return "antiopa"
+}
+
 func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
 	h.DeleteSingleFailedRevisionExecuted = true
 	return nil
