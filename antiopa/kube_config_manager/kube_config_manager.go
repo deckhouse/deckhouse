@@ -15,7 +15,7 @@ import (
 
 const (
 	GlobalValuesKeyName = "global"
-	SecretName          = "antiopa"
+	ConfigMapName       = "antiopa"
 )
 
 type KubeConfigManager interface {
@@ -39,53 +39,42 @@ var (
 	ModuleConfigUpdated <-chan utils.ModuleConfig
 )
 
-func simpleMergeConfigData(data map[string][]byte, newData map[string][]byte) map[string][]byte {
+func simpleMergeConfigMapData(data map[string]string, newData map[string]string) map[string]string {
 	for k, v := range newData {
 		data[k] = v
 	}
 	return data
 }
 
-func (kcm *MainKubeConfigManager) setConfigSecretData(mergeData map[string][]byte) (*v1.Secret, error) {
-	secretsList, err := kube.KubernetesClient.CoreV1().
-		Secrets(kube.KubernetesAntiopaNamespace).
-		List(metav1.ListOptions{})
+func (kcm *MainKubeConfigManager) setConfigData(mergeData map[string]string) (*v1.ConfigMap, error) {
+	obj, err := kcm.getConfigMap()
 	if err != nil {
 		return nil, err
 	}
-	secretExist := false
-	for _, cm := range secretsList.Items {
-		if cm.ObjectMeta.Name == SecretName {
-			secretExist = true
-			break
-		}
-	}
 
-	if secretExist {
-		secret, err := kube.KubernetesClient.CoreV1().
-			Secrets(kube.KubernetesAntiopaNamespace).
-			Get(SecretName, metav1.GetOptions{})
+	if obj != nil {
+		if obj.Data == nil {
+			obj.Data = make(map[string]string)
+		}
+		obj.Data = simpleMergeConfigMapData(obj.Data, mergeData)
+
+		updatedObj, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Update(obj)
 		if err != nil {
 			return nil, err
 		}
 
-		if secret.Data == nil {
-			secret.Data = make(map[string][]byte)
-		}
-		secret.Data = simpleMergeConfigData(secret.Data, mergeData)
-
-		return secret, nil
+		return updatedObj, nil
 	} else {
-		secret := &v1.Secret{}
-		secret.Name = SecretName
-		secret.Data = simpleMergeConfigData(make(map[string][]byte), mergeData)
+		obj := &v1.ConfigMap{}
+		obj.Name = ConfigMapName
+		obj.Data = simpleMergeConfigMapData(make(map[string]string), mergeData)
 
-		_, err := kube.KubernetesClient.CoreV1().Secrets(kube.KubernetesAntiopaNamespace).Create(secret)
+		_, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Create(obj)
 		if err != nil {
 			return nil, err
 		}
 
-		return secret, nil
+		return obj, nil
 	}
 }
 
@@ -95,8 +84,8 @@ func (kcm *MainKubeConfigManager) SetKubeValues(values utils.Values) error {
 		return err
 	}
 
-	// TODO: store checksum in Secret
-	_, err = kcm.setConfigSecretData(map[string][]byte{GlobalValuesKeyName: valuesYaml})
+	// TODO: store checksum
+	_, err = kcm.setConfigData(map[string]string{GlobalValuesKeyName: string(valuesYaml)})
 	if err != nil {
 		return err
 	}
@@ -111,15 +100,44 @@ func (kcm *MainKubeConfigManager) SetModuleKubeValues(moduleName string, values 
 		return err
 	}
 
-	// TODO: store checksum in Secret
+	// TODO: store checksum
 	// FIXME: camelcase module name
-	_, err = kcm.setConfigSecretData(map[string][]byte{moduleName: valuesYaml})
+	_, err = kcm.setConfigData(map[string]string{moduleName: string(valuesYaml)})
 	if err != nil {
 		return err
 	}
 	// TODO: store known resource-version
 
 	return nil
+}
+
+func (kcm *MainKubeConfigManager) getConfigMap() (*v1.ConfigMap, error) {
+	list, err := kube.KubernetesClient.CoreV1().
+		ConfigMaps(kube.KubernetesAntiopaNamespace).
+		List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	objExists := false
+	for _, obj := range list.Items {
+		if obj.ObjectMeta.Name == ConfigMapName {
+			objExists = true
+			break
+		}
+	}
+
+	if objExists {
+		obj, err := kube.KubernetesClient.CoreV1().
+			ConfigMaps(kube.KubernetesAntiopaNamespace).
+			Get(ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		return obj, nil
+	} else {
+		return nil, nil
+	}
 }
 
 func (kcm *MainKubeConfigManager) InitialConfig() *Config {
@@ -135,46 +153,30 @@ func Init() (KubeConfigManager, error) {
 		ModuleConfigs: make(map[string]utils.ModuleConfig),
 	}
 
-	secretsList, err := kube.KubernetesClient.CoreV1().
-		Secrets(kube.KubernetesAntiopaNamespace).
-		List(metav1.ListOptions{})
+	obj, err := kcm.getConfigMap()
 	if err != nil {
 		return nil, err
 	}
-	secretExist := false
-	for _, secret := range secretsList.Items {
-		if secret.ObjectMeta.Name == SecretName {
-			secretExist = true
-			break
-		}
-	}
 
-	if secretExist {
-		secret, err := kube.KubernetesClient.CoreV1().
-			Secrets(kube.KubernetesAntiopaNamespace).
-			Get(SecretName, metav1.GetOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get Secret %s from namespace %s: %s", SecretName, kube.KubernetesAntiopaNamespace, err)
-		}
-
-		if valuesYaml, hasKey := secret.Data[GlobalValuesKeyName]; hasKey {
+	if obj != nil {
+		if valuesYaml, hasKey := obj.Data[GlobalValuesKeyName]; hasKey {
 			var values map[interface{}]interface{}
-			err := yaml.Unmarshal(valuesYaml, &values)
+			err := yaml.Unmarshal([]byte(valuesYaml), &values)
 			if err != nil {
-				return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s:\n%s", SecretName, GlobalValuesKeyName, err, string(valuesYaml))
+				return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s:\n%s", ConfigMapName, GlobalValuesKeyName, err, string(valuesYaml))
 			}
 			formattedValues, err := utils.FormatValues(values)
 			if err != nil {
-				return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s\n%s", SecretName, GlobalValuesKeyName, err, string(valuesYaml))
+				return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s\n%s", ConfigMapName, GlobalValuesKeyName, err, string(valuesYaml))
 			}
 			kcm.initialConfig.Values = formattedValues
 		}
 
-		for key, value := range secret.Data {
+		for key, value := range obj.Data {
 			if key != GlobalValuesKeyName {
-				moduleConfig, err := utils.NewModuleConfigByYamlData(key, value)
+				moduleConfig, err := utils.NewModuleConfigByYamlData(key, []byte(value))
 				if err != nil {
-					return nil, fmt.Errorf("'%s' Secret bad yaml at key '%s': %s", SecretName, key, err)
+					return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s", ConfigMapName, key, err)
 				}
 				kcm.initialConfig.ModuleConfigs[moduleConfig.ModuleName] = *moduleConfig
 			}
