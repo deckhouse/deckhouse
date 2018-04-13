@@ -124,13 +124,11 @@ func TestTasksQueue_MultiThread(t *testing.T) {
 			for {
 				t, _ := q.Peek()
 				if t != nil {
-					if v, ok := t.(*Task); ok {
-						fmt.Printf("%03d. %s!\n", count, v.Name)
-						count++
-						fmt.Println("consumer Pop")
-						q.Pop()
-						time.Sleep(100 * time.Millisecond)
-					}
+					fmt.Printf("%03d. %s!\n", count, t.GetName())
+					count++
+					fmt.Println("consumer Pop")
+					q.Pop()
+					time.Sleep(100 * time.Millisecond)
 				}
 				if q.IsEmpty() {
 					break

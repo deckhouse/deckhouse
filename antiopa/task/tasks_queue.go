@@ -54,12 +54,37 @@ type FailureCountIncrementable interface {
 }
 
 type TasksQueue struct {
-	utils.Queue
+	*utils.Queue
+	queueRef *utils.Queue
+}
+
+func (tq *TasksQueue) Add(task Task) {
+	tq.queueRef.Add(task)
+}
+
+func (tq *TasksQueue) Push(task Task) {
+	tq.queueRef.Push(task)
+}
+
+func (tq *TasksQueue) Peek() (task Task, err error) {
+	res, err := tq.queueRef.Peek()
+	if err != nil {
+		return nil, err
+	}
+
+	var ok bool
+	if task, ok = res.(Task); !ok {
+		return nil, fmt.Errorf("bad data found in queue: %v", res)
+	}
+
+	return task, nil
 }
 
 func NewTasksQueue() *TasksQueue {
+	queue := utils.NewQueue()
 	return &TasksQueue{
-		Queue: *utils.NewQueue(),
+		Queue:    queue,
+		queueRef: queue,
 	}
 }
 
@@ -75,7 +100,7 @@ func (tq *TasksQueue) IncrementFailureCount() {
 // прочитать дамп структуры для сохранения во временный файл
 func (tq *TasksQueue) DumpReader() io.Reader {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("Queue length %d\n", tq.Length()))
+	buf.WriteString(fmt.Sprintf("Queue length %d\n", tq.Queue.Length()))
 	buf.WriteString("\n")
 
 	iterateBuf := tq.Queue.IterateWithLock(func(task interface{}, index int) string {

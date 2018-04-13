@@ -100,8 +100,8 @@ type QueueDumperTest struct {
 
 func (q *QueueDumperTest) QueueChangeCallback() {
 	headTask, _ := TasksQueue.Peek()
-	if v, ok := headTask.(*task.Task); ok {
-		fmt.Printf("head task now is '%s', len=%d\n", v.Name, TasksQueue.Length())
+	if headTask != nil {
+		fmt.Printf("head task now is '%s', len=%d\n", headTask.GetName(), TasksQueue.Length())
 	}
 }
 

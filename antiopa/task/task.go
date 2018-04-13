@@ -22,16 +22,27 @@ const (
 	Stop  TaskType = "TASK_STOP"
 )
 
-type Task struct {
+type Task interface {
+	GetName() string
+	GetType() TaskType
+	GetBinding() module_manager.BindingType
+	GetFailureCount() int
+	IncrementFailureCount()
+	GetDelay() time.Duration
+	GetAllowFailure() bool
+}
+
+type BaseTask struct {
 	FailureCount int    // failed executions count
 	Name         string // name of module or hook
 	Type         TaskType
 	Binding      module_manager.BindingType
+	Delay        time.Duration
 	AllowFailure bool // task considered ok if hook failed. false by default. can be true for some schedule hooks
 }
 
-func NewTask(taskType TaskType, name string) *Task {
-	return &Task{
+func NewTask(taskType TaskType, name string) *BaseTask {
+	return &BaseTask{
 		FailureCount: 0,
 		Name:         name,
 		Type:         taskType,
@@ -39,17 +50,37 @@ func NewTask(taskType TaskType, name string) *Task {
 	}
 }
 
-func (t *Task) WithBinding(binding module_manager.BindingType) *Task {
+func (t *BaseTask) GetName() string {
+	return t.Name
+}
+
+func (t *BaseTask) GetType() TaskType {
+	return t.Type
+}
+
+func (t *BaseTask) GetBinding() module_manager.BindingType {
+	return t.Binding
+}
+
+func (t *BaseTask) GetDelay() time.Duration {
+	return t.Delay
+}
+
+func (t *BaseTask) GetAllowFailure() bool {
+	return t.AllowFailure
+}
+
+func (t *BaseTask) WithBinding(binding module_manager.BindingType) *BaseTask {
 	t.Binding = binding
 	return t
 }
 
-func (t *Task) WithAllowFailure(allowFailure bool) *Task {
+func (t *BaseTask) WithAllowFailure(allowFailure bool) *BaseTask {
 	t.AllowFailure = allowFailure
 	return t
 }
 
-func (t *Task) DumpAsText() string {
+func (t *BaseTask) DumpAsText() string {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("%s '%s'", t.Type, t.Name))
 	if t.FailureCount > 0 {
@@ -58,20 +89,17 @@ func (t *Task) DumpAsText() string {
 	return buf.String()
 }
 
-func (t *Task) IncrementFailureCount() {
+func (t *BaseTask) GetFailureCount() int {
+	return t.FailureCount
+}
+
+func (t *BaseTask) IncrementFailureCount() {
 	t.FailureCount++
 }
 
-type TaskDelay struct {
-	Task
-	Delay time.Duration
-}
-
-func NewTaskDelay(delay time.Duration) *TaskDelay {
-	return &TaskDelay{
-		Task: Task{
-			Type: Delay,
-		},
+func NewTaskDelay(delay time.Duration) *BaseTask {
+	return &BaseTask{
+		Type:  Delay,
 		Delay: delay,
 	}
 }
