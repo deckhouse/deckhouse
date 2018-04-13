@@ -277,7 +277,6 @@ func TasksRunner() {
 			time.Sleep(QueueIsEmptyDelay)
 		}
 		for {
-			rlog.Debugf(">> %+v", TasksQueue)
 			t, _ := TasksQueue.Peek()
 			if t == nil {
 				break

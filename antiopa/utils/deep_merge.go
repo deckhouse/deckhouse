@@ -9,6 +9,30 @@ type mergeValuesPair struct {
 	B map[interface{}]interface{}
 }
 
+func CastArbitraryMap(mapArg interface{}) map[interface{}]interface{} {
+	res := make(map[interface{}]interface{})
+
+	reflMap := reflect.ValueOf(mapArg)
+	for _, key := range reflMap.MapKeys() {
+		value := reflMap.MapIndex(key)
+		res[key.Interface()] = value.Interface()
+	}
+
+	return res
+}
+
+func CastArbitrarySlice(sliceArg interface{}) []interface{} {
+	res := make([]interface{}, 0)
+
+	reflSlice := reflect.ValueOf(sliceArg)
+	for i := 0; i < reflSlice.Len(); i++ {
+		value := reflSlice.Index(i)
+		res = append(res, value.Interface())
+	}
+
+	return res
+}
+
 func DeepMerge(maps ...map[interface{}]interface{}) map[interface{}]interface{} {
 	res := make(map[interface{}]interface{})
 	for _, m := range maps {
@@ -40,21 +64,22 @@ func deepMergeTwo(A map[interface{}]interface{}, B map[interface{}]interface{}) 
 					switch v1Type.Kind() {
 					case reflect.Map:
 						resMap := make(map[interface{}]interface{})
-						for key, value := range v1.(map[interface{}]interface{}) {
+
+						for key, value := range CastArbitraryMap(v1) {
 							resMap[key] = value
 						}
 						pair.A[k] = resMap
 
 						queue = append(queue, mergeValuesPair{
 							A: resMap,
-							B: v2.(map[interface{}]interface{}),
+							B: CastArbitraryMap(v2),
 						})
 					case reflect.Array, reflect.Slice:
 						resArr := make([]interface{}, 0)
-						for _, elem := range v1.([]interface{}) {
+						for _, elem := range CastArbitrarySlice(v1) {
 							resArr = append(resArr, elem)
 						}
-						for _, elem := range v2.([]interface{}) {
+						for _, elem := range CastArbitrarySlice(v2) {
 							resArr = append(resArr, elem)
 						}
 						pair.A[k] = resArr
