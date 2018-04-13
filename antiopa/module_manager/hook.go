@@ -220,24 +220,40 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 }
 
 func (h *GlobalHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
-	valuesPath, err := h.prepareValuesPath()
+	configValuesPath, err := h.prepareConfigValuesPath()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	cmd := h.moduleManager.makeCommand(WorkingDir, valuesPath, h.Path, []string{})
+	dynamicValuesPath, err := h.prepareDynamicValuesPath()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, dynamicValuesPath, h.Path, []string{})
 	return h.moduleManager.execHook(filepath.Join(TempDir, "values", "hooks"), h.Name, cmd)
 }
 
-func (h *GlobalHook) prepareValuesPath() (string, error) {
-	valuesPath, err := dumpValuesYaml("global-hooks.yaml", h.values())
+func (h *GlobalHook) prepareConfigValuesPath() (string, error) {
+	configValuesPath, err := dumpValuesYaml("global-hooks-config-values.yaml", h.configValues())
 	if err != nil {
 		return "", err
 	}
-	return valuesPath, nil
+	return configValuesPath, nil
 }
 
-func (h *GlobalHook) values() utils.Values {
-	return utils.MergeValues(h.moduleManager.globalConfigValues, h.moduleManager.kubeConfigValues, h.moduleManager.dynamicValues)
+func (h *GlobalHook) prepareDynamicValuesPath() (string, error) {
+	dynamicValuesPath, err := dumpValuesYaml("global-hooks-dynamic-values.yaml", h.dynamicValues())
+	if err != nil {
+		return "", err
+	}
+	return dynamicValuesPath, nil
+}
+
+func (h *GlobalHook) configValues() utils.Values {
+	return utils.MergeValues(h.moduleManager.globalConfigValues, h.moduleManager.kubeConfigValues)
+}
+
+func (h *GlobalHook) dynamicValues() utils.Values {
+	return h.moduleManager.dynamicValues
 }
 
 func (h *ModuleHook) run(bindingType BindingType) error {
@@ -279,17 +295,24 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 }
 
 func (h *ModuleHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[string]interface{}, *jsonpatch.Patch, error) {
-	valuesPath, err := h.prepareValuesPath()
+	configValuesPath, err := h.prepareConfigValuesPath()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-
-	cmd := h.moduleManager.makeCommand(WorkingDir, valuesPath, h.Path, []string{})
+	dynamicValuesPath, err := h.prepareDynamicValuesPath()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, dynamicValuesPath, h.Path, []string{})
 	return h.moduleManager.execHook(filepath.Join(TempDir, "values", "modules"), h.Name, cmd)
 }
 
-func (h *ModuleHook) prepareValuesPath() (string, error) {
-	return h.Module.prepareValuesPath()
+func (h *ModuleHook) prepareConfigValuesPath() (string, error) {
+	return h.Module.prepareConfigValuesPath()
+}
+
+func (h *ModuleHook) prepareDynamicValuesPath() (string, error) {
+	return h.Module.prepareDynamicValuesPath()
 }
 
 func (mm *MainModuleManager) initGlobalHooks() error {
@@ -508,4 +531,11 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 	rlog.Debugf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
 
 	return output, nil
+}
+
+func (mm *MainModuleManager) makeHookCommand(dir string, configValuesPath, dynamicValuesPath string, entrypoint string, args []string) *exec.Cmd {
+	envs := make([]string, 0)
+	envs = append(envs, fmt.Sprintf("CONFIG_VALUES_PATH=%s", configValuesPath))
+	envs = append(envs, fmt.Sprintf("DYNAMIC_VALUES_PATH=%s", dynamicValuesPath))
+	return mm.makeCommand(dir, entrypoint, args, envs)
 }

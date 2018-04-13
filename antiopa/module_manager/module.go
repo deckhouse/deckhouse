@@ -151,11 +151,27 @@ func (m *Module) runHooksByBinding(binding BindingType) error {
 }
 
 func (m *Module) prepareValuesPath() (string, error) {
-	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s.yaml", m.Name), m.values())
+	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-values.yaml", m.Name), m.values())
 	if err != nil {
 		return "", err
 	}
 	return valuesPath, nil
+}
+
+func (m *Module) prepareConfigValuesPath() (string, error) {
+	configValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-config-values.yaml", m.Name), m.configValues())
+	if err != nil {
+		return "", err
+	}
+	return configValuesPath, nil
+}
+
+func (m *Module) prepareDynamicValuesPath() (string, error) {
+	dynamicValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-dynamic-values.yaml", m.Name), m.dynamicValues())
+	if err != nil {
+		return "", err
+	}
+	return dynamicValuesPath, nil
 }
 
 func (m *Module) checkHelmChart() (bool, error) {
@@ -172,11 +188,39 @@ func (m *Module) generateHelmReleaseName() string {
 }
 
 func (m *Module) values() utils.Values {
-	values := utils.Values{
-		"global":          utils.MergeValues(m.moduleManager.globalConfigValues, m.moduleManager.kubeConfigValues, m.moduleManager.dynamicValues),
-		m.camelcaseName(): utils.MergeValues(m.moduleManager.globalModulesConfigValues[m.Name], m.moduleManager.kubeModulesConfigValues[m.Name], m.moduleManager.modulesDynamicValues[m.Name]),
+	values := utils.Values{}
+	valuesKeys := []string{"global", m.camelcaseName()}
+
+	for _, key := range valuesKeys {
+		values[key] = utils.MergeValues(
+			m.configValues()[key].(utils.Values),
+			m.dynamicValues()[key].(utils.Values),
+		)
 	}
+
 	return values
+}
+
+func (m *Module) configValues() utils.Values {
+	configValues := utils.Values{
+		"global": utils.MergeValues(
+			m.moduleManager.globalConfigValues,
+			m.moduleManager.kubeConfigValues,
+		),
+		m.camelcaseName(): utils.MergeValues(
+			m.moduleManager.globalModulesConfigValues[m.Name],
+			m.moduleManager.kubeModulesConfigValues[m.Name],
+		),
+	}
+	return configValues
+}
+
+func (m *Module) dynamicValues() utils.Values {
+	dynamicValues := utils.Values{
+		"global":          m.moduleManager.dynamicValues,
+		m.camelcaseName(): m.moduleManager.modulesDynamicValues[m.Name],
+	}
+	return dynamicValues
 }
 
 func (m *Module) camelcaseName() string {
@@ -202,8 +246,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	cmd := m.moduleManager.makeCommand(WorkingDir, "", enabledScriptPath, []string{})
-	cmd.Env = append(cmd.Env, fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath))
+	cmd := m.moduleManager.makeCommand(WorkingDir, enabledScriptPath, []string{}, []string{fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath)})
 	if err := execCommand(cmd); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.Sys().(syscall.WaitStatus).ExitStatus() == 1 {
@@ -425,4 +468,10 @@ func valuesToString(values utils.Values) string {
 func execCommand(cmd *exec.Cmd) error {
 	rlog.Debugf("Executing command in '%s': '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
 	return cmd.Run()
+}
+
+func (mm *MainModuleManager) makeCommand(dir string, entrypoint string, args []string, envs []string) *exec.Cmd {
+	envs = append(envs, os.Environ()...)
+	envs = append(envs, mm.helm.CommandEnv()...)
+	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
