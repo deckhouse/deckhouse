@@ -10,29 +10,38 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
+	"strconv"
+	"strings"
 )
 
 type ModuleManagerMock struct {
+	BeforeHookErrorsCount   int
+	TestModuleErrorsCount   int
+	DeleteModuleErrorsCount int
 }
 
 var mainTestGlobalHooksMap = map[module_manager.BindingType][]string{
 	module_manager.OnStartup: {
-		"hook_1", "hook_2",
+		"hook_1__31", "hook_2__32",
 	},
 	module_manager.BeforeAll: {
-		"before_hook_1", "before_hook_2",
+		"before_hook_1__51", "before_hook_2__52",
 	},
 	module_manager.AfterAll: {
-		"after_hook_1", "after_hook_2",
+		"after_hook_1__201", "after_hook_2__202",
 	},
 }
 
+var runOrder = []int{}
+
+var globalT *testing.T
+
 func (m *ModuleManagerMock) GetModulesToDisableOnInit() []string {
-	return []string{"disabled_module_1", "disabled_2", "disabled_3.14"}
+	return []string{"disabled_module_1__21", "disabled_2__22", "disabled_3.14__23"}
 }
 
 func (m *ModuleManagerMock) GetModulesToPurgeOnInit() []string {
-	return []string{"unknown_module_1", "abandoned_2", "forgotten_3.14"}
+	return []string{"unknown_module_1__11", "abandoned_1__12", "forgotten_3.14__13"}
 }
 
 func (m *ModuleManagerMock) Run() {
@@ -44,7 +53,7 @@ func (m *ModuleManagerMock) GetModule(name string) (*module_manager.Module, erro
 }
 
 func (m *ModuleManagerMock) GetModuleNamesInOrder() []string {
-	return []string{"test_module_1", "test_module_2"}
+	return []string{"test_module_1__101", "test_module_2__102"}
 }
 
 func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHook, error) {
@@ -64,17 +73,32 @@ func (m *ModuleManagerMock) GetModuleHooksInOrder(moduleName string, bindingType
 }
 
 func (m *ModuleManagerMock) DeleteModule(moduleName string) error {
+	addRunOrder(moduleName)
 	fmt.Printf("ModuleManagerMock DeleteModule '%s'\n", moduleName)
+	if strings.Contains(moduleName, "disabled_module_1") && m.DeleteModuleErrorsCount > 0 {
+		m.DeleteModuleErrorsCount--
+		return fmt.Errorf("fake module delete error: helm run error")
+	}
 	return nil
 }
 
 func (m *ModuleManagerMock) RunModule(moduleName string) error {
+	addRunOrder(moduleName)
 	fmt.Printf("ModuleManagerMock RunModule '%s'\n", moduleName)
+	if strings.Contains(moduleName, "test_module_2") && m.TestModuleErrorsCount > 0 {
+		m.TestModuleErrorsCount--
+		return fmt.Errorf("fake module error: /bin/bash not found")
+	}
 	return nil
 }
 
 func (m *ModuleManagerMock) RunGlobalHook(hookName string, binding module_manager.BindingType) error {
+	addRunOrder(hookName)
 	fmt.Printf("Run global hook name '%s' binding '%s'\n", hookName, binding)
+	if strings.Contains(hookName, "before_hook_1") && m.BeforeHookErrorsCount > 0 {
+		m.BeforeHookErrorsCount--
+		return fmt.Errorf("fake module error: /bin/bash not found")
+	}
 	return nil
 }
 
@@ -84,6 +108,7 @@ func (m *ModuleManagerMock) RunModuleHook(hookName string, binding module_manage
 
 type MockHelmClient struct {
 	helm.HelmClient
+	DeleteReleaseErrorsCount int
 }
 
 func (h MockHelmClient) CommandEnv() []string {
@@ -91,8 +116,25 @@ func (h MockHelmClient) CommandEnv() []string {
 }
 
 func (h MockHelmClient) DeleteRelease(name string) error {
+	addRunOrder(name)
 	fmt.Printf("HelmClient: DeleteRelease '%s'\n", name)
+	if strings.Contains(name, "abandoned_2") && h.DeleteReleaseErrorsCount > 0 {
+		h.DeleteReleaseErrorsCount--
+		return fmt.Errorf("fake helm error: helm syntax error")
+	}
 	return nil
+}
+
+func addRunOrder(name string) {
+	if !strings.Contains(name, "__") {
+		return
+	}
+	order := strings.Split(name, "__")[1]
+	orderI, err := strconv.Atoi(order)
+	if err != nil {
+		globalT.Fatalf("Cannot parse number from order '%s' from name '%s'", order, name)
+	}
+	runOrder = append(runOrder, orderI)
 }
 
 type QueueDumperTest struct {
@@ -105,7 +147,11 @@ func (q *QueueDumperTest) QueueChangeCallback() {
 	}
 }
 
-func TestMain_TaskRunner(t *testing.T) {
+// Тест заполнения очереди заданиями при запуске и прогон TaskRunner
+// после прогона очередь должна быть пустой
+func TestMain_TaskRunner_CreateOnStartupTasks(t *testing.T) {
+	runOrder = []int{}
+
 	// Mock ModuleManager
 	ModuleManager = &ModuleManagerMock{}
 
@@ -133,6 +179,8 @@ func TestMain_TaskRunner(t *testing.T) {
 	assert.Equalf(t, 0, TasksQueue.Length(), "%d tasks remain in queue after TasksRunner", TasksQueue.Length())
 }
 
+// Тест заполнения очереди через ModuleManager и его канал EventCh
+// Проверяется, что очередь будет заполнена нужным количеством заданий
 func TestMain_ModulesEventsHandler(t *testing.T) {
 	module_manager.EventCh = make(chan module_manager.Event, 1)
 	ManagersEventsHandlerStopCh = make(chan struct{}, 1)
@@ -194,14 +242,30 @@ func TestMain_ModulesEventsHandler(t *testing.T) {
 	assert.Equal(t, expectedCount, TasksQueue.Length())
 }
 
-func TestMain_Run(t *testing.T) {
+// Тест совместной работы ManagersEventsHandler и TaskRunner.
+// один модуль выдаёт ошибку, TaskRunner должен его перезапускать, не запуская другие модули
+// проверяется, что модули запускаются по порядку (порядок в runOrder — суффикс имени "__число")
+func TestMain_Run_With_InfiniteModuleError(t *testing.T) {
+	// Настройки задержек при ошибках и пустой очереди, чтобы тест побыстрее завершался.
+	QueueIsEmptyDelay = 50 * time.Millisecond
+	FailedHookDelay = 50 * time.Millisecond
+	FailedModuleDelay = 50 * time.Millisecond
+
 	module_manager.EventCh = make(chan module_manager.Event, 1)
 	ManagersEventsHandlerStopCh = make(chan struct{}, 1)
 
-	HelmClient = MockHelmClient{}
+	runOrder = []int{}
+
+	HelmClient = MockHelmClient{
+		DeleteReleaseErrorsCount: 0,
+	}
 
 	// Mock ModuleManager
-	ModuleManager = &ModuleManagerMock{}
+	ModuleManager = &ModuleManagerMock{
+		BeforeHookErrorsCount:   0,
+		TestModuleErrorsCount:   10000,
+		DeleteModuleErrorsCount: 0,
+	}
 
 	assert.Equal(t, 0, 0)
 	fmt.Println("Create queue")
@@ -213,7 +277,63 @@ func TestMain_Run(t *testing.T) {
 
 	Run()
 
+	time.Sleep(1000 * time.Millisecond)
+	// Stop events handler
+	ManagersEventsHandlerStopCh <- struct{}{}
+	// stop tasks runner: add stop task
+	stopTask := task.NewTask(task.Stop, "stop runner")
+	TasksQueue.Push(stopTask)
+
+	fmt.Println("wait for queueIsEmptyDelay")
 	time.Sleep(100 * time.Millisecond)
+
+	assert.True(t, TasksQueue.Length() > 0, "queue is empty with errored module %d", TasksQueue.Length())
+
+	accum := 0
+	for _, ord := range runOrder {
+		assert.True(t, ord >= accum, "detect unordered execution: '%d' '%d'\n%+v", accum, ord, runOrder)
+		accum = ord
+	}
+
+	fmt.Printf("runOrder: %+v", runOrder)
+}
+
+// Тест совместной работы ManagersEventsHandler и TaskRunner.
+// Модули и хуки выдают ошибки, TaskRunner должен их перезапускать, не запуская следующие задания.
+// Проверяется, что модули и хуки запускаются по порядку (порядок в runOrder — суффикс имени "__число")
+func TestMain_Run_With_RecoverableErrors(t *testing.T) {
+	// Настройки задержек при ошибках и пустой очереди, чтобы тест побыстрее завершался.
+	QueueIsEmptyDelay = 50 * time.Millisecond
+	FailedHookDelay = 50 * time.Millisecond
+	FailedModuleDelay = 50 * time.Millisecond
+
+	module_manager.EventCh = make(chan module_manager.Event, 1)
+	ManagersEventsHandlerStopCh = make(chan struct{}, 1)
+
+	runOrder = []int{}
+
+	HelmClient = MockHelmClient{
+		DeleteReleaseErrorsCount: 3,
+	}
+
+	// Mock ModuleManager
+	ModuleManager = &ModuleManagerMock{
+		BeforeHookErrorsCount:   3,
+		TestModuleErrorsCount:   6,
+		DeleteModuleErrorsCount: 2,
+	}
+
+	assert.Equal(t, 0, 0)
+	fmt.Println("Create queue")
+	// Fill a queue
+	TasksQueue = task.NewTasksQueue()
+	// watcher for more verbosity of CreateStartupTasks and
+	TasksQueue.AddWatcher(&QueueDumperTest{})
+	TasksQueue.ChangesEnable(true)
+
+	Run()
+
+	time.Sleep(1000 * time.Millisecond)
 	// Stop events handler
 	ManagersEventsHandlerStopCh <- struct{}{}
 	// stop tasks runner: add stop task
@@ -221,7 +341,15 @@ func TestMain_Run(t *testing.T) {
 	TasksQueue.Add(stopTask)
 
 	fmt.Println("wait for queueIsEmptyDelay")
-	time.Sleep(3100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	assert.Equalf(t, 0, TasksQueue.Length(), "%d tasks remain in queue after TasksRunner", TasksQueue.Length())
+
+	accum := 0
+	for _, ord := range runOrder {
+		assert.True(t, ord >= accum, "detect unordered execution: '%d' '%d'\n%+v", accum, ord, runOrder)
+		accum = ord
+	}
+
+	fmt.Printf("runOrder: %+v", runOrder)
 }

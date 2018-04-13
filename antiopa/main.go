@@ -45,7 +45,7 @@ var (
 const DefaultTasksQueueDumpFilePath = "/tmp/antiopa-tasks-queue"
 
 // Задержки при обработке тасков из очереди
-const (
+var (
 	QueueIsEmptyDelay = 3 * time.Second
 	FailedHookDelay   = 5 * time.Second
 	FailedModuleDelay = 5 * time.Second
@@ -287,7 +287,7 @@ func TasksRunner() {
 				err := ModuleManager.RunModule(t.GetName())
 				if err != nil {
 					t.IncrementFailureCount()
-					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
+					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 				} else {
 					TasksQueue.Pop()
@@ -296,7 +296,7 @@ func TasksRunner() {
 				err := ModuleManager.DeleteModule(t.GetName())
 				if err != nil {
 					t.IncrementFailureCount()
-					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
+					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 				} else {
 					TasksQueue.Pop()
@@ -305,7 +305,7 @@ func TasksRunner() {
 				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
 				if err != nil && !t.GetAllowFailure() {
 					t.IncrementFailureCount()
-					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
+					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 				} else {
 					TasksQueue.Pop()
@@ -314,7 +314,7 @@ func TasksRunner() {
 				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
 				if err != nil && !t.GetAllowFailure() {
 					t.IncrementFailureCount()
-					rlog.Debugf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount())
+					rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount())
 					TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
 				} else {
 					TasksQueue.Pop()
@@ -324,12 +324,12 @@ func TasksRunner() {
 				// удаления достаточно записать в лог
 				err := HelmClient.DeleteRelease(t.GetName())
 				if err != nil {
-					rlog.Errorf("Module purge for '%s' failed.", t.GetName())
+					rlog.Errorf("%s helm delete '%s' failed.", t.GetType(), t.GetName())
 				}
 				TasksQueue.Pop()
 			case task.Delay:
-				time.Sleep(t.GetDelay())
 				TasksQueue.Pop()
+				time.Sleep(t.GetDelay())
 			case task.Stop:
 				rlog.Infof("TaskRunner got stop task. Exiting runner loop.")
 				TasksQueue.Pop()

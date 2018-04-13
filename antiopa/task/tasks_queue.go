@@ -55,19 +55,18 @@ type FailureCountIncrementable interface {
 
 type TasksQueue struct {
 	*utils.Queue
-	queueRef *utils.Queue
 }
 
 func (tq *TasksQueue) Add(task Task) {
-	tq.queueRef.Add(task)
+	tq.Queue.Add(task)
 }
 
 func (tq *TasksQueue) Push(task Task) {
-	tq.queueRef.Push(task)
+	tq.Queue.Push(task)
 }
 
 func (tq *TasksQueue) Peek() (task Task, err error) {
-	res, err := tq.queueRef.Peek()
+	res, err := tq.Queue.Peek()
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +80,8 @@ func (tq *TasksQueue) Peek() (task Task, err error) {
 }
 
 func NewTasksQueue() *TasksQueue {
-	queue := utils.NewQueue()
 	return &TasksQueue{
-		Queue:    queue,
-		queueRef: queue,
+		Queue: utils.NewQueue(),
 	}
 }
 
