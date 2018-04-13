@@ -14,6 +14,8 @@
 * После этих манипуляций вы должны увидеть в Targets (на странице `/prometheus/targets`) новую группу target'ов с названием `custom-<значение label'а prometheus-custom-target>`, в которой должны быть указаны IP-адреса всех pod'ов, на которые ссылается сервис. Если этого не произошло — придется разобраться [в устройстве Prometheus Operator](../../200-prometheus-operator/docs/INTERNALS.md).
 
 
+[Читайте подробнее](PROMETHEUS_TARGETS_DEVELOPMENT.md) в документации по разработке target'ов Prometheus.
+
 ### Как добавлять кастомные dashboard'ы в конкретном проекте?
 
 А очень просто! Любой dashboard, добавленный в `cm/grafana-dashboard-definitions-custom`, автоматически попадет в Grafana (в folder с названием Custom).

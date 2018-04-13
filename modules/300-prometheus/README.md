@@ -9,6 +9,7 @@
 * [Интеграция с Madison](docs/MADISON.md)
 * [Разработка правил для Prometheus (алертов и recording)](docs/PROMETHEUS_RULES_DEVELOPMENT.md)
 * [Разработка графиков (Dashboard'ов для Grafana)](docs/GRAFANA_DASHBOARD_DEVELOPMENT.md)
+* [Разработка target'ов для Prometheus (целей, которые мониторить)](docs/PROMETHEUS_TARGETS_DEVELOPMENT.md)
 * [Кастомные правила и графики для конкретного проекта](docs/PROJECT_CUSTOMIZATION.md)
 
 Конфигурация
