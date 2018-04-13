@@ -4,4 +4,4 @@ metadata:
   name: hello-secret
 type: Opaque
 data:
-  testkey: testvalue
+  heapster: e30K
