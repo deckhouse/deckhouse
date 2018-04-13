@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ type HelmClient interface {
 	Cmd(args ...string) (string, string, error)
 	DeleteSingleFailedRevision(releaseName string) error
 	LastReleaseStatus(releaseName string) (string, string, error)
-	UpgradeRelease(releaseName string, chartPath string, valuesPaths []string) error
+	UpgradeRelease(releaseName string, chart string, valuesPaths []string) error
 	DeleteRelease(releaseName string) error
 	ListReleases() ([]string, error)
 	IsReleaseExists(releaseName string) (bool, error)
@@ -136,7 +137,22 @@ func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, sta
 	return
 }
 
-func (helm *CliHelm) UpgradeRelease(releaseName string, chartPath string, valuesPaths []string) error {
+func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPaths []string) error {
+	args := make([]string, 0)
+	args = append(args, "upgrade")
+	args = append(args, "--install")
+	args = append(args, releaseName)
+	args = append(args, chart)
+	for _, valuesPath := range valuesPaths {
+		args = append(args, "--values")
+		args = append(args, valuesPath)
+	}
+
+	stdout, stderr, err := helm.Cmd(args...)
+	if err != nil {
+		rlog.Debugf("Helm upgrade failed: %s:\n%s %s", err, stdout, stderr)
+	}
+
 	return nil
 }
 
@@ -185,6 +201,8 @@ func (helm *CliHelm) ListReleases() ([]string, error) {
 			}
 		}
 	}
+
+	sort.Strings(releases)
 
 	return releases, nil
 }

@@ -3,20 +3,76 @@ package helm
 import (
 	"fmt"
 	"github.com/romana/rlog"
+	"path/filepath"
 	"reflect"
+	"runtime"
+	"sort"
 	"testing"
 
 	uuid "gopkg.in/satori/go.uuid.v1"
 	v1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/rbac/v1beta1"
 
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 )
 
-// Для теста требуется kubernetes + helm, поэтому skip
+func getTestDirectoryPath(testName string) string {
+	_, testFile, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(testFile), "testdata", testName)
+}
+
+func shouldDeleteRelease(helm HelmClient, releaseName string) (err error) {
+	err = helm.DeleteRelease(releaseName)
+	if err != nil {
+		return fmt.Errorf("Should delete existing release '%s' successfully, got error: %s", releaseName, err)
+	}
+	isExists, err := helm.IsReleaseExists(releaseName)
+	if err != nil {
+		return err
+	}
+	if isExists {
+		return fmt.Errorf("Release '%s' should not exist after deletion", releaseName)
+	}
+
+	return nil
+}
+
+func releasesListShouldEqual(helm HelmClient, expectedList []string) (err error) {
+	releases, err := helm.ListReleases()
+	if err != nil {
+		return err
+	}
+
+	sortedExpectedList := make([]string, len(expectedList))
+	copy(sortedExpectedList, expectedList)
+	sort.Strings(sortedExpectedList)
+
+	if !reflect.DeepEqual(sortedExpectedList, releases) {
+		return fmt.Errorf("Expected %+v releases list, got %+v", expectedList, releases)
+	}
+
+	return nil
+}
+
+func shouldUpgradeRelease(helm HelmClient, releaseName string, chart string, valuesPaths []string) (err error) {
+	err = helm.UpgradeRelease(releaseName, chart, []string{})
+	if err != nil {
+		return fmt.Errorf("Cannot install test release: %s", err)
+	}
+	isExists, err := helm.IsReleaseExists(releaseName)
+	if err != nil {
+		return err
+	}
+	if !isExists {
+		return fmt.Errorf("Release '%s' should exist", releaseName)
+	}
+	return nil
+}
+
 func TestHelm(t *testing.T) {
+	// Для теста требуется kubernetes + helm, поэтому skip
 	t.Skip()
 
-	var releaseName string
 	var err error
 	var stdout, stderr string
 	var isExists bool
@@ -32,10 +88,44 @@ func TestHelm(t *testing.T) {
 	testNs.Name = helm.TillerNamespace()
 	_, err = kube.KubernetesClient.CoreV1().Namespaces().Create(testNs)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	stdout, stderr, err = helm.Cmd("init", "--upgrade", "--wait")
+	sa := &v1.ServiceAccount{}
+	sa.Name = "tiller"
+	_, err = kube.KubernetesClient.CoreV1().ServiceAccounts(helm.TillerNamespace()).Create(sa)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	role := &v1beta1.Role{}
+	role.Name = "tiller-role"
+	role.Rules = []v1beta1.PolicyRule{
+		v1beta1.PolicyRule{
+			APIGroups: []string{"*"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		},
+	}
+	_, err = kube.KubernetesClient.RbacV1beta1().Roles(helm.TillerNamespace()).Create(role)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rb := &v1beta1.RoleBinding{}
+	rb.Name = "tiller-binding"
+	rb.RoleRef.Kind = "Role"
+	rb.RoleRef.Name = "tiller-role"
+	rb.RoleRef.APIGroup = "rbac.authorization.k8s.io"
+	rb.Subjects = []v1beta1.Subject{
+		v1beta1.Subject{Kind: "ServiceAccount", Name: "tiller", Namespace: helm.TillerNamespace()},
+	}
+	_, err = kube.KubernetesClient.RbacV1beta1().RoleBindings(helm.TillerNamespace()).Create(rb)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, err = helm.Cmd("init", "--upgrade", "--wait", "--service-account", "tiller")
 	if err != nil {
 		t.Errorf("Cannot init test tiller in '%s' namespace: %s\n%s %s", helm.TillerNamespace(), err, stdout, stderr)
 	}
@@ -48,62 +138,54 @@ func TestHelm(t *testing.T) {
 		t.Errorf("Expected empty releases list, got: %+v", releases)
 	}
 
-	releaseName = "asdf"
-	_, _, err = helm.LastReleaseStatus(releaseName)
+	_, _, err = helm.LastReleaseStatus("asfd")
 	if err == nil {
 		t.Error(err)
 	}
-	isExists, err = helm.IsReleaseExists(releaseName)
+	isExists, err = helm.IsReleaseExists("asdf")
 	if err != nil {
 		t.Error(err)
 	}
 	if isExists {
-		t.Errorf("Release '%s' should not exist", releaseName)
+		t.Errorf("Release '%s' should not exist", "asdf")
 	}
-	err = helm.DeleteRelease(releaseName)
+	err = helm.DeleteRelease("asdf")
 	if err == nil {
-		t.Errorf("Should fail when trying to delete unexisting release '%s'", releaseName)
+		t.Errorf("Should fail when trying to delete unexisting release '%s'", "asdf")
 	}
 
-	releaseName = "some-module"
-	stdout, stderr, err = helm.Cmd("install", "stable/redis", "--name", releaseName, "--namespace", helm.TillerNamespace())
-	if err != nil {
-		t.Errorf("Cannot install test release: %s\n%s %s", err, stdout, stderr)
-	}
-	isExists, err = helm.IsReleaseExists(releaseName)
+	err = shouldUpgradeRelease(helm, "test-redis", "stable/redis", []string{})
 	if err != nil {
 		t.Error(err)
 	}
-	if !isExists {
-		t.Errorf("Release '%s' should exist", releaseName)
-	}
 
-	releases, err = helm.ListReleases()
+	err = shouldUpgradeRelease(helm, "test-local-chart", filepath.Join(getTestDirectoryPath("test_helm"), "chart"), []string{})
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual([]string{"some-module"}, releases) {
-		t.Errorf("Got unexpected releases list: %+v", releases)
-	}
 
-	err = helm.DeleteRelease(releaseName)
-	if err != nil {
-		t.Errorf("Should succeed when trying to delete existing release '%s', got error: %s", releaseName, err)
-	}
-	isExists, err = helm.IsReleaseExists(releaseName)
+	err = releasesListShouldEqual(helm, []string{"test-local-chart", "test-redis"})
 	if err != nil {
 		t.Error(err)
 	}
-	if isExists {
-		t.Errorf("Release '%s' should not exist after deletion", releaseName)
-	}
 
-	releases, err = helm.ListReleases()
+	err = shouldDeleteRelease(helm, "test-redis")
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual([]string{}, releases) {
-		t.Errorf("Expected empty releases list, got: %+v", releases)
+
+	err = releasesListShouldEqual(helm, []string{"test-local-chart"})
+	if err != nil {
+		t.Error(err)
 	}
 
+	err = shouldDeleteRelease(helm, "test-local-chart")
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = releasesListShouldEqual(helm, []string{})
+	if err != nil {
+		t.Error(err)
+	}
 }

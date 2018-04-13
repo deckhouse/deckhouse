@@ -17,6 +17,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1beta1 "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	rbacv1alpha1 "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
+	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 )
 
 const (
@@ -37,6 +39,8 @@ var (
 type Client interface {
 	CoreV1() corev1.CoreV1Interface
 	AppsV1beta1() appsv1beta1.AppsV1beta1Interface
+	RbacV1alpha1() rbacv1alpha1.RbacV1alpha1Interface
+	RbacV1beta1() rbacv1beta1.RbacV1beta1Interface
 }
 
 func IsRunningOutOfKubeCluster() bool {
