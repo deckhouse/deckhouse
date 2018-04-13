@@ -136,6 +136,7 @@ type Event struct {
     onStartup: ORDER, // оба
     beforeHelm: ORDER, // только module
     afterHelm: ORDER, // только module
+    afterDeleteHelm: ORDER, // только module
     beforeAll: ORDER, // только global
     afterAll: ORDER, // только global
     onKubeNodeChange: ORDER, // только global
@@ -448,7 +449,7 @@ func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.Mod
 		res.Events = append(res.Events, Event{
 			Type: ModulesChanged,
 			ModulesChanges: []ModuleChange{
-				ModuleChange{Name: newModuleConfig.ModuleName, ChangeType: Changed},
+				{Name: newModuleConfig.ModuleName, ChangeType: Changed},
 			},
 		})
 	}
@@ -578,10 +579,6 @@ func (mm *MainModuleManager) GetModuleHooksInOrder(moduleName string, bindingTyp
 	return moduleHooksNames, nil
 }
 
-/*
- * TODO: удаляет helm release (purge)
- * TODO: выполняет новый вид хука afterHelmDelete
- */
 func (mm *MainModuleManager) DeleteModule(moduleName string) error {
 	module, err := mm.GetModule(moduleName)
 	if err != nil {
