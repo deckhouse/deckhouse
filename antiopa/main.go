@@ -277,66 +277,66 @@ func TasksRunner() {
 			time.Sleep(QueueIsEmptyDelay)
 		}
 		for {
-			headTask, _ := TasksQueue.Peek()
-			if headTask == nil {
+			rlog.Debugf(">> %+v", TasksQueue)
+			t, _ := TasksQueue.Peek()
+			if t == nil {
 				break
 			}
-			if t, ok := headTask.(*task.Task); ok {
-				switch t.Type {
-				case task.ModuleRun:
-					err := ModuleManager.RunModule(t.Name)
-					if err != nil {
-						t.IncrementFailureCount()
-						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
-						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
-					} else {
-						TasksQueue.Pop()
-					}
-				case task.ModuleDelete:
-					err := ModuleManager.DeleteModule(t.Name)
-					if err != nil {
-						t.IncrementFailureCount()
-						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
-						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
-					} else {
-						TasksQueue.Pop()
-					}
-				case task.ModuleHookRun:
-					err := ModuleManager.RunModuleHook(t.Name, t.Binding)
-					if err != nil && !t.AllowFailure {
-						t.IncrementFailureCount()
-						rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.FailureCount)
-						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
-					} else {
-						TasksQueue.Pop()
-					}
-				case task.GlobalHookRun:
-					err := ModuleManager.RunGlobalHook(t.Name, t.Binding)
-					if err != nil && !t.AllowFailure {
-						t.IncrementFailureCount()
-						rlog.Debugf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d", t.Type, t.Name, t.Binding, t.FailureCount)
-						TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
-					} else {
-						TasksQueue.Pop()
-					}
-				case task.ModulePurge:
-					// если вызван purge, то про модуль ничего неизвестно, поэтому ошибку
-					// удаления достаточно записать в лог
-					err := HelmClient.DeleteRelease(t.Name)
-					if err != nil {
-						rlog.Errorf("Module purge for '%s' failed.", t.Name)
-					}
+
+			switch t.GetType() {
+			case task.ModuleRun:
+				err := ModuleManager.RunModule(t.GetName())
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
 					TasksQueue.Pop()
-				case task.Delay:
-					td := headTask.(*task.TaskDelay)
-					time.Sleep(td.Delay)
-					TasksQueue.Pop()
-				case task.Stop:
-					rlog.Infof("TaskRunner got stop task. Exiting runner loop.")
-					TasksQueue.Pop()
-					return
 				}
+			case task.ModuleDelete:
+				err := ModuleManager.DeleteModule(t.GetName())
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModuleHookRun:
+				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
+				if err != nil && !t.GetAllowFailure() {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetFailureCount())
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.GlobalHookRun:
+				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
+				if err != nil && !t.GetAllowFailure() {
+					t.IncrementFailureCount()
+					rlog.Debugf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount())
+					TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModulePurge:
+				// если вызван purge, то про модуль ничего неизвестно, поэтому ошибку
+				// удаления достаточно записать в лог
+				err := HelmClient.DeleteRelease(t.GetName())
+				if err != nil {
+					rlog.Errorf("Module purge for '%s' failed.", t.GetName())
+				}
+				TasksQueue.Pop()
+			case task.Delay:
+				time.Sleep(t.GetDelay())
+				TasksQueue.Pop()
+			case task.Stop:
+				rlog.Infof("TaskRunner got stop task. Exiting runner loop.")
+				TasksQueue.Pop()
+				return
 			}
+
 			// break if empty to prevent infinity loop
 			if TasksQueue.IsEmpty() {
 				break
