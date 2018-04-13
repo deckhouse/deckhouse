@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"afterDeleteHelm\": 1
+}
+"
+else
+    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_MERGE_PATH"
+{
+    "afterDeleteHelm": "value"
+}
+EOF
+fi

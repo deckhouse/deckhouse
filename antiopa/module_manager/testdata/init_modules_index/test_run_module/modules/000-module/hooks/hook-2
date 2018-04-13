@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"afterHelm\": 2
+}
+"
+else
+    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_MERGE_PATH"
+{
+    "afterHelm": "override-value"
+}
+EOF
+fi

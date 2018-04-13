@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/magiconair/properties/assert"
+
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
@@ -235,16 +237,30 @@ func TestMainModuleManager_GetModuleHooksInOrder2(t *testing.T) {
 	}
 }
 
-func TestMainModuleManager_RunModule(t *testing.T) {
-	t.Skip()
-}
-
 type MockHelmClient struct {
 	helm.HelmClient
+	DeleteSingleFailedRevisionExecuted bool
+	UpgradeReleaseExecuted             bool
+	DeleteReleaseExecuted              bool
 }
 
-func (h MockHelmClient) CommandEnv() []string {
+func (h *MockHelmClient) CommandEnv() []string {
 	return []string{}
+}
+
+func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
+	h.DeleteSingleFailedRevisionExecuted = true
+	return nil
+}
+
+func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string) error {
+	h.UpgradeReleaseExecuted = true
+	return nil
+}
+
+func (h *MockHelmClient) DeleteRelease(_ string) error {
+	h.DeleteReleaseExecuted = true
+	return nil
 }
 
 type MockKubeConfigManager struct {
@@ -259,9 +275,61 @@ func (kcm MockKubeConfigManager) SetModuleKubeValues(moduleName string, values u
 	return nil
 }
 
+func TestMainModuleManager_RunModule(t *testing.T) {
+	mm := &MainModuleManager{}
+	hc := &MockHelmClient{}
+	mm.helm = hc
+	mm.kubeConfigManager = MockKubeConfigManager{}
+	mm.kubeModulesConfigValues = make(map[string]utils.Values)
+	runInitModulesIndex(t, mm, "test_run_module")
+
+	moduleName := "module"
+	expectedModuleDynamicValues := utils.Values{
+		"afterHelm":  "override-value",
+		"beforeHelm": "override-value",
+	}
+
+	err := mm.RunModule(moduleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName]) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName])
+	}
+
+	assert.Equal(t, hc.DeleteSingleFailedRevisionExecuted, true, "helm.DeleteSingleFailedRevision must be executed!")
+	assert.Equal(t, hc.UpgradeReleaseExecuted, true, "helm.UpgradeReleaseExecuted must be executed!")
+}
+
+func TestMainModuleManager_DeleteModule(t *testing.T) {
+	mm := &MainModuleManager{}
+	hc := &MockHelmClient{}
+	mm.helm = hc
+	mm.kubeConfigManager = MockKubeConfigManager{}
+	mm.kubeModulesConfigValues = make(map[string]utils.Values)
+	runInitModulesIndex(t, mm, "test_delete_module")
+
+	moduleName := "module"
+	expectedModuleDynamicValues := utils.Values{
+		"afterDeleteHelm": "override-value",
+	}
+
+	err := mm.DeleteModule(moduleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName]) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName])
+	}
+
+	assert.Equal(t, hc.DeleteReleaseExecuted, true, "helm.DeleteRelease must be executed!")
+}
+
 func TestMainModuleManager_RunModuleHook(t *testing.T) {
 	mm := &MainModuleManager{}
-	mm.helm = MockHelmClient{}
+	mm.helm = &MockHelmClient{}
 	mm.kubeConfigManager = MockKubeConfigManager{}
 	mm.kubeModulesConfigValues = make(map[string]utils.Values)
 	runInitModulesIndex(t, mm, "test_run_module_hook")
@@ -435,7 +503,7 @@ func TestMainModuleManager_GetGlobalHooksInOrder2(t *testing.T) {
 
 func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 	mm := &MainModuleManager{}
-	mm.helm = MockHelmClient{}
+	mm.helm = &MockHelmClient{}
 	mm.kubeConfigManager = MockKubeConfigManager{}
 	mm.kubeModulesConfigValues = make(map[string]utils.Values)
 	runInitGlobalHooks(t, mm, "test_run_global_hook")

@@ -71,15 +71,8 @@ func (m *Module) cleanup() error {
 }
 
 func (m *Module) execRun() error {
-	err := m.execHelm(func(modulePath, valuesPath, helmReleaseName string) []string {
-		return []string{
-			"upgrade",
-			helmReleaseName,
-			modulePath,
-			"--install",
-			"--namespace", m.moduleManager.helm.TillerNamespace(),
-			"--values", valuesPath,
-		}
+	err := m.execHelm(func(valuesPath, helmReleaseName string) error {
+		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, m.Path, []string{valuesPath})
 	})
 
 	if err != nil {
@@ -90,7 +83,7 @@ func (m *Module) execRun() error {
 }
 
 func (m *Module) delete() error {
-	if err := m.execDelete(); err != nil {
+	if err := m.moduleManager.helm.DeleteRelease(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
 
@@ -102,14 +95,8 @@ func (m *Module) delete() error {
 }
 
 func (m *Module) execDelete() error {
-	err := m.execHelm(func(modulePath, valuesPath, helmReleaseName string) []string {
-		return []string{
-			"delete",
-			helmReleaseName,
-			"--purge",
-			"--namespace", m.moduleManager.helm.TillerNamespace(),
-			"--values", valuesPath,
-		}
+	err := m.execHelm(func(_, helmReleaseName string) error {
+		return m.moduleManager.helm.DeleteRelease(helmReleaseName)
 	})
 
 	if err != nil {
@@ -119,7 +106,7 @@ func (m *Module) execDelete() error {
 	return nil
 }
 
-func (m *Module) execHelm(prepareHelmArgs func(modulePath, valuesPath, helmReleaseName string) []string) error {
+func (m *Module) execHelm(executeHelm func(valuesPath, helmReleaseName string) error) error {
 	chartExists, err := m.checkHelmChart()
 	if !chartExists {
 		if err != nil {
@@ -136,11 +123,8 @@ func (m *Module) execHelm(prepareHelmArgs func(modulePath, valuesPath, helmRelea
 		return err
 	}
 
-	cmd := m.moduleManager.makeCommand(WorkingDir, valuesPath, "helm", []string{})
-	cmd.Args = prepareHelmArgs(m.Path, valuesPath, helmReleaseName)
-	err = execCommand(cmd)
-	if err != nil {
-		return fmt.Errorf("module '%s': helm FAILED: %s", m.Name, err)
+	if err = executeHelm(valuesPath, helmReleaseName); err != nil {
+		return err
 	}
 
 	return nil
