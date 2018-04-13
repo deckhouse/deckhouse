@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/romana/rlog"
-	"os"
-	"os/exec"
 	"reflect"
 	"sort"
 
@@ -671,13 +669,4 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 	}
 
 	return nil
-}
-
-func (mm *MainModuleManager) makeCommand(dir string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
-	envs := make([]string, 0)
-	envs = append(envs, os.Environ()...)
-	envs = append(envs, mm.helm.CommandEnv()...)
-	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
-
-	return utils.MakeCommand(dir, entrypoint, args, envs)
 }
