@@ -19,12 +19,12 @@ function _migrate() {
 }
 
 function __main__() {
-  # Чистим кластер от лишних объектов, созданных автоматически
-  #   * в ACS и в Manual автоматом создается clusterrole/system:heapster
-  #   * в ACS addonmanager создает:
-  #     * clusterrole и clusterrolebinding system:heapster-with-nanny
-  #     * deployment, service, и serviceaccount heapster (в ns kube-system)
+  # В Azure heapster ставится автоматически, поэтому мы ничего не делаем
+  if [[ "$(cluster::type)" == "ACS" ]] ; then
+    return 0
+  fi
 
+  # Чистим кластер от лишних объектов, созданных автоматически
   for resource in deployment/heapster service/heapster serviceaccount/heapster; do
     if heritage=$(kubectl -n kube-system get $resource -o jsonpath='{.metadata.labels.heritage}' 2> /dev/null) ; then
       if [[ "$heritage" != "antiopa" ]] ; then

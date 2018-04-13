@@ -1,3 +1,4 @@
+{{- if not (eq .Values.global.cluster.type "ACS") }}
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
@@ -35,3 +36,4 @@ rules:
   - deployments
   verbs:
   - watch
+{{- end }}

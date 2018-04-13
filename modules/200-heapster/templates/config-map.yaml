@@ -1,3 +1,4 @@
+{{- if not (eq .Values.global.cluster.type "ACS") }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,3 +11,13 @@ data:
   NannyConfiguration: |-
     apiVersion: nannyconfig/v1alpha1
     kind: NannyConfiguration
+{{- else }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heapster-stub
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+{{- end }}
