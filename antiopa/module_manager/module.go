@@ -72,7 +72,7 @@ func (m *Module) cleanup() error {
 
 func (m *Module) execRun() error {
 	err := m.execHelm(func(valuesPath, helmReleaseName string) error {
-		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, m.Path, []string{valuesPath}, "")
+		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, m.Path, []string{valuesPath}, m.moduleManager.helm.TillerNamespace())
 	})
 
 	if err != nil {

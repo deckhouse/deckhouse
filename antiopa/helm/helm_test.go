@@ -189,7 +189,7 @@ func TestHelm(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = helm.UpgradeRelease("hello", "no-such-chart", []string{}, "")
+	err = helm.UpgradeRelease("hello", "no-such-chart", []string{}, helm.TillerNamespace())
 	if err == nil {
 		t.Errorf("Expected helm upgrade to fail, got no error from helm client")
 	}
