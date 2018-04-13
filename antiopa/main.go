@@ -81,6 +81,9 @@ func Init() {
 	}
 	rlog.Debugf("Antiopa hostname: %s", Hostname)
 
+	// Инициализация подключения к kube
+	kube.InitKube()
+
 	// Инициализация слежения за образом
 	// TODO Antiopa может и не следить, если кластер заморожен?
 	err = docker_registry_manager.InitRegistryManager(Hostname)
@@ -88,9 +91,6 @@ func Init() {
 		rlog.Errorf("MAIN Fatal: Cannot initialize registry manager: %s", err)
 		os.Exit(1)
 	}
-
-	// Инициализация подключения к kube
-	kube.InitKube()
 
 	// Инициализация helm — установка tiller, если его нет
 	// TODO KubernetesAntiopaNamespace — имя поменяется, это старая переменная
