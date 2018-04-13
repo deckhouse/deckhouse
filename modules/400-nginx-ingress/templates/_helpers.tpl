@@ -51,3 +51,28 @@ tolerations:
   effect: NoExecute
   {{- end }}
 {{- end }}
+
+{{- define "helper.tolerationsForDirectFallback" }}
+  {{- if and (hasKey . "tolerations") (.tolerations) -}}
+tolerations:
+{{ .tolerations | toYaml | trim }}
+  {{- else if not (hasKey . "tolerations") -}}
+tolerations:
+- key: node-role/frontend
+  effect: NoExecute
+  {{- else }}
+tolerations:
+  {{- end }}
+- key: node.kubernetes.io/not-ready
+  operator: "Exists"
+  effect: "NoExecute"
+- key: node.kubernetes.io/out-of-disk
+  operator: "Exists"
+  effect: "NoExecute"
+- key: node.kubernetes.io/memory-pressure
+  operator: "Exists"
+  effect: "NoExecute"
+- key: node.kubernetes.io/disk-pressure
+  operator: "Exists"
+  effect: "NoExecute"
+{{- end }}

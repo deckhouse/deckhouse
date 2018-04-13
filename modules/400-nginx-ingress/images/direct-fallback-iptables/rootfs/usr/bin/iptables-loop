@@ -7,15 +7,7 @@ JUMP_RULE="-p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j $
 SOCKET_EXISTS_RULE="-m socket --nowildcard -j RETURN"
 DNAT_HTTP_RULE="-p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:81"
 DNAT_HTTPS_RULE="-p tcp --dport 443 -j DNAT --to-destination 127.0.0.1:444"
-
-### Миграция 2018-03-15: https://github.com/deckhouse/deckhouse/merge_requests/126
-if iptables -w -t nat -n --list nginx-ingress-bm-fallback >/dev/null 2>&1 ; then
-  if iptables -w -t nat -C PREROUTING -p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j nginx-ingress-bm-fallback >/dev/null 2>&1 ; then
-    iptables -w -t nat -D PREROUTING -p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j nginx-ingress-bm-fallback
-  fi
-  iptables -w -t nat -F nginx-ingress-bm-fallback
-  iptables -w -t nat -X nginx-ingress-bm-fallback
-fi
+INPUT_ACCEPT_RULE="-p tcp -m multiport --dport 81,444 -d 127.0.0.1 -m comment --comment direct-fallback -j ACCEPT"
 
 while true; do
   iptables -w -t nat -n --list "$CHAIN_NAME" >/dev/null 2>&1 || iptables -w -t nat -N "$CHAIN_NAME"
@@ -23,5 +15,6 @@ while true; do
   iptables -w -t nat -C "$CHAIN_NAME" $SOCKET_EXISTS_RULE >/dev/null 2>&1 || iptables -w -t nat -I "$CHAIN_NAME" 1 $SOCKET_EXISTS_RULE
   iptables -w -t nat -C "$CHAIN_NAME" $DNAT_HTTP_RULE >/dev/null 2>&1 || iptables -w -t nat -I "$CHAIN_NAME" 2 $DNAT_HTTP_RULE
   iptables -w -t nat -C "$CHAIN_NAME" $DNAT_HTTPS_RULE >/dev/null 2>&1 || iptables -w -t nat -I "$CHAIN_NAME" 3 $DNAT_HTTPS_RULE
+  iptables -w -C INPUT $INPUT_ACCEPT_RULE >/dev/null 2>&1 || iptables -w -I INPUT 1 $INPUT_ACCEPT_RULE
   sleep 60
 done

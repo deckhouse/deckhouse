@@ -1,5 +1,92 @@
 #!/bin/bash
 
-echo 'prometheus:'
-echo '  adminPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
-echo '  userPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
+source /antiopa/shell_lib.sh
+
+MADISON_SELF_SETUP_TOKEN="***REMOVED***"
+
+function __config__() {
+  jo -p beforeHelm=0
+}
+
+function __main__() {
+  local project=$(values::get global.project)
+  local cluster_name=$(values::get global.clusterName)
+
+  if values::is_empty $project || values::is_empry $cluster_name ; then
+    >&2 echo "Failed to extract project or clusterName from global values"
+    return 1
+  fi
+
+  local grafana_url="-"
+  local prometheus_url="-"
+  local cluster_hostname=$(values::get global.clusterHostname)
+  local scheme=$([[ "$(values::get global.ingressACME)" == "true" ]] && echo "https" || echo "http")
+  if ! values::is_empty $cluster_hostname ; then
+    grafana_url="${scheme}://prometheus.${cluster_hostname}/"
+    prometheus_url="${scheme}://prometheus.${cluster_hostname}/prometheus/"
+  fi
+
+  local madison_auth_key=$(values::get prometheus.madisonAuthKey)
+  if values::is_empty $madison_auth_key ; then
+    local request=$(jo type=prometheus name=kubernetes-$cluster_name prometheus_url=$prometheus_url grafana_url=$grafana_url)
+    local response=$(curl -s -H "Content-Type: application/json" -X POST -d "$request" https://madison.flant.com/api/$project/self_setup/$MADISON_SELF_SETUP_TOKEN)
+    local error=$(echo "$response" | jq .error -r)
+    madison_auth_key=$(echo "$response" | jq .auth_key -r)
+
+    if ! values::is_empty $error ; then
+      >&2 echo "Failed to self register in madison: $error"
+      return 1
+    fi
+
+    if values::is_empty $madison_auth_key ; then
+      >&2 echo "Failed to self register in madison: unknown error"
+      return 1
+    fi
+
+    values::set --config prometheus.madisonAuthKey $madison_auth_key
+  else
+    local request=$(jo name=kubernetes-$cluster_name prometheus_url=$prometheus_url grafana_url=$grafana_url)
+    local response=$(curl -s -H "Content-Type: application/json" -X PUT -d "$request" https://madison.flant.com/api/$project/self_update/$madison_auth_key)
+    local error=$(echo "$response" | jq .error -r)
+    madison_auth_key=$(echo "$response" | jq .auth_key -r)
+
+    if ! values::is_empty $error ; then
+      >&2 echo "Failed to self update in madison: $error"
+      return 1
+    fi
+
+    if values::is_empty $madison_auth_key ; then
+      >&2 echo "Failed to self update in madison: unknown error"
+      return 1
+    fi
+  fi
+}
+
+function __main_old__() {
+  echo 'prometheus:'
+  echo '  adminPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
+  echo '  userPassword: "'$(makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20)'"'
+
+  global_values=$(kubectl -n antiopa get cm/antiopa -o json | jq '.data.values' -r)
+  project=$(echo "$global_values" | grep '^  project:' | sed 's/^  project: //' | tr -d '"')
+  cluster_name=$(echo "$global_values" | grep '^  clusterName:' | sed 's/^  clusterName: //' | tr -d '"')
+  cluster_hostname=$(echo "$global_values" | grep '^  clusterHostname:' | sed 's/^  clusterHostname: //' | tr -d '"')
+  madison_auth_key=$(kubectl -n antiopa get cm/antiopa -o json | jq '.data."prometheus-values"' -r | grep '^  madisonAuthKey:' | sed 's/^  madisonAuthKey: //')
+  if [[ -z "$project" || -z "$cluster_name" ]] ; then
+    >&2 echo "Failed to extract project or clusterName from global values"
+    return 1
+  fi
+  if [[ -z "$madison_auth_key" || "$madison_auth_key" == "null" ]] ; then
+    madison_auth_key=$(curl -s -H "Content-Type: application/json" -X POST -d '{"type":"prometheus","name":"kubernetes-'$cluster_name'","prometheus_url":"https://prometheus.'$cluster_hostname'/prometheus/","grafana_url":"https://prometheus.'$cluster_hostname'/"}' https://madison.flant.com/api/$project/self_setup/$MADISON_SELF_SETUP_TOKEN | jq .auth_key -r)
+
+    if [[ -z "$madison_auth_key" || "$madison_auth_key" == "null" ]] ; then
+      >&2 echo "Error obtaining auth key from madison!"
+      return 1
+    fi
+  else
+    curl -s -H "Content-Type: application/json" -X PUT -d '{"name":"kubernetes-'$cluster_name'","prometheus_url":"https://prometheus.'$cluster_hostname'/prometheus/","grafana_url":"https://prometheus.'$cluster_hostname'/"}' https://madison.flant.com/api/$project/self_update/$madison_auth_key > /dev/null
+  fi
+  echo '  madisonAuthKey: '$madison_auth_key
+}
+
+hook::run $@

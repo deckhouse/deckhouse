@@ -1,0 +1,44 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-etcd
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: kube-master-proxy-prometheus-target
+  selector:
+    matchLabels:
+      kube-master-proxy-prometheus-target: etcd
+  namespaceSelector:
+    matchNames:
+    - kube-system
+  endpoints:
+  - port: etcd
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
+    - targetLabel: service
+      replacement: etcd
+{{- if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+  - port: etcd-events
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
+    - targetLabel: service
+      replacement: etcd-events
+{{- end }}

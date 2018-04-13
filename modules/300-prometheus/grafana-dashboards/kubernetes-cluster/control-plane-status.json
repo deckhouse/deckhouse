@@ -37,7 +37,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1522509485076,
+  "iteration": 1522700874115,
   "links": [],
   "panels": [
     {
@@ -103,6 +103,7 @@
         {
           "expr": "(sum(up{job=\"kube-apiserver\"} == 1) / sum(up{job=\"kube-apiserver\"})) * 100",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "refId": "A",
           "step": 600
@@ -184,6 +185,7 @@
         {
           "expr": "(sum(up{job=\"kube-controller-manager\"} == 1) / sum(up{job=\"kube-controller-manager\"})) * 100",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "refId": "A",
           "step": 600
@@ -265,6 +267,7 @@
         {
           "expr": "(sum(up{job=\"kube-scheduler\"} == 1) / sum(up{job=\"kube-scheduler\"})) * 100",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "refId": "A",
           "step": 600
@@ -346,6 +349,7 @@
         {
           "expr": "topk(1, (sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[$__range])) / sum by(instance) (rate(apiserver_request_count[$__range]))) * 100)",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -670,5 +674,5 @@
   "timezone": "",
   "title": "Control Plane Status",
   "uid": "3yqtXDziz",
-  "version": 5
+  "version": 1
 }

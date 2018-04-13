@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=0
+}
+
+function __main__() {
+  values::set global '{}'
+  values::set global.cluster '{}'
+}
+
+function __main_old__() {
+  return 0
+}
+
+hook::run $@

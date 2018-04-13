@@ -78,3 +78,25 @@ func TestMergeValuesWithNullValue(t *testing.T) {
 		t.Errorf("MergeValues FAILED: got unexpected merge result: %v", res)
 	}
 }
+
+func TestMergeValuesWithNullValue(t *testing.T) {
+	res := MergeValues(
+		map[interface{}]interface{}{
+			"hello": map[interface{}]interface{}{
+				"bbb": nil,
+			},
+		},
+		map[interface{}]interface{}{
+			"hello": map[interface{}]interface{}{
+				"bbb": nil,
+			},
+		})
+
+	if !reflect.DeepEqual(res, map[interface{}]interface{}{
+		"hello": map[interface{}]interface{}{
+			"bbb": nil,
+		},
+	}) {
+		t.Errorf("MergeValues FAILED: got unexpected merge result: %v", res)
+	}
+}
