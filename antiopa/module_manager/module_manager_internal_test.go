@@ -253,7 +253,7 @@ func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
 	return nil
 }
 
-func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string) error {
+func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string, _ string) error {
 	h.UpgradeReleaseExecuted = true
 	return nil
 }
