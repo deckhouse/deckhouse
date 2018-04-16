@@ -63,5 +63,6 @@ function values::unset() {
 }
 
 function values::is_empty() {
-  [[ -z "$1" || "$1" == "null" ]]
+  arg=${1:-}
+  [[ -z "$arg" || "$arg" == "null" ]]
 }
