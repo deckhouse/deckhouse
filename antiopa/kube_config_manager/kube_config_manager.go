@@ -101,8 +101,7 @@ func (kcm *MainKubeConfigManager) SetModuleKubeValues(moduleName string, values 
 	}
 
 	// TODO: store checksum
-	// FIXME: camelcase module name
-	_, err = kcm.setConfigData(map[string]string{moduleName: string(valuesYaml)})
+	_, err = kcm.setConfigData(map[string]string{utils.ModuleNameToValuesKey(moduleName): string(valuesYaml)})
 	if err != nil {
 		return err
 	}
@@ -174,7 +173,7 @@ func Init() (KubeConfigManager, error) {
 
 		for key, value := range obj.Data {
 			if key != GlobalValuesKeyName {
-				moduleConfig, err := utils.NewModuleConfigByYamlData(key, []byte(value))
+				moduleConfig, err := utils.NewModuleConfigByYamlData(utils.ModuleNameFromValuesKey(key), []byte(value))
 				if err != nil {
 					return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s", ConfigMapName, key, err)
 				}

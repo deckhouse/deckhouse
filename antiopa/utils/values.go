@@ -8,6 +8,7 @@ import (
 	"github.com/evanphx/json-patch"
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
+	"github.com/segmentio/go-camelcase"
 	"strconv"
 	"strings"
 )
@@ -18,6 +19,41 @@ type ModuleConfig struct {
 	ModuleName string
 	IsEnabled  bool
 	Values     Values
+}
+
+func ModuleNameToValuesKey(moduleName string) string {
+	return camelcase.Camelcase(moduleName)
+}
+
+func ModuleNameFromValuesKey(moduleValuesKey string) string {
+	b := make([]byte, 0, 64)
+	l := len(moduleValuesKey)
+	i := 0
+
+	for i < l {
+		c := moduleValuesKey[i]
+
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 {
+				// append dash module name parts delimiter
+				b = append(b, '-')
+			}
+			// append lowercased symbol
+			b = append(b, c+('a'-'A'))
+		} else if c >= '0' && c <= '9' {
+			if i > 0 {
+				// append dash module name parts delimiter
+				b = append(b, '-')
+			}
+			b = append(b, c)
+		} else {
+			b = append(b, c)
+		}
+
+		i++
+	}
+
+	return string(b)
 }
 
 func NewModuleConfigByYamlData(moduleName string, data []byte) (*ModuleConfig, error) {

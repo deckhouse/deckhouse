@@ -129,7 +129,7 @@ userPassword: qwerty`,
 				},
 			},
 		},
-		"nginxIngress": utils.Values{
+		"nginx-ingress": utils.Values{
 			"config": map[string]interface{}{
 				"hsts": true,
 				"setRealIPFrom": []interface{}{

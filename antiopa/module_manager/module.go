@@ -15,7 +15,6 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 
 	"github.com/romana/rlog"
-	"github.com/segmentio/go-camelcase"
 )
 
 type Module struct {
@@ -201,7 +200,7 @@ func (m *Module) generateHelmReleaseName() string {
 
 func (m *Module) values() utils.Values {
 	values := utils.Values{}
-	valuesKeys := []string{"global", m.camelcaseName()}
+	valuesKeys := []string{"global", m.moduleValuesKey()}
 
 	for _, key := range valuesKeys {
 		values[key] = utils.MergeValues(
@@ -219,7 +218,7 @@ func (m *Module) configValues() utils.Values {
 			m.moduleManager.globalConfigValues,
 			m.moduleManager.kubeConfigValues,
 		),
-		m.camelcaseName(): utils.MergeValues(
+		m.moduleValuesKey(): utils.MergeValues(
 			m.moduleManager.globalModulesConfigValues[m.Name],
 			m.moduleManager.kubeModulesConfigValues[m.Name],
 		),
@@ -229,14 +228,14 @@ func (m *Module) configValues() utils.Values {
 
 func (m *Module) dynamicValues() utils.Values {
 	dynamicValues := utils.Values{
-		"global":          m.moduleManager.dynamicValues,
-		m.camelcaseName(): m.moduleManager.modulesDynamicValues[m.Name],
+		"global":            m.moduleManager.dynamicValues,
+		m.moduleValuesKey(): m.moduleManager.modulesDynamicValues[m.Name],
 	}
 	return dynamicValues
 }
 
-func (m *Module) camelcaseName() string {
-	return camelcase.Camelcase(m.Name)
+func (m *Module) moduleValuesKey() string {
+	return utils.ModuleNameToValuesKey(m.Name)
 }
 
 func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool, error) {

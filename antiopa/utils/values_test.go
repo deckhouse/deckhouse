@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -123,5 +124,37 @@ func TestMergeValues(t *testing.T) {
 				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedValues, values)
 			}
 		})
+	}
+}
+
+func expectStringToEqual(str string, expected string) error {
+	if str != expected {
+		return fmt.Errorf("Expected '%s' string, got '%s'", expected, str)
+	}
+	return nil
+}
+
+func TestModuleNameConversions(t *testing.T) {
+	var err error
+
+	for _, strs := range [][]string{
+		[]string{"module-1", "module1"},
+		[]string{"prometheus", "prometheus"},
+		[]string{"prometheus-operator", "prometheusOperator"},
+		[]string{"hello-world-module", "helloWorldModule"},
+		[]string{"cert-manager-crd", "certManagerCrd"},
+	} {
+		moduleName := strs[0]
+		moduleValuesKey := strs[1]
+
+		err = expectStringToEqual(ModuleNameToValuesKey(moduleName), moduleValuesKey)
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = expectStringToEqual(ModuleNameFromValuesKey(moduleValuesKey), moduleName)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
