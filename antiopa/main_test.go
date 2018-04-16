@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,15 +11,15 @@ import (
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
+	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
-	"strconv"
-	"strings"
 )
 
 type ModuleManagerMock struct {
-	BeforeHookErrorsCount   int
-	TestModuleErrorsCount   int
-	DeleteModuleErrorsCount int
+	BeforeHookErrorsCount    int
+	TestModuleErrorsCount    int
+	DeleteModuleErrorsCount  int
+	ScheduledHookErrorsCount int
 }
 
 var mainTestGlobalHooksMap = map[module_manager.BindingType][]string{
@@ -29,6 +31,17 @@ var mainTestGlobalHooksMap = map[module_manager.BindingType][]string{
 	},
 	module_manager.AfterAll: {
 		"after_hook_1__201", "after_hook_2__202",
+	},
+}
+
+var scheduledHooks = map[string]module_manager.ScheduleConfig{
+	"scheduled_global_1": {
+		Crontab:      "*/1 * * * *",
+		AllowFailure: true,
+	},
+	"scheduled_module_1": {
+		Crontab:      "*/2 * * * *",
+		AllowFailure: false,
 	},
 }
 
@@ -57,18 +70,67 @@ func (m *ModuleManagerMock) GetModuleNamesInOrder() []string {
 }
 
 func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHook, error) {
-	panic("implement GetGlobalHook")
+	if _, has_hook := scheduledHooks[name]; has_hook {
+		return &module_manager.GlobalHook{
+			Hook: &module_manager.Hook{
+				Name:           name,
+				Path:           "/antiopa/hooks/global_1",
+				Bindings:       []module_manager.BindingType{module_manager.Schedule},
+				OrderByBinding: map[module_manager.BindingType]float64{},
+				Schedules: []module_manager.ScheduleConfig{
+					scheduledHooks[name],
+				},
+			},
+		}, nil
+	}
+	return nil, nil
 }
 
 func (m *ModuleManagerMock) GetModuleHook(name string) (*module_manager.ModuleHook, error) {
-	panic("implement GetModuleHook")
+	if _, has_hook := scheduledHooks[name]; has_hook {
+		return &module_manager.ModuleHook{
+			Hook: &module_manager.Hook{
+				Name:           name,
+				Path:           "/antiopa/modules/000_test_modu",
+				Bindings:       []module_manager.BindingType{module_manager.Schedule},
+				OrderByBinding: map[module_manager.BindingType]float64{},
+				Schedules: []module_manager.ScheduleConfig{
+					scheduledHooks[name],
+				},
+			},
+			Module: &module_manager.Module{
+				Name:          "test_module",
+				DirectoryName: "/antiopa/modules/000_test_modue",
+				Path:          "/antiopa/modules/000_test_modu",
+			},
+		}, nil
+	}
+	return nil, nil
 }
 
 func (m *ModuleManagerMock) GetGlobalHooksInOrder(bindingType module_manager.BindingType) []string {
+	if bindingType == module_manager.Schedule {
+		res := []string{}
+		for k, _ := range scheduledHooks {
+			if strings.Contains(k, "global") {
+				res = append(res, k)
+			}
+		}
+		return res
+	}
 	return mainTestGlobalHooksMap[bindingType]
 }
 
 func (m *ModuleManagerMock) GetModuleHooksInOrder(moduleName string, bindingType module_manager.BindingType) ([]string, error) {
+	if bindingType == module_manager.Schedule {
+		res := []string{}
+		for k, _ := range scheduledHooks {
+			if strings.Contains(k, "module") {
+				res = append(res, k)
+			}
+		}
+		return res, nil
+	}
 	return []string{"test_module_hook_1", "test_module_hook_2"}, nil
 }
 
@@ -103,7 +165,13 @@ func (m *ModuleManagerMock) RunGlobalHook(hookName string, binding module_manage
 }
 
 func (m *ModuleManagerMock) RunModuleHook(hookName string, binding module_manager.BindingType) error {
-	panic("implement RunModuleHook")
+	addRunOrder(hookName)
+	fmt.Printf("Run module hook name '%s' binding '%s'\n", hookName, binding)
+	if strings.Contains(hookName, "scheduled_module_1") && m.ScheduledHookErrorsCount > 0 {
+		m.ScheduledHookErrorsCount--
+		return fmt.Errorf("fake module hook error: /bin/ash not found")
+	}
+	return nil
 }
 
 type MockHelmClient struct {
@@ -155,7 +223,6 @@ func TestMain_TaskRunner_CreateOnStartupTasks(t *testing.T) {
 	// Mock ModuleManager
 	ModuleManager = &ModuleManagerMock{}
 
-	assert.Equal(t, 0, 0)
 	fmt.Println("Create queue")
 	// Fill a queue
 	TasksQueue = task.NewTasksQueue()
@@ -256,6 +323,8 @@ func TestMain_Run_With_InfiniteModuleError(t *testing.T) {
 
 	runOrder = []int{}
 
+	// Сделать моки для всего, что нужно для запуска Run
+
 	HelmClient = MockHelmClient{
 		DeleteReleaseErrorsCount: 0,
 	}
@@ -267,7 +336,9 @@ func TestMain_Run_With_InfiniteModuleError(t *testing.T) {
 		DeleteModuleErrorsCount: 0,
 	}
 
-	assert.Equal(t, 0, 0)
+	ScheduleManager = &MockScheduleManager{}
+
+	// Создать очередь
 	fmt.Println("Create queue")
 	// Fill a queue
 	TasksQueue = task.NewTasksQueue()
@@ -312,6 +383,8 @@ func TestMain_Run_With_RecoverableErrors(t *testing.T) {
 
 	runOrder = []int{}
 
+	// Сделать моки для всего, что нужно для запуска Run
+
 	HelmClient = MockHelmClient{
 		DeleteReleaseErrorsCount: 3,
 	}
@@ -323,7 +396,8 @@ func TestMain_Run_With_RecoverableErrors(t *testing.T) {
 		DeleteModuleErrorsCount: 2,
 	}
 
-	assert.Equal(t, 0, 0)
+	ScheduleManager = &MockScheduleManager{}
+
 	fmt.Println("Create queue")
 	// Fill a queue
 	TasksQueue = task.NewTasksQueue()
@@ -345,6 +419,133 @@ func TestMain_Run_With_RecoverableErrors(t *testing.T) {
 
 	assert.Equalf(t, 0, TasksQueue.Length(), "%d tasks remain in queue after TasksRunner", TasksQueue.Length())
 
+	accum := 0
+	for _, ord := range runOrder {
+		assert.True(t, ord >= accum, "detect unordered execution: '%d' '%d'\n%+v", accum, ord, runOrder)
+		accum = ord
+	}
+
+	fmt.Printf("runOrder: %+v", runOrder)
+}
+
+type MockScheduleManager struct {
+	schedule_manager.ScheduleManager
+}
+
+func (m *MockScheduleManager) Add(crontab string) (string, error) {
+	fmt.Printf("MockScheduleManager: Add crontab '%s'\n", crontab)
+	return crontab, nil
+}
+
+func (m *MockScheduleManager) Remove(entryId string) error {
+	fmt.Printf("MockScheduleManager: Remove crontab '%s'\n", entryId)
+	return nil
+}
+
+func (m *MockScheduleManager) Run() {
+	fmt.Printf("MockScheduleManager: Run\n")
+}
+
+// Тесты scheduled_tasks
+// Проинициализировать первый раз хуки по расписанию
+// Забросить в scheduled канал несколько расписаний
+// отключить модуль, забросить GLOBAL изменения, проверить, что хуки пересоздались и остался только глобальный
+// забросить в канал расписания, проверить, что выполнится только глобальный хук
+func TestMain_ScheduledTasks(t *testing.T) {
+
+	// Настройки задержек при ошибках и пустой очереди, чтобы тест побыстрее завершался.
+	QueueIsEmptyDelay = 50 * time.Millisecond
+	FailedHookDelay = 50 * time.Millisecond
+	FailedModuleDelay = 50 * time.Millisecond
+
+	module_manager.EventCh = make(chan module_manager.Event, 1)
+	ManagersEventsHandlerStopCh = make(chan struct{}, 1)
+
+	runOrder = []int{}
+
+	HelmClient = MockHelmClient{
+		DeleteReleaseErrorsCount: 3,
+	}
+
+	// Mock ModuleManager
+	ModuleManager = &ModuleManagerMock{
+		BeforeHookErrorsCount:   3,
+		TestModuleErrorsCount:   6,
+		DeleteModuleErrorsCount: 2,
+	}
+
+	// Create ScheduleManager
+	// Инициализация хуков по расписанию - карта scheduleId → []ScheduleHook
+	ScheduleManager = &MockScheduleManager{}
+	schedule_manager.ScheduleCh = make(chan string, 1)
+	ScheduledHooks = UpdateScheduleHooks(nil)
+	assert.Equal(t, 2, len(ScheduledHooks), "not enough scheduled hooks")
+
+	fmt.Println("Create queue")
+	// Fill a queue
+	TasksQueue = task.NewTasksQueue()
+	// watcher for more verbosity of CreateStartupTasks and
+	TasksQueue.AddWatcher(&QueueDumperTest{})
+	TasksQueue.ChangesEnable(true)
+
+	stepCh := make(chan struct{})
+
+	// обработчик событий от менеджеров — события превращаются в таски и
+	// добавляются в очередь
+	go ManagersEventsHandler()
+
+	// TasksRunner запускает задания из очереди
+	go TasksRunner()
+
+	// EmitScheduleEvents
+	go func() {
+		// подождать завершения init тасков
+		//time.Sleep(300 * time.Millisecond)
+		schedule_manager.ScheduleCh <- "*/1 * * * *"
+		time.Sleep(300 * time.Millisecond)
+		schedule_manager.ScheduleCh <- "*/2 * * * *"
+
+		// удалить хук
+		delete(scheduledHooks, "scheduled_global_1")
+
+		// GlobalChanged должен привести к пересозданию хранилища хуков по расписанию
+		time.Sleep(300 * time.Millisecond)
+		module_manager.EventCh <- module_manager.Event{
+			Type: module_manager.GlobalChanged,
+		}
+		time.Sleep(100 * time.Millisecond)
+		stepCh <- struct{}{}
+	}()
+	<-stepCh
+
+	// проверка хуков
+	assert.Equalf(t, 1, len(ScheduledHooks), "bad scheduled hooks count after GlobalChanged: %+v", ScheduledHooks)
+
+	// повторная отправка всех расписаний, в том числе удалённого
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		schedule_manager.ScheduleCh <- "*/1 * * * *"
+		time.Sleep(300 * time.Millisecond)
+		schedule_manager.ScheduleCh <- "*/2 * * * *"
+		stepCh <- struct{}{}
+	}()
+	<-stepCh
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// Stop events handler
+	ManagersEventsHandlerStopCh <- struct{}{}
+
+	// stop tasks runner: add stop task
+	stopTask := task.NewTask(task.Stop, "stop runner")
+	TasksQueue.Add(stopTask)
+
+	fmt.Println("wait for queueIsEmptyDelay")
+	time.Sleep(100 * time.Millisecond)
+
+	assert.Equalf(t, 0, TasksQueue.Length(), "%d tasks remain in queue after TasksRunner", TasksQueue.Length())
+
+	// TODO надо этот order переделать, чтобы были не чиселки, а лог выполнения модулей/хуков
 	accum := 0
 	for _, ord := range runOrder {
 		assert.True(t, ord >= accum, "detect unordered execution: '%d' '%d'\n%+v", accum, ord, runOrder)
