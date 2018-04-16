@@ -145,3 +145,11 @@ func deepMergeResToValues(res map[interface{}]interface{}) Values {
 	}
 	return values
 }
+
+func ValuesToString(values Values) string {
+	valuesYaml, err := yaml.Marshal(&values)
+	if err != nil {
+		return fmt.Sprintf("%v", values)
+	}
+	return string(valuesYaml)
+}

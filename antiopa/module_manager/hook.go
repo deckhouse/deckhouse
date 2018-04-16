@@ -200,7 +200,7 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 	}
 
 	if kubeConfigValuesChanged {
-		rlog.Debugf("Global hook '%s': updating kube config values:\n%s", h.Name, valuesToString(h.moduleManager.kubeConfigValues))
+		rlog.Debugf("Global hook '%s': updating kube config values:\n%s", h.Name, utils.ValuesToString(h.moduleManager.kubeConfigValues))
 		if err := h.moduleManager.kubeConfigManager.SetKubeValues(h.moduleManager.kubeConfigValues); err != nil {
 			return fmt.Errorf("global hook '%s': set kube config failed: %s", h.Name, err)
 		}
@@ -213,7 +213,7 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 	h.moduleManager.dynamicValues = newDynamicValues
 
 	if dynamicValuesChanged {
-		rlog.Debugf("Global hook '%s': updating dynamicValues:\n%s", h.Name, valuesToString(h.moduleManager.dynamicValues))
+		rlog.Debugf("Global hook '%s': dynamic values updated:\n%s", h.Name, utils.ValuesToString(h.moduleManager.dynamicValues))
 	}
 
 	return nil
@@ -233,7 +233,11 @@ func (h *GlobalHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[strin
 }
 
 func (h *GlobalHook) prepareConfigValuesPath() (string, error) {
-	configValuesPath, err := dumpValuesYaml("global-hooks-config-values.yaml", h.configValues())
+	values := h.configValues()
+
+	rlog.Debugf("Prepared hook %s config values:\n%s", h.Name, utils.ValuesToString(values))
+
+	configValuesPath, err := dumpValuesYaml("global-hooks-config-values.yaml", values)
 	if err != nil {
 		return "", err
 	}
@@ -241,7 +245,11 @@ func (h *GlobalHook) prepareConfigValuesPath() (string, error) {
 }
 
 func (h *GlobalHook) prepareDynamicValuesPath() (string, error) {
-	dynamicValuesPath, err := dumpValuesYaml("global-hooks-dynamic-values.yaml", h.dynamicValues())
+	values := h.dynamicValues()
+
+	rlog.Debugf("Prepared hook %s dynamic values:\n%s", h.Name, utils.ValuesToString(values))
+
+	dynamicValuesPath, err := dumpValuesYaml("global-hooks-dynamic-values.yaml", values)
 	if err != nil {
 		return "", err
 	}
@@ -274,7 +282,7 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 	h.moduleManager.kubeModulesConfigValues[moduleName] = newModuleConfigValues
 
 	if kubeModuleConfigValuesChanged {
-		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
+		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, utils.ValuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
 		err = h.moduleManager.kubeConfigManager.SetModuleKubeValues(moduleName, h.moduleManager.kubeModulesConfigValues[moduleName])
 		if err != nil {
 			return fmt.Errorf("hook '%s': set kube values failed: %s", h.Name, err)
@@ -288,7 +296,7 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 	h.moduleManager.modulesDynamicValues[moduleName] = newModuleDynamicValues
 
 	if moduleDynamicValuesChanged {
-		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.modulesDynamicValues[moduleName]))
+		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, utils.ValuesToString(h.moduleManager.modulesDynamicValues[moduleName]))
 	}
 
 	return nil

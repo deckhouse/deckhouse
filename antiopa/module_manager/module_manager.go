@@ -190,7 +190,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 				mm.kubeDisabledModules = append(mm.kubeDisabledModules, moduleConfig.ModuleName)
 			}
 		} else {
-			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
+			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, utils.ValuesToString(moduleConfig.Values))
 		}
 	}
 
@@ -371,7 +371,7 @@ func (mm *MainModuleManager) handleNewKubeConfig(newConfig kube_config_manager.C
 			}
 			res.KubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
 		} else {
-			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
+			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, utils.ValuesToString(moduleConfig.Values))
 		}
 	}
 
@@ -392,7 +392,7 @@ func (mm *MainModuleManager) handleNewKubeConfig(newConfig kube_config_manager.C
 
 func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, error) {
 	if _, hasKey := mm.modulesByName[newModuleConfig.ModuleName]; !hasKey {
-		rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", newModuleConfig.ModuleName, valuesToString(newModuleConfig.Values))
+		rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", newModuleConfig.ModuleName, utils.ValuesToString(newModuleConfig.Values))
 
 		return kubeUpdate{
 			EnabledModules:          mm.enabledModulesInOrder,

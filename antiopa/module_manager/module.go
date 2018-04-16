@@ -151,7 +151,11 @@ func (m *Module) runHooksByBinding(binding BindingType) error {
 }
 
 func (m *Module) prepareValuesPath() (string, error) {
-	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-values.yaml", m.Name), m.values())
+	values := m.values()
+
+	rlog.Debugf("Prepared module %s values:\n%s", m.Name, utils.ValuesToString(values))
+
+	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-values.yaml", m.Name), values)
 	if err != nil {
 		return "", err
 	}
@@ -159,7 +163,11 @@ func (m *Module) prepareValuesPath() (string, error) {
 }
 
 func (m *Module) prepareConfigValuesPath() (string, error) {
-	configValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-config-values.yaml", m.Name), m.configValues())
+	values := m.configValues()
+
+	rlog.Debugf("Prepared module %s config values:\n%s", m.Name, utils.ValuesToString(values))
+
+	configValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-config-values.yaml", m.Name), values)
 	if err != nil {
 		return "", err
 	}
@@ -167,7 +175,11 @@ func (m *Module) prepareConfigValuesPath() (string, error) {
 }
 
 func (m *Module) prepareDynamicValuesPath() (string, error) {
-	dynamicValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-dynamic-values.yaml", m.Name), m.dynamicValues())
+	values := m.dynamicValues()
+
+	rlog.Debugf("Prepared module %s dynamic values:\n%s", m.Name, utils.ValuesToString(values))
+
+	dynamicValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-dynamic-values.yaml", m.Name), values)
 	if err != nil {
 		return "", err
 	}
@@ -279,7 +291,7 @@ func (mm *MainModuleManager) initModulesIndex() error {
 	if err := mm.setGlobalConfigValues(); err != nil {
 		return err
 	}
-	rlog.Debugf("Set mm.globalConfigValues:\n%s", valuesToString(mm.globalConfigValues))
+	rlog.Debugf("Set mm.globalConfigValues:\n%s", utils.ValuesToString(mm.globalConfigValues))
 
 	mm.globalModulesConfigValues = make(map[string]utils.Values)
 
@@ -314,7 +326,7 @@ func (mm *MainModuleManager) initModulesIndex() error {
 
 					if moduleConfig != nil {
 						mm.globalModulesConfigValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, valuesToString(mm.globalModulesConfigValues[moduleName]))
+						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.globalModulesConfigValues[moduleName]))
 					}
 
 					mm.modulesDynamicValues[moduleName] = make(utils.Values)
@@ -455,14 +467,6 @@ func dumpData(filePath string, data []byte) error {
 		return err
 	}
 	return nil
-}
-
-func valuesToString(values utils.Values) string {
-	valuesYaml, err := yaml.Marshal(&values)
-	if err != nil {
-		return fmt.Sprintf("%v", values)
-	}
-	return string(valuesYaml)
 }
 
 func execCommand(cmd *exec.Cmd) error {
