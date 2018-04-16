@@ -128,7 +128,10 @@ type IterateOperation func(task interface{}, index int) string
 func (q *Queue) WithLock(operation TaskOperation) string {
 	q.m.Lock()
 	defer q.m.Unlock()
-	return operation(q.items[0])
+	if !q.isEmpty() {
+		return operation(q.items[0])
+	}
+	return ""
 }
 
 // Вызов операции над всеми элементами очереди с её блокировкой
