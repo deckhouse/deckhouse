@@ -199,39 +199,20 @@ func (m *Module) generateHelmReleaseName() string {
 }
 
 func (m *Module) values() utils.Values {
-	values := utils.Values{}
-	valuesKeys := []string{"global", m.moduleValuesKey()}
-
-	for _, key := range valuesKeys {
-		values[key] = utils.MergeValues(
-			m.configValues()[key].(utils.Values),
-			m.dynamicValues()[key].(utils.Values),
-		)
-	}
-
-	return values
+	return utils.MergeValues(m.configValues(), m.dynamicValues())
 }
 
 func (m *Module) configValues() utils.Values {
-	configValues := utils.Values{
-		"global": utils.MergeValues(
-			m.moduleManager.globalConfigValues,
-			m.moduleManager.kubeConfigValues,
-		),
-		m.moduleValuesKey(): utils.MergeValues(
-			m.moduleManager.globalModulesConfigValues[m.Name],
-			m.moduleManager.kubeModulesConfigValues[m.Name],
-		),
-	}
-	return configValues
+	return utils.MergeValues(
+		m.moduleManager.globalConfigValues,
+		m.moduleManager.kubeGlobalConfigValues,
+		m.moduleManager.modulesConfigValues[m.Name],
+		m.moduleManager.kubeModulesConfigValues[m.Name],
+	)
 }
 
 func (m *Module) dynamicValues() utils.Values {
-	dynamicValues := utils.Values{
-		"global":            m.moduleManager.dynamicValues,
-		m.moduleValuesKey(): m.moduleManager.modulesDynamicValues[m.Name],
-	}
-	return dynamicValues
+	return utils.MergeValues(m.moduleManager.globalDynamicValues, m.moduleManager.modulesDynamicValues[m.Name])
 }
 
 func (m *Module) moduleValuesKey() string {
@@ -290,9 +271,9 @@ func (mm *MainModuleManager) initModulesIndex() error {
 	if err := mm.setGlobalConfigValues(); err != nil {
 		return err
 	}
-	rlog.Debugf("Set mm.globalConfigValues:\n%s", utils.ValuesToString(mm.globalConfigValues))
+	rlog.Debugf("Set mm.configValues:\n%s", utils.ValuesToString(mm.globalConfigValues))
 
-	mm.globalModulesConfigValues = make(map[string]utils.Values)
+	mm.modulesConfigValues = make(map[string]utils.Values)
 
 	mm.modulesDynamicValues = make(map[string]utils.Values)
 
@@ -314,7 +295,7 @@ func (mm *MainModuleManager) initModulesIndex() error {
 				module.DirectoryName = file.Name()
 				module.Path = modulePath
 
-				moduleConfig, err := mm.getModuleConfig(modulePath)
+				moduleConfig, err := mm.getModuleConfig(module)
 				if err != nil {
 					return err
 				}
@@ -324,8 +305,8 @@ func (mm *MainModuleManager) initModulesIndex() error {
 					mm.allModuleNamesInOrder = append(mm.allModuleNamesInOrder, module.Name)
 
 					if moduleConfig != nil {
-						mm.globalModulesConfigValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set globalModulesConfigValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.globalModulesConfigValues[moduleName]))
+						mm.modulesConfigValues[moduleName] = moduleConfig.Values
+						rlog.Debugf("Set modulesConfigValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.modulesConfigValues[moduleName]))
 					}
 
 					mm.modulesDynamicValues[moduleName] = make(utils.Values)
@@ -348,16 +329,17 @@ func (mm *MainModuleManager) initModulesIndex() error {
 }
 
 func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
-	mm.globalConfigValues, err = readModulesValues()
+	values, err := readModulesValues()
 	if err != nil {
 		return err
 	}
+	mm.globalConfigValues = values
+
 	return nil
 }
 
-func (mm *MainModuleManager) getModuleConfig(modulePath string) (*utils.ModuleConfig, error) {
-	moduleName := filepath.Base(modulePath)
-	valuesYamlPath := filepath.Join(modulePath, "values.yaml")
+func (mm *MainModuleManager) getModuleConfig(module *Module) (*utils.ModuleConfig, error) {
+	valuesYamlPath := filepath.Join(module.Path, "values.yaml")
 
 	if _, err := os.Stat(valuesYamlPath); os.IsNotExist(err) {
 		return nil, nil
@@ -365,10 +347,10 @@ func (mm *MainModuleManager) getModuleConfig(modulePath string) (*utils.ModuleCo
 
 	data, err := ioutil.ReadFile(valuesYamlPath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read '%s': %s", modulePath, err)
+		return nil, fmt.Errorf("cannot read '%s': %s", module.Path, err)
 	}
 
-	moduleConfig, err := utils.NewModuleConfigByYamlData(moduleName, data)
+	moduleConfig, err := utils.NewModuleConfigByValuesYamlData(module.Name, data)
 	if err != nil {
 		return nil, err
 	}
@@ -377,11 +359,24 @@ func (mm *MainModuleManager) getModuleConfig(modulePath string) (*utils.ModuleCo
 }
 
 func readModulesValues() (utils.Values, error) {
-	path := filepath.Join(WorkingDir, "modules", "values.yaml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	filePath := filepath.Join(WorkingDir, "modules", "values.yaml")
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return make(utils.Values), nil
 	}
-	return readValuesYamlFile(path)
+
+	valuesYaml, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read '%s': %s", filePath, err)
+	}
+
+	var res map[interface{}]interface{}
+
+	err = yaml.Unmarshal(valuesYaml, &res)
+	if err != nil {
+		return nil, fmt.Errorf("bad '%s': %s\n%s", filePath, err, string(valuesYaml))
+	}
+
+	return utils.FormatValues(res)
 }
 
 func getExecutableHooksFilesPaths(dir string) ([]string, error) {
@@ -409,27 +404,6 @@ func getExecutableHooksFilesPaths(dir string) ([]string, error) {
 	}
 
 	return paths, nil
-}
-
-func readValuesYamlFile(filePath string) (utils.Values, error) {
-	valuesYaml, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read '%s': %s", filePath, err)
-	}
-
-	var res map[interface{}]interface{}
-
-	err = yaml.Unmarshal(valuesYaml, &res)
-	if err != nil {
-		return nil, fmt.Errorf("bad '%s': %s", filePath, err)
-	}
-
-	values, err := utils.FormatValues(res)
-	if err != nil {
-		return nil, err
-	}
-
-	return values, nil
 }
 
 func dumpValuesYaml(fileName string, values utils.Values) (string, error) {

@@ -11,14 +11,14 @@ func TestModuleConfig(t *testing.T) {
 	var config *ModuleConfig
 	var err error
 
-	config, err = NewModuleConfig("test-module", 1234)
+	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"testModule": 1234})
 	if err == nil {
 		t.Errorf("Expected error, got ModuleConfig: %v", config)
 	} else if !strings.HasPrefix(err.Error(), "required map or bool data") {
 		t.Errorf("Got unexpected error: %s", err)
 	}
 
-	config, err = NewModuleConfig("test-module", false)
+	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"testModule": false})
 	if err != nil {
 		t.Error(err)
 	}
@@ -26,7 +26,7 @@ func TestModuleConfig(t *testing.T) {
 		t.Errorf("Expected module to be disabled, got: %v", config)
 	}
 
-	config, err = NewModuleConfig("test-module", true)
+	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"testModule": true})
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,12 +35,16 @@ func TestModuleConfig(t *testing.T) {
 	}
 
 	inputData := map[interface{}]interface{}{
-		"hello": "world", 4: "123", 5: 5,
-		"aaa": map[interface{}]interface{}{"no": []interface{}{"one", "two", "three"}},
+		"testModule": map[interface{}]interface{}{
+			"hello": "world", 4: "123", 5: 5,
+			"aaa": map[interface{}]interface{}{"no": []interface{}{"one", "two", "three"}},
+		},
 	}
 	expectedData := Values{
-		"hello": "world", "4": "123", "5": 5.0,
-		"aaa": map[string]interface{}{"no": []interface{}{"one", "two", "three"}},
+		"testModule": map[string]interface{}{
+			"hello": "world", "4": "123", "5": 5.0,
+			"aaa": map[string]interface{}{"no": []interface{}{"one", "two", "three"}},
+		},
 	}
 
 	config, err = NewModuleConfig("test-module", inputData)
@@ -56,9 +60,13 @@ func TestModuleConfig(t *testing.T) {
 	}
 }
 
-func TestNewModuleConfigByYamlData(t *testing.T) {
-	expectedData := Values{"a": 1.0, "b": 2.0}
-	config, err := NewModuleConfigByYamlData("test-module", []byte("a: 1\nb: 2"))
+func TestNewModuleConfigByValuesYamlData(t *testing.T) {
+	expectedData := Values{
+		"testModule": map[string]interface{}{
+			"a": 1.0, "b": 2.0,
+		},
+	}
+	config, err := NewModuleConfigByValuesYamlData("test-module", []byte("testModule:\n  a: 1\n  b: 2"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -69,7 +77,7 @@ func TestNewModuleConfigByYamlData(t *testing.T) {
 		t.Errorf("Got unexpected config values: %+v", config.Values)
 	}
 
-	config, err = NewModuleConfigByYamlData("test-module", []byte("false\t\n"))
+	config, err = NewModuleConfigByValuesYamlData("test-module", []byte("testModule: false\n"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -77,8 +85,8 @@ func TestNewModuleConfigByYamlData(t *testing.T) {
 		t.Errorf("Expected module to be disabled")
 	}
 
-	config, err = NewModuleConfigByYamlData("test-module", []byte("falsee"))
-	if !strings.HasPrefix(err.Error(), "unsupported value") {
+	config, err = NewModuleConfigByValuesYamlData("test-module", []byte("testModule: falsee\n"))
+	if !strings.HasPrefix(err.Error(), "required map or bool data") {
 		t.Errorf("Got unexpected error: %s", err.Error())
 	}
 }
@@ -94,25 +102,34 @@ func TestMergeValues(t *testing.T) {
 			"simple",
 			Values{"a": 1, "b": 2},
 			Values{"b": 3, "c": 4},
-			Values{"a": 1, "b": 3, "c": 4},
+			Values{"a": 1.0, "b": 3.0, "c": 4.0},
 		},
 		{
 			"array",
 			Values{"a": []interface{}{1}},
 			Values{"a": []interface{}{2}},
-			Values{"a": []interface{}{1, 2}},
+			Values{"a": []interface{}{1.0, 2.0}},
 		},
 		{
 			"map",
 			Values{"a": map[interface{}]interface{}{"a": 1, "b": 2}},
 			Values{"a": map[interface{}]interface{}{"b": 3, "c": 4}},
-			Values{"a": map[interface{}]interface{}{"a": 1, "b": 3, "c": 4}},
+			Values{"a": map[string]interface{}{"a": 1.0, "b": 3.0, "c": 4.0}},
 		},
 		{
 			"mixed-map",
-			Values{"a": map[interface{}]interface{}{1: "a", 2: "b"}},
-			Values{"a": map[interface{}]interface{}{"1": "c"}},
-			Values{"a": map[interface{}]interface{}{1: "a", 2: "b", "1": "c"}},
+			Values{
+				"a": map[interface{}]interface{}{1: "a", 2: "b"},
+				"b": map[interface{}]interface{}{"no": "way"},
+			},
+			Values{
+				"a": map[interface{}]interface{}{"1": "c"},
+				"b": map[string]interface{}{"yo": "whatsup"},
+			},
+			Values{
+				"a": map[string]interface{}{"2": "b", "1": "c"},
+				"b": map[string]interface{}{"yo": "whatsup"},
+			},
 		},
 	}
 

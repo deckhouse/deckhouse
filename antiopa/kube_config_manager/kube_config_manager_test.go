@@ -119,39 +119,45 @@ userPassword: qwerty`,
 
 	expectedData := map[string]utils.Values{
 		"global": utils.Values{
-			"project":         "someproject",
-			"clusterName":     "main",
-			"clusterHostname": "kube.domain.my",
-			"settings": map[string]interface{}{
-				"count": 2.0,
-				"mysql": map[string]interface{}{
-					"user": "myuser",
+			"global": map[string]interface{}{
+				"project":         "someproject",
+				"clusterName":     "main",
+				"clusterHostname": "kube.domain.my",
+				"settings": map[string]interface{}{
+					"count": 2.0,
+					"mysql": map[string]interface{}{
+						"user": "myuser",
+					},
 				},
 			},
 		},
 		"nginx-ingress": utils.Values{
-			"config": map[string]interface{}{
-				"hsts": true,
-				"setRealIPFrom": []interface{}{
-					"1.1.1.1",
-					"2.2.2.2",
+			"nginxIngress": map[string]interface{}{
+				"config": map[string]interface{}{
+					"hsts": true,
+					"setRealIPFrom": []interface{}{
+						"1.1.1.1",
+						"2.2.2.2",
+					},
 				},
 			},
 		},
 		"prometheus": utils.Values{
-			"adminPassword":            "qwerty",
-			"estimatedNumberOfMetrics": 480000.0,
-			"ingressHostname":          "prometheus.mysite.com",
-			"madisonAuthKey":           "70cf58be013c93b5e7960716ea8538eb877808f88303c8a08f18f16582c81b61",
-			"retentionDays":            20.0,
-			"userPassword":             "qwerty",
+			"prometheus": map[string]interface{}{
+				"adminPassword":            "qwerty",
+				"estimatedNumberOfMetrics": 480000.0,
+				"ingressHostname":          "prometheus.mysite.com",
+				"madisonAuthKey":           "70cf58be013c93b5e7960716ea8538eb877808f88303c8a08f18f16582c81b61",
+				"retentionDays":            20.0,
+				"userPassword":             "qwerty",
+			},
 		},
 	}
 
 	for key, data := range expectedData {
 		if key == "global" {
 			if !reflect.DeepEqual(data, config.Values) {
-				t.Errorf("Bad global values: expected %v, got %v", data, config.Values)
+				t.Errorf("Bad global values: expected %#v, got %#v", data, config.Values)
 			}
 		} else {
 			moduleName := key
@@ -237,7 +243,7 @@ func TestSetConfig(t *testing.T) {
 
 	var err error
 
-	err = kcm.SetKubeValues(utils.Values{
+	err = kcm.SetKubeGlobalValues(utils.Values{
 		"mysql": map[string]interface{}{
 			"username": "root",
 			"password": "password",
@@ -259,7 +265,7 @@ func TestSetConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = kcm.SetKubeValues(utils.Values{
+	err = kcm.SetKubeGlobalValues(utils.Values{
 		"mysql": map[string]interface{}{
 			"username": "root",
 			"password": "password",
@@ -289,7 +295,7 @@ func TestSetConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = kcm.SetModuleKubeValues("mymodule", utils.Values{
+	err = kcm.SetKubeModuleValues("mymodule", utils.Values{
 		"one": 1,
 		"two": 2,
 	})

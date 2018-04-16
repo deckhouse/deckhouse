@@ -9,8 +9,6 @@ import (
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
 	"github.com/segmentio/go-camelcase"
-	"strconv"
-	"strings"
 )
 
 type Values map[string]interface{}
@@ -56,42 +54,56 @@ func ModuleNameFromValuesKey(moduleValuesKey string) string {
 	return string(b)
 }
 
-func NewModuleConfigByYamlData(moduleName string, data []byte) (*ModuleConfig, error) {
-	b, err := strconv.ParseBool(strings.TrimSpace(string(data)))
+func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleConfig, error) {
+	var values map[interface{}]interface{}
+
+	err := yaml.Unmarshal(data, &values)
 	if err != nil {
-		var res map[interface{}]interface{}
-		err = yaml.Unmarshal(data, &res)
-
-		if err != nil {
-			return nil, fmt.Errorf("unsupported value '%s': %s", string(data), err)
-		}
-
-		return NewModuleConfig(moduleName, res)
-	} else {
-		return NewModuleConfig(moduleName, b)
+		return nil, fmt.Errorf("bad module %s values data: %s\n%s", moduleName, err, string(data))
 	}
+
+	return NewModuleConfig(moduleName, values)
 }
 
-func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error) {
+func NewModuleConfigByModuleValuesYamlData(moduleName string, moduleData []byte) (*ModuleConfig, error) {
+	var valuesAtModuleKey interface{}
+
+	err := yaml.Unmarshal(moduleData, &valuesAtModuleKey)
+	if err != nil {
+		return nil, fmt.Errorf("bad module %s configmap values data: %s\n%s", moduleName, err, string(moduleData))
+	}
+
+	moduleValues := map[interface{}]interface{}{ModuleNameToValuesKey(moduleName): valuesAtModuleKey}
+
+	return NewModuleConfig(moduleName, moduleValues)
+}
+
+func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
 	moduleConfig := &ModuleConfig{
 		ModuleName: moduleName,
 		IsEnabled:  true,
 		Values:     make(Values),
 	}
 
-	if moduleEnabled, isBool := data.(bool); isBool {
-		moduleConfig.IsEnabled = moduleEnabled
-	} else {
-		moduleValues, moduleValuesOk := data.(map[interface{}]interface{})
-		if !moduleValuesOk {
-			return nil, fmt.Errorf("required map or bool data, got: %v", reflect.TypeOf(data))
-		}
+	moduleValuesKey := ModuleNameToValuesKey(moduleName)
 
-		formattedValues, err := FormatValues(moduleValues)
-		if err != nil {
-			return nil, err
+	if moduleValuesData, hasModuleData := data[moduleValuesKey]; hasModuleData {
+		if moduleEnabled, isBool := moduleValuesData.(bool); isBool {
+			moduleConfig.IsEnabled = moduleEnabled
+		} else {
+			moduleValues, moduleValuesOk := moduleValuesData.(map[interface{}]interface{})
+			if !moduleValuesOk {
+				return nil, fmt.Errorf("required map or bool data, got: %#v", moduleValuesData)
+			}
+
+			values := map[interface{}]interface{}{moduleValuesKey: moduleValues}
+
+			formattedValues, err := FormatValues(values)
+			if err != nil {
+				panic(err)
+			}
+			moduleConfig.Values = formattedValues
 		}
-		moduleConfig.Values = formattedValues
 	}
 
 	return moduleConfig, nil
@@ -161,7 +173,11 @@ func MergeValues(values ...Values) Values {
 	}
 
 	res := DeepMerge(deepMergeArgs...)
-	resValues := deepMergeResToValues(res)
+
+	resValues, err := FormatValues(res)
+	if err != nil {
+		panic(err)
+	}
 
 	return resValues
 }
@@ -174,18 +190,6 @@ func valuesToDeepMergeArg(values Values) map[interface{}]interface{} {
 	return arg
 }
 
-func deepMergeResToValues(res map[interface{}]interface{}) Values {
-	values := make(Values)
-	for key, value := range res {
-		values[key.(string)] = value
-	}
-	return values
-}
-
 func ValuesToString(values Values) string {
-	valuesYaml, err := yaml.Marshal(&values)
-	if err != nil {
-		return fmt.Sprintf("%v", values)
-	}
-	return string(valuesYaml)
+	return YamlToString(values)
 }
