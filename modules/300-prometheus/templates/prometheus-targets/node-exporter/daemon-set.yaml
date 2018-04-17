@@ -22,19 +22,19 @@ spec:
       name: node-exporter
     spec:
       serviceAccountName: node-exporter
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
       hostNetwork: true
       hostPID: true
       containers:
-      - image: quay.io/prometheus/node-exporter:v0.15.2
+      - image: {{ $.Values.global.modulesImages.registry }}/prometheus/node-exporter:{{ $.Values.global.modulesImages.tags.prometheus.nodeExporter }}
         args:
         - "--web.listen-address=127.0.0.1:9101"
         - "--path.procfs=/host/proc"
         - "--path.sysfs=/host/sys"
+        - "--path.rootfs=/host/root"
         - "--collector.filesystem.ignored-mount-points"
-        - '^(\/host\/sys\/kernel\/debug\/).*'
+        - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)'
+        - "--collector.filesystem.ignored-fs-types"
+        - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$'
         name: node-exporter
         resources:
           requests:
@@ -44,6 +44,9 @@ spec:
             memory: 50Mi
             cpu: 200m
         volumeMounts:
+        - name: root
+          readOnly:  true
+          mountPath: /host/root
         - name: proc
           readOnly:  true
           mountPath: /host/proc
@@ -69,10 +72,14 @@ spec:
       tolerations:
       - operator: Exists
       volumes:
+      - name: root
+        hostPath:
+          path: /
       - name: proc
         hostPath:
           path: /proc
       - name: sys
         hostPath:
           path: /sys
-
+      imagePullSecrets:
+      - name: antiopa-registry
