@@ -19,8 +19,8 @@ const (
 )
 
 type KubeConfigManager interface {
-	SetKubeValues(values utils.Values) error
-	SetModuleKubeValues(moduleName string, values utils.Values) error
+	SetKubeGlobalValues(globalValues map[string]interface{}) error
+	SetKubeModuleValues(moduleName string, moduleValues map[string]interface{}) error
 	Run()
 	InitialConfig() *Config
 }
@@ -78,14 +78,14 @@ func (kcm *MainKubeConfigManager) setConfigData(mergeData map[string]string) (*v
 	}
 }
 
-func (kcm *MainKubeConfigManager) SetKubeValues(values utils.Values) error {
-	valuesYaml, err := yaml.Marshal(&values)
+func (kcm *MainKubeConfigManager) SetKubeGlobalValues(globalValues map[string]interface{}) error {
+	globalValuesYaml, err := yaml.Marshal(&globalValues)
 	if err != nil {
 		return err
 	}
 
 	// TODO: store checksum
-	_, err = kcm.setConfigData(map[string]string{GlobalValuesKeyName: string(valuesYaml)})
+	_, err = kcm.setConfigData(map[string]string{GlobalValuesKeyName: string(globalValuesYaml)})
 	if err != nil {
 		return err
 	}
@@ -94,15 +94,14 @@ func (kcm *MainKubeConfigManager) SetKubeValues(values utils.Values) error {
 	return nil
 }
 
-func (kcm *MainKubeConfigManager) SetModuleKubeValues(moduleName string, values utils.Values) error {
-	valuesYaml, err := yaml.Marshal(&values)
+func (kcm *MainKubeConfigManager) SetKubeModuleValues(moduleName string, moduleValues map[string]interface{}) error {
+	moduleValuesYaml, err := yaml.Marshal(&moduleValues)
 	if err != nil {
 		return err
 	}
 
 	// TODO: store checksum
-	// FIXME: camelcase module name
-	_, err = kcm.setConfigData(map[string]string{moduleName: string(valuesYaml)})
+	_, err = kcm.setConfigData(map[string]string{utils.ModuleNameToValuesKey(moduleName): string(moduleValuesYaml)})
 	if err != nil {
 		return err
 	}
@@ -160,11 +159,14 @@ func Init() (KubeConfigManager, error) {
 
 	if obj != nil {
 		if valuesYaml, hasKey := obj.Data[GlobalValuesKeyName]; hasKey {
-			var values map[interface{}]interface{}
-			err := yaml.Unmarshal([]byte(valuesYaml), &values)
+			var globalValues map[interface{}]interface{}
+			err := yaml.Unmarshal([]byte(valuesYaml), &globalValues)
 			if err != nil {
 				return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s:\n%s", ConfigMapName, GlobalValuesKeyName, err, string(valuesYaml))
 			}
+
+			values := map[interface{}]interface{}{GlobalValuesKeyName: globalValues}
+
 			formattedValues, err := utils.FormatValues(values)
 			if err != nil {
 				return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s\n%s", ConfigMapName, GlobalValuesKeyName, err, string(valuesYaml))
@@ -174,7 +176,7 @@ func Init() (KubeConfigManager, error) {
 
 		for key, value := range obj.Data {
 			if key != GlobalValuesKeyName {
-				moduleConfig, err := utils.NewModuleConfigByYamlData(key, []byte(value))
+				moduleConfig, err := utils.NewModuleConfigByModuleValuesYamlData(utils.ModuleNameFromValuesKey(key), []byte(value))
 				if err != nil {
 					return nil, fmt.Errorf("'%s' ConfigMap bad yaml at key '%s': %s", ConfigMapName, key, err)
 				}

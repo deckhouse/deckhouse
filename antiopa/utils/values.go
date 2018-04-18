@@ -8,8 +8,7 @@ import (
 	"github.com/evanphx/json-patch"
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
-	"strconv"
-	"strings"
+	"github.com/segmentio/go-camelcase"
 )
 
 type Values map[string]interface{}
@@ -20,42 +19,91 @@ type ModuleConfig struct {
 	Values     Values
 }
 
-func NewModuleConfigByYamlData(moduleName string, data []byte) (*ModuleConfig, error) {
-	b, err := strconv.ParseBool(strings.TrimSpace(string(data)))
-	if err != nil {
-		var res map[interface{}]interface{}
-		err = yaml.Unmarshal(data, &res)
-
-		if err != nil {
-			return nil, fmt.Errorf("unsupported value '%s': %s", string(data), err)
-		}
-
-		return NewModuleConfig(moduleName, res)
-	} else {
-		return NewModuleConfig(moduleName, b)
-	}
+func ModuleNameToValuesKey(moduleName string) string {
+	return camelcase.Camelcase(moduleName)
 }
 
-func NewModuleConfig(moduleName string, data interface{}) (*ModuleConfig, error) {
+func ModuleNameFromValuesKey(moduleValuesKey string) string {
+	b := make([]byte, 0, 64)
+	l := len(moduleValuesKey)
+	i := 0
+
+	for i < l {
+		c := moduleValuesKey[i]
+
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 {
+				// append dash module name parts delimiter
+				b = append(b, '-')
+			}
+			// append lowercased symbol
+			b = append(b, c+('a'-'A'))
+		} else if c >= '0' && c <= '9' {
+			if i > 0 {
+				// append dash module name parts delimiter
+				b = append(b, '-')
+			}
+			b = append(b, c)
+		} else {
+			b = append(b, c)
+		}
+
+		i++
+	}
+
+	return string(b)
+}
+
+func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleConfig, error) {
+	var values map[interface{}]interface{}
+
+	err := yaml.Unmarshal(data, &values)
+	if err != nil {
+		return nil, fmt.Errorf("bad module %s values data: %s\n%s", moduleName, err, string(data))
+	}
+
+	return NewModuleConfig(moduleName, values)
+}
+
+func NewModuleConfigByModuleValuesYamlData(moduleName string, moduleData []byte) (*ModuleConfig, error) {
+	var valuesAtModuleKey interface{}
+
+	err := yaml.Unmarshal(moduleData, &valuesAtModuleKey)
+	if err != nil {
+		return nil, fmt.Errorf("bad module %s configmap values data: %s\n%s", moduleName, err, string(moduleData))
+	}
+
+	moduleValues := map[interface{}]interface{}{ModuleNameToValuesKey(moduleName): valuesAtModuleKey}
+
+	return NewModuleConfig(moduleName, moduleValues)
+}
+
+func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
 	moduleConfig := &ModuleConfig{
 		ModuleName: moduleName,
 		IsEnabled:  true,
 		Values:     make(Values),
 	}
 
-	if moduleEnabled, isBool := data.(bool); isBool {
-		moduleConfig.IsEnabled = moduleEnabled
-	} else {
-		moduleValues, moduleValuesOk := data.(map[interface{}]interface{})
-		if !moduleValuesOk {
-			return nil, fmt.Errorf("required map or bool data, got: %v", reflect.TypeOf(data))
-		}
+	moduleValuesKey := ModuleNameToValuesKey(moduleName)
 
-		formattedValues, err := FormatValues(moduleValues)
-		if err != nil {
-			return nil, err
+	if moduleValuesData, hasModuleData := data[moduleValuesKey]; hasModuleData {
+		if moduleEnabled, isBool := moduleValuesData.(bool); isBool {
+			moduleConfig.IsEnabled = moduleEnabled
+		} else {
+			moduleValues, moduleValuesOk := moduleValuesData.(map[interface{}]interface{})
+			if !moduleValuesOk {
+				return nil, fmt.Errorf("required map or bool data, got: %#v", moduleValuesData)
+			}
+
+			values := map[interface{}]interface{}{moduleValuesKey: moduleValues}
+
+			formattedValues, err := FormatValues(values)
+			if err != nil {
+				panic(err)
+			}
+			moduleConfig.Values = formattedValues
 		}
-		moduleConfig.Values = formattedValues
 	}
 
 	return moduleConfig, nil
@@ -125,7 +173,11 @@ func MergeValues(values ...Values) Values {
 	}
 
 	res := DeepMerge(deepMergeArgs...)
-	resValues := deepMergeResToValues(res)
+
+	resValues, err := FormatValues(res)
+	if err != nil {
+		panic(err)
+	}
 
 	return resValues
 }
@@ -138,10 +190,6 @@ func valuesToDeepMergeArg(values Values) map[interface{}]interface{} {
 	return arg
 }
 
-func deepMergeResToValues(res map[interface{}]interface{}) Values {
-	values := make(Values)
-	for key, value := range res {
-		values[key.(string)] = value
-	}
-	return values
+func ValuesToString(values Values) string {
+	return YamlToString(values)
 }

@@ -185,6 +185,40 @@ func (mm *MainModuleManager) addModulesHooksOrderByName(moduleName string, bindi
 	mm.modulesHooksOrderByName[moduleName][bindingType] = append(mm.modulesHooksOrderByName[moduleName][bindingType], moduleHook)
 }
 
+type globalValuesMergeResult struct {
+	// global values with root "global" key
+	Values utils.Values
+	// global values under root "global" key
+	GlobalValues  map[string]interface{}
+	ValuesChanged bool
+}
+
+func (h *GlobalHook) handleGlobalValuesMerge(currentValues utils.Values, valuesToMerge utils.Values, patch *jsonpatch.Patch) (*globalValuesMergeResult, error) {
+	newValuesRaw, valuesChanged, err := utils.ApplyJsonMergeAndPatch(currentValues, valuesToMerge, patch)
+	if err != nil {
+		return nil, fmt.Errorf("merge global values failed: %s", err)
+	}
+
+	result := &globalValuesMergeResult{
+		Values:        utils.Values{"global": make(map[string]interface{})},
+		ValuesChanged: valuesChanged,
+	}
+
+	// Changing anything beyond "global" key is forbidden
+	// TODO: validate that only "global" key returned in newValuesRaw
+	if globalValuesRaw, hasKey := newValuesRaw["global"]; hasKey {
+		globalValues, ok := globalValuesRaw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected map at key 'global', got:\n%s", utils.YamlToString(globalValuesRaw))
+		}
+
+		result.Values["global"] = globalValues
+		result.GlobalValues = globalValues
+	}
+
+	return result, nil
+}
+
 func (h *GlobalHook) run(bindingType BindingType) error {
 	rlog.Infof("Running global hook '%s' binding '%s' ...", h.Name, bindingType)
 
@@ -193,27 +227,27 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 		return fmt.Errorf("global hook '%s' failed: %s", h.Name, err)
 	}
 
-	var kubeConfigValuesChanged, dynamicValuesChanged bool
-
-	if h.moduleManager.kubeConfigValues, kubeConfigValuesChanged, err = utils.ApplyJsonMergeAndPatch(h.moduleManager.kubeConfigValues, configVJMV, configVJPV); err != nil {
-		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
+	configValuesMergeResult, err := h.handleGlobalValuesMerge(h.moduleManager.kubeGlobalConfigValues, configVJMV, configVJPV)
+	if err != nil {
+		return fmt.Errorf("global hook '%s': kube config global values update error: %s", h.Name, err)
 	}
-
-	if kubeConfigValuesChanged {
-		rlog.Debugf("Global hook '%s': updating kube config values:\n%s", h.Name, valuesToString(h.moduleManager.kubeConfigValues))
-		if err := h.moduleManager.kubeConfigManager.SetKubeValues(h.moduleManager.kubeConfigValues); err != nil {
+	if configValuesMergeResult.ValuesChanged {
+		if err := h.moduleManager.kubeConfigManager.SetKubeGlobalValues(configValuesMergeResult.GlobalValues); err != nil {
+			rlog.Debugf("Global hook '%s' kube config global values stay unchanged:\n%s", utils.ValuesToString(h.moduleManager.kubeGlobalConfigValues))
 			return fmt.Errorf("global hook '%s': set kube config failed: %s", h.Name, err)
 		}
+
+		h.moduleManager.kubeGlobalConfigValues = configValuesMergeResult.Values
+		rlog.Debugf("Global hook '%s': kube config global values updated:\n%s", h.Name, utils.ValuesToString(h.moduleManager.kubeGlobalConfigValues))
 	}
 
-	newDynamicValues, dynamicValuesChanged, err := utils.ApplyJsonMergeAndPatch(h.moduleManager.dynamicValues, dynamicVJMV, dynamicVJPV)
+	dynamicValuesMergeResult, err := h.handleGlobalValuesMerge(h.moduleManager.globalDynamicValues, dynamicVJMV, dynamicVJPV)
 	if err != nil {
-		return fmt.Errorf("global hook '%s': merge values failed: %s", h.Name, err)
+		return fmt.Errorf("global hook '%s': dynamic global values update error: %s", h.Name, err)
 	}
-	h.moduleManager.dynamicValues = newDynamicValues
-
-	if dynamicValuesChanged {
-		rlog.Debugf("Global hook '%s': updating dynamicValues:\n%s", h.Name, valuesToString(h.moduleManager.dynamicValues))
+	if dynamicValuesMergeResult.ValuesChanged {
+		h.moduleManager.globalDynamicValues = dynamicValuesMergeResult.Values
+		rlog.Debugf("Global hook '%s': dynamic global values updated:\n%s", h.Name, utils.ValuesToString(h.moduleManager.globalDynamicValues))
 	}
 
 	return nil
@@ -233,7 +267,11 @@ func (h *GlobalHook) exec() (map[string]interface{}, *jsonpatch.Patch, map[strin
 }
 
 func (h *GlobalHook) prepareConfigValuesPath() (string, error) {
-	configValuesPath, err := dumpValuesYaml("global-hooks-config-values.yaml", h.configValues())
+	values := h.configValues()
+
+	rlog.Debugf("Prepared global hook %s config values:\n%s", h.Name, utils.ValuesToString(values))
+
+	configValuesPath, err := dumpValuesJson("global-hooks-config-values.json", values)
 	if err != nil {
 		return "", err
 	}
@@ -241,7 +279,11 @@ func (h *GlobalHook) prepareConfigValuesPath() (string, error) {
 }
 
 func (h *GlobalHook) prepareDynamicValuesPath() (string, error) {
-	dynamicValuesPath, err := dumpValuesYaml("global-hooks-dynamic-values.yaml", h.dynamicValues())
+	values := h.dynamicValues()
+
+	rlog.Debugf("Prepared global hook %s dynamic values:\n%s", h.Name, utils.ValuesToString(values))
+
+	dynamicValuesPath, err := dumpValuesJson("global-hooks-dynamic-values.json", values)
 	if err != nil {
 		return "", err
 	}
@@ -249,46 +291,88 @@ func (h *GlobalHook) prepareDynamicValuesPath() (string, error) {
 }
 
 func (h *GlobalHook) configValues() utils.Values {
-	return utils.MergeValues(h.moduleManager.globalConfigValues, h.moduleManager.kubeConfigValues)
+	return utils.MergeValues(h.moduleManager.globalConfigValues, h.moduleManager.kubeGlobalConfigValues)
 }
 
 func (h *GlobalHook) dynamicValues() utils.Values {
-	return h.moduleManager.dynamicValues
+	return h.moduleManager.globalDynamicValues
+}
+
+type moduleValuesMergeResult struct {
+	// global values with root ModuleValuesKey key
+	Values utils.Values
+	// global values under root ModuleValuesKey key
+	ModuleValues    map[string]interface{}
+	ModuleValuesKey string
+	ValuesChanged   bool
+}
+
+func (h *ModuleHook) handleModuleValuesMerge(currentValues utils.Values, valuesToMerge utils.Values, patch *jsonpatch.Patch) (*moduleValuesMergeResult, error) {
+	newValuesRaw, valuesChanged, err := utils.ApplyJsonMergeAndPatch(currentValues, valuesToMerge, patch)
+	if err != nil {
+		return nil, fmt.Errorf("merge module '%s' values failed: %s", h.Module.Name, err)
+	}
+
+	moduleValuesKey := utils.ModuleNameToValuesKey(h.Module.Name)
+	result := &moduleValuesMergeResult{
+		ModuleValuesKey: moduleValuesKey,
+		Values:          utils.Values{moduleValuesKey: make(map[string]interface{})},
+		ValuesChanged:   valuesChanged,
+	}
+
+	// Changing anything beyond myModuleName key is forbidden (for module named "my-module-name")
+	// TODO: validate that only moduleValuesKey returned in newValuesRaw
+	if moduleValuesRaw, hasKey := newValuesRaw[result.ModuleValuesKey]; hasKey {
+		moduleValues, ok := moduleValuesRaw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected map at key '%s', got:\n%s", result.ModuleValuesKey, utils.YamlToString(moduleValuesRaw))
+		}
+		result.Values[result.ModuleValuesKey] = moduleValues
+		result.ModuleValues = moduleValues
+	}
+
+	return result, nil
 }
 
 func (h *ModuleHook) run(bindingType BindingType) error {
 	moduleName := h.Module.Name
-	rlog.Infof("Running hook '%s' binding '%s' ...", h.Name, bindingType)
+	rlog.Infof("Running module hook '%s' binding '%s' ...", h.Name, bindingType)
 
 	configVJMV, configVJPV, dynamicVJMV, dynamicVJPV, err := h.exec()
 	if err != nil {
-		return fmt.Errorf("hook '%s' failed: %s", h.Name, err)
+		return fmt.Errorf("module hook '%s' failed: %s", h.Name, err)
 	}
 
-	var kubeModuleConfigValuesChanged, moduleDynamicValuesChanged bool
-
-	newModuleConfigValues, kubeModuleConfigValuesChanged, err := utils.ApplyJsonMergeAndPatch(h.moduleManager.kubeModulesConfigValues[moduleName], configVJMV, configVJPV)
+	currentConfigValues := make(utils.Values)
+	if v, hasKey := h.moduleManager.kubeModulesConfigValues[moduleName]; hasKey {
+		currentConfigValues = v
+	}
+	configValuesMergeResult, err := h.handleModuleValuesMerge(currentConfigValues, configVJMV, configVJPV)
 	if err != nil {
-		return err
+		return fmt.Errorf("module hook '%s': kube module config values update error: %s", h.Name, err)
 	}
-	h.moduleManager.kubeModulesConfigValues[moduleName] = newModuleConfigValues
-
-	if kubeModuleConfigValuesChanged {
-		rlog.Debugf("Hook '%s': updating kubeModulesConfigValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
-		err = h.moduleManager.kubeConfigManager.SetModuleKubeValues(moduleName, h.moduleManager.kubeModulesConfigValues[moduleName])
+	if configValuesMergeResult.ValuesChanged {
+		err := h.moduleManager.kubeConfigManager.SetKubeModuleValues(moduleName, configValuesMergeResult.ModuleValues)
 		if err != nil {
-			return fmt.Errorf("hook '%s': set kube values failed: %s", h.Name, err)
+			rlog.Debugf("Module hook '%s' kube module config values stay unchanged:\n%s", utils.ValuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
+			return fmt.Errorf("module hook '%s': set kube module config failed: %s", h.Name, err)
 		}
+
+		h.moduleManager.kubeModulesConfigValues[moduleName] = configValuesMergeResult.Values
+		rlog.Debugf("Module hook '%s': kube module '%s' config values updated:\n%s", h.Name, moduleName, utils.ValuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
 	}
 
-	newModuleDynamicValues, moduleDynamicValuesChanged, err := utils.ApplyJsonMergeAndPatch(h.moduleManager.modulesDynamicValues[moduleName], dynamicVJMV, dynamicVJPV)
+	currentDynamicValues := make(utils.Values)
+	if v, hasKey := h.moduleManager.modulesDynamicValues[moduleName]; hasKey {
+		currentDynamicValues = v
+	}
+	dynamicValuesMergeResult, err := h.handleModuleValuesMerge(currentDynamicValues, dynamicVJMV, dynamicVJPV)
 	if err != nil {
-		return fmt.Errorf("hook '%s': merge values failed: %s", h.Name, err)
+		return fmt.Errorf("module hook '%s': dynamic module values update error: %s", h.Name, err)
 	}
-	h.moduleManager.modulesDynamicValues[moduleName] = newModuleDynamicValues
-
-	if moduleDynamicValuesChanged {
-		rlog.Debugf("Hook '%s': updating modulesDynamicValues[%s]:\n%s", h.Name, moduleName, valuesToString(h.moduleManager.modulesDynamicValues[moduleName]))
+	if dynamicValuesMergeResult.ValuesChanged {
+		h.moduleManager.modulesDynamicValues[moduleName] = dynamicValuesMergeResult.Values
+		rlog.Debugf("Module hook '%s': dynamic module '%s' values updated:\n%s", h.Name, moduleName, utils.ValuesToString(h.moduleManager.modulesDynamicValues[moduleName]))
 	}
 
 	return nil
