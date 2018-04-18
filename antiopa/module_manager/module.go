@@ -154,7 +154,7 @@ func (m *Module) prepareValuesPath() (string, error) {
 
 	rlog.Debugf("Prepared module %s values:\n%s", m.Name, utils.ValuesToString(values))
 
-	valuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-values.yaml", m.Name), values)
+	valuesPath, err := dumpValuesJson(fmt.Sprintf("%s-values.json", m.Name), values)
 	if err != nil {
 		return "", err
 	}
@@ -166,7 +166,7 @@ func (m *Module) prepareConfigValuesPath() (string, error) {
 
 	rlog.Debugf("Prepared module %s config values:\n%s", m.Name, utils.ValuesToString(values))
 
-	configValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-config-values.yaml", m.Name), values)
+	configValuesPath, err := dumpValuesJson(fmt.Sprintf("%s-config-values.json", m.Name), values)
 	if err != nil {
 		return "", err
 	}
@@ -178,7 +178,7 @@ func (m *Module) prepareDynamicValuesPath() (string, error) {
 
 	rlog.Debugf("Prepared module %s dynamic values:\n%s", m.Name, utils.ValuesToString(values))
 
-	dynamicValuesPath, err := dumpValuesYaml(fmt.Sprintf("%s-dynamic-values.yaml", m.Name), values)
+	dynamicValuesPath, err := dumpValuesJson(fmt.Sprintf("%s-dynamic-values.json", m.Name), values)
 	if err != nil {
 		return "", err
 	}

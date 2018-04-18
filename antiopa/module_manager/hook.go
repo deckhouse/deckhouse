@@ -271,7 +271,7 @@ func (h *GlobalHook) prepareConfigValuesPath() (string, error) {
 
 	rlog.Debugf("Prepared global hook %s config values:\n%s", h.Name, utils.ValuesToString(values))
 
-	configValuesPath, err := dumpValuesYaml("global-hooks-config-values.yaml", values)
+	configValuesPath, err := dumpValuesJson("global-hooks-config-values.json", values)
 	if err != nil {
 		return "", err
 	}
@@ -283,7 +283,7 @@ func (h *GlobalHook) prepareDynamicValuesPath() (string, error) {
 
 	rlog.Debugf("Prepared global hook %s dynamic values:\n%s", h.Name, utils.ValuesToString(values))
 
-	dynamicValuesPath, err := dumpValuesYaml("global-hooks-dynamic-values.yaml", values)
+	dynamicValuesPath, err := dumpValuesJson("global-hooks-dynamic-values.json", values)
 	if err != nil {
 		return "", err
 	}
