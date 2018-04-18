@@ -55,13 +55,13 @@ type MainModuleManager struct {
 	// values для всех модулей, для всех кластеров
 	globalConfigValues utils.Values
 	// values для конкретного модуля, для всех кластеров
-	globalModulesConfigValues map[string]utils.Values
+	modulesConfigValues map[string]utils.Values
 	// values для всех модулей, для конкретного кластера
-	kubeConfigValues utils.Values
+	kubeGlobalConfigValues utils.Values
 	// values для конкретного модуля, для конкретного кластера
 	kubeModulesConfigValues map[string]utils.Values
 	// dynamic-values для всех модулей, для всех кластеров
-	dynamicValues utils.Values
+	globalDynamicValues utils.Values
 	// dynamic-values для конкретного модуля, для всех кластеров
 	modulesDynamicValues map[string]utils.Values
 
@@ -162,7 +162,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	mm.helm = helmClient
 	mm.globalValuesChanged = make(chan bool, 1)
 	mm.moduleValuesChanged = make(chan string, 1)
-	mm.dynamicValues = make(utils.Values)
+	mm.globalDynamicValues = make(utils.Values)
 
 	if err := mm.initGlobalHooks(); err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	mm.kubeConfigManager = kcm
 
 	kubeConfig := mm.kubeConfigManager.InitialConfig()
-	mm.kubeConfigValues = kubeConfig.Values
+	mm.kubeGlobalConfigValues = kubeConfig.Values
 	mm.kubeModulesConfigValues = make(map[string]utils.Values)
 	mm.kubeDisabledModules = make([]string, 0)
 	for _, moduleConfig := range kubeConfig.ModuleConfigs {
@@ -190,7 +190,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 				mm.kubeDisabledModules = append(mm.kubeDisabledModules, moduleConfig.ModuleName)
 			}
 		} else {
-			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
+			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, utils.ValuesToString(moduleConfig.Values))
 		}
 	}
 
@@ -342,7 +342,7 @@ type kubeUpdate struct {
 }
 
 func (mm *MainModuleManager) applyKubeUpdate(kubeUpdate kubeUpdate) error {
-	mm.kubeConfigValues = kubeUpdate.KubeConfigValues
+	mm.kubeGlobalConfigValues = kubeUpdate.KubeConfigValues
 	mm.kubeModulesConfigValues = kubeUpdate.KubeModulesConfigValues
 	mm.kubeDisabledModules = kubeUpdate.KubeDisabledModules
 	mm.enabledModulesInOrder = kubeUpdate.EnabledModules
@@ -371,7 +371,7 @@ func (mm *MainModuleManager) handleNewKubeConfig(newConfig kube_config_manager.C
 			}
 			res.KubeModulesConfigValues[moduleConfig.ModuleName] = moduleConfig.Values
 		} else {
-			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, valuesToString(moduleConfig.Values))
+			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, utils.ValuesToString(moduleConfig.Values))
 		}
 	}
 
@@ -392,12 +392,12 @@ func (mm *MainModuleManager) handleNewKubeConfig(newConfig kube_config_manager.C
 
 func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.ModuleConfig) (kubeUpdate, error) {
 	if _, hasKey := mm.modulesByName[newModuleConfig.ModuleName]; !hasKey {
-		rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", newModuleConfig.ModuleName, valuesToString(newModuleConfig.Values))
+		rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", newModuleConfig.ModuleName, utils.ValuesToString(newModuleConfig.Values))
 
 		return kubeUpdate{
 			EnabledModules:          mm.enabledModulesInOrder,
 			Events:                  make([]Event, 0),
-			KubeConfigValues:        mm.kubeConfigValues,
+			KubeConfigValues:        mm.kubeGlobalConfigValues,
 			KubeDisabledModules:     mm.kubeDisabledModules,
 			KubeModulesConfigValues: mm.kubeModulesConfigValues,
 		}, nil
@@ -406,7 +406,7 @@ func (mm *MainModuleManager) handleNewKubeModuleConfig(newModuleConfig utils.Mod
 	res := kubeUpdate{
 		EnabledModules:          mm.enabledModulesInOrder,
 		Events:                  make([]Event, 0),
-		KubeConfigValues:        mm.kubeConfigValues,
+		KubeConfigValues:        mm.kubeGlobalConfigValues,
 		KubeDisabledModules:     make([]string, 0),
 		KubeModulesConfigValues: make(map[string]utils.Values),
 	}
@@ -617,7 +617,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 		return err
 	}
 
-	oldValuesChecksum, err := valuesChecksum(mm.kubeConfigValues, mm.dynamicValues)
+	oldValuesChecksum, err := valuesChecksum(mm.kubeGlobalConfigValues, mm.globalDynamicValues)
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 		return err
 	}
 
-	newValuesChecksum, err := valuesChecksum(mm.kubeConfigValues, mm.dynamicValues)
+	newValuesChecksum, err := valuesChecksum(mm.kubeGlobalConfigValues, mm.globalDynamicValues)
 	if err != nil {
 		return err
 	}

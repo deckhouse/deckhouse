@@ -43,15 +43,17 @@ func initTempAndWorkingDirectories(t *testing.T, subPath string) {
 	}
 }
 
-func TestMainModuleManager_globalConfigValues(t *testing.T) {
+func TestMainModuleManager_configValues(t *testing.T) {
 	mm := &MainModuleManager{}
 	runInitModulesIndex(t, mm, "test_global_config_values")
 
 	expectedValues := utils.Values{
-		"a": 1.0,
-		"b": 2.0,
-		"c": 3.0,
-		"d": []interface{}{"a", "b", "c"},
+		"global": map[string]interface{}{
+			"a": 1.0,
+			"b": 2.0,
+			"c": 3.0,
+			"d": []interface{}{"a", "b", "c"},
+		},
 	}
 
 	if !reflect.DeepEqual(mm.globalConfigValues, expectedValues) {
@@ -59,7 +61,7 @@ func TestMainModuleManager_globalConfigValues(t *testing.T) {
 	}
 }
 
-func TestMainModuleManager_globalModulesConfigValues(t *testing.T) {
+func TestMainModuleManager_modulesConfigValues(t *testing.T) {
 	mm := &MainModuleManager{}
 	runInitModulesIndex(t, mm, "test_global_modules_config_values")
 
@@ -69,18 +71,26 @@ func TestMainModuleManager_globalModulesConfigValues(t *testing.T) {
 	}{
 		{
 			moduleName: "with-values-1",
-			values:     utils.Values{"a": 1.0, "b": 2.0, "c": 3.0},
+			values: utils.Values{
+				"withValues1": map[string]interface{}{
+					"a": 1.0, "b": 2.0, "c": 3.0,
+				},
+			},
 		},
 		{
 			moduleName: "with-values-2",
-			values:     utils.Values{"a": []interface{}{1.0, 2.0, map[string]interface{}{"b": 3.0}}},
+			values: utils.Values{
+				"withValues2": map[string]interface{}{
+					"a": []interface{}{1.0, 2.0, map[string]interface{}{"b": 3.0}},
+				},
+			},
 		},
 	}
 
 	for _, expectation := range expectations {
 		t.Run(expectation.moduleName, func(t *testing.T) {
-			if !reflect.DeepEqual(mm.globalModulesConfigValues[expectation.moduleName], expectation.values) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.values, mm.globalModulesConfigValues[expectation.moduleName])
+			if !reflect.DeepEqual(mm.modulesConfigValues[expectation.moduleName], expectation.values) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.values, mm.modulesConfigValues[expectation.moduleName])
 			}
 		})
 	}
@@ -271,11 +281,11 @@ type MockKubeConfigManager struct {
 	kube_config_manager.KubeConfigManager
 }
 
-func (kcm MockKubeConfigManager) SetKubeValues(values utils.Values) error {
+func (kcm MockKubeConfigManager) SetKubeGlobalValues(globalValues map[string]interface{}) error {
 	return nil
 }
 
-func (kcm MockKubeConfigManager) SetModuleKubeValues(moduleName string, values utils.Values) error {
+func (kcm MockKubeConfigManager) SetKubeModuleValues(moduleName string, moduleValues map[string]interface{}) error {
 	return nil
 }
 
@@ -289,8 +299,10 @@ func TestMainModuleManager_RunModule(t *testing.T) {
 
 	moduleName := "module"
 	expectedModuleDynamicValues := utils.Values{
-		"afterHelm":  "override-value",
-		"beforeHelm": "override-value",
+		"module": map[string]interface{}{
+			"afterHelm":  "override-value",
+			"beforeHelm": "override-value",
+		},
 	}
 
 	err := mm.RunModule(moduleName)
@@ -316,7 +328,9 @@ func TestMainModuleManager_DeleteModule(t *testing.T) {
 
 	moduleName := "module"
 	expectedModuleDynamicValues := utils.Values{
-		"afterDeleteHelm": "override-value",
+		"module": map[string]interface{}{
+			"afterDeleteHelm": "override-value",
+		},
 	}
 
 	err := mm.DeleteModule(moduleName)
@@ -353,7 +367,11 @@ func TestMainModuleManager_RunModuleHook(t *testing.T) {
 			"000-update-kube-module-config/hooks/merge_and_patch_values",
 			utils.Values{},
 			utils.Values{},
-			utils.Values{"a": 2.0, "c": []interface{}{3.0}},
+			utils.Values{
+				"updateKubeModuleConfig": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0},
+				},
+			},
 			utils.Values{},
 		},
 		{
@@ -363,15 +381,27 @@ func TestMainModuleManager_RunModuleHook(t *testing.T) {
 			utils.Values{},
 			utils.Values{},
 			utils.Values{},
-			utils.Values{"a": 9.0, "c": "10"},
+			utils.Values{
+				"updateModuleDynamic": map[string]interface{}{
+					"a": 9.0, "c": "10",
+				},
+			},
 		},
 		{
 			"merge_and_patch_over_existing_kube_module_config_values",
 			"update-kube-module-config",
 			"000-update-kube-module-config/hooks/merge_and_patch_values",
-			utils.Values{"a": 1.0, "b": 2.0, "x": "123"},
+			utils.Values{
+				"updateKubeModuleConfig": map[string]interface{}{
+					"a": 1.0, "b": 2.0, "x": "123",
+				},
+			},
 			utils.Values{},
-			utils.Values{"a": 2.0, "c": []interface{}{3.0}, "x": "123"},
+			utils.Values{
+				"updateKubeModuleConfig": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
+				},
+			},
 			utils.Values{},
 		},
 		{
@@ -379,9 +409,17 @@ func TestMainModuleManager_RunModuleHook(t *testing.T) {
 			"update-module-dynamic",
 			"100-update-module-dynamic/hooks/merge_and_patch_values",
 			utils.Values{},
-			utils.Values{"a": 123.0, "x": 10.0},
+			utils.Values{
+				"updateModuleDynamic": map[string]interface{}{
+					"a": 123.0, "x": 10.0,
+				},
+			},
 			utils.Values{},
-			utils.Values{"a": 9.0, "c": "10", "x": 10.0},
+			utils.Values{
+				"updateModuleDynamic": map[string]interface{}{
+					"a": 9.0, "c": "10", "x": 10.0,
+				},
+			},
 		},
 	}
 
@@ -513,19 +551,23 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 	runInitGlobalHooks(t, mm, "test_run_global_hook")
 
 	expectations := []struct {
-		testName                 string
-		hookName                 string
-		kubeConfigValues         utils.Values
-		dynamicValues            utils.Values
-		expectedKubeConfigValues utils.Values
-		expectedDynamicValues    utils.Values
+		testName                       string
+		hookName                       string
+		kubeGlobalConfigValues         utils.Values
+		globalDynamicValues            utils.Values
+		expectedKubeGlobalConfigValues utils.Values
+		expectedDynamicGlobalValues    utils.Values
 	}{
 		{
 			"merge_and_patch_kube_config_values",
 			"global-hooks/000-update-kube-config/merge_and_patch_values",
 			utils.Values{},
 			utils.Values{},
-			utils.Values{"a": 2.0, "c": []interface{}{3.0}},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0},
+				},
+			},
 			utils.Values{},
 		},
 		{
@@ -534,41 +576,61 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			utils.Values{},
 			utils.Values{},
 			utils.Values{},
-			utils.Values{"a": 9.0, "c": "10"},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 9.0, "c": "10",
+				},
+			},
 		},
 		{
 			"merge_and_patch_over_existing_kube_config_values",
 			"global-hooks/000-update-kube-config/merge_and_patch_values",
-			utils.Values{"a": 1.0, "b": 2.0, "x": "123"},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 1.0, "b": 2.0, "x": "123",
+				},
+			},
 			utils.Values{},
-			utils.Values{"a": 2.0, "c": []interface{}{3.0}, "x": "123"},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
+				},
+			},
 			utils.Values{},
 		},
 		{
 			"merge_and_patch_over_existing_dynamic_values",
 			"global-hooks/100-update-dynamic/merge_and_patch_values",
 			utils.Values{},
-			utils.Values{"a": 123.0, "x": 10.0},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 123.0, "x": 10.0,
+				},
+			},
 			utils.Values{},
-			utils.Values{"a": 9.0, "c": "10", "x": 10.0},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 9.0, "c": "10", "x": 10.0,
+				},
+			},
 		},
 	}
 
 	for _, expectation := range expectations {
 		t.Run(expectation.testName, func(t *testing.T) {
-			mm.kubeConfigValues = expectation.kubeConfigValues
-			mm.dynamicValues = expectation.dynamicValues
+			mm.kubeGlobalConfigValues = expectation.kubeGlobalConfigValues
+			mm.globalDynamicValues = expectation.globalDynamicValues
 
 			if err := mm.RunGlobalHook(expectation.hookName, BeforeHelm); err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(expectation.expectedKubeConfigValues, mm.kubeConfigValues) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedKubeConfigValues, mm.kubeConfigValues)
+			if !reflect.DeepEqual(expectation.expectedKubeGlobalConfigValues, mm.kubeGlobalConfigValues) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedKubeGlobalConfigValues, mm.kubeGlobalConfigValues)
 			}
 
-			if !reflect.DeepEqual(expectation.expectedDynamicValues, mm.dynamicValues) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedDynamicValues, mm.dynamicValues)
+			if !reflect.DeepEqual(expectation.expectedDynamicGlobalValues, mm.globalDynamicValues) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedDynamicGlobalValues, mm.globalDynamicValues)
 			}
 		})
 	}
