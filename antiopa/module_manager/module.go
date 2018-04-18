@@ -3,6 +3,7 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -13,8 +14,6 @@ import (
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/antiopa/utils"
-
-	"github.com/romana/rlog"
 )
 
 type Module struct {
@@ -113,8 +112,6 @@ func (m *Module) execHelm(executeHelm func(valuesPath, helmReleaseName string) e
 			return nil
 		}
 	}
-
-	rlog.Infof("Module '%s': running helm ...", m.Name)
 
 	helmReleaseName := m.generateHelmReleaseName()
 	valuesPath, err := m.prepareValuesPath()
