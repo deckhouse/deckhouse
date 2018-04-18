@@ -41,7 +41,7 @@ spec:
       imagePullSecrets:
       - name: registry
       containers:
-      - image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.11.0
+      - image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.13.0
         name: nginx
         env:
         - name: POD_NAME
