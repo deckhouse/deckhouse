@@ -273,7 +273,6 @@ func ManagersEventsHandler() {
 func TasksRunner() {
 	for {
 		if TasksQueue.IsEmpty() {
-			rlog.Debugf("TasksRunner: queue is empty. Wait for tasks.")
 			time.Sleep(QueueIsEmptyDelay)
 		}
 		for {
