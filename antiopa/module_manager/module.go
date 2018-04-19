@@ -201,9 +201,9 @@ func (m *Module) values() utils.Values {
 
 func (m *Module) configValues() utils.Values {
 	return utils.MergeValues(
-		m.moduleManager.globalConfigValues,
+		m.moduleManager.globalStaticValues,
 		m.moduleManager.kubeGlobalConfigValues,
-		m.moduleManager.modulesConfigValues[m.Name],
+		m.moduleManager.modulesStaticValues[m.Name],
 		m.moduleManager.kubeModulesConfigValues[m.Name],
 	)
 }
@@ -268,9 +268,9 @@ func (mm *MainModuleManager) initModulesIndex() error {
 	if err := mm.setGlobalConfigValues(); err != nil {
 		return err
 	}
-	rlog.Debugf("Set mm.configValues:\n%s", utils.ValuesToString(mm.globalConfigValues))
+	rlog.Debugf("Set mm.configValues:\n%s", utils.ValuesToString(mm.globalStaticValues))
 
-	mm.modulesConfigValues = make(map[string]utils.Values)
+	mm.modulesStaticValues = make(map[string]utils.Values)
 
 	mm.modulesDynamicValues = make(map[string]utils.Values)
 
@@ -302,8 +302,8 @@ func (mm *MainModuleManager) initModulesIndex() error {
 					mm.allModuleNamesInOrder = append(mm.allModuleNamesInOrder, module.Name)
 
 					if moduleConfig != nil {
-						mm.modulesConfigValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set modulesConfigValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.modulesConfigValues[moduleName]))
+						mm.modulesStaticValues[moduleName] = moduleConfig.Values
+						rlog.Debugf("Set modulesStaticValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.modulesStaticValues[moduleName]))
 					}
 
 					mm.modulesDynamicValues[moduleName] = make(utils.Values)
@@ -330,7 +330,7 @@ func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
 	if err != nil {
 		return err
 	}
-	mm.globalConfigValues = values
+	mm.globalStaticValues = values
 
 	return nil
 }

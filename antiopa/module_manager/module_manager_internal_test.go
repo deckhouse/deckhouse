@@ -43,9 +43,9 @@ func initTempAndWorkingDirectories(t *testing.T, subPath string) {
 	}
 }
 
-func TestMainModuleManager_configValues(t *testing.T) {
+func TestMainModuleManager_globalStaticValues(t *testing.T) {
 	mm := &MainModuleManager{}
-	runInitModulesIndex(t, mm, "test_global_config_values")
+	runInitModulesIndex(t, mm, "test_global_static_values")
 
 	expectedValues := utils.Values{
 		"global": map[string]interface{}{
@@ -56,14 +56,14 @@ func TestMainModuleManager_configValues(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(mm.globalConfigValues, expectedValues) {
-		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedValues, mm.globalConfigValues)
+	if !reflect.DeepEqual(mm.globalStaticValues, expectedValues) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedValues, mm.globalStaticValues)
 	}
 }
 
-func TestMainModuleManager_modulesConfigValues(t *testing.T) {
+func TestMainModuleManager_modulesStaticValues(t *testing.T) {
 	mm := &MainModuleManager{}
-	runInitModulesIndex(t, mm, "test_global_modules_config_values")
+	runInitModulesIndex(t, mm, "test_modules_static_values")
 
 	var expectations = []struct {
 		moduleName string
@@ -89,8 +89,8 @@ func TestMainModuleManager_modulesConfigValues(t *testing.T) {
 
 	for _, expectation := range expectations {
 		t.Run(expectation.moduleName, func(t *testing.T) {
-			if !reflect.DeepEqual(mm.modulesConfigValues[expectation.moduleName], expectation.values) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.values, mm.modulesConfigValues[expectation.moduleName])
+			if !reflect.DeepEqual(mm.modulesStaticValues[expectation.moduleName], expectation.values) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.values, mm.modulesStaticValues[expectation.moduleName])
 			}
 		})
 	}
