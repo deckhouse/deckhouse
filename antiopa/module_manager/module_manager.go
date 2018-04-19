@@ -52,10 +52,10 @@ type MainModuleManager struct {
 	modulesHooksByName      map[string]*ModuleHook
 	modulesHooksOrderByName map[string]map[BindingType][]*ModuleHook
 
-	// values для всех модулей, для всех кластеров
-	globalConfigValues utils.Values
-	// values для конкретного модуля, для всех кластеров
-	modulesConfigValues map[string]utils.Values
+	// файл values.yaml для всех модулей, для всех кластеров
+	globalStaticValues utils.Values
+	// файл values.yaml для конкретного модуля, для всех кластеров
+	modulesStaticValues map[string]utils.Values
 	// values для всех модулей, для конкретного кластера
 	kubeGlobalConfigValues utils.Values
 	// values для конкретного модуля, для конкретного кластера

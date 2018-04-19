@@ -291,7 +291,7 @@ func (h *GlobalHook) prepareDynamicValuesPath() (string, error) {
 }
 
 func (h *GlobalHook) configValues() utils.Values {
-	return utils.MergeValues(h.moduleManager.globalConfigValues, h.moduleManager.kubeGlobalConfigValues)
+	return utils.MergeValues(h.moduleManager.globalStaticValues, h.moduleManager.kubeGlobalConfigValues)
 }
 
 func (h *GlobalHook) dynamicValues() utils.Values {
