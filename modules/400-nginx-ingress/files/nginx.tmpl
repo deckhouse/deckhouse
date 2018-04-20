@@ -953,8 +953,8 @@ stream {
             {{ if $all.Cfg.EnableVtsStatus }}
             set $service_port   "{{ if $location.Port }}{{ $location.Port }}{{ end }}";
             set $location_path "{{ $location.Path }}";
-            vhost_traffic_status_filter_by_set_key $upstream_response_time_hist upstream_response_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|$upstream_addr|$location_path;
-            vhost_traffic_status_filter_by_set_key $request_time_hist request_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|$upstream_addr|$location_path;
+            vhost_traffic_status_filter_by_set_key $upstream_response_time_hist upstream_response_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|-|$location_path;
+            vhost_traffic_status_filter_by_set_key $request_time_hist request_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|-|$location_path;
             {{ end }}
 
             {{/* redirect to HTTPS can be achieved forcing the redirect or having a SSL Certificate configured for the server */}}
