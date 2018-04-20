@@ -298,10 +298,17 @@ func TestMainModuleManager_RunModule(t *testing.T) {
 	runInitModulesIndex(t, mm, "test_run_module")
 
 	moduleName := "module"
-	expectedModuleDynamicValues := utils.Values{
+	expectedModuleValues := utils.Values{
+		"global": map[string]interface{}{},
 		"module": map[string]interface{}{
-			"afterHelm":  "override-value",
-			"beforeHelm": "override-value",
+			"afterHelm":    "override-value",
+			"beforeHelm":   "override-value",
+			"replicaCount": 1.0,
+			"image": map[string]interface{}{
+				"repository": "nginx",
+				"tag":        "stable",
+				"pullPolicy": "IfNotPresent",
+			},
 		},
 	}
 
@@ -310,8 +317,13 @@ func TestMainModuleManager_RunModule(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName]) {
-		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName])
+	module, err := mm.GetModule(moduleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expectedModuleValues, module.values()) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleValues, module.values())
 	}
 
 	assert.Equal(t, hc.DeleteSingleFailedRevisionExecuted, true, "helm.DeleteSingleFailedRevision must be executed!")
@@ -327,9 +339,16 @@ func TestMainModuleManager_DeleteModule(t *testing.T) {
 	runInitModulesIndex(t, mm, "test_delete_module")
 
 	moduleName := "module"
-	expectedModuleDynamicValues := utils.Values{
+	expectedModuleValues := utils.Values{
+		"global": map[string]interface{}{},
 		"module": map[string]interface{}{
 			"afterDeleteHelm": "override-value",
+			"replicaCount":    1.0,
+			"image": map[string]interface{}{
+				"repository": "nginx",
+				"tag":        "stable",
+				"pullPolicy": "IfNotPresent",
+			},
 		},
 	}
 
@@ -338,8 +357,13 @@ func TestMainModuleManager_DeleteModule(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName]) {
-		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleDynamicValues, mm.modulesDynamicValues[moduleName])
+	module, err := mm.GetModule(moduleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expectedModuleValues, module.values()) {
+		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleValues, module.values())
 	}
 
 	assert.Equal(t, hc.DeleteReleaseExecuted, true, "helm.DeleteRelease must be executed!")
@@ -357,31 +381,45 @@ func TestMainModuleManager_RunModuleHook(t *testing.T) {
 		moduleName                     string
 		hookName                       string
 		kubeModuleConfigValues         utils.Values
-		moduleDynamicValues            utils.Values
+		moduleDynamicValuesPatches     []utils.ValuesPatch
 		expectedKubeModuleConfigValues utils.Values
-		expectedModuleDynamicValues    utils.Values
+		expectedModuleValues           utils.Values
 	}{
 		{
 			"merge_and_patch_kube_module_config_values",
 			"update-kube-module-config",
 			"000-update-kube-module-config/hooks/merge_and_patch_values",
-			utils.Values{},
-			utils.Values{},
 			utils.Values{
+				"updateKubeModuleConfig": map[string]interface{}{
+					"b": "should-be-deleted",
+				},
+			},
+			[]utils.ValuesPatch{},
+			utils.Values{
+				"global": map[string]interface{}{},
 				"updateKubeModuleConfig": map[string]interface{}{
 					"a": 2.0, "c": []interface{}{3.0},
 				},
 			},
-			utils.Values{},
+			utils.Values{
+				"global": map[string]interface{}{},
+				"updateKubeModuleConfig": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0},
+				},
+			},
 		},
 		{
 			"merge_and_patch_module_dynamic_values",
 			"update-module-dynamic",
 			"100-update-module-dynamic/hooks/merge_and_patch_values",
 			utils.Values{},
-			utils.Values{},
-			utils.Values{},
+			[]utils.ValuesPatch{},
 			utils.Values{
+				"global":              map[string]interface{}{},
+				"updateModuleDynamic": map[string]interface{}{},
+			},
+			utils.Values{
+				"global": map[string]interface{}{},
 				"updateModuleDynamic": map[string]interface{}{
 					"a": 9.0, "c": "10",
 				},
@@ -396,26 +434,37 @@ func TestMainModuleManager_RunModuleHook(t *testing.T) {
 					"a": 1.0, "b": 2.0, "x": "123",
 				},
 			},
-			utils.Values{},
+			[]utils.ValuesPatch{},
 			utils.Values{
+				"global": map[string]interface{}{},
 				"updateKubeModuleConfig": map[string]interface{}{
 					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
 				},
 			},
-			utils.Values{},
+			utils.Values{
+				"global": map[string]interface{}{},
+				"updateKubeModuleConfig": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
+				},
+			},
 		},
 		{
 			"merge_and_patch_over_existing_module_dynamic_values",
 			"update-module-dynamic",
 			"100-update-module-dynamic/hooks/merge_and_patch_values",
 			utils.Values{},
-			utils.Values{
-				"updateModuleDynamic": map[string]interface{}{
-					"a": 123.0, "x": 10.0,
-				},
+			[]utils.ValuesPatch{
+				*utils.MustValuesPatch(utils.ValuesPatchFromBytes([]byte(`[
+{"op": "add", "path": "/updateModuleDynamic/a", "value": 123},
+{"op": "add", "path": "/updateModuleDynamic/x", "value": 10}
+				]`))),
 			},
-			utils.Values{},
 			utils.Values{
+				"global":              map[string]interface{}{},
+				"updateModuleDynamic": map[string]interface{}{},
+			},
+			utils.Values{
+				"global": map[string]interface{}{},
 				"updateModuleDynamic": map[string]interface{}{
 					"a": 9.0, "c": "10", "x": 10.0,
 				},
@@ -427,18 +476,23 @@ func TestMainModuleManager_RunModuleHook(t *testing.T) {
 	for _, expectation := range expectations {
 		t.Run(expectation.testName, func(t *testing.T) {
 			mm.kubeModulesConfigValues[expectation.moduleName] = expectation.kubeModuleConfigValues
-			mm.modulesDynamicValues[expectation.moduleName] = expectation.moduleDynamicValues
+			mm.modulesDynamicValuesPatches[expectation.moduleName] = expectation.moduleDynamicValuesPatches
 
 			if err := mm.RunModuleHook(expectation.hookName, BeforeHelm); err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(expectation.expectedKubeModuleConfigValues, mm.kubeModulesConfigValues[expectation.moduleName]) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedKubeModuleConfigValues, mm.kubeModulesConfigValues[expectation.moduleName])
+			module, err := mm.GetModule(expectation.moduleName)
+			if err != nil {
+				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(expectation.expectedModuleDynamicValues, mm.modulesDynamicValues[expectation.moduleName]) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedModuleDynamicValues, mm.modulesDynamicValues[expectation.moduleName])
+			if !reflect.DeepEqual(expectation.expectedKubeModuleConfigValues, module.configValues()) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedKubeModuleConfigValues, module.configValues())
+			}
+
+			if !reflect.DeepEqual(expectation.expectedModuleValues, module.values()) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedModuleValues, module.values())
 			}
 		})
 	}
@@ -554,28 +608,38 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 		testName                       string
 		hookName                       string
 		kubeGlobalConfigValues         utils.Values
-		globalDynamicValues            utils.Values
+		globalDynamicValuesPatches     []utils.ValuesPatch
 		expectedKubeGlobalConfigValues utils.Values
-		expectedDynamicGlobalValues    utils.Values
+		expectedGlobalValues           utils.Values
 	}{
 		{
 			"merge_and_patch_kube_config_values",
 			"global-hooks/000-update-kube-config/merge_and_patch_values",
-			utils.Values{},
-			utils.Values{},
+			utils.Values{
+				"global": map[string]interface{}{
+					"b": "should-be-deleted",
+				},
+			},
+			[]utils.ValuesPatch{},
 			utils.Values{
 				"global": map[string]interface{}{
 					"a": 2.0, "c": []interface{}{3.0},
 				},
 			},
-			utils.Values{},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0},
+				},
+			},
 		},
 		{
 			"merge_and_patch_dynamic_values",
 			"global-hooks/100-update-dynamic/merge_and_patch_values",
 			utils.Values{},
-			utils.Values{},
-			utils.Values{},
+			[]utils.ValuesPatch{},
+			utils.Values{
+				"global": map[string]interface{}{},
+			},
 			utils.Values{
 				"global": map[string]interface{}{
 					"a": 9.0, "c": "10",
@@ -590,24 +654,31 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 					"a": 1.0, "b": 2.0, "x": "123",
 				},
 			},
-			utils.Values{},
+			[]utils.ValuesPatch{},
 			utils.Values{
 				"global": map[string]interface{}{
 					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
 				},
 			},
-			utils.Values{},
+			utils.Values{
+				"global": map[string]interface{}{
+					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
+				},
+			},
 		},
 		{
 			"merge_and_patch_over_existing_dynamic_values",
 			"global-hooks/100-update-dynamic/merge_and_patch_values",
 			utils.Values{},
-			utils.Values{
-				"global": map[string]interface{}{
-					"a": 123.0, "x": 10.0,
-				},
+			[]utils.ValuesPatch{
+				*utils.MustValuesPatch(utils.ValuesPatchFromBytes([]byte(`[
+{"op": "add", "path": "/global/a", "value": 123},
+{"op": "add", "path": "/global/x", "value": 10.0}
+				]`))),
 			},
-			utils.Values{},
+			utils.Values{
+				"global": map[string]interface{}{},
+			},
 			utils.Values{
 				"global": map[string]interface{}{
 					"a": 9.0, "c": "10", "x": 10.0,
@@ -619,18 +690,23 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 	for _, expectation := range expectations {
 		t.Run(expectation.testName, func(t *testing.T) {
 			mm.kubeGlobalConfigValues = expectation.kubeGlobalConfigValues
-			mm.globalDynamicValues = expectation.globalDynamicValues
+			mm.globalDynamicValuesPatches = expectation.globalDynamicValuesPatches
 
 			if err := mm.RunGlobalHook(expectation.hookName, BeforeHelm); err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(expectation.expectedKubeGlobalConfigValues, mm.kubeGlobalConfigValues) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedKubeGlobalConfigValues, mm.kubeGlobalConfigValues)
+			hook, err := mm.GetGlobalHook(expectation.hookName)
+			if err != nil {
+				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(expectation.expectedDynamicGlobalValues, mm.globalDynamicValues) {
-				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedDynamicGlobalValues, mm.globalDynamicValues)
+			if !reflect.DeepEqual(expectation.expectedKubeGlobalConfigValues, hook.configValues()) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedKubeGlobalConfigValues, hook.configValues())
+			}
+
+			if !reflect.DeepEqual(expectation.expectedGlobalValues, hook.values()) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedGlobalValues, hook.values())
 			}
 		})
 	}

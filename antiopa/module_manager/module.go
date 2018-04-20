@@ -3,7 +3,6 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -12,6 +11,10 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+
+	"github.com/kennygrant/sanitize"
+	"github.com/otiai10/copy"
+	"github.com/romana/rlog"
 
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
@@ -28,6 +31,10 @@ func (mm *MainModuleManager) NewModule() *Module {
 	module := &Module{}
 	module.moduleManager = mm
 	return module
+}
+
+func (m *Module) SafeName() string {
+	return sanitize.BaseName(m.Name)
 }
 
 func (m *Module) run() error {
@@ -70,7 +77,24 @@ func (m *Module) cleanup() error {
 
 func (m *Module) execRun() error {
 	err := m.execHelm(func(valuesPath, helmReleaseName string) error {
-		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, m.Path, []string{valuesPath}, m.moduleManager.helm.TillerNamespace())
+		var err error
+
+		runChartPath := filepath.Join(TempDir, fmt.Sprintf("%s.chart", m.SafeName()))
+
+		err = os.RemoveAll(runChartPath)
+		if err != nil {
+			return err
+		}
+		err = copy.Copy(m.Path, runChartPath)
+		if err != nil {
+			return err
+		}
+		err = os.Truncate(filepath.Join(runChartPath, "values.yaml"), 0)
+		if err != nil {
+			return err
+		}
+
+		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, runChartPath, []string{valuesPath}, m.moduleManager.helm.TillerNamespace())
 	})
 
 	if err != nil {
@@ -114,7 +138,7 @@ func (m *Module) execHelm(executeHelm func(valuesPath, helmReleaseName string) e
 	}
 
 	helmReleaseName := m.generateHelmReleaseName()
-	valuesPath, err := m.prepareValuesPath()
+	valuesPath, err := m.prepareValuesYamlFile()
 	if err != nil {
 		return err
 	}
@@ -146,40 +170,64 @@ func (m *Module) runHooksByBinding(binding BindingType) error {
 	return nil
 }
 
-func (m *Module) prepareValuesPath() (string, error) {
-	values := m.values()
+func (m *Module) prepareConfigValuesYamlFile() (string, error) {
+	values := m.configValues()
 
-	rlog.Debugf("Prepared module %s values:\n%s", m.Name, utils.ValuesToString(values))
-
-	valuesPath, err := dumpValuesJson(fmt.Sprintf("%s-values.json", m.Name), values)
+	data := utils.MustDump(utils.DumpValuesYaml(values))
+	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-config-values.yaml", m.SafeName()))
+	err := dumpData(path, data)
 	if err != nil {
 		return "", err
 	}
-	return valuesPath, nil
-}
-
-func (m *Module) prepareConfigValuesPath() (string, error) {
-	values := m.configValues()
 
 	rlog.Debugf("Prepared module %s config values:\n%s", m.Name, utils.ValuesToString(values))
 
-	configValuesPath, err := dumpValuesJson(fmt.Sprintf("%s-config-values.json", m.Name), values)
-	if err != nil {
-		return "", err
-	}
-	return configValuesPath, nil
+	return path, nil
 }
 
-func (m *Module) prepareDynamicValuesPath() (string, error) {
-	values := m.dynamicValues()
+func (m *Module) prepareConfigValuesJsonFile() (string, error) {
+	values := m.configValues()
 
-	rlog.Debugf("Prepared module %s dynamic values:\n%s", m.Name, utils.ValuesToString(values))
-
-	dynamicValuesPath, err := dumpValuesJson(fmt.Sprintf("%s-dynamic-values.json", m.Name), values)
+	data := utils.MustDump(utils.DumpValuesJson(values))
+	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-config-values.json", m.SafeName()))
+	err := dumpData(path, data)
 	if err != nil {
 		return "", err
 	}
-	return dynamicValuesPath, nil
+
+	rlog.Debugf("Prepared module %s config values:\n%s", m.Name, utils.ValuesToString(values))
+
+	return path, nil
+}
+
+func (m *Module) prepareValuesYamlFile() (string, error) {
+	values := m.values()
+
+	data := utils.MustDump(utils.DumpValuesYaml(values))
+	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-values.yaml", m.SafeName()))
+	err := dumpData(path, data)
+	if err != nil {
+		return "", err
+	}
+
+	rlog.Debugf("Prepared module %s values:\n%s", m.Name, utils.ValuesToString(values))
+
+	return path, nil
+}
+
+func (m *Module) prepareValuesJsonFile() (string, error) {
+	values := m.values()
+
+	data := utils.MustDump(utils.DumpValuesJson(values))
+	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-values.json", m.SafeName()))
+	err := dumpData(path, data)
+	if err != nil {
+		return "", err
+	}
+
+	rlog.Debugf("Prepared module %s values:\n%s", m.Name, utils.ValuesToString(values))
+
+	return path, nil
 }
 
 func (m *Module) checkHelmChart() (bool, error) {
@@ -195,21 +243,47 @@ func (m *Module) generateHelmReleaseName() string {
 	return m.Name
 }
 
-func (m *Module) values() utils.Values {
-	return utils.MergeValues(m.configValues(), m.dynamicValues())
-}
-
 func (m *Module) configValues() utils.Values {
 	return utils.MergeValues(
-		m.moduleManager.globalStaticValues,
+		utils.Values{"global": map[string]interface{}{}},
+		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
 		m.moduleManager.kubeGlobalConfigValues,
-		m.moduleManager.modulesStaticValues[m.Name],
 		m.moduleManager.kubeModulesConfigValues[m.Name],
 	)
 }
 
-func (m *Module) dynamicValues() utils.Values {
-	return utils.MergeValues(m.moduleManager.globalDynamicValues, m.moduleManager.modulesDynamicValues[m.Name])
+func (m *Module) values() utils.Values {
+	var err error
+
+	res := utils.MergeValues(
+		utils.Values{"global": map[string]interface{}{}},
+		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
+		m.moduleManager.globalStaticValues,
+		m.moduleManager.modulesStaticValues[m.Name],
+		m.moduleManager.kubeGlobalConfigValues,
+		m.moduleManager.kubeModulesConfigValues[m.Name],
+	)
+
+	rlog.Debugf("SUKA:\n%s", utils.ValuesToString(res))
+
+	for _, patches := range [][]utils.ValuesPatch{
+		m.moduleManager.globalDynamicValuesPatches,
+		m.moduleManager.modulesDynamicValuesPatches[m.Name],
+	} {
+		for _, patch := range patches {
+			// Invariant: do not store patches that does not apply
+			// Give user error for patches early, after patch receive
+
+			res, _, err = utils.ApplyValuesPatch(res, patch)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	rlog.Debugf("SUKA:\n%s", utils.ValuesToString(res))
+
+	return res
 }
 
 func (m *Module) moduleValuesKey() string {
@@ -272,7 +346,7 @@ func (mm *MainModuleManager) initModulesIndex() error {
 
 	mm.modulesStaticValues = make(map[string]utils.Values)
 
-	mm.modulesDynamicValues = make(map[string]utils.Values)
+	mm.modulesDynamicValuesPatches = make(map[string][]utils.ValuesPatch)
 
 	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
 
@@ -306,7 +380,7 @@ func (mm *MainModuleManager) initModulesIndex() error {
 						rlog.Debugf("Set modulesStaticValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.modulesStaticValues[moduleName]))
 					}
 
-					mm.modulesDynamicValues[moduleName] = make(utils.Values)
+					mm.modulesDynamicValuesPatches[moduleName] = make([]utils.ValuesPatch, 0)
 
 					if err = mm.initModuleHooks(module); err != nil {
 						return err
@@ -331,6 +405,8 @@ func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
 		return err
 	}
 	mm.globalStaticValues = values
+
+	rlog.Debugf("Initialized global static values:\n%s", utils.ValuesToString(mm.globalStaticValues))
 
 	return nil
 }

@@ -10,7 +10,7 @@ function values::json_patch() {
     printf '%s\n' "${config_values_json_patch[@]}" | jo -a > $CONFIG_VALUES_JSON_PATCH_PATH
   else
     dynamic_values_json_patch+=($(jo $@))
-    printf '%s\n' "${dynamic_values_json_patch[@]}" | jo -a > $DYNAMIC_VALUES_JSON_PATCH_PATH
+    printf '%s\n' "${dynamic_values_json_patch[@]}" | jo -a > $VALUES_JSON_PATCH_PATH
   fi
 }
 
@@ -19,7 +19,7 @@ function values::get() {
     shift
     cat $CONFIG_VALUES_PATH | jq ".$1" -r
   else
-    cat $DYNAMIC_VALUES_PATH | jq ".$1" -r
+    cat $VALUES_PATH | jq ".$1" -r
   fi
 }
 

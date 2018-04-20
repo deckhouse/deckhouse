@@ -7,18 +7,9 @@ if [[ "$1" == "--config" ]]; then
 }
 "
 else
-    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_MERGE_PATH"
-{
-    "updateModuleDynamic": {
-        "a": 5,
-        "b": 6
-    }
-}
-EOF
-    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_PATCH_PATH"
+    cat << 'EOF' > "$VALUES_JSON_PATCH_PATH"
 [
-    { "op": "replace", "path": "/updateModuleDynamic/a", "value": 9 },
-    { "op": "remove", "path": "/updateModuleDynamic/b"},
+    { "op": "add", "path": "/updateModuleDynamic/a", "value": 9 },
     { "op": "add", "path": "/updateModuleDynamic/c", "value": "10" }
 ]
 EOF
