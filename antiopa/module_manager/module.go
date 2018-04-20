@@ -264,8 +264,6 @@ func (m *Module) values() utils.Values {
 		m.moduleManager.kubeModulesConfigValues[m.Name],
 	)
 
-	rlog.Debugf("SUKA:\n%s", utils.ValuesToString(res))
-
 	for _, patches := range [][]utils.ValuesPatch{
 		m.moduleManager.globalDynamicValuesPatches,
 		m.moduleManager.modulesDynamicValuesPatches[m.Name],
@@ -280,8 +278,6 @@ func (m *Module) values() utils.Values {
 			}
 		}
 	}
-
-	rlog.Debugf("SUKA:\n%s", utils.ValuesToString(res))
 
 	return res
 }
