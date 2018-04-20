@@ -7,18 +7,10 @@ if [[ "$1" == "--config" ]]; then
 }
 "
 else
-    cat << 'EOF' > "$CONFIG_VALUES_JSON_MERGE_PATH"
-{
-    "global": {
-        "a": 1,
-        "b": 2
-    }
-}
-EOF
     cat << 'EOF' > "$CONFIG_VALUES_JSON_PATCH_PATH"
 [
-    { "op": "replace", "path": "/global/a", "value": 2 },
-    { "op": "remove", "path": "/global/b"},
+    { "op": "add", "path": "/global/a", "value": 2 },
+    { "op": "remove", "path": "/global/b" },
     { "op": "add", "path": "/global/c", "value": [3] }
 ]
 EOF

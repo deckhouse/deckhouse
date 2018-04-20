@@ -56,14 +56,19 @@ type MainModuleManager struct {
 	globalStaticValues utils.Values
 	// файл values.yaml для конкретного модуля, для всех кластеров
 	modulesStaticValues map[string]utils.Values
+
 	// values для всех модулей, для конкретного кластера
 	kubeGlobalConfigValues utils.Values
 	// values для конкретного модуля, для конкретного кластера
 	kubeModulesConfigValues map[string]utils.Values
-	// dynamic-values для всех модулей, для всех кластеров
-	globalDynamicValues utils.Values
-	// dynamic-values для конкретного модуля, для всех кластеров
-	modulesDynamicValues map[string]utils.Values
+
+	// Invariant: do not store patches that does not apply
+	// Give user error for patches early, after patch receive
+
+	// values для всех модулей, для конкретного инстанса antiopa-pod
+	globalDynamicValuesPatches []utils.ValuesPatch
+	// values для конкретного модуля, для конкретного инстанса antiopa-pod
+	modulesDynamicValuesPatches map[string][]utils.ValuesPatch
 
 	// Внутреннее событие: изменились values модуля.
 	// Обработка -- генерация внешнего Event со всеми связанными модулями для рестарта.
@@ -162,7 +167,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	mm.helm = helmClient
 	mm.globalValuesChanged = make(chan bool, 1)
 	mm.moduleValuesChanged = make(chan string, 1)
-	mm.globalDynamicValues = make(utils.Values)
+	mm.globalDynamicValuesPatches = make([]utils.ValuesPatch, 0)
 
 	if err := mm.initGlobalHooks(); err != nil {
 		return nil, err
@@ -617,7 +622,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 		return err
 	}
 
-	oldValuesChecksum, err := valuesChecksum(mm.kubeGlobalConfigValues, mm.globalDynamicValues)
+	oldValuesChecksum, err := valuesChecksum(globalHook.values())
 	if err != nil {
 		return err
 	}
@@ -626,7 +631,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 		return err
 	}
 
-	newValuesChecksum, err := valuesChecksum(mm.kubeGlobalConfigValues, mm.globalDynamicValues)
+	newValuesChecksum, err := valuesChecksum(globalHook.values())
 	if err != nil {
 		return err
 	}
@@ -647,7 +652,7 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 		return err
 	}
 
-	oldValuesChecksum, err := valuesChecksum(mm.kubeModulesConfigValues[moduleHook.Module.Name], mm.modulesDynamicValues[moduleHook.Module.Name])
+	oldValuesChecksum, err := valuesChecksum(moduleHook.values())
 	if err != nil {
 		return err
 	}
@@ -656,7 +661,7 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 		return err
 	}
 
-	newValuesChecksum, err := valuesChecksum(mm.kubeModulesConfigValues[moduleHook.Module.Name], mm.modulesDynamicValues[moduleHook.Module.Name])
+	newValuesChecksum, err := valuesChecksum(moduleHook.values())
 	if err != nil {
 		return err
 	}

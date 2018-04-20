@@ -7,18 +7,10 @@ if [[ "$1" == "--config" ]]; then
 }
 "
 else
-    cat << 'EOF' > "$CONFIG_VALUES_JSON_MERGE_PATH"
-{
-    "updateKubeModuleConfig": {
-        "a": 1,
-        "b": 2
-    }
-}
-EOF
     cat << 'EOF' > "$CONFIG_VALUES_JSON_PATCH_PATH"
 [
-    { "op": "replace", "path": "/updateKubeModuleConfig/a", "value": 2 },
-    { "op": "remove", "path": "/updateKubeModuleConfig/b"},
+    { "op": "add", "path": "/updateKubeModuleConfig/a", "value": 2 },
+    { "op": "remove", "path": "/updateKubeModuleConfig/b" },
     { "op": "add", "path": "/updateKubeModuleConfig/c", "value": [3] }
 ]
 EOF

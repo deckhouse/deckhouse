@@ -7,7 +7,6 @@ function __config__() {
 }
 
 function __main__() {
-  values::set global '{}'
   values::set global.cluster '{}'
 }
 

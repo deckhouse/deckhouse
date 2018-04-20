@@ -9,8 +9,8 @@ function __config__() {
 }
 
 function __main__() {
-  local project=$(values::get --config global.project)
-  local cluster_name=$(values::get --config global.clusterName)
+  local project=$(values::get global.project)
+  local cluster_name=$(values::get global.clusterName)
 
   if values::is_empty $project || values::is_empty $cluster_name ; then
     >&2 echo "Failed to extract project or clusterName from global values"
@@ -19,14 +19,14 @@ function __main__() {
 
   local grafana_url="-"
   local prometheus_url="-"
-  local cluster_hostname=$(values::get --config global.clusterHostname)
-  local scheme=$([[ "$(values::get --config global.ingressACME)" == "true" ]] && echo "https" || echo "http")
+  local cluster_hostname=$(values::get global.clusterHostname)
+  local scheme=$([[ "$(values::get global.ingressACME)" == "true" ]] && echo "https" || echo "http")
   if ! values::is_empty $cluster_hostname ; then
     grafana_url="${scheme}://prometheus.${cluster_hostname}/"
     prometheus_url="${scheme}://prometheus.${cluster_hostname}/prometheus/"
   fi
 
-  local madison_auth_key=$(values::get --config prometheus.madisonAuthKey)
+  local madison_auth_key=$(values::get prometheus.madisonAuthKey)
   if values::is_empty $madison_auth_key ; then
     local request=$(jo \
       type=prometheus \

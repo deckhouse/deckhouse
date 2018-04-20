@@ -7,11 +7,9 @@ if [[ "$1" == "--config" ]]; then
 }
 "
 else
-    cat << 'EOF' > "$DYNAMIC_VALUES_JSON_MERGE_PATH"
-{
-    "module": {
-        "afterDeleteHelm": "override-value"
-    }
-}
+    cat << 'EOF' > "$VALUES_JSON_PATCH_PATH"
+[
+    { "op": "add", "path": "/module/afterDeleteHelm", "value": "override-value" }
+]
 EOF
 fi
