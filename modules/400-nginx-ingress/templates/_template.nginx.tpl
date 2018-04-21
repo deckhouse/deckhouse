@@ -25,6 +25,7 @@ spec:
         app: {{ $name }}
       annotations:
         checksum/config-template: {{ .Files.Get "files/nginx.tmpl" | sha256sum }}
+        checksum/lua: {{ include (print .Template.BasePath "/lua.yaml") . | sha256sum }}
 #TODO: Docker before 1.12 does not support sysctls
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
@@ -84,6 +85,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/nginx/template
           name: nginx-config-template
+        - mountPath: /etc/nginx/custom_lua
+          name: nginx-lua
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
         - mountPath: /var/lib/nginx/fastcgi
@@ -94,13 +97,15 @@ spec:
           name: scgi-temp-path
         - mountPath: /var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-      - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/vts-memory-cleaner:{{ .Values.global.modulesImages.tags.nginxIngress.vtsMemoryCleaner }}
-        name: vts-memory-cleaner
-        imagePullPolicy: Always
+      - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
+        name: statsd-exporter
       volumes:
       - name: nginx-config-template
         configMap:
           name: nginx-config-template
+      - name: nginx-lua
+        configMap:
+          name: nginx-lua
       - name: client-body-temp-path
         emptyDir: {}
       - name: fastcgi-temp-path

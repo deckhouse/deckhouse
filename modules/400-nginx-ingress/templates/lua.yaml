@@ -1,0 +1,13 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-lua
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+data:
+{{ ($.Files.Glob "files/lua/*.lua").AsConfig | indent 2 }}
+{{- end }}
