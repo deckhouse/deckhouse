@@ -9,13 +9,8 @@ function __config__() {
 }
 
 function __main__() {
-  local project=$(values::get global.project)
-  local cluster_name=$(values::get global.clusterName)
-
-  if values::is_empty $project || values::is_empty $cluster_name ; then
-    >&2 echo "Failed to extract project or clusterName from global values"
-    return 1
-  fi
+  local project=$(values::get --required global.project)
+  local cluster_name=$(values::get --required global.clusterName)
 
   local grafana_url="-"
   local prometheus_url="-"
