@@ -87,8 +87,10 @@ func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err erro
 func (helm *CliHelm) DeleteSingleFailedRevision(releaseName string) (err error) {
 	revision, status, err := helm.LastReleaseStatus(releaseName)
 	if err != nil {
-		if revision != "0" {
-			rlog.Infof("%v", err)
+		rlog.Infof("%v", err)
+		if revision == "0" {
+			// revision 0 is not an error. just skip deletion.
+			err = nil
 		}
 		return err
 	}
