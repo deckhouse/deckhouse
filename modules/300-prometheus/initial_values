@@ -103,8 +103,7 @@ function __main_old__() {
     prometheus_url="https://prometheus.${cluster_hostname}/prometheus/"
   fi
 
-  madison_auth_key=$(kubectl -n antiopa get cm/antiopa -o json | jq '.data."prometheus-values"' -r | grep '^  madisonAuthKey:' | sed 's/^  madisonAuthKey: //')
-  if [[ -z "$madison_auth_key" || "$madison_auth_key" == "null" ]] ; then
+  if ! madison_auth_key=$(kubectl -n antiopa get cm/antiopa -o json | jq '.data."prometheus-values"' -r | grep '^  madisonAuthKey:' | sed 's/^  madisonAuthKey: //') || [[ -z "$madison_auth_key" || "$madison_auth_key" == "null" ]] ; then
     local request=$(jo \
       type=prometheus \
       name=kubernetes-$cluster_name \
