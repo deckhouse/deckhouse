@@ -74,8 +74,4 @@ function __main__() {
   kubectl::apply_jq kube-system ${kube_dns_deployment_name} "$fltr"
 }
 
-function __main_old__() {
-  __main__ $@
-}
-
 hook::run $@

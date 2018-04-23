@@ -24,8 +24,4 @@ function __main__() {
   kubectl::apply_jq kube-system ds/kube-flannel-ds "$fltr"
 }
 
-function __main_old__() {
-  __main__ $@
-}
-
 hook::run $@

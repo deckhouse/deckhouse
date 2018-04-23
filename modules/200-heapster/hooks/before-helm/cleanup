@@ -42,8 +42,4 @@ function __main__() {
   _migrate
 }
 
-function __main_old__() {
-  __main__ $@
-}
-
 hook::run $@

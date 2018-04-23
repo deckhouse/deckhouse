@@ -10,12 +10,4 @@ function __main__() {
   values::set global.cluster.hasSystemNodes $(cluster::has_system_nodes && echo "true" || echo "false")
 }
 
-function __main_old__() {
-  cat > $RETURN_VALUES_PATH <<END
-global:
-  cluster:
-    hasSystemNodes: $(cluster::has_system_nodes && echo "true" || echo "false")
-END
-}
-
 hook::run $@

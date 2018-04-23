@@ -10,8 +10,4 @@ function __main__() {
   values::set global.cluster '{}'
 }
 
-function __main_old__() {
-  return 0
-}
-
 hook::run $@

@@ -16,8 +16,4 @@ function __main__() {
   kubectl::apply_jq antiopa deploy/antiopa '. | .spec.template.spec.containers[0].resources.limits = {"cpu":"420m","memory":"500Mi"}'
 }
 
-function __main_old__() {
-  __main__ $@
-}
-
 hook::run $@
