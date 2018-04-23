@@ -9,6 +9,7 @@ import (
 	"github.com/evanphx/json-patch"
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
+	"github.com/peterbourgon/mergemap"
 	"github.com/segmentio/go-camelcase"
 )
 
@@ -200,19 +201,13 @@ func ApplyJsonPatchToValues(values Values, patch jsonpatch.Patch) (Values, error
 }
 
 func MergeValues(values ...Values) Values {
-	var deepMergeArgs []map[interface{}]interface{}
+	res := make(Values)
+
 	for _, v := range values {
-		deepMergeArgs = append(deepMergeArgs, valuesToDeepMergeArg(v))
+		res = mergemap.Merge(res, v)
 	}
 
-	res := DeepMerge(deepMergeArgs...)
-
-	resValues, err := FormatValues(res)
-	if err != nil {
-		panic(err)
-	}
-
-	return resValues
+	return res
 }
 
 func valuesToDeepMergeArg(values Values) map[interface{}]interface{} {
