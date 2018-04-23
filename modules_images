@@ -59,8 +59,6 @@ EOF
     esac
   done
 
-  TAGS_YAML_FILE=$(echo $TAGS_JSON_FILE | sed 's/\.json$/.yaml/')
-
   if [[ $# -ne 0 ]] ; then
     echo "$HELP_STRING"
     exit 1
@@ -93,21 +91,18 @@ EOF
       if [[ $module != $previous_module_in_tags_json_file ]] ; then
         if [[ -z $previous_module_in_tags_json_file ]] ; then
           rm -f $TAGS_JSON_FILE
-          rm -f $TAGS_YAML_FILE
           echo -n '{' >> $TAGS_JSON_FILE
         else
           echo -n '},' >> $TAGS_JSON_FILE
         fi
 
         echo -n '"'$(echo $module | sed -E 's/-(.)/\U\1/g')'":{' >> $TAGS_JSON_FILE
-        echo $module: | sed -E 's/-(.)/\U\1/g' >> $TAGS_YAML_FILE
         previous_module_in_tags_json_file=$module
       else
         echo -n ',' >> $TAGS_JSON_FILE
       fi
 
       echo -n '"'$(echo $image | sed -E 's/-(.)/\U\1/g')'":"'$tag'"' >> $TAGS_JSON_FILE
-      echo '  '$image': "'$tag'"' | sed -E 's/-(.)/\U\1/g' >> $TAGS_YAML_FILE
     fi
 
     # Пропускаем, если образ уже собран (присутствует локально на сборщике)

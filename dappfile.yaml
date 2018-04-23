@@ -63,11 +63,6 @@ ansible:
       content: |
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
       dest: /antiopa/modules/images_tags.json
-  - name: "Add modules images tags.yaml"
-    copy:
-      content: |
-{{ .Files.Get "modules/images_tags.yaml" | indent 8 }}
-      dest: /antiopa/modules/images_tags.yaml
 ---
 artifact: antiopa
 from: golang:1.10-alpine3.7
