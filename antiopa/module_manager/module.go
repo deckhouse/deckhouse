@@ -264,27 +264,6 @@ func (m *Module) values() utils.Values {
 		m.moduleManager.kubeModulesConfigValues[m.Name],
 	)
 
-	rlog.Debugf("HELLO %s merge without kube: %#v", m.Name, utils.MergeValues(
-		utils.Values{"global": map[string]interface{}{}},
-		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
-		m.moduleManager.globalStaticValues,
-		m.moduleManager.modulesStaticValues[m.Name],
-	))
-
-	rlog.Debugf("HELLO %s merge with kube: %#v", m.Name, utils.MergeValues(
-		utils.Values{"global": map[string]interface{}{}},
-		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
-		m.moduleManager.globalStaticValues,
-		m.moduleManager.modulesStaticValues[m.Name],
-		m.moduleManager.kubeGlobalConfigValues,
-		m.moduleManager.kubeModulesConfigValues[m.Name],
-	))
-
-	rlog.Debugf("HELLO %s merge with kube: %#v", m.Name, utils.MergeValues(
-		m.moduleManager.kubeGlobalConfigValues,
-		m.moduleManager.kubeModulesConfigValues[m.Name],
-	))
-
 	for _, patches := range [][]utils.ValuesPatch{
 		m.moduleManager.globalDynamicValuesPatches,
 		m.moduleManager.modulesDynamicValuesPatches[m.Name],
