@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=0
+}
+
+function __main__() {
+  values::require_in_config global.project
+  values::require_in_config global.clusterName
+}
+
+hook::run $@

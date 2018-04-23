@@ -87,3 +87,10 @@ function values::unset() {
 function values::is_empty() {
   [[ -z "${1:-}" || "${1:-}" == "null" ]]
 }
+
+function values::require_in_config() {
+  if ! values::has --config $1 ; then
+    >&2 echo "Error: $1 is required in config!"
+    return 1
+  fi
+}
