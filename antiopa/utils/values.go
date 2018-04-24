@@ -16,7 +16,22 @@ import (
 type Values map[string]interface{}
 
 type ValuesPatch struct {
-	JsonPatch jsonpatch.Patch
+	JsonPatch  jsonpatch.Patch
+	Operations []*ValuesPatchOperation
+}
+
+type ValuesPatchOperation struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
+}
+
+func (op *ValuesPatchOperation) ToString() string {
+	data, err := json.Marshal(op)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 type ModuleConfig struct {
@@ -147,7 +162,12 @@ func ValuesPatchFromBytes(data []byte) (*ValuesPatch, error) {
 		return nil, fmt.Errorf("bad json-patch data: %s\n%s", err, string(data))
 	}
 
-	return &ValuesPatch{JsonPatch: patch}, nil
+	var operations []*ValuesPatchOperation
+	if err := json.Unmarshal(data, &operations); err != nil {
+		return nil, fmt.Errorf("bad json-patch data: %s\n%s", err, string(data))
+	}
+
+	return &ValuesPatch{JsonPatch: patch, Operations: operations}, nil
 }
 
 func ValuesPatchFromFile(filePath string) (*ValuesPatch, error) {
@@ -208,14 +228,6 @@ func MergeValues(values ...Values) Values {
 	}
 
 	return res
-}
-
-func valuesToDeepMergeArg(values Values) map[interface{}]interface{} {
-	arg := make(map[interface{}]interface{})
-	for key, value := range values {
-		arg[key] = value
-	}
-	return arg
 }
 
 func ValuesToString(values Values) string {
