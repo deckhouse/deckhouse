@@ -3,7 +3,7 @@
 # dependency: gamma
 # dependency: epsilon
 
-c=$(cat ${ENABLED_MODULES_PATH:-/dev/null} | jq .[] | grep -P '"gamma"|"epsilon"' | wc -l)
+c=$(cat ${VALUES_PATH:-/dev/null} | jq .global.enabledModules[]  | grep -P '"gamma"|"epsilon"' | wc -l)
 if [ "$c" == "2" ] ; then
   exit 0
 fi

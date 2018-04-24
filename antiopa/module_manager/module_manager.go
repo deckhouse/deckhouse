@@ -698,10 +698,10 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 	return nil
 }
 
-func (mm *MainModuleManager) enabledModulesValues() utils.Values {
+func (mm *MainModuleManager) constructEnabledModulesValues(enabledModules []string) utils.Values {
 	return utils.Values{
 		"global": map[string]interface{}{
-			"enabledModules": mm.enabledModulesInOrder,
+			"enabledModules": enabledModules,
 		},
 	}
 }

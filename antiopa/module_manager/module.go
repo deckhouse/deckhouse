@@ -215,9 +215,7 @@ func (m *Module) prepareValuesYamlFile() (string, error) {
 	return path, nil
 }
 
-func (m *Module) prepareValuesJsonFile() (string, error) {
-	values := m.values()
-
+func (m *Module) prepareValuesJsonFileWith(values utils.Values) (string, error) {
 	data := utils.MustDump(utils.DumpValuesJson(values))
 	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-values.json", m.SafeName()))
 	err := dumpData(path, data)
@@ -228,6 +226,14 @@ func (m *Module) prepareValuesJsonFile() (string, error) {
 	rlog.Debugf("Prepared module %s values:\n%s", m.Name, utils.ValuesToString(values))
 
 	return path, nil
+}
+
+func (m *Module) prepareValuesJsonFile() (string, error) {
+	return m.prepareValuesJsonFileWith(m.values())
+}
+
+func (m *Module) prepareValuesJsonFileForEnabledScript(precedingEnabledModules []string) (string, error) {
+	return m.prepareValuesJsonFileWith(m.valuesForEnabledScript(precedingEnabledModules))
 }
 
 func (m *Module) checkHelmChart() (bool, error) {
@@ -252,7 +258,7 @@ func (m *Module) configValues() utils.Values {
 	)
 }
 
-func (m *Module) values() utils.Values {
+func (m *Module) constructValues(enabledModules []string) utils.Values {
 	var err error
 
 	res := utils.MergeValues(
@@ -279,9 +285,17 @@ func (m *Module) values() utils.Values {
 		}
 	}
 
-	res = utils.MergeValues(res, m.moduleManager.enabledModulesValues())
+	res = utils.MergeValues(res, m.moduleManager.constructEnabledModulesValues(enabledModules))
 
 	return res
+}
+
+func (m *Module) valuesForEnabledScript(precedingEnabledModules []string) utils.Values {
+	return m.constructValues(precedingEnabledModules)
+}
+
+func (m *Module) values() utils.Values {
+	return m.constructValues(m.moduleManager.enabledModulesInOrder)
 }
 
 func (m *Module) moduleValuesKey() string {
@@ -302,15 +316,24 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, fmt.Errorf("cannot execute non-executable enable script '%s'", enabledScriptPath)
 	}
 
-	enabledModulesFilePath, err := dumpValuesJson(fmt.Sprintf("%s-preceding-enabled-modules", m.Name), precedingEnabledModules)
+	configValuesPath, err := m.prepareConfigValuesJsonFile()
 	if err != nil {
 		return false, err
 	}
 
-	cmd := m.moduleManager.makeCommand(WorkingDir, enabledScriptPath, []string{}, []string{fmt.Sprintf("ENABLED_MODULES_PATH=%s", enabledModulesFilePath)})
+	valuesPath, err := m.prepareValuesJsonFileForEnabledScript(precedingEnabledModules)
+	if err != nil {
+		return false, err
+	}
+
+	rlog.Infof("Running enabled script for module '%s' ...")
+
+	cmd := m.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, enabledScriptPath, []string{})
+
 	if err := execCommand(cmd); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.Sys().(syscall.WaitStatus).ExitStatus() == 1 {
+				rlog.Infof("Got enabled script result for module '%s': module DISABLED", m.Name)
 				return false, nil
 			} else {
 				return false, err
@@ -319,6 +342,8 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 			return false, err
 		}
 	}
+
+	rlog.Infof("Got enabled script result for module '%s': module ENABLED", m.Name)
 
 	return true, nil
 }
