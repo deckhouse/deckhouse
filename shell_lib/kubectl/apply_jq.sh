@@ -36,7 +36,7 @@ function kubectl::apply_jq() {
     return 1
   fi
 
-  diff -u $a $b
+  diff -u $a $b || true
   rm $a $b $tmp
   return 0
 }
