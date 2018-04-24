@@ -14,6 +14,7 @@ import (
 
 type ModuleManager interface {
 	Run()
+	DiscoverEnabledModules() ([]string, error)
 	GetModule(name string) (*Module, error)
 	GetModuleNamesInOrder() []string
 	GetGlobalHook(name string) (*GlobalHook, error)
@@ -193,13 +194,6 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 			rlog.Warnf("Module manager: no such module '%s' available: ignoring kube config values: %s", moduleConfig.ModuleName, utils.ValuesToString(moduleConfig.Values))
 		}
 	}
-
-	// FIXME: calculate after global-hooks run to
-	enabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
-	if err != nil {
-		return nil, err
-	}
-	mm.enabledModulesInOrder = enabledModules
 
 	releasedModules, err := mm.helm.ListReleases()
 	if err != nil {
@@ -526,6 +520,16 @@ func (mm *MainModuleManager) Run() {
 			}
 		}
 	}
+}
+
+func (mm *MainModuleManager) DiscoverEnabledModules() ([]string, error) {
+	enabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
+	if err != nil {
+		return nil, err
+	}
+	mm.enabledModulesInOrder = enabledModules
+
+	return mm.enabledModulesInOrder, nil
 }
 
 func (mm *MainModuleManager) GetModule(name string) (*Module, error) {

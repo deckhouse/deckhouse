@@ -52,6 +52,10 @@ func (m *ModuleManagerMock) GetModule(name string) (*module_manager.Module, erro
 	panic("implement GetModule")
 }
 
+func (m *ModuleManagerMock) DiscoverEnabledModules() ([]string, error) {
+	return m.GetModuleNamesInOrder(), nil
+}
+
 func (m *ModuleManagerMock) GetModuleNamesInOrder() []string {
 	return []string{"test_module_1__101", "test_module_2__102"}
 }
@@ -236,8 +240,7 @@ func TestMain_ModulesEventsHandler(t *testing.T) {
 
 	expectedCount := 4 // count of ModuleChange in previous go routine
 	expectedCount += len(ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll))
-	expectedCount += len(ModuleManager.GetModuleNamesInOrder())
-	expectedCount += len(ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll))
+	expectedCount += 1 // DiscoverEnabledModules task
 
 	assert.Equal(t, expectedCount, TasksQueue.Length())
 }
