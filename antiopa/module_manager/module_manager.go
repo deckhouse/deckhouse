@@ -162,12 +162,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	WorkingDir = workingDir
 	EventCh = make(chan Event, 1)
 
-	mm := &MainModuleManager{}
-
-	mm.helm = helmClient
-	mm.globalValuesChanged = make(chan bool, 1)
-	mm.moduleValuesChanged = make(chan string, 1)
-	mm.globalDynamicValuesPatches = make([]utils.ValuesPatch, 0)
+	mm := NewMainModuleManager(helmClient, nil)
 
 	if err := mm.initGlobalHooks(); err != nil {
 		return nil, err
@@ -199,6 +194,7 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 		}
 	}
 
+	// FIXME: calculate after global-hooks run to
 	enabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
 	if err != nil {
 		return nil, err
@@ -214,6 +210,32 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 	mm.releasedModulesToDisable = mm.getReleasedModulesToDisable(releasedModules, mm.kubeDisabledModules)
 
 	return mm, nil
+}
+
+func NewMainModuleManager(helmClient helm.HelmClient, kubeConfigManager kube_config_manager.KubeConfigManager) *MainModuleManager {
+	return &MainModuleManager{
+		modulesByName:               make(map[string]*Module),
+		allModuleNamesInOrder:       make([]string, 0),
+		kubeDisabledModules:         make([]string, 0),
+		releasedModulesToDisable:    make([]string, 0),
+		releasedModulesToPurge:      make([]string, 0),
+		enabledModulesInOrder:       make([]string, 0),
+		globalHooksByName:           make(map[string]*GlobalHook),
+		globalHooksOrder:            make(map[BindingType][]*GlobalHook),
+		modulesHooksByName:          make(map[string]*ModuleHook),
+		modulesHooksOrderByName:     make(map[string]map[BindingType][]*ModuleHook),
+		globalStaticValues:          make(utils.Values),
+		modulesStaticValues:         make(map[string]utils.Values),
+		kubeGlobalConfigValues:      make(utils.Values),
+		kubeModulesConfigValues:     make(map[string]utils.Values),
+		globalDynamicValuesPatches:  make([]utils.ValuesPatch, 0),
+		modulesDynamicValuesPatches: make(map[string][]utils.ValuesPatch),
+		moduleValuesChanged:         make(chan string, 1),
+		globalValuesChanged:         make(chan bool, 1),
+
+		helm:              helmClient,
+		kubeConfigManager: kubeConfigManager,
+	}
 }
 
 func (mm *MainModuleManager) GetModulesToDisableOnInit() []string {
@@ -674,4 +696,12 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 	}
 
 	return nil
+}
+
+func (mm *MainModuleManager) enabledModulesValues() utils.Values {
+	return utils.Values{
+		"global": map[string]interface{}{
+			"enabledModules": mm.enabledModulesInOrder,
+		},
+	}
 }
