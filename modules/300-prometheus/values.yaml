@@ -1,6 +1,7 @@
 prometheus:
   retentionDays: 7
   estimatedNumberOfMetrics: 200000
+  madisonSelfSetupKey: ***REMOVED***
 
   # https://github.com/deckhouse/deckhouse/issues/145
   madisonBackends:

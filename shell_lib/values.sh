@@ -104,3 +104,23 @@ function values::array_has() {
 
   values::get $config $1 | jq '(type == "array") and (index("'$2'") != null)' -e > /dev/null
 }
+
+function values::is_true() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  values::get $config $1 | jq '. == true' -e > /dev/null
+}
+
+function values::is_false() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  values::get $config $1 | jq '. == false' -e > /dev/null
+}
