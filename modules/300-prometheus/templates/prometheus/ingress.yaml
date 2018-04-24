@@ -16,7 +16,7 @@ metadata:
     ingress.kubernetes.io/affinity: cookie
     ingress.kubernetes.io/rewrite-target: "/"
 spec:
-  {{- if .Values.global.ingressACME }}
+  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
   tls:
   - hosts:
     - prometheus.{{ .Values.global.clusterHostname }}

@@ -94,3 +94,13 @@ function values::require_in_config() {
     return 1
   fi
 }
+
+function values::array_has() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  values::get $config $1 | jq '(type == "array") and (index("'$2'") != null)' -e > /dev/null
+}
