@@ -278,6 +278,7 @@ SearchEnabledModules:
 	for _, name := range mm.allModuleNamesInOrder {
 		for _, disabled := range disabledModules {
 			if name == disabled {
+				rlog.Infof("Discover enabled modules: module '%s' is DISABLED in config, enabled modules: %s", name, res)
 				continue SearchEnabledModules
 			}
 		}
@@ -290,6 +291,9 @@ SearchEnabledModules:
 
 		if moduleIsEnabled {
 			res = append(res, name)
+			rlog.Infof("Discover enabled modules: module '%s' is ENABLED, enabled modules: %s", name, res)
+		} else {
+			rlog.Infof("Discover enabled modules: module '%s' is DISABLED, enabled modules: %s", name, res)
 		}
 	}
 
@@ -542,7 +546,7 @@ func (mm *MainModuleManager) GetModule(name string) (*Module, error) {
 }
 
 func (mm *MainModuleManager) GetModuleNamesInOrder() []string {
-	return mm.allModuleNamesInOrder
+	return mm.enabledModulesInOrder
 }
 
 func (mm *MainModuleManager) GetGlobalHook(name string) (*GlobalHook, error) {
