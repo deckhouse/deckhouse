@@ -11,10 +11,11 @@ import (
 type TaskType string
 
 const (
-	ModuleDelete  TaskType = "TASK_MODULE_DELETE"
-	ModuleRun     TaskType = "TASK_MODULE_RUN"
-	ModuleHookRun TaskType = "TASK_MODULE_HOOK_RUN"
-	GlobalHookRun TaskType = "TASK_GLOBAL_HOOK_RUN"
+	ModuleDelete           TaskType = "TASK_MODULE_DELETE"
+	ModuleRun              TaskType = "TASK_MODULE_RUN"
+	ModuleHookRun          TaskType = "TASK_MODULE_HOOK_RUN"
+	GlobalHookRun          TaskType = "TASK_GLOBAL_HOOK_RUN"
+	DiscoverEnabledModules TaskType = "TASK_DISCOVER_ENABLED_MODULES"
 	// удаление релиза без сведений о модуле
 	ModulePurge TaskType = "TASK_MODULE_PURGE"
 	// вспомогательные задачи: задержка и остановка обработки

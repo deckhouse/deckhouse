@@ -282,6 +282,40 @@ func TasksRunner() {
 			}
 
 			switch t.GetType() {
+			case task.DiscoverEnabledModules:
+				// FIXME: introduce multiple tasks structures with handler-interface
+				handleTaskFailed := func(err error) {
+					t.IncrementFailureCount()
+					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				}
+				handleTaskSucceeded := func() {
+					TasksQueue.Pop()
+				}
+
+				_, err := ModuleManager.DiscoverEnabledModules()
+				if err != nil {
+					handleTaskFailed(err)
+				}
+
+				// Queue modules
+				moduleNames := ModuleManager.GetModuleNamesInOrder()
+				for _, moduleName := range moduleNames {
+					newTask := task.NewTask(task.ModuleRun, moduleName)
+					rlog.Debugf("ReloadAll Module: queued module run '%s'", moduleName)
+					TasksQueue.Add(newTask)
+				}
+
+				// Queue afterAll global hooks
+				afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
+				for _, hookName := range afterAllHooks {
+					newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
+					TasksQueue.Add(newTask)
+					rlog.Debugf("ReloadAll AfterAll: queued global hook '%s'", hookName)
+				}
+
+				handleTaskSucceeded()
+
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())
 				if err != nil {
@@ -425,24 +459,8 @@ func CreateReloadAllTasks() {
 		rlog.Debugf("ReloadAll BeforeAll: queued global hook '%s'", hookName)
 	}
 
-	// Queue modules
-	moduleNames := ModuleManager.GetModuleNamesInOrder()
-	for _, moduleName := range moduleNames {
-		newTask := task.NewTask(task.ModuleRun, moduleName)
-		rlog.Debugf("ReloadAll Module: queued module run '%s'", moduleName)
-		TasksQueue.Add(newTask)
-	}
-
-	// Queue afterAll global hooks
-	afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
-
-	for _, hookName := range afterAllHooks {
-		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
-		TasksQueue.Add(newTask)
-		rlog.Debugf("ReloadAll AfterAll: queued global hook '%s'", hookName)
-	}
-
-	return
+	TasksQueue.Add(task.NewTask(task.DiscoverEnabledModules, ""))
+	rlog.Debugf("DiscoverEnabledModules: queued discover of enabled modules")
 }
 
 func main() {
