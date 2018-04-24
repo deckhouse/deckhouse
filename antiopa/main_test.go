@@ -39,6 +39,14 @@ var scheduledHooks = map[string]module_manager.ScheduleConfig{
 		Crontab:      "*/1 * * * *",
 		AllowFailure: true,
 	},
+	"scheduled_global_2": {
+		Crontab:      "*/1 * * * *",
+		AllowFailure: true,
+	},
+	"scheduled_global_3": {
+		Crontab:      "*/1 * * * *",
+		AllowFailure: true,
+	},
 	"scheduled_module_1": {
 		Crontab:      "*/2 * * * *",
 		AllowFailure: false,
@@ -479,7 +487,8 @@ func TestMain_ScheduledTasks(t *testing.T) {
 	ScheduleManager = &MockScheduleManager{}
 	schedule_manager.ScheduleCh = make(chan string, 1)
 	ScheduledHooks = UpdateScheduleHooks(nil)
-	assert.Equal(t, 2, len(ScheduledHooks), "not enough scheduled hooks")
+	assert.Equal(t, 4, len(ScheduledHooks), "not enough scheduled hooks")
+	assert.Equal(t, 3, len(ScheduledHooks.GetHooksForSchedule("*/1 * * * *")), "not enough global scheduled hooks")
 
 	fmt.Println("Create queue")
 	// Fill a queue
@@ -519,7 +528,7 @@ func TestMain_ScheduledTasks(t *testing.T) {
 	<-stepCh
 
 	// проверка хуков
-	assert.Equalf(t, 1, len(ScheduledHooks), "bad scheduled hooks count after GlobalChanged: %+v", ScheduledHooks)
+	assert.Equalf(t, 3, len(ScheduledHooks), "bad scheduled hooks count after GlobalChanged: %+v", ScheduledHooks)
 
 	// повторная отправка всех расписаний, в том числе удалённого
 	go func() {

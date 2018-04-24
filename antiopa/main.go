@@ -258,7 +258,7 @@ func ManagersEventsHandler() {
 						rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
 						TasksQueue.Add(newTask)
 					}
-					break
+					continue
 				}
 
 				_, getHookErr = ModuleManager.GetModuleHook(hook.Name)
@@ -270,7 +270,7 @@ func ManagersEventsHandler() {
 						rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
 						TasksQueue.Add(newTask)
 					}
-					break
+					continue
 				}
 
 				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
@@ -501,6 +501,7 @@ LOOP_GLOBAL_HOOKS:
 	}
 
 	if len(oldCrontabs) > 0 {
+		// Собрать новый набор расписаний. Если расписание есть в oldCrontabs, то поставить ему true.
 		newCrontabs := newScheduledTasks.GetCrontabs()
 		for _, crontab := range newCrontabs {
 			if _, has_crontab := oldCrontabs[crontab]; has_crontab {
@@ -508,6 +509,7 @@ LOOP_GLOBAL_HOOKS:
 			}
 		}
 
+		// пройти по старому набору расписаний, если есть расписание с false, то удалить его из обработки.
 		for crontab, _ := range oldCrontabs {
 			if !oldCrontabs[crontab] {
 				ScheduleManager.Remove(crontab)
