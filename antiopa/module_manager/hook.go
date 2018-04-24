@@ -314,7 +314,7 @@ func (h *GlobalHook) values() utils.Values {
 		}
 	}
 
-	res = utils.MergeValues(res, h.moduleManager.enabledModulesValues())
+	res = utils.MergeValues(res, h.moduleManager.constructEnabledModulesValues(h.moduleManager.enabledModulesInOrder))
 
 	return res
 }
