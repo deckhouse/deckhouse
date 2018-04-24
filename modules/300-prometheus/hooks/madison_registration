@@ -56,10 +56,10 @@ function __main__() {
 
   if values::has prometheus.madisonAuthKey ; then
     madison_api PUT "/api/$project/self_update/$(values::get --required prometheus.madisonAuthKey)" "$request_data"
-  else
+  elif values::has prometheus.madisonSelfSetupKey && ! values::is_false prometheus.madisonSelfSetupKey ; then
     request_data=$(echo "$request_data" | jq '.type = "prometheus"')
 
-    madison_auth_key=$(madison_api POST "/api/$project/self_setup/$MADISON_SELF_SETUP_TOKEN" "$request_data")
+    madison_auth_key=$(madison_api POST "/api/$project/self_setup/$(values::get --required prometheus.madisonSelfSetupKey)" "$request_data")
     values::set --config prometheus.madisonAuthKey $madison_auth_key
   fi
 }
