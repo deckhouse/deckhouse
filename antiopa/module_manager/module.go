@@ -307,6 +307,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 
 	f, err := os.Stat(enabledScriptPath)
 	if os.IsNotExist(err) {
+		rlog.Debugf("Enabled script for module '%s' is not exist", m.Name)
 		return true, nil
 	} else if err != nil {
 		return false, err
