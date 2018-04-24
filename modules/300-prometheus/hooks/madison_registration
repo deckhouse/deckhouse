@@ -1,0 +1,67 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+MADISON_SELF_SETUP_TOKEN="***REMOVED***"
+
+function __config__() {
+  jo -p beforeHelm=0
+}
+
+function madison_api() {
+    local response=$(curl -s -H "Content-Type: application/json" -X $1 -d "$3" https://madison.flant.com$2)
+
+    if [[ "$(echo "$response" | jq 'has("auth_key")')" != "true" ]] ; then
+      if [[ "$(echo "$response" | jq 'has("error")')" != "false" ]] ; then
+        >&2 echo "Failed to self setup in madison: $(echo "$response" | jq .error -r)."
+      else
+        >&2 echo "Failed to self setup in madison: unknown error."
+      fi
+
+      >&2 echo 'Command: curl -s -H "Content-Type: application/json" -X '$1' -d "'$3'" https://madison.flant.com'$2
+
+      return 1
+    fi
+
+    echo "$response" | jq .auth_key -r
+}
+
+function __main__() {
+  cluster_name=$(values::get --required global.clusterName)
+  request_data=$(jo \
+    name=kubernetes-$cluster_name \
+    prometheus_url=- \
+    grafana_url=- \
+    extra_data="$(jo \
+      labels="$(jo \
+        kubernetes=$cluster_name \
+      )"
+    )"
+  )
+
+  if values::has global.clusterHostname ; then
+    if ! values::has global.ingressACME || [[ "$(values::get --required global.ingressACME)" == "true" ]] ; then
+      scheme=https
+    else
+      scheme=http
+    fi
+
+    request_data=$(jq -s '.[0] * .[1]' <(echo "$request_data") <(jo \
+      grafana_url="$scheme://prometheus.$(values::get --required global.clusterHostname)/" \
+      prometheus_url="$scheme://prometheus.$(values::get --required global.clusterHostname)/prometheus/"
+    ))
+  fi
+
+  project=$(values::get --required global.project)
+
+  if values::has prometheus.madisonAuthKey ; then
+    madison_api PUT "/api/$project/self_update/$(values::get --required prometheus.madisonAuthKey)" "$request_data"
+  else
+    request_data=$(echo "$request_data" | jq '.type = "prometheus"')
+
+    madison_auth_key=$(madison_api POST "/api/$project/self_setup/$MADISON_SELF_SETUP_TOKEN" "$request_data")
+    values::set --config prometheus.madisonAuthKey $madison_auth_key
+  fi
+}
+
+hook::run $@

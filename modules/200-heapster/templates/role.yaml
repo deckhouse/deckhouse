@@ -1,4 +1,4 @@
-{{- if not (eq .Values.global.cluster.type "ACS") }}
+{{- if not (eq .Values.global.discovery.clusterType "ACS") }}
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:

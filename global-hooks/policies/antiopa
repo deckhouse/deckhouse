@@ -3,7 +3,7 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=30
+  jo -p onStartup=500
 }
 
 function __main__() {

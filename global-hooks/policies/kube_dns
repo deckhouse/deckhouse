@@ -3,7 +3,7 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=40
+  jo -p onStartup=520
 }
 
 function __main__() {
@@ -54,11 +54,14 @@ function __main__() {
   #    * Иначе количество реплик должно быть:
   #      * равно 2 или больше (если руками кто-то поставил),
   #      * но не больше, чем количество неспецифичных нод в кластере (без наших специальных taint)
-  if [[ $(cluster::type) != "AWS" && $(cluster::type) != "GCE" ]] ; then
+  cluster_type=$(values::get --required global.discovery.clusterType)
+  if [[ "$cluster_type" != "AWS" && "$cluster_type" != "GCE" ]] ; then
     if cluster::has_system_nodes; then
-      fltr=$fltr' | .spec.replicas = '$(cluster::count_system_nodes)
+      count_system_nodes=$(cluster::count_system_nodes)
+      fltr=$fltr' | .spec.replicas = '$count_system_nodes
     else
-      fltr=$fltr' | .spec.replicas |= ([[2,.] | max, '$(cluster::nonspecific_nodes | wc -l)'] | min)'
+      count_nonspecific_nodes=$(cluster::nonspecific_nodes | wc -l)
+      fltr=$fltr' | .spec.replicas |= ([[2,.] | max, '$count_nonspecific_nodes'] | min)'
     fi
   fi
 

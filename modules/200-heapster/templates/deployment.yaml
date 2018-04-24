@@ -1,4 +1,4 @@
-{{- if not (eq .Values.global.cluster.type "ACS") }}
+{{- if not (eq .Values.global.discovery.clusterType "ACS") }}
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -23,14 +23,14 @@ spec:
 {{- if and (hasKey .Values.heapster "nodeSelector") (.Values.heapster.nodeSelector) }}
       nodeSelector:
 {{ .Values.heapster.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.heapster "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+{{- else if and (not (hasKey .Values.heapster "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
       nodeSelector:
         node-role/system: ""
 {{- end }}
       tolerations:
 {{- if and (hasKey .Values.heapster "tolerations") (.Values.heapster.tolerations) }}
 {{ .Values.heapster.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.heapster "tolerations")) .Values.global.cluster.hasSystemNodes }}
+{{- else if and (not (hasKey .Values.heapster "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
       - key: node-role/system
         effect: NoExecute
 {{- end }}

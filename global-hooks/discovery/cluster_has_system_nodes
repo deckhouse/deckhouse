@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onKubeNodeChange=150 onStartup=150
+}
+
+function __main__() {
+  if cluster::has_system_nodes ; then
+    values::set global.discovery.clusterHasSystemNodes true
+  else
+    values::set global.discovery.clusterHasSystemNodes false
+  fi
+}
+
+hook::run $@
