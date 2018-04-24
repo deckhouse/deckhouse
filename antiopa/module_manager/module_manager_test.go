@@ -8,9 +8,9 @@ import (
 )
 
 func TestMainModuleManager_GetModule(t *testing.T) {
+	mm := NewMainModuleManager(nil, nil)
+
 	expectedModule := &Module{Name: "module"}
-	mm := &MainModuleManager{}
-	mm.modulesByName = make(map[string]*Module)
 	mm.modulesByName["module"] = expectedModule
 
 	module, err := mm.GetModule("module")
@@ -30,9 +30,9 @@ func TestMainModuleManager_GetModule(t *testing.T) {
 }
 
 func TestMainModuleManager_GetModuleHook(t *testing.T) {
+	mm := NewMainModuleManager(nil, nil)
+
 	expectedModuleHook := &ModuleHook{Hook: &Hook{Name: "hook"}}
-	mm := &MainModuleManager{}
-	mm.modulesHooksByName = make(map[string]*ModuleHook)
 	mm.modulesHooksByName["hook"] = expectedModuleHook
 
 	moduleHook, err := mm.GetModuleHook("hook")
@@ -52,8 +52,9 @@ func TestMainModuleManager_GetModuleHook(t *testing.T) {
 }
 
 func TestMainModuleManager_GetModuleNamesInOrder(t *testing.T) {
+	mm := NewMainModuleManager(nil, nil)
+
 	expectedModuleNamesInOrder := []string{"4", "3", "1", "2"}
-	mm := &MainModuleManager{}
 	mm.allModuleNamesInOrder = expectedModuleNamesInOrder
 
 	moduleNamesInOrder := mm.GetModuleNamesInOrder()
@@ -64,7 +65,8 @@ func TestMainModuleManager_GetModuleNamesInOrder(t *testing.T) {
 }
 
 func TestMainModuleManager_GetModuleHooksInOrder(t *testing.T) {
-	mm := &MainModuleManager{}
+	mm := NewMainModuleManager(nil, nil)
+
 	mm.modulesByName = map[string]*Module{"module": {Name: "module"}}
 	mm.modulesHooksOrderByName = map[string]map[BindingType][]*ModuleHook{
 		"module": {
@@ -146,9 +148,9 @@ func TestMainModuleManager_GetModuleHooksInOrder(t *testing.T) {
 }
 
 func TestMainModuleManager_GetGlobalHook(t *testing.T) {
+	mm := NewMainModuleManager(nil, nil)
+
 	expectedGlobalHook := &GlobalHook{Hook: &Hook{Name: "hook"}}
-	mm := &MainModuleManager{}
-	mm.globalHooksByName = make(map[string]*GlobalHook)
 	mm.globalHooksByName["hook"] = expectedGlobalHook
 
 	moduleHook, err := mm.GetGlobalHook("hook")
@@ -168,7 +170,8 @@ func TestMainModuleManager_GetGlobalHook(t *testing.T) {
 }
 
 func TestMainModuleManager_GetGlobalHooksInOrder(t *testing.T) {
-	mm := &MainModuleManager{}
+	mm := NewMainModuleManager(nil, nil)
+
 	mm.globalHooksOrder = map[BindingType][]*GlobalHook{
 		BeforeAll: {
 			{
@@ -217,7 +220,7 @@ func TestMainModuleManager_GetGlobalHooksInOrder(t *testing.T) {
 }
 
 func TestMainModuleManager_GetModulesToPurgeAndDisableOnInit(t *testing.T) {
-	mm := MainModuleManager{}
+	mm := NewMainModuleManager(nil, nil)
 
 	releasedModules := []string{"module-1", "module-2", "module-3", "module-5", "module-6", "module-9"}
 
@@ -259,8 +262,7 @@ func checkEnabledModules(mm *MainModuleManager, kubeDisabledModules []string, ex
 func TestEnabledModules(t *testing.T) {
 	initTempAndWorkingDirectories(t, "test_enabled_modules")
 
-	mm := &MainModuleManager{}
-	mm.helm = &MockHelmClient{}
+	mm := NewMainModuleManager(&MockHelmClient{}, nil)
 
 	if err := mm.initModulesIndex(); err != nil {
 		t.Fatal(err)

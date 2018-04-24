@@ -279,6 +279,8 @@ func (m *Module) values() utils.Values {
 		}
 	}
 
+	res = utils.MergeValues(res, m.moduleManager.enabledModulesValues())
+
 	return res
 }
 
