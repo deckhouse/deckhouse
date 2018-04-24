@@ -25,7 +25,7 @@ spec:
       containers:
       - name: nginx
         image: nginx:1.13.10-alpine
-{{- if eq .Values.global.cluster.type "Manual" }}
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
         ports:
         - containerPort: 10360
           name: scheduler
@@ -33,13 +33,13 @@ spec:
           name: controller
         - containerPort: 10364
           name: etcd
-{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+{{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
         ports:
         - containerPort: 10364
           name: etcd
         - containerPort: 10366
           name: etcd-events
-{{- else if eq .Values.global.cluster.type "ACS" }}
+{{- else if eq .Values.global.discovery.clusterType "ACS" }}
         ports:
         - containerPort: 10364
           name: etcd
@@ -47,7 +47,7 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /etc/nginx
-{{- if eq .Values.global.cluster.type "Manual" }}
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
       - name: kube-rbac-proxy-for-kube-scheduler
         image: quay.io/brancz/kube-rbac-proxy:v0.2.0
         args:
@@ -63,7 +63,7 @@ spec:
         args:
         - "--secure-listen-address=127.0.0.1:10365"
         - "--upstream=http://127.0.0.1:2379/"
-{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+{{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
       - name: kube-rbac-proxy-for-kube-etcd
         image: quay.io/brancz/kube-rbac-proxy:v0.2.0
         args:
@@ -74,7 +74,7 @@ spec:
         args:
         - "--secure-listen-address=127.0.0.1:10367"
         - "--upstream=http://127.0.0.1:4002/"
-{{- else if eq .Values.global.cluster.type "ACS" }}
+{{- else if eq .Values.global.discovery.clusterType "ACS" }}
       - name: kube-rbac-proxy-for-kube-etcd
         image: quay.io/brancz/kube-rbac-proxy:v0.2.0
         args:
@@ -86,7 +86,7 @@ spec:
         configMap:
           name: kube-prometheus-kube-master-proxy
       nodeSelector:
-{{- if eq .Values.global.cluster.type "ACS" }}
+{{- if eq .Values.global.discovery.clusterType "ACS" }}
         kubernetes.io/role: master
 {{- else }}
         node-role.kubernetes.io/master: ""

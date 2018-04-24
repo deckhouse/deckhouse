@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=150
+}
+
+function __main__() {
+  if default_storage_class_name=$(kubectl get storageclass -o json | jq '.items[] | select (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") | .metadata.name' -r | head -n 1) && [[ -n "$default_storage_class_name" ]] ; then
+    values::set global.discovery.defaultStorageClassName $default_storage_class_name
+  else
+    values::unset global.discovery.defaultStorageClassName
+  fi
+}
+
+hook::run $@

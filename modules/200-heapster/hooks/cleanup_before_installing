@@ -19,17 +19,10 @@ function _migrate() {
 }
 
 function __main__() {
-  # В Azure heapster ставится автоматически, поэтому мы ничего не делаем
-  if [[ "$(cluster::type)" == "ACS" ]] ; then
-    return 0
-  fi
-
   # Чистим кластер от лишних объектов, созданных автоматически
   for resource in deployment/heapster service/heapster serviceaccount/heapster; do
-    if heritage=$(kubectl -n kube-system get $resource -o jsonpath='{.metadata.labels.heritage}' 2> /dev/null) ; then
-      if [[ "$heritage" != "antiopa" ]] ; then
-        kubectl -n kube-system delete $resource
-      fi
+    if heritage=$(kubectl -n kube-system get $resource -o jsonpath='{.metadata.labels.heritage}' 2> /dev/null) && [[ "$heritage" != "antiopa" ]] ; then
+      kubectl -n kube-system delete $resource
     fi
   done
 
@@ -40,10 +33,6 @@ function __main__() {
   done
 
   _migrate
-}
-
-function __main_old__() {
-  __main__ $@
 }
 
 hook::run $@

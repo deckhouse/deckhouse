@@ -7,11 +7,10 @@ function __config__() {
 }
 
 function __main__() {
-  values::set global.cluster '{}'
-}
+  values::require_in_config global.project
+  values::require_in_config global.clusterName
 
-function __main_old__() {
-  return 0
+  values::set global.discovery '{}'
 }
 
 hook::run $@

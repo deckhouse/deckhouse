@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __main__() {
+  if ! values::array_has global.enabledModules "prometheus-operator" ; then
+    return 1
+  fi
+
+  return 0
+}
+
+hook::run $@

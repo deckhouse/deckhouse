@@ -17,7 +17,7 @@ spec:
     port: 10364
     targetPort: 10364
     protocol: TCP
-{{- if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - name: etcd-events
     port: 10366
     targetPort: 10366
