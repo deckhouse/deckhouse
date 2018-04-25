@@ -206,10 +206,16 @@ func TestMainModuleManager_GetGlobalHooksInOrder(t *testing.T) {
 	}
 }
 
-func TestMainModuleManager_GetModulesToPurgeAndDisableOnInit(t *testing.T) {
-	mm := NewMainModuleManager(nil, nil)
+type mockDiscoverModulesHelmClient struct {
+	MockHelmClient
+}
 
-	releasedModules := []string{"module-1", "module-2", "module-3", "module-5", "module-6", "module-9"}
+func (helm *mockDiscoverModulesHelmClient) ListReleases() ([]string, error) {
+	return []string{"module-1", "module-2", "module-3", "module-5", "module-6", "module-9"}, nil
+}
+
+func TestMainModuleManager_DiscoverModulesState(t *testing.T) {
+	mm := NewMainModuleManager(&mockDiscoverModulesHelmClient{}, nil)
 
 	mm.modulesByName = make(map[string]*Module)
 	mm.modulesByName["module-1"] = &Module{Name: "module-1", DirectoryName: "001-module-1", Path: "some/path/001-module-1"}
@@ -219,17 +225,19 @@ func TestMainModuleManager_GetModulesToPurgeAndDisableOnInit(t *testing.T) {
 	mm.modulesByName["module-8"] = &Module{Name: "module-8", DirectoryName: "008-module-8", Path: "some/path/008-module-8"}
 	mm.modulesByName["module-9"] = &Module{Name: "module-9", DirectoryName: "009-module-9", Path: "some/path/009-module-9"}
 	mm.allModuleNamesInOrder = []string{"module-1", "module-3", "module-4", "module-7", "module-8", "module-9"}
+	mm.kubeDisabledModules = []string{"module-3", "module-5", "module-7", "module-9"}
 
-	kubeDisabledModules := []string{"module-3", "module-5", "module-7", "module-9"}
-
-	toPurge := mm.getReleasedModulesToPurge(releasedModules)
-	if !reflect.DeepEqual([]string{"module-6", "module-5", "module-2"}, toPurge) {
-		t.Errorf("Got unexpected released modules to purge list: %+v", toPurge)
+	modulesState, err := mm.DiscoverModulesState()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	toDisable := mm.getReleasedModulesToDisable(releasedModules, kubeDisabledModules)
-	if !reflect.DeepEqual([]string{"module-9", "module-3"}, toDisable) {
-		t.Errorf("Got unexpected released modules to disable list: %+v", toDisable)
+	if !reflect.DeepEqual([]string{"module-6", "module-5", "module-2"}, modulesState.ModulesToPurge) {
+		t.Errorf("Got unexpected released modules to purge list: %+v", modulesState.ModulesToPurge)
+	}
+
+	if !reflect.DeepEqual([]string{"module-9", "module-3"}, modulesState.ModulesToDisable) {
+		t.Errorf("Got unexpected released modules to disable list: %+v", modulesState.ModulesToDisable)
 	}
 }
 
