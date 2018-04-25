@@ -268,6 +268,10 @@ func (h *MockHelmClient) ListReleases() ([]string, error) {
 	return []string{}, nil
 }
 
+func (h *MockHelmClient) ListReleasesNames() ([]string, error) {
+	return []string{}, nil
+}
+
 func (h *MockHelmClient) CommandEnv() []string {
 	return []string{}
 }
@@ -650,8 +654,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              2.0, "c": []interface{}{3.0},
+					"a": 2.0, "c": []interface{}{3.0},
 				},
 			},
 		},
@@ -665,8 +668,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              9.0, "c": "10",
+					"a": 9.0, "c": "10",
 				},
 			},
 		},
@@ -686,8 +688,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              2.0, "c": []interface{}{3.0}, "x": "123",
+					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
 				},
 			},
 		},
@@ -706,8 +707,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              9.0, "c": "10", "x": 10.0,
+					"a": 9.0, "c": "10", "x": 10.0,
 				},
 			},
 		},

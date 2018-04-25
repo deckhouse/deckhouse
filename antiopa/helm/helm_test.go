@@ -130,7 +130,7 @@ func TestHelm(t *testing.T) {
 		t.Errorf("Cannot init test tiller in '%s' namespace: %s\n%s %s", helm.TillerNamespace(), err, stdout, stderr)
 	}
 
-	releases, err = helm.ListReleases()
+	releases, err = helm.ListReleasesNames()
 	if err != nil {
 		t.Error(err)
 	}

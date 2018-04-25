@@ -567,7 +567,7 @@ func (mm *MainModuleManager) DiscoverModulesState() (*ModulesState, error) {
 	mm.enabledModulesInOrder = enabledModules
 	state.ModulesToRun = mm.enabledModulesInOrder
 
-	releasedModules, err := mm.helm.ListReleases()
+	releasedModules, err := mm.helm.ListReleasesNames()
 	if err != nil {
 		return nil, err
 	}
