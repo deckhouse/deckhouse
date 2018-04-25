@@ -23,9 +23,6 @@ spec:
     metadata:
       labels:
         app: {{ $name }}
-      annotations:
-        checksum/config-template: {{ .Files.Get "files/nginx.tmpl" | sha256sum }}
-        checksum/lua: {{ include (print .Template.BasePath "/lua.yaml") . | sha256sum }}
 #TODO: Docker before 1.12 does not support sysctls
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
@@ -42,7 +39,7 @@ spec:
       imagePullSecrets:
       - name: registry
       containers:
-      - image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.13.0
+      - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/controller:{{ .Values.global.modulesImages.tags.nginxIngress.controller }}
         name: nginx
         env:
         - name: POD_NAME
@@ -83,10 +80,6 @@ spec:
         - --ingress-class=nginx-{{ .name }}
     {{- end }}
         volumeMounts:
-        - mountPath: /etc/nginx/template
-          name: nginx-config-template
-        - mountPath: /etc/nginx/custom_lua
-          name: nginx-lua
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
         - mountPath: /var/lib/nginx/fastcgi
@@ -99,13 +92,23 @@ spec:
           name: uwsgi-temp-path
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
+      - image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+        name: kube-rbac-proxy
+        args:
+        - "--secure-listen-address=:9103"
+        - "--upstream=http://127.0.0.1:9102/"
+        ports:
+        - containerPort: 9103
+          hostPort: 9103
+          name: https
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+          limits:
+            memory: 40Mi
+            cpu: 20m
       volumes:
-      - name: nginx-config-template
-        configMap:
-          name: nginx-config-template
-      - name: nginx-lua
-        configMap:
-          name: nginx-lua
       - name: client-body-temp-path
         emptyDir: {}
       - name: fastcgi-temp-path

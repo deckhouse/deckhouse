@@ -19,7 +19,11 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: http-metrics
+  - port: https-metrics
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
@@ -35,77 +39,6 @@ spec:
       replacement: {{ .name }}
     {{- end }}
     # request_time_hist::$scheme:$server_name:$namespace:$ingress_name:$service_name:$service_port:$upstream_addr:$location_path
-    metricRelabelings:
-    # remove ingress_class, we have "controller" label
-    - regex: ingress_class
-      action: labeldrop
-
-    # remove unused metrics
-    - sourceLabels: [__name__]
-      regex: nginx_bytes_total|nginx_cache_total|nginx_filterzone_cache_total|nginx_requests_total|nginx_responses_total|nginx_upstream_backup|nginx_upstream_bytes_total|nginx_upstream_fail_timeout|nginx_upstream_maxfails|nginx_upstream_requests_total|nginx_upstream_response_msecs_avg|nginx_upstream_responses_total|nginx_upstream_weight|nginx_vts_upstream_down_total
-      action: drop
-
-    # process time_hist's
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::([^\|]*)\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      targetLabel: scheme
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|([^\|]*)\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      targetLabel: server_name
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|(_)\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      replacement: Default
-      targetLabel: server_name
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|([^\|]*)\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      targetLabel: namespace
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|()\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      replacement: None
-      targetLabel: namespace
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|([^\|]*)\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      targetLabel: ingress_name
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|()\|[^\|]*\|[^\|]*\|[^\|]*\|.*
-      replacement: None
-      targetLabel: ingress_name
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|([^\|]*)\|[^\|]*\|[^\|]*\|.*
-      targetLabel: service_name
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|()\|[^\|]*\|[^\|]*\|.*
-      replacement: None
-      targetLabel: service_name
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|([^\|]*)\|[^\|]*\|.*
-      targetLabel: service_port
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|(0)\|[^\|]*\|.*
-      replacement: None
-      targetLabel: service_port
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|([^, \|]*)([^\|]*)\|.*
-      targetLabel: upstream_address
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|()\|.*
-      replacement: None
-      targetLabel: upstream_address
-
-    - sourceLabels: [server_zone]
-      regex: .*_time_hist::[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|[^\|]*\|(.*)
-      targetLabel: location_path
-
-    - sourceLabels: [server_zone]
-      regex: (.*_time_hist)::.*
-      replacement: $1
-      targetLabel: server_zone
   selector:
     matchLabels:
       prometheus-target: nginx-ingress-controller
@@ -128,9 +61,9 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: http-metrics
-    port: 10254
-    targetPort: 10254
+  - name: https-metrics
+    port: 9103
+    targetPort: 9103
     protocol: TCP
     {{- if eq $inlet "Direct" }}
 ---
@@ -150,8 +83,8 @@ spec:
   clusterIP: None
   ports:
   - name: http-metrics
-    port: 10254
-    targetPort: 10254
+    port: 9103
+    targetPort: 9103
     protocol: TCP
     {{- end }}
   {{- end }}

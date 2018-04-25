@@ -38,7 +38,7 @@ events {
 http {
     {{ if not $all.DisableLua }}
     lua_package_cpath "/usr/local/lib/lua/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so;;";
-    lua_package_path "/etc/nginx/custom_lua/?.lua;/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/lib/lua/?.lua;;";
+    lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/lib/lua/?.lua;;";
 
     {{ buildLuaSharedDictionaries $servers $all.DynamicConfigurationEnabled $all.Cfg.DisableLuaRestyWAF }}
 
@@ -594,7 +594,7 @@ http {
             allow ::1;
             {{ end }}
             deny all;
-            
+
             # this should be equals to configuration_data dict
             client_max_body_size                    "10m";
             proxy_buffering                         off;
