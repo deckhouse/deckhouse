@@ -5,7 +5,8 @@
 
 c=$(cat ${VALUES_PATH:-/dev/null} | jq .global.enabledModules[]  | grep -P '"gamma"|"epsilon"' | wc -l)
 if [ "$c" == "2" ] ; then
+  echo true > $MODULE_ENABLED_RESULT
   exit 0
 fi
 
-exit 1
+echo false > $MODULE_ENABLED_RESULT
