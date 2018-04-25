@@ -51,19 +51,6 @@ func TestMainModuleManager_GetModuleHook(t *testing.T) {
 	}
 }
 
-func TestMainModuleManager_GetModuleNamesInOrder(t *testing.T) {
-	mm := NewMainModuleManager(nil, nil)
-
-	expectedModuleNamesInOrder := []string{"4", "3", "1", "2"}
-	mm.allModuleNamesInOrder = expectedModuleNamesInOrder
-
-	moduleNamesInOrder := mm.GetModuleNamesInOrder()
-
-	if !reflect.DeepEqual(expectedModuleNamesInOrder, moduleNamesInOrder) {
-		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleNamesInOrder, moduleNamesInOrder)
-	}
-}
-
 func TestMainModuleManager_GetModuleHooksInOrder(t *testing.T) {
 	mm := NewMainModuleManager(nil, nil)
 
@@ -236,12 +223,12 @@ func TestMainModuleManager_GetModulesToPurgeAndDisableOnInit(t *testing.T) {
 	kubeDisabledModules := []string{"module-3", "module-5", "module-7", "module-9"}
 
 	toPurge := mm.getReleasedModulesToPurge(releasedModules)
-	if !reflect.DeepEqual([]string{"module-2", "module-5", "module-6"}, toPurge) {
+	if !reflect.DeepEqual([]string{"module-6", "module-5", "module-2"}, toPurge) {
 		t.Errorf("Got unexpected released modules to purge list: %+v", toPurge)
 	}
 
 	toDisable := mm.getReleasedModulesToDisable(releasedModules, kubeDisabledModules)
-	if !reflect.DeepEqual([]string{"module-3", "module-9"}, toDisable) {
+	if !reflect.DeepEqual([]string{"module-9", "module-3"}, toDisable) {
 		t.Errorf("Got unexpected released modules to disable list: %+v", toDisable)
 	}
 }
