@@ -314,7 +314,8 @@ func (h *GlobalHook) values() utils.Values {
 		}
 	}
 
-	res = utils.MergeValues(res, h.moduleManager.constructEnabledModulesValues(h.moduleManager.enabledModulesInOrder))
+	// fix #229 - do not pass enabledModules to global hooks
+	// res = utils.MergeValues(res, h.moduleManager.constructEnabledModulesValues(h.moduleManager.enabledModulesInOrder))
 
 	return res
 }
