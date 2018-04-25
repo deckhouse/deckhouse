@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
 
 	"github.com/kennygrant/sanitize"
 	"github.com/otiai10/copy"
@@ -302,6 +301,31 @@ func (m *Module) moduleValuesKey() string {
 	return utils.ModuleNameToValuesKey(m.Name)
 }
 
+func (m *Module) prepareModuleEnabledResultFile() (string, error) {
+	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-enabled-result", m.Name))
+	if err := createHookResultValuesFile(path); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (m *Module) readModuleEnabledResult(filePath string) (bool, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return false, fmt.Errorf("cannot read %s: %s", filePath, err)
+	}
+
+	value := strings.TrimSpace(string(data))
+
+	if value == "true" {
+		return true, nil
+	} else if value == "false" {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("expected 'true' or 'false', got '%s'", value)
+}
+
 func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool, error) {
 	enabledScriptPath := filepath.Join(m.Path, "enabled")
 
@@ -327,26 +351,36 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	rlog.Infof("Running enabled script '%s' for module '%s' ...", enabledScriptPath, m.Name)
-
-	cmd := m.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, enabledScriptPath, []string{})
-
-	if err := execCommand(cmd); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.Sys().(syscall.WaitStatus).ExitStatus() == 1 {
-				rlog.Infof("Got enabled script result for module '%s': module DISABLED", m.Name)
-				return false, nil
-			} else {
-				return false, err
-			}
-		} else {
-			return false, err
-		}
+	enabledResultFilePath, err := m.prepareModuleEnabledResultFile()
+	if err != nil {
+		return false, err
 	}
 
-	rlog.Infof("Got enabled script result for module '%s': module ENABLED", m.Name)
+	rlog.Infof("Running enabled script '%s' for module '%s' ...", enabledScriptPath, m.Name)
 
-	return true, nil
+	cmd := m.moduleManager.makeHookCommand(
+		WorkingDir, configValuesPath, valuesPath, enabledScriptPath, []string{},
+		[]string{
+			fmt.Sprintf("MODULE_ENABLED_RESULT=%s", enabledResultFilePath),
+		},
+	)
+
+	if err := execCommand(cmd); err != nil {
+		return false, nil
+	}
+
+	moduleEnabled, err := m.readModuleEnabledResult(enabledResultFilePath)
+	if err != nil {
+		return false, fmt.Errorf("bad enabled result in file MODULE_ENABLED_RESULT=\"%s\" from enabled script '%s' for module '%s': %s", enabledResultFilePath, enabledScriptPath, m.Name, err)
+	}
+
+	if moduleEnabled {
+		rlog.Infof("Got enabled script result for module '%s': module ENABLED", m.Name)
+		return true, nil
+	}
+
+	rlog.Infof("Got enabled script result for module '%s': module DISABLED", m.Name)
+	return false, nil
 }
 
 func (mm *MainModuleManager) initModulesIndex() error {

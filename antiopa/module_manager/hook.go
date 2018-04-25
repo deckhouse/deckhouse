@@ -276,7 +276,7 @@ func (h *GlobalHook) exec() (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, h.Path, []string{})
+	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, h.Path, []string{}, []string{})
 
 	configValuesPatchPath, err := h.prepareConfigValuesJsonPatchFile()
 	if err != nil {
@@ -473,7 +473,7 @@ func (h *ModuleHook) exec() (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, h.Path, []string{})
+	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, h.Path, []string{}, []string{})
 
 	configValuesPatchPath, err := h.prepareConfigValuesJsonPatchFile()
 	if err != nil {
@@ -710,8 +710,7 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 	return output, nil
 }
 
-func (mm *MainModuleManager) makeHookCommand(dir string, configValuesPath string, valuesPath string, entrypoint string, args []string) *exec.Cmd {
-	envs := make([]string, 0)
+func (mm *MainModuleManager) makeHookCommand(dir string, configValuesPath string, valuesPath string, entrypoint string, args []string, envs []string) *exec.Cmd {
 	envs = append(envs, fmt.Sprintf("CONFIG_VALUES_PATH=%s", configValuesPath))
 	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
 	return mm.makeCommand(dir, entrypoint, args, envs)
