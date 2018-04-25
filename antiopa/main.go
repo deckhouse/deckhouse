@@ -128,7 +128,7 @@ func Init() {
 	// потом, когда от менеджера придёт id настройки,
 	// найти по id нужные имена хуков и добавить их запуск в очередь
 	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
-	   GetModuleNamesInOrder.each {
+	   ModulesToRun.each {
 	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
 	           schedule.add hook // регистрация binding
 	       }
@@ -159,9 +159,10 @@ func Run() {
 	// слежение за измененияи включить только после всей загрузки
 	rlog.Info("MAIN: add onStartup, beforeAll, module and afterAll tasks")
 	TasksQueue.ChangesDisable()
-	CreateAfterInitTasks()
+
 	CreateOnStartupTasks()
 	CreateReloadAllTasks()
+
 	TasksQueue.ChangesEnable(true)
 
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
@@ -282,7 +283,7 @@ func TasksRunner() {
 			}
 
 			switch t.GetType() {
-			case task.DiscoverEnabledModules:
+			case task.DiscoverModulesState:
 				// FIXME: introduce multiple tasks structures with handler-interface
 				handleTaskFailed := func(err error) {
 					t.IncrementFailureCount()
@@ -293,17 +294,27 @@ func TasksRunner() {
 					TasksQueue.Pop()
 				}
 
-				_, err := ModuleManager.DiscoverEnabledModules()
+				modulesState, err := ModuleManager.DiscoverModulesState()
 				if err != nil {
 					handleTaskFailed(err)
 				}
 
-				// Queue modules
-				moduleNames := ModuleManager.GetModuleNamesInOrder()
-				for _, moduleName := range moduleNames {
+				for _, moduleName := range modulesState.ModulesToRun {
 					newTask := task.NewTask(task.ModuleRun, moduleName)
-					rlog.Debugf("ReloadAll Module: queued module run '%s'", moduleName)
+					rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
 					TasksQueue.Add(newTask)
+				}
+
+				for _, moduleName := range modulesState.ModulesToDisable {
+					newTask := task.NewTask(task.ModuleDelete, moduleName)
+					TasksQueue.Add(newTask)
+					rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
+				}
+
+				for _, moduleName := range modulesState.ModulesToPurge {
+					newTask := task.NewTask(task.ModulePurge, moduleName)
+					TasksQueue.Add(newTask)
+					rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
 				}
 
 				// Queue afterAll global hooks
@@ -311,7 +322,7 @@ func TasksRunner() {
 				for _, hookName := range afterAllHooks {
 					newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
 					TasksQueue.Add(newTask)
-					rlog.Debugf("ReloadAll AfterAll: queued global hook '%s'", hookName)
+					rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
 				}
 
 				handleTaskSucceeded()
@@ -405,38 +416,6 @@ func RegisterScheduleHooks() {
 	return
 }
 
-func CreateAfterInitTasks() {
-	purgeModules := ModuleManager.GetModulesToPurgeOnInit()
-
-	for _, moduleName := range purgeModules {
-		newTask := task.NewTask(task.ModulePurge, moduleName)
-		TasksQueue.Add(newTask)
-		rlog.Debugf("AfterInit: queued module purge '%s'", moduleName)
-	}
-
-	deleteModules := ModuleManager.GetModulesToDisableOnInit()
-
-	for _, moduleName := range deleteModules {
-		newTask := task.NewTask(task.ModuleDelete, moduleName)
-		TasksQueue.Add(newTask)
-		rlog.Debugf("AfterInit: queued module delete '%s'", moduleName)
-	}
-}
-
-/*
-Первый запуск - добавление в очередь хуков on startup, добавление хуков beforeAll, после чего добавление всех модулей
-	GetGlobalHooksInOrder(module.onstartup).each{RunGlobalHook(name)}
-	  GetGlobalHooksInOrder(module.BeforeAll).each {RunGlobalHook(name)}
-   GetModuleNamesInOrder.each {RunModule(name)}
-   GetGlobalHooksInOrder(module.AfterAll).each {RunGlobalHook(name)}
-
-		Initial run:
-		* Append each global-hook with before-all binding to queue as separate task
-		* Append each module from module.ModuleNamesOrder to queue
-		    * append each before-helm module hook to queue as separate task
-		    * append helm to queue as separate task
-		    * append each after-helm module hook to queue as separate task
-*/
 func CreateOnStartupTasks() {
 	onStartupHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
 
@@ -456,11 +435,11 @@ func CreateReloadAllTasks() {
 	for _, hookName := range beforeAllHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.BeforeAll)
 		TasksQueue.Add(newTask)
-		rlog.Debugf("ReloadAll BeforeAll: queued global hook '%s'", hookName)
+		rlog.Debugf("ReloadAll: queued global %s hook '%s'", module_manager.BeforeAll, hookName)
 	}
 
-	TasksQueue.Add(task.NewTask(task.DiscoverEnabledModules, ""))
-	rlog.Debugf("DiscoverEnabledModules: queued discover of enabled modules")
+	TasksQueue.Add(task.NewTask(task.DiscoverModulesState, ""))
+	rlog.Debugf("ReloadAll: queued discover of modules state")
 }
 
 func main() {
