@@ -3,11 +3,11 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
-  if ! values::array_has global.enabledModules "prometheus-operator" ; then
-    return 1
+  if values::array_has global.enabledModules "prometheus-operator" ; then
+    echo "true" > $MODULE_ENABLED_RESULT
+  else
+    echo "false" > $MODULE_ENABLED_RESULT
   fi
-
-  return 0
 }
 
 hook::run $@
