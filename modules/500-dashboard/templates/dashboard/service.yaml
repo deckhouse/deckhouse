@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: dashboard
+  name: dashboard
+  namespace: kube-dashboard
+spec:
+  ports:
+  - port: 80
+    targetPort: 9090
+  selector:
+    app: dashboard

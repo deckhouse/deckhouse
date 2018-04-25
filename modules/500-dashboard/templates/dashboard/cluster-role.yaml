@@ -1,39 +1,11 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: kube-dashboard
-  name: kube-dashboard
-  namespace: kube-dashboard
-
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: kube-dashboard
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: kube-dashboard
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kube-dashboard
-subjects:
-- kind: ServiceAccount
-  name: kube-dashboard
-  namespace: kube-dashboard
-
----
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
+  name: kube-dashboard
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-  name: kube-dashboard
+    app: dashboard
 rules:
 # Start default view role
 - apiGroups:
@@ -58,7 +30,6 @@ rules:
   - get
   - list
   - watch
-  - delete
 - apiGroups:
   - ""
   resources:
@@ -108,7 +79,6 @@ rules:
   resources:
   - cronjobs
   - jobs
-  - scheduledjobs
   verbs:
   - get
   - list
@@ -128,7 +98,12 @@ rules:
   - list
   - watch
 # End default view role
-
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
 - apiGroups:
   - ""
   resources:
@@ -150,7 +125,9 @@ rules:
   - "*"
   resources:
   - roles
+  - rolebindings
   - clusterroles
+  - clusterrolebindings
   verbs:
   - get
   - list
@@ -166,7 +143,7 @@ rules:
 - apiGroups:
   - "*"
   resources:
-  - thirdpartyresources
+  - customresourcedefinitions
   verbs:
   - get
   - list
@@ -185,43 +162,3 @@ rules:
   - replicationcontrollers/scale
   verbs:
   - "*"
-- nonResourceURLs:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
-  - '*'
-  resourceNames:
-  - heapster
-  resources:
-  - services
-  verbs:
-  - get
-  - proxy
-  # Allow Dashboard to create 'kube-dashboard-key-holder' secret.
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["create"]
-  # Allow Dashboard to create 'kube-dashboard-settings' config map.
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["create"]
-  # Allow Dashboard to get, update and delete Dashboard exclusive secrets.
-- apiGroups: [""]
-  resources: ["secrets"]
-  resourceNames: ["kube-dashboard-key-holder", "kube-dashboard-certs"]
-  verbs: ["get", "update", "delete"]
-  # Allow Dashboard to get and update 'kube-dashboard-settings' config map.
-- apiGroups: [""]
-  resources: ["configmaps"]
-  resourceNames: ["kube-dashboard-settings"]
-  verbs: ["get", "update"]
-  # Allow Dashboard to get metrics from heapster.
-- apiGroups: [""]
-  resources: ["services"]
-  resourceNames: ["heapster"]
-  verbs: ["proxy"]
-- apiGroups: [""]
-  resources: ["services/proxy"]
-  resourceNames: ["heapster", "http:heapster:", "https:heapster:"]
-  verbs: ["get"]

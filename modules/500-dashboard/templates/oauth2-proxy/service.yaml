@@ -1,21 +1,4 @@
----
-kind: Service
-apiVersion: v1
-metadata:
-  labels:
-    app: kube-dashboard
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-  name: kube-dashboard
-  namespace: kube-dashboard
-spec:
-  ports:
-  - port: 80
-    targetPort: 9090
-  selector:
-    app: kube-dashboard
 {{- if .Values.dashboard.gitlabBaseUrl }}
----
 apiVersion: v1
 kind: Service
 metadata:

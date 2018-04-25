@@ -124,3 +124,7 @@ function values::is_false() {
 
   values::get $config $1 | jq '. == false' -e > /dev/null
 }
+
+function values::generate_password() {
+  makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20
+}

@@ -2,12 +2,12 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
+  name: oauth2-proxy
+  namespace: kube-dashboard
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
     app: oauth2-proxy
-  name: oauth2-proxy
-  namespace: kube-dashboard
 spec:
   replicas: 1
   selector:
@@ -18,21 +18,21 @@ spec:
       labels:
         app: oauth2-proxy
     spec:
-{{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
+  {{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
       nodeSelector:
 {{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+  {{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
       nodeSelector:
         node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
+  {{- end }}
+  {{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
       tolerations:
 {{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.cluster.hasSystemNodes }}
+  {{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
       tolerations:
       - key: node-role/system
         effect: NoExecute
-{{- end }}
+  {{- end }}
       imagePullSecrets:
       - name: antiopa-registry
       containers:
@@ -51,7 +51,7 @@ spec:
           value: {{ .Values.dashboard.oauth2ProxyClientSecret }}
         - name: OAUTH2_PROXY_COOKIE_SECRET
           value: {{ .Values.dashboard.oauth2ProxyCookieSecret }}
-        image: {{ $.Values.global.modulesImages.registry }}/dashboard/oauth2proxy:{{ $.Values.global.modulesImages.tags.dashboard.oauth2proxy }}
+        image: {{ $.Values.global.modulesImages.registry }}/dashboard/oauth2-proxy:{{ $.Values.global.modulesImages.tags.dashboard.oauth2Proxy }}
         imagePullPolicy: Always
         name: oauth2-proxy
         readinessProbe:

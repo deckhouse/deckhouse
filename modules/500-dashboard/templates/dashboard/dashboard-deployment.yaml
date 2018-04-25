@@ -1,41 +1,40 @@
----
 kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
+  name: dashboard
+  namespace: kube-dashboard
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    app: kube-dashboard
-  name: kube-dashboard
-  namespace: kube-dashboard
+    app: dashboard
 spec:
   replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: kube-dashboard
+      app: dashboard
   template:
     metadata:
       labels:
-        app: kube-dashboard
+        app: dashboard
     spec:
 {{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
       nodeSelector:
 {{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.clusterHasSystemNodes }}
       nodeSelector:
         node-role/system: ""
 {{- end }}
 {{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
       tolerations:
 {{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.cluster.hasSystemNodes }}
+{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.clusterHasSystemNodes }}
       tolerations:
       - key: node-role/system
         effect: NoExecute
 {{- end }}
       containers:
-      - name: kube-dashboard
+      - name: dashboard
         image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.8.3
         resources:
           requests:
@@ -52,15 +51,9 @@ spec:
           initialDelaySeconds: 30
           timeoutSeconds: 30
         volumeMounts:
-        - name: kube-dashboard-certs
-          mountPath: /certs
         - mountPath: /tmp
           name: tmp-volume
       volumes:
-      - name: kube-dashboard-certs
-        secret:
-          secretName: kube-dashboard-certs
       - name: tmp-volume
         emptyDir: {}
-      serviceAccountName: kube-dashboard
-
+      serviceAccountName: dashboard
