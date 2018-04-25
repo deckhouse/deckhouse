@@ -26,7 +26,7 @@ data:
       allow 127.0.0.0/8;
       deny all;
 
-{{- if eq .Values.global.cluster.type "Manual" }}
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
       server {
         listen 10360;
         proxy_pass 127.0.0.1:10361;
@@ -41,7 +41,7 @@ data:
         listen 10364;
         proxy_pass 127.0.0.1:10365;
       }
-{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+{{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
       server {
         listen 10364;
         proxy_pass 127.0.0.1:10365;
@@ -51,7 +51,7 @@ data:
         listen 10366;
         proxy_pass 127.0.0.1:10367;
       }
-{{- else if eq .Values.global.cluster.type "ACS" }}
+{{- else if eq .Values.global.discovery.clusterType "ACS" }}
       server {
         listen 10364;
         proxy_pass 127.0.0.1:10365;

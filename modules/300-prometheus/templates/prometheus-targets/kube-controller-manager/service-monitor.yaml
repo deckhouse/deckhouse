@@ -10,7 +10,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-{{- if not (eq .Values.global.cluster.type "Manual") }}
+{{- if not (eq .Values.global.discovery.clusterType "Manual") }}
   - port: http-metrics
 {{- else }}
   - port: https-metrics

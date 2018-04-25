@@ -3,12 +3,13 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=35
+  jo -p onStartup=510
 }
 
 function __main__() {
   # flannel есть только в Manual кластерах
-  [[ $(cluster::type) != "Manual" ]] && return 0
+  cluster_type=$(values::get --required global.discovery.clusterType)
+  [[ "$cluster_type" != "Manual" ]] && return 0
 
   fltr='.'
 
@@ -22,10 +23,6 @@ function __main__() {
 
   # Применяем
   kubectl::apply_jq kube-system ds/kube-flannel-ds "$fltr"
-}
-
-function __main_old__() {
-  __main__ $@
 }
 
 hook::run $@

@@ -19,14 +19,14 @@
     {{- end }}
     {{- .inlet }}
   {{- else -}}
-    {{- if or (eq .Values.global.cluster.type "GCE") (eq .Values.global.cluster.type "ACS") -}}
+    {{- if or (eq .Values.global.discovery.clusterType "GCE") (eq .Values.global.discovery.clusterType "ACS") -}}
       LoadBalancer
-    {{- else if eq .Values.global.cluster.type "AWS" -}}
+    {{- else if eq .Values.global.discovery.clusterType "AWS" -}}
       AWSClassicLoadBalancer
-    {{- else if eq .Values.global.cluster.type "Manual" -}}
+    {{- else if eq .Values.global.discovery.clusterType "Manual" -}}
       Direct
     {{- else -}}
-      {{ cat "Unsupported cluster type" .Values.global.cluster.type | fail }}
+      {{ cat "Unsupported cluster type" .Values.global.discovery.clusterType | fail }}
     {{- end }}
   {{- end }}
 {{- end }}

@@ -2,9 +2,10 @@
 
 # dependency: alpha
 
-c=$(cat ${ENABLED_MODULES_PATH:-/dev/null} | jq .[] | grep '"alpha"' | wc -l)
+c=$(cat ${VALUES_PATH:-/dev/null} | jq .global.enabledModules[] | grep '"alpha"' | wc -l)
 if [ "$c" == "1" ] ; then
+  echo true > $MODULE_ENABLED_RESULT
   exit 0
 fi
 
-exit 1
+echo false > $MODULE_ENABLED_RESULT

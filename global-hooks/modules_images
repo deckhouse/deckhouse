@@ -1,0 +1,22 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=10
+}
+
+function __main__() {
+  values::set global.modulesImages "{}"
+
+  registry=$(kubectl -n antiopa get deploy/antiopa -o json | jq '.spec.template.spec.containers[0].image' -r | cut -d: -f1 | sed 's/\/dev$//')
+  values::set global.modulesImages.registry "$registry"
+
+  registry_dockercfg=$(kubectl -n antiopa get secret/registrysecret -o json | jq '.data.".dockercfg"' -r)
+  values::set global.modulesImages.registryDockercfg "$registry_dockercfg"
+
+  images_tags=$(cat /antiopa/modules/images_tags.json)
+  values::set global.modulesImages.tags "$images_tags"
+}
+
+hook::run $@

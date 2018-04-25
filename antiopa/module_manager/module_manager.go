@@ -14,8 +14,8 @@ import (
 
 type ModuleManager interface {
 	Run()
+	DiscoverModulesState() (*ModulesState, error)
 	GetModule(name string) (*Module, error)
-	GetModuleNamesInOrder() []string
 	GetGlobalHook(name string) (*GlobalHook, error)
 	GetModuleHook(name string) (*ModuleHook, error)
 	GetGlobalHooksInOrder(bindingType BindingType) []string
@@ -24,8 +24,13 @@ type ModuleManager interface {
 	RunModule(moduleName string) error
 	RunGlobalHook(hookName string, binding BindingType) error
 	RunModuleHook(hookName string, binding BindingType) error
-	GetModulesToDisableOnInit() []string
-	GetModulesToPurgeOnInit() []string
+}
+
+// All modules are in the right order to run/disable/purge
+type ModulesState struct {
+	ModulesToRun     []string
+	ModulesToDisable []string
+	ModulesToPurge   []string
 }
 
 type MainModuleManager struct {
@@ -40,6 +45,7 @@ type MainModuleManager struct {
 	releasedModulesToDisable []string
 	// Список имен модулей, у которых отсутствуют файлы, но для которых есть helm релиз — их нужно удалить.
 	releasedModulesToPurge []string
+
 	// Результирующий список имен включенных модулей в порядке вызова.
 	// С учетом скрипта enabled, kube-config и yaml-файла для модуля.
 	// Список меняется во время работы antiopa по мере возникновения событий
@@ -194,21 +200,6 @@ func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (Module
 		}
 	}
 
-	// FIXME: calculate after global-hooks run to
-	enabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
-	if err != nil {
-		return nil, err
-	}
-	mm.enabledModulesInOrder = enabledModules
-
-	releasedModules, err := mm.helm.ListReleases()
-	if err != nil {
-		return nil, err
-	}
-
-	mm.releasedModulesToPurge = mm.getReleasedModulesToPurge(releasedModules)
-	mm.releasedModulesToDisable = mm.getReleasedModulesToDisable(releasedModules, mm.kubeDisabledModules)
-
 	return mm, nil
 }
 
@@ -238,12 +229,46 @@ func NewMainModuleManager(helmClient helm.HelmClient, kubeConfigManager kube_con
 	}
 }
 
-func (mm *MainModuleManager) GetModulesToDisableOnInit() []string {
-	return mm.releasedModulesToDisable
+func (mm *MainModuleManager) sortModulesToPurge(modules []string) []string {
+	res := make([]string, 0)
+	for _, module := range modules {
+		res = append(res, module)
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(res)))
+
+	return res
 }
 
-func (mm *MainModuleManager) GetModulesToPurgeOnInit() []string {
-	return mm.releasedModulesToPurge
+func (mm *MainModuleManager) sortModulesToDisable(modules []string) []string {
+	res := make([]string, 0)
+
+	for _, module := range mm.allModuleNamesInOrder {
+		for _, disableModule := range modules {
+			if module == disableModule {
+				// prepend
+				res = append([]string{module}, res...)
+			}
+		}
+	}
+
+	return res
+}
+
+func (mm *MainModuleManager) getDisabledModules(enabledModules []string) []string {
+	res := make([]string, 0)
+
+SearchDisabledModules:
+	for _, module := range mm.allModuleNamesInOrder {
+		for _, enabledModule := range enabledModules {
+			if module == enabledModule {
+				continue SearchDisabledModules
+			}
+		}
+
+		res = append(res, module)
+	}
+
+	return res
 }
 
 func (mm *MainModuleManager) getReleasedModulesToPurge(releasedModules []string) []string {
@@ -255,7 +280,7 @@ func (mm *MainModuleManager) getReleasedModulesToPurge(releasedModules []string)
 		}
 	}
 
-	return res
+	return mm.sortModulesToPurge(res)
 }
 
 func (mm *MainModuleManager) getReleasedModulesToDisable(releasedModules []string, disabledModules []string) []string {
@@ -274,7 +299,7 @@ SearchModulesToDisable:
 		}
 	}
 
-	return res
+	return mm.sortModulesToDisable(res)
 }
 
 func (mm *MainModuleManager) getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
@@ -284,6 +309,7 @@ SearchEnabledModules:
 	for _, name := range mm.allModuleNamesInOrder {
 		for _, disabled := range disabledModules {
 			if name == disabled {
+				rlog.Infof("Discover enabled modules: module '%s' is DISABLED in config, enabled modules: %s", name, res)
 				continue SearchEnabledModules
 			}
 		}
@@ -296,6 +322,9 @@ SearchEnabledModules:
 
 		if moduleIsEnabled {
 			res = append(res, name)
+			rlog.Infof("Discover enabled modules: module '%s' is ENABLED, enabled modules: %s", name, res)
+		} else {
+			rlog.Infof("Discover enabled modules: module '%s' is DISABLED, enabled modules: %s", name, res)
 		}
 	}
 
@@ -528,6 +557,31 @@ func (mm *MainModuleManager) Run() {
 	}
 }
 
+func (mm *MainModuleManager) DiscoverModulesState() (*ModulesState, error) {
+	state := &ModulesState{}
+
+	enabledModules, err := mm.getEnabledModulesInOrder(mm.kubeDisabledModules)
+	if err != nil {
+		return nil, err
+	}
+	mm.enabledModulesInOrder = enabledModules
+	state.ModulesToRun = mm.enabledModulesInOrder
+
+	releasedModules, err := mm.helm.ListReleasesNames()
+	if err != nil {
+		return nil, err
+	}
+
+	state.ModulesToPurge = mm.getReleasedModulesToPurge(releasedModules)
+
+	allDisabledModules := append([]string{}, mm.kubeDisabledModules...)
+	allDisabledModules = append(allDisabledModules, mm.getDisabledModules(enabledModules)...)
+
+	state.ModulesToDisable = mm.getReleasedModulesToDisable(releasedModules, allDisabledModules)
+
+	return state, nil
+}
+
 func (mm *MainModuleManager) GetModule(name string) (*Module, error) {
 	module, exist := mm.modulesByName[name]
 	if exist {
@@ -535,10 +589,6 @@ func (mm *MainModuleManager) GetModule(name string) (*Module, error) {
 	} else {
 		return nil, fmt.Errorf("module '%s' not found", name)
 	}
-}
-
-func (mm *MainModuleManager) GetModuleNamesInOrder() []string {
-	return mm.allModuleNamesInOrder
 }
 
 func (mm *MainModuleManager) GetGlobalHook(name string) (*GlobalHook, error) {
@@ -698,10 +748,10 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 	return nil
 }
 
-func (mm *MainModuleManager) enabledModulesValues() utils.Values {
+func (mm *MainModuleManager) constructEnabledModulesValues(enabledModules []string) utils.Values {
 	return utils.Values{
 		"global": map[string]interface{}{
-			"enabledModules": mm.enabledModulesInOrder,
+			"enabledModules": enabledModules,
 		},
 	}
 }

@@ -11,18 +11,18 @@ spec:
   type: ClusterIP
   clusterIP: None
   selector:
-{{- if eq .Values.global.cluster.type "ACS" }}
+{{- if eq .Values.global.discovery.clusterType "ACS" }}
     component: kube-controller-manager
     tier: control-plane
-{{- else if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+{{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
     k8s-app: kube-controller-manager
-{{- else if eq .Values.global.cluster.type "Manual" }}
+{{- else if eq .Values.global.discovery.clusterType "Manual" }}
     app: kube-prometheus-kube-master-proxy
 {{- else }}
-  {{- fail "Unsupported cluster type" .Values.global.cluster.type }}
+  {{- fail "Unsupported cluster type" .Values.global.discovery.clusterType }}
 {{- end }}
   ports:
-{{- if not (eq .Values.global.cluster.type "Manual") }}
+{{- if not (eq .Values.global.discovery.clusterType "Manual") }}
   - name: http-metrics
     port: 10252
     targetPort: 10252

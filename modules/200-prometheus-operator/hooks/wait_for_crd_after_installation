@@ -37,8 +37,4 @@ function __main__() {
   fi
 }
 
-function __main_old__() {
-  __main__ $@
-}
-
 hook::run $@

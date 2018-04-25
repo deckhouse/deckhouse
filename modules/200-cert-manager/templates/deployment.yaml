@@ -18,14 +18,14 @@ spec:
 {{- if and (hasKey .Values.certManager "nodeSelector") (.Values.certManager.nodeSelector) }}
       nodeSelector:
 {{ .Values.certManager.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.certManager "nodeSelector")) .Values.global.cluster.hasSystemNodes }}
+{{- else if and (not (hasKey .Values.certManager "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
       nodeSelector:
         node-role/system: ""
 {{- end }}
 {{- if and (hasKey .Values.certManager "tolerations") (.Values.certManager.tolerations) }}
       tolerations:
 {{ .Values.certManager.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.certManager "tolerations")) .Values.global.cluster.hasSystemNodes }}
+{{- else if and (not (hasKey .Values.certManager "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
       tolerations:
       - key: node-role/system
         effect: NoExecute

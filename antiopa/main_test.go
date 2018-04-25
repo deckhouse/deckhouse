@@ -57,14 +57,6 @@ var runOrder = []int{}
 
 var globalT *testing.T
 
-func (m *ModuleManagerMock) GetModulesToDisableOnInit() []string {
-	return []string{"disabled_module_1__21", "disabled_2__22", "disabled_3.14__23"}
-}
-
-func (m *ModuleManagerMock) GetModulesToPurgeOnInit() []string {
-	return []string{"unknown_module_1__11", "abandoned_1__12", "forgotten_3.14__13"}
-}
-
 func (m *ModuleManagerMock) Run() {
 	fmt.Println("ModuleManagerMock Run")
 }
@@ -73,8 +65,12 @@ func (m *ModuleManagerMock) GetModule(name string) (*module_manager.Module, erro
 	panic("implement GetModule")
 }
 
-func (m *ModuleManagerMock) GetModuleNamesInOrder() []string {
-	return []string{"test_module_1__101", "test_module_2__102"}
+func (m *ModuleManagerMock) DiscoverModulesState() (*module_manager.ModulesState, error) {
+	return &module_manager.ModulesState{
+		[]string{"test_module_1__101", "test_module_2__102"},
+		[]string{"disabled_module_1__111", "disabled_2__112", "disabled_3.14__113"},
+		[]string{"unknown_module_1__121", "abandoned_1__122", "forgotten_3.14__123"},
+	}, nil
 }
 
 func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHook, error) {
@@ -311,8 +307,7 @@ func TestMain_ModulesEventsHandler(t *testing.T) {
 
 	expectedCount := 4 // count of ModuleChange in previous go routine
 	expectedCount += len(ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll))
-	expectedCount += len(ModuleManager.GetModuleNamesInOrder())
-	expectedCount += len(ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll))
+	expectedCount += 1 // DiscoverModulesState task
 
 	assert.Equal(t, expectedCount, TasksQueue.Length())
 }

@@ -126,8 +126,8 @@ func TestMainModuleManager_GetModule2(t *testing.T) {
 	}
 }
 
-func TestMainModuleManager_GetModuleNamesInOrder2(t *testing.T) {
-	mm := NewMainModuleManager(nil, nil)
+func TestMainModuleManager_ModulesToRun(t *testing.T) {
+	mm := NewMainModuleManager(&MockHelmClient{}, nil)
 
 	runInitModulesIndex(t, mm, "test_get_module_names_in_order")
 
@@ -137,9 +137,13 @@ func TestMainModuleManager_GetModuleNamesInOrder2(t *testing.T) {
 		"module-b",
 	}
 
-	modulesInOrder := mm.GetModuleNamesInOrder()
-	if !reflect.DeepEqual(expectedModules, modulesInOrder) {
-		t.Errorf("\n[EXPECTED]: %s\n[GOT]: %s", expectedModules, modulesInOrder)
+	modulesState, err := mm.DiscoverModulesState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expectedModules, modulesState.ModulesToRun) {
+		t.Errorf("\n[EXPECTED]: %s\n[GOT]: %s", expectedModules, modulesState.ModulesToRun)
 	}
 }
 
@@ -258,6 +262,14 @@ type MockHelmClient struct {
 	DeleteSingleFailedRevisionExecuted bool
 	UpgradeReleaseExecuted             bool
 	DeleteReleaseExecuted              bool
+}
+
+func (h *MockHelmClient) ListReleases() ([]string, error) {
+	return []string{}, nil
+}
+
+func (h *MockHelmClient) ListReleasesNames() ([]string, error) {
+	return []string{}, nil
 }
 
 func (h *MockHelmClient) CommandEnv() []string {
@@ -642,8 +654,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              2.0, "c": []interface{}{3.0},
+					"a": 2.0, "c": []interface{}{3.0},
 				},
 			},
 		},
@@ -657,8 +668,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              9.0, "c": "10",
+					"a": 9.0, "c": "10",
 				},
 			},
 		},
@@ -678,8 +688,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              2.0, "c": []interface{}{3.0}, "x": "123",
+					"a": 2.0, "c": []interface{}{3.0}, "x": "123",
 				},
 			},
 		},
@@ -698,8 +707,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			},
 			utils.Values{
 				"global": map[string]interface{}{
-					"enabledModules": []string{},
-					"a":              9.0, "c": "10", "x": 10.0,
+					"a": 9.0, "c": "10", "x": 10.0,
 				},
 			},
 		},

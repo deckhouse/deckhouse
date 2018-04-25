@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=9999
+}
+
+function __main__() {
+  mkdir /tmp/***REMOVED***
+  values::get global.discovery.clusterType > /tmp/***REMOVED***/cluster_type
+}
+
+hook::run $@

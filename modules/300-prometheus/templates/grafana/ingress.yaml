@@ -13,14 +13,14 @@ metadata:
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
-  {{- if .Values.global.ingressACME }}
+  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
     kubernetes.io/tls-acme: "true"
   {{- end }}
     ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header X-WEBAUTH-USER $remote_user;
     ingress.kubernetes.io/affinity: cookie
 spec:
-  {{- if .Values.global.ingressACME }}
+  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
   tls:
   - hosts:
     - prometheus.{{ .Values.global.clusterHostname }}
