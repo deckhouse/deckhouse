@@ -299,11 +299,11 @@ type MockKubeConfigManager struct {
 	kube_config_manager.KubeConfigManager
 }
 
-func (kcm MockKubeConfigManager) SetKubeGlobalValues(globalValues map[string]interface{}) error {
+func (kcm MockKubeConfigManager) SetKubeGlobalValues(values utils.Values) error {
 	return nil
 }
 
-func (kcm MockKubeConfigManager) SetKubeModuleValues(moduleName string, moduleValues map[string]interface{}) error {
+func (kcm MockKubeConfigManager) SetKubeModuleValues(moduleName string, values utils.Values) error {
 	return nil
 }
 

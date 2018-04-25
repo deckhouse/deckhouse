@@ -246,7 +246,7 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 		}
 
 		if configValuesPatchResult.ValuesChanged {
-			if err := h.moduleManager.kubeConfigManager.SetKubeGlobalValues(configValuesPatchResult.GlobalValues); err != nil {
+			if err := h.moduleManager.kubeConfigManager.SetKubeGlobalValues(configValuesPatchResult.Values); err != nil {
 				rlog.Debugf("Global hook '%s' kube config global values stay unchanged:\n%s", utils.ValuesToString(h.moduleManager.kubeGlobalConfigValues))
 				return fmt.Errorf("global hook '%s': set kube config failed: %s", h.Name, err)
 			}
@@ -463,7 +463,7 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 			return fmt.Errorf("module hook '%s': kube module config values update error: %s", h.Name, err)
 		}
 		if configValuesPatchResult.ValuesChanged {
-			err := h.moduleManager.kubeConfigManager.SetKubeModuleValues(moduleName, configValuesPatchResult.ModuleValues)
+			err := h.moduleManager.kubeConfigManager.SetKubeModuleValues(moduleName, configValuesPatchResult.Values)
 			if err != nil {
 				rlog.Debugf("Module hook '%s' kube module config values stay unchanged:\n%s", utils.ValuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
 				return fmt.Errorf("module hook '%s': set kube module config failed: %s", h.Name, err)
