@@ -25,6 +25,7 @@ type HelmClient interface {
 	UpgradeRelease(releaseName string, chart string, valuesPaths []string, namespace string) error
 	DeleteRelease(releaseName string) error
 	ListReleases() ([]string, error)
+	ListReleasesNames() ([]string, error)
 	IsReleaseExists(releaseName string) (bool, error)
 }
 
@@ -188,6 +189,7 @@ func (helm *CliHelm) IsReleaseExists(releaseName string) (bool, error) {
 	return true, nil
 }
 
+// Возвращает все известные релизы в виде строк "<имя_релиза>.v<номер_версии>"
 // helm ищет ConfigMap-ы по лейблу OWNER=TILLER и получает данные о релизе из ключа "release"
 // https://github.com/kubernetes/helm/blob/8981575082ea6fc2a670f81fb6ca5b560c4f36a7/pkg/storage/driver/cfgmaps.go#L88
 func (helm *CliHelm) ListReleases() ([]string, error) {
@@ -200,20 +202,40 @@ func (helm *CliHelm) ListReleases() ([]string, error) {
 		return nil, err
 	}
 
-	var releaseCmNamePattern = regexp.MustCompile(`^(.*).v[0-9]+$`)
-
 	releases := make([]string, 0)
 	for _, cm := range cmList.Items {
-		matchRes := releaseCmNamePattern.FindStringSubmatch(cm.Name)
-		if matchRes != nil {
-			if _, has_key := cm.Data["release"]; has_key {
-				releaseName := matchRes[1]
-				releases = append(releases, releaseName)
-			}
+		if _, has_key := cm.Data["release"]; has_key {
+			releases = append(releases, cm.Name)
 		}
 	}
 
 	sort.Strings(releases)
 
 	return releases, nil
+}
+
+// Список имён релизов без суффикса ".v<номер релиза>"
+func (helm *CliHelm) ListReleasesNames() ([]string, error) {
+	releases, err := helm.ListReleases()
+	if err != nil {
+		return []string{}, err
+	}
+
+	var releaseCmNamePattern = regexp.MustCompile(`^(.*).v[0-9]+$`)
+
+	releasesNamesMap := map[string]bool{}
+	for _, release := range releases {
+		matchRes := releaseCmNamePattern.FindStringSubmatch(release)
+		if matchRes != nil {
+			releaseName := matchRes[1]
+			releasesNamesMap[releaseName] = true
+		}
+	}
+
+	releasesNames := make([]string, 0)
+	for releaseName, _ := range releasesNamesMap {
+		releasesNames = append(releasesNames, releaseName)
+	}
+
+	return releasesNames, nil
 }

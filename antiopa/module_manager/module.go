@@ -327,7 +327,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	rlog.Infof("Running enabled script for module '%s' ...")
+	rlog.Infof("Running enabled script '%s' for module '%s' ...", enabledScriptPath, m.Name)
 
 	cmd := m.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, enabledScriptPath, []string{})
 
