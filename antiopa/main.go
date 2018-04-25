@@ -297,6 +297,7 @@ func TasksRunner() {
 				modulesState, err := ModuleManager.DiscoverModulesState()
 				if err != nil {
 					handleTaskFailed(err)
+					break
 				}
 
 				for _, moduleName := range modulesState.ModulesToRun {
