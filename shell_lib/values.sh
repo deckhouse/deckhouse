@@ -80,7 +80,7 @@ function values::unset() {
   fi
 
   if values::has $config $1 ; then
-    values::json_patch $config op=remove path=/$(echo $1 | 'sed s/\./\//g')
+    values::json_patch $config op=remove path=/$(echo $1 | sed 's/\./\//g')
   fi
 }
 
