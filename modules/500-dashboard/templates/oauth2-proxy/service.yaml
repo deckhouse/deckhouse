@@ -1,0 +1,19 @@
+{{- if .Values.dashboard.gitlabBaseUrl }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oauth2-proxy
+  name: oauth2-proxy
+  namespace: kube-dashboard
+spec:
+  ports:
+  - name: http
+    port: 4180
+    protocol: TCP
+    targetPort: 4180
+  selector:
+    app: oauth2-proxy
+{{- end }}

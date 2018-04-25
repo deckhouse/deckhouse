@@ -1,0 +1,74 @@
+{{- if .Values.dashboard.gitlabBaseUrl }}
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: kube-dashboard
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+  {{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
+      nodeSelector:
+{{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
+  {{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+  {{- end }}
+  {{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
+      tolerations:
+{{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
+  {{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+  {{- end }}
+      imagePullSecrets:
+      - name: antiopa-registry
+      containers:
+      - args:
+        - --provider=gitlab
+        - -login-url={{ .Values.dashboard.gitlabBaseUrl }}/oauth/authorize
+        - -redeem-url={{ .Values.dashboard.gitlabBaseUrl }}/oauth/token
+        - -validate-url={{ .Values.dashboard.gitlabBaseUrl }}/api/v3/user
+        - --email-domain=*
+        - --upstream=file:///dev/null
+        - --http-address=0.0.0.0:4180
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          value: {{ .Values.dashboard.oauth2ProxyClientId }}
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          value: {{ .Values.dashboard.oauth2ProxyClientSecret }}
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          value: {{ .Values.dashboard.oauth2ProxyCookieSecret }}
+        image: {{ $.Values.global.modulesImages.registry }}/dashboard/oauth2-proxy:{{ $.Values.global.modulesImages.tags.dashboard.oauth2Proxy }}
+        imagePullPolicy: Always
+        name: oauth2-proxy
+        readinessProbe:
+          tcpSocket:
+            port: 4180
+          initialDelaySeconds: 1
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 4180
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        ports:
+        - containerPort: 4180
+          protocol: TCP
+{{- end }}

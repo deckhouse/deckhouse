@@ -1,0 +1,37 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+{{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
+    kubernetes.io/tls-acme: "true"
+{{- end }}
+    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+{{- if .Values.dashboard.gitlabBaseUrl }}
+    ingress.kubernetes.io/auth-signin: https://$host/oauth2/sign_in
+    ingress.kubernetes.io/auth-url: http://oauth2-proxy.kube-dashboard.svc.cluster.local:4180/oauth2/auth
+{{- else }}
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: basic-auth
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+{{- end }}
+  name: dashboard
+  namespace: kube-dashboard
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: dashboard
+spec:
+  rules:
+  - host: dashboard.{{ .Values.global.clusterHostname }}
+    http:
+      paths:
+      - backend:
+          serviceName: dashboard
+          servicePort: 80
+        path: /
+{{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
+  tls:
+  - hosts:
+      - dashboard.{{ .Values.global.clusterHostname }}
+    secretName: ingress-tls
+{{- end }}
