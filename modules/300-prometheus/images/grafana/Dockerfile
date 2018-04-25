@@ -1,6 +1,6 @@
 FROM grafana/build-container:v0.1
 RUN mkdir -p /go/src/github.com/grafana/grafana && \
-    wget https://github.com/grafana/grafana/archive/v5.0.4.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
+    wget https://github.com/grafana/grafana/archive/v5.1.0-beta1.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
 WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .

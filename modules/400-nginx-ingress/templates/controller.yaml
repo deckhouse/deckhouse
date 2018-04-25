@@ -2,6 +2,7 @@
   {{- $_ := set . "Values" $.Values }}
   {{- $_ := set . "Files" $.Files }}
   {{- $_ := set . "Chart" $.Chart }}
+  {{- $_ := set . "Template" $.Template }}
   {{- $inlet := (include "helper.inlet" .) }}
 
   {{- if eq $inlet "LoadBalancer" }}
