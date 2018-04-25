@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __main__() {
+  cluster_type=$(values::get global.discovery.clusterType)
+  if [[ "$cluster_type" == "ACS" ]] ; then
+    echo "false" > $MODULE_ENABLED_RESULT
+  else
+    echo "true" > $MODULE_ENABLED_RESULT
+  fi
+}
+
+hook::run $@

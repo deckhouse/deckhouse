@@ -1,16 +1,17 @@
-{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
-  {{- $_ := set . "Values" $.Values }}
-  {{- $inlet := (include "helper.inlet" .) }}
-  {{- if eq $inlet "Direct" }}
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+  {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+    {{- $_ := set . "Values" $.Values }}
+    {{- $inlet := (include "helper.inlet" .) }}
+    {{- if eq $inlet "Direct" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  {{- if not .name }}
+      {{- if not .name }}
   name: nginx-ingress-direct-fallback
-  {{- else }}
+      {{- else }}
   name: nginx-ingress-direct-fallback-{{ .name }}
-  {{- end }}
+      {{- end }}
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -26,11 +27,11 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
     - targetLabel: controller
-  {{- if not .name }}
+      {{- if not .name }}
       replacement: main
-  {{- else }}
+      {{- else }}
       replacement: {{ .name }}
-  {{- end }}
+      {{- end }}
     scheme: https
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
@@ -61,5 +62,6 @@ spec:
     port: 10355
     targetPort: 10355
     protocol: TCP
+    {{- end }}
   {{- end }}
 {{- end }}

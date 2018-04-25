@@ -1,0 +1,40 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  # Скрипт проверят, что Prometheus Operator уже зарегистрировал CRD и если нет —
+  # ожидает до тех пор, пока не зарегистрирует!
+
+  n=1
+  while ! kubectl get customresourcedefinitions servicemonitors.monitoring.coreos.com > /dev/null 2>&1 ||
+        ! kubectl get customresourcedefinitions prometheuses.monitoring.coreos.com > /dev/null 2>&1 ||
+        ! kubectl get customresourcedefinitions alertmanagers.monitoring.coreos.com > /dev/null 2>&1 ||
+        ! kubectl get servicemonitors.monitoring.coreos.com > /dev/null 2>&1 ||
+        ! kubectl get prometheuses.monitoring.coreos.com > /dev/null 2>&1 ||
+        ! kubectl get alertmanagers.monitoring.coreos.com > /dev/null 2>&1 ; do
+    if [[ $n -eq 1 ]] ; then
+      echo -n "Waiting for Prometheus Operator to register custom resource definitions.."
+    fi
+
+    ((n++))
+  
+    if [[ $n -gt 60 ]] ; then
+      echo "timeout!"
+      return 1
+    fi
+
+    sleep 1
+    echo -n .
+  done
+
+  if [[ $n -ne 1 ]] ; then
+    echo "done!"
+  fi
+}
+
+hook::run $@

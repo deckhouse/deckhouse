@@ -28,7 +28,7 @@ spec:
       targetLabel: instance
     - targetLabel: service
       replacement: etcd
-{{- if or (eq .Values.global.cluster.type "AWS") (eq .Values.global.cluster.type "GCE") }}
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - port: etcd-events
     scheme: https
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=510
+}
+
+function __main__() {
+  # flannel есть только в Manual кластерах
+  cluster_type=$(values::get --required global.discovery.clusterType)
+  [[ "$cluster_type" != "Manual" ]] && return 0
+
+  fltr='.'
+
+  ###
+  # Политика #1: flanneld должен быть запущен на всех узлах, вне зависимости от taint'ов
+  fltr=$fltr' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
+
+  ###
+  # Политика #2: DaemonSet flanneld должен нормально обновляться
+  fltr=$fltr' | .spec.updateStrategy.type = "RollingUpdate"'
+
+  # Применяем
+  kubectl::apply_jq kube-system ds/kube-flannel-ds "$fltr"
+}
+
+hook::run $@

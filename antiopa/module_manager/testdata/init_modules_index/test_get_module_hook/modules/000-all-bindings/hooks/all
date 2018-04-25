@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"afterHelm\": 1,
+    \"beforeHelm\": 1,
+    \"afterDeleteHelm\": 1,
+    \"onStartup\": 1,
+    \"schedule\": [
+      {
+        \"crontab\": \"* * * * *\",
+        \"allowFailure\": true
+      }
+    ]
+}
+"
+fi

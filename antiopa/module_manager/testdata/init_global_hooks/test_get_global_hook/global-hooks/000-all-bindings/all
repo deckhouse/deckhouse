@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"afterAll\": 1,
+    \"beforeAll\": 1,
+    \"onStartup\": 1,
+    \"schedule\": [
+      {
+        \"crontab\": \"* * * * *\",
+        \"allowFailure\": true
+      }
+    ]
+}
+"
+fi

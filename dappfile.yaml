@@ -1,5 +1,5 @@
 dimg: ~
-from: alpine:3.6
+from: alpine:3.7
 git:
 - add: /
   to: /antiopa
@@ -14,7 +14,7 @@ git:
   - modules/*/README.md
 import:
 - artifact: antiopa
-  add: /go/src/github.com/deckhouse/deckhouse/antiopa
+  add: /go/bin/antiopa
   to: /antiopa/antiopa
   before: setup
 ansible:
@@ -63,33 +63,28 @@ ansible:
       content: |
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
       dest: /antiopa/modules/images_tags.json
-  - name: "Add modules images tags.yaml"
-    copy:
-      content: |
-{{ .Files.Get "modules/images_tags.yaml" | indent 8 }}
-      dest: /antiopa/modules/images_tags.yaml
 ---
 artifact: antiopa
-from: golang:1.8-alpine3.6
+from: golang:1.10-alpine3.7
 git:
 - add: /antiopa
-  to: /go/src/github.com/deckhouse/deckhouse
+  to: /go/src/github.com/deckhouse/deckhouse/antiopa
   excludePaths:
   - development
   stageDependencies:
     install:
     - go-get-run
+    - go-get.sh
     buildArtifact:
     - "**/*.go"
+    - go-build.sh
 ansible:
   beforeInstall:
   - apk: name=git update_cache=yes
   - command: rm -rf /var/cache/apk/*
 
   install:
-  - command: go get -v -d github.com/deckhouse/deckhouse/...
+  - command: /go/src/github.com/deckhouse/deckhouse/antiopa/go-get.sh
 
   buildArtifact:
-  - command: go build
-    args:
-      chdir: /go/src/github.com/deckhouse/deckhouse
+  - command: /go/src/github.com/deckhouse/deckhouse/antiopa/go-build.sh

@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"beforeAll\": 1
+}
+"
+fi

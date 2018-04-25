@@ -1,4 +1,4 @@
-{{- if not (eq .Values.global.cluster.type "ACS") }}
+{{- if not (eq .Values.global.discovery.clusterType "ACS") }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

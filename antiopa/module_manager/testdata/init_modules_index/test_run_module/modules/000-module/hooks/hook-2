@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"afterHelm\": 2
+}
+"
+else
+    cat << 'EOF' > "$VALUES_JSON_PATCH_PATH"
+[
+    { "op": "add", "path": "/module/afterHelm", "value": "override-value" }
+]
+EOF
+fi

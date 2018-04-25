@@ -1,0 +1,16 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"beforeAll\": 1
+}
+"
+else
+    cat << 'EOF' > "$VALUES_JSON_PATCH_PATH"
+[
+    { "op": "add", "path": "/global/a", "value": 9 },
+    { "op": "add", "path": "/global/c", "value": "10" }
+]
+EOF
+fi

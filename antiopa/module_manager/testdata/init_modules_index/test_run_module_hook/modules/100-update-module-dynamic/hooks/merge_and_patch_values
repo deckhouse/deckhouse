@@ -1,0 +1,16 @@
+#!/bin/bash -e
+
+if [[ "$1" == "--config" ]]; then
+    echo "
+{
+    \"beforeHelm\": 1
+}
+"
+else
+    cat << 'EOF' > "$VALUES_JSON_PATCH_PATH"
+[
+    { "op": "add", "path": "/updateModuleDynamic/a", "value": 9 },
+    { "op": "add", "path": "/updateModuleDynamic/c", "value": "10" }
+]
+EOF
+fi

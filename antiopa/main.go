@@ -1,59 +1,60 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"github.com/gobwas/glob"
-	"github.com/romana/rlog"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"reflect"
-	"regexp"
-	"strings"
 	"time"
+
+	"github.com/deckhouse/deckhouse/antiopa/docker_registry_manager"
+	"github.com/deckhouse/deckhouse/antiopa/helm"
+	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
+	"github.com/deckhouse/deckhouse/antiopa/module_manager"
+	"github.com/deckhouse/deckhouse/antiopa/task"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
+
+	"github.com/romana/rlog"
 )
 
-type Module struct {
-	Name          string
-	DirectoryName string
-	Path          string
-}
-
 var (
-	// список модулей, найденных в инсталляции
-	modulesByName map[string]Module
-	// список имен модулей в порядке вызова
-	modulesOrder []string
-
-	// values для всех модулей, для всех кластеров
-	globalValues map[interface{}]interface{}
-	// values, которые генерируют хуки (on-kube-node-change)
-	hooksValues map[interface{}]interface{}
-	// values для конкретного модуля, для всех кластеров
-	globalModulesValues map[string]map[interface{}]interface{}
-	// values для всех модулей, для конкретного кластера
-	kubeValues map[interface{}]interface{}
-	// values для конкретного модуля, для конкретного кластера
-	kubeModulesValues map[string]map[interface{}]interface{}
-
-	retryModulesNamesQueue []string
-	retryAll               bool
-
 	WorkingDir string
 	TempDir    string
 
 	// Имя хоста совпадает с именем пода. Можно использовать для запросов API
 	Hostname string
+
+	// Имя файла, в который будет сбрасываться очередь
+	TasksQueueDumpFilePath string
+
+	// Очередь задач
+	TasksQueue *task.TasksQueue
+
+	// TODO Когда будет schedule_manager - удалить
+	schedule_manager_ScheduleEventCh chan struct{}
+
+	// module manager object
+	ModuleManager module_manager.ModuleManager
+
+	// chan for stopping ManagersEventsHandler infinite loop
+	ManagersEventsHandlerStopCh chan struct{}
+
+	// helm client object
+	HelmClient helm.HelmClient
 )
 
-func main() {
-	Init()
-	Run()
-}
+const DefaultTasksQueueDumpFilePath = "/tmp/antiopa-tasks-queue"
 
+// Задержки при обработке тасков из очереди
+var (
+	QueueIsEmptyDelay = 3 * time.Second
+	FailedHookDelay   = 5 * time.Second
+	FailedModuleDelay = 5 * time.Second
+)
+
+// Собрать настройки - директории, имя хоста, файл с дампом, namespace для tiller
+// Проинициализировать все нужные объекты: helm, registry manager, module manager,
+// kube events manager
+// Создать пустую очередь с заданиями.
 func Init() {
 	rlog.Debug("Init")
 
@@ -64,657 +65,391 @@ func Init() {
 		rlog.Errorf("MAIN Fatal: Cannot determine antiopa working dir: %s", err)
 		os.Exit(1)
 	}
+	rlog.Debugf("Antiopa working dir: %s", WorkingDir)
 
 	TempDir, err = ioutil.TempDir("", "antiopa-")
 	if err != nil {
-		rlog.Errorf("MAIN Fatal: cannot create antiopa temporary dir: %s", err)
+		rlog.Errorf("MAIN Fatal: Cannot create antiopa temporary dir: %s", err)
 		os.Exit(1)
 	}
-
-	retryModulesNamesQueue = make([]string, 0)
-	retryAll = false
+	rlog.Debugf("Antiopa temporary dir: %s", TempDir)
 
 	Hostname, err = os.Hostname()
 	if err != nil {
-		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %v", err)
+		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %s", err)
 		os.Exit(1)
 	}
+	rlog.Debugf("Antiopa hostname: %s", Hostname)
 
-	InitKube()
-	InitHelm()
+	// Инициализация подключения к kube
+	kube.InitKube()
 
-	// Initialize global enabled-modules index with descriptors
-	modules, err := getEnabledModules()
+	// Инициализация слежения за образом
+	// TODO Antiopa может и не следить, если кластер заморожен?
+	err = docker_registry_manager.InitRegistryManager(Hostname)
 	if err != nil {
-		rlog.Errorf("Cannot detect enabled antiopa modules: %s", err)
+		rlog.Errorf("MAIN Fatal: Cannot initialize registry manager: %s", err)
 		os.Exit(1)
 	}
-	if len(modules) == 0 {
-		rlog.Warnf("No modules enabled")
-	}
-	modulesOrder = make([]string, 0)
-	modulesByName = make(map[string]Module)
-	for _, module := range modules {
-		modulesByName[module.Name] = module
-		modulesOrder = append(modulesOrder, module.Name)
-		rlog.Debugf("Using module %s", module.Name)
-	}
 
-	hooksValues = make(map[interface{}]interface{})
-
-	globalValues, err = readValues()
+	// Инициализация helm — установка tiller, если его нет
+	// TODO KubernetesAntiopaNamespace — имя поменяется, это старая переменная
+	tillerNamespace := kube.KubernetesAntiopaNamespace
+	rlog.Debugf("Antiopa tiller namespace: %s", tillerNamespace)
+	HelmClient, err = helm.Init(tillerNamespace)
 	if err != nil {
-		rlog.Errorf("Cannot read values: %s", err)
+		rlog.Errorf("MAIN Fatal: cannot initialize helm: %s", err)
 		os.Exit(1)
 	}
-	rlog.Debugf("Read global VALUES:\n%s", valuesToString(globalValues))
 
-	globalModulesValues = make(map[string]map[interface{}]interface{})
-	for _, module := range modulesByName {
-		values, err := readModuleValues(module)
-		if err != nil {
-			rlog.Errorf("Cannot read module %s global values: %s", module.Name, err)
-			os.Exit(1)
-		}
-		if values != nil {
-			globalModulesValues[module.Name] = values
-			rlog.Debugf("Read module %s global VALUES:\n%s", module.Name, valuesToString(values))
-		}
-	}
-
-	res, err := InitKubeValuesManager()
+	// Инициализация слежения за конфигом и за values
+	ModuleManager, err = module_manager.Init(WorkingDir, TempDir, HelmClient)
 	if err != nil {
-		rlog.Errorf("Cannot initialize kube values manager: %s", err)
+		rlog.Errorf("MAIN Fatal: Cannot initialize module manager: %s", err)
 		os.Exit(1)
 	}
-	kubeValues = res.Values
-	kubeModulesValues = res.ModulesValues
-	rlog.Debugf("Read kube VALUES:\n%s", valuesToString(kubeValues))
-	for moduleName, kubeModuleValues := range kubeModulesValues {
-		rlog.Debugf("Read module %s kube VALUES:\n%s", moduleName, valuesToString(kubeModuleValues))
-	}
 
-	InitKubeNodeManager()
+	// Пустая очередь задач.
+	TasksQueue = task.NewTasksQueue()
 
-	err = InitRegistryManager()
-	if err != nil {
-		rlog.Errorf("Cannot initialize registry manager: %s", err)
-		os.Exit(1)
-	}
+	// Дампер для сброса изменений в очереди во временный файл
+	// TODO определить файл через переменную окружения?
+	TasksQueueDumpFilePath = DefaultTasksQueueDumpFilePath
+	rlog.Debugf("Antiopa tasks queue dump file '%s'", TasksQueueDumpFilePath)
+	queueWatcher := task.NewTasksQueueDumper(TasksQueueDumpFilePath, TasksQueue)
+	TasksQueue.AddWatcher(queueWatcher)
+
+	// Инициализация слежения за событиями onKubeNodeChange (пока нет kube_event_manager)
+	kube_node_manager.InitKubeNodeManager()
+
+	// TODO Инициализация слежения за событиями из kube
+	// нужно по конфигам хуков создать настройки в менеджере
+	// связать настройку и имя хука
+	// потом, когда от менеджера придёт id настройки,
+	// найти по id нужные имена хуков и добавить их запуск в очередь
+	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
+	   ModulesToRun.each {
+	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
+	           schedule.add hook // регистрация binding
+	       }
+
+	       GetModuleHooksInOrder(moduleName, module.OnKubeNodeChange).each {
+	           ... // регистрация binding
+	       }
+	   }
+
+	   GetGlobalHooksInOrder(module.OnKubeNodeChange).each {...} // регистрация binding
+
+	   GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
+	*/
+
+	// Инициализация хуков по расписанию - карта scheduleId → []ScheduleHook
+	schedule_manager_ScheduleEventCh = make(chan struct{}, 1)
+	RegisterScheduleHooks()
+	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
+	// RegisterKubeEventHooks()
 }
 
+// Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
+// Основной процесс блокируется for-select-ом в обработчике очереди.
 func Run() {
-	rlog.Debug("Run")
+	rlog.Info("MAIN: run main loop")
 
-	go RunKubeValuesManager()
-	go RunKubeNodeManager()
-	go RunRegistryManager()
+	// Загрузить в очередь onStartup хуки и запуск всех модулей.
+	// слежение за измененияи включить только после всей загрузки
+	rlog.Info("MAIN: add onStartup, beforeAll, module and afterAll tasks")
+	TasksQueue.ChangesDisable()
 
-	RunAll()
+	CreateOnStartupTasks()
+	CreateReloadAllTasks()
 
-	retryTicker := time.NewTicker(time.Duration(30) * time.Second)
+	TasksQueue.ChangesEnable(true)
 
+	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
+	go docker_registry_manager.RunRegistryManager()
+	go ModuleManager.Run()
+	go kube_node_manager.RunKubeNodeManager()
+
+	// обработчик событий от менеджеров — события превращаются в таски и
+	// добавляются в очередь
+	go ManagersEventsHandler()
+
+	// TasksRunner запускает задания из очереди
+	go TasksRunner()
+
+}
+
+func ManagersEventsHandler() {
 	for {
 		select {
-		case newKubevalues := <-KubeValuesUpdated:
-			kubeValues = newKubevalues.Values
-			kubeModulesValues = newKubevalues.ModulesValues
-
-			rlog.Infof("Kube values has been updated, rerun all modules ...")
-
-			RunModules()
-
-		case moduleValuesUpdate := <-KubeModuleValuesUpdated:
-			if _, hasKey := modulesByName[moduleValuesUpdate.ModuleName]; hasKey {
-				kubeModulesValues[moduleValuesUpdate.ModuleName] = moduleValuesUpdate.Values
-
-				rlog.Infof("Module '%s' kube values has been updated, rerun ...", moduleValuesUpdate.ModuleName)
-
-				RunModule(moduleValuesUpdate.ModuleName)
-			}
-
-		case <-KubeNodeChanged:
-			OnKubeNodeChanged()
-
-		case <-retryTicker.C:
-			if retryAll {
-				retryAll = false
-
-				rlog.Infof("Retrying all modules ...")
-
-				RunAll()
-			} else if len(retryModulesNamesQueue) > 0 {
-				retryModuleName := retryModulesNamesQueue[0]
-				retryModulesNamesQueue = retryModulesNamesQueue[1:]
-
-				rlog.Infof("Retrying module '%s' ...", retryModuleName)
-
-				RunModule(retryModuleName)
-			}
-
-		case newImageId := <-ImageUpdated:
-			err := KubeUpdateDeployment(newImageId)
+		// Образ antiopa изменился, нужен рестарт деплоймента (можно и не выходить)
+		case newImageId := <-docker_registry_manager.ImageUpdated:
+			err := kube.KubeUpdateDeployment(newImageId)
 			if err == nil {
 				rlog.Infof("KUBE deployment update successful, exiting ...")
 				os.Exit(1)
 			} else {
 				rlog.Errorf("KUBE deployment update error: %s", err)
 			}
-		}
-	}
-}
-
-func RunAll() {
-	values, err := RunOnKubeNodeChangedHooks()
-
-	if err != nil {
-		retryAll = true
-		rlog.Errorf("on-kube-node-change hooks error: %s", err)
-		return
-	}
-
-	hooksValues = values
-
-	RunModules()
-}
-
-func OnKubeNodeChanged() {
-	rlog.Infof("Kube node change detected")
-
-	values, err := RunOnKubeNodeChangedHooks()
-	if err != nil {
-		rlog.Errorf("on-kube-node-change hooks error: %s", err)
-		return
-	}
-
-	newHooksValues := MergeValues(hooksValues, values)
-
-	if !reflect.DeepEqual(hooksValues, newHooksValues) {
-		hooksValues = newHooksValues
-
-		RunModules()
-	}
-}
-
-// Вызов хуков при изменении опций узлов и самих узлов.
-// Таким образом можно подтюнить узлы кластера.
-// см. `/global-hooks/on-kube-node-change/*`
-func RunOnKubeNodeChangedHooks() (map[interface{}]interface{}, error) {
-	hooksDir := filepath.Join(WorkingDir, "global-hooks", "on-kube-node-change")
-
-	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
-		return nil, nil
-	}
-
-	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
-	if err != nil {
-		return nil, err
-	}
-
-	var resValues map[interface{}]interface{}
-
-	for _, hookName := range hooksNames {
-		rlog.Infof("Running global on-kube-node-change hook %s ...", hookName)
-
-		returnValuesPath := filepath.Join(TempDir, "global.on-kube-node-change.yaml")
-		returnValuesFile, err := os.OpenFile(returnValuesPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-		if err != nil {
-			return nil, err
-		}
-		returnValuesFile.Close()
-
-		cmd := exec.Command(filepath.Join(hooksDir, hookName))
-		cmd.Env = append(cmd.Env, os.Environ()...)
-		cmd.Env = append(
-			cmd.Env,
-			fmt.Sprintf("RETURN_VALUES_PATH=%s", returnValuesPath),
-			fmt.Sprintf("TILLER_NAMESPACE=%s", HelmTillerNamespace()),
-		)
-
-		cmd.Dir = WorkingDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		err = execCommand(cmd)
-		if err != nil {
-			return nil, fmt.Errorf("%s FAILED: %s", hookName, err)
-		}
-
-		values, err := readValuesYamlFile(returnValuesPath)
-		if err != nil {
-			return nil, fmt.Errorf("Got bad values yaml from hook %s: %s", hookName, err)
-		}
-
-		resValues = MergeValues(resValues, values)
-	}
-
-	return resValues, nil
-}
-
-func RunModules() {
-	retryModulesNamesQueue = make([]string, 0)
-	for _, moduleName := range modulesOrder {
-		RunModule(moduleName)
-	}
-}
-
-func RunModule(moduleName string) {
-	vals, err := PrepareModuleValues(moduleName)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-	rlog.Debugf("Module '%s': Prepared VALUES:\n%s", moduleName, valuesToString(vals))
-
-	valuesPath, err := dumpModuleValuesYaml(moduleName, vals)
-	if err != nil {
-		rlog.Errorf("Module '%s': dump values yaml error: %s", moduleName, err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-
-	err = CleanupModule(moduleName)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-
-	err = RunModuleBeforeHelmHooks(moduleName, valuesPath)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-
-	err = RunModuleHelm(moduleName, valuesPath)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-	}
-
-	err = RunModuleAfterHelmHooks(moduleName, valuesPath)
-	if err != nil {
-		rlog.Error(err)
-		retryModulesNamesQueue = append(retryModulesNamesQueue, moduleName)
-		return
-	}
-}
-
-func CheckModuleHelmChart(module Module) (chartExists bool, err error) {
-	chartPath := filepath.Join(module.Path, "Chart.yaml")
-
-	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
-		return false, fmt.Errorf("chart file not found '%s'", module.Name, chartPath)
-	}
-	return true, nil
-}
-
-func GenerateHelmReleaseName(moduleName string) string {
-	return moduleName
-}
-
-func CleanupModule(moduleName string) (err error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	chartExists, err := CheckModuleHelmChart(module)
-	if !chartExists {
-		if err != nil {
-			rlog.Debugf("Module '%s': cleanup not needed: %s", moduleName, err)
-			return nil
-		}
-	}
-
-	rlog.Infof("Module '%s': running cleanup ...", moduleName)
-
-	helmReleaseName := GenerateHelmReleaseName(moduleName)
-
-	HelmDeleteSingleFailedRevision(helmReleaseName)
-	return nil
-}
-
-func RunModuleBeforeHelmHooks(moduleName string, ValuesPath string) error {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-	hooksDir := filepath.Join(module.Path, "hooks", "before-helm")
-
-	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
-		rlog.Debugf("Module '%s': before-helm hooks not needed: %s", module.Name, err)
-		return nil
-	}
-
-	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
-	if err != nil {
-		return fmt.Errorf("Module '%s': before-helm hooks find error: %s", module.Name, err)
-	}
-
-	for _, hookName := range hooksNames {
-		rlog.Infof("Module '%s': running before-helm hook '%s' ...", module.Name, hookName)
-
-		err := execCommand(makeModuleCommand(module.Path, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
-		if err != nil {
-			return fmt.Errorf("Module '%s': before-helm hook '%s' FAILED: %s", module.Name, hookName, err)
-		}
-	}
-
-	return nil
-}
-
-func RunModuleAfterHelmHooks(moduleName string, ValuesPath string) error {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	hooksDir := filepath.Join(module.Path, "hooks", "after-helm")
-
-	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
-		rlog.Debugf("Module '%s': after-helm hooks not needed: %s", module.Name, err)
-		return nil
-	}
-
-	hooksNames, err := readDirectoryExecutableFilesNames(hooksDir)
-	if err != nil {
-		return fmt.Errorf("Module '%s': after-helm hooks find error: %s", module.Name, err)
-	}
-
-	for _, hookName := range hooksNames {
-		rlog.Infof("Module '%s': running after-helm hook '%s' ...", module.Name, hookName)
-
-		err := execCommand(makeModuleCommand(module.Path, ValuesPath, filepath.Join(hooksDir, hookName), []string{}))
-		if err != nil {
-			return fmt.Errorf("Module '%s': after-helm hook '%s' FAILED: %s", module.Name, hookName, err)
-		}
-	}
-
-	return nil
-}
-
-func RunModuleHelm(moduleName string, ValuesPath string) (err error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	chartExists, err := CheckModuleHelmChart(module)
-	if !chartExists {
-		if err != nil {
-			rlog.Debugf("Module '%s': helm not needed: %s", module.Name, err)
-			return nil
-		}
-	}
-
-	rlog.Infof("Module '%s': running helm ...", module.Name)
-
-	helmReleaseName := GenerateHelmReleaseName(module.Name)
-
-	err = execCommand(makeModuleCommand(module.Path, ValuesPath, "helm", []string{"upgrade", helmReleaseName, ".", "--install", "--namespace", HelmTillerNamespace(), "--values", ValuesPath}))
-	if err != nil {
-		return fmt.Errorf("Module '%s': helm FAILED: %s", module.Name, err)
-	}
-
-	return nil
-}
-
-func PrepareModuleValues(moduleName string) (map[interface{}]interface{}, error) {
-	module, hasModule := modulesByName[moduleName]
-	if !hasModule {
-		return nil, fmt.Errorf("Module '%s': no such module", moduleName)
-	}
-
-	valuesShPath := filepath.Join(module.Path, "initial_values")
-
-	if statRes, err := os.Stat(valuesShPath); !os.IsNotExist(err) {
-		// Тупой тест, что файл executable.
-		// Т.к. antiopa всегда работает под root, то этого достаточно.
-		if statRes.Mode()&0111 != 0 {
-			rlog.Debugf("Module '%s': running values generator '%s' ...", module.Name, valuesShPath)
-
-			var valuesYamlBuffer bytes.Buffer
-			cmd := exec.Command(valuesShPath)
-			cmd.Env = append(cmd.Env, os.Environ()...)
-			cmd.Dir = module.Path
-			cmd.Stdout = &valuesYamlBuffer
-			err := execCommand(cmd)
-			if err != nil {
-				return nil, fmt.Errorf("Module '%s': Values generator '%s' error: %s", module.Name, valuesShPath, err)
-			}
-
-			var generatedValues map[interface{}]interface{}
-			err = yaml.Unmarshal(valuesYamlBuffer.Bytes(), &generatedValues)
-			if err != nil {
-				return nil, fmt.Errorf("Module '%s': Got bad yaml from values generator '%s': %s", module.Name, valuesShPath, err)
-			}
-			rlog.Debugf("Module '%s': got VALUES from initial_values:\n%s", module.Name, valuesToString(generatedValues))
-
-			newModuleValues := MergeValues(generatedValues, kubeModulesValues[module.Name])
-
-			rlog.Debugf("Module '%s': Updating VALUES in ConfigMap:\n%s", module.Name, valuesToString(newModuleValues))
-
-			err = SetModuleKubeValues(module.Name, newModuleValues)
-			if err != nil {
-				return nil, fmt.Errorf("Module '%s': set kube values error: %s", module.Name, err)
-			}
-			kubeModulesValues[module.Name] = newModuleValues
-		} else {
-			rlog.Warnf("Module '%s': Ignoring non executable file '%s'", module.Name, valuesShPath)
-		}
-
-	}
-
-	return MergeValues(globalValues, hooksValues, globalModulesValues[moduleName], kubeValues, kubeModulesValues[moduleName]), nil
-}
-
-func makeModuleCommand(ModuleDir string, ValuesPath string, Entrypoint string, Args []string) *exec.Cmd {
-	cmd := exec.Command(Entrypoint, Args...)
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	cmd.Env = append(
-		cmd.Env,
-		fmt.Sprintf("VALUES_PATH=%s", ValuesPath),
-		fmt.Sprintf("TILLER_NAMESPACE=%s", HelmTillerNamespace()),
-	)
-
-	cmd.Dir = ModuleDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd
-}
-
-func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in %s: `%s`", cmd.Dir, strings.Join(cmd.Args, " "))
-	return cmd.Run()
-}
-
-func readDirectoryExecutableFilesNames(Dir string) ([]string, error) {
-	files, err := ioutil.ReadDir(Dir)
-	if err != nil {
-		err := fmt.Errorf("readdir error: %s", err)
-		return nil, err
-	}
-
-	res := make([]string, 0)
-	for _, file := range files {
-		// Тупой тест, что файл executable.
-		// Т.к. antiopa всегда работает под root, то этого достаточно.
-		isExecutable := !file.IsDir() && (file.Mode()&0111 != 0)
-
-		if isExecutable {
-			res = append(res, file.Name())
-		} else {
-			rlog.Warnf("Ignoring non executable file %s", filepath.Join(Dir, file.Name()))
-		}
-	}
-
-	return res, nil
-}
-
-func matchesGlob(value string, globPattern string) bool {
-	g, err := glob.Compile(globPattern)
-	if err != nil {
-		return false
-	}
-	return g.Match(value)
-}
-
-func getEnabledModules() ([]Module, error) {
-	allModules, err := readModules()
-	if err != nil {
-		return nil, err
-	}
-
-	cm, err := GetConfigMap()
-	if err != nil {
-		return nil, err
-	}
-
-	var disabledModulesNames []string
-	for _, configKey := range []string{"disable-modules", "disabled-modules"} {
-		if _, hasKey := cm.Data[configKey]; hasKey {
-			disabledModulesNames = make([]string, 0)
-			for _, moduleName := range strings.Split(cm.Data[configKey], ",") {
-				disabledModulesNames = append(disabledModulesNames, strings.TrimSpace(moduleName))
-			}
-		}
-	}
-
-	for _, disabledModuleName := range disabledModulesNames {
-		found := false
-		for _, module := range allModules {
-			if matchesGlob(module.Name, disabledModuleName) {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			rlog.Warnf("Bad value '%s' in antiopa ConfigMap disabled-modules: does not match any module", disabledModuleName)
-		}
-	}
-
-	res := make([]Module, 0)
-	for _, module := range allModules {
-		isEnabled := true
-
-		for _, disabledModuleName := range disabledModulesNames {
-			if matchesGlob(module.Name, disabledModuleName) {
-				isEnabled = false
-				break
-			}
-		}
-
-		if isEnabled {
-			res = append(res, module)
-		}
-	}
-
-	return res, nil
-}
-
-func readModules() ([]Module, error) {
-	modulesDir := filepath.Join(WorkingDir, "modules")
-
-	files, err := ioutil.ReadDir(modulesDir)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot list modules directory %s: %s", modulesDir, err)
-	}
-
-	var validmoduleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
-
-	res := make([]Module, 0)
-	badModulesDirs := make([]string, 0)
-
-	for _, file := range files {
-		if file.IsDir() {
-			matchRes := validmoduleName.FindStringSubmatch(file.Name())
-			if matchRes != nil {
-				module := Module{
-					Name:          matchRes[1],
-					DirectoryName: file.Name(),
-					Path:          filepath.Join(modulesDir, file.Name()),
+		// пришло событие от module_manager → перезапуск модулей или всего
+		case moduleEvent := <-module_manager.EventCh:
+			// событие от module_manager может прийти, если изменился состав модулей
+			// поэтому нужно заново зарегистрировать событийные хуки
+			// RegisterScheduledHooks()
+			// RegisterKubeEventHooks()
+			switch moduleEvent.Type {
+			// Изменились отдельные модули
+			case module_manager.ModulesChanged:
+				rlog.Debug("main got ModulesChanged event")
+				for _, moduleChange := range moduleEvent.ModulesChanges {
+					switch moduleChange.ChangeType {
+					case module_manager.Enabled, module_manager.Changed:
+						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
+						TasksQueue.Add(newTask)
+					case module_manager.Disabled:
+						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
+						TasksQueue.Add(newTask)
+					case module_manager.Purged:
+						newTask := task.NewTask(task.ModulePurge, moduleChange.Name)
+						TasksQueue.Add(newTask)
+					}
 				}
-				res = append(res, module)
-			} else {
-				badModulesDirs = append(badModulesDirs, filepath.Join(modulesDir, file.Name()))
+			// Изменились глобальные values, нужен рестарт всех модулей
+			case module_manager.GlobalChanged:
+				rlog.Debug("main got GlobalChanged event")
+				TasksQueue.ChangesDisable()
+				CreateReloadAllTasks()
+				TasksQueue.ChangesEnable(true)
+			}
+		case <-kube_node_manager.KubeNodeChanged:
+			// Добавить выполнение глобальных хуков по событию KubeNodeChange
+			TasksQueue.ChangesDisable()
+			hookNames := ModuleManager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
+			for _, hookName := range hookNames {
+				newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnKubeNodeChange)
+				TasksQueue.Add(newTask)
+				rlog.Debugf("KubeNodeChange: queued global hook '%s'", hookName)
+			}
+			TasksQueue.ChangesEnable(true)
+		// TODO поменять, когда появится schedule_manager
+		//case scheduleId := <-schedule_manager.ScheduleEventCh:
+		case scheduleId := <-schedule_manager_ScheduleEventCh:
+			scheduleHooks := GetScheduleHooks(scheduleId)
+			for _, hook := range scheduleHooks {
+				var getHookErr error
+
+				_, getHookErr = ModuleManager.GetGlobalHook(hook.Name)
+				if getHookErr == nil {
+					newTask := task.NewTask(task.GlobalHookRun, hook.Name).
+						WithBinding(module_manager.Schedule).
+						WithAllowFailure(hook.Schedule.AllowFailure)
+					rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
+					TasksQueue.Add(newTask)
+					break
+				}
+
+				_, getHookErr = ModuleManager.GetModuleHook(hook.Name)
+				if getHookErr == nil {
+					newTask := task.NewTask(task.ModuleHookRun, hook.Name).
+						WithBinding(module_manager.Schedule).
+						WithAllowFailure(hook.Schedule.AllowFailure)
+					rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
+					TasksQueue.Add(newTask)
+					break
+				}
+
+				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
+			}
+		case <-ManagersEventsHandlerStopCh:
+			return
+		}
+	}
+}
+
+// Обработчик один на очередь.
+// Обработчик может отложить обработку следующего таска с помощью пуша в начало очереди таска задержки
+// TODO пока только один обработчик, всё ок. Но лучше, чтобы очередь позволяла удалять только то, чему ранее был сделан peek.
+// Т.е. кто взял в обработку задание, тот его и удалил из очереди. Сейчас Peek-нуть может одна го-рутина, другая добавит,
+// первая Pop-нет задание — новое задание пропало, второй раз будет обработано одно и тоже.
+func TasksRunner() {
+	for {
+		if TasksQueue.IsEmpty() {
+			time.Sleep(QueueIsEmptyDelay)
+		}
+		for {
+			t, _ := TasksQueue.Peek()
+			if t == nil {
+				break
+			}
+
+			switch t.GetType() {
+			case task.DiscoverModulesState:
+				// FIXME: introduce multiple tasks structures with handler-interface
+				handleTaskFailed := func(err error) {
+					t.IncrementFailureCount()
+					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				}
+				handleTaskSucceeded := func() {
+					TasksQueue.Pop()
+				}
+
+				modulesState, err := ModuleManager.DiscoverModulesState()
+				if err != nil {
+					handleTaskFailed(err)
+					break
+				}
+
+				for _, moduleName := range modulesState.ModulesToRun {
+					newTask := task.NewTask(task.ModuleRun, moduleName)
+					rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
+					TasksQueue.Add(newTask)
+				}
+
+				for _, moduleName := range modulesState.ModulesToDisable {
+					newTask := task.NewTask(task.ModuleDelete, moduleName)
+					TasksQueue.Add(newTask)
+					rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
+				}
+
+				for _, moduleName := range modulesState.ModulesToPurge {
+					newTask := task.NewTask(task.ModulePurge, moduleName)
+					TasksQueue.Add(newTask)
+					rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
+				}
+
+				// Queue afterAll global hooks
+				afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
+				for _, hookName := range afterAllHooks {
+					newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
+					TasksQueue.Add(newTask)
+					rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
+				}
+
+				handleTaskSucceeded()
+
+			case task.ModuleRun:
+				err := ModuleManager.RunModule(t.GetName())
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModuleDelete:
+				err := ModuleManager.DeleteModule(t.GetName())
+				if err != nil {
+					t.IncrementFailureCount()
+					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModuleHookRun:
+				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
+				if err != nil && !t.GetAllowFailure() {
+					t.IncrementFailureCount()
+					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
+					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.GlobalHookRun:
+				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
+				if err != nil && !t.GetAllowFailure() {
+					t.IncrementFailureCount()
+					rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
+					TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+				} else {
+					TasksQueue.Pop()
+				}
+			case task.ModulePurge:
+				// если вызван purge, то про модуль ничего неизвестно, поэтому ошибку
+				// удаления достаточно записать в лог
+				err := HelmClient.DeleteRelease(t.GetName())
+				if err != nil {
+					rlog.Errorf("%s helm delete '%s' failed. Error: %s", t.GetType(), t.GetName(), err)
+				}
+				TasksQueue.Pop()
+			case task.Delay:
+				TasksQueue.Pop()
+				time.Sleep(t.GetDelay())
+			case task.Stop:
+				rlog.Infof("TaskRunner got stop task. Exiting runner loop.")
+				TasksQueue.Pop()
+				return
+			}
+
+			// break if empty to prevent infinity loop
+			if TasksQueue.IsEmpty() {
+				break
 			}
 		}
 	}
-
-	if len(badModulesDirs) > 0 {
-		return nil, fmt.Errorf("bad module directory names, must match regex `%s`: %s", validmoduleName, strings.Join(badModulesDirs, ", "))
-	}
-
-	return res, nil
 }
 
-func readValuesYamlFile(Path string) (map[interface{}]interface{}, error) {
-	valuesYaml, err := ioutil.ReadFile(Path)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot read %s: %s", Path, err)
-	}
+// Работа с событийными хуками
 
-	var res map[interface{}]interface{}
+type ScheduleIdType struct{}
 
-	err = yaml.Unmarshal(valuesYaml, &res)
-	if err != nil {
-		return nil, fmt.Errorf("Bad %s: %s", Path, err)
-	}
-
-	return res, nil
+type ScheduleHook struct {
+	Name     string
+	Schedule module_manager.ScheduleConfig
 }
 
-func dumpModuleValuesYaml(moduleName string, Values map[interface{}]interface{}) (string, error) {
-	return dumpValuesYaml(fmt.Sprintf("%s.yaml", moduleName), Values)
+type KubeEventHook struct {
+	Name           string
+	OnCreateConfig struct{}
+	OnChangeConfig struct{}
 }
 
-func dumpValuesYaml(FileName string, Values map[interface{}]interface{}) (string, error) {
-	valuesYaml, err := yaml.Marshal(&Values)
-	if err != nil {
-		return "", err
-	}
+var ScheduleHooks map[ScheduleIdType][]*ScheduleHook
 
-	filePath := filepath.Join(TempDir, FileName)
-
-	err = ioutil.WriteFile(filePath, valuesYaml, 0644)
-	if err != nil {
-		return "", err
-	}
-
-	return filePath, nil
+func GetScheduleHooks(scheduleId ScheduleIdType) []*ScheduleHook {
+	return ScheduleHooks[scheduleId]
 }
 
-func readValues() (map[interface{}]interface{}, error) {
-	path := filepath.Join(WorkingDir, "modules", "values.yaml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return make(map[interface{}]interface{}), nil
-	}
+func RegisterScheduleHooks() {
+	ScheduleHooks = make(map[ScheduleIdType][]*ScheduleHook)
+	// Примерный алгоритм
 
-	return readValuesYamlFile(path)
+	return
 }
 
-func readModuleValues(module Module) (map[interface{}]interface{}, error) {
-	path := filepath.Join(module.Path, "values.yaml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, nil
+func CreateOnStartupTasks() {
+	onStartupHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
+
+	for _, hookName := range onStartupHooks {
+		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnStartup)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("OnStartup: queued global hook '%s'", hookName)
 	}
 
-	values, err := readValuesYamlFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return values, nil
+	return
 }
 
-func valuesToString(Values map[interface{}]interface{}) string {
-	valuesYaml, err := yaml.Marshal(&Values)
-	if err != nil {
-		return fmt.Sprintf("%v", Values)
+func CreateReloadAllTasks() {
+	// Queue beforeAll global hooks
+	beforeAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll)
+
+	for _, hookName := range beforeAllHooks {
+		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.BeforeAll)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("ReloadAll: queued global %s hook '%s'", module_manager.BeforeAll, hookName)
 	}
-	return string(valuesYaml)
+
+	TasksQueue.Add(task.NewTask(task.DiscoverModulesState, ""))
+	rlog.Debugf("ReloadAll: queued discover of modules state")
+}
+
+func main() {
+	// настроить всё необходимое
+	Init()
+
+	// запустить менеджеры и обработчики
+	Run()
+
+	// Блокировка main на сигналах от os.
+	utils.WaitForProcessInterruption()
 }

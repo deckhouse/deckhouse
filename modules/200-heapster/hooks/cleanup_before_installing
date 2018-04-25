@@ -1,0 +1,38 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function _migrate() {
+  ### Миграция 2018-04-10: https://github.com/deckhouse/deckhouse/merge_requests/230
+  if kubectl get clusterrolebinding/heapster > /dev/null 2> /dev/null ; then
+    kubectl delete clusterrolebinding/heapster
+  fi
+  for resource in deployment/monitoring-influxdb service/monitoring-influxdb ; do
+    if kubectl -n kube-system get $resource > /dev/null 2> /dev/null ; then
+      kubectl -n kube-system delete $resource
+    fi
+  done
+}
+
+function __main__() {
+  # Чистим кластер от лишних объектов, созданных автоматически
+  for resource in deployment/heapster service/heapster serviceaccount/heapster; do
+    if heritage=$(kubectl -n kube-system get $resource -o jsonpath='{.metadata.labels.heritage}' 2> /dev/null) && [[ "$heritage" != "antiopa" ]] ; then
+      kubectl -n kube-system delete $resource
+    fi
+  done
+
+  for resource in clusterrole/system:heapster clusterrolebinding/system:heapster clusterrole/system:heapster-with-nanny clusterrolebinding/system:heapster-with-nanny ; do
+    if kubectl get $resource > /dev/null 2> /dev/null ; then
+      kubectl delete $resource
+    fi
+  done
+
+  _migrate
+}
+
+hook::run $@

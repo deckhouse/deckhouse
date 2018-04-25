@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# dependency: gamma
+# dependency: epsilon
+
+c=$(cat ${VALUES_PATH:-/dev/null} | jq .global.enabledModules[]  | grep -P '"gamma"|"epsilon"' | wc -l)
+if [ "$c" == "2" ] ; then
+  echo true > $MODULE_ENABLED_RESULT
+  exit 0
+fi
+
+echo false > $MODULE_ENABLED_RESULT

@@ -10,16 +10,38 @@ function values::json_patch() {
     printf '%s\n' "${config_values_json_patch[@]}" | jo -a > $CONFIG_VALUES_JSON_PATCH_PATH
   else
     dynamic_values_json_patch+=($(jo $@))
-    printf '%s\n' "${dynamic_values_json_patch[@]}" | jo -a > $DYNAMIC_VALUES_JSON_PATCH_PATH
+    printf '%s\n' "${dynamic_values_json_patch[@]}" | jo -a > $VALUES_JSON_PATCH_PATH
   fi
 }
 
 function values::get() {
-  if [[ "$1" == "--config" ]] ; then
-    shift
-    cat $CONFIG_VALUES_PATH | jq ".$1" -r
+  local values_path=$VALUES_PATH
+  local required=no
+
+  while true ; do
+    case ${1:-} in
+      --config)
+        values_path=$CONFIG_VALUES_PATH
+        shift
+        ;;
+      --required)
+        required=yes
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  local value=$(cat $values_path | jq ".${1:-}" -r)
+
+  if [[ "$required" == "yes" ]] && values::is_empty "$value" ; then
+    >&2 echo "Error: Value $1 required, but empty"
+    return 1
   else
-    cat $DYNAMIC_VALUES_PATH | jq ".$1" -r
+    echo $value
+    return 0
   fi
 }
 
@@ -63,5 +85,42 @@ function values::unset() {
 }
 
 function values::is_empty() {
-  [[ -z "$1" || "$1" == "null" ]]
+  [[ -z "${1:-}" || "${1:-}" == "null" ]]
+}
+
+function values::require_in_config() {
+  if ! values::has --config $1 ; then
+    >&2 echo "Error: $1 is required in config!"
+    return 1
+  fi
+}
+
+function values::array_has() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  values::get $config $1 | jq '(type == "array") and (index("'$2'") != null)' -e > /dev/null
+}
+
+function values::is_true() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  values::get $config $1 | jq '. == true' -e > /dev/null
+}
+
+function values::is_false() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  values::get $config $1 | jq '. == false' -e > /dev/null
 }

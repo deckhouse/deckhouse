@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-secret
+type: Opaque
+data:
+  heapster: e30K

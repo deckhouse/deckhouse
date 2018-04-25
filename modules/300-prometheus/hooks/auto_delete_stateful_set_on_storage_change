@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  if kubectl -n kube-prometheus get statefulset/prometheus-main > /dev/nyll 2> /dev/null; then
+    as_is=$(kubectl -n kube-prometheus get statefulset/prometheus-main -o json | jq '.spec.volumeClaimTemplates[0].spec.storageClassName + ":" + .spec.volumeClaimTemplates[0].spec.resources.requests.storage' -r)
+    to_be=$(kubectl -n kube-prometheus get prometheus/main -o json | jq '.spec.storage.volumeClaimTemplate.spec.storageClassName + ":" + .spec.storage.volumeClaimTemplate.spec.resources.requests.storage' -r)
+
+    if [[ "$as_is" != "$to_be" ]] ; then
+      kubectl -n kube-prometheus delete pvc -l app=prometheus,prometheus=main
+      kubectl -n kube-prometheus delete statefulset/prometheus-main
+    fi
+  fi
+}
+
+hook::run $@

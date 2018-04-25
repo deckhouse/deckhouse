@@ -1,15 +1,16 @@
-{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
-  {{- $_ := set . "Values" $.Values }}
-  {{- $inlet := (include "helper.inlet" .) }}
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+  {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+    {{- $_ := set . "Values" $.Values }}
+    {{- $inlet := (include "helper.inlet" .) }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  {{- if not .name }}
+    {{- if not .name }}
   name: nginx-ingress-controller
-  {{- else }}
+    {{- else }}
   name: nginx-ingress-controller-{{ .name }}
-  {{- end }}
+    {{- end }}
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -28,11 +29,11 @@ spec:
       regex: kube-prometheus-discovery-of-(.*)
       targetLabel: app
     - targetLabel: controller
-  {{- if not .name }}
+    {{- if not .name }}
       replacement: main
-  {{- else }}
+    {{- else }}
       replacement: {{ .name }}
-  {{- end }}
+    {{- end }}
     # request_time_hist::$scheme:$server_name:$namespace:$ingress_name:$service_name:$service_port:$upstream_addr:$location_path
     metricRelabelings:
     # remove ingress_class, we have "controller" label
@@ -131,7 +132,7 @@ spec:
     port: 10254
     targetPort: 10254
     protocol: TCP
-  {{- if eq $inlet "Direct" }}
+    {{- if eq $inlet "Direct" }}
 ---
 apiVersion: v1
 kind: Service
@@ -152,5 +153,6 @@ spec:
     port: 10254
     targetPort: 10254
     protocol: TCP
+    {{- end }}
   {{- end }}
 {{- end }}
