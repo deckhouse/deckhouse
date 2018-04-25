@@ -229,6 +229,48 @@ func NewMainModuleManager(helmClient helm.HelmClient, kubeConfigManager kube_con
 	}
 }
 
+func (mm *MainModuleManager) sortModulesToPurge(modules []string) []string {
+	res := make([]string, 0)
+	for _, module := range modules {
+		res = append(res, module)
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(res)))
+
+	return res
+}
+
+func (mm *MainModuleManager) sortModulesToDisable(modules []string) []string {
+	res := make([]string, 0)
+
+	for _, module := range mm.allModuleNamesInOrder {
+		for _, disableModule := range modules {
+			if module == disableModule {
+				// prepend
+				res = append([]string{module}, res...)
+			}
+		}
+	}
+
+	return res
+}
+
+func (mm *MainModuleManager) getDisabledModules(enabledModules []string) []string {
+	res := make([]string, 0)
+
+SearchDisabledModules:
+	for _, module := range mm.allModuleNamesInOrder {
+		for _, enabledModule := range enabledModules {
+			if module == enabledModule {
+				continue SearchDisabledModules
+			}
+		}
+
+		res = append(res, module)
+	}
+
+	return res
+}
+
 func (mm *MainModuleManager) getReleasedModulesToPurge(releasedModules []string) []string {
 	res := make([]string, 0)
 
@@ -238,13 +280,11 @@ func (mm *MainModuleManager) getReleasedModulesToPurge(releasedModules []string)
 		}
 	}
 
-	sort.Sort(sort.Reverse(sort.StringSlice(res)))
-
-	return res
+	return mm.sortModulesToPurge(res)
 }
 
 func (mm *MainModuleManager) getReleasedModulesToDisable(releasedModules []string, disabledModules []string) []string {
-	modulesToDisable := make([]string, 0)
+	res := make([]string, 0)
 
 SearchModulesToDisable:
 	for _, releasedModule := range releasedModules {
@@ -253,25 +293,13 @@ SearchModulesToDisable:
 		}
 		for _, disabledModule := range disabledModules {
 			if disabledModule == releasedModule {
-				modulesToDisable = append(modulesToDisable, releasedModule)
+				res = append(res, releasedModule)
 				continue SearchModulesToDisable
 			}
 		}
 	}
 
-	// result modules list is sorted in the reversed order of allModuleNamesInOrder
-	sortedModulesToDisable := make([]string, 0)
-
-	for _, module := range mm.allModuleNamesInOrder {
-		for _, disableModule := range modulesToDisable {
-			if module == disableModule {
-				// prepend
-				sortedModulesToDisable = append([]string{module}, sortedModulesToDisable...)
-			}
-		}
-	}
-
-	return sortedModulesToDisable
+	return mm.sortModulesToDisable(res)
 }
 
 func (mm *MainModuleManager) getEnabledModulesInOrder(disabledModules []string) ([]string, error) {
@@ -543,8 +571,13 @@ func (mm *MainModuleManager) DiscoverModulesState() (*ModulesState, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	state.ModulesToPurge = mm.getReleasedModulesToPurge(releasedModules)
-	state.ModulesToDisable = mm.getReleasedModulesToDisable(releasedModules, mm.kubeDisabledModules)
+
+	allDisabledModules := append([]string{}, mm.kubeDisabledModules...)
+	allDisabledModules = append(allDisabledModules, mm.getDisabledModules(enabledModules)...)
+
+	state.ModulesToDisable = mm.getReleasedModulesToDisable(releasedModules, allDisabledModules)
 
 	return state, nil
 }
