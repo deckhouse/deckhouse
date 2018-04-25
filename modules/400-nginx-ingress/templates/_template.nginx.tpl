@@ -99,7 +99,6 @@ spec:
         - "--upstream=http://127.0.0.1:9102/"
         ports:
         - containerPort: 9103
-          hostPort: 9103
           name: https
         resources:
           requests:
