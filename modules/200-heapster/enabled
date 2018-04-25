@@ -5,9 +5,9 @@ source /antiopa/shell_lib.sh
 function __main__() {
   cluster_type=$(values::get global.discovery.clusterType)
   if [[ "$cluster_type" == "ACS" ]] ; then
-    return 1
+    echo "false" > $MODULE_ENABLED_RESULT
   else
-    return 0
+    echo "true" > $MODULE_ENABLED_RESULT
   fi
 }
 
