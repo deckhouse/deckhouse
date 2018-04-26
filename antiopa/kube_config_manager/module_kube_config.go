@@ -3,6 +3,7 @@ package kube_config_manager
 import (
 	"fmt"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
+	"github.com/romana/rlog"
 	"gopkg.in/yaml.v2"
 )
 
@@ -11,6 +12,10 @@ func GetModulesNamesFromConfigData(configData map[string]string) []string {
 
 	for key := range configData {
 		if key != utils.GlobalValuesKey {
+			if utils.ModuleNameToValuesKey(utils.ModuleNameFromValuesKey(key)) != key {
+				rlog.Warnf("Bad module name '%s': should be camelCased module name: ignoring data", key)
+				continue
+			}
 			res = append(res, utils.ModuleNameFromValuesKey(key))
 		}
 	}

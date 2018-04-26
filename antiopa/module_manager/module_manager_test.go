@@ -232,12 +232,12 @@ func TestMainModuleManager_DiscoverModulesState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual([]string{"module-6", "module-5", "module-2"}, modulesState.ModulesToPurge) {
-		t.Errorf("Got unexpected released modules to purge list: %+v", modulesState.ModulesToPurge)
+	if !reflect.DeepEqual([]string{"module-6", "module-5", "module-2"}, modulesState.ReleasedUnknownModules) {
+		t.Errorf("Got unexpected released unknown modules list: %+v", modulesState.ReleasedUnknownModules)
 	}
 
 	if !reflect.DeepEqual([]string{"module-9", "module-3"}, modulesState.ModulesToDisable) {
-		t.Errorf("Got unexpected released modules to disable list: %+v", modulesState.ModulesToDisable)
+		t.Errorf("Got unexpected released disabled modules list: %+v", modulesState.ModulesToDisable)
 	}
 }
 

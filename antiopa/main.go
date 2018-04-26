@@ -130,7 +130,7 @@ func Init() {
 	// потом, когда от менеджера придёт id настройки,
 	// найти по id нужные имена хуков и добавить их запуск в очередь
 	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
-	   ModulesToRun.each {
+	   EnabledModules.each {
 	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
 	           schedule.add hook // регистрация binding
 	       }
@@ -315,7 +315,7 @@ func TasksRunner() {
 					break
 				}
 
-				for _, moduleName := range modulesState.ModulesToRun {
+				for _, moduleName := range modulesState.EnabledModules {
 					newTask := task.NewTask(task.ModuleRun, moduleName)
 					rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
 					TasksQueue.Add(newTask)
@@ -327,7 +327,7 @@ func TasksRunner() {
 					rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
 				}
 
-				for _, moduleName := range modulesState.ModulesToPurge {
+				for _, moduleName := range modulesState.ReleasedUnknownModules {
 					newTask := task.NewTask(task.ModulePurge, moduleName)
 					TasksQueue.Add(newTask)
 					rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
