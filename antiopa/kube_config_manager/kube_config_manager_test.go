@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
@@ -82,7 +82,7 @@ func TestInit(t *testing.T) {
 			v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: kube.AntiopaConfigMap},
 				Data: map[string]string{
-					GlobalValuesKeyName: `
+					utils.GlobalValuesKey: `
 project: someproject
 clusterName: main
 clusterHostname: kube.domain.my
@@ -117,9 +117,9 @@ userPassword: qwerty`,
 	}
 	config := kcm.InitialConfig()
 
-	expectedData := map[string]utils.Values{
+	expectedData := utils.Values{
 		"global": utils.Values{
-			"global": map[string]interface{}{
+			utils.GlobalValuesKey: map[string]interface{}{
 				"project":         "someproject",
 				"clusterName":     "main",
 				"clusterHostname": "kube.domain.my",
@@ -132,7 +132,7 @@ userPassword: qwerty`,
 			},
 		},
 		"nginx-ingress": utils.Values{
-			"nginxIngress": map[string]interface{}{
+			utils.ModuleNameToValuesKey("nginx-ingress"): map[string]interface{}{
 				"config": map[string]interface{}{
 					"hsts": true,
 					"setRealIPFrom": []interface{}{
@@ -143,7 +143,7 @@ userPassword: qwerty`,
 			},
 		},
 		"prometheus": utils.Values{
-			"prometheus": map[string]interface{}{
+			utils.ModuleNameToValuesKey("prometheus"): map[string]interface{}{
 				"adminPassword":            "qwerty",
 				"estimatedNumberOfMetrics": 480000.0,
 				"ingressHostname":          "prometheus.mysite.com",
@@ -215,9 +215,9 @@ func configRawDataShouldEqual(expectedData map[string]string) error {
 	return nil
 }
 
-func convertToConfigData(input map[string]utils.Values) (map[string]string, error) {
+func convertToConfigData(values utils.Values) (map[string]string, error) {
 	res := make(map[string]string)
-	for k, v := range input {
+	for k, v := range values {
 		yamlData, err := yaml.Marshal(v)
 		if err != nil {
 			return nil, err
@@ -228,8 +228,8 @@ func convertToConfigData(input map[string]utils.Values) (map[string]string, erro
 	return res, nil
 }
 
-func configDataShouldEqual(expectedData map[string]utils.Values) error {
-	expectedDataRaw, err := convertToConfigData(expectedData)
+func configDataShouldEqual(expectedValues utils.Values) error {
+	expectedDataRaw, err := convertToConfigData(expectedValues)
 	if err != nil {
 		return err
 	}
@@ -244,17 +244,19 @@ func TestSetConfig(t *testing.T) {
 	var err error
 
 	err = kcm.SetKubeGlobalValues(utils.Values{
-		"mysql": map[string]interface{}{
-			"username": "root",
-			"password": "password",
+		utils.GlobalValuesKey: map[string]interface{}{
+			"mysql": map[string]interface{}{
+				"username": "root",
+				"password": "password",
+			},
 		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = configDataShouldEqual(map[string]utils.Values{
-		"global": utils.Values{
+	err = configDataShouldEqual(utils.Values{
+		utils.GlobalValuesKey: map[string]interface{}{
 			"mysql": map[string]interface{}{
 				"username": "root",
 				"password": "password",
@@ -266,21 +268,23 @@ func TestSetConfig(t *testing.T) {
 	}
 
 	err = kcm.SetKubeGlobalValues(utils.Values{
-		"mysql": map[string]interface{}{
-			"username": "root",
-			"password": "password",
-		},
-		"mongo": map[string]interface{}{
-			"username": "root",
-			"password": "password",
+		utils.GlobalValuesKey: map[string]interface{}{
+			"mysql": map[string]interface{}{
+				"username": "root",
+				"password": "password",
+			},
+			"mongo": map[string]interface{}{
+				"username": "root",
+				"password": "password",
+			},
 		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = configDataShouldEqual(map[string]utils.Values{
-		"global": utils.Values{
+	err = configDataShouldEqual(utils.Values{
+		utils.GlobalValuesKey: map[string]interface{}{
 			"mysql": map[string]interface{}{
 				"username": "root",
 				"password": "password",
@@ -296,15 +300,17 @@ func TestSetConfig(t *testing.T) {
 	}
 
 	err = kcm.SetKubeModuleValues("mymodule", utils.Values{
-		"one": 1,
-		"two": 2,
+		utils.ModuleNameToValuesKey("mymodule"): map[string]interface{}{
+			"one": 1,
+			"two": 2,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = configDataShouldEqual(map[string]utils.Values{
-		"global": utils.Values{
+	err = configDataShouldEqual(utils.Values{
+		utils.GlobalValuesKey: map[string]interface{}{
 			"mysql": map[string]interface{}{
 				"username": "root",
 				"password": "password",
@@ -314,7 +320,7 @@ func TestSetConfig(t *testing.T) {
 				"password": "password",
 			},
 		},
-		"mymodule": utils.Values{
+		utils.ModuleNameToValuesKey("mymodule"): map[string]interface{}{
 			"one": 1,
 			"two": 2,
 		},

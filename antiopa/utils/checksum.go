@@ -6,10 +6,10 @@ import (
 	"sort"
 )
 
-func CalculateChecksum(Values ...string) string {
+func CalculateChecksum(stringArr ...string) string {
 	hasher := md5.New()
-	sort.Strings(Values)
-	for _, value := range Values {
+	sort.Strings(stringArr)
+	for _, value := range stringArr {
 		hasher.Write([]byte(value))
 	}
 	return hex.EncodeToString(hasher.Sum(nil))

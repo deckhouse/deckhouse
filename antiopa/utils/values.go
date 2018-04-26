@@ -14,6 +14,10 @@ import (
 	"strings"
 )
 
+const (
+	GlobalValuesKey = "global"
+)
+
 type Values map[string]interface{}
 
 type ValuesPatch struct {
@@ -100,25 +104,25 @@ func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleCon
 	return NewModuleConfig(moduleName, values)
 }
 
-func NewModuleConfigByModuleValuesYamlData(moduleName string, moduleData []byte) (*ModuleConfig, error) {
-	var valuesAtModuleKey interface{}
-
-	err := yaml.Unmarshal(moduleData, &valuesAtModuleKey)
+func NewValues(data map[interface{}]interface{}) (Values, error) {
+	values, err := FormatValues(data)
 	if err != nil {
-		return nil, fmt.Errorf("bad module %s configmap values data: %s\n%s", moduleName, err, string(moduleData))
+		return nil, fmt.Errorf("cannot cast data to json compatible format: %s:\n%s", err, YamlToString(data))
 	}
 
-	moduleValues := map[interface{}]interface{}{ModuleNameToValuesKey(moduleName): valuesAtModuleKey}
-
-	return NewModuleConfig(moduleName, moduleValues)
+	return values, nil
 }
 
-func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
-	moduleConfig := &ModuleConfig{
+func NewEmptyModuleConfig(moduleName string) *ModuleConfig {
+	return &ModuleConfig{
 		ModuleName: moduleName,
 		IsEnabled:  true,
 		Values:     make(Values),
 	}
+}
+
+func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
+	moduleConfig := NewEmptyModuleConfig(moduleName)
 
 	moduleValuesKey := ModuleNameToValuesKey(moduleName)
 
@@ -131,13 +135,14 @@ func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*Modu
 				return nil, fmt.Errorf("required map or bool data, got: %#v", moduleValuesData)
 			}
 
-			values := map[interface{}]interface{}{moduleValuesKey: moduleValues}
+			data := map[interface{}]interface{}{moduleValuesKey: moduleValues}
 
-			formattedValues, err := FormatValues(values)
+			values, err := NewValues(data)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
-			moduleConfig.Values = formattedValues
+
+			moduleConfig.Values = values
 		}
 	}
 
