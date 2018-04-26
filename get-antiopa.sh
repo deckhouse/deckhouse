@@ -220,7 +220,7 @@ spec:
           command: ["/antiopa/antiopa"]
           resources:
             limits:
-              # Важно!!!! Изменять синхронно с policy.cluster.antiopa
+              # Важно!!!! Изменять синхронно с global-hooks/policy/antiopa
               cpu: 420m
               memory: 500Mi
           workingDir: /antiopa
@@ -302,27 +302,22 @@ kind: ConfigMap
 metadata:
   name: antiopa
 data:
-  help: |
-    Add values key to define global values yaml
-    Add <module>-values key to define values yaml for module
-    Add disable-modules to specify disabled modules (comma separated, may be globs), for example "disable-modules: test*, kube-dashboard"
-  values: |
-    global:
-      project: "${PROJECT}"
-      clusterName: "${CLUSTER_NAME}"
+  global: |
+    project: "${PROJECT}"
+    clusterName: "${CLUSTER_NAME}"
 YAML
 )
   if [[ "x$CLUSTER_HOSTNAME" != "x" ]] ; then
     VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
 
-      clusterHostname: "${CLUSTER_HOSTNAME}"
+    clusterHostname: "${CLUSTER_HOSTNAME}"
 YAML
 )
   fi
   if [[ "$LOG_LEVEL" != "Info" ]] ; then
     VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
 
-      antiopaLogLevel: "${LOG_LEVEL}"
+    antiopaLogLevel: "${LOG_LEVEL}"
 YAML
 )
   fi
@@ -348,15 +343,6 @@ install_yaml() {
         echo "  " Create namespace $NAMESPACE
         kubectl create ns $NAMESPACE
     fi
-
-#    if [[ "$(kubectl -n $NAMESPACE get pod -a 2>/dev/null | cut -d' ' -f1 | grep "^deploy\$")" != "" ]] ; then
-#        echo "  " Delete Install manifests...
-#        kubectl -n $NAMESPACE delete pod deploy
-#
-#        while [[ "$(kubectl -n $NAMESPACE get pod -a 2>/dev/null | cut -d' ' -f1 | grep "^deploy\$")" != "" ]] ; do
-#            sleep 1
-#        done
-#    fi
 
     echo "  " Apply manifests
     echo "$MANIFESTS" | kubectl -n $NAMESPACE apply -f -
