@@ -102,34 +102,19 @@ func TestMergeValues(t *testing.T) {
 			"simple",
 			Values{"a": 1, "b": 2},
 			Values{"b": 3, "c": 4},
-			Values{"a": 1.0, "b": 3.0, "c": 4.0},
+			Values{"a": 1, "b": 3, "c": 4},
 		},
 		{
 			"array",
 			Values{"a": []interface{}{1}},
 			Values{"a": []interface{}{2}},
-			Values{"a": []interface{}{1.0, 2.0}},
+			Values{"a": []interface{}{2}},
 		},
 		{
 			"map",
-			Values{"a": map[interface{}]interface{}{"a": 1, "b": 2}},
-			Values{"a": map[interface{}]interface{}{"b": 3, "c": 4}},
-			Values{"a": map[string]interface{}{"a": 1.0, "b": 3.0, "c": 4.0}},
-		},
-		{
-			"mixed-map",
-			Values{
-				"a": map[interface{}]interface{}{1: "a", 2: "b"},
-				"b": map[interface{}]interface{}{"no": "way"},
-			},
-			Values{
-				"a": map[interface{}]interface{}{"1": "c"},
-				"b": map[string]interface{}{"yo": "whatsup"},
-			},
-			Values{
-				"a": map[string]interface{}{"2": "b", "1": "c"},
-				"b": map[string]interface{}{"yo": "whatsup"},
-			},
+			Values{"a": map[string]interface{}{"a": 1, "b": 2}},
+			Values{"a": map[string]interface{}{"b": 3, "c": 4}},
+			Values{"a": map[string]interface{}{"a": 1, "b": 3, "c": 4}},
 		},
 	}
 
