@@ -65,6 +65,10 @@ func (m *ModuleManagerMock) GetModule(name string) (*module_manager.Module, erro
 	panic("implement GetModule")
 }
 
+func (m *ModuleManagerMock) GetModuleNamesInOrder() []string {
+	return []string{"test_module_1__101", "test_module_2__102"}
+}
+
 func (m *ModuleManagerMock) DiscoverModulesState() (*module_manager.ModulesState, error) {
 	return &module_manager.ModulesState{
 		[]string{"test_module_1__101", "test_module_2__102"},

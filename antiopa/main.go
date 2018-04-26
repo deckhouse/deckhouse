@@ -151,7 +151,6 @@ func Init() {
 		rlog.Errorf("MAIN Fatal: Cannot initialize schedule manager: %s", err)
 		os.Exit(1)
 	}
-	ScheduledHooks = UpdateScheduleHooks(nil)
 
 	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
 	// RegisterKubeEventHooks()
@@ -343,6 +342,8 @@ func TasksRunner() {
 				}
 
 				handleTaskSucceeded()
+
+				ScheduledHooks = UpdateScheduleHooks(nil)
 
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())
