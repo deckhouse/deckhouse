@@ -29,7 +29,7 @@ Heapster работает в standalone режиме (не использует 
 ### Пример конфига
 
 ```yaml
-heapster:
+heapster: |
   nodeSelector:
     node-role/other: ""
   tolerations:

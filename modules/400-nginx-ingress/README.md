@@ -40,7 +40,7 @@
 ### Пример конфига
 
 ```yaml
-nginxIngress
+nginxIngress: |
   config:
     hsts: true
     setRealIPFrom:
@@ -90,7 +90,7 @@ nginxIngress
 * Настраиваем Qrator, чтобы он отправлял трафик на "эфемерные" порты сервиса с типом NodePort: `kubectl -n kube-nginx-ingress-qraror get svc nginx -o yaml`
 
 ```
-nginxIngress:
+nginxIngress: |
   additionalControllers:
   - name: qrator
     inlet: NodePort
@@ -131,7 +131,7 @@ nginxIngress:
 * Настраиваем CloudFlare, чтобы он отправлял трафик на адрес сервиса: `kubectl -n kube-nginx-ingress-cf get svc nginx -o yaml`
 
 ```
-nginxIngress:
+nginxIngress: |
   additionalControllers:
   - name: cf
     inlet: LoadBalancer
@@ -165,7 +165,7 @@ nginxIngress:
 * Настраиваем в AWS Application Load Balancer, чтобы он кидал трафик по "эфемерным" портам сервиса с типом NodePort: `kubectl -n kube-nginx-ingress get svc nginx -o yaml`.
 
 ```
-nginxIngress:
+nginxIngress: |
   inlet: NodePort
   config:
     setRealIPFrom:
@@ -211,7 +211,7 @@ spec:
 
 
 ```
-nginxIngress:
+nginxIngress: |
   additionalControllers:
   - name: aws-http
     inlet: NodePort
@@ -230,7 +230,7 @@ nginxIngress:
 * Создаем два дополнительных контроллера и выделенные для них машины (с label и taint `node-role/frontend-foo` и `node-role/frontend-bar`)
 
 ```
-nginxIngress:
+nginxIngress: |
   additionalControllers:
   - name: foo
     nodeSelector:
