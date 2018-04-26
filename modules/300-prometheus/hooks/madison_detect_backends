@@ -1,0 +1,16 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=0 schedule="$(jo -a \
+    "$(jo allowFailure=true crontab="*/10 * * * *")"
+  )"
+}
+
+function __main__() {
+  backends=$(getent ahosts madison.flant.com | grep STREAM | awk {'print $1'} | sort | jo -a)
+  values::set prometheus.madisonBackends "$backends"
+}
+
+hook::run $@
