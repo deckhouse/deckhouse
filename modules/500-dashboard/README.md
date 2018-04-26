@@ -28,15 +28,10 @@ Redirect URI(Callback url) устанавливаем вида https://dashboard
 
 ### Пример конфига
 ```yaml
-dashboard:
+dashboard: |
   nodeSelector:
     node-role/other: ""
   tolerations:
   - key: node-role/other
     operator: Exists
 ```
-
-Как пользоваться модулем?
--------------------------
-Все настолько понятно и очевидно, на сколько это вообще может быть! Бери и используй.
-
