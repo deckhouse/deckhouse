@@ -80,7 +80,7 @@ function values::unset() {
   fi
 
   if values::has $config $1 ; then
-    values::json_patch $config op=remove path=/$(echo $1 | 'sed s/\./\//g')
+    values::json_patch $config op=remove path=/$(echo $1 | sed 's/\./\//g')
   fi
 }
 
@@ -123,4 +123,8 @@ function values::is_false() {
   fi
 
   values::get $config $1 | jq '. == false' -e > /dev/null
+}
+
+function values::generate_password() {
+  makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20
 }

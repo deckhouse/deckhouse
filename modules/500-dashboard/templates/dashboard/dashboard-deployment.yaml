@@ -1,0 +1,59 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: dashboard
+  namespace: kube-dashboard
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: dashboard
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+{{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
+      nodeSelector:
+{{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
+      tolerations:
+{{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      containers:
+      - name: dashboard
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.8.3
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        args:
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9090
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      serviceAccountName: dashboard

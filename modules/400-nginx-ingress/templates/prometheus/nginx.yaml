@@ -19,7 +19,7 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: http-metrics
+  - port: controller
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
@@ -34,6 +34,8 @@ spec:
     {{- else }}
       replacement: {{ .name }}
     {{- end }}
+    - targetLabel: endpoint
+      replacement: controller
     # request_time_hist::$scheme:$server_name:$namespace:$ingress_name:$service_name:$service_port:$upstream_addr:$location_path
     metricRelabelings:
     # remove ingress_class, we have "controller" label
@@ -106,6 +108,27 @@ spec:
       regex: (.*_time_hist)::.*
       replacement: $1
       targetLabel: server_zone
+  - port: statsd
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
+    - sourceLabels: [__meta_kubernetes_service_name]
+      regex: kube-prometheus-discovery-of-(.*)
+      targetLabel: app
+    - targetLabel: controller
+    {{- if not .name }}
+      replacement: main
+    {{- else }}
+      replacement: {{ .name }}
+    {{- end }}
+    - targetLabel: endpoint
+      replacement: statsd
   selector:
     matchLabels:
       prometheus-target: nginx-ingress-controller
@@ -128,9 +151,13 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: http-metrics
+  - name: controller
     port: 10254
     targetPort: 10254
+    protocol: TCP
+  - name: statsd
+    port: 9103
+    targetPort: 9103
     protocol: TCP
     {{- if eq $inlet "Direct" }}
 ---
@@ -149,9 +176,13 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: http-metrics
+  - name: controller
     port: 10254
     targetPort: 10254
+    protocol: TCP
+  - name: statsd
+    port: 9103
+    targetPort: 9103
     protocol: TCP
     {{- end }}
   {{- end }}
