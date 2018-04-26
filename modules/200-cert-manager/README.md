@@ -22,7 +22,7 @@
 ### Пример конфига
 
 ```yaml
-certManager:
+certManager: |
   nodeSelector:
     node-role/other: ""
   tolerations:

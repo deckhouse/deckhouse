@@ -2,8 +2,6 @@
 
 source /antiopa/shell_lib.sh
 
-MADISON_SELF_SETUP_TOKEN="***REMOVED***"
-
 function __config__() {
   jo -p beforeHelm=0
 }

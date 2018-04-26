@@ -11,12 +11,45 @@ import (
 	"github.com/go-yaml/yaml"
 	"github.com/peterbourgon/mergemap"
 	"github.com/segmentio/go-camelcase"
+	"strings"
+)
+
+const (
+	GlobalValuesKey = "global"
 )
 
 type Values map[string]interface{}
 
 type ValuesPatch struct {
-	JsonPatch jsonpatch.Patch
+	Operations []*ValuesPatchOperation
+}
+
+func (p *ValuesPatch) JsonPatch() jsonpatch.Patch {
+	data, err := json.Marshal(p.Operations)
+	if err != nil {
+		panic(err)
+	}
+
+	patch, err := jsonpatch.DecodePatch(data)
+	if err != nil {
+		panic(err)
+	}
+
+	return patch
+}
+
+type ValuesPatchOperation struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
+}
+
+func (op *ValuesPatchOperation) ToString() string {
+	data, err := json.Marshal(op)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 type ModuleConfig struct {
@@ -71,25 +104,25 @@ func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleCon
 	return NewModuleConfig(moduleName, values)
 }
 
-func NewModuleConfigByModuleValuesYamlData(moduleName string, moduleData []byte) (*ModuleConfig, error) {
-	var valuesAtModuleKey interface{}
-
-	err := yaml.Unmarshal(moduleData, &valuesAtModuleKey)
+func NewValues(data map[interface{}]interface{}) (Values, error) {
+	values, err := FormatValues(data)
 	if err != nil {
-		return nil, fmt.Errorf("bad module %s configmap values data: %s\n%s", moduleName, err, string(moduleData))
+		return nil, fmt.Errorf("cannot cast data to json compatible format: %s:\n%s", err, YamlToString(data))
 	}
 
-	moduleValues := map[interface{}]interface{}{ModuleNameToValuesKey(moduleName): valuesAtModuleKey}
-
-	return NewModuleConfig(moduleName, moduleValues)
+	return values, nil
 }
 
-func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
-	moduleConfig := &ModuleConfig{
+func NewEmptyModuleConfig(moduleName string) *ModuleConfig {
+	return &ModuleConfig{
 		ModuleName: moduleName,
 		IsEnabled:  true,
 		Values:     make(Values),
 	}
+}
+
+func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
+	moduleConfig := NewEmptyModuleConfig(moduleName)
 
 	moduleValuesKey := ModuleNameToValuesKey(moduleName)
 
@@ -102,13 +135,14 @@ func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*Modu
 				return nil, fmt.Errorf("required map or bool data, got: %#v", moduleValuesData)
 			}
 
-			values := map[interface{}]interface{}{moduleValuesKey: moduleValues}
+			data := map[interface{}]interface{}{moduleValuesKey: moduleValues}
 
-			formattedValues, err := FormatValues(values)
+			values, err := NewValues(data)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
-			moduleConfig.Values = formattedValues
+
+			moduleConfig.Values = values
 		}
 	}
 
@@ -142,12 +176,17 @@ func MustValuesPatch(res *ValuesPatch, err error) *ValuesPatch {
 }
 
 func ValuesPatchFromBytes(data []byte) (*ValuesPatch, error) {
-	patch, err := jsonpatch.DecodePatch(data)
+	_, err := jsonpatch.DecodePatch(data)
 	if err != nil {
 		return nil, fmt.Errorf("bad json-patch data: %s\n%s", err, string(data))
 	}
 
-	return &ValuesPatch{JsonPatch: patch}, nil
+	var operations []*ValuesPatchOperation
+	if err := json.Unmarshal(data, &operations); err != nil {
+		return nil, fmt.Errorf("bad json-patch data: %s\n%s", err, string(data))
+	}
+
+	return &ValuesPatch{Operations: operations}, nil
 }
 
 func ValuesPatchFromFile(filePath string) (*ValuesPatch, error) {
@@ -164,15 +203,48 @@ func ValuesPatchFromFile(filePath string) (*ValuesPatch, error) {
 }
 
 func AppendValuesPatch(valuesPatches []ValuesPatch, newValuesPatch ValuesPatch) []ValuesPatch {
-	// FIXME: patches compaction
-	return append(valuesPatches, newValuesPatch)
+	compactValuesPatches := CompactValuesPatches(valuesPatches, newValuesPatch)
+	return append(compactValuesPatches, newValuesPatch)
+}
+
+func CompactValuesPatches(valuesPatches []ValuesPatch, newValuesPatch ValuesPatch) []ValuesPatch {
+	var compactValuesPatches []ValuesPatch
+	for _, valuesPatch := range valuesPatches {
+		compactValuesPatchOperations := CompactValuesPatchOperations(valuesPatch.Operations, newValuesPatch.Operations)
+		if compactValuesPatchOperations != nil {
+			valuesPatch.Operations = compactValuesPatchOperations
+			compactValuesPatches = append(compactValuesPatches, valuesPatch)
+		}
+	}
+	return compactValuesPatches
+}
+
+func CompactValuesPatchOperations(operations []*ValuesPatchOperation, newOperations []*ValuesPatchOperation) []*ValuesPatchOperation {
+	var compactOperations []*ValuesPatchOperation
+
+operations:
+	for _, operation := range operations {
+		for _, newOperation := range newOperations {
+			if newOperation.Op == operation.Op {
+				equalPath := newOperation.Path == operation.Path
+				subpathOfPath := strings.HasPrefix(operation.Path, strings.Join([]string{newOperation.Path, "/"}, ""))
+
+				if equalPath || subpathOfPath {
+					continue operations
+				}
+			}
+		}
+		compactOperations = append(compactOperations, operation)
+	}
+
+	return compactOperations
 }
 
 func ApplyValuesPatch(values Values, valuesPatch ValuesPatch) (Values, bool, error) {
 	var err error
 	resValues := values
 
-	if resValues, err = ApplyJsonPatchToValues(resValues, valuesPatch.JsonPatch); err != nil {
+	if resValues, err = ApplyJsonPatchToValues(resValues, valuesPatch.JsonPatch()); err != nil {
 		return nil, false, err
 	}
 
@@ -208,14 +280,6 @@ func MergeValues(values ...Values) Values {
 	}
 
 	return res
-}
-
-func valuesToDeepMergeArg(values Values) map[interface{}]interface{} {
-	arg := make(map[interface{}]interface{})
-	for key, value := range values {
-		arg[key] = value
-	}
-	return arg
 }
 
 func ValuesToString(values Values) string {

@@ -126,7 +126,7 @@ func TestMainModuleManager_GetModule2(t *testing.T) {
 	}
 }
 
-func TestMainModuleManager_ModulesToRun(t *testing.T) {
+func TestMainModuleManager_EnabledModules(t *testing.T) {
 	mm := NewMainModuleManager(&MockHelmClient{}, nil)
 
 	runInitModulesIndex(t, mm, "test_get_module_names_in_order")
@@ -142,8 +142,8 @@ func TestMainModuleManager_ModulesToRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(expectedModules, modulesState.ModulesToRun) {
-		t.Errorf("\n[EXPECTED]: %s\n[GOT]: %s", expectedModules, modulesState.ModulesToRun)
+	if !reflect.DeepEqual(expectedModules, modulesState.EnabledModules) {
+		t.Errorf("\n[EXPECTED]: %s\n[GOT]: %s", expectedModules, modulesState.EnabledModules)
 	}
 }
 
@@ -299,11 +299,11 @@ type MockKubeConfigManager struct {
 	kube_config_manager.KubeConfigManager
 }
 
-func (kcm MockKubeConfigManager) SetKubeGlobalValues(globalValues map[string]interface{}) error {
+func (kcm MockKubeConfigManager) SetKubeGlobalValues(values utils.Values) error {
 	return nil
 }
 
-func (kcm MockKubeConfigManager) SetKubeModuleValues(moduleName string, moduleValues map[string]interface{}) error {
+func (kcm MockKubeConfigManager) SetKubeModuleValues(moduleName string, values utils.Values) error {
 	return nil
 }
 

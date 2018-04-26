@@ -3,17 +3,37 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=500
+  jo -p beforeAll=500
 }
 
 function __main__() {
+  fltr='.'
+
   ###
   # Политика #1: Ресурсы, выданные antiopa, должны быть ограничены
   #
   # К сожалению на данный момент antiopa течет. Да и никто не защищен от ошибки.
   # Чтобы максимально обезопасить себя — ставим жесткий лимит на память и CPU.
   # Важно! Изменять необходимо синхронно и здесь и в инсталляторе!
-  kubectl::apply_jq antiopa deploy/antiopa '. | .spec.template.spec.containers[0].resources.limits = {"cpu":"420m","memory":"500Mi"}'
+  fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {"cpu":"420m","memory":"500Mi"}'
+
+
+  ###
+  # Политика #2: Уровень логирования из config
+  if values::has global.antiopaLogLevel ; then
+    log_level=$(values::get global.antiopaLogLevel)
+
+    if [[ "$log_level" != "Debug" && "$log_level" != "Info" && "$log_level" != "Error" ]] ; then
+      >&2 echo "Bad global.antiopaLogLevel value \"$log_level\", supported values are: Debug, Info and Error."
+      return 1
+    fi
+  else
+    log_level=Info
+  fi
+  fltr=$fltr' | .spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
+
+  # Применяем
+  kubectl::apply_jq antiopa deploy/antiopa "$fltr"
 }
 
 hook::run $@

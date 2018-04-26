@@ -21,7 +21,7 @@ main() {
   CLUSTER_HOSTNAME=''
   DRY_RUN=0
   OUT_FILE=''
-  LOG_LEVEL='DEBUG'
+  LOG_LEVEL='Info'
 
   parse_args "$@" || (usage && exit 1)
 
@@ -86,9 +86,9 @@ printf " Usage: $0 --token <gitlab user auth token> [--dry-run]
             Do not run kubectl apply.
             Print yaml to stdout or to -o file.
 
-    --log-level <INFO|ERROR|DEBUG>
-            Set RLOG_LOG_LEVEL.
-            Default: DEBUG
+    --log-level <Debug|Info|Error>
+            Antiopa log level.
+            Default: Info
 
     --help|-h
             Print this message.
@@ -220,7 +220,7 @@ spec:
           command: ["/antiopa/antiopa"]
           resources:
             limits:
-              # Важно!!!! Изменять синхронно с policy.cluster.antiopa
+              # Важно!!!! Изменять синхронно с global-hooks/policy/antiopa
               cpu: 420m
               memory: 500Mi
           workingDir: /antiopa
@@ -228,7 +228,7 @@ spec:
             - name: KUBERNETES_DEPLOYED
               value: "$(date --rfc-3339=seconds)"
             - name: RLOG_LOG_LEVEL
-              value: ${LOG_LEVEL}
+              value: ${LOG_LEVEL^^}
             - name: GITLAB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -302,20 +302,22 @@ kind: ConfigMap
 metadata:
   name: antiopa
 data:
-  help: |
-    Add values key to define global values yaml
-    Add <module>-values key to define values yaml for module
-    Add disable-modules to specify disabled modules (comma separated, may be globs), for example "disable-modules: test*, kube-dashboard"
-  values: |
-    global:
-      project: "${PROJECT}"
-      clusterName: "${CLUSTER_NAME}"
+  global: |
+    project: "${PROJECT}"
+    clusterName: "${CLUSTER_NAME}"
 YAML
 )
   if [[ "x$CLUSTER_HOSTNAME" != "x" ]] ; then
     VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
 
-      clusterHostname: "${CLUSTER_HOSTNAME}"
+    clusterHostname: "${CLUSTER_HOSTNAME}"
+YAML
+)
+  fi
+  if [[ "$LOG_LEVEL" != "Info" ]] ; then
+    VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
+
+    antiopaLogLevel: "${LOG_LEVEL}"
 YAML
 )
   fi
@@ -341,15 +343,6 @@ install_yaml() {
         echo "  " Create namespace $NAMESPACE
         kubectl create ns $NAMESPACE
     fi
-
-#    if [[ "$(kubectl -n $NAMESPACE get pod -a 2>/dev/null | cut -d' ' -f1 | grep "^deploy\$")" != "" ]] ; then
-#        echo "  " Delete Install manifests...
-#        kubectl -n $NAMESPACE delete pod deploy
-#
-#        while [[ "$(kubectl -n $NAMESPACE get pod -a 2>/dev/null | cut -d' ' -f1 | grep "^deploy\$")" != "" ]] ; do
-#            sleep 1
-#        done
-#    fi
 
     echo "  " Apply manifests
     echo "$MANIFESTS" | kubectl -n $NAMESPACE apply -f -

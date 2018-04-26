@@ -10,6 +10,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 	"github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
+	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 
@@ -29,11 +30,12 @@ var (
 	// Очередь задач
 	TasksQueue *task.TasksQueue
 
-	// TODO Когда будет schedule_manager - удалить
-	schedule_manager_ScheduleEventCh chan struct{}
-
 	// module manager object
 	ModuleManager module_manager.ModuleManager
+
+	// schedule manager
+	ScheduleManager schedule_manager.ScheduleManager
+	ScheduledHooks  ScheduledHooksStorage
 
 	// chan for stopping ManagersEventsHandler infinite loop
 	ManagersEventsHandlerStopCh chan struct{}
@@ -128,7 +130,7 @@ func Init() {
 	// потом, когда от менеджера придёт id настройки,
 	// найти по id нужные имена хуков и добавить их запуск в очередь
 	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
-	   ModulesToRun.each {
+	   EnabledModules.each {
 	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
 	           schedule.add hook // регистрация binding
 	       }
@@ -144,8 +146,12 @@ func Init() {
 	*/
 
 	// Инициализация хуков по расписанию - карта scheduleId → []ScheduleHook
-	schedule_manager_ScheduleEventCh = make(chan struct{}, 1)
-	RegisterScheduleHooks()
+	ScheduleManager, err = schedule_manager.Init()
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot initialize schedule manager: %s", err)
+		os.Exit(1)
+	}
+
 	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
 	// RegisterKubeEventHooks()
 }
@@ -169,6 +175,7 @@ func Run() {
 	go docker_registry_manager.RunRegistryManager()
 	go ModuleManager.Run()
 	go kube_node_manager.RunKubeNodeManager()
+	go ScheduleManager.Run()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
 	// добавляются в очередь
@@ -214,12 +221,16 @@ func ManagersEventsHandler() {
 						TasksQueue.Add(newTask)
 					}
 				}
+				// Поменялись модули, нужно пересоздать индекс хуков по расписанию
+				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			// Изменились глобальные values, нужен рестарт всех модулей
 			case module_manager.GlobalChanged:
 				rlog.Debug("main got GlobalChanged event")
 				TasksQueue.ChangesDisable()
 				CreateReloadAllTasks()
 				TasksQueue.ChangesEnable(true)
+				// Пересоздать индекс хуков по расписанию
+				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			}
 		case <-kube_node_manager.KubeNodeChanged:
 			// Добавить выполнение глобальных хуков по событию KubeNodeChange
@@ -233,29 +244,33 @@ func ManagersEventsHandler() {
 			TasksQueue.ChangesEnable(true)
 		// TODO поменять, когда появится schedule_manager
 		//case scheduleId := <-schedule_manager.ScheduleEventCh:
-		case scheduleId := <-schedule_manager_ScheduleEventCh:
-			scheduleHooks := GetScheduleHooks(scheduleId)
+		case crontab := <-schedule_manager.ScheduleCh:
+			scheduleHooks := ScheduledHooks.GetHooksForSchedule(crontab)
 			for _, hook := range scheduleHooks {
 				var getHookErr error
 
 				_, getHookErr = ModuleManager.GetGlobalHook(hook.Name)
 				if getHookErr == nil {
-					newTask := task.NewTask(task.GlobalHookRun, hook.Name).
-						WithBinding(module_manager.Schedule).
-						WithAllowFailure(hook.Schedule.AllowFailure)
-					rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
-					TasksQueue.Add(newTask)
-					break
+					for _, scheduleConfig := range hook.Schedule {
+						newTask := task.NewTask(task.GlobalHookRun, hook.Name).
+							WithBinding(module_manager.Schedule).
+							WithAllowFailure(scheduleConfig.AllowFailure)
+						rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
+						TasksQueue.Add(newTask)
+					}
+					continue
 				}
 
 				_, getHookErr = ModuleManager.GetModuleHook(hook.Name)
 				if getHookErr == nil {
-					newTask := task.NewTask(task.ModuleHookRun, hook.Name).
-						WithBinding(module_manager.Schedule).
-						WithAllowFailure(hook.Schedule.AllowFailure)
-					rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
-					TasksQueue.Add(newTask)
-					break
+					for _, scheduleConfig := range hook.Schedule {
+						newTask := task.NewTask(task.ModuleHookRun, hook.Name).
+							WithBinding(module_manager.Schedule).
+							WithAllowFailure(scheduleConfig.AllowFailure)
+						rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
+						TasksQueue.Add(newTask)
+					}
+					continue
 				}
 
 				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
@@ -300,7 +315,7 @@ func TasksRunner() {
 					break
 				}
 
-				for _, moduleName := range modulesState.ModulesToRun {
+				for _, moduleName := range modulesState.EnabledModules {
 					newTask := task.NewTask(task.ModuleRun, moduleName)
 					rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
 					TasksQueue.Add(newTask)
@@ -312,7 +327,7 @@ func TasksRunner() {
 					rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
 				}
 
-				for _, moduleName := range modulesState.ModulesToPurge {
+				for _, moduleName := range modulesState.ReleasedUnknownModules {
 					newTask := task.NewTask(task.ModulePurge, moduleName)
 					TasksQueue.Add(newTask)
 					rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
@@ -327,6 +342,8 @@ func TasksRunner() {
 				}
 
 				handleTaskSucceeded()
+
+				ScheduledHooks = UpdateScheduleHooks(nil)
 
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())
@@ -390,12 +407,9 @@ func TasksRunner() {
 }
 
 // Работа с событийными хуками
-
-type ScheduleIdType struct{}
-
 type ScheduleHook struct {
 	Name     string
-	Schedule module_manager.ScheduleConfig
+	Schedule []module_manager.ScheduleConfig
 }
 
 type KubeEventHook struct {
@@ -404,17 +418,153 @@ type KubeEventHook struct {
 	OnChangeConfig struct{}
 }
 
-var ScheduleHooks map[ScheduleIdType][]*ScheduleHook
+type ScheduledHooksStorage []*ScheduleHook
 
-func GetScheduleHooks(scheduleId ScheduleIdType) []*ScheduleHook {
-	return ScheduleHooks[scheduleId]
+// Возврат всех расписаний из хранилища хуков
+func (s ScheduledHooksStorage) GetCrontabs() []string {
+	resMap := map[string]bool{}
+	for _, hook := range s {
+		for _, schedule := range hook.Schedule {
+			resMap[schedule.Crontab] = true
+		}
+	}
+
+	res := make([]string, len(resMap))
+	for k := range resMap {
+		res = append(res, k)
+	}
+	return res
 }
 
-func RegisterScheduleHooks() {
-	ScheduleHooks = make(map[ScheduleIdType][]*ScheduleHook)
-	// Примерный алгоритм
+// Возврат хуков, у которых есть переданное расписание
+func (s ScheduledHooksStorage) GetHooksForSchedule(crontab string) []*ScheduleHook {
+	res := []*ScheduleHook{}
 
-	return
+	for _, hook := range s {
+		newHook := &ScheduleHook{
+			Name:     hook.Name,
+			Schedule: []module_manager.ScheduleConfig{},
+		}
+		for _, schedule := range hook.Schedule {
+			if schedule.Crontab == crontab {
+				newHook.Schedule = append(newHook.Schedule, schedule)
+			}
+		}
+
+		if len(newHook.Schedule) > 0 {
+			res = append(res, newHook)
+		}
+	}
+
+	return res
+}
+
+// Добавить хук в список хуков, выполняемых по расписанию
+func (s *ScheduledHooksStorage) AddHook(hookName string, config []module_manager.ScheduleConfig) {
+	for i, hook := range *s {
+		if hook.Name == hookName {
+			// Если хук уже есть, то изменить ему конфиг и выйти
+			(*s)[i].Schedule = []module_manager.ScheduleConfig{}
+			for _, item := range config {
+				(*s)[i].Schedule = append((*s)[i].Schedule, item)
+			}
+			return
+		}
+	}
+
+	newHook := &ScheduleHook{
+		Name:     hookName,
+		Schedule: []module_manager.ScheduleConfig{},
+	}
+	for _, item := range config {
+		newHook.Schedule = append(newHook.Schedule, item)
+	}
+	*s = append(*s, newHook)
+
+}
+
+// Удалить сведения о хуке из хранилища
+func (s *ScheduledHooksStorage) RemoveHook(hookName string) {
+	tmp := ScheduledHooksStorage{}
+	for _, hook := range *s {
+		if hook.Name == hookName {
+			continue
+		}
+		tmp = append(tmp, hook)
+	}
+
+	*s = tmp
+}
+
+// Создать новый набор ScheduledHooks
+// вычислить разницу в ScheduledId между старым набором и новым.
+// то, что было в старом наборе, но отсутстует в новом — удалить из ScheduleManager
+//
+func UpdateScheduleHooks(storage ScheduledHooksStorage) ScheduledHooksStorage {
+	if ScheduleManager == nil {
+		return nil
+	}
+
+	oldCrontabs := map[string]bool{}
+	if storage != nil {
+		for _, crontab := range storage.GetCrontabs() {
+			oldCrontabs[crontab] = false
+		}
+	}
+
+	newScheduledTasks := ScheduledHooksStorage{}
+
+	globalHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.Schedule)
+LOOP_GLOBAL_HOOKS:
+	for _, globalHookName := range globalHooks {
+		globalHook, _ := ModuleManager.GetGlobalHook(globalHookName)
+		for _, schedule := range globalHook.Schedules {
+			_, err := ScheduleManager.Add(schedule.Crontab)
+			if err != nil {
+				rlog.Errorf("Schedule: cannot add '%s' for global hook '%s': %s", schedule.Crontab, globalHookName, err)
+				continue LOOP_GLOBAL_HOOKS
+			}
+			rlog.Debugf("Schedule: add '%s' for global hook '%s'", schedule.Crontab, globalHookName)
+		}
+		newScheduledTasks.AddHook(globalHook.Name, globalHook.Schedules)
+	}
+
+	modules := ModuleManager.GetModuleNamesInOrder()
+	for _, moduleName := range modules {
+		moduleHooks, _ := ModuleManager.GetModuleHooksInOrder(moduleName, module_manager.Schedule)
+	LOOP_MODULE_HOOKS:
+		for _, moduleHookName := range moduleHooks {
+			moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
+			for _, schedule := range moduleHook.Schedules {
+				_, err := ScheduleManager.Add(schedule.Crontab)
+				if err != nil {
+					rlog.Errorf("Schedule: cannot add '%s' for hook '%s': %s", schedule.Crontab, moduleHookName, err)
+					continue LOOP_MODULE_HOOKS
+				}
+				rlog.Debugf("Schedule: add '%s' for hook '%s'", schedule.Crontab, moduleHookName)
+			}
+			newScheduledTasks.AddHook(moduleHook.Name, moduleHook.Schedules)
+		}
+	}
+
+	if len(oldCrontabs) > 0 {
+		// Собрать новый набор расписаний. Если расписание есть в oldCrontabs, то поставить ему true.
+		newCrontabs := newScheduledTasks.GetCrontabs()
+		for _, crontab := range newCrontabs {
+			if _, has_crontab := oldCrontabs[crontab]; has_crontab {
+				oldCrontabs[crontab] = true
+			}
+		}
+
+		// пройти по старому набору расписаний, если есть расписание с false, то удалить его из обработки.
+		for crontab, _ := range oldCrontabs {
+			if !oldCrontabs[crontab] {
+				ScheduleManager.Remove(crontab)
+			}
+		}
+	}
+
+	return newScheduledTasks
 }
 
 func CreateOnStartupTasks() {

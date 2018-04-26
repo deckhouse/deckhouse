@@ -19,7 +19,7 @@
 
 При установке **нужно настроить два параметра**:
 ```yaml
-prometheus:
+prometheus: |
   retentionDays: 15
   estimatedNumberOfMetrics: 250000
 ```
@@ -60,7 +60,7 @@ prometheus:
 ### Пример конфига
 
 ```yaml
-prometheus:
+prometheus: |
   userPassword: xxxxxx
   adminPassword: yyyyyy
   retentionDays: 7

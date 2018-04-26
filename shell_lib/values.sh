@@ -1,17 +1,19 @@
 #!/bin/bash
 
 config_values_json_patch=()
-dynamic_values_json_patch=()
+values_json_patch=()
 
 function values::json_patch() {
+  set -f
   if [[ "$1" == "--config" ]] ; then
     shift
     config_values_json_patch+=($(jo $@))
     printf '%s\n' "${config_values_json_patch[@]}" | jo -a > $CONFIG_VALUES_JSON_PATCH_PATH
   else
-    dynamic_values_json_patch+=($(jo $@))
-    printf '%s\n' "${dynamic_values_json_patch[@]}" | jo -a > $VALUES_JSON_PATCH_PATH
+    values_json_patch+=($(jo $@))
+    printf '%s\n' "${values_json_patch[@]}" | jo -a > $VALUES_JSON_PATCH_PATH
   fi
+  set +f
 }
 
 function values::get() {

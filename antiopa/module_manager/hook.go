@@ -6,7 +6,6 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 	"github.com/kennygrant/sanitize"
 	"github.com/romana/rlog"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -197,26 +196,30 @@ type globalValuesMergeResult struct {
 }
 
 func (h *GlobalHook) handleGlobalValuesPatch(currentValues utils.Values, valuesPatch utils.ValuesPatch) (*globalValuesMergeResult, error) {
+	acceptableKey := "global"
+
+	if err := validateHookValuesPatch(valuesPatch, acceptableKey); err != nil {
+		return nil, fmt.Errorf("merge global values failed: %s", err)
+	}
+
 	newValuesRaw, valuesChanged, err := utils.ApplyValuesPatch(currentValues, valuesPatch)
 	if err != nil {
 		return nil, fmt.Errorf("merge global values failed: %s", err)
 	}
 
 	result := &globalValuesMergeResult{
-		Values:        utils.Values{"global": make(map[string]interface{})},
+		Values:        utils.Values{acceptableKey: make(map[string]interface{})},
 		ValuesChanged: valuesChanged,
 		ValuesPatch:   valuesPatch,
 	}
 
-	// Changing anything beyond "global" key is forbidden
-	// TODO: validate that only "global" key returned in newValuesRaw
-	if globalValuesRaw, hasKey := newValuesRaw["global"]; hasKey {
+	if globalValuesRaw, hasKey := newValuesRaw[acceptableKey]; hasKey {
 		globalValues, ok := globalValuesRaw.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("expected map at key 'global', got:\n%s", utils.YamlToString(globalValuesRaw))
+			return nil, fmt.Errorf("expected map at key '%s', got:\n%s", acceptableKey, utils.YamlToString(globalValuesRaw))
 		}
 
-		result.Values["global"] = globalValues
+		result.Values[acceptableKey] = globalValues
 		result.GlobalValues = globalValues
 	}
 
@@ -243,7 +246,7 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 		}
 
 		if configValuesPatchResult.ValuesChanged {
-			if err := h.moduleManager.kubeConfigManager.SetKubeGlobalValues(configValuesPatchResult.GlobalValues); err != nil {
+			if err := h.moduleManager.kubeConfigManager.SetKubeGlobalValues(configValuesPatchResult.Values); err != nil {
 				rlog.Debugf("Global hook '%s' kube config global values stay unchanged:\n%s", utils.ValuesToString(h.moduleManager.kubeGlobalConfigValues))
 				return fmt.Errorf("global hook '%s': set kube config failed: %s", h.Name, err)
 			}
@@ -392,12 +395,17 @@ func (h *Hook) SafeName() string {
 }
 
 func (h *ModuleHook) handleModuleValuesPatch(currentValues utils.Values, valuesPatch utils.ValuesPatch) (*moduleValuesMergeResult, error) {
+	moduleValuesKey := utils.ModuleNameToValuesKey(h.Module.Name)
+
+	if err := validateHookValuesPatch(valuesPatch, moduleValuesKey); err != nil {
+		return nil, fmt.Errorf("merge module '%s' values failed: %s", h.Module.Name, err)
+	}
+
 	newValuesRaw, valuesChanged, err := utils.ApplyValuesPatch(currentValues, valuesPatch)
 	if err != nil {
 		return nil, fmt.Errorf("merge module '%s' values failed: %s", h.Module.Name, err)
 	}
 
-	moduleValuesKey := utils.ModuleNameToValuesKey(h.Module.Name)
 	result := &moduleValuesMergeResult{
 		ModuleValuesKey: moduleValuesKey,
 		Values:          utils.Values{moduleValuesKey: make(map[string]interface{})},
@@ -405,8 +413,6 @@ func (h *ModuleHook) handleModuleValuesPatch(currentValues utils.Values, valuesP
 		ValuesPatch:     valuesPatch,
 	}
 
-	// Changing anything beyond myModuleName key is forbidden (for module named "my-module-name")
-	// TODO: validate that only moduleValuesKey returned in newValuesRaw
 	if moduleValuesRaw, hasKey := newValuesRaw[result.ModuleValuesKey]; hasKey {
 		moduleValues, ok := moduleValuesRaw.(map[string]interface{})
 		if !ok {
@@ -417,6 +423,24 @@ func (h *ModuleHook) handleModuleValuesPatch(currentValues utils.Values, valuesP
 	}
 
 	return result, nil
+}
+
+func validateHookValuesPatch(valuesPatch utils.ValuesPatch, acceptableKey string) error {
+	for _, op := range valuesPatch.Operations {
+		if op.Op == "replace" {
+			return fmt.Errorf("unsupported patch operation '%s': '%s'", op.Op, op.ToString())
+		}
+
+		pathParts := strings.Split(op.Path, "/")
+		if len(pathParts) > 1 {
+			affectedKey := pathParts[1]
+			if affectedKey != acceptableKey {
+				return fmt.Errorf("unacceptable patch operation path '%s' (only '%s' accepted): '%s'", affectedKey, acceptableKey, op.ToString())
+			}
+		}
+	}
+
+	return nil
 }
 
 func (h *ModuleHook) run(bindingType BindingType) error {
@@ -439,7 +463,7 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 			return fmt.Errorf("module hook '%s': kube module config values update error: %s", h.Name, err)
 		}
 		if configValuesPatchResult.ValuesChanged {
-			err := h.moduleManager.kubeConfigManager.SetKubeModuleValues(moduleName, configValuesPatchResult.ModuleValues)
+			err := h.moduleManager.kubeConfigManager.SetKubeModuleValues(moduleName, configValuesPatchResult.Values)
 			if err != nil {
 				rlog.Debugf("Module hook '%s' kube module config values stay unchanged:\n%s", utils.ValuesToString(h.moduleManager.kubeModulesConfigValues[moduleName]))
 				return fmt.Errorf("module hook '%s': set kube module config failed: %s", h.Name, err)
@@ -668,26 +692,6 @@ func createHookResultValuesFile(filePath string) error {
 
 	file.Close()
 	return nil
-}
-
-func readValuesJsonFile(filePath string) (map[string]interface{}, error) {
-	valuesJson, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %s", filePath, err)
-	}
-
-	if len(valuesJson) == 0 {
-		return make(map[string]interface{}), nil
-	}
-
-	var res map[string]interface{}
-
-	err = json.Unmarshal(valuesJson, &res)
-	if err != nil {
-		return nil, fmt.Errorf("bad %s: %s", filePath, err)
-	}
-
-	return res, nil
 }
 
 func makeCommand(dir string, entrypoint string, envs []string, args []string) *exec.Cmd {

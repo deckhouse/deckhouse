@@ -31,35 +31,35 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1522522563469,
+  "iteration": 1524756601713,
   "links": [],
   "panels": [
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
-        "h": 9,
+        "h": 6,
         "w": 18,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": true,
         "current": true,
         "max": true,
         "min": false,
         "rightSide": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": true
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
@@ -69,14 +69,15 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (pod, namespace) (rate(phpfpm_accepted_connections_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\"}[$__interval_rv])) by (instance) ",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{ namespace }} / {{ pod }}",
+          "legendFormat": "{{ instance }}",
           "refId": "A",
           "step": 4
         }
@@ -104,7 +105,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -217,30 +218,30 @@
     },
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 18,
         "x": 0,
-        "y": 9
+        "y": 6
       },
       "id": 3,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": true,
         "current": true,
         "max": true,
         "min": false,
         "rightSide": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": true
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
@@ -248,53 +249,24 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "/^Total/",
-          "color": "#6ED0E0"
-        },
-        {
-          "alias": "/^Active/",
-          "color": "#508642"
-        },
-        {
-          "alias": "/^Idle/",
-          "color": "#BF1B00"
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (namespace, pod) (phpfpm_processes_total{namespace=~\"$namespace\", pod=~\"$pod\"})",
+          "expr": "sum by (service, instance) (phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", state=\"idle\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Total {{namespace}} / {{pod}}",
-          "refId": "A",
-          "step": 2
-        },
-        {
-          "expr": "sum by (namespace, pod) (phpfpm_processes_total{namespace=~\"$namespace\", pod=~\"$pod\", state=\"active\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Active {{namespace}} / {{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "B",
-          "step": 2
-        },
-        {
-          "expr": "sum by (namespace, pod) (phpfpm_processes_total{namespace=~\"$namespace\", pod=~\"$pod\", state=\"idle\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Idle {{namespace}} / {{pod}}",
-          "refId": "C",
           "step": 2
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Workers",
+      "title": "Idle Workers",
       "tooltip": {
         "shared": true,
         "sort": 1,
@@ -314,7 +286,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -407,6 +379,89 @@
           "show": false
         }
       ]
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 18,
+        "x": 0,
+        "y": 12
+      },
+      "id": 5,
+      "legend": {
+        "alignAsTable": false,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum by (instance) (phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=~\"$instance\", state=\"active\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "B",
+          "step": 2
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Active Workers",
+      "tooltip": {
+        "shared": true,
+        "sort": 1,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
     }
   ],
   "refresh": "30s",
@@ -436,10 +491,10 @@
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
-        "multi": true,
+        "multi": false,
         "name": "namespace",
         "options": [],
-        "query": "label_values(phpfpm_up, namespace)",
+        "query": "label_values(up{job=\"php-fpm\"}, namespace)",
         "refresh": 2,
         "regex": "",
         "sort": 1,
@@ -450,39 +505,19 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {},
         "datasource": "$ds_prometheus",
         "hide": 0,
-        "includeAll": true,
-        "label": "Controller Kind",
-        "multi": true,
-        "name": "controller_kind",
+        "includeAll": false,
+        "label": "Service",
+        "multi": false,
+        "name": "service",
         "options": [],
-        "query": "label_values(kube_pod_info{namespace=~\"$namespace\", created_by_name!=\"<none>\", created_by_kind!=\"<none>\"}, created_by_kind)",
+        "query": "label_values(up{job=\"php-fpm\",namespace=\"$namespace\"}, service)",
         "refresh": 2,
         "regex": "",
         "sort": 1,
-        "tagValuesQuery": "label_values(kube_pod_info{created_by_kind=~\"$tag\", created_by_name!=\"<none>\", created_by_kind!=\"<none>\"}, created_by_name)",
-        "tags": [],
-        "tagsQuery": "label_values(kube_pod_info{created_by_kind!=\"<none>\"}, created_by_kind)",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {},
-        "datasource": "$ds_prometheus",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Controller Name",
-        "multi": true,
-        "name": "controller_name",
-        "options": [],
-        "query": "label_values(kube_pod_info{namespace=~\"$namespace\", created_by_name!=\"<none>\", created_by_kind!=\"<none>\", created_by_kind=~\"$controller_kind\"}, created_by_name)",
-        "refresh": 2,
-        "regex": "",
-        "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -490,39 +525,19 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {},
         "datasource": "$ds_prometheus",
         "hide": 2,
         "includeAll": true,
-        "label": "",
+        "label": "Instance",
         "multi": true,
-        "name": "pod_name",
+        "name": "instance",
         "options": [],
-        "query": "label_values(kube_pod_info{namespace=~\"$namespace\", created_by_kind=~\"$controller_kind\", created_by_name=~\"$controller_name\"}, pod)",
+        "query": "label_values(up{job=\"php-fpm\",namespace=\"$namespace\",service=\"$service\"}, instance)",
         "refresh": 2,
         "regex": "",
         "sort": 1,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {},
-        "datasource": "$ds_prometheus",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Pod",
-        "multi": true,
-        "name": "pod",
-        "options": [],
-        "query": "label_values(phpfpm_up{namespace=~\"$namespace\",  pod=~\"$pod_name\"}, pod)",
-        "refresh": 1,
-        "regex": "",
-        "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -532,7 +547,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
