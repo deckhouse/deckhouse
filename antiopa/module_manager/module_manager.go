@@ -16,6 +16,7 @@ type ModuleManager interface {
 	Run()
 	DiscoverModulesState() (*ModulesState, error)
 	GetModule(name string) (*Module, error)
+	GetModuleNamesInOrder() []string
 	GetGlobalHook(name string) (*GlobalHook, error)
 	GetModuleHook(name string) (*ModuleHook, error)
 	GetGlobalHooksInOrder(bindingType BindingType) []string
@@ -589,6 +590,10 @@ func (mm *MainModuleManager) GetModule(name string) (*Module, error) {
 	} else {
 		return nil, fmt.Errorf("module '%s' not found", name)
 	}
+}
+
+func (mm *MainModuleManager) GetModuleNamesInOrder() []string {
+	return mm.enabledModulesInOrder
 }
 
 func (mm *MainModuleManager) GetGlobalHook(name string) (*GlobalHook, error) {
