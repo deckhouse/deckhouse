@@ -155,11 +155,11 @@ func TestModuleNameConversions(t *testing.T) {
 	var err error
 
 	for _, strs := range [][]string{
-		[]string{"module-1", "module1"},
-		[]string{"prometheus", "prometheus"},
-		[]string{"prometheus-operator", "prometheusOperator"},
-		[]string{"hello-world-module", "helloWorldModule"},
-		[]string{"cert-manager-crd", "certManagerCrd"},
+		{"module-1", "module1"},
+		{"prometheus", "prometheus"},
+		{"prometheus-operator", "prometheusOperator"},
+		{"hello-world-module", "helloWorldModule"},
+		{"cert-manager-crd", "certManagerCrd"},
 	} {
 		moduleName := strs[0]
 		moduleValuesKey := strs[1]
@@ -173,5 +173,158 @@ func TestModuleNameConversions(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+func TestCompactValuesPatchOperations(t *testing.T) {
+	expectations := []struct {
+		testName           string
+		operations         []*ValuesPatchOperation
+		newOperations      []*ValuesPatchOperation
+		expectedOperations []*ValuesPatchOperation
+	}{
+		{
+			"path",
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+			nil,
+		},
+		{
+			"subpath",
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a/b",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+			nil,
+		},
+		{
+			"different op",
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"delete",
+					"/a",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+		},
+		{
+			"different path",
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/b",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+			},
+		},
+		{
+			"sample",
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+				{
+					"add",
+					"/a/b",
+					"",
+				},
+				{
+					"add",
+					"/b",
+					"",
+				},
+				{
+					"delete",
+					"/c",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/a",
+					"",
+				},
+				{
+					"delete",
+					"/c",
+					"",
+				},
+				{
+					"add",
+					"/d",
+					"",
+				},
+			},
+			[]*ValuesPatchOperation{
+				{
+					"add",
+					"/b",
+					"",
+				},
+			},
+		},
+	}
+
+	for _, expectation := range expectations {
+		t.Run(expectation.testName, func(t *testing.T) {
+			compactOperations := CompactValuesPatchOperations(expectation.operations, expectation.newOperations)
+
+			if !reflect.DeepEqual(expectation.expectedOperations, compactOperations) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedOperations, compactOperations)
+			}
+		})
 	}
 }

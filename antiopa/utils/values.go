@@ -11,13 +11,27 @@ import (
 	"github.com/go-yaml/yaml"
 	"github.com/peterbourgon/mergemap"
 	"github.com/segmentio/go-camelcase"
+	"strings"
 )
 
 type Values map[string]interface{}
 
 type ValuesPatch struct {
-	JsonPatch  jsonpatch.Patch
 	Operations []*ValuesPatchOperation
+}
+
+func (p *ValuesPatch) JsonPatch() jsonpatch.Patch {
+	data, err := json.Marshal(p.Operations)
+	if err != nil {
+		panic(err)
+	}
+
+	patch, err := jsonpatch.DecodePatch(data)
+	if err != nil {
+		panic(err)
+	}
+
+	return patch
 }
 
 type ValuesPatchOperation struct {
@@ -157,7 +171,7 @@ func MustValuesPatch(res *ValuesPatch, err error) *ValuesPatch {
 }
 
 func ValuesPatchFromBytes(data []byte) (*ValuesPatch, error) {
-	patch, err := jsonpatch.DecodePatch(data)
+	_, err := jsonpatch.DecodePatch(data)
 	if err != nil {
 		return nil, fmt.Errorf("bad json-patch data: %s\n%s", err, string(data))
 	}
@@ -167,7 +181,7 @@ func ValuesPatchFromBytes(data []byte) (*ValuesPatch, error) {
 		return nil, fmt.Errorf("bad json-patch data: %s\n%s", err, string(data))
 	}
 
-	return &ValuesPatch{JsonPatch: patch, Operations: operations}, nil
+	return &ValuesPatch{Operations: operations}, nil
 }
 
 func ValuesPatchFromFile(filePath string) (*ValuesPatch, error) {
@@ -184,15 +198,48 @@ func ValuesPatchFromFile(filePath string) (*ValuesPatch, error) {
 }
 
 func AppendValuesPatch(valuesPatches []ValuesPatch, newValuesPatch ValuesPatch) []ValuesPatch {
-	// FIXME: patches compaction
-	return append(valuesPatches, newValuesPatch)
+	compactValuesPatches := CompactValuesPatches(valuesPatches, newValuesPatch)
+	return append(compactValuesPatches, newValuesPatch)
+}
+
+func CompactValuesPatches(valuesPatches []ValuesPatch, newValuesPatch ValuesPatch) []ValuesPatch {
+	var compactValuesPatches []ValuesPatch
+	for _, valuesPatch := range valuesPatches {
+		compactValuesPatchOperations := CompactValuesPatchOperations(valuesPatch.Operations, newValuesPatch.Operations)
+		if compactValuesPatchOperations != nil {
+			valuesPatch.Operations = compactValuesPatchOperations
+			compactValuesPatches = append(compactValuesPatches, valuesPatch)
+		}
+	}
+	return compactValuesPatches
+}
+
+func CompactValuesPatchOperations(operations []*ValuesPatchOperation, newOperations []*ValuesPatchOperation) []*ValuesPatchOperation {
+	var compactOperations []*ValuesPatchOperation
+
+operations:
+	for _, operation := range operations {
+		for _, newOperation := range newOperations {
+			if newOperation.Op == operation.Op {
+				equalPath := newOperation.Path == operation.Path
+				subpathOfPath := strings.HasPrefix(operation.Path, strings.Join([]string{newOperation.Path, "/"}, ""))
+
+				if equalPath || subpathOfPath {
+					continue operations
+				}
+			}
+		}
+		compactOperations = append(compactOperations, operation)
+	}
+
+	return compactOperations
 }
 
 func ApplyValuesPatch(values Values, valuesPatch ValuesPatch) (Values, bool, error) {
 	var err error
 	resValues := values
 
-	if resValues, err = ApplyJsonPatchToValues(resValues, valuesPatch.JsonPatch); err != nil {
+	if resValues, err = ApplyJsonPatchToValues(resValues, valuesPatch.JsonPatch()); err != nil {
 		return nil, false, err
 	}
 
