@@ -103,6 +103,7 @@ const (
 	OnKubeNodeChange BindingType = "ON_KUBE_NODE_CHANGE"
 	Schedule         BindingType = "SCHEDULE"
 	OnStartup        BindingType = "ON_STARTUP"
+	KubeEvents       BindingType = "KUBE_EVENTS"
 )
 
 // Типы событий, отправляемые в Main — либо изменились какие-то модули и нужно
@@ -147,6 +148,25 @@ type Event struct {
     beforeAll: ORDER, // только global
     afterAll: ORDER, // только global
     onKubeNodeChange: ORDER, // только global
+	onAdd: [
+		{
+			kind: pod|service|namespace|... ,
+			selector:
+			    matchExpressions: ... https://v1-6.docs.kubernetes.io/docs/api-reference/v1.6/#labelselector-v1-meta,
+			    matchLabels: ... ,
+            namespaceSelector:
+		        matchNames: [...]
+	            any: true|false
+	        jqFilter: ".items[] | del(.metadata, .status)",
+			allowFailure: true,
+	    }
+	],
+	onUpdate: [
+		...
+	],
+	onDelete: [
+		...
+	],
     schedule:  [
 		{
 			crontab: "* * * * *",

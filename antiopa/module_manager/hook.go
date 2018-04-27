@@ -6,6 +6,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 	"github.com/kennygrant/sanitize"
 	"github.com/romana/rlog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +28,7 @@ type Hook struct {
 	Bindings       []BindingType
 	OrderByBinding map[BindingType]float64
 	Schedules      []ScheduleConfig
+	KubeEvents     []KubeEventsConfig
 
 	moduleManager *MainModuleManager
 }
@@ -46,13 +48,33 @@ type ModuleHookConfig struct {
 }
 
 type HookConfig struct {
-	OnStartup interface{}      `json:"onStartup"`
-	Schedule  []ScheduleConfig `json:"schedule"`
+	OnStartup  interface{}      `json:"onStartup"`
+	Schedule   []ScheduleConfig `json:"schedule"`
+	KubeEvents []KubeEventsConfig
 }
 
 type ScheduleConfig struct {
 	Crontab      string `json:"crontab"`
 	AllowFailure bool   `json:"allowFailure"`
+}
+
+type KubeEventsConfig struct {
+	OnAdd    *KubeEventsOnAction `json:"onAdd"`
+	OnUpdate *KubeEventsOnAction `json:"onUpdate"`
+	OnDelete *KubeEventsOnAction `json:"onDelete"`
+}
+
+type KubeEventsOnAction struct {
+	Kind              string `json:"kind"`
+	Selector          *metav1.LabelSelector
+	NamespaceSelector *KubeNamespaceSelector
+	JqFilter          string `json:"jqFilter"`
+	AllowFailure      bool   `json:"allowFailure"`
+}
+
+type KubeNamespaceSelector struct {
+	MatchNames []string `json:"matchNames"`
+	Any        bool     `json:"any"`
 }
 
 func (mm *MainModuleManager) newGlobalHook() *GlobalHook {
@@ -118,6 +140,12 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 		mm.globalHooksOrder[Schedule] = append(mm.globalHooksOrder[Schedule], globalHook)
 	}
 
+	if config.KubeEvents != nil {
+		globalHook.Bindings = append(globalHook.Bindings, KubeEvents)
+		globalHook.KubeEvents = config.KubeEvents
+		mm.globalHooksOrder[KubeEvents] = append(mm.globalHooksOrder[KubeEvents], globalHook)
+	}
+
 	mm.globalHooksByName[name] = globalHook
 
 	return nil
@@ -170,6 +198,12 @@ func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config
 		moduleHook.Bindings = append(moduleHook.Bindings, Schedule)
 		moduleHook.Schedules = config.Schedule
 		mm.addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
+	}
+
+	if config.KubeEvents != nil {
+		moduleHook.Bindings = append(moduleHook.Bindings, KubeEvents)
+		moduleHook.KubeEvents = config.KubeEvents
+		mm.addModulesHooksOrderByName(moduleName, KubeEvents, moduleHook)
 	}
 
 	mm.modulesHooksByName[name] = moduleHook
