@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=30
+}
+
+function __main__() {
+  fltr='.'
+
+  if values::has antiopa.nodeSelector ; then
+    if ! values::is_false antiopa.nodeSelector ; then
+      fltr=$fltr" | .spec.template.spec.nodeSelector = $(values::get --required antiopa.nodeSelector | jq -c .)"
+    else
+      fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
+    fi
+  elif values::is_true global.discovery.clusterHasSystemNodes ; then
+    fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role/system":""}'
+  else
+    fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
+  fi
+
+  if values::has antiopa.tolerations ; then
+    if ! values::is_false antiopa.tolerations ; then
+      fltr=$fltr" | .spec.template.spec.tolerations = $(values::get --required antiopa.tolerations | jq -c .)"
+    else
+      fltr=$fltr' | del(.spec.template.spec.tolerations)'
+    fi
+  elif values::is_true global.discovery.clusterHasSystemNodes ; then
+    fltr=$fltr' | .spec.template.spec.tolerations = [{"key":"node-role/system","effect":"NoExecute"}]'
+  else
+    fltr=$fltr' | del(.spec.template.spec.tolerations)'
+  fi
+
+  kubectl::apply_jq antiopa deploy/antiopa "$fltr"
+}
+
+hook::run $@

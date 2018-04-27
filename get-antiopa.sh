@@ -220,7 +220,7 @@ spec:
           command: ["/antiopa/antiopa"]
           resources:
             limits:
-              # Важно!!!! Изменять синхронно с global-hooks/policy/antiopa
+              # Важно!!!! Изменять синхронно с modules/50-antiopa
               cpu: 420m
               memory: 500Mi
           workingDir: /antiopa
@@ -317,7 +317,8 @@ YAML
   if [[ "$LOG_LEVEL" != "Info" ]] ; then
     VALUES_CONFIG_MAP="$VALUES_CONFIG_MAP"$(cat <<- YAML
 
-    antiopaLogLevel: "${LOG_LEVEL}"
+  antiopa: |
+    logLevel: "${LOG_LEVEL}"
 YAML
 )
   fi

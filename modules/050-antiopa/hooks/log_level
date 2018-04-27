@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=0
+}
+
+function __main__() {
+  log_level=$(values::get --required antiopa.logLevel)
+
+  if [[ "$log_level" != "Debug" && "$log_level" != "Info" && "$log_level" != "Error" ]] ; then
+    >&2 echo "Bad antiopa.logLevel value \"$log_level\", should be Debug, Info or Error."
+    return 1
+  fi
+
+  kubectl::apply_jq antiopa deploy/antiopa '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
+}
+
+hook::run $@
