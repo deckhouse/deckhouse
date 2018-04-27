@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 )
@@ -30,14 +31,15 @@ type KubeConfigManager interface {
 type MainKubeConfigManager struct {
 	initialConfig *Config
 
-	GlobalValuesChecksum   string
-	ModulesValuesChecksum  map[string]string
-	KnownCmResourceVersion string
+	GlobalValuesChecksum  string
+	ModulesValuesChecksum map[string]string
 }
+
+type ModuleConfigs map[string]utils.ModuleConfig
 
 type Config struct {
 	Values        utils.Values
-	ModuleConfigs map[string]utils.ModuleConfig
+	ModuleConfigs ModuleConfigs
 }
 
 func NewConfig() *Config {
@@ -48,8 +50,8 @@ func NewConfig() *Config {
 }
 
 var (
-	ConfigUpdated       chan Config
-	ModuleConfigUpdated chan utils.ModuleConfig
+	ConfigUpdated        chan Config
+	ModuleConfigsUpdated chan ModuleConfigs
 )
 
 func simpleMergeConfigMapData(data map[string]string, newData map[string]string) map[string]string {
@@ -111,12 +113,10 @@ func (kcm *MainKubeConfigManager) changeOrCreateKubeConfig(configChangeFunc func
 			return err
 		}
 
-		updatedObj, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Update(obj)
+		_, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Update(obj)
 		if err != nil {
 			return err
 		}
-
-		kcm.KnownCmResourceVersion = updatedObj.ResourceVersion
 
 		return nil
 	} else {
@@ -129,12 +129,10 @@ func (kcm *MainKubeConfigManager) changeOrCreateKubeConfig(configChangeFunc func
 			return err
 		}
 
-		updatedObj, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Create(obj)
+		_, err := kube.KubernetesClient.CoreV1().ConfigMaps(kube.KubernetesAntiopaNamespace).Create(obj)
 		if err != nil {
 			return err
 		}
-
-		kcm.KnownCmResourceVersion = updatedObj.ResourceVersion
 
 		return nil
 	}
@@ -250,7 +248,7 @@ func Init() (KubeConfigManager, error) {
 	rlog.Debug("Init kube config manager")
 
 	ConfigUpdated = make(chan Config, 1)
-	ModuleConfigUpdated = make(chan utils.ModuleConfig, 1)
+	ModuleConfigsUpdated = make(chan ModuleConfigs, 1)
 
 	kcm := NewMainKubeConfigManager()
 
@@ -291,12 +289,6 @@ func (kcm *MainKubeConfigManager) setValuesChecksums(cm *v1.ConfigMap, checksums
 }
 
 func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
-	// Save resource-version as known in the first place.
-	// If error occures during handle -- antiopa will stay in state
-	// that this resource-version is "known", and resource-version change
-	// needed to see new changes.
-	kcm.KnownCmResourceVersion = obj.ResourceVersion
-
 	savedChecksums, err := kcm.getValuesChecksums(obj)
 	if err != nil {
 		return err
@@ -336,9 +328,16 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 		kcm.GlobalValuesChecksum = newGlobalValuesChecksum
 		kcm.ModulesValuesChecksum = newModulesValuesChecksum
 
+		rlog.Debugf("Kube config manager: got kube global config update:")
+		rlog.Debug(utils.ValuesToString(newConfig.Values))
+		for _, moduleConfig := range newConfig.ModuleConfigs {
+			rlog.Debugf("%s", moduleConfig.String())
+		}
 		ConfigUpdated <- *newConfig
 	} else {
 		actualModulesNames := GetModulesNamesFromConfigData(obj.Data)
+
+		moduleConfigsUpdate := make(ModuleConfigs)
 
 		for _, module := range actualModulesNames {
 			// all GetModulesNamesFromConfigData must exist
@@ -349,8 +348,7 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 
 			if moduleKubeConfig.Checksum != savedChecksums[module] && moduleKubeConfig.Checksum != kcm.ModulesValuesChecksum[module] {
 				kcm.ModulesValuesChecksum[module] = moduleKubeConfig.Checksum
-
-				ModuleConfigUpdated <- moduleKubeConfig.ModuleConfig
+				moduleConfigsUpdate[module] = moduleKubeConfig.ModuleConfig
 			}
 		}
 
@@ -364,22 +362,48 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 
 			delete(kcm.ModulesValuesChecksum, module)
 
-			ModuleConfigUpdated <- *utils.NewEmptyModuleConfig(module)
+			moduleConfigsUpdate[module] = *utils.NewEmptyModuleConfig(module)
+		}
+
+		if len(moduleConfigsUpdate) > 0 {
+			rlog.Debugf("Kube config manager: got kube modules configs update:")
+			for _, moduleConfig := range moduleConfigsUpdate {
+				rlog.Debugf("%s", moduleConfig.String())
+			}
+			ModuleConfigsUpdated <- moduleConfigsUpdate
 		}
 	}
 
 	return nil
 }
 
-func (kcm *MainKubeConfigManager) handleCmAdd(cm *v1.ConfigMap) error {
-	return kcm.handleNewCm(cm)
+func (kcm *MainKubeConfigManager) handleCmAdd(obj *v1.ConfigMap) error {
+	objYaml, err := yaml.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	rlog.Debugf("Kube config manager: informer: handle ConfigMap '%s' add:\n%s", obj.Name, objYaml)
+
+	return kcm.handleNewCm(obj)
 }
 
-func (kcm *MainKubeConfigManager) handleCmUpdate(_ *v1.ConfigMap, cm *v1.ConfigMap) error {
-	return kcm.handleNewCm(cm)
+func (kcm *MainKubeConfigManager) handleCmUpdate(_ *v1.ConfigMap, obj *v1.ConfigMap) error {
+	objYaml, err := yaml.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	rlog.Debugf("Kube config manager: informer: handle ConfigMap '%s' update:\n%s", obj.Name, objYaml)
+
+	return kcm.handleNewCm(obj)
 }
 
-func (kcm *MainKubeConfigManager) handleCmDelete(cm *v1.ConfigMap) error {
+func (kcm *MainKubeConfigManager) handleCmDelete(obj *v1.ConfigMap) error {
+	objYaml, err := yaml.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	rlog.Debugf("Kube config manager: handle ConfigMap '%s' delete:\n%s", obj.Name, objYaml)
+
 	if kcm.GlobalValuesChecksum != "" {
 		kcm.GlobalValuesChecksum = ""
 		kcm.ModulesValuesChecksum = make(map[string]string)
@@ -393,18 +417,22 @@ func (kcm *MainKubeConfigManager) handleCmDelete(cm *v1.ConfigMap) error {
 		// So check each module values change separately,
 		// and generate signals per-module.
 
+		moduleConfigsUpdate := make(ModuleConfigs)
+
 		updateModulesNames := make([]string, 0)
 		for module := range kcm.ModulesValuesChecksum {
 			updateModulesNames = append(updateModulesNames, module)
 		}
 		for _, module := range updateModulesNames {
 			delete(kcm.ModulesValuesChecksum, module)
-			ModuleConfigUpdated <- utils.ModuleConfig{
+			moduleConfigsUpdate[module] = utils.ModuleConfig{
 				ModuleName: module,
 				IsEnabled:  true,
 				Values:     make(utils.Values),
 			}
 		}
+
+		ModuleConfigsUpdated <- moduleConfigsUpdate
 	}
 
 	return nil
