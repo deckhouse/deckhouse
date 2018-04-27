@@ -23,14 +23,14 @@ spec:
 {{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
       nodeSelector:
 {{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.clusterHasSystemNodes }}
+{{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
       nodeSelector:
         node-role/system: ""
 {{- end }}
 {{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
       tolerations:
 {{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.clusterHasSystemNodes }}
+{{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
       tolerations:
       - key: node-role/system
         effect: NoExecute
