@@ -2,8 +2,8 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: oauth2-proxy
-  namespace: kube-dashboard
+  name: dashboard-oauth2-proxy
+  namespace: kube-system
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
@@ -12,10 +12,12 @@ spec:
   replicas: 1
   selector:
     matchLabels:
+      module: {{ $.Chart.Name }}
       app: oauth2-proxy
   template:
     metadata:
       labels:
+        module: {{ $.Chart.Name }}
         app: oauth2-proxy
     spec:
   {{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
@@ -34,7 +36,7 @@ spec:
         effect: NoExecute
   {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: dashboard-oauth2-proxy-antiopa-registry
       containers:
       - args:
         - --provider=gitlab

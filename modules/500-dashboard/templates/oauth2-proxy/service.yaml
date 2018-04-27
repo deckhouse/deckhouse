@@ -6,8 +6,8 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
     app: oauth2-proxy
-  name: oauth2-proxy
-  namespace: kube-dashboard
+  name: dashboard-oauth2-proxy
+  namespace: kube-system
 spec:
   ports:
   - name: http
@@ -15,5 +15,6 @@ spec:
     protocol: TCP
     targetPort: 4180
   selector:
+    module: {{ $.Chart.Name }}
     app: oauth2-proxy
 {{- end }}
