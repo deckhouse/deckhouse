@@ -10,20 +10,13 @@ function kubectl::jq_patch() {
   local tmp=$(mktemp)
 
   local cleanup_filter='. | del(
-    .metadata.annotations."deployment.kubernetes.io/revision",
-    .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
-    .metadata.creationTimestamp,
-    .metadata.generation,
-    .metadata.resourceVersion,
-    .metadata.selfLink,
-    .metadata.uid,
-    .status
+    .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"
   )'
 
   if ! kubectl -n $namespace get $resource -o json > $tmp ||
      ! jq "$cleanup_filter" $tmp > $a ||
      ! jq "$filter" $a > $b ||
-     ! kubectl apply -f $b ;
+     ! kubectl replace -f $b ;
   then
     echo FILTER: "$filter"
 

@@ -9,7 +9,7 @@ function __config__() {
 ### Миграция 2018-04-27: https://github.com/deckhouse/deckhouse/merge_requests/307
 function __main__() {
   for resource in ns/antiopa secret/registrysecret secret/antiopa-secret deployment/antiopa serviceaccount/antiopa clusterrolebinding/antiopa configmap/antiopa ; do
-    kubectl::apply_jq antiopa $resource '.metadata.labels.heritage = "antiopa"'
+    kubectl::jq_patch antiopa $resource '.metadata.labels.heritage = "antiopa"'
   done
 
   for resource in role/antiopa rolebinding/antiopa ; do

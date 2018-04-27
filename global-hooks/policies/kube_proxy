@@ -26,7 +26,7 @@ function __main__() {
   fltr=$fltr' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
 
   # Применяем
-  kubectl::apply_jq kube-system ds/kube-proxy "$fltr"
+  kubectl::jq_patch kube-system ds/kube-proxy "$fltr"
 }
 
 hook::run $@

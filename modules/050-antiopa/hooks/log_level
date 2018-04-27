@@ -14,7 +14,7 @@ function __main__() {
     return 1
   fi
 
-  kubectl::apply_jq antiopa deploy/antiopa '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
+  kubectl::jq_patch antiopa deploy/antiopa '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
 }
 
 hook::run $@
