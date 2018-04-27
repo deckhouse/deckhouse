@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function kubectl::apply_jq() {
+function kubectl::jq_patch() {
   local namespace=$1
   local resource=$2
   local filter=$3
