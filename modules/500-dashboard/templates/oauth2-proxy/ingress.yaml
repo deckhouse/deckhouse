@@ -4,8 +4,8 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
-  name: oauth2-proxy
-  namespace: kube-dashboard
+  name: dashboard-oauth2-proxy
+  namespace: kube-system
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
@@ -16,7 +16,7 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: oauth2-proxy
+          serviceName: dashboard-oauth2-proxy
           servicePort: 4180
         path: /oauth2
   {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
