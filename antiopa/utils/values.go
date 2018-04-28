@@ -58,6 +58,14 @@ type ModuleConfig struct {
 	Values     Values
 }
 
+func (mc ModuleConfig) String() string {
+	return fmt.Sprintf("ModuleName=%s IsEnabled=%v Values:\n%s", mc.ModuleName, mc.IsEnabled, ValuesToString(mc.Values))
+}
+
+func ModuleConfigToString(mc ModuleConfig) string {
+	return mc.String()
+}
+
 func ModuleNameToValuesKey(moduleName string) string {
 	return camelcase.Camelcase(moduleName)
 }
