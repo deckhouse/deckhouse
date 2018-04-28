@@ -104,8 +104,25 @@ func (m *Module) execRun() error {
 }
 
 func (m *Module) delete() error {
-	if err := m.moduleManager.helm.DeleteRelease(m.generateHelmReleaseName()); err != nil {
-		return err
+	// Если есть chart, но нет релиза — warning
+	// если нет чарта — молча перейти к хукам
+	// если есть и chart и релиз — удалить
+	chartExists, _ := m.checkHelmChart()
+	if chartExists {
+		releaseExists, err := m.moduleManager.helm.IsReleaseExists(m.generateHelmReleaseName())
+		if !releaseExists {
+			if err != nil {
+				rlog.Warnf("Module delete: Cannot find helm release '%s' for module '%s'. Helm error: %s", m.generateHelmReleaseName(), m.Name, err)
+			} else {
+				rlog.Warnf("Module delete: Cannot find helm release '%s' for module '%s'.", m.generateHelmReleaseName(), m.Name)
+			}
+		} else {
+			// Есть чарт и есть релиз — запуск удаления
+			err := m.moduleManager.helm.DeleteRelease(m.generateHelmReleaseName())
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if err := m.runHooksByBinding(AfterDeleteHelm); err != nil {
