@@ -76,12 +76,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(container_name) (container_memory_usage_bytes{pod_name=\"$pod\", container_name=~\"$container\", container_name!=\"POD\"})",
+          "expr": "sum by(container_name) (container_memory_rss{pod_name=\"$pod\", container_name=~\"$container\", container_name!=\"POD\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current: {{ container_name }}",
-          "metric": "container_memory_usage_bytes",
+          "metric": "container_memory_rss",
           "refId": "A",
           "step": 15
         },
