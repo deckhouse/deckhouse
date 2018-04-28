@@ -862,7 +862,7 @@
         "name": "node",
         "options": [],
         "query": "label_values(up{job=\"node-exporter\"}, instance)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "sort": 0,
         "tagValuesQuery": "",

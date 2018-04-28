@@ -3108,7 +3108,7 @@
         "name": "queue",
         "options": [],
         "query": "label_values(rabbitmq_queue_messages_published_total{namespace=~\"$namespace\", instance=~\"$instance\"}, queue)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "sort": 3,
         "tagValuesQuery": "",
