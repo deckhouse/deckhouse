@@ -24,6 +24,8 @@
     * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](modules/nginx-ingress/templates/controller.yaml).
 * `config.hsts` — bool, включен ли hsts.
     * По-умолчанию выключен.
+* `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](modules/400-nginx-ingress/templates/_template.config.tpl).
+    * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `config.setRealIPFrom` — список CIDR'ов, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
     * Список строк, именно YAML list, а не строка со значениями через запятую!
     * Так-как nginx ingress не поддерживает получение адреса клиента из `X-Forwarded-For` при одновременном использовании proxy protocol параметр полностью игнорируется для inlet'а `AWSClassicLoadBalancer`.
