@@ -74,7 +74,7 @@ function __main__() {
   kube_dns_deployment_name=$(kubectl -n kube-system get deployment -l k8s-app=kube-dns -o name)
 
   # Применяем
-  kubectl::apply_jq kube-system ${kube_dns_deployment_name} "$fltr"
+  kubectl::jq_patch kube-system ${kube_dns_deployment_name} "$fltr"
 }
 
 hook::run $@
