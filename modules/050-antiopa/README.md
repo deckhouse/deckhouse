@@ -13,7 +13,7 @@
 ### Параметры
 
 
-* `logLevel` — уровень логирования antiopa: `Debug`, `Info` или `Error`. По-умолчанию `Debug`.
+* `logLevel` — уровень логирования antiopa: `Debug`, `Info` или `Error`. По-умолчанию `Info`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
