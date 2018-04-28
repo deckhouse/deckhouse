@@ -27,6 +27,15 @@ data:
   enable-vts-status: "true"
   vts-status-zone-size: "20m"
   vts-default-filter-key: "$geoip_country_code overall_country"
+    {{- if $config.legacySSL }}
+  ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"
+  ssl-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:\
+                ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:\
+                DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:\
+                ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:\
+                AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:\
+                AES256-SHA:AES128-SHA:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"
+    {{- end }}
   use-proxy-protocol: {{ $useProxyProtocol | quote }}
     {{- if $useProxyProtocol }}
   proxy-real-ip-cidr: "0.0.0.0/0"
