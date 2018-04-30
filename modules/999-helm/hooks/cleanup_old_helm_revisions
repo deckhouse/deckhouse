@@ -9,7 +9,7 @@ function __config__() {
 }
 
 function __main__() {
-  target_num_revisions=10
+  target_num_revisions=1
   target_num_revisions=$(($target_num_revisions+0))
 
   releases=$(kubectl --namespace=kube-system get cm -l OWNER=TILLER -o go-template --template='{{range .items}}{{ .metadata.labels.NAME }}{{"\n"}}{{ end }}' | sort -u)
