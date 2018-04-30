@@ -21,9 +21,6 @@ ansible:
   beforeInstall:
   - apk: update_cache=yes
 
-  # ca-certificates нужны для работы helm
-  - apk: name=ca-certificates
-
   # Нам нужен bash, на нем все хуки
   - apk: name=bash
 
@@ -33,12 +30,19 @@ ansible:
   - apk: name=makepasswd
   - apk: name=apache2-utils
 
+  # Зависимости хуков (из edge/testing)
+  - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
+  - apk: name=cfssl repository=http://nl.alpinelinux.org/alpine/edge/testing/
+
   # Ставим kubectl
   - name: Install kubectl
     get_url:
       url: https://storage.googleapis.com/kubernetes-release/release/v1.8.8/bin/linux/amd64/kubectl
       dest: /usr/local/bin/kubectl
       mode: +x
+
+  # ca-certificates нужны для работы helm
+  - apk: name=ca-certificates
 
   # Ставим helm
   - name: Install helm
@@ -50,9 +54,6 @@ ansible:
       remote_src: yes
       dest: /usr/local/bin
   - raw: helm init --client-only
-
-  # Зависимости хуков (из edge/testing)
-  - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
 
   # Чистим кеш
   - raw: rm -rf /var/cache/apk/*

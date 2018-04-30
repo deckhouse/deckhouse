@@ -18,6 +18,20 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_name]
       targetLabel: instance
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      replacement: custom-$1
+      targetLabel: job
+    - regex: endpoint|pod
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
   namespaceSelector:
     any: true
   selector:

@@ -17,6 +17,8 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       prometheus: main
+  secrets:
+  - prometheus-scraper-cert
   ruleSelector:
     matchLabels:
       prometheus: main

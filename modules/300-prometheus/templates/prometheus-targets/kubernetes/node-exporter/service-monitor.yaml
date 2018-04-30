@@ -1,34 +1,30 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: kube-scheduler
+  name: node-exporter
   namespace: kube-prometheus
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
+    app: node-exporter
     prometheus: main
 spec:
   jobLabel: prometheus-target
+  selector:
+    matchLabels:
+      prometheus-target: node-exporter
+  namespaceSelector:
+    matchNames:
+    - kube-prometheus
   endpoints:
-{{- if not (eq .Values.global.discovery.clusterType "Manual") }}
-  - port: http-metrics
-{{- else }}
-  - port: https-metrics
+  - port: https
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
-{{- end }}
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
-  selector:
-    matchLabels:
-      heritage: antiopa
-      module: {{ $.Chart.Name }}
-      prometheus-target: kube-scheduler
-  namespaceSelector:
-    matchNames:
-    - kube-system

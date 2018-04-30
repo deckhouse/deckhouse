@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: nginx
+  name: kube-controller-manager
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -10,25 +10,26 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
+{{- if not (eq .Values.global.discovery.clusterType "Manual") }}
   - port: http-metrics
-    relabelings:
-    - regex: endpoint|pod
-      action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
+{{- else }}
   - port: https-metrics
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+{{- end }}
     relabelings:
-    - regex: endpoint|pod
+    - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
-  namespaceSelector:
-    any: true
   selector:
     matchLabels:
-      prometheus-target: nginx
+      heritage: antiopa
+      module: {{ $.Chart.Name }}
+      prometheus-target: kube-controller-manager
+  namespaceSelector:
+    matchNames:
+    - kube-system

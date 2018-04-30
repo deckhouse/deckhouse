@@ -92,14 +92,18 @@ spec:
           name: uwsgi-temp-path
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
-      - image: quay.io/brancz/kube-rbac-proxy:v0.2.0
-        name: kube-rbac-proxy
+      - name: prometheus-auth-proxy
+        image: flant/kube-prometheus-auth-proxy:v0.1.0
         args:
-        - "--secure-listen-address=:9103"
-        - "--upstream=http://127.0.0.1:9102/"
+        - "--listen=$(MY_POD_IP):9103"
+        - "--proxy-pass=http://127.0.0.1:9102/metrics"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         ports:
         - containerPort: 9103
-          name: https
         resources:
           requests:
             memory: 20Mi
