@@ -6,17 +6,29 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    kube-master-proxy-prometheus-target: etcd
+    kubernetes-master-prometheus-target: etcd
 spec:
   type: ClusterIP
   clusterIP: None
   selector:
+{{- if not (eq .Values.global.discovery.clusterType "ACS") }}
     app: kube-prometheus-kube-master-proxy
+{{- else }}
+    component: kube-apiserver
+    tier: control-plane
+{{- end }}
   ports:
+{{- if not (eq .Values.global.discovery.clusterType "ACS") }}
   - name: etcd
     port: 10364
     targetPort: 10364
     protocol: TCP
+{{- else }}
+  - name: etcd
+    port: 2379
+    targetPort: 2379
+    protocol: TCP
+{{- end }}
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - name: etcd-events
     port: 10366

@@ -8,19 +8,20 @@ metadata:
     module: {{ $.Chart.Name }}
     prometheus: main
 spec:
-  jobLabel: kube-master-proxy-prometheus-target
+  jobLabel: kubernetes-master-prometheus-target
   selector:
     matchLabels:
-      kube-master-proxy-prometheus-target: etcd
+      kubernetes-master-prometheus-target: etcd
   namespaceSelector:
     matchNames:
     - kube-system
   endpoints:
   - port: etcd
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - regex: endpoint|pod|service
       action: labeldrop
@@ -31,9 +32,10 @@ spec:
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - port: etcd-events
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - regex: endpoint|pod|service
       action: labeldrop
