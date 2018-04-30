@@ -19,9 +19,10 @@ spec:
   endpoints:
   - port: https
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
