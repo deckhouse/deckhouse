@@ -20,8 +20,8 @@ spec:
   ports:
 {{- if not (eq .Values.global.discovery.clusterType "ACS") }}
   - name: etcd
-    port: 10364
-    targetPort: 10364
+    port: 10362
+    targetPort: etcd
     protocol: TCP
 {{- else }}
   - name: etcd
@@ -31,7 +31,7 @@ spec:
 {{- end }}
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - name: etcd-events
-    port: 10366
-    targetPort: 10366
+    port: 10363
+    targetPort: etcd-events
     protocol: TCP
 {{- end }}
