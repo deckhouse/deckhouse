@@ -11,7 +11,11 @@ spec:
   jobLabel: kubernetes-master-prometheus-target
   selector:
     matchLabels:
-      kubernetes-master-prometheus-target: etcd
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+      kubernetes-master-prometheus-target: etcd2
+{{- else }}
+      kubernetes-master-prometheus-target: etcd3
+{{- end }}
   namespaceSelector:
     matchNames:
     - kube-system

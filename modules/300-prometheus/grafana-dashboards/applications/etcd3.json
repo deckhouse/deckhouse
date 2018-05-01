@@ -111,7 +111,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(etcd_server_has_leader{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"})",
+          "expr": "sum(etcd_server_has_leader{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -173,7 +173,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_started_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_type=\"unary\"}[$__interval_rv]))",
+          "expr": "sum(rate(grpc_server_started_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_type=\"unary\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Rate",
@@ -182,7 +182,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_rv]))",
+          "expr": "sum(rate(grpc_server_handled_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Failed Rate",
@@ -268,7 +268,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(grpc_server_started_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"})",
+          "expr": "sum(grpc_server_started_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Watch Streams",
@@ -277,7 +277,7 @@
           "step": 4
         },
         {
-          "expr": "sum(grpc_server_started_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"})",
+          "expr": "sum(grpc_server_started_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Lease Streams",
@@ -364,7 +364,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcd_debugging_mvcc_db_total_size_in_bytes{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}",
+          "expr": "etcd_debugging_mvcc_db_total_size_in_bytes{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -450,7 +450,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance, le))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -460,7 +460,7 @@
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance, le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}} DB fsync",
@@ -544,7 +544,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}",
+          "expr": "process_resident_memory_bytes{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}} Resident Memory",
@@ -630,7 +630,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}} Client Traffic In",
@@ -716,7 +716,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}} Client Traffic Out",
@@ -802,7 +802,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{instance}} Peer Traffic In",
@@ -889,7 +889,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv])) by (instance)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -975,7 +975,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Failure Rate",
@@ -984,7 +984,7 @@
           "step": 2
         },
         {
-          "expr": "sum(etcd_server_proposals_pending{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"})",
+          "expr": "sum(etcd_server_proposals_pending{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Pending Total",
@@ -993,7 +993,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Commit Rate",
@@ -1002,7 +1002,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Apply Rate",
@@ -1091,7 +1091,7 @@
       ],
       "targets": [
         {
-          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"etcd\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__range])",
+          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"etcd3\", namespace=\"$namespace\", service=~\"$service\", instance=~\"$instance\"}[$__range])",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -1134,7 +1134,7 @@
         "multi": false,
         "name": "namespace",
         "options": [],
-        "query": "label_values(up{job=\"etcd\"}, namespace)",
+        "query": "label_values(up{job=\"etcd3\"}, namespace)",
         "refresh": 2,
         "regex": "",
         "sort": 0,
@@ -1154,7 +1154,7 @@
         "multi": true,
         "name": "service",
         "options": [],
-        "query": "label_values(up{job=\"etcd\",namespace=\"$namespace\"}, service)",
+        "query": "label_values(up{job=\"etcd3\",namespace=\"$namespace\"}, service)",
         "refresh": 2,
         "regex": "",
         "sort": 0,
@@ -1174,7 +1174,7 @@
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": "label_values(up{job=\"etcd\",namespace=\"$namespace\",service=~\"$service\"}, instance)",
+        "query": "label_values(up{job=\"etcd3\",namespace=\"$namespace\",service=~\"$service\"}, instance)",
         "refresh": 2,
         "regex": "",
         "sort": 0,
@@ -1217,7 +1217,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "etcd",
+  "title": "etcd3",
   "uid": "mlRD4Simk",
   "version": 2
 }

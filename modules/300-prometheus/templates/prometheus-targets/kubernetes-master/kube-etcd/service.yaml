@@ -6,7 +6,11 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    kubernetes-master-prometheus-target: etcd
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+    kubernetes-master-prometheus-target: etcd2
+{{- else }}
+    kubernetes-master-prometheus-target: etcd3
+{{- end }}
 spec:
   type: ClusterIP
   clusterIP: None

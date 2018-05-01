@@ -1,16 +1,16 @@
 #groups:
-#- name: coreos.etcd
+#- name: coreos.etcd3
 #  rules:
 #  - alert: InsufficientMembers
-#    expr: count(up{job="etcd"} == 0) > (count(up{job="etcd"}) / 2 - 1)
+#    expr: count(up{job="etcd3"} == 0) > (count(up{job="etcd3"}) / 2 - 1)
 #    for: 3m
 #    labels:
 #      severity: critical
 #    annotations:
-#      description: If one more etcd member goes down the cluster will be unavailable
-#      summary: etcd cluster insufficient members
+#      description: If one more etcd3 member goes down the cluster will be unavailable
+#      summary: etcd3 cluster insufficient members
 #  - alert: NoLeader
-#    expr: etcd_server_has_leader{job="etcd"} == 0
+#    expr: etcd_server_has_leader{job="etcd3"} == 0
 #    for: 1m
 #    labels:
 #      severity: critical
@@ -18,7 +18,7 @@
 #      description: etcd member {{ $labels.instance }} has no leader
 #      summary: etcd member has no leader
 #  - alert: HighNumberOfLeaderChanges
-#    expr: increase(etcd_server_leader_changes_seen_total{job="etcd"}[1h]) > 3
+#    expr: increase(etcd_server_leader_changes_seen_total{job="etcd3"}[1h]) > 3
 #    labels:
 #      severity: warning
 #    annotations:
@@ -26,8 +26,8 @@
 #        changes within the last hour
 #      summary: a high number of leader changes within the etcd cluster are happening
 #  - alert: HighNumberOfFailedGRPCRequests
-#    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",job="etcd"}[5m])) BY (grpc_service, grpc_method)
-#      / sum(rate(grpc_server_handled_total{job="etcd"}[5m])) BY (grpc_service, grpc_method) > 0.01
+#    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",job="etcd3"}[5m])) BY (grpc_service, grpc_method)
+#      / sum(rate(grpc_server_handled_total{job="etcd3"}[5m])) BY (grpc_service, grpc_method) > 0.01
 #    for: 10m
 #    labels:
 #      severity: warning
@@ -36,8 +36,8 @@
 #        on etcd instance {{ $labels.instance }}'
 #      summary: a high number of gRPC requests are failing
 #  - alert: HighNumberOfFailedGRPCRequests
-#    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",job="etcd"}[5m])) BY (grpc_service, grpc_method)
-#      / sum(rate(grpc_server_handled_total{job="etcd"}[5m])) BY (grpc_service, grpc_method) > 0.05
+#    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",job="etcd3"}[5m])) BY (grpc_service, grpc_method)
+#      / sum(rate(grpc_server_handled_total{job="etcd3"}[5m])) BY (grpc_service, grpc_method) > 0.05
 #    for: 5m
 #    labels:
 #      severity: critical
@@ -46,7 +46,7 @@
 #        on etcd instance {{ $labels.instance }}'
 #      summary: a high number of gRPC requests are failing
 #  - alert: GRPCRequestsSlow
-#    expr: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{job="etcd",grpc_type="unary"}[5m])) by (grpc_service, grpc_method, le))
+#    expr: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{job="etcd3",grpc_type="unary"}[5m])) by (grpc_service, grpc_method, le))
 #      > 0.15
 #    for: 10m
 #    labels:
@@ -56,23 +56,23 @@
 #        }} are slow
 #      summary: slow gRPC requests
 #  - alert: HighNumberOfFailedHTTPRequests
-#    expr: sum(rate(etcd_http_failed_total{job="etcd"}[5m])) BY (method) / sum(rate(etcd_http_received_total{job="etcd"}[5m]))
+#    expr: sum(rate(etcd_http_failed_total{job="etcd3"}[5m])) BY (method) / sum(rate(etcd_http_received_total{job="etcd3"}[5m]))
 #      BY (method) > 0.01
 #    for: 10m
 #    labels:
 #      severity: warning
 #    annotations:
-#      description: '{{ $value }}% of requests for {{ $labels.method }} failed on etcd
+#      description: '{{ $value }}% of requests for {{ $labels.method }} failed on etcd3
 #        instance {{ $labels.instance }}'
 #      summary: a high number of HTTP requests are failing
 #  - alert: HighNumberOfFailedHTTPRequests
-#    expr: sum(rate(etcd_http_failed_total{job="etcd"}[5m])) BY (method) / sum(rate(etcd_http_received_total{job="etcd"}[5m]))
+#    expr: sum(rate(etcd_http_failed_total{job="etcd3"}[5m])) BY (method) / sum(rate(etcd_http_received_total{job="etcd3"}[5m]))
 #      BY (method) > 0.05
 #    for: 5m
 #    labels:
 #      severity: critical
 #    annotations:
-#      description: '{{ $value }}% of requests for {{ $labels.method }} failed on etcd
+#      description: '{{ $value }}% of requests for {{ $labels.method }} failed on etcd3
 #        instance {{ $labels.instance }}'
 #      summary: a high number of HTTP requests are failing
 #  - alert: HTTPRequestsSlow
@@ -82,7 +82,7 @@
 #    labels:
 #      severity: warning
 #    annotations:
-#      description: on etcd instance {{ $labels.instance }} HTTP requests to {{ $labels.method
+#      description: on etcd3 instance {{ $labels.instance }} HTTP requests to {{ $labels.method
 #        }} are slow
 #      summary: slow HTTP requests
 #  - alert: EtcdMemberCommunicationSlow
@@ -92,17 +92,17 @@
 #    labels:
 #      severity: warning
 #    annotations:
-#      description: etcd instance {{ $labels.instance }} member communication with
+#      description: etcd3 instance {{ $labels.instance }} member communication with
 #        {{ $labels.To }} is slow
-#      summary: etcd member communication is slow
+#      summary: etcd3 member communication is slow
 #  - alert: HighNumberOfFailedProposals
-#    expr: increase(etcd_server_proposals_failed_total{job="etcd"}[1h]) > 5
+#    expr: increase(etcd_server_proposals_failed_total{job="etcd3"}[1h]) > 5
 #    labels:
 #      severity: warning
 #    annotations:
-#      description: etcd instance {{ $labels.instance }} has seen {{ $value }} proposal
+#      description: etcd3 instance {{ $labels.instance }} has seen {{ $value }} proposal
 #        failures within the last hour
-#      summary: a high number of proposals within the etcd cluster are failing
+#      summary: a high number of proposals within the etcd3 cluster are failing
 #  - alert: HighFsyncDurations
 #    expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
 #      > 0.5
@@ -110,7 +110,7 @@
 #    labels:
 #      severity: warning
 #    annotations:
-#      description: etcd instance {{ $labels.instance }} fync durations are high
+#      description: etcd3 instance {{ $labels.instance }} fync durations are high
 #      summary: high fsync durations
 #  - alert: HighCommitDurations
 #    expr: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket[5m]))
@@ -119,5 +119,5 @@
 #    labels:
 #      severity: warning
 #    annotations:
-#      description: etcd instance {{ $labels.instance }} commit durations are high
+#      description: etcd3 instance {{ $labels.instance }} commit durations are high
 #      summary: high commit durations
