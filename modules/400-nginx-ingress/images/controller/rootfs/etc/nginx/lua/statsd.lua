@@ -44,98 +44,160 @@ function _M.call()
   local buffer = {}
   buffer["len"] = 0
 
-  local var_namespace = ngx.var.namespace
   local var_server_name = ngx.var.server_name
-
-  local overall_key = ngx.var.scheme .. "#" .. var_namespace .. "#" .. var_server_name
-  local namespace_key = var_namespace .. "#" .. ngx.var.ingress_name
-  local namespace_service_key = namespace_key .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port
-  local server_key = var_server_name .. "#" .. ngx.var.location_path
-
-  -- response status
-  local var_status = string.sub(ngx.var.status,1, 1) .. "xx"
-  _incr(buffer, "a#" .. overall_key .. "#" .. var_status)
-  _incr(buffer, "b#" .. namespace_key .. "#" .. var_status)
-  _incr(buffer, "c#" .. namespace_service_key .. "#" .. var_status)
-  _incr(buffer, "d#" .. server_key .. "#" .. var_status)
-
-  -- request time
-  local var_request_time = tonumber(ngx.var.request_time)
-  _hist(buffer, "e#" .. overall_key, var_request_time)
-  _hist(buffer, "f#" .. namespace_key, var_request_time)
-  _hist(buffer, "g#" .. namespace_service_key, var_request_time)
-  _hist(buffer, "h#" .. server_key, var_request_time)
-
-  -- bytes sent
-  local var_bytes_sent = ngx.var.bytes_sent
-  _hist(buffer, "i#" .. overall_key, var_bytes_sent)
-  _hist(buffer, "j#" .. namespace_key, var_bytes_sent)
-  _hist(buffer, "k#" .. namespace_service_key, var_bytes_sent)
-  _hist(buffer, "l#" .. server_key, var_bytes_sent)
-
-  -- bytes received (according to https://serverfault.com/questions/346853/logging-request-response-size-in-access-log-of-nginx)
-  local var_bytes_received = ngx.var.request_length
-  if var_bytes_received then
-    _hist(buffer, "m#" .. overall_key, var_bytes_received)
-    _hist(buffer, "n#" .. namespace_key, var_bytes_received)
-    _hist(buffer, "o#" .. namespace_service_key, var_bytes_received)
-    _hist(buffer, "p#" .. server_key, var_bytes_received)
-  end
-
-  -- upstreams
-  local var_upstream_addr = ngx.var.upstream_addr
-  if var_upstream_addr then
-    local backends = {}
-    for backend in string.gmatch(var_upstream_addr, "([%d.]+):") do
-      table.insert(backends, backend)
-    end
-
-    local n = 0
-    local var_upstream_response_time = ngx.var.upstream_response_time
-    local upstream_response_time = 0.0
-    local upstream_requests = 0
-    for t in string.gmatch(var_upstream_response_time, "[%d.]+") do
-      local response_time = tonumber(t)
-      n = n + 1
-
-      upstream_response_time = upstream_response_time + response_time
-      upstream_requests = upstream_requests + 1
-
-      -- upstream response time (for each backend)
-      _hist(buffer, "q#" .. namespace_service_key .. "#" .. backends[n], response_time)
-      _hist(buffer, "r#" .. server_key .. "#" .. backends[n], response_time)
-    end
-    local upstream_redirects = 0
-    for _ in string.gmatch(var_upstream_response_time, ":") do
-      upstream_redirects = upstream_redirects + 1
-    end
-
-    for status in string.gmatch(ngx.var.upstream_status, "[%d]+") do
-      -- response status (for each backend)
-      if string.len(status)==3 then
-        status = (string.sub(status,1, 1) .. "xx")
+  if var_server_name == "_" then
+    _incr(buffer, "l#")
+  else
+    local content_kind
+    local var_upstream_x_content_kind = ngx.var.upstream_x_content_kind
+    local var_upstream_addr = ngx.var.upstream_addr
+    local var_http_upgrade = ngx.var.http_upgrade
+    local var_upstream_http_cache_control = ngx.var.upstream_http_cache_control
+    local var_upstream_http_expires = ngx.var.upstream_http_expires
+    if var_upstream_x_content_kind then
+      content_kind = var_upstream_x_content_kind
+    elseif not var_upstream_addr then
+      content_kind = 'served-without-upstream'
+    elseif var_http_upgrade then
+      content_kind = string.lower(var_http_upgrade)
+    elseif var_upstream_http_cache_control or var_upstream_http_expires then
+      local cacheable = true
+      if var_upstream_http_cache_control then
+        if string.match(var_upstream_http_cache_control, "no-cache") or string.match(var_upstream_http_cache_control, "no-store") or string.match(var_upstream_http_cache_control, "private") then
+          cacheable = false
+        end
       end
-      _incr(buffer, "s#" .. namespace_service_key .. "#" .. backends[n] .. "#" .. status)
-      _incr(buffer, "t#" .. server_key .. "#" .. backends[n] .. "#" .. status)
+      if var_upstream_http_expires then
+        local var_upstream_http_expires_parsed = ngx.parse_http_time(var_upstream_http_expires)
+        if not var_upstream_http_expires_parsed or var_upstream_http_expires_parsed <= ngx.time() then
+          cacheable = false
+        end
+      end
+      local var_upstream_http_vary = ngx.var.upstream_http_vary
+      if var_upstream_http_vary and var_upstream_http_vary == "*" then
+        cacheable = false
+      end
+      if ngx.var.upstream_http_set_cookie then
+        cacheable = false
+      end
+  
+      if cacheable then
+        content_kind = 'cacheable'
+      else
+        content_kind = 'non-cacheable'
+      end
+    else
+      content_kind = 'cache-headers-not-present'
     end
 
-    -- upstream response time
-    _hist(buffer, "u#" .. overall_key, upstream_response_time)
-    _hist(buffer, "v#" .. namespace_key, upstream_response_time)
-    _hist(buffer, "w#" .. namespace_service_key, upstream_response_time)
-    _hist(buffer, "x#" .. server_key, upstream_response_time)
+    local var_namespace = ngx.var.namespace
+    local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
+    local detail_key = content_kind .. "#" .. var_namespace .. "#" .. ngx.var.ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
+    local backend_key = var_namespace .. "#" .. ngx.var.ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
 
-    -- upstream retries
-    _count(buffer, "y#" .. overall_key, upstream_requests - upstream_redirects)
-    _count(buffer, "z#" .. namespace_key, upstream_requests - upstream_redirects)
-    _count(buffer, "0#" .. namespace_service_key, upstream_requests - upstream_redirects)
-    _count(buffer, "1#" .. server_key, upstream_requests - upstream_redirects)
+    -- requests
+    local var_scheme = ngx.var.scheme
+    local var_request_method = ngx.var.request_method
+    _incr(buffer, "ao#" .. overall_key .. "#" .. var_scheme .. "#" .. var_request_method)
+    _incr(buffer, "ad#" .. detail_key .. "#" .. var_scheme .. "#" .. var_request_method)
 
-    -- upstream redirects
-    _count(buffer, "2#" .. overall_key, upstream_redirects)
-    _count(buffer, "3#" .. namespace_key, upstream_redirects)
-    _count(buffer, "4#" .. namespace_service_key, upstream_redirects)
-    _count(buffer, "5#" .. server_key, upstream_redirects)
+    -- responses
+    local var_status = ngx.var.status
+    _incr(buffer, "bo#" .. overall_key .. "#" .. var_status)
+    _incr(buffer, "bd#" .. detail_key .. "#" .. var_status)
+
+    -- request time
+    local var_request_time = tonumber(ngx.var.request_time)
+    _hist(buffer, "co#" .. overall_key, var_request_time)
+    _hist(buffer, "cd#" .. detail_key, var_request_time)
+
+    -- bytes sent
+    local var_bytes_sent = ngx.var.bytes_sent
+    _hist(buffer, "do#" .. overall_key, var_bytes_sent)
+    _hist(buffer, "dd#" .. detail_key, var_bytes_sent)
+
+    -- bytes received (according to https://serverfault.com/questions/346853/logging-request-response-size-in-access-log-of-nginx)
+    local var_request_length = ngx.var.request_length
+    _hist(buffer, "eo#" .. overall_key, var_request_length)
+    _hist(buffer, "ed#" .. detail_key, var_request_length)
+
+    -- upstreams
+    if var_upstream_addr then
+      local backends = {}
+      for backend in string.gmatch(var_upstream_addr, "([%d.]+):") do
+        table.insert(backends, backend)
+      end
+
+      local n = 0
+      local var_upstream_response_time = ngx.var.upstream_response_time
+      local upstream_response_time = 0.0
+      local upstream_requests = 0
+      for t in string.gmatch(var_upstream_response_time, "[%d.]+") do
+        local response_time = tonumber(t)
+        n = n + 1
+
+        upstream_response_time = upstream_response_time + response_time
+        upstream_requests = upstream_requests + 1
+
+        -- upstream response time (for each backend)
+        _hist(buffer, "ka#" .. backend_key .. "#" .. backends[n], response_time)
+      end
+
+      -- upstream response time
+      _hist(buffer, "fo#" .. overall_key, upstream_response_time)
+      _hist(buffer, "go#" .. overall_key, upstream_response_time)
+      _hist(buffer, "fd#" .. detail_key, upstream_response_time)
+      _hist(buffer, "gd#" .. detail_key, upstream_response_time)
+
+      local upstream_redirects = 0
+      for _ in string.gmatch(var_upstream_response_time, ":") do
+        upstream_redirects = upstream_redirects + 1
+      end
+
+      local upstream_retries = upstream_requests - upstream_redirects - 1
+      if upstream_retries > 0 then
+        -- upstream retries (count)
+        _incr(buffer, "ho#" .. overall_key)
+        _incr(buffer, "hd#" .. detail_key)
+
+        -- upstream retries (sum)
+        _count(buffer, "io#" .. overall_key, upstream_retries)
+        _count(buffer, "id#" .. detail_key, upstream_retries)
+      end
+
+      for status in string.gmatch(ngx.var.upstream_status, "[%d]+") do
+        -- responses (for each backend)
+        _incr(buffer, "kb#" .. backend_key .. "#" .. backends[n] .. "#" .. string.sub(status, 1, 1))
+      end
+
+      for upstream_bytes_received in string.gmatch(ngx.var.upstream_bytes_received, "[%d]+") do
+        -- upstream bytes received (for each backend)
+        _count(buffer, "kc#" .. backend_key .. "#" .. backends[n], upstream_bytes_received)
+      end
+    end
+
+    local geoip_latitude = tonumber(ngx.var.geoip_latitude)
+    local geoip_longitude = tonumber(ngx.var.geoip_longitude)
+    if geoip_latitude and geoip_longitude then
+      GeoHash = require "geohash"
+      GeoHash.precision(2)
+      local geohash = GeoHash.encode(geoip_latitude, geoip_longitude)
+
+      local place = "Unknown"
+      local var_geoip_city = ngx.var.geoip_city
+      local var_geoip_region_name = ngx.var.geoip_region_name
+      local var_geoip_country_name = ngx.var.geoip_city_country_code
+      if var_geoip_city then
+        place = var_geoip_city
+      elseif var_geoip_region_name then
+        place = var_geoip_region_name
+      elseif var_geoip_country_name then
+        place = var_geoip_country_name
+      end
+
+      -- geohash
+      _incr(buffer, "jo#" .. overall_key .. "#" .. geohash .. "#" .. place)
+    end
   end
 
   buffer["len"] = nil

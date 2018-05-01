@@ -38,7 +38,7 @@ events {
 http {
     {{ if not $all.DisableLua }}
     lua_package_cpath "/usr/local/lib/lua/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so;;";
-    lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/lib/lua/?.lua;;";
+    lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/lib/lua/?.lua;;";
 
     {{ buildLuaSharedDictionaries $servers $all.DynamicConfigurationEnabled $all.Cfg.DisableLuaRestyWAF }}
 
@@ -100,8 +100,6 @@ http {
     {{ if $cfg.EnableVtsStatus }}
     vhost_traffic_status_zone shared:vhost_traffic_status:{{ $cfg.VtsStatusZoneSize }};
     vhost_traffic_status_filter_by_set_key {{ $cfg.VtsDefaultFilterKey }};
-    vhost_traffic_status_filter_by_set_key $upstream_response_time_hist overall_upstream_response_time_hist;
-    vhost_traffic_status_filter_by_set_key $request_time_hist overall_request_time_hist;
     {{ end }}
 
     aio                 threads;
@@ -288,56 +286,6 @@ http {
         {{ end}}
     }
     {{ end }}
-
-    map $upstream_response_time $upstream_response_time_hist {
-      "" "-";
-      "~^0\.00[0-5]" "0.005";
-      "~^0\.0(0[6-9]|10)" "0.01";
-      "~^0\.0(1[1-9]|20)" "0.02";
-      "~^0\.0(2[1-9]|30)" "0.03";
-      "~^0\.0(3[1-9]|40)" "0.04";
-      "~^0\.0(4[1-9]|50)" "0.05";
-      "~^0\.0(5[1-9]|6|7[0-5])" "0.075";
-      "~^0\.(07[6-9]|08|09|100)" "0.1";
-      "~^0\.(10[1-9]|1[1-9]|200)" "0.2";
-      "~^0\.(20[1-9]|2[1-9]|300)" "0.3";
-      "~^0\.(30[1-9]|3[1-9]|400)" "0.4";
-      "~^0\.(40[1-9]|4[1-9]|500)" "0.5";
-      "~^0\.(50[1-9]|5[1-9]|6|7[0-4]|750)" "0.75";
-      "~^(0\.(75[1-9]|7[6-9]|8|9)|1\.000)" "1.0";
-      "~^(1\.00[1-9]|1\.0[1-9]|1\.[1-4]|1\.500)" "1.5";
-      "~^(1\.50[1-9]|1\.5[1-9]|1\.[6-9]|2\.000)" "2";
-      "~^(2\.00[1-9]|2\.0[1-9]|2\.[1-9]|3\.000)" "3";
-      "~^(3\.00[1-9]|3\.0[1-9]|3\.[1-9]|4\.000)" "4";
-      "~^(4\.00[1-9]|4\.0[1-9]|4\.[1-9]|5\.000)" "5";
-      "~^(5\.00[1-9]|5\.0[1-9]|5\.[1-9]|[6-9]\.|10\.000)" "10";
-      default ">10";
-    }
-
-    map $request_time $request_time_hist {
-      "" "-";
-      "~^0\.00[0-5]" "0.005";
-      "~^0\.0(0[6-9]|10)" "0.01";
-      "~^0\.0(1[1-9]|20)" "0.02";
-      "~^0\.0(2[1-9]|30)" "0.03";
-      "~^0\.0(3[1-9]|40)" "0.04";
-      "~^0\.0(4[1-9]|50)" "0.05";
-      "~^0\.0(5[1-9]|6|7[0-5])" "0.075";
-      "~^0\.(07[6-9]|08|09|100)" "0.1";
-      "~^0\.(10[1-9]|1[1-9]|200)" "0.2";
-      "~^0\.(20[1-9]|2[1-9]|300)" "0.3";
-      "~^0\.(30[1-9]|3[1-9]|400)" "0.4";
-      "~^0\.(40[1-9]|4[1-9]|500)" "0.5";
-      "~^0\.(50[1-9]|5[1-9]|6|7[0-4]|750)" "0.75";
-      "~^(0\.(75[1-9]|7[6-9]|8|9)|1\.000)" "1.0";
-      "~^(1\.00[1-9]|1\.0[1-9]|1\.[1-4]|1\.500)" "1.5";
-      "~^(1\.50[1-9]|1\.5[1-9]|1\.[6-9]|2\.000)" "2";
-      "~^(2\.00[1-9]|2\.0[1-9]|2\.[1-9]|3\.000)" "3";
-      "~^(3\.00[1-9]|3\.0[1-9]|3\.[1-9]|4\.000)" "4";
-      "~^(4\.00[1-9]|4\.0[1-9]|4\.[1-9]|5\.000)" "5";
-      "~^(5\.00[1-9]|5\.0[1-9]|5\.[1-9]|[6-9]\.|10\.000)" "10";
-      default ">10";
-    }
 
     server_name_in_redirect off;
     port_in_redirect        off;
@@ -594,7 +542,7 @@ http {
             allow ::1;
             {{ end }}
             deny all;
-
+            
             # this should be equals to configuration_data dict
             client_max_body_size                    "10m";
             proxy_buffering                         off;
@@ -953,11 +901,6 @@ stream {
             {{ if $all.Cfg.EnableVtsStatus }}{{ if $location.VtsFilterKey }} vhost_traffic_status_filter_by_set_key {{ $location.VtsFilterKey }};{{ end }}{{ end }}
 
             set $proxy_upstream_name "{{ buildUpstreamName $server.Hostname $all.Backends $location $all.DynamicConfigurationEnabled }}";
-
-            {{ if $all.Cfg.EnableVtsStatus }}
-            vhost_traffic_status_filter_by_set_key $upstream_response_time_hist upstream_response_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|-|$location_path;
-            vhost_traffic_status_filter_by_set_key $request_time_hist request_time_hist::$scheme|$server_name|$namespace|$ingress_name|$service_name|$service_port|-|$location_path;
-            {{ end }}
 
             {{/* redirect to HTTPS can be achieved forcing the redirect or having a SSL Certificate configured for the server */}}
             {{ if (or $location.Rewrite.ForceSSLRedirect (and (not (empty $server.SSLCertificate)) $location.Rewrite.SSLRedirect)) }}

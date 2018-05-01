@@ -53,7 +53,7 @@ spec:
         - name: GF_PATHS_PROVISIONING
           value: /grafana/conf/provisioning
         - name: GF_INSTALL_PLUGINS
-          value: petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel
+          value: grafana-piechart-panel, grafana-worldmap-panel
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/lib/grafana
@@ -63,7 +63,7 @@ spec:
           mountPath: /grafana/conf/provisioning/dashboards
 {{- define "dashboard_definition_volume_mount" }}
 {{- $folder := index . 1 }}
-        - name: grafana-dashboard-definitions-{{ $folder }}
+        - name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
           mountPath: /grafana-dashboard-definitions/{{ $folder }}
 {{- end }}
 {{- tuple . "dashboard_definition_volume_mount" | include "for_each_dashboard_folder" }}
@@ -95,9 +95,9 @@ spec:
           name: grafana-dashboards
 {{- define "dashboard_definition_volume" }}
 {{- $folder := index . 1 }}
-      - name: grafana-dashboard-definitions-{{ $folder }}
+      - name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
         configMap:
-          name: grafana-dashboard-definitions-{{ $folder }}
+          name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
 {{- end }}
 {{- tuple . "dashboard_definition_volume" | include "for_each_dashboard_folder" }}
       - name: grafana-dashboard-definitions-custom

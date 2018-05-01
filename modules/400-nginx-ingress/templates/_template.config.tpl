@@ -24,9 +24,6 @@ data:
   body-size: "64m"
   server-name-hash-bucket-size: "256"
   variables-hash-bucket-size: "256"
-  enable-vts-status: "true"
-  vts-status-zone-size: "20m"
-  vts-default-filter-key: "$geoip_country_code overall_country"
     {{- if $config.legacySSL }}
   ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"
   ssl-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:\
