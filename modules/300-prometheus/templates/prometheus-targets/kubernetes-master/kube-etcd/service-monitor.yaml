@@ -8,10 +8,14 @@ metadata:
     module: {{ $.Chart.Name }}
     prometheus: main
 spec:
-  jobLabel: kubernetes-master-prometheus-target
+  jobLabel: prometheus-target
   selector:
     matchLabels:
-      kubernetes-master-prometheus-target: etcd
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+      prometheus-target: kube-etcd2
+{{- else }}
+      prometheus-target: kube-etcd3
+{{- end }}
   namespaceSelector:
     matchNames:
     - kube-system
@@ -23,7 +27,7 @@ spec:
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - regex: endpoint|pod|service
+    - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
@@ -37,7 +41,7 @@ spec:
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - regex: endpoint|pod|service
+    - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance

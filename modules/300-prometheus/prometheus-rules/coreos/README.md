@@ -7,7 +7,7 @@
 * [general.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/kube-prometheus/templates/general.rules.yaml)
 * [kubernetes.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/exporter-kubernetes/templates/kubernetes.rules.yaml)
 * [kube-controller-manager.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/exporter-kube-controller-manager/templates/kube-controller-manager.rules.yaml)
-* [etcd.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/exporter-kube-etcd/templates/etcd3.rules.yaml)
+* [kube-etcd3.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/exporter-kube-etcd/templates/etcd3.rules.yaml)
 * [kubelet.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/exporter-kubelets/templates/kubelet.rules.yaml)
 * [prometheus.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/prometheus/templates/prometheus.rules.yaml)
 * [kube-scheduler.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/exporter-kube-scheduler/templates/kube-scheduler.rules.yaml)
