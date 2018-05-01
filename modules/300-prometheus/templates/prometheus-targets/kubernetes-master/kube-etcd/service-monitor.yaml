@@ -31,7 +31,7 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
-    - targetLabel: service
+    - targetLabel: component
       replacement: etcd
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - port: etcd-events
@@ -45,6 +45,6 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
-    - targetLabel: service
+    - targetLabel: component
       replacement: etcd-events
 {{- end }}

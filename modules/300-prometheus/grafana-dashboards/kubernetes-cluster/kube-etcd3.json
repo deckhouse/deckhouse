@@ -377,7 +377,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} DB Size",
+          "legendFormat": "{{instance}} ({{component}}) DB Size",
           "metric": "",
           "refId": "A",
           "step": 4
@@ -462,20 +462,20 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (service, instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component, le))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} WAL fsync",
+          "legendFormat": "{{instance}} ({{component}}) WAL fsync",
           "metric": "etcd_disk_wal_fsync_duration_seconds_bucket",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (service, instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component, le))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} DB fsync",
+          "legendFormat": "{{instance}} ({{component}}) DB fsync",
           "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
           "refId": "B",
           "step": 4
@@ -563,7 +563,7 @@
           "expr": "process_resident_memory_bytes{job=\"kube-etcd3\", instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} Resident Memory",
+          "legendFormat": "{{instance}} ({{component}}) Resident Memory",
           "metric": "process_resident_memory_bytes",
           "refId": "A",
           "step": 4
@@ -653,7 +653,7 @@
           "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} Client Traffic In",
+          "legendFormat": "{{instance}} ({{component}}) Client Traffic In",
           "metric": "etcd_network_client_grpc_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -743,7 +743,7 @@
           "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} Client Traffic Out",
+          "legendFormat": "{{instance}} ({{component}}) Client Traffic Out",
           "metric": "etcd_network_client_grpc_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -830,10 +830,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (service, instance)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} Peer Traffic In",
+          "legendFormat": "{{instance}} ({{component}}) Peer Traffic In",
           "metric": "etcd_network_peer_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -921,12 +921,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (service, instance)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component)",
           "format": "time_series",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}} Peer Traffic Out",
+          "legendFormat": "{{instance}} ({{component}}) Peer Traffic Out",
           "metric": "etcd_network_peer_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -1135,7 +1135,7 @@
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{service}}/{{instance}}",
+          "legendFormat": "{{instance}} ({{component}})",
           "refId": "A"
         }
       ],
