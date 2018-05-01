@@ -20,6 +20,8 @@ spec:
         app: kube-prometheus-kube-master-proxy
     spec:
       hostNetwork: true
+      # Миграция 2018-05-01: https://github.com/deckhouse/deckhouse/merge_requests/320
+      serviceAccountName: default
       containers:
   {{- if eq .Values.global.discovery.clusterType "Manual" }}
       - name: prometheus-auth-proxy-for-kube-scheduler
