@@ -21,6 +21,11 @@ spec:
   jobLabel: prometheus-target
   endpoints:
   - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
@@ -32,10 +37,6 @@ spec:
       {{- else }}
       replacement: {{ .name }}
       {{- end }}
-    scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-    tlsConfig:
-      insecureSkipVerify: true
   selector:
     matchLabels:
       prometheus-target: nginx-ingress-direct-fallback

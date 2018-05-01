@@ -74,11 +74,6 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
-      - name: kube-rbac-proxy
-        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
-        args:
-        - "--secure-listen-address=127.0.0.1:10356"
-        - "--upstream=http://127.0.0.1:10354/"
       - name: nginx-exporter
         image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/nginx-exporter:{{ $.Values.global.modulesImages.tags.nginxIngress.nginxExporter }}
         args: ["-nginx.scrape_uri=http://127.0.0.1:10253/nginx_status", "-telemetry.address=127.0.0.1:10354", "-insecure=true"]
@@ -87,6 +82,26 @@ spec:
             path: /metrics
             port: 10354
             host: 127.0.0.1
+      - name: prometheus-auth-proxy
+        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        args:
+        - "--listen=$(MY_POD_IP):10355"
+        - "--proxy-pass=http://127.0.0.1:10354/metrics"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 10355
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+          limits:
+            memory: 40Mi
+            cpu: 20m
+
       imagePullSecrets:
       - name: registry
   {{- end }}
