@@ -10,7 +10,12 @@ metadata:
 spec:
   jobLabel: k8s-app
   endpoints:
-  - port: http-metrics
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     honorLabels: true
     relabelings:
     - sourceLabels: [__meta_kubernetes_namespace]
@@ -28,7 +33,12 @@ spec:
       targetLabel: instance
     - targetLabel: endpoint
       replacement: kubelet
-  - port: http-metrics
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     path: /metrics/cadvisor
     honorLabels: true
     relabelings:

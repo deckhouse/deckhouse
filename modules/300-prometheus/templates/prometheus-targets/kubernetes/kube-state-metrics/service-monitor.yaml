@@ -20,9 +20,10 @@ spec:
   - port: https-main
     scheme: https
     honorLabels: true
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - sourceLabels: [__meta_kubernetes_namespace]
       regex: '.*()'
@@ -39,9 +40,10 @@ spec:
       replacement: main
   - port: https-self
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - sourceLabels: [__meta_kubernetes_namespace]
       regex: '.*()'

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  # Никто не защищен от ошибки, и чтобы максимально обезопасить себя — ставим
+  # жесткий лимит на память и CPU.
+  #
+  # Важно! Изменять необходимо синхронно и здесь и в install.sh!
+  #
+  fltr='.'
+  fltr=$fltr' | .spec.template.spec.containers[0].resources.requests = {"cpu":"50m","memory":"100Mi"}'
+  fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {"cpu":"500m","memory":"200Mi"}'
+  kubectl::jq_patch antiopa deploy/antiopa "$fltr"
+}
+
+hook::run $@

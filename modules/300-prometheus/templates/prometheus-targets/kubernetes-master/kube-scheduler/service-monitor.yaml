@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: kube-controller-manager
+  name: kube-scheduler
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -15,9 +15,10 @@ spec:
 {{- else }}
   - port: https-metrics
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
 {{- end }}
     relabelings:
     - regex: endpoint|namespace|pod|service
@@ -28,7 +29,7 @@ spec:
     matchLabels:
       heritage: antiopa
       module: {{ $.Chart.Name }}
-      prometheus-target: kube-controller-manager
+      prometheus-target: kube-scheduler
   namespaceSelector:
     matchNames:
     - kube-system

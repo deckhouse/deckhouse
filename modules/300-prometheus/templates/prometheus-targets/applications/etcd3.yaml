@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: etcd
+  name: etcd3
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -16,8 +16,19 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_name]
       targetLabel: instance
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+    relabelings:
+    - regex: endpoint|pod
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: instance
   namespaceSelector:
     any: true
   selector:
     matchLabels:
-      prometheus-target: etcd
+      prometheus-target: etcd3

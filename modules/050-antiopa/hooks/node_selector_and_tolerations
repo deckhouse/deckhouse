@@ -28,7 +28,7 @@ function __main__() {
       fltr=$fltr' | del(.spec.template.spec.tolerations)'
     fi
   elif values::is_true global.discovery.clusterHasSystemNodes ; then
-    fltr=$fltr' | .spec.template.spec.tolerations = [{"key":"node-role/system","effect":"NoExecute"}]'
+    fltr=$fltr' | .spec.template.spec.tolerations = [{"effect":"NoExecute","key":"node-role/system"}]'
   else
     fltr=$fltr' | del(.spec.template.spec.tolerations)'
   fi

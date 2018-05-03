@@ -8,37 +8,43 @@ metadata:
     module: {{ $.Chart.Name }}
     prometheus: main
 spec:
-  jobLabel: kube-master-proxy-prometheus-target
+  jobLabel: prometheus-target
   selector:
     matchLabels:
-      kube-master-proxy-prometheus-target: etcd
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+      prometheus-target: kube-etcd2
+{{- else }}
+      prometheus-target: kube-etcd3
+{{- end }}
   namespaceSelector:
     matchNames:
     - kube-system
   endpoints:
   - port: etcd
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - regex: endpoint|pod|service
+    - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
-    - targetLabel: service
+    - targetLabel: component
       replacement: etcd
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - port: etcd-events
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - regex: endpoint|pod|service
+    - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: instance
-    - targetLabel: service
+    - targetLabel: component
       replacement: etcd-events
 {{- end }}

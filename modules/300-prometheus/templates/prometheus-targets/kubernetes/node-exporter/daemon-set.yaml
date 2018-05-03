@@ -21,9 +21,10 @@ spec:
         app: node-exporter
       name: node-exporter
     spec:
-      serviceAccountName: node-exporter
       hostNetwork: true
       hostPID: true
+      # Миграция 2018-05-01: https://github.com/deckhouse/deckhouse/merge_requests/320
+      serviceAccountName: default
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/prometheus/node-exporter:{{ $.Values.global.modulesImages.tags.prometheus.nodeExporter }}
         args:
@@ -53,11 +54,16 @@ spec:
         - name: sys
           readOnly: true
           mountPath: /host/sys
-      - name: kube-rbac-proxy
-        image: quay.io/brancz/kube-rbac-proxy:v0.2.0
+      - name: prometheus-auth-proxy
+        image: flant/kube-prometheus-auth-proxy:v0.1.0
         args:
-        - "--secure-listen-address=:9100"
-        - "--upstream=http://127.0.0.1:9101/"
+        - "--listen=$(MY_POD_IP):9100"
+        - "--proxy-pass=http://127.0.0.1:9101/metrics"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         ports:
         - containerPort: 9100
           name: https
