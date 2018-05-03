@@ -12,25 +12,30 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 )
 
+var (
+	KubeEventCh chan string
+)
+
 type KubeEventsManager interface {
 	Run(config module_manager.KubeEventsConfig) (string, error)
 	Stop(configId string) error
 }
 
 type MainKubeEventsManager struct {
-	KubeEventCh                   chan string
 	KubeEventsInformersByConfigId map[string][]*KubeEventsInformer
 }
 
 func NewMainKubeEventsManager() *MainKubeEventsManager {
 	em := &MainKubeEventsManager{}
 	em.KubeEventsInformersByConfigId = make(map[string][]*KubeEventsInformer)
-	em.KubeEventCh = make(chan string, 1)
 	return em
 }
 
 func Init() (KubeEventsManager, error) {
 	em := NewMainKubeEventsManager()
+
+	KubeEventCh = make(chan string, 1)
+
 	return em, nil
 }
 
