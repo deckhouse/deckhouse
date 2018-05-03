@@ -142,6 +142,8 @@ func (kcm *MainKubeConfigManager) SetKubeGlobalValues(values utils.Values) error
 	globalKubeConfig := GetGlobalKubeConfigFromValues(values)
 
 	if globalKubeConfig != nil {
+		rlog.Debugf("Kube config manager: set kube global values:\n%s", utils.ValuesToString(values))
+
 		err := kcm.saveGlobalKubeConfig(*globalKubeConfig)
 		if err != nil {
 			return err
@@ -155,6 +157,8 @@ func (kcm *MainKubeConfigManager) SetKubeModuleValues(moduleName string, values 
 	moduleKubeConfig := GetModuleKubeConfigFromValues(moduleName, values)
 
 	if moduleKubeConfig != nil {
+		rlog.Debugf("Kube config manager: set kube module values:\n%s", moduleKubeConfig.ModuleConfig.String())
+
 		err := kcm.saveModuleKubeConfig(*moduleKubeConfig)
 		if err != nil {
 			return err
