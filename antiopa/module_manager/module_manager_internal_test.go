@@ -285,6 +285,10 @@ func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
 	return nil
 }
 
+func (h *MockHelmClient) IsReleaseExists(_ string) (bool, error) {
+	return true, nil
+}
+
 func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string, _ string) error {
 	h.UpgradeReleaseExecuted = true
 	return nil
