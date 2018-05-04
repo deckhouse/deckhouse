@@ -31,7 +31,7 @@ const (
 )
 
 type KubeEventsManager interface {
-	Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector) (string, error)
+	Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error)
 	Stop(configId string) error
 }
 
@@ -51,7 +51,7 @@ func Init() (KubeEventsManager, error) {
 	return em, nil
 }
 
-func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector) (string, error) {
+func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector, _ string) (string, error) {
 	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
