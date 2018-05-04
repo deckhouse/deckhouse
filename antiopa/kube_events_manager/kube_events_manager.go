@@ -1,7 +1,10 @@
 package kube_events_manager
 
 import (
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	uuid "gopkg.in/satori/go.uuid.v1"
@@ -70,8 +73,9 @@ func (em *MainKubeEventsManager) addInformersOnAdd(configId string, config *modu
 				configMap := obj.(*v1.ConfigMap)
 
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-				if configMap.ResourceVersion != ei.Checksum[configMapId] {
-					ei.Checksum[configMapId] = configMap.ResourceVersion
+				configMapChecksum := md5OfMap(configMap.Data)
+				if ei.Checksum[configMapId] != configMapChecksum {
+					ei.Checksum[configMapId] = configMapChecksum
 					KubeEventCh <- ei.ConfigId
 				}
 			},
@@ -86,8 +90,9 @@ func (em *MainKubeEventsManager) addInformersOnUpdate(configId string, config *m
 				configMap := newObj.(*v1.ConfigMap)
 
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-				if configMap.ResourceVersion != ei.Checksum[configMapId] {
-					ei.Checksum[configMapId] = configMap.ResourceVersion
+				configMapChecksum := md5OfMap(configMap.Data)
+				if ei.Checksum[configMapId] != configMapChecksum {
+					ei.Checksum[configMapId] = configMapChecksum
 					KubeEventCh <- ei.ConfigId
 				}
 			},
@@ -139,7 +144,7 @@ func (em *MainKubeEventsManager) newInformer(kind, namespace string, labelSelect
 	configMaps, _ := kube.KubernetesClient.CoreV1().ConfigMaps(namespace).List(*listOptions)
 	for _, configMap := range configMaps.Items {
 		configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-		kubeEventsInformer.Checksum[configMapId] = configMap.ResourceVersion
+		kubeEventsInformer.Checksum[configMapId] = md5OfMap(configMap.Data)
 	}
 
 	optionsModifier := func(options *metav1.ListOptions) {
@@ -154,6 +159,18 @@ func (em *MainKubeEventsManager) newInformer(kind, namespace string, labelSelect
 	kubeEventsInformer.SharedInformer = cache.NewSharedInformer(lw, &v1.ConfigMap{}, time.Duration(15)*time.Second)
 
 	return kubeEventsInformer
+}
+
+func md5OfMap(obj map[string]string) string {
+	data, err := json.Marshal(obj)
+	if err != nil {
+		panic(err)
+	}
+
+	h := md5.New()
+	io.WriteString(h, string(data))
+
+	return string(h.Sum(nil))
 }
 
 func (em *MainKubeEventsManager) Stop(configId string) error {
