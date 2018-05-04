@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/satori/go.uuid"
+	uuid "gopkg.in/satori/go.uuid.v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -39,10 +39,7 @@ func Init() (KubeEventsManager, error) {
 }
 
 func (em *MainKubeEventsManager) Run(config *module_manager.KubeEventsConfig) (string, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return "", err
-	}
+	uid := uuid.NewV4()
 	configId := uid.String()
 
 	if config.OnAdd != nil {
