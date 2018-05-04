@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/satori/go.uuid"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -17,7 +18,7 @@ var (
 )
 
 type KubeEventsManager interface {
-	Run(config module_manager.KubeEventsConfig) (string, error)
+	Run(config *module_manager.KubeEventsConfig) (string, error)
 	Stop(configId string) error
 }
 
@@ -33,18 +34,40 @@ func NewMainKubeEventsManager() *MainKubeEventsManager {
 
 func Init() (KubeEventsManager, error) {
 	em := NewMainKubeEventsManager()
-
 	KubeEventCh = make(chan string, 1)
-
 	return em, nil
 }
 
-func (em *MainKubeEventsManager) Run(config module_manager.KubeEventsConfig) (string, error) {
-	return "", nil
+func (em *MainKubeEventsManager) Run(config *module_manager.KubeEventsConfig) (string, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return "", err
+	}
+	configId := uid.String()
+
+	if config.OnAdd != nil {
+		if err := em.addInformersOnAdd(configId, config.OnAdd); err != nil {
+			return "", err
+		}
+	}
+
+	if config.OnUpdate != nil {
+		if err := em.addInformersOnUpdate(configId, config.OnAdd); err != nil {
+			return "", err
+		}
+	}
+
+	if config.OnDelete != nil {
+		if err := em.addInformersOnDelete(configId, config.OnDelete); err != nil {
+			return "", err
+		}
+	}
+
+	return configId, nil
 }
 
-func (em *MainKubeEventsManager) AddOnAdd(config module_manager.KubeEventsConfig) (string, error) {
-	configId, err := em.AddConfig(config, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
+func (em *MainKubeEventsManager) addInformersOnAdd(configId string, config *module_manager.KubeEventsOnAction) error {
+	return em.addInformers(configId, config, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				configMap := obj.(*v1.ConfigMap)
@@ -52,16 +75,15 @@ func (em *MainKubeEventsManager) AddOnAdd(config module_manager.KubeEventsConfig
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
 				if configMap.ResourceVersion != ei.Checksum[configMapId] {
 					ei.Checksum[configMapId] = configMap.ResourceVersion
-					em.KubeEventCh <- ei.ConfigId
+					KubeEventCh <- ei.ConfigId
 				}
 			},
 		}
 	})
-	return configId, err
 }
 
-func (em *MainKubeEventsManager) AddOnUpdate(config module_manager.KubeEventsConfig) (string, error) {
-	configId, err := em.AddConfig(config, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
+func (em *MainKubeEventsManager) addInformersOnUpdate(configId string, config *module_manager.KubeEventsOnAction) error {
+	return em.addInformers(configId, config, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			UpdateFunc: func(_ interface{}, newObj interface{}) {
 				configMap := newObj.(*v1.ConfigMap)
@@ -69,51 +91,46 @@ func (em *MainKubeEventsManager) AddOnUpdate(config module_manager.KubeEventsCon
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
 				if configMap.ResourceVersion != ei.Checksum[configMapId] {
 					ei.Checksum[configMapId] = configMap.ResourceVersion
-					em.KubeEventCh <- ei.ConfigId
+					KubeEventCh <- ei.ConfigId
 				}
 			},
 		}
 	})
-	return configId, err
 }
 
-func (em *MainKubeEventsManager) AddOnDelete(config module_manager.KubeEventsConfig) (string, error) {
-	configId, err := em.AddConfig(config, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
+func (em *MainKubeEventsManager) addInformersOnDelete(configId string, config *module_manager.KubeEventsOnAction) error {
+	return em.addInformers(configId, config, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			DeleteFunc: func(obj interface{}) {
-				em.KubeEventCh <- ei.ConfigId
+				KubeEventCh <- ei.ConfigId
 			},
 		}
 	})
-	return configId, err
 }
 
-func (em *MainKubeEventsManager) AddConfig(config module_manager.KubeEventsConfig, resourceEventHandlerFuncs func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (string, error) {
-	//var kubeEventsInformers []*KubeEventsInformer
-	//if config.NamespaceSelector.Any {
-	//	kubeEventsInformers = append(kubeEventsInformers, em.NewKubeEventsInformer(config.Kind, "", config.Selector))
-	//} else {
-	//	for _, namespace := range config.NamespaceSelector.MatchNames {
-	//		kubeEventsInformers = append(kubeEventsInformers, em.NewKubeEventsInformer(config.Kind, namespace, config.Selector))
-	//	}
-	//}
-	//
-	//configId := uuid.NewV4().String()
-	//for _, kubeEventsInformer := range kubeEventsInformers {
-	//	kubeEventsInformer.Config = config
-	//	kubeEventsInformer.ConfigId = configId
-	//	kubeEventsInformer.SharedInformer.AddEventHandler(resourceEventHandlerFuncs(kubeEventsInformer))
-	//	kubeEventsInformer.SharedInformer.Run(kubeEventsInformer.SharedInformerStop)
-	//}
-	//
-	//em.KubeEventsInformersByConfigId[configId] = kubeEventsInformers
-	//
-	//return configId, nil
+func (em *MainKubeEventsManager) addInformers(configId string, config *module_manager.KubeEventsOnAction, resourceEventHandlerFuncs func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs) error {
+	var kubeEventsInformers []*KubeEventsInformer
+	if config.NamespaceSelector.Any {
+		kubeEventsInformers = append(kubeEventsInformers, em.newInformer(config.Kind, "", config.Selector))
+	} else {
+		for _, namespace := range config.NamespaceSelector.MatchNames {
+			kubeEventsInformers = append(kubeEventsInformers, em.newInformer(config.Kind, namespace, config.Selector))
+		}
+	}
 
-	return "", nil
+	for _, kubeEventsInformer := range kubeEventsInformers {
+		kubeEventsInformer.Config = config
+		kubeEventsInformer.ConfigId = configId
+		kubeEventsInformer.SharedInformer.AddEventHandler(resourceEventHandlerFuncs(kubeEventsInformer))
+		kubeEventsInformer.SharedInformer.Run(kubeEventsInformer.SharedInformerStop)
+	}
+
+	em.KubeEventsInformersByConfigId[configId] = kubeEventsInformers
+
+	return nil
 }
 
-func (em *MainKubeEventsManager) NewKubeEventsInformer(kind, namespace string, labelSelector *metav1.LabelSelector) *KubeEventsInformer {
+func (em *MainKubeEventsManager) newInformer(kind, namespace string, labelSelector *metav1.LabelSelector) *KubeEventsInformer {
 	kubeEventsInformer := NewKubeEventsInformer()
 
 	listOptions := &metav1.ListOptions{}
@@ -150,7 +167,7 @@ func (em *MainKubeEventsManager) Stop(configId string) error {
 }
 
 type KubeEventsInformer struct {
-	Config             module_manager.KubeEventsConfig
+	Config             *module_manager.KubeEventsOnAction
 	ConfigId           string
 	Checksum           map[string]string
 	SharedInformer     cache.SharedInformer
