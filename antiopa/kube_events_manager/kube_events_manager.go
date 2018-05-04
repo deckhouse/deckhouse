@@ -21,7 +21,7 @@ var (
 )
 
 type KubeEventsManager interface {
-	Run(config *module_manager.KubeEventsConfig) (string, error)
+	Run(config module_manager.KubeEventsConfig) (string, error)
 	Stop(configId string) error
 }
 
@@ -41,7 +41,7 @@ func Init() (KubeEventsManager, error) {
 	return em, nil
 }
 
-func (em *MainKubeEventsManager) Run(config *module_manager.KubeEventsConfig) (string, error) {
+func (em *MainKubeEventsManager) Run(config module_manager.KubeEventsConfig) (string, error) {
 	uid := uuid.NewV4()
 	configId := uid.String()
 
