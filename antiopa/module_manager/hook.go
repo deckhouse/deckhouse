@@ -28,7 +28,7 @@ type Hook struct {
 	Bindings       []BindingType
 	OrderByBinding map[BindingType]float64
 	Schedules      []ScheduleConfig
-	KubeEvents     []KubeEventsConfig
+	KubeEvents     *KubeEventsConfig
 
 	moduleManager *MainModuleManager
 }
@@ -50,7 +50,7 @@ type ModuleHookConfig struct {
 type HookConfig struct {
 	OnStartup  interface{}      `json:"onStartup"`
 	Schedule   []ScheduleConfig `json:"schedule"`
-	KubeEvents []KubeEventsConfig
+	KubeEvents *KubeEventsConfig
 }
 
 type ScheduleConfig struct {
