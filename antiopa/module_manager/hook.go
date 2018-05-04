@@ -59,9 +59,9 @@ type ScheduleConfig struct {
 }
 
 type KubeEventsConfig struct {
-	OnAdd    *KubeEventsOnAction `json:"onAdd"`
-	OnUpdate *KubeEventsOnAction `json:"onUpdate"`
-	OnDelete *KubeEventsOnAction `json:"onDelete"`
+	OnAdd    []*KubeEventsOnAction `json:"onAdd"`
+	OnUpdate []*KubeEventsOnAction `json:"onUpdate"`
+	OnDelete []*KubeEventsOnAction `json:"onDelete"`
 }
 
 type KubeEventsOnAction struct {
