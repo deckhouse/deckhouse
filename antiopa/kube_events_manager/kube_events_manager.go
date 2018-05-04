@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/romana/rlog"
-	"github.com/satori/go.uuid"
+	"gopkg.in/satori/go.uuid.v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -50,7 +50,7 @@ func Init() (KubeEventsManager, error) {
 }
 
 func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector) (string, error) {
-	eventInformer, err := em.addInformer(kind, namespace, labelSelector, func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
+	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		resourceEventHandlerFuncs := cache.ResourceEventHandlerFuncs{}
 
 		switch informerType {
@@ -60,9 +60,9 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
 				configMapChecksum := md5OfMap(configMap.Data)
-				if ei.Checksum[configMapId] != configMapChecksum {
-					ei.Checksum[configMapId] = configMapChecksum
-					KubeEventCh <- ei.ConfigId
+				if kubeEventsInformer.Checksum[configMapId] != configMapChecksum {
+					kubeEventsInformer.Checksum[configMapId] = configMapChecksum
+					KubeEventCh <- kubeEventsInformer.ConfigId
 				}
 			}
 		case OnUpdate:
@@ -71,14 +71,14 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
 				configMapChecksum := md5OfMap(configMap.Data)
-				if ei.Checksum[configMapId] != configMapChecksum {
-					ei.Checksum[configMapId] = configMapChecksum
-					KubeEventCh <- ei.ConfigId
+				if kubeEventsInformer.Checksum[configMapId] != configMapChecksum {
+					kubeEventsInformer.Checksum[configMapId] = configMapChecksum
+					KubeEventCh <- kubeEventsInformer.ConfigId
 				}
 			}
 		case OnDelete:
 			resourceEventHandlerFuncs.DeleteFunc = func(obj interface{}) {
-				KubeEventCh <- ei.ConfigId
+				KubeEventCh <- kubeEventsInformer.ConfigId
 			}
 		}
 
@@ -89,22 +89,13 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 		return "", err
 	}
 
-	go eventInformer.Run()
+	go kubeEventsInformer.Run()
 
-	return eventInformer.ConfigId, nil
+	return kubeEventsInformer.ConfigId, nil
 }
 
-func (em *MainKubeEventsManager) addInformer(kind, namespace string, labelSelector *metav1.LabelSelector, resourceEventHandlerFuncs func(ei *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
+func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metav1.LabelSelector, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
 	kubeEventsInformer := NewKubeEventsInformer()
-
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return nil, err
-	}
-	configId := uid.String()
-
-	kubeEventsInformer.ConfigId = configId
-	kubeEventsInformer.SharedInformer.AddEventHandler(resourceEventHandlerFuncs(kubeEventsInformer))
 
 	listOptions := &metav1.ListOptions{}
 
@@ -128,8 +119,10 @@ func (em *MainKubeEventsManager) addInformer(kind, namespace string, labelSelect
 	lw := cache.NewFilteredListWatchFromClient(restKubeClient, kind, namespace, optionsModifier)
 
 	kubeEventsInformer.SharedInformer = cache.NewSharedInformer(lw, &v1.ConfigMap{}, time.Duration(15)*time.Second)
+	kubeEventsInformer.SharedInformer.AddEventHandler(resourceEventHandlerFuncs(kubeEventsInformer))
+	kubeEventsInformer.ConfigId = uuid.NewV4().String()
 
-	em.KubeEventsInformersByConfigId[configId] = kubeEventsInformer
+	em.KubeEventsInformersByConfigId[kubeEventsInformer.ConfigId] = kubeEventsInformer
 
 	return kubeEventsInformer, nil
 }
@@ -147,9 +140,9 @@ func md5OfMap(obj map[string]string) string {
 }
 
 func (em *MainKubeEventsManager) Stop(configId string) error {
-	ei, ok := em.KubeEventsInformersByConfigId[configId]
+	kubeEventsInformer, ok := em.KubeEventsInformersByConfigId[configId]
 	if ok {
-		ei.Stop()
+		kubeEventsInformer.Stop()
 	} else {
 		rlog.Errorf("Kube events informer '%s' not found!", configId)
 	}
@@ -164,10 +157,10 @@ type KubeEventsInformer struct {
 }
 
 func NewKubeEventsInformer() *KubeEventsInformer {
-	ei := &KubeEventsInformer{}
-	ei.Checksum = make(map[string]string)
-	ei.SharedInformerStop = make(chan struct{}, 1)
-	return ei
+	kubeEventsInformer := &KubeEventsInformer{}
+	kubeEventsInformer.Checksum = make(map[string]string)
+	kubeEventsInformer.SharedInformerStop = make(chan struct{}, 1)
+	return kubeEventsInformer
 }
 
 func (ei *KubeEventsInformer) Run() {
