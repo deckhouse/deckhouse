@@ -10,7 +10,9 @@ import (
 	"github.com/romana/rlog"
 	"gopkg.in/satori/go.uuid.v1"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/deckhouse/deckhouse/antiopa/kube"
@@ -51,37 +53,17 @@ func Init() (KubeEventsManager, error) {
 
 func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector) (string, error) {
 	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
-		resourceEventHandlerFuncs := cache.ResourceEventHandlerFuncs{}
-
-		switch informerType {
-		case OnAdd:
-			resourceEventHandlerFuncs.AddFunc = func(obj interface{}) {
-				configMap := obj.(*v1.ConfigMap)
-
-				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-				configMapChecksum := md5OfJson(configMap)
-				if kubeEventsInformer.Checksum[configMapId] != configMapChecksum {
-					kubeEventsInformer.Checksum[configMapId] = configMapChecksum
-					KubeEventCh <- kubeEventsInformer.ConfigId
-				}
-			}
-		case OnUpdate:
-			resourceEventHandlerFuncs.UpdateFunc = func(_ interface{}, newObj interface{}) {
-				configMap := newObj.(*v1.ConfigMap)
-				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-				configMapChecksum := md5OfJson(configMap)
-				if kubeEventsInformer.Checksum[configMapId] != configMapChecksum {
-					kubeEventsInformer.Checksum[configMapId] = configMapChecksum
-					KubeEventCh <- kubeEventsInformer.ConfigId
-				}
-			}
-		case OnDelete:
-			resourceEventHandlerFuncs.DeleteFunc = func(obj interface{}) {
-				KubeEventCh <- kubeEventsInformer.ConfigId
-			}
+		return cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				kubeEventsInformer.HandleKubeEvent(obj, informerType == OnAdd)
+			},
+			UpdateFunc: func(_ interface{}, newObj interface{}) {
+				kubeEventsInformer.HandleKubeEvent(newObj, informerType == OnUpdate)
+			},
+			DeleteFunc: func(obj interface{}) {
+				kubeEventsInformer.HandleKubeEvent(obj, informerType == OnDelete)
+			},
 		}
-
-		return resourceEventHandlerFuncs
 	})
 
 	if err != nil {
@@ -105,7 +87,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	configMaps, _ := kube.KubernetesClient.CoreV1().ConfigMaps(namespace).List(*listOptions)
 	for _, configMap := range configMaps.Items {
 		configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-		kubeEventsInformer.Checksum[configMapId] = md5OfJson(configMap)
+		kubeEventsInformer.Checksum[configMapId] = runtimeObjectMd5(configMap)
 	}
 
 	optionsModifier := func(options *metav1.ListOptions) {
@@ -126,7 +108,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	return kubeEventsInformer, nil
 }
 
-func md5OfJson(obj interface{}) string {
+func runtimeObjectMd5(obj interface{}) string {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
@@ -160,6 +142,40 @@ func NewKubeEventsInformer() *KubeEventsInformer {
 	kubeEventsInformer.Checksum = make(map[string]string)
 	kubeEventsInformer.SharedInformerStop = make(chan struct{}, 1)
 	return kubeEventsInformer
+}
+
+func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, sendSignal bool) {
+	runtimeObject := obj.(runtime.Object)
+	objectId, err := runtimeObjectId(runtimeObject)
+	if err != nil {
+		rlog.Error(err)
+		return
+	}
+
+	checksum := runtimeObjectMd5(runtimeObject)
+	if ei.Checksum[objectId] != checksum {
+		ei.Checksum[objectId] = checksum
+
+		if sendSignal {
+			KubeEventCh <- ei.ConfigId
+		}
+	}
+}
+
+func runtimeObjectId(obj runtime.Object) (string, error) {
+	accessor := meta.NewAccessor()
+
+	name, err := accessor.Name(obj)
+	if err != nil {
+		return "", err
+	}
+
+	namespace, err := accessor.Namespace(obj)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s-%s", name, namespace), nil
 }
 
 func (ei *KubeEventsInformer) Run() {
