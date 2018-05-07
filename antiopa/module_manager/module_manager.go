@@ -141,26 +141,32 @@ type Event struct {
 Пример конфига:
 
 {
-    onStartup: ORDER, // оба
-    beforeHelm: ORDER, // только module
-    afterHelm: ORDER, // только module
-    afterDeleteHelm: ORDER, // только module
-    beforeAll: ORDER, // только global
-    afterAll: ORDER, // только global
-    onKubeNodeChange: ORDER, // только global
-	onAdd: [
-		{
-			kind: pod|service|namespace|... ,
-			selector:
-			    matchExpressions: ... https://v1-6.docs.kubernetes.io/docs/api-reference/v1.6/#labelselector-v1-meta,
-			    matchLabels: ... ,
-            namespaceSelector:
-		        matchNames: [...]
-	            any: true|false
-	        jqFilter: ".items[] | del(.metadata, .status)",
-			allowFailure: true,
-	    }
-	],
+    "onStartup": ORDER,        // оба
+    "beforeHelm": ORDER,       // только module
+    "afterHelm": ORDER,        // только module
+    "afterDeleteHelm": ORDER,  // только module
+    "beforeAll": ORDER,        // только global
+    "afterAll": ORDER,         // только global
+    "onKubeNodeChange": ORDER, // только global
+	"onAdd": [{
+		"kind": "pods",
+		"selector": {
+			"matchLabels": {
+				"component": "component"
+			},
+			"matchExpressions": [{
+				"key": "tier",
+				"operator": "In",
+				"values": ["cache"]
+			}]
+		},
+		"namespaceSelector": {
+			"matchNames": ["namespace"],
+			"any": false
+		},
+		"jqFilter": ".items[] | del(.metadata, .status)",
+		"allowFailure": true
+	}],
 	onUpdate: [
 		...
 	],
@@ -169,11 +175,11 @@ type Event struct {
 	],
     schedule:  [
 		{
-			crontab: "* * * * *",
-			allowFailure: true
+			"crontab": "* * * * *",
+			"allowFailure": true
 		},
         {
-			crontab: "*_/2 * * * *",
+			"crontab": "*_/2 * * * *",
 		}
 	]
 }

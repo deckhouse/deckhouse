@@ -48,9 +48,9 @@ type ModuleHookConfig struct {
 }
 
 type HookConfig struct {
-	OnStartup  interface{}      `json:"onStartup"`
-	Schedule   []ScheduleConfig `json:"schedule"`
-	KubeEvents *KubeEventsConfig
+	*KubeEventsConfig
+	OnStartup interface{}      `json:"onStartup"`
+	Schedule  []ScheduleConfig `json:"schedule"`
 }
 
 type ScheduleConfig struct {
@@ -65,11 +65,11 @@ type KubeEventsConfig struct {
 }
 
 type KubeEventsOnAction struct {
-	Kind              string `json:"kind"`
-	Selector          *metav1.LabelSelector
-	NamespaceSelector *KubeNamespaceSelector
-	JqFilter          string `json:"jqFilter"`
-	AllowFailure      bool   `json:"allowFailure"`
+	Kind              string                 `json:"kind"`
+	Selector          *metav1.LabelSelector  `json:"selector"`
+	NamespaceSelector *KubeNamespaceSelector `json:"namespaceSelector"`
+	JqFilter          string                 `json:"jqFilter"`
+	AllowFailure      bool                   `json:"allowFailure"`
 }
 
 type KubeNamespaceSelector struct {
@@ -134,15 +134,15 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 		mm.globalHooksOrder[OnStartup] = append(mm.globalHooksOrder[OnStartup], globalHook)
 	}
 
-	if config.Schedule != nil {
+	if len(config.Schedule) != 0 {
 		globalHook.Bindings = append(globalHook.Bindings, Schedule)
 		globalHook.Schedules = config.Schedule
 		mm.globalHooksOrder[Schedule] = append(mm.globalHooksOrder[Schedule], globalHook)
 	}
 
-	if config.KubeEvents != nil {
+	if config.KubeEventsConfig != nil {
 		globalHook.Bindings = append(globalHook.Bindings, KubeEvents)
-		globalHook.KubeEvents = config.KubeEvents
+		globalHook.KubeEvents = config.KubeEventsConfig
 		mm.globalHooksOrder[KubeEvents] = append(mm.globalHooksOrder[KubeEvents], globalHook)
 	}
 
@@ -194,15 +194,15 @@ func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config
 		mm.addModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
 	}
 
-	if config.Schedule != nil {
+	if len(config.Schedule) != 0 {
 		moduleHook.Bindings = append(moduleHook.Bindings, Schedule)
 		moduleHook.Schedules = config.Schedule
 		mm.addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
 	}
 
-	if config.KubeEvents != nil {
+	if config.KubeEventsConfig != nil {
 		moduleHook.Bindings = append(moduleHook.Bindings, KubeEvents)
-		moduleHook.KubeEvents = config.KubeEvents
+		moduleHook.KubeEvents = config.KubeEventsConfig
 		mm.addModulesHooksOrderByName(moduleName, KubeEvents, moduleHook)
 	}
 
