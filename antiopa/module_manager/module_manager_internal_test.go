@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
@@ -152,7 +153,7 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 
 	runInitModulesIndex(t, mm, "test_get_module_hook")
 
-	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedules []ScheduleConfig) *ModuleHook {
+	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedules []ScheduleConfig, kubeEventsConfig *KubeEventsConfig) *ModuleHook {
 		moduleHook := mm.newModuleHook()
 		moduleHook.Name = name
 		moduleHook.moduleManager = mm
@@ -166,21 +167,23 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 		moduleHook.Schedules = schedules
 		moduleHook.Bindings = bindings
 		moduleHook.OrderByBinding = orderByBindings
+		moduleHook.KubeEvents = kubeEventsConfig
 
 		return moduleHook
 	}
 
 	expectations := []struct {
-		moduleName     string
-		name           string
-		bindings       []BindingType
-		orderByBinding map[BindingType]float64
-		schedule       []ScheduleConfig
+		moduleName       string
+		name             string
+		bindings         []BindingType
+		orderByBinding   map[BindingType]float64
+		schedule         []ScheduleConfig
+		kubeEventsConfig *KubeEventsConfig
 	}{
 		{
 			"all-bindings",
 			"000-all-bindings/hooks/all",
-			[]BindingType{BeforeHelm, AfterHelm, AfterDeleteHelm, OnStartup, Schedule},
+			[]BindingType{BeforeHelm, AfterHelm, AfterDeleteHelm, OnStartup, Schedule, KubeEvents},
 			map[BindingType]float64{
 				BeforeHelm:      1,
 				AfterHelm:       1,
@@ -193,6 +196,77 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 					AllowFailure: true,
 				},
 			},
+			&KubeEventsConfig{
+				OnAdd: []*KubeEventsOnAction{
+					{
+						Kind: "configmaps",
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"component": "component1",
+							},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "tier",
+									Operator: "In",
+									Values:   []string{"cache"},
+								},
+							},
+						},
+						NamespaceSelector: &KubeNamespaceSelector{
+							MatchNames: []string{"namespace1"},
+							Any:        false,
+						},
+						JqFilter:     ".items[] | del(.metadata, .field1)",
+						AllowFailure: true,
+					},
+				},
+				OnUpdate: []*KubeEventsOnAction{
+					{
+						Kind: "namespaces",
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"component": "component2",
+							},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "tier",
+									Operator: "In",
+									Values:   []string{"cache"},
+								},
+							},
+						},
+						NamespaceSelector: &KubeNamespaceSelector{
+							MatchNames: []string{"namespace2"},
+							Any:        false,
+						},
+						JqFilter:     ".items[] | del(.metadata, .field2)",
+						AllowFailure: true,
+					},
+				},
+				OnDelete: []*KubeEventsOnAction{
+					{
+						Kind: "pods",
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"component": "component3",
+							},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "tier",
+									Operator: "In",
+									Values:   []string{"cache"},
+								},
+							},
+						},
+						NamespaceSelector: &KubeNamespaceSelector{
+							MatchNames: nil,
+							Any:        true,
+						},
+						JqFilter:     ".items[] | del(.metadata, .field3)",
+						AllowFailure: true,
+					},
+				},
+			},
 		},
 		{
 			"nested-hooks",
@@ -202,12 +276,13 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 				BeforeHelm: 1,
 			},
 			nil,
+			nil,
 		},
 	}
 
 	for _, expectation := range expectations {
 		t.Run(expectation.moduleName, func(t *testing.T) {
-			expectedModuleHook := createModuleHook(expectation.moduleName, expectation.name, expectation.bindings, expectation.orderByBinding, expectation.schedule)
+			expectedModuleHook := createModuleHook(expectation.moduleName, expectation.name, expectation.bindings, expectation.orderByBinding, expectation.schedule, expectation.kubeEventsConfig)
 
 			moduleHook, err := mm.GetModuleHook(expectedModuleHook.Name)
 			if err != nil {
@@ -533,7 +608,7 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 
 	runInitGlobalHooks(t, mm, "test_get_global_hook")
 
-	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedules []ScheduleConfig) *GlobalHook {
+	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedules []ScheduleConfig, kubeEventsConfig *KubeEventsConfig) *GlobalHook {
 		globalHook := mm.newGlobalHook()
 		globalHook.moduleManager = mm
 		globalHook.Name = name
@@ -541,19 +616,21 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 		globalHook.Schedules = schedules
 		globalHook.Bindings = bindings
 		globalHook.OrderByBinding = orderByBindings
+		globalHook.KubeEvents = kubeEventsConfig
 
 		return globalHook
 	}
 
 	expectations := []struct {
-		name           string
-		bindings       []BindingType
-		orderByBinding map[BindingType]float64
-		schedule       []ScheduleConfig
+		name             string
+		bindings         []BindingType
+		orderByBinding   map[BindingType]float64
+		schedule         []ScheduleConfig
+		kubeEventsConfig *KubeEventsConfig
 	}{
 		{
 			"global-hooks/000-all-bindings/all",
-			[]BindingType{BeforeAll, AfterAll, OnStartup, Schedule},
+			[]BindingType{BeforeAll, AfterAll, OnStartup, Schedule, KubeEvents},
 			map[BindingType]float64{
 				BeforeAll: 1,
 				AfterAll:  1,
@@ -565,6 +642,77 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 					AllowFailure: true,
 				},
 			},
+			&KubeEventsConfig{
+				OnAdd: []*KubeEventsOnAction{
+					{
+						Kind: "configmaps",
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"component": "component1",
+							},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "tier",
+									Operator: "In",
+									Values:   []string{"cache"},
+								},
+							},
+						},
+						NamespaceSelector: &KubeNamespaceSelector{
+							MatchNames: []string{"namespace1"},
+							Any:        false,
+						},
+						JqFilter:     ".items[] | del(.metadata, .field1)",
+						AllowFailure: true,
+					},
+				},
+				OnUpdate: []*KubeEventsOnAction{
+					{
+						Kind: "namespaces",
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"component": "component2",
+							},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "tier",
+									Operator: "In",
+									Values:   []string{"cache"},
+								},
+							},
+						},
+						NamespaceSelector: &KubeNamespaceSelector{
+							MatchNames: []string{"namespace2"},
+							Any:        false,
+						},
+						JqFilter:     ".items[] | del(.metadata, .field2)",
+						AllowFailure: true,
+					},
+				},
+				OnDelete: []*KubeEventsOnAction{
+					{
+						Kind: "pods",
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"component": "component3",
+							},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "tier",
+									Operator: "In",
+									Values:   []string{"cache"},
+								},
+							},
+						},
+						NamespaceSelector: &KubeNamespaceSelector{
+							MatchNames: nil,
+							Any:        true,
+						},
+						JqFilter:     ".items[] | del(.metadata, .field3)",
+						AllowFailure: true,
+					},
+				},
+			},
 		},
 		{
 			"global-hooks/100-nested-hook/sub/sub/nested-before-all",
@@ -573,12 +721,13 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 				BeforeAll: 1,
 			},
 			nil,
+			nil,
 		},
 	}
 
 	for _, exp := range expectations {
 		t.Run(exp.name, func(t *testing.T) {
-			expectedGlobalHook := createGlobalHook(exp.name, exp.bindings, exp.orderByBinding, exp.schedule)
+			expectedGlobalHook := createGlobalHook(exp.name, exp.bindings, exp.orderByBinding, exp.schedule, exp.kubeEventsConfig)
 
 			globalHook, err := mm.GetGlobalHook(expectedGlobalHook.Name)
 			if err != nil {
