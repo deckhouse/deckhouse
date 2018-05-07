@@ -59,7 +59,7 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 				configMap := obj.(*v1.ConfigMap)
 
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-				configMapChecksum := md5OfMap(configMap.Data)
+				configMapChecksum := md5OfJson(configMap)
 				if kubeEventsInformer.Checksum[configMapId] != configMapChecksum {
 					kubeEventsInformer.Checksum[configMapId] = configMapChecksum
 					KubeEventCh <- kubeEventsInformer.ConfigId
@@ -68,9 +68,8 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 		case OnUpdate:
 			resourceEventHandlerFuncs.UpdateFunc = func(_ interface{}, newObj interface{}) {
 				configMap := newObj.(*v1.ConfigMap)
-
 				configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-				configMapChecksum := md5OfMap(configMap.Data)
+				configMapChecksum := md5OfJson(configMap)
 				if kubeEventsInformer.Checksum[configMapId] != configMapChecksum {
 					kubeEventsInformer.Checksum[configMapId] = configMapChecksum
 					KubeEventCh <- kubeEventsInformer.ConfigId
@@ -106,7 +105,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	configMaps, _ := kube.KubernetesClient.CoreV1().ConfigMaps(namespace).List(*listOptions)
 	for _, configMap := range configMaps.Items {
 		configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-		kubeEventsInformer.Checksum[configMapId] = md5OfMap(configMap.Data)
+		kubeEventsInformer.Checksum[configMapId] = md5OfJson(configMap)
 	}
 
 	optionsModifier := func(options *metav1.ListOptions) {
@@ -127,7 +126,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	return kubeEventsInformer, nil
 }
 
-func md5OfMap(obj map[string]string) string {
+func md5OfJson(obj interface{}) string {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
