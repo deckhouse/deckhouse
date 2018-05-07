@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onAdd="$(jo -a "$(jo kind=configmaps)")" onUpdate="$(jo -a "$(jo kind=configmaps)")" onDelete="$(jo -a "$(jo kind=configmaps)")"
+}
+
+function __main__() {
+    echo "kube-events-test called!"
+}
+
+hook::run $@

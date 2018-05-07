@@ -31,7 +31,7 @@ const (
 )
 
 type KubeEventsManager interface {
-	Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector) (string, error)
+	Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error)
 	Stop(configId string) error
 }
 
@@ -51,17 +51,26 @@ func Init() (KubeEventsManager, error) {
 	return em, nil
 }
 
-func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector) (string, error) {
-	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
+func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error) {
+	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, jqFilter, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				kubeEventsInformer.HandleKubeEvent(obj, informerType == OnAdd)
+				err := kubeEventsInformer.HandleKubeEvent(obj, runtimeObjectMd5(obj, jqFilter), informerType == OnAdd)
+				if err != nil {
+					rlog.Error("Kube events manager: %s", err)
+				}
 			},
-			UpdateFunc: func(_ interface{}, newObj interface{}) {
-				kubeEventsInformer.HandleKubeEvent(newObj, informerType == OnUpdate)
+			UpdateFunc: func(_ interface{}, obj interface{}) {
+				err := kubeEventsInformer.HandleKubeEvent(obj, runtimeObjectMd5(obj, jqFilter), informerType == OnUpdate)
+				if err != nil {
+					rlog.Error("Kube events manager: %s", err)
+				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				kubeEventsInformer.HandleKubeEvent(obj, informerType == OnDelete)
+				err := kubeEventsInformer.HandleKubeEvent(obj, "", informerType == OnDelete)
+				if err != nil {
+					rlog.Error("Kube events manager: %s", err)
+				}
 			},
 		}
 	})
@@ -75,7 +84,7 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 	return kubeEventsInformer.ConfigId, nil
 }
 
-func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metav1.LabelSelector, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
+func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
 	kubeEventsInformer := NewKubeEventsInformer()
 
 	listOptions := &metav1.ListOptions{}
@@ -87,7 +96,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	configMaps, _ := kube.KubernetesClient.CoreV1().ConfigMaps(namespace).List(*listOptions)
 	for _, configMap := range configMaps.Items {
 		configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-		kubeEventsInformer.Checksum[configMapId] = runtimeObjectMd5(configMap)
+		kubeEventsInformer.Checksum[configMapId] = runtimeObjectMd5(configMap, jqFilter)
 	}
 
 	optionsModifier := func(options *metav1.ListOptions) {
@@ -108,7 +117,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	return kubeEventsInformer, nil
 }
 
-func runtimeObjectMd5(obj interface{}) string {
+func runtimeObjectMd5(obj interface{}, _ string) string {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
@@ -144,22 +153,21 @@ func NewKubeEventsInformer() *KubeEventsInformer {
 	return kubeEventsInformer
 }
 
-func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, sendSignal bool) {
-	runtimeObject := obj.(runtime.Object)
-	objectId, err := runtimeObjectId(runtimeObject)
+func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum string, sendSignal bool) error {
+	objectId, err := runtimeObjectId(obj.(runtime.Object))
 	if err != nil {
-		rlog.Error(err)
-		return
+		return fmt.Errorf("failed to get object id: %s", err)
 	}
 
-	checksum := runtimeObjectMd5(runtimeObject)
-	if ei.Checksum[objectId] != checksum {
-		ei.Checksum[objectId] = checksum
+	if ei.Checksum[objectId] != newChecksum {
+		ei.Checksum[objectId] = newChecksum
 
 		if sendSignal {
 			KubeEventCh <- ei.ConfigId
 		}
 	}
+
+	return nil
 }
 
 func runtimeObjectId(obj runtime.Object) (string, error) {

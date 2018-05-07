@@ -14,6 +14,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/task"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 
+	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
 	"github.com/romana/rlog"
 )
 
@@ -36,6 +37,9 @@ var (
 	// schedule manager
 	ScheduleManager schedule_manager.ScheduleManager
 	ScheduledHooks  ScheduledHooksStorage
+
+	KubeEventsManager kube_events_manager.KubeEventsManager
+	KubeEventsHooks   *KubeEventsHooksController
 
 	// chan for stopping ManagersEventsHandler infinite loop
 	ManagersEventsHandlerStopCh chan struct{}
@@ -154,6 +158,13 @@ func Init() {
 
 	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
 	// RegisterKubeEventHooks()
+
+	KubeEventsManager, err = kube_events_manager.Init()
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot initialize kube events manager: %s", err)
+		os.Exit(1)
+	}
+	KubeEventsHooks = NewKubeEventsHooksController()
 }
 
 // Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
@@ -168,6 +179,8 @@ func Run() {
 
 	CreateOnStartupTasks()
 	CreateReloadAllTasks()
+
+	KubeEventsHooks.EnableGlobalHooks(ModuleManager, KubeEventsManager)
 
 	TasksQueue.ChangesEnable(true)
 
@@ -207,7 +220,7 @@ func ManagersEventsHandler() {
 			switch moduleEvent.Type {
 			// Изменились отдельные модули
 			case module_manager.ModulesChanged:
-				rlog.Debug("main got ModulesChanged event")
+				rlog.Debug("main: got ModulesChanged event")
 				for _, moduleChange := range moduleEvent.ModulesChanges {
 					switch moduleChange.ChangeType {
 					case module_manager.Enabled, module_manager.Changed:
@@ -225,7 +238,7 @@ func ManagersEventsHandler() {
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			// Изменились глобальные values, нужен рестарт всех модулей
 			case module_manager.GlobalChanged:
-				rlog.Debug("main got GlobalChanged event")
+				rlog.Debug("main: got GlobalChanged event")
 				TasksQueue.ChangesDisable()
 				CreateReloadAllTasks()
 				TasksQueue.ChangesEnable(true)
@@ -274,6 +287,18 @@ func ManagersEventsHandler() {
 				}
 
 				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
+			}
+		case configId := <-kube_events_manager.KubeEventCh:
+			rlog.Debugf("main: got kube event '%s'", configId)
+
+			res, err := KubeEventsHooks.HandleEvent(configId)
+			if err != nil {
+				rlog.Errorf("main: error handling kube event '%s': %s", configId, err)
+			}
+
+			for _, task := range res.Tasks {
+				TasksQueue.Add(task)
+				rlog.Debugf("main: queued %s '%s' with binding %s", task.GetType(), task.GetName(), task.GetBinding())
 			}
 		case <-ManagersEventsHandlerStopCh:
 			return
@@ -410,12 +435,6 @@ func TasksRunner() {
 type ScheduleHook struct {
 	Name     string
 	Schedule []module_manager.ScheduleConfig
-}
-
-type KubeEventHook struct {
-	Name           string
-	OnCreateConfig struct{}
-	OnChangeConfig struct{}
 }
 
 type ScheduledHooksStorage []*ScheduleHook
