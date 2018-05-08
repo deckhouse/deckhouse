@@ -153,18 +153,18 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 
 	runInitModulesIndex(t, mm, "test_get_module_hook")
 
-	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedule []ScheduleConfig, onAdd []KubeEventsOnAction, onUpdate []KubeEventsOnAction, onDelete []KubeEventsOnAction) *ModuleHook {
+	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onAdd []KubeEventsOnAction, onUpdate []KubeEventsOnAction, onDelete []KubeEventsOnAction) *ModuleHook {
 		config := &ModuleHookConfig{
 			HookConfig{
-				1,
+				orderByBindings[OnStartup],
 				schedule,
 				onAdd,
 				onUpdate,
 				onDelete,
 			},
-			1,
-			1,
-			1,
+			orderByBindings[BeforeHelm],
+			orderByBindings[AfterHelm],
+			orderByBindings[AfterDeleteHelm],
 		}
 
 		moduleHook := mm.newModuleHook(name, filepath.Join(WorkingDir, "modules", name), config)
@@ -175,7 +175,9 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 		}
 
 		moduleHook.Bindings = bindings
-		moduleHook.OrderByBinding = orderByBindings
+		for k, v := range orderByBindings {
+			moduleHook.OrderByBinding[k] = v.(float64)
+		}
 
 		return moduleHook
 	}
@@ -184,7 +186,7 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 		moduleName     string
 		name           string
 		bindings       []BindingType
-		orderByBinding map[BindingType]float64
+		orderByBinding map[BindingType]interface{}
 		schedule       []ScheduleConfig
 		onAdd          []KubeEventsOnAction
 		onUpdate       []KubeEventsOnAction
@@ -194,11 +196,11 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 			"all-bindings",
 			"000-all-bindings/hooks/all",
 			[]BindingType{BeforeHelm, AfterHelm, AfterDeleteHelm, OnStartup, Schedule, KubeEvents},
-			map[BindingType]float64{
-				BeforeHelm:      1,
-				AfterHelm:       1,
-				AfterDeleteHelm: 1,
-				OnStartup:       1,
+			map[BindingType]interface{}{
+				BeforeHelm:      1.0,
+				AfterHelm:       1.0,
+				AfterDeleteHelm: 1.0,
+				OnStartup:       1.0,
 			},
 			[]ScheduleConfig{
 				{
@@ -280,8 +282,8 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 			"nested-hooks",
 			"100-nested-hooks/hooks/sub/sub/nested-before-helm",
 			[]BindingType{BeforeHelm},
-			map[BindingType]float64{
-				BeforeHelm: 1,
+			map[BindingType]interface{}{
+				BeforeHelm: 1.0,
 			},
 			nil,
 			nil,
@@ -618,23 +620,26 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 
 	runInitGlobalHooks(t, mm, "test_get_global_hook")
 
-	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedule []ScheduleConfig, onAdd []KubeEventsOnAction, onUpdate []KubeEventsOnAction, onDelete []KubeEventsOnAction) *GlobalHook {
+	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onAdd []KubeEventsOnAction, onUpdate []KubeEventsOnAction, onDelete []KubeEventsOnAction) *GlobalHook {
 		config := &GlobalHookConfig{
 			HookConfig{
-				1,
+				orderByBindings[OnStartup],
 				schedule,
 				onAdd,
 				onUpdate,
 				onDelete,
 			},
-			nil,
-			1,
-			1,
+			orderByBindings[OnKubeNodeChange],
+			orderByBindings[BeforeAll],
+			orderByBindings[AfterAll],
 		}
 
 		globalHook := mm.newGlobalHook(name, filepath.Join(WorkingDir, name), config)
 		globalHook.Bindings = bindings
-		globalHook.OrderByBinding = orderByBindings
+
+		for k, v := range orderByBindings {
+			globalHook.OrderByBinding[k] = v.(float64)
+		}
 
 		return globalHook
 	}
@@ -642,7 +647,7 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 	expectations := []struct {
 		name           string
 		bindings       []BindingType
-		orderByBinding map[BindingType]float64
+		orderByBinding map[BindingType]interface{}
 		schedule       []ScheduleConfig
 		onAdd          []KubeEventsOnAction
 		onUpdate       []KubeEventsOnAction
@@ -651,10 +656,10 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 		{
 			"global-hooks/000-all-bindings/all",
 			[]BindingType{BeforeAll, AfterAll, OnStartup, Schedule, KubeEvents},
-			map[BindingType]float64{
-				BeforeAll: 1,
-				AfterAll:  1,
-				OnStartup: 1,
+			map[BindingType]interface{}{
+				BeforeAll: 1.0,
+				AfterAll:  1.0,
+				OnStartup: 1.0,
 			},
 			[]ScheduleConfig{
 				{
@@ -735,8 +740,8 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 		{
 			"global-hooks/100-nested-hook/sub/sub/nested-before-all",
 			[]BindingType{BeforeAll},
-			map[BindingType]float64{
-				BeforeAll: 1,
+			map[BindingType]interface{}{
+				BeforeAll: 1.0,
 			},
 			nil,
 			nil,
