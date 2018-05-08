@@ -537,7 +537,7 @@ func UpdateScheduleHooks(storage ScheduledHooksStorage) ScheduledHooksStorage {
 LOOP_GLOBAL_HOOKS:
 	for _, globalHookName := range globalHooks {
 		globalHook, _ := ModuleManager.GetGlobalHook(globalHookName)
-		for _, schedule := range globalHook.Schedules {
+		for _, schedule := range globalHook.Config.Schedule {
 			_, err := ScheduleManager.Add(schedule.Crontab)
 			if err != nil {
 				rlog.Errorf("Schedule: cannot add '%s' for global hook '%s': %s", schedule.Crontab, globalHookName, err)
@@ -545,7 +545,7 @@ LOOP_GLOBAL_HOOKS:
 			}
 			rlog.Debugf("Schedule: add '%s' for global hook '%s'", schedule.Crontab, globalHookName)
 		}
-		newScheduledTasks.AddHook(globalHook.Name, globalHook.Schedules)
+		newScheduledTasks.AddHook(globalHook.Name, globalHook.Config.Schedule)
 	}
 
 	modules := ModuleManager.GetModuleNamesInOrder()
@@ -554,7 +554,7 @@ LOOP_GLOBAL_HOOKS:
 	LOOP_MODULE_HOOKS:
 		for _, moduleHookName := range moduleHooks {
 			moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
-			for _, schedule := range moduleHook.Schedules {
+			for _, schedule := range moduleHook.Config.Schedule {
 				_, err := ScheduleManager.Add(schedule.Crontab)
 				if err != nil {
 					rlog.Errorf("Schedule: cannot add '%s' for hook '%s': %s", schedule.Crontab, moduleHookName, err)
@@ -562,7 +562,7 @@ LOOP_GLOBAL_HOOKS:
 				}
 				rlog.Debugf("Schedule: add '%s' for hook '%s'", schedule.Crontab, moduleHookName)
 			}
-			newScheduledTasks.AddHook(moduleHook.Name, moduleHook.Schedules)
+			newScheduledTasks.AddHook(moduleHook.Name, moduleHook.Config.Schedule)
 		}
 	}
 

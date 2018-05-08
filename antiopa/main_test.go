@@ -85,8 +85,12 @@ func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHo
 				Path:           "/antiopa/hooks/global_1",
 				Bindings:       []module_manager.BindingType{module_manager.Schedule},
 				OrderByBinding: map[module_manager.BindingType]float64{},
-				Schedules: []module_manager.ScheduleConfig{
-					scheduledHooks[name],
+			},
+			Config: &module_manager.GlobalHookConfig{
+				HookConfig: module_manager.HookConfig{
+					Schedule: []module_manager.ScheduleConfig{
+						scheduledHooks[name],
+					},
 				},
 			},
 		}, nil
@@ -102,14 +106,18 @@ func (m *ModuleManagerMock) GetModuleHook(name string) (*module_manager.ModuleHo
 				Path:           "/antiopa/modules/000_test_modu",
 				Bindings:       []module_manager.BindingType{module_manager.Schedule},
 				OrderByBinding: map[module_manager.BindingType]float64{},
-				Schedules: []module_manager.ScheduleConfig{
-					scheduledHooks[name],
-				},
 			},
 			Module: &module_manager.Module{
 				Name:          "test_module",
 				DirectoryName: "/antiopa/modules/000_test_modue",
 				Path:          "/antiopa/modules/000_test_modu",
+			},
+			Config: &module_manager.ModuleHookConfig{
+				HookConfig: module_manager.HookConfig{
+					Schedule: []module_manager.ScheduleConfig{
+						scheduledHooks[name],
+					},
+				},
 			},
 		}, nil
 	}
