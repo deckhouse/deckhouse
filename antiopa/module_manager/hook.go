@@ -15,11 +15,13 @@ import (
 
 type GlobalHook struct {
 	*Hook
+	Config *GlobalHookConfig
 }
 
 type ModuleHook struct {
 	*Hook
 	Module *Module
+	Config *ModuleHookConfig
 }
 
 type Hook struct {
@@ -27,8 +29,6 @@ type Hook struct {
 	Path           string
 	Bindings       []BindingType
 	OrderByBinding map[BindingType]float64
-	Schedules      []ScheduleConfig
-	KubeEvents     *KubeEventsConfig
 
 	moduleManager *MainModuleManager
 }
@@ -48,20 +48,16 @@ type ModuleHookConfig struct {
 }
 
 type HookConfig struct {
-	*KubeEventsConfig
-	OnStartup interface{}      `json:"onStartup"`
-	Schedule  []ScheduleConfig `json:"schedule"`
+	OnStartup interface{}          `json:"onStartup"`
+	Schedule  []ScheduleConfig     `json:"schedule"`
+	OnAdd     []KubeEventsOnAction `json:"onAdd"`
+	OnUpdate  []KubeEventsOnAction `json:"onUpdate"`
+	OnDelete  []KubeEventsOnAction `json:"onDelete"`
 }
 
 type ScheduleConfig struct {
 	Crontab      string `json:"crontab"`
 	AllowFailure bool   `json:"allowFailure"`
-}
-
-type KubeEventsConfig struct {
-	OnAdd    []*KubeEventsOnAction `json:"onAdd"`
-	OnUpdate []*KubeEventsOnAction `json:"onUpdate"`
-	OnDelete []*KubeEventsOnAction `json:"onDelete"`
 }
 
 type KubeEventsOnAction struct {
@@ -77,30 +73,32 @@ type KubeNamespaceSelector struct {
 	Any        bool     `json:"any"`
 }
 
-func (mm *MainModuleManager) newGlobalHook() *GlobalHook {
+func (mm *MainModuleManager) newGlobalHook(name, path string, config *GlobalHookConfig) *GlobalHook {
 	globalHook := &GlobalHook{}
-	globalHook.Hook = mm.newHook()
+	globalHook.Hook = mm.newHook(name, path)
+	globalHook.Config = config
 	return globalHook
 }
 
-func (mm *MainModuleManager) newHook() *Hook {
+func (mm *MainModuleManager) newHook(name, path string) *Hook {
 	hook := &Hook{}
 	hook.moduleManager = mm
+	hook.Name = name
+	hook.Path = path
 	hook.OrderByBinding = make(map[BindingType]float64)
 	return hook
 }
 
-func (mm *MainModuleManager) newModuleHook() *ModuleHook {
+func (mm *MainModuleManager) newModuleHook(name, path string, config *ModuleHookConfig) *ModuleHook {
 	moduleHook := &ModuleHook{}
-	moduleHook.Hook = mm.newHook()
+	moduleHook.Hook = mm.newHook(name, path)
+	moduleHook.Config = config
 	return moduleHook
 }
 
 func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	var ok bool
-	globalHook := mm.newGlobalHook()
-	globalHook.Name = name
-	globalHook.Path = path
+	globalHook := mm.newGlobalHook(name, path, config)
 
 	if config.BeforeAll != nil {
 		globalHook.Bindings = append(globalHook.Bindings, BeforeAll)
@@ -136,13 +134,11 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 
 	if len(config.Schedule) != 0 {
 		globalHook.Bindings = append(globalHook.Bindings, Schedule)
-		globalHook.Schedules = config.Schedule
 		mm.globalHooksOrder[Schedule] = append(mm.globalHooksOrder[Schedule], globalHook)
 	}
 
-	if config.KubeEventsConfig != nil {
+	if (len(config.OnAdd) + len(config.OnUpdate) + len(config.OnDelete)) != 0 {
 		globalHook.Bindings = append(globalHook.Bindings, KubeEvents)
-		globalHook.KubeEvents = config.KubeEventsConfig
 		mm.globalHooksOrder[KubeEvents] = append(mm.globalHooksOrder[KubeEvents], globalHook)
 	}
 
@@ -153,9 +149,7 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 
 func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err error) {
 	var ok bool
-	moduleHook := mm.newModuleHook()
-	moduleHook.Name = name
-	moduleHook.Path = path
+	moduleHook := mm.newModuleHook(name, path, config)
 
 	if moduleHook.Module, err = mm.GetModule(moduleName); err != nil {
 		return err
@@ -196,13 +190,11 @@ func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config
 
 	if len(config.Schedule) != 0 {
 		moduleHook.Bindings = append(moduleHook.Bindings, Schedule)
-		moduleHook.Schedules = config.Schedule
 		mm.addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
 	}
 
-	if config.KubeEventsConfig != nil {
+	if (len(config.OnAdd) + len(config.OnUpdate) + len(config.OnDelete)) != 0 {
 		moduleHook.Bindings = append(moduleHook.Bindings, KubeEvents)
-		moduleHook.KubeEvents = config.KubeEventsConfig
 		mm.addModulesHooksOrderByName(moduleName, KubeEvents, moduleHook)
 	}
 
@@ -569,6 +561,20 @@ func (h *ModuleHook) prepareConfigValuesYamlFile() (string, error) {
 	return h.Module.prepareConfigValuesYamlFile()
 }
 
+func prepareHookConfig(hookConfig *HookConfig) {
+	for _, configs := range [][]KubeEventsOnAction{
+		hookConfig.OnAdd,
+		hookConfig.OnUpdate,
+		hookConfig.OnDelete,
+	} {
+		for _, cfg := range configs {
+			if cfg.NamespaceSelector != nil {
+				cfg.NamespaceSelector = &KubeNamespaceSelector{Any: true}
+			}
+		}
+	}
+}
+
 func (mm *MainModuleManager) initGlobalHooks() error {
 	rlog.Info("Initializing global hooks ...")
 
@@ -589,6 +595,8 @@ func (mm *MainModuleManager) initGlobalHooks() error {
 		if err := json.Unmarshal(output, hookConfig); err != nil {
 			return fmt.Errorf("unmarshaling global hook '%s' json failed: %s", hookName, err.Error())
 		}
+
+		prepareHookConfig(&hookConfig.HookConfig)
 
 		if err := mm.addGlobalHook(hookName, hookPath, hookConfig); err != nil {
 			return fmt.Errorf("adding global hook '%s' failed: %s", hookName, err.Error())
@@ -621,6 +629,8 @@ func (mm *MainModuleManager) initModuleHooks(module *Module) error {
 		if err := json.Unmarshal(output, hookConfig); err != nil {
 			return fmt.Errorf("unmarshaling module hook '%s' json failed: %s", hookName, err.Error())
 		}
+
+		prepareHookConfig(&hookConfig.HookConfig)
 
 		if err := mm.addModuleHook(module.Name, hookName, hookPath, hookConfig); err != nil {
 			return fmt.Errorf("adding module hook '%s' failed: %s", hookName, err.Error())

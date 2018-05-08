@@ -22,23 +22,19 @@ type KubeEventHook struct {
 	Config module_manager.KubeEventsOnAction
 }
 
-func MakeKubeEventHookDescriptors(hook module_manager.Hook) []*KubeEventHook {
-	if hook.KubeEvents == nil {
-		return nil
-	}
-
+func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_manager.HookConfig) []*KubeEventHook {
 	res := make([]*KubeEventHook, 0)
 
 	for _, data := range []struct {
 		InformerType kube_events_manager.InformerType
-		Configs      []*module_manager.KubeEventsOnAction
+		Configs      []module_manager.KubeEventsOnAction
 	}{
-		{kube_events_manager.OnAdd, hook.KubeEvents.OnAdd},
-		{kube_events_manager.OnUpdate, hook.KubeEvents.OnUpdate},
-		{kube_events_manager.OnDelete, hook.KubeEvents.OnDelete},
+		{kube_events_manager.OnAdd, hookConfig.OnAdd},
+		{kube_events_manager.OnUpdate, hookConfig.OnUpdate},
+		{kube_events_manager.OnDelete, hookConfig.OnDelete},
 	} {
 		for _, config := range data.Configs {
-			if config.NamespaceSelector == nil || config.NamespaceSelector.Any {
+			if config.NamespaceSelector.Any {
 				res = append(res, &KubeEventHook{
 					HookName:     hook.Name,
 					InformerType: data.InformerType,
@@ -84,7 +80,7 @@ func (obj *KubeEventsHooksController) EnableGlobalHooks(moduleManager module_man
 	for _, globalHookName := range globalHooks {
 		globalHook, _ := ModuleManager.GetGlobalHook(globalHookName)
 
-		for _, desc := range MakeKubeEventHookDescriptors(*globalHook.Hook) {
+		for _, desc := range MakeKubeEventHookDescriptors(globalHook.Hook, &globalHook.Config.HookConfig) {
 			configId, err := eventsManager.Run(desc.InformerType, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
 			if err != nil {
 				return err
