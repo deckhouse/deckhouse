@@ -567,9 +567,9 @@ func prepareHookConfig(hookConfig *HookConfig) {
 		hookConfig.OnUpdate,
 		hookConfig.OnDelete,
 	} {
-		for _, cfg := range configs {
-			if cfg.NamespaceSelector != nil {
-				cfg.NamespaceSelector = &KubeNamespaceSelector{Any: true}
+		for i := range configs {
+			if configs[i].NamespaceSelector == nil {
+				configs[i].NamespaceSelector = &KubeNamespaceSelector{Any: true}
 			}
 		}
 	}
