@@ -99,10 +99,11 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 
 func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
 	kubeEventsInformer := NewKubeEventsInformer()
+	formatLabelSelector := metav1.FormatLabelSelector(labelSelector)
 
 	listOptions := metav1.ListOptions{}
-	if labelSelector != nil {
-		listOptions.LabelSelector = labelSelector.String()
+	if formatLabelSelector != "" {
+		listOptions.LabelSelector = formatLabelSelector
 	}
 
 	var runtimeObj runtime.Object
@@ -208,8 +209,8 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	}
 
 	optionsModifier := func(options *metav1.ListOptions) {
-		if labelSelector != nil {
-			options.LabelSelector = labelSelector.String()
+		if formatLabelSelector != "" {
+			options.LabelSelector = formatLabelSelector
 		}
 	}
 
