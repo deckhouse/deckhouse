@@ -1,10 +1,13 @@
 package kube_events_manager
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/romana/rlog"
@@ -55,15 +58,25 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, jqFilter, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				err := kubeEventsInformer.HandleKubeEvent(obj, resourceMd5(obj, jqFilter), informerType == OnAdd)
+				checksum, err := resourceMd5(obj, jqFilter)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
+				} else {
+					err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnAdd)
+					if err != nil {
+						rlog.Error("Kube events manager: %s", err)
+					}
 				}
 			},
 			UpdateFunc: func(_ interface{}, obj interface{}) {
-				err := kubeEventsInformer.HandleKubeEvent(obj, resourceMd5(obj, jqFilter), informerType == OnUpdate)
+				checksum, err := resourceMd5(obj, jqFilter)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
+				} else {
+					err := kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnUpdate)
+					if err != nil {
+						rlog.Error("Kube events manager: %s", err)
+					}
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -104,7 +117,11 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 
 		for _, resource := range configMapList.Items {
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
+				return nil, fmt.Errorf("failed resource md5: %s", err)
+			} else {
+				kubeEventsInformer.Checksum[resourceId] = checksum
+			}
 		}
 	case "pods":
 		runtimeObj = &v1.Pod{}
@@ -116,7 +133,11 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 
 		for _, resource := range podList.Items {
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
+				return nil, fmt.Errorf("failed resource md5: %s", err)
+			} else {
+				kubeEventsInformer.Checksum[resourceId] = checksum
+			}
 		}
 	case "endpoints":
 		runtimeObj = &v1.Endpoints{}
@@ -128,7 +149,11 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 
 		for _, resource := range endpointList.Items {
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
+				return nil, fmt.Errorf("failed resource md5: %s", err)
+			} else {
+				kubeEventsInformer.Checksum[resourceId] = checksum
+			}
 		}
 	case "services":
 		runtimeObj = &v1.Service{}
@@ -140,7 +165,11 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 
 		for _, resource := range serviceList.Items {
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
+				return nil, fmt.Errorf("failed resource md5: %s", err)
+			} else {
+				kubeEventsInformer.Checksum[resourceId] = checksum
+			}
 		}
 	case "serviceaccounts":
 		runtimeObj = &v1.ServiceAccount{}
@@ -152,7 +181,11 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 
 		for _, resource := range serviceAccountList.Items {
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
+				return nil, fmt.Errorf("failed resource md5: %s", err)
+			} else {
+				kubeEventsInformer.Checksum[resourceId] = checksum
+			}
 		}
 	case "replicationcontrollers":
 		runtimeObj = &v1.ReplicationController{}
@@ -164,7 +197,11 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 
 		for _, resource := range replicationControllerList.Items {
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
+				return nil, fmt.Errorf("failed resource md5: %s", err)
+			} else {
+				kubeEventsInformer.Checksum[resourceId] = checksum
+			}
 		}
 	default:
 		return nil, fmt.Errorf("kind '%s' isn't supported", kind)
@@ -188,16 +225,28 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	return kubeEventsInformer, nil
 }
 
-func resourceMd5(obj interface{}, _ string) string {
+func resourceMd5(obj interface{}, jqFilter string) (string, error) {
 	data, err := json.Marshal(obj)
 	if err != nil {
-		panic(err)
+		return "", err
+	}
+
+	var res string
+	if jqFilter != "" {
+		stdout, stderr, err := execJq(jqFilter, data)
+		if err != nil {
+			return "", fmt.Errorf("failed exec jq: \nerr: '%s'\nstderr: '%s'", err, stderr)
+		}
+
+		res = stdout
+	} else {
+		res = string(data)
 	}
 
 	h := md5.New()
-	io.WriteString(h, string(data))
+	io.WriteString(h, res)
 
-	return string(h.Sum(nil))
+	return string(h.Sum(nil)), nil
 }
 
 func (em *MainKubeEventsManager) Stop(configId string) error {
@@ -268,4 +317,25 @@ func (ei *KubeEventsInformer) Run() {
 
 func (ei *KubeEventsInformer) Stop() {
 	ei.SharedInformerStop <- struct{}{}
+}
+
+func execJq(jqFilter string, jsonData []byte) (stdout string, stderr string, err error) {
+	cmd := exec.Command("/usr/bin/jq", jqFilter)
+
+	var stdinBuf bytes.Buffer
+	_, err = stdinBuf.WriteString(string(jsonData))
+	if err != nil {
+		panic(err)
+	}
+	cmd.Stdin = &stdinBuf
+	var stdoutBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
+
+	err = cmd.Run()
+	stdout = strings.TrimSpace(stdoutBuf.String())
+	stderr = strings.TrimSpace(stderrBuf.String())
+
+	return
 }
