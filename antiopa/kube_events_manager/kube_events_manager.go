@@ -55,13 +55,13 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, jqFilter, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				err := kubeEventsInformer.HandleKubeEvent(obj, runtimeObjectMd5(obj, jqFilter), informerType == OnAdd)
+				err := kubeEventsInformer.HandleKubeEvent(obj, resourceMd5(obj, jqFilter), informerType == OnAdd)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
 				}
 			},
 			UpdateFunc: func(_ interface{}, obj interface{}) {
-				err := kubeEventsInformer.HandleKubeEvent(obj, runtimeObjectMd5(obj, jqFilter), informerType == OnUpdate)
+				err := kubeEventsInformer.HandleKubeEvent(obj, resourceMd5(obj, jqFilter), informerType == OnUpdate)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
 				}
@@ -87,28 +87,99 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
 	kubeEventsInformer := NewKubeEventsInformer()
 
-	listOptions := &metav1.ListOptions{}
-
+	listOptions := metav1.ListOptions{}
 	if labelSelector != nil {
 		listOptions.LabelSelector = labelSelector.String()
 	}
 
-	configMaps, _ := kube.KubernetesClient.CoreV1().ConfigMaps(namespace).List(*listOptions)
-	for _, configMap := range configMaps.Items {
-		configMapId := fmt.Sprintf("%s-%s", configMap.Name, configMap.Namespace)
-		kubeEventsInformer.Checksum[configMapId] = runtimeObjectMd5(configMap, jqFilter)
+	var runtimeObj runtime.Object
+	switch kind {
+	case "configmaps":
+		runtimeObj = &v1.ConfigMap{}
+
+		configMapList, err := kube.KubernetesClient.CoreV1().ConfigMaps(namespace).List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		for _, resource := range configMapList.Items {
+			resourceId := generateChecksumId(resource.Name, resource.Namespace)
+			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+		}
+	case "pods":
+		runtimeObj = &v1.Pod{}
+
+		podList, err := kube.KubernetesClient.CoreV1().Pods(namespace).List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		for _, resource := range podList.Items {
+			resourceId := generateChecksumId(resource.Name, resource.Namespace)
+			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+		}
+	case "endpoints":
+		runtimeObj = &v1.Endpoints{}
+
+		endpointList, err := kube.KubernetesClient.CoreV1().Endpoints(namespace).List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		for _, resource := range endpointList.Items {
+			resourceId := generateChecksumId(resource.Name, resource.Namespace)
+			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+		}
+	case "services":
+		runtimeObj = &v1.Service{}
+
+		serviceList, err := kube.KubernetesClient.CoreV1().Services(namespace).List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		for _, resource := range serviceList.Items {
+			resourceId := generateChecksumId(resource.Name, resource.Namespace)
+			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+		}
+	case "serviceaccounts":
+		runtimeObj = &v1.ServiceAccount{}
+
+		serviceAccountList, err := kube.KubernetesClient.CoreV1().ServiceAccounts(namespace).List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		for _, resource := range serviceAccountList.Items {
+			resourceId := generateChecksumId(resource.Name, resource.Namespace)
+			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+		}
+	case "replicationcontrollers":
+		runtimeObj = &v1.ReplicationController{}
+
+		replicationControllerList, err := kube.KubernetesClient.CoreV1().ReplicationControllers(namespace).List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		for _, resource := range replicationControllerList.Items {
+			resourceId := generateChecksumId(resource.Name, resource.Namespace)
+			kubeEventsInformer.Checksum[resourceId] = resourceMd5(resource, jqFilter)
+		}
+	default:
+		return nil, fmt.Errorf("kind '%s' isn't supported", kind)
 	}
 
 	optionsModifier := func(options *metav1.ListOptions) {
 		if labelSelector != nil {
-			*options = *listOptions
+			options.LabelSelector = labelSelector.String()
 		}
 	}
 
 	restKubeClient := kube.KubernetesClient.CoreV1().RESTClient()
 	lw := cache.NewFilteredListWatchFromClient(restKubeClient, kind, namespace, optionsModifier)
 
-	kubeEventsInformer.SharedInformer = cache.NewSharedInformer(lw, &v1.ConfigMap{}, time.Duration(15)*time.Second)
+	kubeEventsInformer.SharedInformer = cache.NewSharedInformer(lw, runtimeObj, time.Duration(15)*time.Second)
 	kubeEventsInformer.SharedInformer.AddEventHandler(resourceEventHandlerFuncs(kubeEventsInformer))
 	kubeEventsInformer.ConfigId = uuid.NewV4().String()
 
@@ -117,7 +188,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	return kubeEventsInformer, nil
 }
 
-func runtimeObjectMd5(obj interface{}, _ string) string {
+func resourceMd5(obj interface{}, _ string) string {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
@@ -154,7 +225,7 @@ func NewKubeEventsInformer() *KubeEventsInformer {
 }
 
 func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum string, sendSignal bool) error {
-	objectId, err := runtimeObjectId(obj.(runtime.Object))
+	objectId, err := runtimeResourceId(obj.(runtime.Object))
 	if err != nil {
 		return fmt.Errorf("failed to get object id: %s", err)
 	}
@@ -170,20 +241,25 @@ func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum strin
 	return nil
 }
 
-func runtimeObjectId(obj runtime.Object) (string, error) {
+func runtimeResourceId(obj interface{}) (string, error) {
+	runtimeObj := obj.(runtime.Object)
 	accessor := meta.NewAccessor()
 
-	name, err := accessor.Name(obj)
+	name, err := accessor.Name(runtimeObj)
 	if err != nil {
 		return "", err
 	}
 
-	namespace, err := accessor.Namespace(obj)
+	namespace, err := accessor.Namespace(runtimeObj)
 	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s-%s", name, namespace), nil
+	return generateChecksumId(name, namespace), nil
+}
+
+func generateChecksumId(name, namespace string) string {
+	return fmt.Sprintf("%s-%s", name, namespace)
 }
 
 func (ei *KubeEventsInformer) Run() {
