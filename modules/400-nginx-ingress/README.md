@@ -28,7 +28,7 @@
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `config.setRealIPFrom` — список CIDR'ов, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
     * Список строк, именно YAML list, а не строка со значениями через запятую!
-    * Так-как nginx ingress не поддерживает получение адреса клиента из `X-Forwarded-For` при одновременном использовании proxy protocol параметр полностью игнорируется для inlet'а `AWSClassicLoadBalancer`.
+    * **Важно!** Так-как nginx ingress (как и сам nginx) не поддерживает получение адреса клиента из `X-Forwarded-For` при одновременном использовании proxy protocol параметр запрещено использовать для inlet'ов `Direct` и `AWSClassicLoadBalancer`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role/frontend":""}`.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
