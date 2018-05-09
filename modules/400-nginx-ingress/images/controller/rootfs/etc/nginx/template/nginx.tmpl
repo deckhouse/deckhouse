@@ -830,6 +830,10 @@ stream {
             set $service_port   "{{ if $location.Port }}{{ $location.Port }}{{ end }}";
             set $location_path  "{{ $location.Path }}";
 
+            set $content_kind "";
+            set $total_upstream_response_time "0";
+            set $upstream_retries "0";
+
             {{ if not $all.DisableLua }}
             {{ if shouldConfigureLuaRestyWAF $all.Cfg.DisableLuaRestyWAF $location.LuaRestyWAF.Mode }}
             access_by_lua_block {

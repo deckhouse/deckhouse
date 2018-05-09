@@ -89,6 +89,7 @@ function _M.call()
     else
       content_kind = 'cache-headers-not-present'
     end
+    ngx.var.content_kind = content_kind
 
     local var_namespace = ngx.var.namespace
     local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
@@ -142,6 +143,7 @@ function _M.call()
         -- upstream response time (for each backend)
         _hist(buffer, "ka#" .. backend_key .. "#" .. backends[n], response_time)
       end
+      ngx.var.total_upstream_response_time = upstream_response_time
 
       -- upstream response time
       _hist(buffer, "fo#" .. overall_key, upstream_response_time)
@@ -155,6 +157,7 @@ function _M.call()
       end
 
       local upstream_retries = upstream_requests - upstream_redirects - 1
+      ngx.var.upstream_retries = upstream_retries
       if upstream_retries > 0 then
         -- upstream retries (count)
         _incr(buffer, "ho#" .. overall_key)
