@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboard-definitions-{{ $folder }}
+  name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
   namespace: kube-prometheus
   labels:
     heritage: antiopa

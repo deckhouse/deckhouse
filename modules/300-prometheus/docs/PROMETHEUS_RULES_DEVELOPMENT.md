@@ -30,6 +30,7 @@
               * `kubectl -n kube-prometheus-operator logs -f deploy/prometheus-operator --tail=50` — посмотреть, что в логе нет ошибок
           * Если `prometheus-config-reloader` не может релоаднуть prometheus, значит в правилах ошибка и надо смотреть лог Prometheus:
               * `kubectl -n kube-prometheus logs prometheus-main-0 prometheus -f`
+          * **Важно!** Бывает так, что `prometheus-config-reloader` "зависает" на какой-то ошибке и перестает видеть новые изменения, а продолжает пытаться релоаднуть Prometheus со старой ошибочной конфигурацией. В этом случае единственное, что можно сделать — зайти в pod и прибить процесс `prometheus-config-reloader` (kubernetes перезапустит контейнер).
 
 Лучшие практики
 ---------------
