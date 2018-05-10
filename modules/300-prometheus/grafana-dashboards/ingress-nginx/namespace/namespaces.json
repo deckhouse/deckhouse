@@ -9888,12 +9888,9 @@
       {
         "allValue": ".*",
         "current": {
-          "text": "cache-headers-not-present + cacheable + non-cacheable + served-without-upstream",
+          "text": "All",
           "value": [
-            "cache-headers-not-present",
-            "cacheable",
-            "non-cacheable",
-            "served-without-upstream"
+            "$__all"
           ]
         },
         "datasource": "$ds_prometheus",
