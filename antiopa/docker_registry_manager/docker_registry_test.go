@@ -1,10 +1,13 @@
 package docker_registry_manager
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/docker/distribution/reference"
+	"github.com/romana/rlog"
 )
 
 // https://docs.docker.com/engine/reference/commandline/tag/#extended-description
@@ -81,55 +84,33 @@ func ParseByDocker(t *testing.T, test string) {
 	t.Logf("  %s %s %s", reference.Domain(distributionRef), reference.Path(distributionRef), tag)
 }
 
-/*
-package main_test
+// Попытка сэмулировать panic в момент обращения к registry.
+// Попытка не удалась с insecure registry. Нужно пробовать registry с авторизацией.
+func TestDockerRegistry_Fault_Registry(t *testing.T) {
+	t.SkipNow()
+	dockerRegistry := NewDockerRegistry("http://localhost:5000", "", "")
 
-import (
-	"fmt"
-	"regexp"
-)
-
-var re = regexp.MustCompile(`https?:\/\/((([^:@]*):?([^@]*))@)?[^@].*`)
-
-
-var mustPass = []string{
-"http://admin:pass@domain.com",
-"https://admin:pass@domain.com",
-"https://admin@domain.com",
-"https://admin:@domain.com",
-"https://:pass@domain.com",
-"https://domain.com",
-
-}
-
-var mustFail = []string{
-"htt://admin:admin@domain.com",
-"http://",
-}
-
-
-func main() {
-
-	for _, test := range append(mustPass) {
-		matches := re.FindStringSubmatch(test)
-		PrintMatches(test, matches)
+	image := DockerImageInfo{
+		Repository: "localhost:5000",
+		Registry:   "antiopa",
+		Tag:        "master",
 	}
-	for _, test := range append(mustFail) {
-		matches := re.FindStringSubmatch(test)
-		PrintMatches(test, matches)
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+
+	for {
+		select {
+		case <-ticker.C:
+			rlog.Debugf("Checking registry for updates")
+
+			id, err := DockerRegistryGetImageDigest(image, dockerRegistry)
+
+			if err != nil {
+				fmt.Printf("DockerReg id error: %s\n", err)
+			}
+
+			fmt.Printf("Got image id %s\n", id)
+
+		}
 	}
 }
-
-func PrintMatches(test string, matches []string){
-  fmt.Println(test)
-  if matches == nil {
-    fmt.Println("  No matches")
-    return
-  }
-  for i, m := range matches {
-    fmt.Printf("  %2d: %s\n", i, m)
-  }
-  fmt.Println()
-}
-
-*/

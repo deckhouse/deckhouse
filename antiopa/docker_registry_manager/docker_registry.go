@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,23 +14,41 @@ import (
 )
 
 type DockerImageInfo struct {
-	Registry   string
-	Repository string
-	Tag        string
+	Registry   string // url для registry
+	Repository string // репозиторий в registry (antiopa)
+	Tag        string // tag репозитория (master, stable, ea, etc.)
+	FullName   string // полное имя образа для лога
 }
 
-func DockerRegistryGetImageId(imageInfo DockerImageInfo, dockerRegistry *registryclient.Registry) (string, error) {
-	// Получить описание образа
-	antiopaManifest, err := dockerRegistry.ManifestV2(imageInfo.Repository, imageInfo.Tag)
+// regex для определения валидного docker image digest (image id)
+var DockerImageDigestRe = regexp.MustCompile("(sha256:?)?[a-fA-F0-9]{64}")
+
+// Отправить запрос в registry, из заголовка ответа достать digest.
+// Если произошла какая-то ошибка, то сообщить в лог и вернуть пустую
+// строку — метод нужно вызывать в цикле, пока registry не ответит успешно.
+//
+// Запрос к registry может паниковать — проблема где-то в docker-registry-client,
+// но случается очень редко, предположительно когда registry становится
+// недоступен из куба — трудно диагностируемо.
+// Поэтому проще тут поймать panic и вывести в Debug лог.
+func DockerRegistryGetImageDigest(imageInfo DockerImageInfo, dockerRegistry *registryclient.Registry) (digest string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			rlog.Debugf("REGISTRY: manifest digest request panic: %s", r)
+		}
+	}()
+
+	// Получить digest образа
+	imageDigest, err := dockerRegistry.ManifestDigestV2(imageInfo.Repository, imageInfo.Tag)
 	if err != nil {
-		rlog.Errorf("REGISTRY cannot get manifest for %s:%s: %v", imageInfo.Repository, imageInfo.Tag, err)
+		rlog.Debugf("REGISTRY: manifest digest request error for %s/%s:%s: %v", imageInfo.Registry, imageInfo.Repository, imageInfo.Tag, err)
 		return "", err
 	}
 
-	imageID := antiopaManifest.Config.Digest.String()
-	rlog.Debugf("REGISTRY id=%s for %s:%s", imageID, imageInfo.Repository, imageInfo.Tag)
+	digest = imageDigest.String()
+	rlog.Debugf("REGISTRY: imageDigest='%s' for %s:%s", digest, imageInfo.Repository, imageInfo.Tag)
 
-	return imageID, nil
+	return digest, nil
 }
 
 func DockerParseImageName(imageName string) (imageInfo DockerImageInfo, err error) {
@@ -51,11 +70,24 @@ func DockerParseImageName(imageName string) (imageInfo DockerImageInfo, err erro
 		Registry:   reference.Domain(namedRef),
 		Repository: reference.Path(namedRef),
 		Tag:        tag,
+		FullName:   imageName,
 	}
 
 	rlog.Debugf("REGISTRY image %s parsed to reg=%s repo=%s tag=%s", imageName, imageInfo.Registry, imageInfo.Repository, imageInfo.Tag)
 
 	return
+}
+
+// Поиск digest в строке
+// Например, в строке из kubernetes: docker-pullable://registry/repo:tag@sha256:DIGEST-HASH
+func FindImageDigest(imageId string) (image string) {
+	image = DockerImageDigestRe.FindString(imageId)
+	return
+}
+
+// Проверка, что строка это docker digest
+func IsValidImageDigest(imageId string) bool {
+	return DockerImageDigestRe.MatchString(imageId)
 }
 
 func RegistryClientLogCallback(format string, args ...interface{}) {
