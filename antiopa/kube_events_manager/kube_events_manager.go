@@ -12,6 +12,7 @@ import (
 
 	"github.com/romana/rlog"
 	"gopkg.in/satori/go.uuid.v1"
+	"gopkg.in/yaml.v2"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,8 @@ func NewMainKubeEventsManager() *MainKubeEventsManager {
 }
 
 func Init() (KubeEventsManager, error) {
+	rlog.Debug("Init kube events manager")
+
 	em := NewMainKubeEventsManager()
 	KubeEventCh = make(chan string, 1)
 	return em, nil
@@ -58,31 +61,57 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, jqFilter, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
+				objectId, err := runtimeResourceId(obj)
+				if err != nil {
+					rlog.Errorf("failed to get object id: %s", err)
+					return
+				}
+				rlog.Debugf("Kube events manager: informer %s: add object %s", kubeEventsInformer.ConfigId, objectId)
+
 				checksum, err := resourceMd5(obj, jqFilter)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
-				} else {
-					err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnAdd)
-					if err != nil {
-						rlog.Error("Kube events manager: %s", err)
-					}
+					return
+				}
+
+				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnAdd)
+				if err != nil {
+					rlog.Error("Kube events manager: %s", err)
+					return
 				}
 			},
 			UpdateFunc: func(_ interface{}, obj interface{}) {
+				objectId, err := runtimeResourceId(obj)
+				if err != nil {
+					rlog.Errorf("failed to get object id: %s", err)
+					return
+				}
+				rlog.Debugf("Kube events manager: informer %s: update object %s", kubeEventsInformer.ConfigId, objectId)
+
 				checksum, err := resourceMd5(obj, jqFilter)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
-				} else {
-					err := kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnUpdate)
-					if err != nil {
-						rlog.Error("Kube events manager: %s", err)
-					}
+					return
+				}
+
+				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnUpdate)
+				if err != nil {
+					rlog.Error("Kube events manager: %s", err)
+					return
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				err := kubeEventsInformer.HandleKubeEvent(obj, "", informerType == OnDelete)
+				objectId, err := runtimeResourceId(obj)
+				if err != nil {
+					rlog.Errorf("failed to get object id: %s", err)
+					return
+				}
+				rlog.Debugf("Kube events manager: informer %s: delete object %s", kubeEventsInformer.ConfigId, objectId)
+
+				err = kubeEventsInformer.HandleKubeEvent(obj, "", informerType == OnDelete)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
+					return
 				}
 			},
 		}
@@ -117,6 +146,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 		}
 
 		for _, resource := range configMapList.Items {
+			rlog.Debugf("CONFIGMAP LIST ITEM: %#v", resource)
 			resourceId := generateChecksumId(resource.Name, resource.Namespace)
 			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
 				return nil, fmt.Errorf("failed resource md5: %s", err)
@@ -284,6 +314,7 @@ func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum strin
 		ei.Checksum[objectId] = newChecksum
 
 		if sendSignal {
+			rlog.Debugf("Kube events manager: informer %s: object %s CHANGED", ei.ConfigId, objectId)
 			KubeEventCh <- ei.ConfigId
 		}
 	}
@@ -309,14 +340,16 @@ func runtimeResourceId(obj interface{}) (string, error) {
 }
 
 func generateChecksumId(name, namespace string) string {
-	return fmt.Sprintf("%s-%s", name, namespace)
+	return fmt.Sprintf("name=%s namespace=%s", name, namespace)
 }
 
 func (ei *KubeEventsInformer) Run() {
+	rlog.Debugf("Kube events manager: run informer %s", ei.ConfigId)
 	ei.SharedInformer.Run(ei.SharedInformerStop)
 }
 
 func (ei *KubeEventsInformer) Stop() {
+	rlog.Debugf("Kube events manager: stop informer %s", ei.ConfigId)
 	ei.SharedInformerStop <- struct{}{}
 }
 
@@ -339,4 +372,12 @@ func execJq(jqFilter string, jsonData []byte) (stdout string, stderr string, err
 	stderr = strings.TrimSpace(stderrBuf.String())
 
 	return
+}
+
+func dumpObjYaml(obj interface{}) string {
+	objYaml, err := yaml.Marshal(obj)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot dump kube object to yaml: %s", err))
+	}
+	return string(objYaml)
 }

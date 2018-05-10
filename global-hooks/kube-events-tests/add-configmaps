@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onAdd="$(jo -a "$(jo kind=configmaps selector=$(jo matchLabels=$(jo hello=world)))")"
+}
+
+function __main__() {
+    echo "KUBE EVENT add-configmaps"
+}
+
+hook::run $@
