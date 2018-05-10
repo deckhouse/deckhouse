@@ -149,7 +149,7 @@ type Event struct {
     "afterAll": ORDER,         // только global
     "onKubeNodeChange": ORDER, // только global
 	"onAdd": [{
-		"kind": "pods",
+		"kind": "pod",
 		"selector": {
 			"matchLabels": {
 				"component": "component"
