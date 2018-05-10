@@ -8883,7 +8883,7 @@
             },
             {
               "$$hashKey": "object:403",
-              "expr": "(sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip) * 8 > 0)\nor sum(irate(ingress_nginx_${metric}_backend_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip)",
+              "expr": "(sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip) * 8 > 0)\nor sum(irate(ingress_nginx_${metric}_backend_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip)",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -8893,7 +8893,7 @@
             },
             {
               "$$hashKey": "object:404",
-              "expr": "sum(increase(ingress_nginx_${metric}_backend_upstream_bytes_received{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip)\n  / (sum(increase(ingress_nginx_${metric}_backend_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip) > 0)\nor sum(irate(ingress_nginx_${metric}_backend_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip)",
+              "expr": "sum(increase(ingress_nginx_${metric}_backend_upstream_bytes_received_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip)\n  / (sum(increase(ingress_nginx_${metric}_backend_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip) > 0)\nor sum(irate(ingress_nginx_${metric}_backend_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__range])) by (pod_ip)",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -9293,7 +9293,7 @@
           "targets": [
             {
               "$$hashKey": "object:650",
-              "expr": "sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) by (pod_ip)\n  / sum(rate(ingress_nginx_${metric}_backend_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) by (pod_ip) > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) by (pod_ip)\n  / sum(rate(ingress_nginx_${metric}_backend_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) by (pod_ip) > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod_ip}}",
@@ -9390,7 +9390,7 @@
           "targets": [
             {
               "$$hashKey": "object:1047",
-              "expr": "sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) * 8",
+              "expr": "sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -9399,7 +9399,7 @@
             },
             {
               "$$hashKey": "object:1048",
-              "expr": "sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) by (pod_ip) * 8 > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_backend_upstream_bytes_received_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", instance=~\"$instance\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", pod_ip=~\"$pod_ip\"}[$__interval_rv])) by (pod_ip) * 8 > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod_ip}}",
