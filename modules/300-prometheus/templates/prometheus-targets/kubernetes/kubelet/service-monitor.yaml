@@ -57,6 +57,23 @@ spec:
       targetLabel: instance
     - targetLabel: endpoint
       replacement: cadvisor
+    metricRelabelings:
+    - sourceLabels: [pod_name]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container_name]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [namespace]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container_name]
+      targetLabel: container
+    - sourceLabels: [pod_name]
+      targetLabel: pod
+    - regex: container_name|pod_name|id|image|name
+      action: labeldrop
+
   selector:
     matchLabels:
       k8s-app: kubelet

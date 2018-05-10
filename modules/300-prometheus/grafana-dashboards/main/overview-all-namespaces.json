@@ -427,7 +427,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{pod_name!=\"\",namespace!~\"kube-.*|monitoring\"}[$__interval_rv])) by (namespace)",
+          "expr": "sum(rate(container_network_receive_bytes_total{pod!=\"\",namespace!~\"kube-.*|monitoring\"}[$__interval_rv])) by (namespace)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
@@ -602,7 +602,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name!=\"\",namespace!~\"kube-.*|monitoring\"}[$__interval_rv])) by (namespace)",
+          "expr": "sum(rate(container_network_transmit_bytes_total{pod!=\"\",namespace!~\"kube-.*|monitoring\"}[$__interval_rv])) by (namespace)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{namespace}}",
@@ -778,7 +778,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(container_fs_usage_bytes{pod_name!=\"\"}) by (namespace)",
+          "expr": "sum(container_fs_usage_bytes{pod!=\"\"}) by (namespace)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

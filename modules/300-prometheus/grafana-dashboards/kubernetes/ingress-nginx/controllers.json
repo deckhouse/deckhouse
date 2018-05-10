@@ -18,7 +18,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1525861760342,
+  "iteration": 1525985455116,
   "links": [],
   "panels": [
     {
@@ -79,7 +79,7 @@
           "targets": [
             {
               "$$hashKey": "object:644",
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod_name=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\",\"$1\",\"label_app\",\"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -88,7 +88,7 @@
             },
             {
               "$$hashKey": "object:643",
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod_name=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\",\"$1\",\"label_app\",\"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -184,7 +184,7 @@
           "targets": [
             {
               "$$hashKey": "object:644",
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod_name=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\",\"$1\",\"label_app\",\"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -193,7 +193,7 @@
             },
             {
               "$$hashKey": "object:643",
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod_name=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\",\"$1\",\"label_app\",\"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -291,7 +291,7 @@
           "targets": [
             {
               "$$hashKey": "object:983",
-              "expr": "sum(\n  container_memory_usage_bytes{pod_name=~\"nginx-.*\", instance=~\"$instance\"}\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\", \"$1\", \"label_app\", \"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"nginx-.*\", instance=~\"$instance\"}\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -300,7 +300,7 @@
             },
             {
               "$$hashKey": "object:982",
-              "expr": "sum(\n  container_memory_usage_bytes{pod_name=~\"nginx-.*\", instance=~\"$instance\"}\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\", \"$1\", \"label_app\", \"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"nginx-.*\", instance=~\"$instance\"}\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -396,7 +396,7 @@
           "targets": [
             {
               "$$hashKey": "object:644",
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\",\"$1\",\"label_app\",\"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -405,7 +405,7 @@
             },
             {
               "$$hashKey": "object:643",
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod_name=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod_name) group_left (app) max by (pod_name, app) (\n    label_replace(\n      label_replace(kube_pod_labels{label_app=~\"$app\"}, \"pod_name\", \"$1\", \"pod\", \"(.*)\"),\n      \"app\",\"$1\",\"label_app\",\"(.*)\"\n    )\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"nginx-.*\", instance=~\"$instance\"}[$__interval_rv])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -10679,7 +10679,6 @@
     "list": [
       {
         "current": {
-          "selected": true,
           "text": "default",
           "value": "default"
         },
@@ -11086,5 +11085,5 @@
   "timezone": "",
   "title": "Ingress Nginx Controllers",
   "uid": "NB8ty6Gmk",
-  "version": 8
+  "version": 13
 }
