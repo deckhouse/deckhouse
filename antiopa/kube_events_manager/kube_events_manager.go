@@ -132,6 +132,9 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	kubeEventsInformer := NewKubeEventsInformer()
 
 	formatLabelSelector := metaV1.FormatLabelSelector(labelSelector)
+	if formatLabelSelector == "<error>" {
+		return nil, fmt.Errorf("failed format label selector '%s'", labelSelector.String())
+	}
 
 	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
 	resyncPeriod := time.Duration(15) * time.Second
