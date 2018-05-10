@@ -540,7 +540,7 @@ func (ei *KubeEventsInformer) Run() {
 
 func (ei *KubeEventsInformer) Stop() {
 	rlog.Debugf("Kube events manager: stop informer %s", ei.ConfigId)
-	ei.SharedInformerStop <- struct{}{}
+	close(ei.SharedInformerStop)
 }
 
 func execJq(jqFilter string, jsonData []byte) (stdout string, stderr string, err error) {
