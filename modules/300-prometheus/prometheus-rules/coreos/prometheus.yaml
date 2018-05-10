@@ -21,7 +21,7 @@ groups:
   - alert: PrometheusErrorSendingAlerts
     expr: max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
       > 0.01) BY (namespace, instance, alertmanager)
-    for: 10m
+    for: 30m
     labels:
       severity: warning
     annotations:
@@ -31,7 +31,7 @@ groups:
   - alert: PrometheusErrorSendingAlerts
     expr: max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
       > 0.03) by (namespace, instance, alertmanager)
-    for: 10m
+    for: 1h
     labels:
       severity: critical
     annotations:
