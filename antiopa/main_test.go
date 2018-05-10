@@ -8,12 +8,44 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/satori/go.uuid.v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
+	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
 )
+
+type KubeEventsHooksControllerMock struct{}
+
+func (obj *KubeEventsHooksControllerMock) EnableGlobalHooks(moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	return nil
+}
+
+func (obj *KubeEventsHooksControllerMock) EnableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	return nil
+}
+
+func (obj *KubeEventsHooksControllerMock) DisableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	return nil
+}
+
+func (obj *KubeEventsHooksControllerMock) HandleEvent(configId string) (*struct{ Tasks []task.Task }, error) {
+	return nil, nil
+}
+
+type KubeEventsManagerMock struct{}
+
+func (kem *KubeEventsManagerMock) Run(informerType kube_events_manager.InformerType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error) {
+	return uuid.NewV4().String(), nil
+}
+
+func (kem *KubeEventsManagerMock) Stop(configId string) error {
+	return nil
+}
 
 type ModuleManagerMock struct {
 	BeforeHookErrorsCount    int
@@ -270,6 +302,8 @@ func TestMain_ModulesEventsHandler(t *testing.T) {
 
 	// Mock ModuleManager
 	ModuleManager = &ModuleManagerMock{}
+	KubeEventsManager = &KubeEventsManagerMock{}
+	KubeEventsHooks = &KubeEventsHooksControllerMock{}
 
 	assert.Equal(t, 0, 0)
 	fmt.Println("Create queue")

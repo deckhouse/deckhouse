@@ -62,19 +62,28 @@ func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_
 	return res
 }
 
-type KubeEventsHooksController struct {
-	GlobalHooks map[string]*KubeEventHook
-	ModuleHooks map[string]*KubeEventHook
+type KubeEventsHooksController interface {
+	EnableGlobalHooks(moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error
+	EnableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error
+	DisableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error
+	HandleEvent(configId string) (*struct{ Tasks []task.Task }, error)
 }
 
-func NewKubeEventsHooksController() *KubeEventsHooksController {
-	obj := &KubeEventsHooksController{}
+type MainKubeEventsHooksController struct {
+	GlobalHooks    map[string]*KubeEventHook
+	ModuleHooks    map[string]*KubeEventHook
+	EnabledModules []string
+}
+
+func NewMainKubeEventsHooksController() *MainKubeEventsHooksController {
+	obj := &MainKubeEventsHooksController{}
 	obj.GlobalHooks = make(map[string]*KubeEventHook)
 	obj.ModuleHooks = make(map[string]*KubeEventHook)
+	obj.EnabledModules = make([]string, 0)
 	return obj
 }
 
-func (obj *KubeEventsHooksController) EnableGlobalHooks(moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+func (obj *MainKubeEventsHooksController) EnableGlobalHooks(moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
 	globalHooks := moduleManager.GetGlobalHooksInOrder(module_manager.KubeEvents)
 
 	for _, globalHookName := range globalHooks {
@@ -92,73 +101,73 @@ func (obj *KubeEventsHooksController) EnableGlobalHooks(moduleManager module_man
 	return nil
 }
 
-func (obj *KubeEventsHooksController) DisableAllHooks(eventsManager kube_events_manager.KubeEventsManager) error {
-	var err error
-
-	for configId := range obj.GlobalHooks {
-		err = eventsManager.Stop(configId)
-		if err != nil {
-			return err
+func (obj *MainKubeEventsHooksController) EnableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	for _, enabledModuleName := range obj.EnabledModules {
+		if enabledModuleName == moduleName {
+			// already enabled
+			return nil
 		}
 	}
 
-	for configId := range obj.ModuleHooks {
-		err = eventsManager.Stop(configId)
-		if err != nil {
-			return err
+	moduleHooks, err := ModuleManager.GetModuleHooksInOrder(moduleName, module_manager.KubeEvents)
+	if err != nil {
+		return err
+	}
+
+	for _, moduleHookName := range moduleHooks {
+		moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
+
+		for _, desc := range MakeKubeEventHookDescriptors(moduleHook.Hook, &moduleHook.Config.HookConfig) {
+			configId, err := eventsManager.Run(desc.InformerType, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
+			if err != nil {
+				return err
+			}
+			obj.ModuleHooks[configId] = desc
+		}
+	}
+
+	obj.EnabledModules = append(obj.EnabledModules, moduleName)
+
+	return nil
+}
+
+func (obj *MainKubeEventsHooksController) DisableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	moduleEnabledInd := -1
+	for i, enabledModuleName := range obj.EnabledModules {
+		if enabledModuleName == moduleName {
+			moduleEnabledInd = i
+			break
+		}
+	}
+	if moduleEnabledInd < 0 {
+		return nil
+	}
+	obj.EnabledModules = append(obj.EnabledModules[:moduleEnabledInd], obj.EnabledModules[moduleEnabledInd+1:]...)
+
+	disabledModuleHooks, err := moduleManager.GetModuleHooksInOrder(moduleName, module_manager.KubeEvents)
+	if err != nil {
+		return err
+	}
+
+	for configId, desc := range obj.ModuleHooks {
+		for _, disabledModuleHookName := range disabledModuleHooks {
+			if desc.HookName == disabledModuleHookName {
+				err := eventsManager.Stop(configId)
+				if err != nil {
+					return err
+				}
+
+				delete(obj.ModuleHooks, configId)
+
+				break
+			}
 		}
 	}
 
 	return nil
 }
 
-func (obj *KubeEventsHooksController) EnableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
-	//moduleHooks, _ := ModuleManager.GetModuleHooksInOrder(moduleName, module_manager.KubeEvents)
-	//
-	//for _, moduleHookName := range moduleHooks {
-	//	moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
-	//
-	//	for _, kubeEventsConfig := range moduleHook.KubeEvents {
-	//		configId, err := eventsManager.Run(kubeEventsConfig)
-	//		if err != nil {
-	//			return err
-	//		}
-	//
-	//		if obj.ModuleHooksByConfigId[configId] == nil {
-	//			obj.ModuleHooksByConfigId[configId] = make([]string, 0)
-	//		}
-	//		obj.ModuleHooksByConfigId[configId] = append(obj.ModuleHooksByConfigId[configId], moduleHookName)
-	//	}
-	//}
-
-	return nil
-}
-
-func (obj *KubeEventsHooksController) DisableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
-	//disabledModuleHooks, err := moduleManager.GetModuleHooksInOrder(moduleName, module_manager.KubeEvents)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//for configId, moduleHookName := range obj.ModuleHooks {
-	//	for _, disabledModuleHookName := range disabledModuleHooks {
-	//		if moduleHookName == disabledModuleHookName {
-	//			err := eventsManager.Stop(configId)
-	//			if err != nil {
-	//				return err
-	//			}
-	//
-	//			delete(obj.ModuleHooks, configId)
-	//
-	//			break
-	//		}
-	//	}
-	//}
-
-	return nil
-}
-
-func (obj *KubeEventsHooksController) HandleEvent(configId string) (*struct{ Tasks []task.Task }, error) {
+func (obj *MainKubeEventsHooksController) HandleEvent(configId string) (*struct{ Tasks []task.Task }, error) {
 	res := &struct{ Tasks []task.Task }{Tasks: make([]task.Task, 0)}
 
 	if desc, hasKey := obj.ModuleHooks[configId]; hasKey {
