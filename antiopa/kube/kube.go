@@ -33,6 +33,7 @@ const (
 
 var (
 	KubernetesClient           Client
+	Kubernetes                 kubernetes.Interface
 	KubernetesAntiopaNamespace string
 )
 
@@ -97,11 +98,13 @@ func InitKube() {
 		KubernetesAntiopaNamespace = DefaultNamespace
 	}
 
-	KubernetesClient, err = kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		rlog.Errorf("KUBE-INIT Kubernetes connection problem: %s", err)
 		os.Exit(1)
 	}
+	Kubernetes = clientset
+	KubernetesClient = clientset
 
 	rlog.Info("KUBE-INIT Successfully connected to kubernetes")
 }
