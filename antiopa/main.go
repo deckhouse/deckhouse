@@ -39,7 +39,7 @@ var (
 	ScheduledHooks  ScheduledHooksStorage
 
 	KubeEventsManager kube_events_manager.KubeEventsManager
-	KubeEventsHooks   *KubeEventsHooksController
+	KubeEventsHooks   KubeEventsHooksController
 
 	// chan for stopping ManagersEventsHandler infinite loop
 	ManagersEventsHandlerStopCh chan struct{}
@@ -164,7 +164,7 @@ func Init() {
 		rlog.Errorf("MAIN Fatal: Cannot initialize kube events manager: %s", err)
 		os.Exit(1)
 	}
-	KubeEventsHooks = NewKubeEventsHooksController()
+	KubeEventsHooks = NewMainKubeEventsHooksController()
 }
 
 // Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
@@ -223,15 +223,36 @@ func ManagersEventsHandler() {
 				rlog.Debug("main: got ModulesChanged event")
 				for _, moduleChange := range moduleEvent.ModulesChanges {
 					switch moduleChange.ChangeType {
-					case module_manager.Enabled, module_manager.Changed:
+					case module_manager.Enabled:
 						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
 						TasksQueue.Add(newTask)
+
+						err := KubeEventsHooks.EnableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
+						if err != nil {
+							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+						}
+
+					case module_manager.Changed:
+						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
+						TasksQueue.Add(newTask)
+
 					case module_manager.Disabled:
 						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
 						TasksQueue.Add(newTask)
+
+						err := KubeEventsHooks.DisableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
+						if err != nil {
+							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+						}
+
 					case module_manager.Purged:
 						newTask := task.NewTask(task.ModulePurge, moduleChange.Name)
 						TasksQueue.Add(newTask)
+
+						err := KubeEventsHooks.DisableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
+						if err != nil {
+							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+						}
 					}
 				}
 				// Поменялись модули, нужно пересоздать индекс хуков по расписанию
@@ -294,6 +315,7 @@ func ManagersEventsHandler() {
 			res, err := KubeEventsHooks.HandleEvent(configId)
 			if err != nil {
 				rlog.Errorf("main: error handling kube event '%s': %s", configId, err)
+				break
 			}
 
 			for _, task := range res.Tasks {
@@ -304,6 +326,59 @@ func ManagersEventsHandler() {
 			return
 		}
 	}
+}
+
+func runDiscoverModulesState(_ task.Task) error {
+	modulesState, err := ModuleManager.DiscoverModulesState()
+	if err != nil {
+		return err
+	}
+
+	for _, moduleName := range modulesState.EnabledModules {
+		newTask := task.NewTask(task.ModuleRun, moduleName)
+		rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
+		TasksQueue.Add(newTask)
+	}
+
+	for _, moduleName := range modulesState.ModulesToDisable {
+		newTask := task.NewTask(task.ModuleDelete, moduleName)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
+	}
+
+	for _, moduleName := range modulesState.ReleasedUnknownModules {
+		newTask := task.NewTask(task.ModulePurge, moduleName)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
+	}
+
+	// Queue afterAll global hooks
+	afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
+	for _, hookName := range afterAllHooks {
+		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
+	}
+
+	ScheduledHooks = UpdateScheduleHooks(nil)
+
+	// Enable kube events hooks for newly enabled modules
+	for _, moduleName := range modulesState.EnabledModules {
+		err = KubeEventsHooks.EnableModuleHooks(moduleName, ModuleManager, KubeEventsManager)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Disable kube events hooks for newly disabled modules
+	for _, moduleName := range modulesState.ModulesToDisable {
+		err = KubeEventsHooks.DisableModuleHooks(moduleName, ModuleManager, KubeEventsManager)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Обработчик один на очередь.
@@ -324,51 +399,16 @@ func TasksRunner() {
 
 			switch t.GetType() {
 			case task.DiscoverModulesState:
-				// FIXME: introduce multiple tasks structures with handler-interface
-				handleTaskFailed := func(err error) {
+				err := runDiscoverModulesState(t)
+
+				if err != nil {
 					t.IncrementFailureCount()
 					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
-				}
-				handleTaskSucceeded := func() {
-					TasksQueue.Pop()
-				}
-
-				modulesState, err := ModuleManager.DiscoverModulesState()
-				if err != nil {
-					handleTaskFailed(err)
 					break
 				}
 
-				for _, moduleName := range modulesState.EnabledModules {
-					newTask := task.NewTask(task.ModuleRun, moduleName)
-					rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
-					TasksQueue.Add(newTask)
-				}
-
-				for _, moduleName := range modulesState.ModulesToDisable {
-					newTask := task.NewTask(task.ModuleDelete, moduleName)
-					TasksQueue.Add(newTask)
-					rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
-				}
-
-				for _, moduleName := range modulesState.ReleasedUnknownModules {
-					newTask := task.NewTask(task.ModulePurge, moduleName)
-					TasksQueue.Add(newTask)
-					rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
-				}
-
-				// Queue afterAll global hooks
-				afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
-				for _, hookName := range afterAllHooks {
-					newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
-					TasksQueue.Add(newTask)
-					rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
-				}
-
-				handleTaskSucceeded()
-
-				ScheduledHooks = UpdateScheduleHooks(nil)
+				TasksQueue.Pop()
 
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())

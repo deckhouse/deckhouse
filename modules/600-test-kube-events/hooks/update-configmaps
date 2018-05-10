@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onUpdate="$(jo -a "$(jo kind=configmap namespaceSelector="$(jo matchNames="$(jo -a testwatchns)")")")"
+}
+
+function __main__() {
+    echo "MODULE 600-test-kube-events KUBE EVENT update-configmaps"
+}
+
+hook::run $@
