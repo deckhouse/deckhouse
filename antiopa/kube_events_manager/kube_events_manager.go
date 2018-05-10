@@ -131,22 +131,22 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metaV1.LabelSelector, jqFilter string, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
 	kubeEventsInformer := NewKubeEventsInformer()
 
-	formatLabelSelector := metaV1.FormatLabelSelector(labelSelector)
-	if formatLabelSelector == "<error>" {
+	formatSelector, err := formatLabelSelector(labelSelector)
+	if err != nil {
 		return nil, fmt.Errorf("failed format label selector '%s'", labelSelector.String())
 	}
 
 	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
 	resyncPeriod := time.Duration(15) * time.Second
 	tweakListOptions := func(options *metaV1.ListOptions) {
-		if formatLabelSelector != "<none>" {
-			options.LabelSelector = formatLabelSelector
+		if formatSelector != "" {
+			options.LabelSelector = formatSelector
 		}
 	}
 
 	listOptions := metaV1.ListOptions{}
-	if formatLabelSelector != "<none>" {
-		listOptions.LabelSelector = formatLabelSelector
+	if formatSelector != "" {
+		listOptions.LabelSelector = formatSelector
 	}
 
 	var sharedInformer cache.SharedIndexInformer
@@ -435,6 +435,15 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	em.KubeEventsInformersByConfigId[kubeEventsInformer.ConfigId] = kubeEventsInformer
 
 	return kubeEventsInformer, nil
+}
+
+func formatLabelSelector(selector *metaV1.LabelSelector) (string, error) {
+	res, err := metaV1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return "", err
+	}
+
+	return res.String(), nil
 }
 
 func resourceMd5(obj interface{}, jqFilter string) (string, error) {
