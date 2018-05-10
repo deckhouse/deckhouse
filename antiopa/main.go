@@ -613,6 +613,10 @@ func CreateReloadAllTasks() {
 }
 
 func main() {
+	// Be a good parent - clean up behind the children processes.
+	// Antiopa is PID1, no special config required
+	go utils.Reap()
+
 	// настроить всё необходимое
 	Init()
 
