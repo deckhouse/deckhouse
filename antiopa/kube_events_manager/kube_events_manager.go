@@ -70,11 +70,16 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 				}
 				rlog.Debugf("Kube events manager: informer %s: add object %s", kubeEventsInformer.ConfigId, objectId)
 
-				checksum, err := resourceMd5(obj, jqFilter)
+				filtered, err := resourceFilter(obj, jqFilter)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
 					return
 				}
+
+				checksum := calcMd5(filtered)
+
+				rlog.Debugf("Kube events manager: AddFunc: informer %s, object %s, jqFilter '%s': checksum is '%s' and result is %s",
+					kubeEventsInformer.ConfigId, objectId, jqFilter, checksum, filtered)
 
 				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnAdd)
 				if err != nil {
@@ -90,11 +95,16 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 				}
 				rlog.Debugf("Kube events manager: informer %s: update object %s", kubeEventsInformer.ConfigId, objectId)
 
-				checksum, err := resourceMd5(obj, jqFilter)
+				filtered, err := resourceFilter(obj, jqFilter)
 				if err != nil {
 					rlog.Error("Kube events manager: %s", err)
 					return
 				}
+
+				checksum := calcMd5(filtered)
+
+				rlog.Debugf("Kube events manager: UpdateFunc: informer %s, object %s, jqFilter '%s': checksum is '%s' and result is %s",
+					kubeEventsInformer.ConfigId, objectId, jqFilter, checksum, filtered)
 
 				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnUpdate)
 				if err != nil {
@@ -446,13 +456,12 @@ func formatLabelSelector(selector *metaV1.LabelSelector) (string, error) {
 	return res.String(), nil
 }
 
-func resourceMd5(obj interface{}, jqFilter string) (string, error) {
+func resourceFilter(obj interface{}, jqFilter string) (res string, err error) {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		return "", err
 	}
 
-	var res string
 	if jqFilter != "" {
 		stdout, stderr, err := execJq(jqFilter, data)
 		if err != nil {
@@ -463,11 +472,22 @@ func resourceMd5(obj interface{}, jqFilter string) (string, error) {
 	} else {
 		res = string(data)
 	}
+	return
+}
 
+func calcMd5(data string) string {
 	h := md5.New()
-	io.WriteString(h, res)
+	io.WriteString(h, data)
+	return string(h.Sum(nil))
+}
 
-	return string(h.Sum(nil)), nil
+func resourceMd5(obj interface{}, jqFilter string) (string, error) {
+	filtered, err := resourceFilter(obj, jqFilter)
+	if err != nil {
+		return "", err
+	}
+
+	return calcMd5(filtered), nil
 }
 
 func (em *MainKubeEventsManager) Stop(configId string) error {
