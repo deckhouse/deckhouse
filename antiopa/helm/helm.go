@@ -35,25 +35,69 @@ type CliHelm struct {
 
 // InitHelm запускает установку tiller-a.
 func Init(tillerNamespace string) (HelmClient, error) {
-	rlog.Info("HELM-INIT run helm init")
+	rlog.Info("Helm: run helm init")
 
 	helm := &CliHelm{tillerNamespace: tillerNamespace}
 
-	stdout, stderr, err := helm.Cmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
+	err := helm.InitTiller()
 	if err != nil {
-		return nil, fmt.Errorf("%s\n%s\n%s", err, stdout, stderr)
+		return nil, err
 	}
-	rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
 
-	stdout, stderr, err = helm.Cmd("version")
+	stdout, stderr, err := helm.Cmd("version")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get helm version: %v\n%v %v", err, stdout, stderr)
 	}
-	rlog.Infof("HELM-INIT helm version:\n%v %v", stdout, stderr)
+	rlog.Infof("Helm: helm version:\n%v %v", stdout, stderr)
 
-	rlog.Info("HELM-INIT Successfully initialized")
+	rlog.Info("Helm: successfully initialized")
 
 	return helm, nil
+}
+
+func (helm *CliHelm) InitTiller() error {
+	antiopaDeploy, err := kube.KubernetesClient.AppsV1beta1().Deployments(kube.KubernetesAntiopaNamespace).Get(kube.AntiopaDeploymentName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot fetch antiopa deployment to gather settings for tiller deployment: %s", err)
+	}
+
+	cmd := make([]string, 0)
+	cmd = append(cmd,
+		"init",
+		"--service-account", "antiopa",
+		"--upgrade", "--wait", "--skip-refresh",
+	)
+
+	nodeSelectors := make([]string, 0)
+	for k, v := range antiopaDeploy.Spec.Template.Spec.NodeSelector {
+		nodeSelectors = append(nodeSelectors, fmt.Sprintf("%s=%s", k, v))
+	}
+	if len(nodeSelectors) > 0 {
+		cmd = append(cmd, fmt.Sprintf("--node-selectors=%s", strings.Join(nodeSelectors, ",")))
+	}
+
+	override := make([]string, 0)
+	for i, spec := range antiopaDeploy.Spec.Template.Spec.Tolerations {
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].key=%s", i, spec.Key))
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].operator=%s", i, spec.Operator))
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].value=%s", i, spec.Value))
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].effect=%s", i, spec.Effect))
+
+		if spec.TolerationSeconds != nil {
+			override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].tolerationSeconds=%s", i, *spec.TolerationSeconds))
+		}
+	}
+	if len(override) > 0 {
+		cmd = append(cmd, fmt.Sprintf("--override=%s", strings.Join(override, ",")))
+	}
+
+	stdout, stderr, err := helm.Cmd(cmd...)
+	if err != nil {
+		return fmt.Errorf("%s\n%s\n%s", err, stdout, stderr)
+	}
+	rlog.Infof("Helm: tiller initialization done: %v %v", stdout, stderr)
+
+	return nil
 }
 
 func (helm *CliHelm) TillerNamespace() string {
@@ -70,7 +114,9 @@ func (helm *CliHelm) CommandEnv() []string {
 // Перед запуском устанавливает переменную среды TILLER_NAMESPACE,
 // чтобы antiopa работала со своим tiller-ом.
 func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err error) {
-	cmd := exec.Command("/usr/local/bin/helm", args...)
+	binPath := "/usr/local/bin/helm"
+	rlog.Debugf("Executing helm command: %s %s", binPath, strings.Join(args, " "))
+	cmd := exec.Command(binPath, args...)
 	cmd.Env = append(os.Environ(), helm.CommandEnv()...)
 
 	var stdoutBuf bytes.Buffer
