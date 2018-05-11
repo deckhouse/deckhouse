@@ -21,11 +21,11 @@ spec:
   {{- end }}
   resources:
     requests:
-      {{- /* 12 раз в час (1 раз в 5 минут) * 24 часа * 2 байта на метрику + 50% запас = 864 байт на метрику памяти */}}
-      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 864) 1048576) 500 }}Mi
+      {{- /* 8Кб × количество метрик */}}
+      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 8192) 1048576) 500 }}Mi
     limits:
-      {{- /* 12 раз в час (1 раз в 5 минут) * 24 часа * 2 байта на метрику + 100% запас = 1152 байт на метрику памяти */}}
-      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 1152) 1048576) 500 }}Mi
+      {{- /* 16Кб × количество метрик */}}
+      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 16384) 1048576) 500 }}Mi
   {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
   {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
