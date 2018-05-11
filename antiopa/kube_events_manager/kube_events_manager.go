@@ -2,10 +2,8 @@ package kube_events_manager
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -24,6 +22,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 var (
@@ -68,18 +67,17 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 					rlog.Errorf("failed to get object id: %s", err)
 					return
 				}
-				rlog.Debugf("Kube events manager: informer %s: add object %s", kubeEventsInformer.ConfigId, objectId)
 
 				filtered, err := resourceFilter(obj, jqFilter)
 				if err != nil {
-					rlog.Error("Kube events manager: %s", err)
+					rlog.Error("Kube events manager: informer %s object %s: %s", kubeEventsInformer.ConfigId, objectId, err)
 					return
 				}
 
-				checksum := calcMd5(filtered)
+				checksum := utils.CalculateChecksum(filtered)
 
-				rlog.Debugf("Kube events manager: AddFunc: informer %s, object %s, jqFilter '%s': checksum is '%s' and result is %s",
-					kubeEventsInformer.ConfigId, objectId, jqFilter, checksum, filtered)
+				rlog.Debugf("Kube events manager: informer %s: add object %s: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
+					kubeEventsInformer.ConfigId, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
 
 				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnAdd)
 				if err != nil {
@@ -93,18 +91,17 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 					rlog.Errorf("failed to get object id: %s", err)
 					return
 				}
-				rlog.Debugf("Kube events manager: informer %s: update object %s", kubeEventsInformer.ConfigId, objectId)
 
 				filtered, err := resourceFilter(obj, jqFilter)
 				if err != nil {
-					rlog.Error("Kube events manager: %s", err)
+					rlog.Error("Kube events manager: informer %s object %s: %s", kubeEventsInformer.ConfigId, objectId, err)
 					return
 				}
 
-				checksum := calcMd5(filtered)
+				checksum := utils.CalculateChecksum(filtered)
 
-				rlog.Debugf("Kube events manager: UpdateFunc: informer %s, object %s, jqFilter '%s': checksum is '%s' and result is %s",
-					kubeEventsInformer.ConfigId, objectId, jqFilter, checksum, filtered)
+				rlog.Debugf("Kube events manager: informer %s: update object %s: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
+					kubeEventsInformer.ConfigId, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
 
 				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, informerType == OnUpdate)
 				if err != nil {
@@ -118,6 +115,7 @@ func (em *MainKubeEventsManager) Run(informerType InformerType, kind, namespace 
 					rlog.Errorf("failed to get object id: %s", err)
 					return
 				}
+
 				rlog.Debugf("Kube events manager: informer %s: delete object %s", kubeEventsInformer.ConfigId, objectId)
 
 				err = kubeEventsInformer.HandleKubeEvent(obj, "", informerType == OnDelete)
@@ -165,275 +163,309 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	case "cronjob":
 		sharedInformer = batchV2Alpha1.NewFilteredCronJobInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		cronJobList, err := kube.Kubernetes.BatchV2alpha1().CronJobs(namespace).List(listOptions)
+		list, err := kube.Kubernetes.BatchV2alpha1().CronJobs(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range cronJobList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "daemonset":
 		sharedInformer = appsV1.NewFilteredDaemonSetInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		daemonSetList, err := kube.Kubernetes.AppsV1().DaemonSets(namespace).List(listOptions)
+		list, err := kube.Kubernetes.AppsV1().DaemonSets(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range daemonSetList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "deployment":
 		sharedInformer = appsV1.NewFilteredDeploymentInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		deploymentList, err := kube.Kubernetes.AppsV1().Deployments(namespace).List(listOptions)
+		list, err := kube.Kubernetes.AppsV1().Deployments(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range deploymentList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "job":
 		sharedInformer = batchV1.NewFilteredJobInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		jobList, err := kube.Kubernetes.BatchV1().Jobs(namespace).List(listOptions)
+		list, err := kube.Kubernetes.BatchV1().Jobs(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range jobList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "pod":
 		sharedInformer = coreV1.NewFilteredPodInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		podList, err := kube.Kubernetes.CoreV1().Pods(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().Pods(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range podList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "replicaset":
 		sharedInformer = appsV1.NewFilteredReplicaSetInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		replicaSetList, err := kube.Kubernetes.AppsV1().ReplicaSets(namespace).List(listOptions)
+		list, err := kube.Kubernetes.AppsV1().ReplicaSets(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range replicaSetList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "replicationcontroller":
 		sharedInformer = coreV1.NewFilteredReplicationControllerInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		replicationControllerList, err := kube.Kubernetes.CoreV1().ReplicationControllers(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().ReplicationControllers(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range replicationControllerList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "statefulset":
 		sharedInformer = appsV1.NewFilteredStatefulSetInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		statefulSetList, err := kube.Kubernetes.AppsV1().StatefulSets(namespace).List(listOptions)
+		list, err := kube.Kubernetes.AppsV1().StatefulSets(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range statefulSetList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "endpoints":
 		sharedInformer = coreV1.NewFilteredEndpointsInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		endpointList, err := kube.Kubernetes.CoreV1().Endpoints(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().Endpoints(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range endpointList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "ingress":
 		sharedInformer = extensionsV1Beta1.NewFilteredIngressInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		ingressList, err := kube.Kubernetes.ExtensionsV1beta1().Ingresses(namespace).List(listOptions)
+		list, err := kube.Kubernetes.ExtensionsV1beta1().Ingresses(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range ingressList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "service":
 		sharedInformer = coreV1.NewFilteredServiceInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		serviceList, err := kube.Kubernetes.CoreV1().Services(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().Services(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range serviceList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "configmap":
 		sharedInformer = coreV1.NewFilteredConfigMapInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		configMapList, err := kube.Kubernetes.CoreV1().ConfigMaps(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().ConfigMaps(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range configMapList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "secret":
 		sharedInformer = coreV1.NewFilteredSecretInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		secretList, err := kube.Kubernetes.CoreV1().Secrets(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().Secrets(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range secretList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "persistentvolumeclaim":
 		sharedInformer = coreV1.NewFilteredPersistentVolumeClaimInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		persistentVolumeClaimList, err := kube.Kubernetes.CoreV1().PersistentVolumeClaims(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().PersistentVolumeClaims(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range persistentVolumeClaimList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "storageclass":
 		sharedInformer = storageV1.NewFilteredStorageClassInformer(kube.Kubernetes, resyncPeriod, indexers, tweakListOptions)
 
-		storageClassList, err := kube.Kubernetes.StorageV1().StorageClasses().List(listOptions)
+		list, err := kube.Kubernetes.StorageV1().StorageClasses().List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range storageClassList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "node":
 		sharedInformer = coreV1.NewFilteredNodeInformer(kube.Kubernetes, resyncPeriod, indexers, tweakListOptions)
 
-		nodeList, err := kube.Kubernetes.CoreV1().Nodes().List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().Nodes().List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range nodeList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	case "serviceaccount":
 		sharedInformer = coreV1.NewFilteredServiceAccountInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
-		serviceAccountList, err := kube.Kubernetes.CoreV1().ServiceAccounts(namespace).List(listOptions)
+		list, err := kube.Kubernetes.CoreV1().ServiceAccounts(namespace).List(listOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed list resources: %s", err)
 		}
 
-		for _, resource := range serviceAccountList.Items {
-			resourceId := generateChecksumId(resource.Name, resource.Namespace)
-			if checksum, err := resourceMd5(resource, jqFilter); err != nil {
-				return nil, fmt.Errorf("failed resource md5: %s", err)
-			} else {
-				kubeEventsInformer.Checksum[resourceId] = checksum
-			}
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
 		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, jqFilter)
+		if err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("kind '%s' isn't supported", kind)
 	}
@@ -475,21 +507,6 @@ func resourceFilter(obj interface{}, jqFilter string) (res string, err error) {
 	return
 }
 
-func calcMd5(data string) string {
-	h := md5.New()
-	io.WriteString(h, data)
-	return string(h.Sum(nil))
-}
-
-func resourceMd5(obj interface{}, jqFilter string) (string, error) {
-	filtered, err := resourceFilter(obj, jqFilter)
-	if err != nil {
-		return "", err
-	}
-
-	return calcMd5(filtered), nil
-}
-
 func (em *MainKubeEventsManager) Stop(configId string) error {
 	kubeEventsInformer, ok := em.KubeEventsInformersByConfigId[configId]
 	if ok {
@@ -512,6 +529,33 @@ func NewKubeEventsInformer() *KubeEventsInformer {
 	kubeEventsInformer.Checksum = make(map[string]string)
 	kubeEventsInformer.SharedInformerStop = make(chan struct{}, 1)
 	return kubeEventsInformer
+}
+
+type ListItemObject interface {
+	GetName() string
+	GetNamespace() string
+}
+
+func (ei *KubeEventsInformer) InitializeItemsList(objects []ListItemObject, jqFilter string) error {
+	for _, obj := range objects {
+		resourceId := generateChecksumId(obj.GetName(), obj.GetNamespace())
+
+		filtered, err := resourceFilter(obj, jqFilter)
+		if err != nil {
+			return err
+		}
+
+		ei.Checksum[resourceId] = utils.CalculateChecksum(filtered)
+
+		rlog.Debugf("Kube events manager: informer %s: object %s initialization: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
+			ei.ConfigId,
+			resourceId,
+			jqFilter,
+			ei.Checksum[resourceId],
+			utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+	}
+
+	return nil
 }
 
 func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum string, sendSignal bool) error {
