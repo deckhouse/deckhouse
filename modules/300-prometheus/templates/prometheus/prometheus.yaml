@@ -61,8 +61,6 @@ spec:
 {{- if $storageClassName }}
   storage:
     volumeClaimTemplate:
-      metadata:
-        name: data
       spec:
         accessModes:
         - ReadWriteOnce

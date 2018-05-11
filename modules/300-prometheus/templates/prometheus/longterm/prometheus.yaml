@@ -1,0 +1,57 @@
+{{- if .Values.prometheus.longtermRetentionDays }}
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: longterm
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+spec:
+  replicas: 1
+  retention: {{ .Values.prometheus.longtermRetentionDays }}d
+  version: v2.2.1
+  scrapeInterval: 5m
+  evaluationInterval: 5m
+  {{- if .Values.global.ingressACME }}
+  externalUrl: https://prometheus.{{ .Values.global.clusterHostname }}/prometheus/longterm/
+  {{- else }}
+  externalUrl: http://prometheus.{{ .Values.global.clusterHostname }}/prometheus/longterm/
+  {{- end }}
+  resources:
+    requests:
+      {{- /* 12 раз в час (1 раз в 5 минут) * 24 часа * 2 байта на метрику + 50% запас = 864 байт на метрику памяти */}}
+      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 864) 1048576) 500 }}Mi
+    limits:
+      {{- /* 12 раз в час (1 раз в 5 минут) * 24 часа * 2 байта на метрику + 100% запас = 1152 байт на метрику памяти */}}
+      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 1152) 1048576) 500 }}Mi
+  {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
+  nodeSelector:
+  {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
+  {{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+  nodeSelector:
+    node-role/system: ""
+  {{- end }}
+  {{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
+  tolerations:
+  {{ .Values.prometheus.tolerations | toYaml | trim | indent 2 }}
+  {{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+  tolerations:
+  - key: node-role/system
+    effect: NoExecute
+  {{- end }}
+  {{- $storageClassName := .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
+  {{- if $storageClassName }}
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            {{- /* 12 раз в час (1 раз в 5 минут) * 24 часа * 2 байта на метрику + 30% запас = 748 байт на метрику в сутки */}}
+            storage: {{ add (div (mul (mul .Values.prometheus.estimatedNumberOfMetrics 748) .Values.prometheus.longtermRetentionDays) 1073741824) 1 }}G
+        storageClassName: {{ $storageClassName }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,28 @@
+{{- if .Values.prometheus.longtermRetentionDays }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-longterm
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+    prometheus: longterm
+    prometheus-target: prometheus
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: web
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  - name: http-metrics
+    port: 9091
+    protocol: TCP
+    targetPort: web
+  selector:
+    app: prometheus
+    prometheus: longterm
+{{- end }}
