@@ -643,7 +643,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(100 - (avg by (instance) (rate(node_cpu{job=\"node-exporter\",mode=\"idle\"}[$__range])) * 100)) / count(node_cpu{job=\"node-exporter\",mode=\"idle\"})",
+          "expr": "sum(100 - (avg by (node) (rate(node_cpu{job=\"node-exporter\",mode=\"idle\"}[$__range])) * 100)) / count(node_cpu{job=\"node-exporter\",mode=\"idle\"})",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,

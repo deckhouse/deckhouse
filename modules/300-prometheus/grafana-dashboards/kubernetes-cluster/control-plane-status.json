@@ -347,7 +347,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "topk(1, (sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[$__range])) / sum by(instance) (rate(apiserver_request_count[$__range]))) * 100)",
+          "expr": "topk(1, (sum by(node) (rate(apiserver_request_count{code!~\"2..\"}[$__range])) / sum by(node) (rate(apiserver_request_count[$__range]))) * 100)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -567,7 +567,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(instance) (rate(apiserver_request_count{code!~\"2..\"}[$__interval_rv]))",
+          "expr": "sum by(node) (rate(apiserver_request_count{code!~\"2..\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Error Rate",
@@ -575,7 +575,7 @@
           "step": 60
         },
         {
-          "expr": "sum by(instance) (rate(apiserver_request_count[$__interval_rv]))",
+          "expr": "sum by(node) (rate(apiserver_request_count[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Request Rate",

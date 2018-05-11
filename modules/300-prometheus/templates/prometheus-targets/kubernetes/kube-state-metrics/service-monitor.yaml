@@ -27,8 +27,6 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
     - targetLabel: scrape_endpoint
       replacement: main
   - port: https-self
@@ -40,7 +38,5 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
     - targetLabel: scrape_endpoint
       replacement: self

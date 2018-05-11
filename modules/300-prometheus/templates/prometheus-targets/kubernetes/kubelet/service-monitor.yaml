@@ -23,7 +23,7 @@ spec:
 # Костыль, ждет https://github.com/prometheus/prometheus/pull/3770
     - sourceLabels: [__meta_kubernetes_pod_node_name]
 #    - sourceLabels: [__meta_kubernetes_endpoint_address_target_name]
-      targetLabel: instance
+      targetLabel: node
     - targetLabel: scrape_endpoint
       replacement: kubelet
   - port: https-metrics
@@ -40,7 +40,7 @@ spec:
 # Костыль, ждет https://github.com/prometheus/prometheus/pull/3770
     - sourceLabels: [__meta_kubernetes_pod_node_name]
 #    - sourceLabels: [__meta_kubernetes_endpoint_address_target_name]
-      targetLabel: instance
+      targetLabel: node
     - targetLabel: scrape_endpoint
       replacement: cadvisor
     metricRelabelings:

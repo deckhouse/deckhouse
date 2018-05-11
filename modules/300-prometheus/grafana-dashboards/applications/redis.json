@@ -33,7 +33,7 @@
       }
     ]
   },
-  "description": "Prometheus dashboard for Redis servers (by host and alias)",
+  "description": "Prometheus dashboard for Redis servers (by pod and alias)",
   "editable": true,
   "gnetId": 763,
   "graphTooltip": 0,
@@ -105,7 +105,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "redis_uptime_in_seconds{instance=\"$host\",alias=\"$alias\"}",
+          "expr": "redis_uptime_in_seconds{pod=\"$pod\",alias=\"$alias\"}",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
@@ -191,7 +191,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "redis_connected_clients{instance=\"$host\",alias=\"$alias\"}",
+          "expr": "redis_connected_clients{pod=\"$pod\",alias=\"$alias\"}",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
@@ -279,7 +279,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (redis_memory_used_bytes{instance=\"$host\",alias=\"$alias\"}  / redis_memory_max_bytes{instance=\"$host\",alias=\"$alias\"} )",
+          "expr": "100 * (redis_memory_used_bytes{pod=\"$pod\",alias=\"$alias\"}  / redis_memory_max_bytes{pod=\"$pod\",alias=\"$alias\"} )",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
@@ -342,7 +342,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_commands_processed_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_commands_processed_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -431,7 +431,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_keyspace_hits_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_keyspace_hits_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -443,7 +443,7 @@
           "target": ""
         },
         {
-          "expr": "rate(redis_keyspace_misses_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_keyspace_misses_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -536,7 +536,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "redis_memory_used_bytes{instance=\"$host\",alias=\"$alias\"} ",
+          "expr": "redis_memory_used_bytes{pod=\"$pod\",alias=\"$alias\"} ",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "used",
@@ -546,7 +546,7 @@
           "target": ""
         },
         {
-          "expr": "redis_memory_max_bytes{instance=\"$host\",alias=\"$alias\"} ",
+          "expr": "redis_memory_max_bytes{pod=\"$pod\",alias=\"$alias\"} ",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -632,7 +632,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_net_input_bytes_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_net_input_bytes_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ input }}",
@@ -640,7 +640,7 @@
           "step": 2
         },
         {
-          "expr": "rate(redis_net_output_bytes_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_net_output_bytes_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -728,7 +728,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (redis_db_keys{instance=\"$host\",alias=\"$alias\"}) by (db)",
+          "expr": "sum (redis_db_keys{pod=\"$pod\",alias=\"$alias\"}) by (db)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -815,7 +815,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (redis_db_keys{instance=\"$host\",alias=\"$alias\"}) - sum (redis_db_keys_expiring{instance=\"$host\",alias=\"$alias\"}) ",
+          "expr": "sum (redis_db_keys{pod=\"$pod\",alias=\"$alias\"}) - sum (redis_db_keys_expiring{pod=\"$pod\",alias=\"$alias\"}) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -825,7 +825,7 @@
           "target": ""
         },
         {
-          "expr": "sum (redis_db_keys_expiring{instance=\"$host\",alias=\"$alias\"}) ",
+          "expr": "sum (redis_db_keys_expiring{pod=\"$pod\",alias=\"$alias\"}) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -919,7 +919,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(redis_expired_keys_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "expr": "sum(rate(redis_expired_keys_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -930,7 +930,7 @@
           "target": ""
         },
         {
-          "expr": "sum(rate(redis_evicted_keys_total{instance=\"$host\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "expr": "sum(rate(redis_evicted_keys_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1016,7 +1016,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{instance=\"$host\",alias=\"$alias\"}[$__interval_rv]))",
+          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1112,9 +1112,9 @@
         "includeAll": false,
         "label": null,
         "multi": false,
-        "name": "host",
+        "name": "pod",
         "options": [],
-        "query": "label_values(redis_connected_clients{namespace=~\"$namespace\"}, instance)",
+        "query": "label_values(redis_connected_clients{namespace=~\"$namespace\"}, pod)",
         "refresh": 2,
         "regex": "",
         "sort": 1,
@@ -1134,7 +1134,7 @@
         "multi": false,
         "name": "alias",
         "options": [],
-        "query": "label_values(redis_connected_clients{instance=\"$host\"}, alias)",
+        "query": "label_values(redis_connected_clients{pod=\"$pod\"}, alias)",
         "refresh": 2,
         "regex": "",
         "sort": 1,
