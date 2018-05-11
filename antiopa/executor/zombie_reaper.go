@@ -1,9 +1,10 @@
-package utils
+package executor
 
 // Some information about docker and pid1 process and zombie problem:
 // https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/
 // The code hereafter is from go-reaper (https://github.com/ramr/go-reaper) with small change:
 // - use rlog instead of fmt
+// - lock reaper when cmd.Run or cmd.Output are called
 
 /*  Note:  This is a *nix only implementation.  */
 
@@ -59,26 +60,32 @@ func reapChildren(config Config) {
 	for {
 		var sig = <-notifications
 		rlog.Debugf(" - Received signal %v\n", sig)
-		for {
-			var wstatus syscall.WaitStatus
+		func() {
+			// Acquire lock
+			ExecutorLock.Lock()
+			defer ExecutorLock.Unlock()
 
-			/*
-			 *  Reap 'em, so that zombies don't accumulate.
-			 *  Plants vs. Zombies!!
-			 */
-			pid, err := syscall.Wait4(pid, &wstatus, opts, nil)
-			for syscall.EINTR == err {
-				pid, err = syscall.Wait4(pid, &wstatus, opts, nil)
+			for {
+				var wstatus syscall.WaitStatus
+
+				/*
+				 *  Reap 'em, so that zombies don't accumulate.
+				 *  Plants vs. Zombies!!
+				 */
+				pid, err := syscall.Wait4(pid, &wstatus, opts, nil)
+				for syscall.EINTR == err {
+					pid, err = syscall.Wait4(pid, &wstatus, opts, nil)
+				}
+
+				if syscall.ECHILD == err {
+					break
+				}
+
+				rlog.Debugf(" - Grim reaper cleanup: pid=%d, wstatus=%+v\n",
+					pid, wstatus)
+
 			}
-
-			if syscall.ECHILD == err {
-				break
-			}
-
-			rlog.Debugf(" - Grim reaper cleanup: pid=%d, wstatus=%+v\n",
-				pid, wstatus)
-
-		}
+		}()
 	}
 
 } /*   End of function  reapChildren.  */
