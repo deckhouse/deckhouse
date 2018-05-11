@@ -79,7 +79,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "min(sum(kube_node_status_allocatable_cpu_cores) by (instance))",
+          "expr": "min(sum(kube_node_status_allocatable_cpu_cores) by (node))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -88,7 +88,7 @@
           "step": 20
         },
         {
-          "expr": "max(sum(kube_pod_container_resource_requests_cpu_cores) by (instance))",
+          "expr": "max(sum(kube_pod_container_resource_requests_cpu_cores) by (node))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Requested CPU Cores",
@@ -194,7 +194,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(sum(kube_pod_container_resource_requests_cpu_cores) by (instance)) / min(sum(kube_node_status_allocatable_cpu_cores) by (instance)) * 100",
+          "expr": "max(sum(kube_pod_container_resource_requests_cpu_cores) by (node)) / min(sum(kube_node_status_allocatable_cpu_cores) by (node)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -253,7 +253,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "min(sum(kube_node_status_allocatable_memory_bytes) by (instance))",
+          "expr": "min(sum(kube_node_status_allocatable_memory_bytes) by (node))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -262,7 +262,7 @@
           "step": 20
         },
         {
-          "expr": "max(sum(kube_pod_container_resource_requests_memory_bytes) by (instance))",
+          "expr": "max(sum(kube_pod_container_resource_requests_memory_bytes) by (node))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Requested Memory",
@@ -368,7 +368,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(sum(kube_pod_container_resource_requests_memory_bytes) by (instance)) / min(sum(kube_node_status_allocatable_memory_bytes) by (instance)) * 100",
+          "expr": "max(sum(kube_pod_container_resource_requests_memory_bytes) by (node)) / min(sum(kube_node_status_allocatable_memory_bytes) by (node)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",

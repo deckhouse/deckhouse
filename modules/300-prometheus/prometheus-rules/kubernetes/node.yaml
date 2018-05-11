@@ -2,20 +2,20 @@ groups:
 - name: kubernetes.node
   rules:
   - alert: NodeDiskRunningOutOfInodes
-    expr: max(predict_linear(node_filesystem_files_free{job="node-exporter"}[6h], 3600 * 24)) BY (instance, device, mountpoint, fstype) < 0
+    expr: max(predict_linear(node_filesystem_files_free{job="node-exporter"}[6h], 3600 * 24)) BY (node, device, mountpoint, fstype) < 0
     for: 30m
     labels:
       severity: warning
     annotations:
-      description: device {{$labels.device}} on node {{$labels.instance}} is running
+      description: device {{$labels.device}} on node {{$labels.node}} is running
         out of inodes within the next 24 hours (mounted at {{$labels.mountpoint}})
       summary: Node disk is running out of inodes within 24 hours
   - alert: NodeDiskRunningOutOfInodes
-    expr: max(predict_linear(node_filesystem_files_free{job="node-exporter"}[30m], 3600 * 2)) BY (instance, device, mountpoint, fstype) < 0
+    expr: max(predict_linear(node_filesystem_files_free{job="node-exporter"}[30m], 3600 * 2)) BY (node, device, mountpoint, fstype) < 0
     for: 10m
     labels:
       severity: critical
     annotations:
-      description: device {{$labels.device}} on node {{$labels.instance}} is running
+      description: device {{$labels.device}} on node {{$labels.node}} is running
         out of inodes within the next 2 hours (mounted at {{$labels.mountpoint}})
       summary: Node disk is running out of inodes within 2 hours

@@ -24,7 +24,7 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: instance
+      targetLabel: node
     - sourceLabels: [__meta_kubernetes_service_name]
       regex: kube-prometheus-discovery-of-(.*)
       targetLabel: app
@@ -34,7 +34,7 @@ spec:
     {{- else }}
       replacement: {{ .name }}
     {{- end }}
-    - targetLabel: endpoint
+    - targetLabel: scrape_source
       replacement: controller
     metricRelabelings:
     # remove ingress_class, we have "controller" label
@@ -50,7 +50,7 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: instance
+      targetLabel: node
     - sourceLabels: [__meta_kubernetes_service_name]
       regex: kube-prometheus-discovery-of-(.*)
       targetLabel: app
@@ -60,7 +60,7 @@ spec:
     {{- else }}
       replacement: {{ .name }}
     {{- end }}
-    - targetLabel: endpoint
+    - targetLabel: scrape_source
       replacement: statsd
   selector:
     matchLabels:

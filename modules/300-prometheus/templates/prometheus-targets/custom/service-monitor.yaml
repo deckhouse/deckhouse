@@ -14,10 +14,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
       replacement: custom-$1
       targetLabel: job
-    - regex: endpoint|pod
+    - regex: endpoint
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -28,10 +26,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
       replacement: custom-$1
       targetLabel: job
-    - regex: endpoint|pod
+    - regex: endpoint
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
   namespaceSelector:
     any: true
   selector:

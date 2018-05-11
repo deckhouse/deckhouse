@@ -30,7 +30,7 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: instance
+      targetLabel: node
     - targetLabel: controller
       {{- if not .name }}
       replacement: main

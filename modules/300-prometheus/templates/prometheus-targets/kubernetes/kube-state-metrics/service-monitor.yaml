@@ -25,18 +25,9 @@ spec:
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - sourceLabels: [__meta_kubernetes_namespace]
-      regex: '.*()'
-      targetLabel: namespace
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      regex: '.*()'
-      targetLabel: pod
-    - sourceLabels: [__meta_kubernetes_service_name]
-      regex: '.*()'
-      targetLabel: service
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
-    - targetLabel: endpoint
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - targetLabel: scrape_endpoint
       replacement: main
   - port: https-self
     scheme: https
@@ -45,16 +36,7 @@ spec:
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - sourceLabels: [__meta_kubernetes_namespace]
-      regex: '.*()'
-      targetLabel: namespace
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      regex: '.*()'
-      targetLabel: pod
-    - sourceLabels: [__meta_kubernetes_service_name]
-      regex: '.*()'
-      targetLabel: service
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
-    - targetLabel: endpoint
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - targetLabel: scrape_endpoint
       replacement: self
