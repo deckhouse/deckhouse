@@ -3,7 +3,7 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onDelete="$(jo -a "$(jo kind=configmap selector=$(jo matchLabels=$(jo hello=world)))")"
+  jo -p onDelete="$(jo -a "$(jo kind=configmap jqFilter=".metadata.labels" selector=$(jo matchLabels=$(jo hello=world)))")"
 }
 
 function __main__() {
