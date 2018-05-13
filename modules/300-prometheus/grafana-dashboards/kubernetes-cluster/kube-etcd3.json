@@ -111,7 +111,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(etcd_server_has_leader{job=\"kube-etcd3\", instance=~\"$instance\"})",
+          "expr": "sum(etcd_server_has_leader{job=\"kube-etcd3\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -173,7 +173,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_started_total{job=\"kube-etcd3\", instance=~\"$instance\", grpc_type=\"unary\"}[$__interval_rv]))",
+          "expr": "sum(rate(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Rate",
@@ -182,7 +182,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"kube-etcd3\", instance=~\"$instance\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_rv]))",
+          "expr": "sum(rate(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Failed Rate",
@@ -272,7 +272,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(grpc_server_started_total{job=\"kube-etcd3\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"kube-etcd3\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"})",
+          "expr": "sum(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Watch Streams",
@@ -281,7 +281,7 @@
           "step": 4
         },
         {
-          "expr": "sum(grpc_server_started_total{job=\"kube-etcd3\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"kube-etcd3\", instance=~\"$instance\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"})",
+          "expr": "sum(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Lease Streams",
@@ -372,12 +372,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcd_debugging_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", instance=~\"$instance\"}",
+          "expr": "etcd_debugging_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) DB Size",
+          "legendFormat": "{{node}} ({{component}}) DB Size",
           "metric": "",
           "refId": "A",
           "step": 4
@@ -462,20 +462,20 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component, le))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) WAL fsync",
+          "legendFormat": "{{node}} ({{component}}) WAL fsync",
           "metric": "etcd_disk_wal_fsync_duration_seconds_bucket",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component, le))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) DB fsync",
+          "legendFormat": "{{node}} ({{component}}) DB fsync",
           "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
           "refId": "B",
           "step": 4
@@ -560,10 +560,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"kube-etcd3\", instance=~\"$instance\"}",
+          "expr": "process_resident_memory_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) Resident Memory",
+          "legendFormat": "{{node}} ({{component}}) Resident Memory",
           "metric": "process_resident_memory_bytes",
           "refId": "A",
           "step": 4
@@ -650,10 +650,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) Client Traffic In",
+          "legendFormat": "{{node}} ({{component}}) Client Traffic In",
           "metric": "etcd_network_client_grpc_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -740,10 +740,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) Client Traffic Out",
+          "legendFormat": "{{node}} ({{component}}) Client Traffic Out",
           "metric": "etcd_network_client_grpc_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -830,10 +830,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) Peer Traffic In",
+          "legendFormat": "{{node}} ({{component}}) Peer Traffic In",
           "metric": "etcd_network_peer_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -921,12 +921,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv])) by (instance, component)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component)",
           "format": "time_series",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}}) Peer Traffic Out",
+          "legendFormat": "{{node}} ({{component}}) Peer Traffic Out",
           "metric": "etcd_network_peer_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -1011,7 +1011,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Failure Rate",
@@ -1020,7 +1020,7 @@
           "step": 2
         },
         {
-          "expr": "sum(etcd_server_proposals_pending{job=\"kube-etcd3\", instance=~\"$instance\"})",
+          "expr": "sum(etcd_server_proposals_pending{job=\"kube-etcd3\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Pending Total",
@@ -1029,7 +1029,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Commit Rate",
@@ -1038,7 +1038,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Apply Rate",
@@ -1113,7 +1113,7 @@
       },
       "styles": [
         {
-          "alias": "Service / Instance",
+          "alias": "Service / Node",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1131,11 +1131,11 @@
       ],
       "targets": [
         {
-          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"kube-etcd3\", instance=~\"$instance\"}[$__range])",
+          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"kube-etcd3\", node=~\"$node\"}[$__range])",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} ({{component}})",
+          "legendFormat": "{{node}} ({{component}})",
           "refId": "A"
         }
       ],
@@ -1170,11 +1170,11 @@
         "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
-        "label": "Instance",
+        "label": "Node",
         "multi": true,
-        "name": "instance",
+        "name": "node",
         "options": [],
-        "query": "label_values(up{job=\"kube-etcd3\"}, instance)",
+        "query": "label_values(up{job=\"kube-etcd3\"}, node)",
         "refresh": 2,
         "regex": "",
         "sort": 0,

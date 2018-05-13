@@ -51,8 +51,8 @@
       },
       "id": 17,
       "panels": [],
-      "repeat": "instance",
-      "title": "Query Metrics for $instance",
+      "repeat": "pod",
+      "title": "Query Metrics for $pod",
       "type": "row"
     },
     {
@@ -92,7 +92,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(mongodb_op_counters_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(mongodb_op_counters_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -179,7 +179,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(mongodb_metrics_document_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(mongodb_metrics_document_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -261,7 +261,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(mongodb_metrics_query_executor_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(mongodb_metrics_query_executor_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -316,8 +316,8 @@
       },
       "id": 18,
       "panels": [],
-      "repeat": "instance",
-      "title": "Replica Set Metrics for $instance",
+      "repeat": "pod",
+      "title": "Replica Set Metrics for $pod",
       "type": "row"
     },
     {
@@ -357,7 +357,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "mongodb_replset_number_of_members{namespace=~\"$namespace\", instance=~\"$instance\"}",
+          "expr": "mongodb_replset_number_of_members{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -366,7 +366,7 @@
           "step": 2
         },
         {
-          "expr": "sum(mongodb_replset_member_health{namespace=~\"$namespace\", instance=~\"$instance\"})",
+          "expr": "sum(mongodb_replset_member_health{namespace=~\"$namespace\", pod=~\"$pod\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -452,7 +452,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "mongodb_replset_member_state{namespace=~\"$namespace\", instance=~\"$instance\"}",
+          "expr": "mongodb_replset_member_state{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -536,7 +536,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(mongodb_op_counters_repl_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(mongodb_op_counters_repl_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -591,8 +591,8 @@
       },
       "id": 19,
       "panels": [],
-      "repeat": "instance",
-      "title": "Health metrics for $instance",
+      "repeat": "pod",
+      "title": "Health metrics for $pod",
       "type": "row"
     },
     {
@@ -657,7 +657,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "mongodb_instance_uptime_seconds{namespace=~\"$namespace\", instance=~\"$instance\"}",
+          "expr": "mongodb_instance_uptime_seconds{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -740,7 +740,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "mongodb_connections{namespace=~\"$namespace\", instance=~\"$instance\", state=\"available\"}",
+          "expr": "mongodb_connections{namespace=~\"$namespace\", pod=~\"$pod\", state=\"available\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -823,7 +823,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "mongodb_connections{namespace=~\"$namespace\", instance=~\"$instance\", state=\"current\"}",
+          "expr": "mongodb_connections{namespace=~\"$namespace\", pod=~\"$pod\", state=\"current\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -855,8 +855,8 @@
       },
       "id": 20,
       "panels": [],
-      "repeat": "instance",
-      "title": "Resource Metrics for $instance",
+      "repeat": "pod",
+      "title": "Resource Metrics for $pod",
       "type": "row"
     },
     {
@@ -896,7 +896,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "mongodb_replset_oplog_size_bytes{namespace=~\"$namespace\", instance=~\"$instance\"}",
+          "expr": "mongodb_replset_oplog_size_bytes{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -983,7 +983,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "mongodb_memory{namespace=~\"$namespace\", instance=~\"$instance\",type=~\"resident|virtual\"}",
+          "expr": "mongodb_memory{namespace=~\"$namespace\", pod=~\"$pod\",type=~\"resident|virtual\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1067,7 +1067,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(mongodb_network_bytes_total{namespace=~\"$namespace\", instance=~\"$instance\"}[$__interval_rv])",
+          "expr": "rate(mongodb_network_bytes_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1169,7 +1169,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{pod}}",
           "refId": "A",
           "step": 2
         }
@@ -1257,11 +1257,11 @@
         "datasource": "$ds_prometheus",
         "hide": 0,
         "includeAll": true,
-        "label": "Instance",
+        "label": "Pod",
         "multi": true,
-        "name": "instance",
+        "name": "pod",
         "options": [],
-        "query": "label_values(mongodb_up, instance)",
+        "query": "label_values(mongodb_up, pod)",
         "refresh": 2,
         "regex": "",
         "sort": 1,

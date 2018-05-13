@@ -7,13 +7,23 @@ function __config__() {
 }
 
 function __main__() {
-  if kubectl -n kube-prometheus get statefulset/prometheus-main > /dev/nyll 2> /dev/null; then
+  if kubectl -n kube-prometheus get statefulset/prometheus-main > /dev/null 2> /dev/null; then
     as_is=$(kubectl -n kube-prometheus get statefulset/prometheus-main -o json | jq '.spec.volumeClaimTemplates[0].spec.storageClassName + ":" + .spec.volumeClaimTemplates[0].spec.resources.requests.storage' -r)
     to_be=$(kubectl -n kube-prometheus get prometheus/main -o json | jq '.spec.storage.volumeClaimTemplate.spec.storageClassName + ":" + .spec.storage.volumeClaimTemplate.spec.resources.requests.storage' -r)
 
     if [[ "$as_is" != "$to_be" ]] ; then
       kubectl -n kube-prometheus delete pvc -l app=prometheus,prometheus=main
       kubectl -n kube-prometheus delete statefulset/prometheus-main
+    fi
+  fi
+
+  if kubectl -n kube-prometheus get statefulset/prometheus-longterm > /dev/null 2> /dev/null; then
+    as_is=$(kubectl -n kube-prometheus get statefulset/prometheus-longterm -o json | jq '.spec.volumeClaimTemplates[0].spec.storageClassName + ":" + .spec.volumeClaimTemplates[0].spec.resources.requests.storage' -r)
+    to_be=$(kubectl -n kube-prometheus get prometheus/longterm -o json | jq '.spec.storage.volumeClaimTemplate.spec.storageClassName + ":" + .spec.storage.volumeClaimTemplate.spec.resources.requests.storage' -r)
+
+    if [[ "$as_is" != "$to_be" ]] ; then
+      kubectl -n kube-prometheus delete pvc -l app=prometheus,prometheus=longterm
+      kubectl -n kube-prometheus delete statefulset/prometheus-longterm
     fi
   fi
 }

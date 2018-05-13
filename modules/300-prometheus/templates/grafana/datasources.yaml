@@ -20,3 +20,13 @@ data:
        isDefault: true
        jsonData:
          timeInterval: 30s
+{{- if .Values.prometheus.longtermRetentionDays }}
+     - name: longterm
+       type: prometheus
+       access: direct
+       orgId: 1
+       url: /prometheus/longterm
+       version: 1
+       jsonData:
+         timeInterval: 300s
+{{- end }}

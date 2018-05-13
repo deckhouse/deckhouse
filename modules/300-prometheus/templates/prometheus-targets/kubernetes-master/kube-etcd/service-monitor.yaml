@@ -30,7 +30,7 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: instance
+      targetLabel: node
     - targetLabel: component
       replacement: etcd
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
@@ -44,7 +44,7 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: instance
+      targetLabel: node
     - targetLabel: component
       replacement: etcd-events
 {{- end }}

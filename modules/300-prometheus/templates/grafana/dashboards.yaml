@@ -13,9 +13,9 @@ data:
     providers:
 {{- define "dashboards_yaml_item" }}
 {{- $folder := index . 1 }}
-    - name: {{ $folder }}
+    - name: {{ $folder | replace "/" "-" }}
       orgId: 1
-      folder: {{ $folder | replace "-" " " | title | quote }}
+      folder: {{ $folder | splitList "/" | first | replace "-" " " | title | quote }}
       type: file
       options:
         path: /grafana-dashboard-definitions/{{ $folder }}

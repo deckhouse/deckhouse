@@ -24,9 +24,6 @@ data:
   body-size: "64m"
   server-name-hash-bucket-size: "256"
   variables-hash-bucket-size: "256"
-  enable-vts-status: "true"
-  vts-status-zone-size: "20m"
-  vts-default-filter-key: "$geoip_country_code overall_country"
     {{- if $config.legacySSL }}
   ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"
   ssl-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:\
@@ -46,28 +43,34 @@ data:
   log-format-escape-json: "true"
   log-format-upstream: '{
     "time": "$time_iso8601",
-    "remote_addr": "$the_real_ip",
-    "x_forwarded_for": "$proxy_add_x_forwarded_for",
     "request_id": "$request_id",
-    "remote_user": "$remote_user",
+    "user": "$remote_user",
+    "address": "$the_real_ip",
+    "bytes_received": $request_length,
     "bytes_sent": $bytes_sent,
-    "request_time": $request_time,
-    "status": $status,
+    "protocol": "$server_protocol",
+    "scheme": "$scheme",
+    "method": "$request_method",
     "host": "$host",
-    "request_proto": "$server_protocol",
     "path": "$uri",
     "request_query": "$args",
-    "request_length": $request_length,
-    "method": "$request_method",
-    "http_referrer": "$http_referer",
-    "http_user_agent": "$http_user_agent",
-    "upstream_addr": "$upstream_addr",
-    "upstream_response_length": "$upstream_response_length",
-    "upstream_response_time": "$upstream_response_time",
-    "upstream_status": "$upstream_status",
+    "referrer": "$http_referer",
+    "user_agent": "$http_user_agent",
+    "request_time": $request_time,
+    "status": $status,
+    "content_kind": "$content_kind",
+    "upstream_response_time": $total_upstream_response_time,
+    "upstream_retries": $upstream_retries,
     "namespace": "$namespace",
-    "ingress_name": "$ingress_name",
-    "service_name": "$service_name"
+    "ingress": "$ingress_name",
+    "service": "$service_name",
+    "service_port": "$service_port",
+    "vhost": "$server_name",
+    "location": "$location_path",
+    "nginx_upstream_addr": "$upstream_addr",
+    "nginx_upstream_response_length": "$upstream_response_length",
+    "nginx_upstream_response_time": "$upstream_response_time",
+    "nginx_upstream_status": "$upstream_status"
   }'
   {{- end }}
 {{- end }}

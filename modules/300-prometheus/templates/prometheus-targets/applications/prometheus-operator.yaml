@@ -12,10 +12,8 @@ spec:
   endpoints:
   - port: http-metrics
     relabelings:
-    - regex: endpoint|pod
+    - regex: endpoint
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -23,10 +21,8 @@ spec:
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
-    - regex: endpoint|pod
+    - regex: endpoint
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: instance
   namespaceSelector:
     any: true
   selector:

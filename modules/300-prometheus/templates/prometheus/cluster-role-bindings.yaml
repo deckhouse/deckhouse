@@ -31,7 +31,3 @@ subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
   name: kube-prometheus:scraper
-# TODO временнно, удалить после отказа от rbac-proxy
-- kind: ServiceAccount
-  name: prometheus
-  namespace: kube-prometheus

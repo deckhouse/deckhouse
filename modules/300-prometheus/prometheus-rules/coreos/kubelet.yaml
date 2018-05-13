@@ -38,7 +38,7 @@ groups:
         have disappeared from service discovery.
       summary: Many Kubelets cannot be scraped
   - alert: K8SKubeletTooManyPods
-    expr: label_replace(kubelet_running_pod_count, "node", "$1", "instance", "(.*)") > on(node) kube_node_status_capacity_pods * 0.9
+    expr: kubelet_running_pod_count > on(node) kube_node_status_capacity_pods * 0.9
     for: 10m
     labels:
       severity: warning

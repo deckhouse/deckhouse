@@ -50,8 +50,8 @@
       },
       "id": 14,
       "panels": [],
-      "repeat": "instance",
-      "title": "$instance",
+      "repeat": "pod",
+      "title": "$pod",
       "type": "row"
     },
     {
@@ -115,7 +115,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(increase(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=\"$instance\"}[$__range]))",
+          "expr": "sum(increase(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__range]))",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -184,7 +184,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=\"$instance\", state=\"active\"}",
+          "expr": "phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\", state=\"active\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{state}}",
@@ -192,7 +192,7 @@
           "step": 2
         },
         {
-          "expr": "phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=\"$instance\", state=\"idle\"}",
+          "expr": "phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\", state=\"idle\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{state}}",
@@ -279,7 +279,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=\"$instance\"}[$__interval_rv])",
+          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -389,7 +389,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(sum(phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=\"$instance\", state=\"active\"}) without(state) / sum(phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", instance=\"$instance\"}) without(state)) * 100",
+          "expr": "avg(sum(phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\", state=\"active\"}) without(state) / sum(phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}) without(state)) * 100",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -477,11 +477,11 @@
         "datasource": "$ds_prometheus",
         "hide": 2,
         "includeAll": true,
-        "label": "Instance",
+        "label": "Pod",
         "multi": true,
-        "name": "instance",
+        "name": "pod",
         "options": [],
-        "query": "label_values(up{job=\"php-fpm\",namespace=\"$namespace\", service=\"$service\"}, instance)",
+        "query": "label_values(up{job=\"php-fpm\",namespace=\"$namespace\", service=\"$service\"}, pod)",
         "refresh": 2,
         "regex": "",
         "sort": 1,

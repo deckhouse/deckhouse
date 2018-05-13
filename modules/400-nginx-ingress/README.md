@@ -248,6 +248,37 @@ nginxIngress: |
       operator: Exists
 ```
 
+Статистика
+----------
+
+### Основные принципы работы статистики
+
+1. На каждый запрос, на стадии `log_by_lua`, [вызывается наш модуль](images/controller/rootfs/etc/nginx/template/nginx.tmpl#L887-888), который [рассчитывает необходимые данные и шлет их по UDP](images/controller/rootfs/etc/nginx/lua/statsd.lua) в statsd.
+2. Вместо обычного statsd у нас в pod'е с ingress-controller'ом запущен sidecar контейнер с [statsd_exporter'ом](https://github.com/prometheus/statsd_exporter), который принимает данные в формате statsd, разбирает и агрегирует их [[по установленным нами правилам](images/statsd-exporter/rootfs/etc/statsd_mapping.conf) и экспортирует в формате для Prometheus.
+3. Prometheus каждые 30 секунд scrape'ает как сам ingress-controller (там есть небольшое количество нужных нам метрик), так и statsd_exporter, и на основании этих данных все и работает!
+
+### Какая информация собирается и как она представлена?
+
+* У всех собираемых метрик есть служебные лейблы, позволяющие идентифицировать экземпляр контроллера: `controller`, `app`, `instance` и `endpoint` (они видны в `/prometheus/targets`).
+* Все метрики (кроме geo), экспортируемые statsd_exporter'ом, представлены в трех уровнях детализации:
+    * `ingress_nginx_overall_*` — "вид с вертолета", у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`.
+    * `ingress_nginx_detail_*` — кроме лейблов уровня overall добавляются: `ingress`, `service`, `service_port` и `location`.
+    * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бекендам. У этих метрик, кроме лейблов уровня detail, добавляестя лейбл `pod_ip`.
+* Для уровней overall и detail собираются следующие метрики:
+    * `..._requests_total` — counter количества запросов (дополнительные лейблы: `scheme`, `method`).
+    * `..._responses_total` — counter количества ответов (дополнительные лейблы: `status`).
+    * `..._request_seconds_{sum,count,bucket}` — histogram времени ответа.
+    * `..._bytes_received_{sum,count,bucket}` — histogram размера запроса.
+    * `..._bytes_sent_{sum,count,bucket}` — histogram размера ответа.
+    * `..._upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream'а (используется сумма времен ответов всех upstream'ов, если их было несколько).
+    * `..._lowres_upstream_response_seconds_{sum,count,bucket}` — тоже самое, что предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile).
+    * `..._upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бекендов, и сумма retry'ев.
+* Для уровня overall собираются следующие метрики:
+    * `..._geohash_total` — counter количества запросов с определенным geohash (дополнительные лейблы: `geohash`, `place`).
+* Для уровня detail_backend собираются следующие метрики:
+    * `..._lowres_upstream_response_seconds` — тоже самое, что аналогичная метрика для overall и detail.
+    * `..._responses_total` — counter количества ответов (дополнительный лейбл `status_class`, а не просто `status`)
+    *  `..._upstream_bytes_received_sum` — counter суммы размеров ответов backend'а.
 
 Дополнительная информация
 -------------------------
