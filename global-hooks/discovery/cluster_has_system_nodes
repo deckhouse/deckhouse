@@ -3,7 +3,9 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onKubeNodeChange=150 onStartup=150
+  jo -p onStartup=150 onUpdate="$(jo -a \
+    "$(jo kind=node jqFilter=".metadata.labels")" \
+  )"
 }
 
 function __main__() {

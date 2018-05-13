@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=50
+}
+
+function __main__() {
+  fltr='.'
+
+  node_selector='null'
+  if values::has antiopa.nodeSelector ; then
+    if ! values::is_false antiopa.nodeSelector ; then
+      node_selector="$(values::get --required antiopa.nodeSelector | jq -c .)"
+    fi
+  elif values::is_true global.discovery.clusterHasSystemNodes ; then
+    node_selector='{"node-role/system":""}'
+  fi
+
+  tolerations='null'
+  if values::has antiopa.tolerations ; then
+    if ! values::is_false antiopa.tolerations ; then
+      tolerations="$(values::get --required antiopa.tolerations | jq -c .)"
+    fi
+  elif values::is_true global.discovery.clusterHasSystemNodes ; then
+    tolerations='[{"effect":"NoExecute","key":"node-role/system"}]'
+  fi
+
+  res=$(kubectl -n antiopa get deploy/tiller-deploy -o json | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')
+  if [[ "$res" != "true" ]] ; then
+    # Удаляем tiller, а antiopa уже инициализирует его с правильными значениями при следующем запуске
+    echo "Tiller has wrong nodeSelector or toleration. Removing tiller and restarting self."
+    kubectl -n antiopa delete deploy/tiller-deploy
+    kill 1
+  fi
+}
+
+hook::run $@
