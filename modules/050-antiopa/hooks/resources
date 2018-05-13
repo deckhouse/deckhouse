@@ -13,8 +13,8 @@ function __main__() {
   # Важно! Изменять необходимо синхронно и здесь и в install.sh!
   #
   fltr='.'
-  fltr=$fltr' | .spec.template.spec.containers[0].resources.requests = {"cpu":"50m","memory":"500Mi"}'
-  fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {"cpu":"500m","memory":"500Mi"}'
+  fltr=$fltr' | .spec.template.spec.containers[0].resources.requests = {"cpu":"50m","memory":"512Mi"}'
+  fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {"cpu":"500m","memory":"2Gi"}'
   kubectl::jq_patch antiopa deploy/antiopa "$fltr"
 }
 
