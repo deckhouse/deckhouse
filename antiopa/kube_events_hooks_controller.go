@@ -7,6 +7,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
 
+	"github.com/romana/rlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -95,6 +96,8 @@ func (obj *MainKubeEventsHooksController) EnableGlobalHooks(moduleManager module
 				return err
 			}
 			obj.GlobalHooks[configId] = desc
+
+			rlog.Debugf("main: run informer %s for global hook %s", configId, globalHook.Name)
 		}
 	}
 
@@ -123,6 +126,8 @@ func (obj *MainKubeEventsHooksController) EnableModuleHooks(moduleName string, m
 				return err
 			}
 			obj.ModuleHooks[configId] = desc
+
+			rlog.Debugf("main: run informer %s for module hook %s", configId, moduleHook.Name)
 		}
 	}
 
