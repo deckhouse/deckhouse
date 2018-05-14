@@ -11,8 +11,9 @@ if [[ "$1" == "--config" ]]; then
 		"crontab": "* * * * *",
 		"allowFailure": true
 	}],
-	"onAdd": [{
-    "kind": "configmaps",
+	"onKubernetesEvent": [{
+    "event": ["add"],
+    "kind": "configmap",
     "selector": {
       "matchLabels": {
         "component": "component1"
@@ -29,9 +30,9 @@ if [[ "$1" == "--config" ]]; then
     },
     "jqFilter": ".items[] | del(.metadata, .field1)",
     "allowFailure": true
-  }],
-  "onUpdate": [{
-    "kind": "namespaces",
+  },
+  {
+    "kind": "namespace",
     "selector": {
       "matchLabels": {
         "component": "component2"
@@ -48,9 +49,9 @@ if [[ "$1" == "--config" ]]; then
     },
     "jqFilter": ".items[] | del(.metadata, .field2)",
     "allowFailure": true
-  }],
-  "onDelete": [{
-    "kind": "pods",
+  },
+  {
+    "kind": "pod",
     "selector": {
       "matchLabels": {
         "component": "component3"
@@ -60,9 +61,6 @@ if [[ "$1" == "--config" ]]; then
         "operator": "In",
         "values": ["cache"]
       }]
-    },
-    "namespaceSelector": {
-      "any": true
     },
     "jqFilter": ".items[] | del(.metadata, .field3)",
     "allowFailure": true

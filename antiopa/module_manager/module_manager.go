@@ -3,14 +3,15 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/romana/rlog"
+	"reflect"
 	"sort"
+	"strings"
+
+	"github.com/romana/rlog"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
-	"reflect"
-	"strings"
 )
 
 type ModuleManager interface {
@@ -148,31 +149,26 @@ type Event struct {
     "beforeAll": ORDER,        // только global
     "afterAll": ORDER,         // только global
     "onKubeNodeChange": ORDER, // только global
-	"onAdd": [{
-		"kind": "pod",
+	"onKubernetesEvent": [{
+		"event": ["add", "delete"],
+		"kind": "configmap",
 		"selector": {
-			"matchLabels": {
-				"component": "component"
-			},
-			"matchExpressions": [{
-				"key": "tier",
-				"operator": "In",
-				"values": ["cache"]
-			}]
+		  "matchLabels": {
+		    "component": "component"
+		  },
+		  "matchExpressions": [{
+		    "key": "tier",
+		    "operator": "In",
+		    "values": ["cache"]
+		  }]
 		},
 		"namespaceSelector": {
-			"matchNames": ["namespace"],
-			"any": false
+		  "matchNames": ["namespace"],
+		  "any": false
 		},
-		"jqFilter": ".items[] | del(.metadata, .status)",
+		"jqFilter": del(.metadata, .field1)",
 		"allowFailure": true
 	}],
-	onUpdate: [
-		...
-	],
-	onDelete: [
-		...
-	],
     schedule:  [
 		{
 			"crontab": "* * * * *",
