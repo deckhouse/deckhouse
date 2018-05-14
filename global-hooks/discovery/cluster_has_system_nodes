@@ -3,8 +3,8 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=150 onUpdate="$(jo -a \
-    "$(jo kind=node jqFilter=".metadata.labels")" \
+  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
+    "$(jo event="$(jo -a update)" kind=node jqFilter=".metadata.labels")" \
   )"
 }
 
