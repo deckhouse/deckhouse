@@ -15,13 +15,13 @@
 
 Модуль поддерживает несколько контроллеров — один **основной** и сколько угодно **дополнительных**, для них можно указывать следующие параметры:
 * `inlet` — способа поступления трафика из внешнего мира.
-    * Определяется автоматическиьв зависимости от типа кластера!
+    * Определяется автоматически в зависимости от типа кластера (GCE и ACS — LoadBalancer, AWS — AWSClassicLoadBalancer, Manual — Direct; подробнее [здесь](templates/_helpers.tpl#L22-30))!
     * Поддерживаются следующие inlet'ы
         * `LoadBalancer` (автоматически для `GCE` и `ACS`) — заказывает автоматом LoadBalancer.
         * `AWSClassicLoadBalancer` (автоматически для`AWS`) — заказывает автоматом LoadBalancer и включает proxy protocol, используется по-умолчанию для AWS.
         * `Direct` (автоматически `Manual`) — pod'ы работают в host network, nginx слушает на 80 и 443 порту, хитрая схема с direct-fallback.
         * `NodePort` — создает сервис с типом NodePort, подходит в тех ситуациях, когда необходимо настроить "сторонний" балансировщик (например, использовать AWS Application Load Balancer, Qrator или  CloudFLare).
-    * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](modules/nginx-ingress/templates/controller.yaml).
+    * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](templates/controller.yaml).
 * `config.hsts` — bool, включен ли hsts.
     * По-умолчанию выключен.
 * `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](modules/400-nginx-ingress/templates/_template.config.tpl).
