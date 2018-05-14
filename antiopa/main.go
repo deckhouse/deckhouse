@@ -2,10 +2,14 @@ package main
 
 import (
 	"flag"
+	"io"
 	"io/ioutil"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/romana/rlog"
 
 	"github.com/deckhouse/deckhouse/antiopa/docker_registry_manager"
@@ -654,6 +658,30 @@ func CreateReloadAllTasks() {
 	rlog.Debugf("ReloadAll: queued discover of modules state")
 }
 
+func InitHttpServer() {
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte(`<html>
+    <head><title>Antiopa</title></head>
+    <body>
+    <h1>Antiopa</h1>
+    <pre>go tool pprof goprofex http://ANTIOPA_IP:9115/debug/pprof/profile</pre>
+    </body>
+    </html>`))
+	})
+	http.Handle("/metrics", promhttp.Handler())
+
+	http.HandleFunc("/queue", func(writer http.ResponseWriter, request *http.Request) {
+		io.Copy(writer, TasksQueue.DumpReader())
+	})
+
+	go func() {
+		rlog.Info("Listening on :9115")
+		if err := http.ListenAndServe(":9115", nil); err != nil {
+			rlog.Error("Error starting HTTP server: %s", err)
+		}
+	}()
+}
+
 func main() {
 	// set flag.Parsed() for glog
 	flag.CommandLine.Parse([]string{})
@@ -661,6 +689,9 @@ func main() {
 	// Be a good parent - clean up behind the children processes.
 	// Antiopa is PID1, no special config required
 	go executor.Reap()
+
+	// Включить Http сервер для pprof и prometheus client
+	InitHttpServer()
 
 	// настроить всё необходимое
 	Init()
