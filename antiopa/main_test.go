@@ -1,12 +1,16 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
+	"github.com/romana/rlog"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/satori/go.uuid.v1"
 
@@ -603,4 +607,23 @@ func TestMain_ScheduledTasks(t *testing.T) {
 	}
 
 	fmt.Printf("runOrder: %+v", runOrder)
+}
+
+// Тесты запускаются уже с flag.Parsed(), поэтому glog ничего не пишет
+func TestGlog(t *testing.T) {
+	t.SkipNow()
+	os.Setenv("RLOG_LOG_LEVEL", "DEBUG")
+	rlog.UpdateEnv()
+
+	rlog.Info("start TestGlog")
+	glog.Warning("test warngin from glog")
+
+	flag.Set("", "")
+	//flag.CommandLine.Parse([]string{})
+	glog.Warning("test warngin from glog after Parse")
+	rlog.Info("stop TestGlog")
+
+	time.Sleep(1 * time.Second)
+
+	t.Error("Error call to get stdout")
 }
