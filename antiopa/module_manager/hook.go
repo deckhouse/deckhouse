@@ -3,14 +3,17 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/antiopa/utils"
-	"github.com/kennygrant/sanitize"
-	"github.com/romana/rlog"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/kennygrant/sanitize"
+	"github.com/romana/rlog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/antiopa/executor"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 type GlobalHook struct {
@@ -710,7 +713,7 @@ func (mm *MainModuleManager) execHook(hookName string, configValuesJsonPatchPath
 		fmt.Sprintf("VALUES_JSON_PATCH_PATH=%s", valuesJsonPatchPath),
 	)
 
-	err := execCommand(cmd)
+	err := executor.Run(cmd)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s FAILED: %s", hookName, err)
 	}
@@ -747,7 +750,7 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 	rlog.Debugf("Executing command in %s: '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
 	cmd.Stdout = nil
 
-	output, err := cmd.Output()
+	output, err := executor.Output(cmd)
 	if err != nil {
 		rlog.Errorf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
 		return output, err

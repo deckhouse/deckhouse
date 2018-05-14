@@ -3,16 +3,17 @@ package helm
 import (
 	"bytes"
 	"fmt"
-	"github.com/romana/rlog"
 	"os"
 	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/romana/rlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kblabels "k8s.io/apimachinery/pkg/labels"
 
+	"github.com/deckhouse/deckhouse/antiopa/executor"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 )
 
@@ -115,7 +116,6 @@ func (helm *CliHelm) CommandEnv() []string {
 // чтобы antiopa работала со своим tiller-ом.
 func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err error) {
 	binPath := "/usr/local/bin/helm"
-	rlog.Debugf("Executing helm command: %s %s", binPath, strings.Join(args, " "))
 	cmd := exec.Command(binPath, args...)
 	cmd.Env = append(os.Environ(), helm.CommandEnv()...)
 
@@ -124,7 +124,7 @@ func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err erro
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = &stderrBuf
 
-	err = cmd.Run()
+	err = executor.Run(cmd)
 	stdout = strings.TrimSpace(stdoutBuf.String())
 	stderr = strings.TrimSpace(stderrBuf.String())
 

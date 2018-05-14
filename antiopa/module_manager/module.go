@@ -3,7 +3,6 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -14,7 +13,9 @@ import (
 	"github.com/kennygrant/sanitize"
 	"github.com/otiai10/copy"
 	"github.com/romana/rlog"
+	"gopkg.in/yaml.v2"
 
+	"github.com/deckhouse/deckhouse/antiopa/executor"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
@@ -382,7 +383,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		},
 	)
 
-	if err := execCommand(cmd); err != nil {
+	if err := executor.Run(cmd); err != nil {
 		return false, nil
 	}
 
@@ -588,11 +589,6 @@ func dumpData(filePath string, data []byte) error {
 		return err
 	}
 	return nil
-}
-
-func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in '%s': '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
-	return cmd.Run()
 }
 
 func (mm *MainModuleManager) makeCommand(dir string, entrypoint string, args []string, envs []string) *exec.Cmd {
