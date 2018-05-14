@@ -781,7 +781,9 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 
 	if newValuesChecksum != oldValuesChecksum {
 		switch binding {
-		case OnKubeNodeChange:
+		case Schedule, KubeEvents:
+			mm.globalValuesChanged <- true
+		case OnKubeNodeChange: // TODO: remove in https://github.com/deckhouse/deckhouse/issues/281
 			mm.globalValuesChanged <- true
 		}
 	}
@@ -811,7 +813,7 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 
 	if newValuesChecksum != oldValuesChecksum {
 		switch binding {
-		case Schedule:
+		case Schedule, KubeEvents:
 			mm.moduleValuesChanged <- moduleHook.Module.Name
 		}
 	}
