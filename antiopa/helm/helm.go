@@ -15,6 +15,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/antiopa/executor"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 type HelmClient interface {
@@ -23,7 +24,8 @@ type HelmClient interface {
 	Cmd(args ...string) (string, string, error)
 	DeleteSingleFailedRevision(releaseName string) error
 	LastReleaseStatus(releaseName string) (string, string, error)
-	UpgradeRelease(releaseName string, chart string, valuesPaths []string, namespace string) error
+	UpgradeRelease(releaseName string, chart string, valuesPaths []string, setValues []string, namespace string) error
+	GetReleaseValues(releaseName string) (utils.Values, error)
 	DeleteRelease(releaseName string) error
 	ListReleases() ([]string, error)
 	ListReleasesNames() ([]string, error)
@@ -187,7 +189,7 @@ func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, sta
 	return
 }
 
-func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPaths []string, namespace string) error {
+func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPaths []string, setValues []string, namespace string) error {
 	args := make([]string, 0)
 	args = append(args, "upgrade")
 	args = append(args, "--install")
@@ -204,6 +206,11 @@ func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPath
 		args = append(args, valuesPath)
 	}
 
+	for _, setValue := range setValues {
+		args = append(args, "--set")
+		args = append(args, setValue)
+	}
+
 	rlog.Infof("Running helm upgrade for release '%s' with chart '%s' in namespace '%s' ...", releaseName, chart, namespace)
 	stdout, stderr, err := helm.Cmd(args...)
 	if err != nil {
@@ -212,6 +219,20 @@ func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPath
 	rlog.Infof("Helm upgrade for release '%s' with chart '%s' in namespace '%s' successful:\n%s\n%s", releaseName, chart, namespace, stdout, stderr)
 
 	return nil
+}
+
+func (helm *CliHelm) GetReleaseValues(releaseName string) (utils.Values, error) {
+	stdout, stderr, err := helm.Cmd("get", "values", releaseName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get values of helm release %s: %s\n%s %s", releaseName, err, stdout, stderr)
+	}
+
+	values, err := utils.NewValuesFromBytes([]byte(stdout))
+	if err != nil {
+		return nil, fmt.Errorf("cannot get values of helm release %s: %s", releaseName, err)
+	}
+
+	return values, nil
 }
 
 func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {

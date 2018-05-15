@@ -112,6 +112,17 @@ func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleCon
 	return NewModuleConfig(moduleName, values)
 }
 
+func NewValuesFromBytes(data []byte) (Values, error) {
+	var rawValues map[interface{}]interface{}
+
+	err := yaml.Unmarshal(data, &rawValues)
+	if err != nil {
+		return nil, fmt.Errorf("bad values data: %s\n%s", err, string(data))
+	}
+
+	return NewValues(rawValues)
+}
+
 func NewValues(data map[interface{}]interface{}) (Values, error) {
 	values, err := FormatValues(data)
 	if err != nil {
