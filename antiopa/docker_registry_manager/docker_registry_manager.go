@@ -70,7 +70,7 @@ func RunRegistryManager() {
 		return
 	}
 
-	rlog.Infof("Registry manager: start watch for image '%s'")
+	rlog.Infof("Registry manager: start watch for image '%s'", AntiopaImageName)
 
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
