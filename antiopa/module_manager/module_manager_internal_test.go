@@ -369,7 +369,11 @@ func (h *MockHelmClient) IsReleaseExists(_ string) (bool, error) {
 	return true, nil
 }
 
-func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string, _ string) error {
+func (h *MockHelmClient) GetReleaseValues(_ string) (utils.Values, error) {
+	return make(utils.Values), nil
+}
+
+func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string, _ []string, _ string) error {
 	h.UpgradeReleaseExecuted = true
 	return nil
 }

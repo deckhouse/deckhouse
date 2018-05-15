@@ -89,12 +89,57 @@ func (m *Module) execRun() error {
 		if err != nil {
 			return err
 		}
+
+		// Prepare dummy empty values.yaml for helm not to fail
 		err = os.Truncate(filepath.Join(runChartPath, "values.yaml"), 0)
 		if err != nil {
 			return err
 		}
 
-		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, runChartPath, []string{valuesPath}, m.moduleManager.helm.TillerNamespace())
+		checksum, err := utils.CalculateChecksumOfPaths(runChartPath, valuesPath)
+		if err != nil {
+			return err
+		}
+
+		doRelease := true
+
+		isReleaseExists, err := m.moduleManager.helm.IsReleaseExists(helmReleaseName)
+		if err != nil {
+			return err
+		}
+
+		if isReleaseExists {
+			releaseValues, err := m.moduleManager.helm.GetReleaseValues(helmReleaseName)
+			if err != nil {
+				return err
+			}
+
+			if recordedChecksum, hasKey := releaseValues["_antiopaModuleChecksum"]; hasKey {
+				if recordedChecksumStr, ok := recordedChecksum.(string); ok {
+					if recordedChecksumStr == checksum {
+						doRelease = false
+						rlog.Debugf("Module manager: helm release '%s' checksum '%s' does not changed: will skip helm release", helmReleaseName, checksum)
+					} else {
+						rlog.Debugf("Module manager: helm release '%s' checksum changed '%s' -> '%s': will make helm release", helmReleaseName, recordedChecksumStr, checksum)
+					}
+				}
+			}
+		}
+
+		if doRelease {
+			rlog.Debugf("Module manager: helm release '%s' checksum '%s': installing/upgrading release", helmReleaseName, checksum)
+
+			return m.moduleManager.helm.UpgradeRelease(
+				helmReleaseName, runChartPath,
+				[]string{valuesPath},
+				[]string{fmt.Sprintf("_antiopaModuleChecksum=%s", checksum)},
+				m.moduleManager.helm.TillerNamespace(),
+			)
+		} else {
+			rlog.Debugf("Module manager: helm release '%s' checksum '%s': release install/upgrade is skipped", helmReleaseName, checksum)
+		}
+
+		return nil
 	})
 
 	if err != nil {
