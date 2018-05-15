@@ -43,7 +43,7 @@ func (obj *KubeEventsHooksControllerMock) HandleEvent(configId string) (*struct{
 
 type KubeEventsManagerMock struct{}
 
-func (kem *KubeEventsManagerMock) Run(informerType kube_events_manager.InformerType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error) {
+func (kem *KubeEventsManagerMock) Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error) {
 	return uuid.NewV4().String(), nil
 }
 
