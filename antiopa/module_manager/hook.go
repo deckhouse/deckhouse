@@ -51,11 +51,9 @@ type ModuleHookConfig struct {
 }
 
 type HookConfig struct {
-	OnStartup interface{}          `json:"onStartup"`
-	Schedule  []ScheduleConfig     `json:"schedule"`
-	OnAdd     []KubeEventsOnAction `json:"onAdd"`
-	OnUpdate  []KubeEventsOnAction `json:"onUpdate"`
-	OnDelete  []KubeEventsOnAction `json:"onDelete"`
+	OnStartup         interface{}               `json:"onStartup"`
+	Schedule          []ScheduleConfig          `json:"schedule"`
+	OnKubernetesEvent []OnKubernetesEventConfig `json:"onKubernetesEvent"`
 }
 
 type ScheduleConfig struct {
@@ -63,12 +61,21 @@ type ScheduleConfig struct {
 	AllowFailure bool   `json:"allowFailure"`
 }
 
-type KubeEventsOnAction struct {
-	Kind              string                 `json:"kind"`
-	Selector          *metav1.LabelSelector  `json:"selector"`
-	NamespaceSelector *KubeNamespaceSelector `json:"namespaceSelector"`
-	JqFilter          string                 `json:"jqFilter"`
-	AllowFailure      bool                   `json:"allowFailure"`
+type OnKubernetesEventType string
+
+const (
+	KubernetesEventOnAdd    OnKubernetesEventType = "add"
+	KubernetesEventOnUpdate OnKubernetesEventType = "update"
+	KubernetesEventOnDelete OnKubernetesEventType = "delete"
+)
+
+type OnKubernetesEventConfig struct {
+	EventTypes        []OnKubernetesEventType `json:"event"`
+	Kind              string                  `json:"kind"`
+	Selector          *metav1.LabelSelector   `json:"selector"`
+	NamespaceSelector *KubeNamespaceSelector  `json:"namespaceSelector"`
+	JqFilter          string                  `json:"jqFilter"`
+	AllowFailure      bool                    `json:"allowFailure"`
 }
 
 type KubeNamespaceSelector struct {
@@ -140,7 +147,7 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 		mm.globalHooksOrder[Schedule] = append(mm.globalHooksOrder[Schedule], globalHook)
 	}
 
-	if (len(config.OnAdd) + len(config.OnUpdate) + len(config.OnDelete)) != 0 {
+	if len(config.OnKubernetesEvent) != 0 {
 		globalHook.Bindings = append(globalHook.Bindings, KubeEvents)
 		mm.globalHooksOrder[KubeEvents] = append(mm.globalHooksOrder[KubeEvents], globalHook)
 	}
@@ -196,7 +203,7 @@ func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config
 		mm.addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
 	}
 
-	if (len(config.OnAdd) + len(config.OnUpdate) + len(config.OnDelete)) != 0 {
+	if len(config.OnKubernetesEvent) != 0 {
 		moduleHook.Bindings = append(moduleHook.Bindings, KubeEvents)
 		mm.addModulesHooksOrderByName(moduleName, KubeEvents, moduleHook)
 	}
@@ -565,15 +572,15 @@ func (h *ModuleHook) prepareConfigValuesYamlFile() (string, error) {
 }
 
 func prepareHookConfig(hookConfig *HookConfig) {
-	for _, configs := range [][]KubeEventsOnAction{
-		hookConfig.OnAdd,
-		hookConfig.OnUpdate,
-		hookConfig.OnDelete,
-	} {
-		for i := range configs {
-			if configs[i].NamespaceSelector == nil {
-				configs[i].NamespaceSelector = &KubeNamespaceSelector{Any: true}
-			}
+	for i := range hookConfig.OnKubernetesEvent {
+		config := &hookConfig.OnKubernetesEvent[i]
+
+		if config.EventTypes == nil {
+			config.EventTypes = []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete}
+		}
+
+		if config.NamespaceSelector == nil {
+			config.NamespaceSelector = &KubeNamespaceSelector{Any: true}
 		}
 	}
 }

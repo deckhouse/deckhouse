@@ -153,14 +153,12 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 
 	runInitModulesIndex(t, mm, "test_get_module_hook")
 
-	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onAdd []KubeEventsOnAction, onUpdate []KubeEventsOnAction, onDelete []KubeEventsOnAction) *ModuleHook {
+	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onKubernetesEvent []OnKubernetesEventConfig) *ModuleHook {
 		config := &ModuleHookConfig{
 			HookConfig{
 				orderByBindings[OnStartup],
 				schedule,
-				onAdd,
-				onUpdate,
-				onDelete,
+				onKubernetesEvent,
 			},
 			orderByBindings[BeforeHelm],
 			orderByBindings[AfterHelm],
@@ -183,14 +181,12 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 	}
 
 	expectations := []struct {
-		moduleName     string
-		name           string
-		bindings       []BindingType
-		orderByBinding map[BindingType]interface{}
-		schedule       []ScheduleConfig
-		onAdd          []KubeEventsOnAction
-		onUpdate       []KubeEventsOnAction
-		onDelete       []KubeEventsOnAction
+		moduleName        string
+		name              string
+		bindings          []BindingType
+		orderByBinding    map[BindingType]interface{}
+		schedule          []ScheduleConfig
+		onKubernetesEvent []OnKubernetesEventConfig
 	}{
 		{
 			"all-bindings",
@@ -208,9 +204,10 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 					AllowFailure: true,
 				},
 			},
-			[]KubeEventsOnAction{
+			[]OnKubernetesEventConfig{
 				{
-					Kind: "configmaps",
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd},
+					Kind:       "configmap",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"component": "component1",
@@ -230,10 +227,9 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 					JqFilter:     ".items[] | del(.metadata, .field1)",
 					AllowFailure: true,
 				},
-			},
-			[]KubeEventsOnAction{
 				{
-					Kind: "namespaces",
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "namespace",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"component": "component2",
@@ -253,10 +249,9 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 					JqFilter:     ".items[] | del(.metadata, .field2)",
 					AllowFailure: true,
 				},
-			},
-			[]KubeEventsOnAction{
 				{
-					Kind: "pods",
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "pod",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"component": "component3",
@@ -287,14 +282,12 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 			},
 			nil,
 			nil,
-			nil,
-			nil,
 		},
 	}
 
 	for _, expectation := range expectations {
 		t.Run(expectation.moduleName, func(t *testing.T) {
-			expectedModuleHook := createModuleHook(expectation.moduleName, expectation.name, expectation.bindings, expectation.orderByBinding, expectation.schedule, expectation.onAdd, expectation.onUpdate, expectation.onDelete)
+			expectedModuleHook := createModuleHook(expectation.moduleName, expectation.name, expectation.bindings, expectation.orderByBinding, expectation.schedule, expectation.onKubernetesEvent)
 
 			moduleHook, err := mm.GetModuleHook(expectedModuleHook.Name)
 			if err != nil {
@@ -620,14 +613,12 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 
 	runInitGlobalHooks(t, mm, "test_get_global_hook")
 
-	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onAdd []KubeEventsOnAction, onUpdate []KubeEventsOnAction, onDelete []KubeEventsOnAction) *GlobalHook {
+	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onKubernetesEvent []OnKubernetesEventConfig) *GlobalHook {
 		config := &GlobalHookConfig{
 			HookConfig{
 				orderByBindings[OnStartup],
 				schedule,
-				onAdd,
-				onUpdate,
-				onDelete,
+				onKubernetesEvent,
 			},
 			orderByBindings[OnKubeNodeChange],
 			orderByBindings[BeforeAll],
@@ -645,13 +636,11 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 	}
 
 	expectations := []struct {
-		name           string
-		bindings       []BindingType
-		orderByBinding map[BindingType]interface{}
-		schedule       []ScheduleConfig
-		onAdd          []KubeEventsOnAction
-		onUpdate       []KubeEventsOnAction
-		onDelete       []KubeEventsOnAction
+		name              string
+		bindings          []BindingType
+		orderByBinding    map[BindingType]interface{}
+		schedule          []ScheduleConfig
+		onKubernetesEvent []OnKubernetesEventConfig
 	}{
 		{
 			"global-hooks/000-all-bindings/all",
@@ -667,9 +656,10 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 					AllowFailure: true,
 				},
 			},
-			[]KubeEventsOnAction{
+			[]OnKubernetesEventConfig{
 				{
-					Kind: "configmaps",
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd},
+					Kind:       "configmap",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"component": "component1",
@@ -689,10 +679,9 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 					JqFilter:     ".items[] | del(.metadata, .field1)",
 					AllowFailure: true,
 				},
-			},
-			[]KubeEventsOnAction{
 				{
-					Kind: "namespaces",
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "namespace",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"component": "component2",
@@ -712,10 +701,9 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 					JqFilter:     ".items[] | del(.metadata, .field2)",
 					AllowFailure: true,
 				},
-			},
-			[]KubeEventsOnAction{
 				{
-					Kind: "pods",
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "pod",
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"component": "component3",
@@ -745,14 +733,12 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 			},
 			nil,
 			nil,
-			nil,
-			nil,
 		},
 	}
 
 	for _, exp := range expectations {
 		t.Run(exp.name, func(t *testing.T) {
-			expectedGlobalHook := createGlobalHook(exp.name, exp.bindings, exp.orderByBinding, exp.schedule, exp.onAdd, exp.onUpdate, exp.onDelete)
+			expectedGlobalHook := createGlobalHook(exp.name, exp.bindings, exp.orderByBinding, exp.schedule, exp.onKubernetesEvent)
 
 			globalHook, err := mm.GetGlobalHook(expectedGlobalHook.Name)
 			if err != nil {

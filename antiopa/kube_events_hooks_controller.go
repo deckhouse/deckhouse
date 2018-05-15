@@ -14,49 +14,39 @@ import (
 type KubeEventHook struct {
 	HookName string
 
-	InformerType kube_events_manager.InformerType
-	Kind         string
-	Namespace    string
-	Selector     *metav1.LabelSelector
-	JqFilter     string
+	EventTypes []module_manager.OnKubernetesEventType
+	Kind       string
+	Namespace  string
+	Selector   *metav1.LabelSelector
+	JqFilter   string
 
-	Config module_manager.KubeEventsOnAction
+	Config module_manager.OnKubernetesEventConfig
 }
 
 func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_manager.HookConfig) []*KubeEventHook {
 	res := make([]*KubeEventHook, 0)
 
-	for _, data := range []struct {
-		InformerType kube_events_manager.InformerType
-		Configs      []module_manager.KubeEventsOnAction
-	}{
-		{kube_events_manager.OnAdd, hookConfig.OnAdd},
-		{kube_events_manager.OnUpdate, hookConfig.OnUpdate},
-		{kube_events_manager.OnDelete, hookConfig.OnDelete},
-	} {
-		for _, config := range data.Configs {
-			if config.NamespaceSelector.Any {
+	for _, config := range hookConfig.OnKubernetesEvent {
+		if config.NamespaceSelector.Any {
+			res = append(res, &KubeEventHook{
+				HookName:   hook.Name,
+				EventTypes: config.EventTypes,
+				Kind:       config.Kind,
+				Namespace:  "",
+				Selector:   config.Selector,
+				JqFilter:   config.JqFilter,
+			})
+		} else {
+			for _, namespace := range config.NamespaceSelector.MatchNames {
 				res = append(res, &KubeEventHook{
-					HookName:     hook.Name,
-					InformerType: data.InformerType,
-					Kind:         config.Kind,
-					Namespace:    "",
-					Selector:     config.Selector,
-					JqFilter:     config.JqFilter,
+					HookName:   hook.Name,
+					EventTypes: config.EventTypes,
+					Kind:       config.Kind,
+					Namespace:  namespace,
+					Selector:   config.Selector,
+					JqFilter:   config.JqFilter,
 				})
-			} else {
-				for _, namespace := range config.NamespaceSelector.MatchNames {
-					res = append(res, &KubeEventHook{
-						HookName:     hook.Name,
-						InformerType: data.InformerType,
-						Kind:         config.Kind,
-						Namespace:    namespace,
-						Selector:     config.Selector,
-						JqFilter:     config.JqFilter,
-					})
-				}
 			}
-
 		}
 	}
 
@@ -91,7 +81,7 @@ func (obj *MainKubeEventsHooksController) EnableGlobalHooks(moduleManager module
 		globalHook, _ := ModuleManager.GetGlobalHook(globalHookName)
 
 		for _, desc := range MakeKubeEventHookDescriptors(globalHook.Hook, &globalHook.Config.HookConfig) {
-			configId, err := eventsManager.Run(desc.InformerType, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
+			configId, err := eventsManager.Run(desc.EventTypes, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
 			if err != nil {
 				return err
 			}
@@ -121,7 +111,7 @@ func (obj *MainKubeEventsHooksController) EnableModuleHooks(moduleName string, m
 		moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
 
 		for _, desc := range MakeKubeEventHookDescriptors(moduleHook.Hook, &moduleHook.Config.HookConfig) {
-			configId, err := eventsManager.Run(desc.InformerType, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
+			configId, err := eventsManager.Run(desc.EventTypes, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
 			if err != nil {
 				return err
 			}
