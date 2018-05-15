@@ -96,15 +96,14 @@ var (
 type BindingType string
 
 const (
-	BeforeHelm       BindingType = "BEFORE_HELM"
-	AfterHelm        BindingType = "AFTER_HELM"
-	AfterDeleteHelm  BindingType = "AFTER_DELETE_HELM"
-	BeforeAll        BindingType = "BEFORE_ALL"
-	AfterAll         BindingType = "AFTER_ALL"
-	OnKubeNodeChange BindingType = "ON_KUBE_NODE_CHANGE"
-	Schedule         BindingType = "SCHEDULE"
-	OnStartup        BindingType = "ON_STARTUP"
-	KubeEvents       BindingType = "KUBE_EVENTS"
+	BeforeHelm      BindingType = "BEFORE_HELM"
+	AfterHelm       BindingType = "AFTER_HELM"
+	AfterDeleteHelm BindingType = "AFTER_DELETE_HELM"
+	BeforeAll       BindingType = "BEFORE_ALL"
+	AfterAll        BindingType = "AFTER_ALL"
+	Schedule        BindingType = "SCHEDULE"
+	OnStartup       BindingType = "ON_STARTUP"
+	KubeEvents      BindingType = "KUBE_EVENTS"
 )
 
 // Типы событий, отправляемые в Main — либо изменились какие-то модули и нужно
@@ -148,7 +147,6 @@ type Event struct {
     "afterDeleteHelm": ORDER,  // только module
     "beforeAll": ORDER,        // только global
     "afterAll": ORDER,         // только global
-    "onKubeNodeChange": ORDER, // только global
 	"onKubernetesEvent": [{
 		"event": ["add", "delete"],
 		"kind": "configmap",
@@ -778,8 +776,6 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 	if newValuesChecksum != oldValuesChecksum {
 		switch binding {
 		case Schedule, KubeEvents:
-			mm.globalValuesChanged <- true
-		case OnKubeNodeChange: // TODO: remove in https://github.com/deckhouse/deckhouse/issues/281
 			mm.globalValuesChanged <- true
 		}
 	}

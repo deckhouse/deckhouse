@@ -17,7 +17,6 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
-	"github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
@@ -131,39 +130,12 @@ func Init() {
 	queueWatcher := task.NewTasksQueueDumper(TasksQueueDumpFilePath, TasksQueue)
 	TasksQueue.AddWatcher(queueWatcher)
 
-	// Инициализация слежения за событиями onKubeNodeChange (пока нет kube_event_manager)
-	kube_node_manager.InitKubeNodeManager()
-
-	// TODO Инициализация слежения за событиями из kube
-	// нужно по конфигам хуков создать настройки в менеджере
-	// связать настройку и имя хука
-	// потом, когда от менеджера придёт id настройки,
-	// найти по id нужные имена хуков и добавить их запуск в очередь
-	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
-	   EnabledModules.each {
-	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
-	           schedule.add hook // регистрация binding
-	       }
-
-	       GetModuleHooksInOrder(moduleName, module.OnKubeNodeChange).each {
-	           ... // регистрация binding
-	       }
-	   }
-
-	   GetGlobalHooksInOrder(module.OnKubeNodeChange).each {...} // регистрация binding
-
-	   GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
-	*/
-
 	// Инициализация хуков по расписанию - карта scheduleId → []ScheduleHook
 	ScheduleManager, err = schedule_manager.Init()
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize schedule manager: %s", err)
 		os.Exit(1)
 	}
-
-	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
-	// RegisterKubeEventHooks()
 
 	KubeEventsManager, err = kube_events_manager.Init()
 	if err != nil {
@@ -193,7 +165,6 @@ func Run() {
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
 	go docker_registry_manager.RunRegistryManager()
 	go ModuleManager.Run()
-	go kube_node_manager.RunKubeNodeManager()
 	go ScheduleManager.Run()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
@@ -272,18 +243,6 @@ func ManagersEventsHandler() {
 				// Пересоздать индекс хуков по расписанию
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			}
-		case <-kube_node_manager.KubeNodeChanged:
-			// Добавить выполнение глобальных хуков по событию KubeNodeChange
-			TasksQueue.ChangesDisable()
-			hookNames := ModuleManager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
-			for _, hookName := range hookNames {
-				newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnKubeNodeChange)
-				TasksQueue.Add(newTask)
-				rlog.Debugf("KubeNodeChange: queued global hook '%s'", hookName)
-			}
-			TasksQueue.ChangesEnable(true)
-		// TODO поменять, когда появится schedule_manager
-		//case scheduleId := <-schedule_manager.ScheduleEventCh:
 		case crontab := <-schedule_manager.ScheduleCh:
 			scheduleHooks := ScheduledHooks.GetHooksForSchedule(crontab)
 			for _, hook := range scheduleHooks {

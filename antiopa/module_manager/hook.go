@@ -38,9 +38,8 @@ type Hook struct {
 
 type GlobalHookConfig struct {
 	HookConfig
-	OnKubeNodeChange interface{} `json:"onKubeNodeChange"`
-	BeforeAll        interface{} `json:"beforeAll"`
-	AfterAll         interface{} `json:"afterAll"`
+	BeforeAll interface{} `json:"beforeAll"`
+	AfterAll  interface{} `json:"afterAll"`
 }
 
 type ModuleHookConfig struct {
@@ -124,14 +123,6 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.AfterAll, AfterAll)
 		}
 		mm.globalHooksOrder[AfterAll] = append(mm.globalHooksOrder[AfterAll], globalHook)
-	}
-
-	if config.OnKubeNodeChange != nil {
-		globalHook.Bindings = append(globalHook.Bindings, OnKubeNodeChange)
-		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
-			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnKubeNodeChange, OnKubeNodeChange)
-		}
-		mm.globalHooksOrder[OnKubeNodeChange] = append(mm.globalHooksOrder[OnKubeNodeChange], globalHook)
 	}
 
 	if config.OnStartup != nil {
