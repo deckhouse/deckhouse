@@ -620,7 +620,6 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 				schedule,
 				onKubernetesEvent,
 			},
-			orderByBindings[OnKubeNodeChange],
 			orderByBindings[BeforeAll],
 			orderByBindings[AfterAll],
 		}
