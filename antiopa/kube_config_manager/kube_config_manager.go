@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
+	"os"
 )
 
 const (
@@ -50,6 +51,7 @@ func NewConfig() *Config {
 }
 
 var (
+	VerboseDebug         bool
 	ConfigUpdated        chan Config
 	ModuleConfigsUpdated chan ModuleConfigs
 )
@@ -251,6 +253,11 @@ func (kcm *MainKubeConfigManager) initConfig() error {
 func Init() (KubeConfigManager, error) {
 	rlog.Debug("Init kube config manager")
 
+	VerboseDebug = false
+	if os.Getenv("KUBE_CONFIG_MANAGER_DEBUG") != "" {
+		VerboseDebug = true
+	}
+
 	ConfigUpdated = make(chan Config, 1)
 	ModuleConfigsUpdated = make(chan ModuleConfigs, 1)
 
@@ -382,31 +389,37 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 }
 
 func (kcm *MainKubeConfigManager) handleCmAdd(obj *v1.ConfigMap) error {
-	objYaml, err := yaml.Marshal(obj)
-	if err != nil {
-		return err
+	if VerboseDebug {
+		objYaml, err := yaml.Marshal(obj)
+		if err != nil {
+			return err
+		}
+		rlog.Debugf("Kube config manager: informer: handle ConfigMap '%s' add:\n%s", obj.Name, objYaml)
 	}
-	rlog.Debugf("Kube config manager: informer: handle ConfigMap '%s' add:\n%s", obj.Name, objYaml)
 
 	return kcm.handleNewCm(obj)
 }
 
 func (kcm *MainKubeConfigManager) handleCmUpdate(_ *v1.ConfigMap, obj *v1.ConfigMap) error {
-	objYaml, err := yaml.Marshal(obj)
-	if err != nil {
-		return err
+	if VerboseDebug {
+		objYaml, err := yaml.Marshal(obj)
+		if err != nil {
+			return err
+		}
+		rlog.Debugf("Kube config manager: informer: handle ConfigMap '%s' update:\n%s", obj.Name, objYaml)
 	}
-	rlog.Debugf("Kube config manager: informer: handle ConfigMap '%s' update:\n%s", obj.Name, objYaml)
 
 	return kcm.handleNewCm(obj)
 }
 
 func (kcm *MainKubeConfigManager) handleCmDelete(obj *v1.ConfigMap) error {
-	objYaml, err := yaml.Marshal(obj)
-	if err != nil {
-		return err
+	if VerboseDebug {
+		objYaml, err := yaml.Marshal(obj)
+		if err != nil {
+			return err
+		}
+		rlog.Debugf("Kube config manager: handle ConfigMap '%s' delete:\n%s", obj.Name, objYaml)
 	}
-	rlog.Debugf("Kube config manager: handle ConfigMap '%s' delete:\n%s", obj.Name, objYaml)
 
 	if kcm.GlobalValuesChecksum != "" {
 		kcm.GlobalValuesChecksum = ""
