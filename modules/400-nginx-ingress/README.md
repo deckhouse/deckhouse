@@ -3,6 +3,10 @@
 
 Модуль устанавливает **один или несколько** [nginx-ingress controller'ов](https://github.com/kubernetes/ingress-nginx/) и учитывает все особенности интеграции с кластерами Kubernetes различных типов.
 
+Дополнительная информация
+-------------------------
+* Видео-объяснение ([часть 1](https://www.youtube.com/watch?v=BS9QrmH6keI), [часть 2](https://www.youtube.com/watch?v=_ZG8umyd0B4)) о модуле и его настройках
+* [Видео-объяснение](https://www.youtube.com/watch?v=IQac_TgiSao) про графики и как ими пользоваться
 
 Конфигурация
 ------------
