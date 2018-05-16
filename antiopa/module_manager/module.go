@@ -66,9 +66,12 @@ func (m *Module) cleanup() error {
 		}
 	}
 
-	rlog.Infof("Module '%s': running cleanup ...", m.Name)
-
+	rlog.Infof("Module '%s': deleting failed helm release from first installation", m.Name)
 	if err := m.moduleManager.helm.DeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
+		return err
+	}
+
+	if err := m.moduleManager.helm.DeleteOldFailedRevisions(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
 
@@ -109,18 +112,26 @@ func (m *Module) execRun() error {
 		}
 
 		if isReleaseExists {
-			releaseValues, err := m.moduleManager.helm.GetReleaseValues(helmReleaseName)
+			_, status, err := m.moduleManager.helm.LastReleaseStatus(helmReleaseName)
 			if err != nil {
 				return err
 			}
 
-			if recordedChecksum, hasKey := releaseValues["_antiopaModuleChecksum"]; hasKey {
-				if recordedChecksumStr, ok := recordedChecksum.(string); ok {
-					if recordedChecksumStr == checksum {
-						doRelease = false
-						rlog.Debugf("Module manager: helm release '%s' checksum '%s' does not changed: will skip helm release", helmReleaseName, checksum)
-					} else {
-						rlog.Debugf("Module manager: helm release '%s' checksum changed '%s' -> '%s': will make helm release", helmReleaseName, recordedChecksumStr, checksum)
+			// Ignore skiping of helm release process for FAILED releases
+			if status != "FAILED" {
+				releaseValues, err := m.moduleManager.helm.GetReleaseValues(helmReleaseName)
+				if err != nil {
+					return err
+				}
+
+				if recordedChecksum, hasKey := releaseValues["_antiopaModuleChecksum"]; hasKey {
+					if recordedChecksumStr, ok := recordedChecksum.(string); ok {
+						if recordedChecksumStr == checksum {
+							doRelease = false
+							rlog.Debugf("Module manager: helm release '%s' checksum '%s' does not changed: will skip helm release", helmReleaseName, checksum)
+						} else {
+							rlog.Debugf("Module manager: helm release '%s' checksum changed '%s' -> '%s': will make helm release", helmReleaseName, recordedChecksumStr, checksum)
+						}
 					}
 				}
 			}

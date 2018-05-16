@@ -38,7 +38,7 @@ func shouldDeleteRelease(helm HelmClient, releaseName string) (err error) {
 }
 
 func releasesListShouldEqual(helm HelmClient, expectedList []string) (err error) {
-	releases, err := helm.ListReleasesNames()
+	releases, err := helm.ListReleasesNames(nil)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func TestHelm(t *testing.T) {
 		t.Errorf("Cannot init test tiller in '%s' namespace: %s\n%s %s", helm.TillerNamespace(), err, stdout, stderr)
 	}
 
-	releases, err = helm.ListReleasesNames()
+	releases, err = helm.ListReleasesNames(nil)
 	if err != nil {
 		t.Error(err)
 	}

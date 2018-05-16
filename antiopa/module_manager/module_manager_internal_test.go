@@ -344,11 +344,15 @@ type MockHelmClient struct {
 	DeleteReleaseExecuted              bool
 }
 
-func (h *MockHelmClient) ListReleases() ([]string, error) {
+func (h *MockHelmClient) DeleteOldFailedRevisions(releaseName string) error {
+	return nil
+}
+
+func (h *MockHelmClient) ListReleases(_ map[string]string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (h *MockHelmClient) ListReleasesNames() ([]string, error) {
+func (h *MockHelmClient) ListReleasesNames(_ map[string]string) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -363,6 +367,10 @@ func (h *MockHelmClient) TillerNamespace() string {
 func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
 	h.DeleteSingleFailedRevisionExecuted = true
 	return nil
+}
+
+func (h *MockHelmClient) LastReleaseStatus(_ string) (string, string, error) {
+	return "", "", nil
 }
 
 func (h *MockHelmClient) IsReleaseExists(_ string) (bool, error) {
