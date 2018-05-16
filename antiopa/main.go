@@ -17,6 +17,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
+	"github.com/deckhouse/deckhouse/antiopa/metrics_storage"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
@@ -39,12 +40,17 @@ var (
 	// module manager object
 	ModuleManager module_manager.ModuleManager
 
+	// registry manager — watch for antiopa image updates
+	RegistryManager docker_registry_manager.DockerRegistryManager
+
 	// schedule manager
 	ScheduleManager schedule_manager.ScheduleManager
 	ScheduledHooks  ScheduledHooksStorage
 
 	KubeEventsManager kube_events_manager.KubeEventsManager
 	KubeEventsHooks   KubeEventsHooksController
+
+	MetricsStorage *metrics_storage.MetricStorage
 
 	// chan for stopping ManagersEventsHandler infinite loop
 	ManagersEventsHandlerStopCh chan struct{}
@@ -97,7 +103,7 @@ func Init() {
 
 	// Инициализация слежения за образом
 	// TODO Antiopa может и не следить, если кластер заморожен?
-	err = docker_registry_manager.InitRegistryManager(Hostname)
+	RegistryManager, err = docker_registry_manager.Init(Hostname)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize registry manager: %s", err)
 		os.Exit(1)
@@ -143,6 +149,8 @@ func Init() {
 		os.Exit(1)
 	}
 	KubeEventsHooks = NewMainKubeEventsHooksController()
+
+	MetricsStorage = metrics_storage.Init()
 }
 
 // Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
@@ -163,9 +171,20 @@ func Run() {
 	TasksQueue.ChangesEnable(true)
 
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
-	go docker_registry_manager.RunRegistryManager()
+	RegistryManager.SetErrorCallback(func() {
+		MetricsStorage.SendCounterMetric("antiopa_registry_errors", 1.0, map[string]string{})
+	})
+	go RegistryManager.Run()
 	go ModuleManager.Run()
 	go ScheduleManager.Run()
+
+	// обработчик добавления метрик
+	go MetricsStorage.Run()
+	// счётчик работы antiopa
+	go func() {
+		MetricsStorage.SendCounterMetric("antiopa_live_ticks", 1.0, map[string]string{})
+		time.Sleep(15 * time.Second)
+	}()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
 	// добавляются в очередь
@@ -365,8 +384,8 @@ func TasksRunner() {
 			switch t.GetType() {
 			case task.DiscoverModulesState:
 				err := runDiscoverModulesState(t)
-
 				if err != nil {
+					MetricsStorage.SendCounterMetric("antiopa_discover_errors", 1.0, map[string]string{})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -378,6 +397,7 @@ func TasksRunner() {
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())
 				if err != nil {
+					MetricsStorage.SendCounterMetric("antiopa_module_run_errors", 1.0, map[string]string{"name": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -387,6 +407,7 @@ func TasksRunner() {
 			case task.ModuleDelete:
 				err := ModuleManager.DeleteModule(t.GetName())
 				if err != nil {
+					MetricsStorage.SendCounterMetric("antiopa_module_delete_errors", 1.0, map[string]string{"name": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -395,19 +416,29 @@ func TasksRunner() {
 				}
 			case task.ModuleHookRun:
 				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
-				if err != nil && !t.GetAllowFailure() {
-					t.IncrementFailureCount()
-					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
-					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				if err != nil {
+					if t.GetAllowFailure() {
+						MetricsStorage.SendCounterMetric("antiopa_module_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+					} else {
+						MetricsStorage.SendCounterMetric("antiopa_module_errors", 1.0, map[string]string{"name": t.GetName()})
+						t.IncrementFailureCount()
+						rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
+						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+					}
 				} else {
 					TasksQueue.Pop()
 				}
 			case task.GlobalHookRun:
 				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
-				if err != nil && !t.GetAllowFailure() {
-					t.IncrementFailureCount()
-					rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
-					TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+				if err != nil {
+					if t.GetAllowFailure() {
+						MetricsStorage.SendCounterMetric("antiopa_global_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+					} else {
+						MetricsStorage.SendCounterMetric("antiopa_global_errors", 1.0, map[string]string{"name": t.GetName()})
+						t.IncrementFailureCount()
+						rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
+						TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+					}
 				} else {
 					TasksQueue.Pop()
 				}

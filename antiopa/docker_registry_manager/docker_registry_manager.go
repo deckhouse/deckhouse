@@ -10,20 +10,29 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/kube"
 )
 
+type DockerRegistryManager interface {
+	SetErrorCallback(errorCb func())
+	Run()
+}
+
 var (
 	// новый id образа с тем же именем
 	// (смена самого имени образа будет обрабатываться самим Deployment'ом автоматом)
-	ImageUpdated       chan string
+	ImageUpdated chan string
+)
+
+type MainRegistryManager struct {
 	AntiopaImageDigest string
 	AntiopaImageName   string
 	AntiopaImageInfo   DockerImageInfo
 	PodHostname        string
-
+	// клиент для обращений к
 	DockerRegistry *registryclient.Registry
-
-	// счётчик ошибок обращений к registry и последняя ошибка
-	RegistryErrorCounter int
-)
+	// счётчик ошибок обращений к registry
+	ErrorCounter int
+	// callback вызывается в случае ошибки
+	ErrorCallback func()
+}
 
 // TODO данные для доступа к registry серверам нужно хранить в secret-ах.
 // TODO по imageInfo.Registry брать данные и подключаться к нужному registry.
@@ -42,16 +51,13 @@ var DockerRegistryInfo = map[string]map[string]string{
 
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
 // TODO вытащить token и host в секрет
-func InitRegistryManager(hostname string) error {
+func Init(hostname string) (DockerRegistryManager, error) {
 	if kube.IsRunningOutOfKubeCluster() {
 		rlog.Infof("Antiopa is running out of cluster. No registry manager required.")
-		return nil
+		return nil, nil
 	}
 
 	rlog.Debug("Init registry manager")
-
-	PodHostname = hostname
-	RegistryErrorCounter = 0
 
 	// TODO Пока для доступа к registry.flant.com передаётся временный токен через переменную среды
 	GitlabToken := os.Getenv("GITLAB_TOKEN")
@@ -61,26 +67,33 @@ func InitRegistryManager(hostname string) error {
 
 	rlog.Infof("Registry manager initialized")
 
-	return nil
+	return &MainRegistryManager{
+		ErrorCounter: 0,
+		PodHostname:  hostname,
+	}, nil
 }
 
 // Запускает проверку каждые 10 секунд, не изменился ли id образа.
-func RunRegistryManager() {
+func (rm *MainRegistryManager) Run() {
 	if kube.IsRunningOutOfKubeCluster() {
 		return
 	}
 
-	rlog.Infof("Registry manager: start watch for image '%s'", AntiopaImageName)
+	rlog.Infof("Registry manager: start watch for image '%s'", rm.AntiopaImageName)
 
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
-	CheckIsImageUpdated()
+	rm.CheckIsImageUpdated()
 	for {
 		select {
 		case <-ticker.C:
-			CheckIsImageUpdated()
+			rm.CheckIsImageUpdated()
 		}
 	}
+}
+
+func (rm *MainRegistryManager) SetErrorCallback(errorCb func()) {
+	rm.ErrorCallback = errorCb
 }
 
 // Основной метод проверки обновления образа.
@@ -88,47 +101,47 @@ func RunRegistryManager() {
 // и по имени Pod-а получить имя и digest его образа. Когда digest получен, то
 // обращается в registry и по имени образа смотрит, изменился ли digest. Если да,
 // то отправляет новый digest в канал.
-func CheckIsImageUpdated() {
+func (rm *MainRegistryManager) CheckIsImageUpdated() {
 	// Первый шаг - получить имя и id образа из куба.
 	// kube-api может быть недоступно, поэтому нужно периодически подключаться к нему.
-	if AntiopaImageName == "" {
+	if rm.AntiopaImageName == "" {
 		rlog.Debugf("Registry manager: retrieve image name and id from kube-api")
-		podImageName, podImageId := kube.KubeGetPodImageInfo(PodHostname)
+		podImageName, podImageId := kube.KubeGetPodImageInfo(rm.PodHostname)
 		if podImageName == "" {
 			rlog.Debugf("Registry manager: error retrieving image name and id from kube-api. Will try again")
 			return
 		}
 
 		var err error
-		AntiopaImageInfo, err = DockerParseImageName(podImageName)
+		rm.AntiopaImageInfo, err = DockerParseImageName(podImageName)
 		if err != nil {
 			// Очень маловероятная ситуация, потому что Pod запустился, а имя образа из его спеки не парсится.
 			rlog.Errorf("Registry manager: pod image name '%s' is invalid. Will try again. Error was: %v", podImageName, err)
 			return
 		}
 
-		AntiopaImageName = podImageName
-		AntiopaImageDigest = FindImageDigest(podImageId)
+		rm.AntiopaImageName = podImageName
+		rm.AntiopaImageDigest = FindImageDigest(podImageId)
 	}
 
 	// Второй шаг — после получения id начать мониторить его изменение в registry.
 	// registry тоже может быть недоступен
-	if DockerRegistry == nil {
+	if rm.DockerRegistry == nil {
 		rlog.Debugf("Registry manager: create docker registry client")
 		var url, user, password string
-		if info, hasInfo := DockerRegistryInfo[AntiopaImageInfo.Registry]; hasInfo {
+		if info, hasInfo := DockerRegistryInfo[rm.AntiopaImageInfo.Registry]; hasInfo {
 			url = info["url"]
 			user = info["user"]
 			password = info["password"]
 		}
 		// Создать клиента для подключения к docker-registry
 		// в единственном экземляре
-		DockerRegistry = NewDockerRegistry(url, user, password)
+		rm.DockerRegistry = NewDockerRegistry(url, user, password)
 	}
 
 	rlog.Debugf("Registry manager: checking registry for updates")
-	digest, err := DockerRegistryGetImageDigest(AntiopaImageInfo, DockerRegistry)
-	SetOrCheckAntiopaImageDigest(digest, err)
+	digest, err := DockerRegistryGetImageDigest(rm.AntiopaImageInfo, rm.DockerRegistry)
+	rm.SetOrCheckAntiopaImageDigest(digest, err)
 }
 
 // Сравнить запомненный digest образа с полученным из registry.
@@ -136,19 +149,20 @@ func CheckIsImageUpdated() {
 // Если digest не был запомнен, то запомнить.
 // Если была ошибка при опросе registry, то увеличить счётчик ошибок.
 // Когда накопится 3 ошибки подряд, вывести ошибку и сбросить счётчик
-func SetOrCheckAntiopaImageDigest(digest string, err error) {
+func (rm *MainRegistryManager) SetOrCheckAntiopaImageDigest(digest string, err error) {
 	// Если пришёл не валидный id или была ошибка — увеличить счётчик ошибок.
 	// Сообщить в лог, когда накопится 3 ошибки подряд
 	if err != nil || !IsValidImageDigest(digest) {
-		RegistryErrorCounter++
-		if RegistryErrorCounter >= 3 {
+		rm.ErrorCallback()
+		rm.ErrorCounter++
+		if rm.ErrorCounter >= 3 {
 			rlog.Errorf("Registry manager: registry request error: %s", err)
-			RegistryErrorCounter = 0
+			rm.ErrorCounter = 0
 		}
 		return
 	}
-	if digest != AntiopaImageDigest {
+	if digest != rm.AntiopaImageDigest {
 		ImageUpdated <- digest
 	}
-	RegistryErrorCounter = 0
+	rm.ErrorCounter = 0
 }
