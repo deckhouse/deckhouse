@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/romana/rlog"
@@ -23,12 +24,13 @@ type HelmClient interface {
 	CommandEnv() []string
 	Cmd(args ...string) (string, string, error)
 	DeleteSingleFailedRevision(releaseName string) error
+	DeleteOldFailedRevisions(releaseName string) error
 	LastReleaseStatus(releaseName string) (string, string, error)
 	UpgradeRelease(releaseName string, chart string, valuesPaths []string, setValues []string, namespace string) error
 	GetReleaseValues(releaseName string) (utils.Values, error)
 	DeleteRelease(releaseName string) error
-	ListReleases() ([]string, error)
-	ListReleasesNames() ([]string, error)
+	ListReleases(labelSelector map[string]string) ([]string, error)
+	ListReleasesNames(labelSelector map[string]string) ([]string, error)
 	IsReleaseExists(releaseName string) (bool, error)
 }
 
@@ -161,6 +163,49 @@ func (helm *CliHelm) DeleteSingleFailedRevision(releaseName string) (err error) 
 	return
 }
 
+func (helm *CliHelm) DeleteOldFailedRevisions(releaseName string) error {
+	cmNames, err := helm.ListReleases(map[string]string{"STATUS": "FAILED", "NAME": releaseName})
+	if err != nil {
+		return err
+	}
+
+	rlog.Debugf("Found release '%s' ConfigMaps: %v", cmNames)
+
+	var releaseCmNamePattern = regexp.MustCompile(`^(.*).v([0-9]+)$`)
+
+	revisions := make([]int, 0)
+	for _, cmName := range cmNames {
+		matchRes := releaseCmNamePattern.FindStringSubmatch(cmName)
+		if matchRes != nil {
+			revision, err := strconv.Atoi(matchRes[2])
+			if err != nil {
+				continue
+			}
+			revisions = append(revisions, revision)
+		}
+	}
+	sort.Ints(revisions)
+
+	// Do not remove last FAILED revision
+	if len(revisions) > 0 {
+		revisions = revisions[:len(revisions)-1]
+	}
+
+	for _, revision := range revisions {
+		rlog.Infof("Deleting old FAILED revision ConfigMap %s.v%d", releaseName, revision)
+
+		err := kube.KubernetesClient.CoreV1().
+			ConfigMaps(kube.KubernetesAntiopaNamespace).
+			Delete(fmt.Sprintf("%s.v%d", releaseName, revision), &metav1.DeleteOptions{})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Get last known revision and status
 // helm history output:
 // REVISION	UPDATED                 	STATUS    	CHART                 	DESCRIPTION
@@ -260,11 +305,16 @@ func (helm *CliHelm) IsReleaseExists(releaseName string) (bool, error) {
 // Возвращает все известные релизы в виде строк "<имя_релиза>.v<номер_версии>"
 // helm ищет ConfigMap-ы по лейблу OWNER=TILLER и получает данные о релизе из ключа "release"
 // https://github.com/kubernetes/helm/blob/8981575082ea6fc2a670f81fb6ca5b560c4f36a7/pkg/storage/driver/cfgmaps.go#L88
-func (helm *CliHelm) ListReleases() ([]string, error) {
-	lsel := kblabels.Set{"OWNER": "TILLER"}.AsSelector()
+func (helm *CliHelm) ListReleases(labelSelector map[string]string) ([]string, error) {
+	labelsSet := make(kblabels.Set)
+	for k, v := range labelSelector {
+		labelsSet[k] = v
+	}
+	labelsSet["OWNER"] = "TILLER"
+
 	cmList, err := kube.KubernetesClient.CoreV1().
 		ConfigMaps(kube.KubernetesAntiopaNamespace).
-		List(metav1.ListOptions{LabelSelector: lsel.String()})
+		List(metav1.ListOptions{LabelSelector: labelsSet.AsSelector().String()})
 	if err != nil {
 		rlog.Debugf("helm releases ConfigMaps list failed: %s", err)
 		return nil, err
@@ -283,8 +333,8 @@ func (helm *CliHelm) ListReleases() ([]string, error) {
 }
 
 // Список имён релизов без суффикса ".v<номер релиза>"
-func (helm *CliHelm) ListReleasesNames() ([]string, error) {
-	releases, err := helm.ListReleases()
+func (helm *CliHelm) ListReleasesNames(labelSelector map[string]string) ([]string, error) {
+	releases, err := helm.ListReleases(labelSelector)
 	if err != nil {
 		return []string{}, err
 	}

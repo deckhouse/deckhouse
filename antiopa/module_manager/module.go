@@ -67,8 +67,11 @@ func (m *Module) cleanup() error {
 	}
 
 	rlog.Infof("Module '%s': deleting failed helm release from first installation", m.Name)
-
 	if err := m.moduleManager.helm.DeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
+		return err
+	}
+
+	if err := m.moduleManager.helm.DeleteOldFailedRevisions(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
 

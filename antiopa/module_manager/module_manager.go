@@ -601,7 +601,7 @@ func (mm *MainModuleManager) discoverModulesState(kubeDisabledModules []string) 
 
 	state.EnabledModules = mm.enabledModulesInOrder
 
-	releasedModules, err := mm.helm.ListReleasesNames()
+	releasedModules, err := mm.helm.ListReleasesNames(nil)
 	if err != nil {
 		return nil, err
 	}

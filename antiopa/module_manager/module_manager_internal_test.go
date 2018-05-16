@@ -344,11 +344,15 @@ type MockHelmClient struct {
 	DeleteReleaseExecuted              bool
 }
 
-func (h *MockHelmClient) ListReleases() ([]string, error) {
+func (h *MockHelmClient) DeleteOldFailedRevisions(releaseName string) error {
+	return nil
+}
+
+func (h *MockHelmClient) ListReleases(_ map[string]string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (h *MockHelmClient) ListReleasesNames() ([]string, error) {
+func (h *MockHelmClient) ListReleasesNames(_ map[string]string) ([]string, error) {
 	return []string{}, nil
 }
 
