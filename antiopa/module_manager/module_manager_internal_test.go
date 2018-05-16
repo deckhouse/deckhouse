@@ -365,6 +365,10 @@ func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
 	return nil
 }
 
+func (h *MockHelmClient) LastReleaseStatus(_ string) (string, string, error) {
+	return "", "", nil
+}
+
 func (h *MockHelmClient) IsReleaseExists(_ string) (bool, error) {
 	return true, nil
 }
