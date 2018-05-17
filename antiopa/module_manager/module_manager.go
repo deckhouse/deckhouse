@@ -137,48 +137,6 @@ type Event struct {
 	Type           EventType
 }
 
-/*
-Пример конфига:
-
-{
-    "onStartup": ORDER,        // оба
-    "beforeHelm": ORDER,       // только module
-    "afterHelm": ORDER,        // только module
-    "afterDeleteHelm": ORDER,  // только module
-    "beforeAll": ORDER,        // только global
-    "afterAll": ORDER,         // только global
-	"onKubernetesEvent": [{
-		"event": ["add", "delete"],
-		"kind": "configmap",
-		"selector": {
-		  "matchLabels": {
-		    "component": "component"
-		  },
-		  "matchExpressions": [{
-		    "key": "tier",
-		    "operator": "In",
-		    "values": ["cache"]
-		  }]
-		},
-		"namespaceSelector": {
-		  "matchNames": ["namespace"],
-		  "any": false
-		},
-		"jqFilter": del(.metadata, .field1)",
-		"allowFailure": true
-	}],
-    schedule:  [
-		{
-			"crontab": "* * * * *",
-			"allowFailure": true
-		},
-        {
-			"crontab": "*_/2 * * * *",
-		}
-	]
-}
-*/
-
 func Init(workingDir string, tempDir string, helmClient helm.HelmClient) (ModuleManager, error) {
 	rlog.Info("Initializing module manager ...")
 
