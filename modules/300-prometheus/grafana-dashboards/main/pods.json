@@ -175,7 +175,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (container)( rate(container_cpu_usage_seconds_total{image!=\"\",container!=\"POD\",pod=\"$pod\"}[$__interval_rv] ) )",
+          "expr": "sum by (container)( rate(container_cpu_usage_seconds_total{container!=\"POD\",pod=\"$pod\"}[$__interval_rv] ) )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
