@@ -2,15 +2,6 @@ groups:
 - name: kubernetes.persistent-volume-claim
   rules:
   - alert: PersistentVolumeClaimRunningFull
-    expr: max(predict_linear(kubelet_volume_stats_available_bytes{job="kubelet"}[6h], 3600 * 24)) by (namespace, persistentvolumeclaim) < 0
-    for: 30m
-    labels:
-      severity: warning
-    annotations:
-      description: |
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is running full within the next 24 hours (PVC is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }})'
-      summary: PersistentVolumeClaim is running full within 24 hours
-  - alert: PersistentVolumeClaimRunningFull
     expr: max(predict_linear(kubelet_volume_stats_available_bytes{job="kubelet"}[30m], 3600 * 2)) by (namespace, persistentvolumeclaim) < 0
     for: 10m
     labels:
