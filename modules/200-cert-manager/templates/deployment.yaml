@@ -34,23 +34,19 @@ spec:
       serviceAccountName: cert-manager
       containers:
         - name: cert-manager
-          image: "quay.io/jetstack/cert-manager-controller:v0.2.3"
+          image: "quay.io/jetstack/cert-manager-controller:v0.3.0"
+          imagePullPolicy: Always
           args:
           - --cluster-resource-namespace=kube-cert-manager
           - --leader-election-namespace=kube-cert-manager
-          imagePullPolicy: Always
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-        - name: ingress-shim
-          image: "quay.io/jetstack/cert-manager-ingress-shim:v0.2.3"
-          imagePullPolicy: Always
-          args:
           - --default-issuer-name=letsencrypt
           - --default-issuer-kind=ClusterIssuer
-          - --leader-election-namespace=kube-cert-manager
           resources:
             requests:
               cpu: 10m
               memory: 32Mi
+          env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace

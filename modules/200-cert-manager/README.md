@@ -18,6 +18,8 @@
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет использовано значение `[{"key":"node-role/system","operator":"Exists"}]` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
+*  `cloudflareGlobalAPIKey` — Cloudflare Global API key для управления DNS записями (Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат, находятся под управлением cert-manager у DNS провайдера Cloudflare. Проверка происходит добавлением специальных TXT записей для домена [ACME DNS01 Challenge Provider](https://github.com/jetstack/cert-manager/blob/master/docs/reference/issuers/acme/dns01.rst))
+*  `cloudflareEmail` — Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare
 
 ### Пример конфига
 
@@ -71,6 +73,77 @@ spec:
 * можно валидировать разные домены, входящие в один сертификат, через разные ingress контроллеры.
 
 Подробнее можно прочитать [здесь](https://github.com/jetstack/cert-manager/blob/master/docs/user-guides/acme-http-validation.md).
+
+### Как заказать wildcard сертификат с DNS в cloudflare
+
+1. Получим Global API Key и Email Address:
+* Заходим на страницу: https://dash.cloudflare.com/profile
+* В самом верху страницы написана ваша почта под `Email Address`
+* В самом низу страницы жмем на кнопку "View" напротив `Global API Key`
+
+В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
+
+2. Редактируем конфигурационный configmap antiop'ы добавляя такую секцию:
+```
+kubectl -n antiopa edit cm antiopa
+```
+
+```yaml
+certManager: |
+  cloudflareGlobalAPIKey: APIkey
+  cloudflareEmail: some@mail.somedomain
+```
+
+После чего  antiopa автоматически создаст clusterissuer и secret для cloudflare в namespace kube-cert-manager.
+
+3. Создаем Certificate с проверкой с помощью провайдера cloudflare. Данная возможность появится только при указании настройки cloudflareGlobalAPIKey и cloudflareEmail в antiop'е:
+
+```yaml
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: domain-wildcard
+  namespace: app-namespace
+spec:
+  secretName: tls-wildcard
+  issuerRef:
+    name: domain-wildcard
+    kind: ClusterIssuer
+  commonName: "*.domain.com"
+  dnsNames:
+  - "*.domain.com"
+  acme:
+    config:
+    - dns01:
+        provider: cloudflare
+      domains:
+      - "*.domain.com"
+```
+
+4. Создаем ingress:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: domain-wildcard
+  namespace: app-namespace
+spec:
+  rules:
+  - host: "*.domain.com"
+    http:
+      paths:
+      - backend:
+          serviceName: svc-web
+          servicePort: 80
+        path: /
+  tls:
+  - hosts:
+    - "*.domain.com"
+    secretName: tls-wildcard
+```
 
 ### Как посмотреть состояние сертификата?
 
