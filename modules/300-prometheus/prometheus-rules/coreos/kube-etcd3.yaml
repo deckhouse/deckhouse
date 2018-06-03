@@ -96,13 +96,13 @@ groups:
         {{ $labels.To }} is slow
       summary: kube-etcd3 member communication is slow
   - alert: KubeEtcd3HighNumberOfFailedProposals
-    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 5
+    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 300
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: kube-etcd3 node {{ $labels.node }} ({{ $labels.component }}) has seen {{ $value }} proposal
         failures within the last hour
-      summary: a high number of proposals within the kube-etcd3 cluster are failing
+      summary: an extremely high number of proposals within the kube-etcd3 cluster are failing
 #  - alert: KubeEtcd3HighFsyncDurations
 #    expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{job="kube-etcd3"}[5m]))
 #      > 0.5
