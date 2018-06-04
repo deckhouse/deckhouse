@@ -19,6 +19,7 @@ groups:
       severity: critical
     annotations:
       description: '{{ $value }}% of Kubernetes nodes are not ready'
+      summary: Too many nodes are not ready
   - alert: K8SKubeletDown
     expr: count(up{job="kubelet"} == 0) / count(up{job="kubelet"}) * 100 > 3
     for: 1h
