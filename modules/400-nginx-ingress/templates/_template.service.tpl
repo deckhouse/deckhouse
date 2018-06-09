@@ -24,10 +24,16 @@ spec:
     port: 80
     targetPort: 80
     protocol: TCP
+{{- if and ( eq $type "NodePort") (.nodePortHTTP) }}
+    nodePort: {{ .nodePortHTTP }}
+{{- end }}
   - name: https
     port: 443
     targetPort: 443
     protocol: TCP
+{{- if and ( eq $type "NodePort") (.nodePortHTTPS) }}
+    nodePort: {{ .nodePortHTTPS }}
+{{- end }}
   selector:
     app: nginx
   {{- end }}
