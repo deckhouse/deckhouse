@@ -26,6 +26,8 @@
         * `Direct` (автоматически `Manual`) — pod'ы работают в host network, nginx слушает на 80 и 443 порту, хитрая схема с direct-fallback.
         * `NodePort` — создает сервис с типом NodePort, подходит в тех ситуациях, когда необходимо настроить "сторонний" балансировщик (например, использовать AWS Application Load Balancer, Qrator или  CloudFLare).
     * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](templates/controller.yaml).
+* `nodePortHTTP` — для инлетов с типом `NodePort` позволяет задать конкретный nodePort для публикации 80-го порта (по-умолчанию ничего не указывается и kube-controller-manager подбирает случайный свободный).
+* `nodePortHTTPS` — для инлетов с типом `NodePort` позволяет задать конкретный nodePort для публикации порта 443 (по-умолчанию аналогично `nodePortHTTP`).
 * `config.hsts` — bool, включен ли hsts.
     * По-умолчанию выключен.
 * `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](modules/400-nginx-ingress/templates/_template.config.tpl).
@@ -92,14 +94,17 @@ nginxIngress: |
 Способ реализации:
 * Оставляем основной контроллер работать без измений.
 * Указываем дополнительный контроллер с inlet `NodePort`.
+* Опционально в дополнительном контроллере указываем конкретные nodePort-порты для HTTP и HTTPS (`nodePortHTTP` и `nodePortHTTPS`).
 * В ingress ресурсах прода указываем аннотацию `kubernetes.io/ingress.class: "nginx-qrator"`.
-* Настраиваем Qrator, чтобы он отправлял трафик на "эфемерные" порты сервиса с типом NodePort: `kubectl -n kube-nginx-ingress-qraror get svc nginx -o yaml`
+* Настраиваем Qrator, чтобы он отправлял трафик на "эфемерные" порты сервиса с типом NodePort. Если не указали конкретные порты (`nodePortHTTP`, `nodePortHTTPS`), то узнать, какие порты выбрал controller-manager, можно с помощью команды: `kubectl -n kube-nginx-ingress-qraror get svc nginx -o yaml`
 
 ```
 nginxIngress: |
   additionalControllers:
   - name: qrator
     inlet: NodePort
+    nodePortHTTP: 30080
+    nodePortHTTPS: 30443
     config:
       setRealIPFrom:
       - 87.245.197.192
@@ -121,7 +126,6 @@ nginxIngress: |
       - 130.117.190.18
       - 130.117.190.19
       - 185.94.108.0/24
-
 ```
 
 
