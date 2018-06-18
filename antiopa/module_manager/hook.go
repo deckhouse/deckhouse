@@ -3,22 +3,28 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/antiopa/utils"
-	"github.com/kennygrant/sanitize"
-	"github.com/romana/rlog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/kennygrant/sanitize"
+	"github.com/romana/rlog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/antiopa/executor"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 type GlobalHook struct {
 	*Hook
+	Config *GlobalHookConfig
 }
 
 type ModuleHook struct {
 	*Hook
 	Module *Module
+	Config *ModuleHookConfig
 }
 
 type Hook struct {
@@ -26,16 +32,14 @@ type Hook struct {
 	Path           string
 	Bindings       []BindingType
 	OrderByBinding map[BindingType]float64
-	Schedules      []ScheduleConfig
 
 	moduleManager *MainModuleManager
 }
 
 type GlobalHookConfig struct {
 	HookConfig
-	OnKubeNodeChange interface{} `json:"onKubeNodeChange"`
-	BeforeAll        interface{} `json:"beforeAll"`
-	AfterAll         interface{} `json:"afterAll"`
+	BeforeAll interface{} `json:"beforeAll"`
+	AfterAll  interface{} `json:"afterAll"`
 }
 
 type ModuleHookConfig struct {
@@ -46,8 +50,9 @@ type ModuleHookConfig struct {
 }
 
 type HookConfig struct {
-	OnStartup interface{}      `json:"onStartup"`
-	Schedule  []ScheduleConfig `json:"schedule"`
+	OnStartup         interface{}               `json:"onStartup"`
+	Schedule          []ScheduleConfig          `json:"schedule"`
+	OnKubernetesEvent []OnKubernetesEventConfig `json:"onKubernetesEvent"`
 }
 
 type ScheduleConfig struct {
@@ -55,30 +60,54 @@ type ScheduleConfig struct {
 	AllowFailure bool   `json:"allowFailure"`
 }
 
-func (mm *MainModuleManager) newGlobalHook() *GlobalHook {
+type OnKubernetesEventType string
+
+const (
+	KubernetesEventOnAdd    OnKubernetesEventType = "add"
+	KubernetesEventOnUpdate OnKubernetesEventType = "update"
+	KubernetesEventOnDelete OnKubernetesEventType = "delete"
+)
+
+type OnKubernetesEventConfig struct {
+	EventTypes        []OnKubernetesEventType `json:"event"`
+	Kind              string                  `json:"kind"`
+	Selector          *metav1.LabelSelector   `json:"selector"`
+	NamespaceSelector *KubeNamespaceSelector  `json:"namespaceSelector"`
+	JqFilter          string                  `json:"jqFilter"`
+	AllowFailure      bool                    `json:"allowFailure"`
+}
+
+type KubeNamespaceSelector struct {
+	MatchNames []string `json:"matchNames"`
+	Any        bool     `json:"any"`
+}
+
+func (mm *MainModuleManager) newGlobalHook(name, path string, config *GlobalHookConfig) *GlobalHook {
 	globalHook := &GlobalHook{}
-	globalHook.Hook = mm.newHook()
+	globalHook.Hook = mm.newHook(name, path)
+	globalHook.Config = config
 	return globalHook
 }
 
-func (mm *MainModuleManager) newHook() *Hook {
+func (mm *MainModuleManager) newHook(name, path string) *Hook {
 	hook := &Hook{}
 	hook.moduleManager = mm
+	hook.Name = name
+	hook.Path = path
 	hook.OrderByBinding = make(map[BindingType]float64)
 	return hook
 }
 
-func (mm *MainModuleManager) newModuleHook() *ModuleHook {
+func (mm *MainModuleManager) newModuleHook(name, path string, config *ModuleHookConfig) *ModuleHook {
 	moduleHook := &ModuleHook{}
-	moduleHook.Hook = mm.newHook()
+	moduleHook.Hook = mm.newHook(name, path)
+	moduleHook.Config = config
 	return moduleHook
 }
 
 func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHookConfig) (err error) {
 	var ok bool
-	globalHook := mm.newGlobalHook()
-	globalHook.Name = name
-	globalHook.Path = path
+	globalHook := mm.newGlobalHook(name, path, config)
 
 	if config.BeforeAll != nil {
 		globalHook.Bindings = append(globalHook.Bindings, BeforeAll)
@@ -96,14 +125,6 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 		mm.globalHooksOrder[AfterAll] = append(mm.globalHooksOrder[AfterAll], globalHook)
 	}
 
-	if config.OnKubeNodeChange != nil {
-		globalHook.Bindings = append(globalHook.Bindings, OnKubeNodeChange)
-		if globalHook.OrderByBinding[OnKubeNodeChange], ok = config.OnKubeNodeChange.(float64); !ok {
-			return fmt.Errorf("unsuported value '%v' for binding '%s'", config.OnKubeNodeChange, OnKubeNodeChange)
-		}
-		mm.globalHooksOrder[OnKubeNodeChange] = append(mm.globalHooksOrder[OnKubeNodeChange], globalHook)
-	}
-
 	if config.OnStartup != nil {
 		globalHook.Bindings = append(globalHook.Bindings, OnStartup)
 		if globalHook.OrderByBinding[OnStartup], ok = config.OnStartup.(float64); !ok {
@@ -112,10 +133,14 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 		mm.globalHooksOrder[OnStartup] = append(mm.globalHooksOrder[OnStartup], globalHook)
 	}
 
-	if config.Schedule != nil {
+	if len(config.Schedule) != 0 {
 		globalHook.Bindings = append(globalHook.Bindings, Schedule)
-		globalHook.Schedules = config.Schedule
 		mm.globalHooksOrder[Schedule] = append(mm.globalHooksOrder[Schedule], globalHook)
+	}
+
+	if len(config.OnKubernetesEvent) != 0 {
+		globalHook.Bindings = append(globalHook.Bindings, KubeEvents)
+		mm.globalHooksOrder[KubeEvents] = append(mm.globalHooksOrder[KubeEvents], globalHook)
 	}
 
 	mm.globalHooksByName[name] = globalHook
@@ -125,9 +150,7 @@ func (mm *MainModuleManager) addGlobalHook(name, path string, config *GlobalHook
 
 func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config *ModuleHookConfig) (err error) {
 	var ok bool
-	moduleHook := mm.newModuleHook()
-	moduleHook.Name = name
-	moduleHook.Path = path
+	moduleHook := mm.newModuleHook(name, path, config)
 
 	if moduleHook.Module, err = mm.GetModule(moduleName); err != nil {
 		return err
@@ -166,10 +189,14 @@ func (mm *MainModuleManager) addModuleHook(moduleName, name, path string, config
 		mm.addModulesHooksOrderByName(moduleName, OnStartup, moduleHook)
 	}
 
-	if config.Schedule != nil {
+	if len(config.Schedule) != 0 {
 		moduleHook.Bindings = append(moduleHook.Bindings, Schedule)
-		moduleHook.Schedules = config.Schedule
 		mm.addModulesHooksOrderByName(moduleName, Schedule, moduleHook)
+	}
+
+	if len(config.OnKubernetesEvent) != 0 {
+		moduleHook.Bindings = append(moduleHook.Bindings, KubeEvents)
+		mm.addModulesHooksOrderByName(moduleName, KubeEvents, moduleHook)
 	}
 
 	mm.modulesHooksByName[name] = moduleHook
@@ -535,6 +562,20 @@ func (h *ModuleHook) prepareConfigValuesYamlFile() (string, error) {
 	return h.Module.prepareConfigValuesYamlFile()
 }
 
+func prepareHookConfig(hookConfig *HookConfig) {
+	for i := range hookConfig.OnKubernetesEvent {
+		config := &hookConfig.OnKubernetesEvent[i]
+
+		if config.EventTypes == nil {
+			config.EventTypes = []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete}
+		}
+
+		if config.NamespaceSelector == nil {
+			config.NamespaceSelector = &KubeNamespaceSelector{Any: true}
+		}
+	}
+}
+
 func (mm *MainModuleManager) initGlobalHooks() error {
 	rlog.Info("Initializing global hooks ...")
 
@@ -555,6 +596,8 @@ func (mm *MainModuleManager) initGlobalHooks() error {
 		if err := json.Unmarshal(output, hookConfig); err != nil {
 			return fmt.Errorf("unmarshaling global hook '%s' json failed: %s", hookName, err.Error())
 		}
+
+		prepareHookConfig(&hookConfig.HookConfig)
 
 		if err := mm.addGlobalHook(hookName, hookPath, hookConfig); err != nil {
 			return fmt.Errorf("adding global hook '%s' failed: %s", hookName, err.Error())
@@ -587,6 +630,8 @@ func (mm *MainModuleManager) initModuleHooks(module *Module) error {
 		if err := json.Unmarshal(output, hookConfig); err != nil {
 			return fmt.Errorf("unmarshaling module hook '%s' json failed: %s", hookName, err.Error())
 		}
+
+		prepareHookConfig(&hookConfig.HookConfig)
 
 		if err := mm.addModuleHook(module.Name, hookName, hookPath, hookConfig); err != nil {
 			return fmt.Errorf("adding module hook '%s' failed: %s", hookName, err.Error())
@@ -666,7 +711,7 @@ func (mm *MainModuleManager) execHook(hookName string, configValuesJsonPatchPath
 		fmt.Sprintf("VALUES_JSON_PATCH_PATH=%s", valuesJsonPatchPath),
 	)
 
-	err := execCommand(cmd)
+	err := executor.Run(cmd)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s FAILED: %s", hookName, err)
 	}
@@ -703,7 +748,7 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 	rlog.Debugf("Executing command in %s: '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
 	cmd.Stdout = nil
 
-	output, err := cmd.Output()
+	output, err := executor.Output(cmd)
 	if err != nil {
 		rlog.Errorf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
 		return output, err

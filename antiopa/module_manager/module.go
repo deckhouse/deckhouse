@@ -3,7 +3,6 @@ package module_manager
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -14,7 +13,9 @@ import (
 	"github.com/kennygrant/sanitize"
 	"github.com/otiai10/copy"
 	"github.com/romana/rlog"
+	"gopkg.in/yaml.v2"
 
+	"github.com/deckhouse/deckhouse/antiopa/executor"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
@@ -65,9 +66,12 @@ func (m *Module) cleanup() error {
 		}
 	}
 
-	rlog.Infof("Module '%s': running cleanup ...", m.Name)
-
+	rlog.Infof("Module '%s': deleting failed helm release from first installation", m.Name)
 	if err := m.moduleManager.helm.DeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
+		return err
+	}
+
+	if err := m.moduleManager.helm.DeleteOldFailedRevisions(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
 
@@ -88,12 +92,65 @@ func (m *Module) execRun() error {
 		if err != nil {
 			return err
 		}
+
+		// Prepare dummy empty values.yaml for helm not to fail
 		err = os.Truncate(filepath.Join(runChartPath, "values.yaml"), 0)
 		if err != nil {
 			return err
 		}
 
-		return m.moduleManager.helm.UpgradeRelease(helmReleaseName, runChartPath, []string{valuesPath}, m.moduleManager.helm.TillerNamespace())
+		checksum, err := utils.CalculateChecksumOfPaths(runChartPath, valuesPath)
+		if err != nil {
+			return err
+		}
+
+		doRelease := true
+
+		isReleaseExists, err := m.moduleManager.helm.IsReleaseExists(helmReleaseName)
+		if err != nil {
+			return err
+		}
+
+		if isReleaseExists {
+			_, status, err := m.moduleManager.helm.LastReleaseStatus(helmReleaseName)
+			if err != nil {
+				return err
+			}
+
+			// Ignore skiping of helm release process for FAILED releases
+			if status != "FAILED" {
+				releaseValues, err := m.moduleManager.helm.GetReleaseValues(helmReleaseName)
+				if err != nil {
+					return err
+				}
+
+				if recordedChecksum, hasKey := releaseValues["_antiopaModuleChecksum"]; hasKey {
+					if recordedChecksumStr, ok := recordedChecksum.(string); ok {
+						if recordedChecksumStr == checksum {
+							doRelease = false
+							rlog.Debugf("Module manager: helm release '%s' checksum '%s' does not changed: will skip helm release", helmReleaseName, checksum)
+						} else {
+							rlog.Debugf("Module manager: helm release '%s' checksum changed '%s' -> '%s': will make helm release", helmReleaseName, recordedChecksumStr, checksum)
+						}
+					}
+				}
+			}
+		}
+
+		if doRelease {
+			rlog.Debugf("Module manager: helm release '%s' checksum '%s': installing/upgrading release", helmReleaseName, checksum)
+
+			return m.moduleManager.helm.UpgradeRelease(
+				helmReleaseName, runChartPath,
+				[]string{valuesPath},
+				[]string{fmt.Sprintf("_antiopaModuleChecksum=%s", checksum)},
+				m.moduleManager.helm.TillerNamespace(),
+			)
+		} else {
+			rlog.Debugf("Module manager: helm release '%s' checksum '%s': release install/upgrade is skipped", helmReleaseName, checksum)
+		}
+
+		return nil
 	})
 
 	if err != nil {
@@ -104,8 +161,25 @@ func (m *Module) execRun() error {
 }
 
 func (m *Module) delete() error {
-	if err := m.moduleManager.helm.DeleteRelease(m.generateHelmReleaseName()); err != nil {
-		return err
+	// Если есть chart, но нет релиза — warning
+	// если нет чарта — молча перейти к хукам
+	// если есть и chart и релиз — удалить
+	chartExists, _ := m.checkHelmChart()
+	if chartExists {
+		releaseExists, err := m.moduleManager.helm.IsReleaseExists(m.generateHelmReleaseName())
+		if !releaseExists {
+			if err != nil {
+				rlog.Warnf("Module delete: Cannot find helm release '%s' for module '%s'. Helm error: %s", m.generateHelmReleaseName(), m.Name, err)
+			} else {
+				rlog.Warnf("Module delete: Cannot find helm release '%s' for module '%s'.", m.generateHelmReleaseName(), m.Name)
+			}
+		} else {
+			// Есть чарт и есть релиз — запуск удаления
+			err := m.moduleManager.helm.DeleteRelease(m.generateHelmReleaseName())
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if err := m.runHooksByBinding(AfterDeleteHelm); err != nil {
@@ -365,7 +439,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		},
 	)
 
-	if err := execCommand(cmd); err != nil {
+	if err := executor.Run(cmd); err != nil {
 		return false, nil
 	}
 
@@ -571,11 +645,6 @@ func dumpData(filePath string, data []byte) error {
 		return err
 	}
 	return nil
-}
-
-func execCommand(cmd *exec.Cmd) error {
-	rlog.Debugf("Executing command in '%s': '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
-	return cmd.Run()
 }
 
 func (mm *MainModuleManager) makeCommand(dir string, entrypoint string, args []string, envs []string) *exec.Cmd {

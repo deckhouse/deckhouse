@@ -38,7 +38,7 @@ func shouldDeleteRelease(helm HelmClient, releaseName string) (err error) {
 }
 
 func releasesListShouldEqual(helm HelmClient, expectedList []string) (err error) {
-	releases, err := helm.ListReleasesNames()
+	releases, err := helm.ListReleasesNames(nil)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func releasesListShouldEqual(helm HelmClient, expectedList []string) (err error)
 }
 
 func shouldUpgradeRelease(helm HelmClient, releaseName string, chart string, valuesPaths []string) (err error) {
-	err = helm.UpgradeRelease(releaseName, chart, []string{}, helm.TillerNamespace())
+	err = helm.UpgradeRelease(releaseName, chart, []string{}, []string{}, helm.TillerNamespace())
 	if err != nil {
 		return fmt.Errorf("Cannot install test release: %s", err)
 	}
@@ -130,7 +130,7 @@ func TestHelm(t *testing.T) {
 		t.Errorf("Cannot init test tiller in '%s' namespace: %s\n%s %s", helm.TillerNamespace(), err, stdout, stderr)
 	}
 
-	releases, err = helm.ListReleasesNames()
+	releases, err = helm.ListReleasesNames(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -189,7 +189,7 @@ func TestHelm(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = helm.UpgradeRelease("hello", "no-such-chart", []string{}, helm.TillerNamespace())
+	err = helm.UpgradeRelease("hello", "no-such-chart", []string{}, []string{}, helm.TillerNamespace())
 	if err == nil {
 		t.Errorf("Expected helm upgrade to fail, got no error from helm client")
 	}

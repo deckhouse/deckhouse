@@ -58,6 +58,14 @@ type ModuleConfig struct {
 	Values     Values
 }
 
+func (mc ModuleConfig) String() string {
+	return fmt.Sprintf("ModuleName=%s IsEnabled=%v Values:\n%s", mc.ModuleName, mc.IsEnabled, ValuesToString(mc.Values))
+}
+
+func ModuleConfigToString(mc ModuleConfig) string {
+	return mc.String()
+}
+
 func ModuleNameToValuesKey(moduleName string) string {
 	return camelcase.Camelcase(moduleName)
 }
@@ -102,6 +110,17 @@ func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleCon
 	}
 
 	return NewModuleConfig(moduleName, values)
+}
+
+func NewValuesFromBytes(data []byte) (Values, error) {
+	var rawValues map[interface{}]interface{}
+
+	err := yaml.Unmarshal(data, &rawValues)
+	if err != nil {
+		return nil, fmt.Errorf("bad values data: %s\n%s", err, string(data))
+	}
+
+	return NewValues(rawValues)
 }
 
 func NewValues(data map[interface{}]interface{}) (Values, error) {
@@ -203,8 +222,9 @@ func ValuesPatchFromFile(filePath string) (*ValuesPatch, error) {
 }
 
 func AppendValuesPatch(valuesPatches []ValuesPatch, newValuesPatch ValuesPatch) []ValuesPatch {
-	compactValuesPatches := CompactValuesPatches(valuesPatches, newValuesPatch)
-	return append(compactValuesPatches, newValuesPatch)
+	// TODO #280 - придумать более безопасный способ compact-а.
+	//compactValuesPatches := CompactValuesPatches(valuesPatches, newValuesPatch)
+	return append(valuesPatches, newValuesPatch)
 }
 
 func CompactValuesPatches(valuesPatches []ValuesPatch, newValuesPatch ValuesPatch) []ValuesPatch {

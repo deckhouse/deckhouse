@@ -3,7 +3,9 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=150
+  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
+    "$(jo kind=storageclass jqFilter='[.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class", .metadata.name]')" \
+  )"
 }
 
 function __main__() {

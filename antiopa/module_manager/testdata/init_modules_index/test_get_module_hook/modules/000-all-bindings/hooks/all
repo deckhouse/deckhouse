@@ -1,18 +1,70 @@
 #!/bin/bash -e
 
 if [[ "$1" == "--config" ]]; then
-    echo "
+      cat << EndOfJSON
 {
-    \"afterHelm\": 1,
-    \"beforeHelm\": 1,
-    \"afterDeleteHelm\": 1,
-    \"onStartup\": 1,
-    \"schedule\": [
-      {
-        \"crontab\": \"* * * * *\",
-        \"allowFailure\": true
-      }
-    ]
+	"afterHelm": 1,
+	"beforeHelm": 1,
+	"afterDeleteHelm": 1,
+	"onStartup": 1,
+	"schedule": [{
+		"crontab": "* * * * *",
+		"allowFailure": true
+	}],
+	"onKubernetesEvent": [{
+    "event": ["add"],
+    "kind": "configmap",
+    "selector": {
+      "matchLabels": {
+        "component": "component1"
+      },
+      "matchExpressions": [{
+        "key": "tier",
+        "operator": "In",
+        "values": ["cache"]
+      }]
+    },
+    "namespaceSelector": {
+      "matchNames": ["namespace1"],
+      "any": false
+    },
+    "jqFilter": ".items[] | del(.metadata, .field1)",
+    "allowFailure": true
+  },
+  {
+    "kind": "namespace",
+    "selector": {
+      "matchLabels": {
+        "component": "component2"
+      },
+      "matchExpressions": [{
+        "key": "tier",
+        "operator": "In",
+        "values": ["cache"]
+      }]
+    },
+    "namespaceSelector": {
+      "matchNames": ["namespace2"],
+      "any": false
+    },
+    "jqFilter": ".items[] | del(.metadata, .field2)",
+    "allowFailure": true
+  },
+  {
+    "kind": "pod",
+    "selector": {
+      "matchLabels": {
+        "component": "component3"
+      },
+      "matchExpressions": [{
+        "key": "tier",
+        "operator": "In",
+        "values": ["cache"]
+      }]
+    },
+    "jqFilter": ".items[] | del(.metadata, .field3)",
+    "allowFailure": true
+  }]
 }
-"
+EndOfJSON
 fi

@@ -1,19 +1,55 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/golang/glog"
+	"github.com/romana/rlog"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/satori/go.uuid.v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
+	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
 )
+
+type KubeEventsHooksControllerMock struct{}
+
+func (obj *KubeEventsHooksControllerMock) EnableGlobalHooks(moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	return nil
+}
+
+func (obj *KubeEventsHooksControllerMock) EnableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	return nil
+}
+
+func (obj *KubeEventsHooksControllerMock) DisableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error {
+	return nil
+}
+
+func (obj *KubeEventsHooksControllerMock) HandleEvent(configId string) (*struct{ Tasks []task.Task }, error) {
+	return nil, nil
+}
+
+type KubeEventsManagerMock struct{}
+
+func (kem *KubeEventsManagerMock) Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error) {
+	return uuid.NewV4().String(), nil
+}
+
+func (kem *KubeEventsManagerMock) Stop(configId string) error {
+	return nil
+}
 
 type ModuleManagerMock struct {
 	BeforeHookErrorsCount    int
@@ -85,8 +121,12 @@ func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHo
 				Path:           "/antiopa/hooks/global_1",
 				Bindings:       []module_manager.BindingType{module_manager.Schedule},
 				OrderByBinding: map[module_manager.BindingType]float64{},
-				Schedules: []module_manager.ScheduleConfig{
-					scheduledHooks[name],
+			},
+			Config: &module_manager.GlobalHookConfig{
+				HookConfig: module_manager.HookConfig{
+					Schedule: []module_manager.ScheduleConfig{
+						scheduledHooks[name],
+					},
 				},
 			},
 		}, nil
@@ -102,14 +142,18 @@ func (m *ModuleManagerMock) GetModuleHook(name string) (*module_manager.ModuleHo
 				Path:           "/antiopa/modules/000_test_modu",
 				Bindings:       []module_manager.BindingType{module_manager.Schedule},
 				OrderByBinding: map[module_manager.BindingType]float64{},
-				Schedules: []module_manager.ScheduleConfig{
-					scheduledHooks[name],
-				},
 			},
 			Module: &module_manager.Module{
 				Name:          "test_module",
 				DirectoryName: "/antiopa/modules/000_test_modue",
 				Path:          "/antiopa/modules/000_test_modu",
+			},
+			Config: &module_manager.ModuleHookConfig{
+				HookConfig: module_manager.HookConfig{
+					Schedule: []module_manager.ScheduleConfig{
+						scheduledHooks[name],
+					},
+				},
 			},
 		}, nil
 	}
@@ -262,6 +306,8 @@ func TestMain_ModulesEventsHandler(t *testing.T) {
 
 	// Mock ModuleManager
 	ModuleManager = &ModuleManagerMock{}
+	KubeEventsManager = &KubeEventsManagerMock{}
+	KubeEventsHooks = &KubeEventsHooksControllerMock{}
 
 	assert.Equal(t, 0, 0)
 	fmt.Println("Create queue")
@@ -561,4 +607,23 @@ func TestMain_ScheduledTasks(t *testing.T) {
 	}
 
 	fmt.Printf("runOrder: %+v", runOrder)
+}
+
+// Тесты запускаются уже с flag.Parsed(), поэтому glog ничего не пишет
+func TestGlog(t *testing.T) {
+	t.SkipNow()
+	os.Setenv("RLOG_LOG_LEVEL", "DEBUG")
+	rlog.UpdateEnv()
+
+	rlog.Info("start TestGlog")
+	glog.Warning("test warngin from glog")
+
+	flag.Set("", "")
+	//flag.CommandLine.Parse([]string{})
+	glog.Warning("test warngin from glog after Parse")
+	rlog.Info("stop TestGlog")
+
+	time.Sleep(1 * time.Second)
+
+	t.Error("Error call to get stdout")
 }

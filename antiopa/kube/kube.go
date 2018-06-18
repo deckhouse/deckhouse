@@ -33,6 +33,7 @@ const (
 
 var (
 	KubernetesClient           Client
+	Kubernetes                 kubernetes.Interface
 	KubernetesAntiopaNamespace string
 )
 
@@ -97,11 +98,13 @@ func InitKube() {
 		KubernetesAntiopaNamespace = DefaultNamespace
 	}
 
-	KubernetesClient, err = kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		rlog.Errorf("KUBE-INIT Kubernetes connection problem: %s", err)
 		os.Exit(1)
 	}
+	Kubernetes = clientset
+	KubernetesClient = clientset
 
 	rlog.Info("KUBE-INIT Successfully connected to kubernetes")
 }
@@ -125,23 +128,27 @@ func KubeGetDeploymentImageName() string {
 	return ""
 }
 
-func KubeGetPodImageName(podName string) string {
+// Возвращает image — имя образа (адрес регистри/репо:тэг) и imageID.
+// imageID может быть такого вида:
+//  "imageID": "docker-pullable://registry.flant.com/sys/antiopa/dev@sha256:05f5cc14dff4fcc3ff3eb554de0e550050e65c968dc8bbc2d7f4506edfcdc5b6"
+//  "imageID": "docker://sha256:e537460dd124f6db6656c1728a42cf8e268923ff52575504a471fa485c2a884a"
+func KubeGetPodImageInfo(podName string) (imageName string, imageId string) {
 	res, err := KubernetesClient.CoreV1().Pods(KubernetesAntiopaNamespace).Get(podName, metav1.GetOptions{})
 
 	if err != nil {
-		rlog.Errorf("KUBE Cannot get info for pod %s! %v", podName, err)
-		return ""
+		rlog.Debugf("KUBE Cannot get info for pod %s! %v", podName, err)
+		return "", ""
 	}
 
-	containersSpecs := res.Spec.Containers
-
-	for _, spec := range containersSpecs {
-		if spec.Name == AntiopaContainerName {
-			return spec.Image
+	for _, status := range res.Status.ContainerStatuses {
+		if status.Name == AntiopaContainerName {
+			imageName = status.Image
+			imageId = status.ImageID
+			break
 		}
 	}
 
-	return ""
+	return
 }
 
 // KubeUpdateDeployment - меняет лейбл antiopaImageName на новый id образа antiopa

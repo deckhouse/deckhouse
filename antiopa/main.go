@@ -1,20 +1,27 @@
 package main
 
 import (
+	"flag"
+	"io"
 	"io/ioutil"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/romana/rlog"
+
 	"github.com/deckhouse/deckhouse/antiopa/docker_registry_manager"
+	"github.com/deckhouse/deckhouse/antiopa/executor"
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
-	"github.com/deckhouse/deckhouse/antiopa/kube_node_manager"
+	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
+	"github.com/deckhouse/deckhouse/antiopa/metrics_storage"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
-
-	"github.com/romana/rlog"
 )
 
 var (
@@ -33,9 +40,17 @@ var (
 	// module manager object
 	ModuleManager module_manager.ModuleManager
 
+	// registry manager — watch for antiopa image updates
+	RegistryManager docker_registry_manager.DockerRegistryManager
+
 	// schedule manager
 	ScheduleManager schedule_manager.ScheduleManager
 	ScheduledHooks  ScheduledHooksStorage
+
+	KubeEventsManager kube_events_manager.KubeEventsManager
+	KubeEventsHooks   KubeEventsHooksController
+
+	MetricsStorage *metrics_storage.MetricStorage
 
 	// chan for stopping ManagersEventsHandler infinite loop
 	ManagersEventsHandlerStopCh chan struct{}
@@ -88,7 +103,7 @@ func Init() {
 
 	// Инициализация слежения за образом
 	// TODO Antiopa может и не следить, если кластер заморожен?
-	err = docker_registry_manager.InitRegistryManager(Hostname)
+	RegistryManager, err = docker_registry_manager.Init(Hostname)
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot initialize registry manager: %s", err)
 		os.Exit(1)
@@ -121,30 +136,6 @@ func Init() {
 	queueWatcher := task.NewTasksQueueDumper(TasksQueueDumpFilePath, TasksQueue)
 	TasksQueue.AddWatcher(queueWatcher)
 
-	// Инициализация слежения за событиями onKubeNodeChange (пока нет kube_event_manager)
-	kube_node_manager.InitKubeNodeManager()
-
-	// TODO Инициализация слежения за событиями из kube
-	// нужно по конфигам хуков создать настройки в менеджере
-	// связать настройку и имя хука
-	// потом, когда от менеджера придёт id настройки,
-	// найти по id нужные имена хуков и добавить их запуск в очередь
-	/* Примерный алгоритм поиска всех привязок по всем хукам, как глобальным, так и модульным:
-	   EnabledModules.each {
-	       GetModuleHooksInOrder(moduleName, module.Schedule).each {
-	           schedule.add hook // регистрация binding
-	       }
-
-	       GetModuleHooksInOrder(moduleName, module.OnKubeNodeChange).each {
-	           ... // регистрация binding
-	       }
-	   }
-
-	   GetGlobalHooksInOrder(module.OnKubeNodeChange).each {...} // регистрация binding
-
-	   GetGlobalHooksInOrder(module.OnStartup).each {RunGlobalHook(name)} // запуск по binding
-	*/
-
 	// Инициализация хуков по расписанию - карта scheduleId → []ScheduleHook
 	ScheduleManager, err = schedule_manager.Init()
 	if err != nil {
@@ -152,8 +143,14 @@ func Init() {
 		os.Exit(1)
 	}
 
-	// Инициализация хуков по событиям от kube - карта kubeEventId → []KubeEventHook
-	// RegisterKubeEventHooks()
+	KubeEventsManager, err = kube_events_manager.Init()
+	if err != nil {
+		rlog.Errorf("MAIN Fatal: Cannot initialize kube events manager: %s", err)
+		os.Exit(1)
+	}
+	KubeEventsHooks = NewMainKubeEventsHooksController()
+
+	MetricsStorage = metrics_storage.Init()
 }
 
 // Run запускает все менеджеры, обработчик событий от менеджеров и обработчик очереди.
@@ -169,13 +166,25 @@ func Run() {
 	CreateOnStartupTasks()
 	CreateReloadAllTasks()
 
+	KubeEventsHooks.EnableGlobalHooks(ModuleManager, KubeEventsManager)
+
 	TasksQueue.ChangesEnable(true)
 
 	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
-	go docker_registry_manager.RunRegistryManager()
+	RegistryManager.SetErrorCallback(func() {
+		MetricsStorage.SendCounterMetric("antiopa_registry_errors", 1.0, map[string]string{})
+	})
+	go RegistryManager.Run()
 	go ModuleManager.Run()
-	go kube_node_manager.RunKubeNodeManager()
 	go ScheduleManager.Run()
+
+	// обработчик добавления метрик
+	go MetricsStorage.Run()
+	// счётчик работы antiopa
+	go func() {
+		MetricsStorage.SendCounterMetric("antiopa_live_ticks", 1.0, map[string]string{})
+		time.Sleep(15 * time.Second)
+	}()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
 	// добавляются в очередь
@@ -207,43 +216,52 @@ func ManagersEventsHandler() {
 			switch moduleEvent.Type {
 			// Изменились отдельные модули
 			case module_manager.ModulesChanged:
-				rlog.Debug("main got ModulesChanged event")
+				rlog.Debug("main: got ModulesChanged event")
 				for _, moduleChange := range moduleEvent.ModulesChanges {
 					switch moduleChange.ChangeType {
-					case module_manager.Enabled, module_manager.Changed:
+					case module_manager.Enabled:
 						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
 						TasksQueue.Add(newTask)
+
+						err := KubeEventsHooks.EnableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
+						if err != nil {
+							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+						}
+
+					case module_manager.Changed:
+						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
+						TasksQueue.Add(newTask)
+
 					case module_manager.Disabled:
 						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
 						TasksQueue.Add(newTask)
+
+						err := KubeEventsHooks.DisableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
+						if err != nil {
+							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+						}
+
 					case module_manager.Purged:
 						newTask := task.NewTask(task.ModulePurge, moduleChange.Name)
 						TasksQueue.Add(newTask)
+
+						err := KubeEventsHooks.DisableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
+						if err != nil {
+							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+						}
 					}
 				}
 				// Поменялись модули, нужно пересоздать индекс хуков по расписанию
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			// Изменились глобальные values, нужен рестарт всех модулей
 			case module_manager.GlobalChanged:
-				rlog.Debug("main got GlobalChanged event")
+				rlog.Debug("main: got GlobalChanged event")
 				TasksQueue.ChangesDisable()
 				CreateReloadAllTasks()
 				TasksQueue.ChangesEnable(true)
 				// Пересоздать индекс хуков по расписанию
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			}
-		case <-kube_node_manager.KubeNodeChanged:
-			// Добавить выполнение глобальных хуков по событию KubeNodeChange
-			TasksQueue.ChangesDisable()
-			hookNames := ModuleManager.GetGlobalHooksInOrder(module_manager.OnKubeNodeChange)
-			for _, hookName := range hookNames {
-				newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnKubeNodeChange)
-				TasksQueue.Add(newTask)
-				rlog.Debugf("KubeNodeChange: queued global hook '%s'", hookName)
-			}
-			TasksQueue.ChangesEnable(true)
-		// TODO поменять, когда появится schedule_manager
-		//case scheduleId := <-schedule_manager.ScheduleEventCh:
 		case crontab := <-schedule_manager.ScheduleCh:
 			scheduleHooks := ScheduledHooks.GetHooksForSchedule(crontab)
 			for _, hook := range scheduleHooks {
@@ -275,10 +293,76 @@ func ManagersEventsHandler() {
 
 				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
 			}
+		case configId := <-kube_events_manager.KubeEventCh:
+			rlog.Debugf("main: got kube event '%s'", configId)
+
+			res, err := KubeEventsHooks.HandleEvent(configId)
+			if err != nil {
+				rlog.Errorf("main: error handling kube event '%s': %s", configId, err)
+				break
+			}
+
+			for _, task := range res.Tasks {
+				TasksQueue.Add(task)
+				rlog.Debugf("main: queued %s '%s' with binding %s", task.GetType(), task.GetName(), task.GetBinding())
+			}
 		case <-ManagersEventsHandlerStopCh:
 			return
 		}
 	}
+}
+
+func runDiscoverModulesState(_ task.Task) error {
+	modulesState, err := ModuleManager.DiscoverModulesState()
+	if err != nil {
+		return err
+	}
+
+	for _, moduleName := range modulesState.EnabledModules {
+		newTask := task.NewTask(task.ModuleRun, moduleName)
+		rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
+		TasksQueue.Add(newTask)
+	}
+
+	for _, moduleName := range modulesState.ModulesToDisable {
+		newTask := task.NewTask(task.ModuleDelete, moduleName)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
+	}
+
+	for _, moduleName := range modulesState.ReleasedUnknownModules {
+		newTask := task.NewTask(task.ModulePurge, moduleName)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
+	}
+
+	// Queue afterAll global hooks
+	afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
+	for _, hookName := range afterAllHooks {
+		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
+		TasksQueue.Add(newTask)
+		rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
+	}
+
+	ScheduledHooks = UpdateScheduleHooks(nil)
+
+	// Enable kube events hooks for newly enabled modules
+	for _, moduleName := range modulesState.EnabledModules {
+		err = KubeEventsHooks.EnableModuleHooks(moduleName, ModuleManager, KubeEventsManager)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Disable kube events hooks for newly disabled modules
+	for _, moduleName := range modulesState.ModulesToDisable {
+		err = KubeEventsHooks.DisableModuleHooks(moduleName, ModuleManager, KubeEventsManager)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Обработчик один на очередь.
@@ -299,55 +383,21 @@ func TasksRunner() {
 
 			switch t.GetType() {
 			case task.DiscoverModulesState:
-				// FIXME: introduce multiple tasks structures with handler-interface
-				handleTaskFailed := func(err error) {
+				err := runDiscoverModulesState(t)
+				if err != nil {
+					MetricsStorage.SendCounterMetric("antiopa_discover_errors", 1.0, map[string]string{})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
-				}
-				handleTaskSucceeded := func() {
-					TasksQueue.Pop()
-				}
-
-				modulesState, err := ModuleManager.DiscoverModulesState()
-				if err != nil {
-					handleTaskFailed(err)
 					break
 				}
 
-				for _, moduleName := range modulesState.EnabledModules {
-					newTask := task.NewTask(task.ModuleRun, moduleName)
-					rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
-					TasksQueue.Add(newTask)
-				}
-
-				for _, moduleName := range modulesState.ModulesToDisable {
-					newTask := task.NewTask(task.ModuleDelete, moduleName)
-					TasksQueue.Add(newTask)
-					rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
-				}
-
-				for _, moduleName := range modulesState.ReleasedUnknownModules {
-					newTask := task.NewTask(task.ModulePurge, moduleName)
-					TasksQueue.Add(newTask)
-					rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
-				}
-
-				// Queue afterAll global hooks
-				afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
-				for _, hookName := range afterAllHooks {
-					newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
-					TasksQueue.Add(newTask)
-					rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
-				}
-
-				handleTaskSucceeded()
-
-				ScheduledHooks = UpdateScheduleHooks(nil)
+				TasksQueue.Pop()
 
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())
 				if err != nil {
+					MetricsStorage.SendCounterMetric("antiopa_module_run_errors", 1.0, map[string]string{"name": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -357,6 +407,7 @@ func TasksRunner() {
 			case task.ModuleDelete:
 				err := ModuleManager.DeleteModule(t.GetName())
 				if err != nil {
+					MetricsStorage.SendCounterMetric("antiopa_module_delete_errors", 1.0, map[string]string{"name": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -365,19 +416,29 @@ func TasksRunner() {
 				}
 			case task.ModuleHookRun:
 				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
-				if err != nil && !t.GetAllowFailure() {
-					t.IncrementFailureCount()
-					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
-					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				if err != nil {
+					if t.GetAllowFailure() {
+						MetricsStorage.SendCounterMetric("antiopa_module_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+					} else {
+						MetricsStorage.SendCounterMetric("antiopa_module_errors", 1.0, map[string]string{"name": t.GetName()})
+						t.IncrementFailureCount()
+						rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
+						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+					}
 				} else {
 					TasksQueue.Pop()
 				}
 			case task.GlobalHookRun:
 				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
-				if err != nil && !t.GetAllowFailure() {
-					t.IncrementFailureCount()
-					rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
-					TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+				if err != nil {
+					if t.GetAllowFailure() {
+						MetricsStorage.SendCounterMetric("antiopa_global_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+					} else {
+						MetricsStorage.SendCounterMetric("antiopa_global_errors", 1.0, map[string]string{"name": t.GetName()})
+						t.IncrementFailureCount()
+						rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
+						TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
+					}
 				} else {
 					TasksQueue.Pop()
 				}
@@ -410,12 +471,6 @@ func TasksRunner() {
 type ScheduleHook struct {
 	Name     string
 	Schedule []module_manager.ScheduleConfig
-}
-
-type KubeEventHook struct {
-	Name           string
-	OnCreateConfig struct{}
-	OnChangeConfig struct{}
 }
 
 type ScheduledHooksStorage []*ScheduleHook
@@ -518,7 +573,7 @@ func UpdateScheduleHooks(storage ScheduledHooksStorage) ScheduledHooksStorage {
 LOOP_GLOBAL_HOOKS:
 	for _, globalHookName := range globalHooks {
 		globalHook, _ := ModuleManager.GetGlobalHook(globalHookName)
-		for _, schedule := range globalHook.Schedules {
+		for _, schedule := range globalHook.Config.Schedule {
 			_, err := ScheduleManager.Add(schedule.Crontab)
 			if err != nil {
 				rlog.Errorf("Schedule: cannot add '%s' for global hook '%s': %s", schedule.Crontab, globalHookName, err)
@@ -526,7 +581,7 @@ LOOP_GLOBAL_HOOKS:
 			}
 			rlog.Debugf("Schedule: add '%s' for global hook '%s'", schedule.Crontab, globalHookName)
 		}
-		newScheduledTasks.AddHook(globalHook.Name, globalHook.Schedules)
+		newScheduledTasks.AddHook(globalHook.Name, globalHook.Config.Schedule)
 	}
 
 	modules := ModuleManager.GetModuleNamesInOrder()
@@ -535,7 +590,7 @@ LOOP_GLOBAL_HOOKS:
 	LOOP_MODULE_HOOKS:
 		for _, moduleHookName := range moduleHooks {
 			moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
-			for _, schedule := range moduleHook.Schedules {
+			for _, schedule := range moduleHook.Config.Schedule {
 				_, err := ScheduleManager.Add(schedule.Crontab)
 				if err != nil {
 					rlog.Errorf("Schedule: cannot add '%s' for hook '%s': %s", schedule.Crontab, moduleHookName, err)
@@ -543,7 +598,7 @@ LOOP_GLOBAL_HOOKS:
 				}
 				rlog.Debugf("Schedule: add '%s' for hook '%s'", schedule.Crontab, moduleHookName)
 			}
-			newScheduledTasks.AddHook(moduleHook.Name, moduleHook.Schedules)
+			newScheduledTasks.AddHook(moduleHook.Name, moduleHook.Config.Schedule)
 		}
 	}
 
@@ -593,7 +648,41 @@ func CreateReloadAllTasks() {
 	rlog.Debugf("ReloadAll: queued discover of modules state")
 }
 
+func InitHttpServer() {
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte(`<html>
+    <head><title>Antiopa</title></head>
+    <body>
+    <h1>Antiopa</h1>
+    <pre>go tool pprof goprofex http://ANTIOPA_IP:9115/debug/pprof/profile</pre>
+    </body>
+    </html>`))
+	})
+	http.Handle("/metrics", promhttp.Handler())
+
+	http.HandleFunc("/queue", func(writer http.ResponseWriter, request *http.Request) {
+		io.Copy(writer, TasksQueue.DumpReader())
+	})
+
+	go func() {
+		rlog.Info("Listening on :9115")
+		if err := http.ListenAndServe(":9115", nil); err != nil {
+			rlog.Error("Error starting HTTP server: %s", err)
+		}
+	}()
+}
+
 func main() {
+	// set flag.Parsed() for glog
+	flag.CommandLine.Parse([]string{})
+
+	// Be a good parent - clean up behind the children processes.
+	// Antiopa is PID1, no special config required
+	go executor.Reap()
+
+	// Включить Http сервер для pprof и prometheus client
+	InitHttpServer()
+
 	// настроить всё необходимое
 	Init()
 

@@ -210,7 +210,7 @@ type mockDiscoverModulesHelmClient struct {
 	MockHelmClient
 }
 
-func (helm *mockDiscoverModulesHelmClient) ListReleasesNames() ([]string, error) {
+func (helm *mockDiscoverModulesHelmClient) ListReleasesNames(_ map[string]string) ([]string, error) {
 	return []string{"module-1", "module-2", "module-3", "module-5", "module-6", "module-9"}, nil
 }
 

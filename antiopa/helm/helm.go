@@ -3,17 +3,20 @@ package helm
 import (
 	"bytes"
 	"fmt"
-	"github.com/romana/rlog"
 	"os"
 	"os/exec"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/romana/rlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kblabels "k8s.io/apimachinery/pkg/labels"
 
+	"github.com/deckhouse/deckhouse/antiopa/executor"
 	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/utils"
 )
 
 type HelmClient interface {
@@ -21,11 +24,13 @@ type HelmClient interface {
 	CommandEnv() []string
 	Cmd(args ...string) (string, string, error)
 	DeleteSingleFailedRevision(releaseName string) error
+	DeleteOldFailedRevisions(releaseName string) error
 	LastReleaseStatus(releaseName string) (string, string, error)
-	UpgradeRelease(releaseName string, chart string, valuesPaths []string, namespace string) error
+	UpgradeRelease(releaseName string, chart string, valuesPaths []string, setValues []string, namespace string) error
+	GetReleaseValues(releaseName string) (utils.Values, error)
 	DeleteRelease(releaseName string) error
-	ListReleases() ([]string, error)
-	ListReleasesNames() ([]string, error)
+	ListReleases(labelSelector map[string]string) ([]string, error)
+	ListReleasesNames(labelSelector map[string]string) ([]string, error)
 	IsReleaseExists(releaseName string) (bool, error)
 }
 
@@ -35,25 +40,69 @@ type CliHelm struct {
 
 // InitHelm запускает установку tiller-a.
 func Init(tillerNamespace string) (HelmClient, error) {
-	rlog.Info("HELM-INIT run helm init")
+	rlog.Info("Helm: run helm init")
 
 	helm := &CliHelm{tillerNamespace: tillerNamespace}
 
-	stdout, stderr, err := helm.Cmd("init", "--service-account", "antiopa", "--upgrade", "--wait", "--skip-refresh")
+	err := helm.InitTiller()
 	if err != nil {
-		return nil, fmt.Errorf("%s\n%s\n%s", err, stdout, stderr)
+		return nil, err
 	}
-	rlog.Infof("HELM-INIT Tiller initialization done: %v %v", stdout, stderr)
 
-	stdout, stderr, err = helm.Cmd("version")
+	stdout, stderr, err := helm.Cmd("version")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get helm version: %v\n%v %v", err, stdout, stderr)
 	}
-	rlog.Infof("HELM-INIT helm version:\n%v %v", stdout, stderr)
+	rlog.Infof("Helm: helm version:\n%v %v", stdout, stderr)
 
-	rlog.Info("HELM-INIT Successfully initialized")
+	rlog.Info("Helm: successfully initialized")
 
 	return helm, nil
+}
+
+func (helm *CliHelm) InitTiller() error {
+	antiopaDeploy, err := kube.KubernetesClient.AppsV1beta1().Deployments(kube.KubernetesAntiopaNamespace).Get(kube.AntiopaDeploymentName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot fetch antiopa deployment to gather settings for tiller deployment: %s", err)
+	}
+
+	cmd := make([]string, 0)
+	cmd = append(cmd,
+		"init",
+		"--service-account", "antiopa",
+		"--upgrade", "--wait", "--skip-refresh",
+	)
+
+	nodeSelectors := make([]string, 0)
+	for k, v := range antiopaDeploy.Spec.Template.Spec.NodeSelector {
+		nodeSelectors = append(nodeSelectors, fmt.Sprintf("%s=%s", k, v))
+	}
+	if len(nodeSelectors) > 0 {
+		cmd = append(cmd, fmt.Sprintf("--node-selectors=%s", strings.Join(nodeSelectors, ",")))
+	}
+
+	override := make([]string, 0)
+	for i, spec := range antiopaDeploy.Spec.Template.Spec.Tolerations {
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].key=%s", i, spec.Key))
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].operator=%s", i, spec.Operator))
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].value=%s", i, spec.Value))
+		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].effect=%s", i, spec.Effect))
+
+		if spec.TolerationSeconds != nil {
+			override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].tolerationSeconds=%s", i, *spec.TolerationSeconds))
+		}
+	}
+	if len(override) > 0 {
+		cmd = append(cmd, fmt.Sprintf("--override=%s", strings.Join(override, ",")))
+	}
+
+	stdout, stderr, err := helm.Cmd(cmd...)
+	if err != nil {
+		return fmt.Errorf("%s\n%s\n%s", err, stdout, stderr)
+	}
+	rlog.Infof("Helm: tiller initialization done: %v %v", stdout, stderr)
+
+	return nil
 }
 
 func (helm *CliHelm) TillerNamespace() string {
@@ -70,7 +119,8 @@ func (helm *CliHelm) CommandEnv() []string {
 // Перед запуском устанавливает переменную среды TILLER_NAMESPACE,
 // чтобы antiopa работала со своим tiller-ом.
 func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err error) {
-	cmd := exec.Command("/usr/local/bin/helm", args...)
+	binPath := "/usr/local/bin/helm"
+	cmd := exec.Command(binPath, args...)
 	cmd.Env = append(os.Environ(), helm.CommandEnv()...)
 
 	var stdoutBuf bytes.Buffer
@@ -78,7 +128,7 @@ func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err erro
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = &stderrBuf
 
-	err = cmd.Run()
+	err = executor.Run(cmd)
 	stdout = strings.TrimSpace(stdoutBuf.String())
 	stderr = strings.TrimSpace(stderrBuf.String())
 
@@ -113,6 +163,49 @@ func (helm *CliHelm) DeleteSingleFailedRevision(releaseName string) (err error) 
 	return
 }
 
+func (helm *CliHelm) DeleteOldFailedRevisions(releaseName string) error {
+	cmNames, err := helm.ListReleases(map[string]string{"STATUS": "FAILED", "NAME": releaseName})
+	if err != nil {
+		return err
+	}
+
+	rlog.Debugf("Found release '%s' ConfigMaps: %v", cmNames)
+
+	var releaseCmNamePattern = regexp.MustCompile(`^(.*).v([0-9]+)$`)
+
+	revisions := make([]int, 0)
+	for _, cmName := range cmNames {
+		matchRes := releaseCmNamePattern.FindStringSubmatch(cmName)
+		if matchRes != nil {
+			revision, err := strconv.Atoi(matchRes[2])
+			if err != nil {
+				continue
+			}
+			revisions = append(revisions, revision)
+		}
+	}
+	sort.Ints(revisions)
+
+	// Do not remove last FAILED revision
+	if len(revisions) > 0 {
+		revisions = revisions[:len(revisions)-1]
+	}
+
+	for _, revision := range revisions {
+		rlog.Infof("Deleting old FAILED revision ConfigMap %s.v%d", releaseName, revision)
+
+		err := kube.KubernetesClient.CoreV1().
+			ConfigMaps(kube.KubernetesAntiopaNamespace).
+			Delete(fmt.Sprintf("%s.v%d", releaseName, revision), &metav1.DeleteOptions{})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Get last known revision and status
 // helm history output:
 // REVISION	UPDATED                 	STATUS    	CHART                 	DESCRIPTION
@@ -141,7 +234,7 @@ func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, sta
 	return
 }
 
-func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPaths []string, namespace string) error {
+func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPaths []string, setValues []string, namespace string) error {
 	args := make([]string, 0)
 	args = append(args, "upgrade")
 	args = append(args, "--install")
@@ -158,6 +251,11 @@ func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPath
 		args = append(args, valuesPath)
 	}
 
+	for _, setValue := range setValues {
+		args = append(args, "--set")
+		args = append(args, setValue)
+	}
+
 	rlog.Infof("Running helm upgrade for release '%s' with chart '%s' in namespace '%s' ...", releaseName, chart, namespace)
 	stdout, stderr, err := helm.Cmd(args...)
 	if err != nil {
@@ -166,6 +264,20 @@ func (helm *CliHelm) UpgradeRelease(releaseName string, chart string, valuesPath
 	rlog.Infof("Helm upgrade for release '%s' with chart '%s' in namespace '%s' successful:\n%s\n%s", releaseName, chart, namespace, stdout, stderr)
 
 	return nil
+}
+
+func (helm *CliHelm) GetReleaseValues(releaseName string) (utils.Values, error) {
+	stdout, stderr, err := helm.Cmd("get", "values", releaseName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get values of helm release %s: %s\n%s %s", releaseName, err, stdout, stderr)
+	}
+
+	values, err := utils.NewValuesFromBytes([]byte(stdout))
+	if err != nil {
+		return nil, fmt.Errorf("cannot get values of helm release %s: %s", releaseName, err)
+	}
+
+	return values, nil
 }
 
 func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {
@@ -193,11 +305,16 @@ func (helm *CliHelm) IsReleaseExists(releaseName string) (bool, error) {
 // Возвращает все известные релизы в виде строк "<имя_релиза>.v<номер_версии>"
 // helm ищет ConfigMap-ы по лейблу OWNER=TILLER и получает данные о релизе из ключа "release"
 // https://github.com/kubernetes/helm/blob/8981575082ea6fc2a670f81fb6ca5b560c4f36a7/pkg/storage/driver/cfgmaps.go#L88
-func (helm *CliHelm) ListReleases() ([]string, error) {
-	lsel := kblabels.Set{"OWNER": "TILLER"}.AsSelector()
+func (helm *CliHelm) ListReleases(labelSelector map[string]string) ([]string, error) {
+	labelsSet := make(kblabels.Set)
+	for k, v := range labelSelector {
+		labelsSet[k] = v
+	}
+	labelsSet["OWNER"] = "TILLER"
+
 	cmList, err := kube.KubernetesClient.CoreV1().
 		ConfigMaps(kube.KubernetesAntiopaNamespace).
-		List(metav1.ListOptions{LabelSelector: lsel.String()})
+		List(metav1.ListOptions{LabelSelector: labelsSet.AsSelector().String()})
 	if err != nil {
 		rlog.Debugf("helm releases ConfigMaps list failed: %s", err)
 		return nil, err
@@ -216,8 +333,8 @@ func (helm *CliHelm) ListReleases() ([]string, error) {
 }
 
 // Список имён релизов без суффикса ".v<номер релиза>"
-func (helm *CliHelm) ListReleasesNames() ([]string, error) {
-	releases, err := helm.ListReleases()
+func (helm *CliHelm) ListReleasesNames(labelSelector map[string]string) ([]string, error) {
+	releases, err := helm.ListReleases(labelSelector)
 	if err != nil {
 		return []string{}, err
 	}

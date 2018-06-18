@@ -313,3 +313,78 @@ func TestCompactValuesPatchOperations(t *testing.T) {
 		})
 	}
 }
+
+// TODO поправить после изменения алгоритма compact
+func TestApplyPatch(t *testing.T) {
+	t.SkipNow()
+	expectations := []struct {
+		testName              string
+		operations            ValuesPatch
+		values                Values
+		expectedValues        Values
+		expectedValuesChanged bool
+	}{
+		{
+			"path",
+			ValuesPatch{
+				[]*ValuesPatchOperation{
+					{
+						"add",
+						"/test_key_3",
+						"baz",
+					},
+				},
+			},
+			Values{
+				"test_key_1": "foo",
+				"test_key_2": "bar",
+			},
+			Values{
+				"test_key_1": "foo",
+				"test_key_2": "bar",
+				"test_key_3": "baz",
+			},
+			true,
+		},
+		{
+			"path",
+			ValuesPatch{
+				[]*ValuesPatchOperation{
+					{
+						"remove",
+						"/test_key_3",
+						"baz",
+					},
+				},
+			},
+			Values{
+				"test_key_1": "foo",
+				"test_key_2": "bar",
+			},
+			Values{
+				"test_key_1": "foo",
+				"test_key_2": "bar",
+			},
+			false,
+		},
+	}
+
+	for _, expectation := range expectations {
+		t.Run(expectation.testName, func(t *testing.T) {
+			newValues, changed, err := ApplyValuesPatch(expectation.values, expectation.operations)
+
+			if err != nil {
+				t.Errorf("ApplyValuesPatch error: %s", err)
+				return
+			}
+
+			if !reflect.DeepEqual(expectation.expectedValues, newValues) {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedValues, newValues)
+			}
+
+			if changed != expectation.expectedValuesChanged {
+				t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectation.expectedValuesChanged, changed)
+			}
+		})
+	}
+}

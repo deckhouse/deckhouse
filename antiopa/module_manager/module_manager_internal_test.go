@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
@@ -152,44 +153,122 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 
 	runInitModulesIndex(t, mm, "test_get_module_hook")
 
-	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedules []ScheduleConfig) *ModuleHook {
-		moduleHook := mm.newModuleHook()
-		moduleHook.Name = name
-		moduleHook.moduleManager = mm
+	createModuleHook := func(moduleName, name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onKubernetesEvent []OnKubernetesEventConfig) *ModuleHook {
+		config := &ModuleHookConfig{
+			HookConfig{
+				orderByBindings[OnStartup],
+				schedule,
+				onKubernetesEvent,
+			},
+			orderByBindings[BeforeHelm],
+			orderByBindings[AfterHelm],
+			orderByBindings[AfterDeleteHelm],
+		}
+
+		moduleHook := mm.newModuleHook(name, filepath.Join(WorkingDir, "modules", name), config)
 
 		var err error
 		if moduleHook.Module, err = mm.GetModule(moduleName); err != nil {
 			t.Fatal(err)
 		}
 
-		moduleHook.Path = filepath.Join(WorkingDir, "modules", name)
-		moduleHook.Schedules = schedules
 		moduleHook.Bindings = bindings
-		moduleHook.OrderByBinding = orderByBindings
+		for k, v := range orderByBindings {
+			moduleHook.OrderByBinding[k] = v.(float64)
+		}
 
 		return moduleHook
 	}
 
 	expectations := []struct {
-		moduleName     string
-		name           string
-		bindings       []BindingType
-		orderByBinding map[BindingType]float64
-		schedule       []ScheduleConfig
+		moduleName        string
+		name              string
+		bindings          []BindingType
+		orderByBinding    map[BindingType]interface{}
+		schedule          []ScheduleConfig
+		onKubernetesEvent []OnKubernetesEventConfig
 	}{
 		{
 			"all-bindings",
 			"000-all-bindings/hooks/all",
-			[]BindingType{BeforeHelm, AfterHelm, AfterDeleteHelm, OnStartup, Schedule},
-			map[BindingType]float64{
-				BeforeHelm:      1,
-				AfterHelm:       1,
-				AfterDeleteHelm: 1,
-				OnStartup:       1,
+			[]BindingType{BeforeHelm, AfterHelm, AfterDeleteHelm, OnStartup, Schedule, KubeEvents},
+			map[BindingType]interface{}{
+				BeforeHelm:      1.0,
+				AfterHelm:       1.0,
+				AfterDeleteHelm: 1.0,
+				OnStartup:       1.0,
 			},
 			[]ScheduleConfig{
 				{
 					Crontab:      "* * * * *",
+					AllowFailure: true,
+				},
+			},
+			[]OnKubernetesEventConfig{
+				{
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd},
+					Kind:       "configmap",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"component": "component1",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: "In",
+								Values:   []string{"cache"},
+							},
+						},
+					},
+					NamespaceSelector: &KubeNamespaceSelector{
+						MatchNames: []string{"namespace1"},
+						Any:        false,
+					},
+					JqFilter:     ".items[] | del(.metadata, .field1)",
+					AllowFailure: true,
+				},
+				{
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "namespace",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"component": "component2",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: "In",
+								Values:   []string{"cache"},
+							},
+						},
+					},
+					NamespaceSelector: &KubeNamespaceSelector{
+						MatchNames: []string{"namespace2"},
+						Any:        false,
+					},
+					JqFilter:     ".items[] | del(.metadata, .field2)",
+					AllowFailure: true,
+				},
+				{
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "pod",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"component": "component3",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: "In",
+								Values:   []string{"cache"},
+							},
+						},
+					},
+					NamespaceSelector: &KubeNamespaceSelector{
+						MatchNames: nil,
+						Any:        true,
+					},
+					JqFilter:     ".items[] | del(.metadata, .field3)",
 					AllowFailure: true,
 				},
 			},
@@ -198,16 +277,17 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 			"nested-hooks",
 			"100-nested-hooks/hooks/sub/sub/nested-before-helm",
 			[]BindingType{BeforeHelm},
-			map[BindingType]float64{
-				BeforeHelm: 1,
+			map[BindingType]interface{}{
+				BeforeHelm: 1.0,
 			},
+			nil,
 			nil,
 		},
 	}
 
 	for _, expectation := range expectations {
 		t.Run(expectation.moduleName, func(t *testing.T) {
-			expectedModuleHook := createModuleHook(expectation.moduleName, expectation.name, expectation.bindings, expectation.orderByBinding, expectation.schedule)
+			expectedModuleHook := createModuleHook(expectation.moduleName, expectation.name, expectation.bindings, expectation.orderByBinding, expectation.schedule, expectation.onKubernetesEvent)
 
 			moduleHook, err := mm.GetModuleHook(expectedModuleHook.Name)
 			if err != nil {
@@ -215,7 +295,7 @@ func TestMainModuleManager_GetModuleHook2(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(expectedModuleHook, moduleHook) {
-				t.Errorf("\n[EXPECTED]: \n%#v\n[GOT]: \n%#v", expectedModuleHook.Hook, moduleHook.Hook)
+				t.Errorf("\n[EXPECTED]: \n%#v\n[GOT]: \n%#v", expectedModuleHook, moduleHook)
 			}
 		})
 	}
@@ -264,11 +344,15 @@ type MockHelmClient struct {
 	DeleteReleaseExecuted              bool
 }
 
-func (h *MockHelmClient) ListReleases() ([]string, error) {
+func (h *MockHelmClient) DeleteOldFailedRevisions(releaseName string) error {
+	return nil
+}
+
+func (h *MockHelmClient) ListReleases(_ map[string]string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (h *MockHelmClient) ListReleasesNames() ([]string, error) {
+func (h *MockHelmClient) ListReleasesNames(_ map[string]string) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -285,7 +369,19 @@ func (h *MockHelmClient) DeleteSingleFailedRevision(_ string) error {
 	return nil
 }
 
-func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string, _ string) error {
+func (h *MockHelmClient) LastReleaseStatus(_ string) (string, string, error) {
+	return "", "", nil
+}
+
+func (h *MockHelmClient) IsReleaseExists(_ string) (bool, error) {
+	return true, nil
+}
+
+func (h *MockHelmClient) GetReleaseValues(_ string) (utils.Values, error) {
+	return make(utils.Values), nil
+}
+
+func (h *MockHelmClient) UpgradeRelease(_, _ string, _ []string, _ []string, _ string) error {
 	h.UpgradeReleaseExecuted = true
 	return nil
 }
@@ -529,31 +625,41 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 
 	runInitGlobalHooks(t, mm, "test_get_global_hook")
 
-	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]float64, schedules []ScheduleConfig) *GlobalHook {
-		globalHook := mm.newGlobalHook()
-		globalHook.moduleManager = mm
-		globalHook.Name = name
-		globalHook.Path = filepath.Join(WorkingDir, name)
-		globalHook.Schedules = schedules
+	createGlobalHook := func(name string, bindings []BindingType, orderByBindings map[BindingType]interface{}, schedule []ScheduleConfig, onKubernetesEvent []OnKubernetesEventConfig) *GlobalHook {
+		config := &GlobalHookConfig{
+			HookConfig{
+				orderByBindings[OnStartup],
+				schedule,
+				onKubernetesEvent,
+			},
+			orderByBindings[BeforeAll],
+			orderByBindings[AfterAll],
+		}
+
+		globalHook := mm.newGlobalHook(name, filepath.Join(WorkingDir, name), config)
 		globalHook.Bindings = bindings
-		globalHook.OrderByBinding = orderByBindings
+
+		for k, v := range orderByBindings {
+			globalHook.OrderByBinding[k] = v.(float64)
+		}
 
 		return globalHook
 	}
 
 	expectations := []struct {
-		name           string
-		bindings       []BindingType
-		orderByBinding map[BindingType]float64
-		schedule       []ScheduleConfig
+		name              string
+		bindings          []BindingType
+		orderByBinding    map[BindingType]interface{}
+		schedule          []ScheduleConfig
+		onKubernetesEvent []OnKubernetesEventConfig
 	}{
 		{
 			"global-hooks/000-all-bindings/all",
-			[]BindingType{BeforeAll, AfterAll, OnStartup, Schedule},
-			map[BindingType]float64{
-				BeforeAll: 1,
-				AfterAll:  1,
-				OnStartup: 1,
+			[]BindingType{BeforeAll, AfterAll, OnStartup, Schedule, KubeEvents},
+			map[BindingType]interface{}{
+				BeforeAll: 1.0,
+				AfterAll:  1.0,
+				OnStartup: 1.0,
 			},
 			[]ScheduleConfig{
 				{
@@ -561,20 +667,89 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 					AllowFailure: true,
 				},
 			},
+			[]OnKubernetesEventConfig{
+				{
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd},
+					Kind:       "configmap",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"component": "component1",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: "In",
+								Values:   []string{"cache"},
+							},
+						},
+					},
+					NamespaceSelector: &KubeNamespaceSelector{
+						MatchNames: []string{"namespace1"},
+						Any:        false,
+					},
+					JqFilter:     ".items[] | del(.metadata, .field1)",
+					AllowFailure: true,
+				},
+				{
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "namespace",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"component": "component2",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: "In",
+								Values:   []string{"cache"},
+							},
+						},
+					},
+					NamespaceSelector: &KubeNamespaceSelector{
+						MatchNames: []string{"namespace2"},
+						Any:        false,
+					},
+					JqFilter:     ".items[] | del(.metadata, .field2)",
+					AllowFailure: true,
+				},
+				{
+					EventTypes: []OnKubernetesEventType{KubernetesEventOnAdd, KubernetesEventOnUpdate, KubernetesEventOnDelete},
+					Kind:       "pod",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"component": "component3",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: "In",
+								Values:   []string{"cache"},
+							},
+						},
+					},
+					NamespaceSelector: &KubeNamespaceSelector{
+						MatchNames: nil,
+						Any:        true,
+					},
+					JqFilter:     ".items[] | del(.metadata, .field3)",
+					AllowFailure: true,
+				},
+			},
 		},
 		{
 			"global-hooks/100-nested-hook/sub/sub/nested-before-all",
 			[]BindingType{BeforeAll},
-			map[BindingType]float64{
-				BeforeAll: 1,
+			map[BindingType]interface{}{
+				BeforeAll: 1.0,
 			},
+			nil,
 			nil,
 		},
 	}
 
 	for _, exp := range expectations {
 		t.Run(exp.name, func(t *testing.T) {
-			expectedGlobalHook := createGlobalHook(exp.name, exp.bindings, exp.orderByBinding, exp.schedule)
+			expectedGlobalHook := createGlobalHook(exp.name, exp.bindings, exp.orderByBinding, exp.schedule, exp.onKubernetesEvent)
 
 			globalHook, err := mm.GetGlobalHook(expectedGlobalHook.Name)
 			if err != nil {
@@ -582,7 +757,7 @@ func TestMainModuleManager_GetGlobalHook2(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(expectedGlobalHook, globalHook) {
-				t.Errorf("\n[EXPECTED]: \n%#v\n[GOT]: \n%#v", expectedGlobalHook.Hook, globalHook.Hook)
+				t.Errorf("\n[EXPECTED]: \n%#v\n[GOT]: \n%#v", expectedGlobalHook, globalHook)
 			}
 		})
 	}
