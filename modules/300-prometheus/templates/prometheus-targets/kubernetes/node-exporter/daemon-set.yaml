@@ -23,8 +23,6 @@ spec:
     spec:
       hostNetwork: true
       hostPID: true
-      # Миграция 2018-05-01: https://github.com/deckhouse/deckhouse/merge_requests/320
-      serviceAccountName: default
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/prometheus/node-exporter:{{ $.Values.global.modulesImages.tags.prometheus.nodeExporter }}
         args:

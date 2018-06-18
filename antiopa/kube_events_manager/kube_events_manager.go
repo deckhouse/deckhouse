@@ -143,7 +143,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	}
 
 	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
-	resyncPeriod := time.Duration(15) * time.Second
+	resyncPeriod := time.Duration(2) * time.Hour
 	tweakListOptions := func(options *metaV1.ListOptions) {
 		if formatSelector != "" {
 			options.LabelSelector = formatSelector
