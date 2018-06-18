@@ -94,6 +94,16 @@
           "metric": "kube_pod_container_resource_requests_memory_bytes",
           "refId": "B",
           "step": 20
+        },
+        {
+          "expr": "kube_pod_container_resource_limits_memory_bytes{pod=\"$pod\", container=~\"$container\"}",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Limits: {{ container }}",
+          "metric": "kube_pod_container_resource_limits_memory_bytes",
+          "refId": "C",
+          "step": 20
         }
       ],
       "thresholds": [],
@@ -175,7 +185,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (container)( rate(container_cpu_usage_seconds_total{image!=\"\",container!=\"POD\",pod=\"$pod\"}[$__interval_rv] ) )",
+          "expr": "sum by (container)( rate(container_cpu_usage_seconds_total{container!=\"POD\",pod=\"$pod\"}[$__interval_rv] ) )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
