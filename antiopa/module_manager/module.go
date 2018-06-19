@@ -440,7 +440,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 	)
 
 	if err := executor.Run(cmd); err != nil {
-		return false, nil
+		return false, err
 	}
 
 	moduleEnabled, err := m.readModuleEnabledResult(enabledResultFilePath)
