@@ -18,6 +18,8 @@ const (
 	DiscoverModulesState TaskType = "TASK_DISCOVER_MODULES_STATE"
 	// удаление релиза без сведений о модуле
 	ModulePurge TaskType = "TASK_MODULE_PURGE"
+	// retry module_manager-а
+	ModuleManagerRetry TaskType = "TASK_MODULE_MANAGER_RETRY"
 	// вспомогательные задачи: задержка и остановка обработки
 	Delay TaskType = "TASK_DELAY"
 	Stop  TaskType = "TASK_STOP"
