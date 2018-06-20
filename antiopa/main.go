@@ -487,7 +487,7 @@ func TasksRunner() {
 
 			// break if empty to prevent infinity loop
 			if TasksQueue.IsEmpty() {
-				rlog.Info("Task queue is cleared. Will sleep now.")
+				rlog.Debug("Task queue is empty. Will sleep now.")
 				break
 			}
 		}
