@@ -678,15 +678,19 @@ func CreateReloadAllTasks() {
 func RunAntiopaMetrics() {
 	// antiopa live ticks
 	go func() {
-		MetricsStorage.SendCounterMetric("antiopa_live_ticks", 1.0, map[string]string{})
-		time.Sleep(10 * time.Second)
+		for {
+			MetricsStorage.SendCounterMetric("antiopa_live_ticks", 1.0, map[string]string{})
+			time.Sleep(10 * time.Second)
+		}
 	}()
 
 	// TasksQueue length
 	go func() {
-		queueLen := float64(TasksQueue.Length())
-		MetricsStorage.SendGaugeMetric("antiopa_tasks_queue_length", queueLen, map[string]string{})
-		time.Sleep(5 * time.Second)
+		for {
+			queueLen := float64(TasksQueue.Length())
+			MetricsStorage.SendGaugeMetric("antiopa_tasks_queue_length", queueLen, map[string]string{})
+			time.Sleep(5 * time.Second)
+		}
 	}()
 }
 
