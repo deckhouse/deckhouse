@@ -28,8 +28,8 @@ type ModuleHook struct {
 }
 
 type Hook struct {
-	Name           string
-	Path           string
+	Name           string // Unique name like 'global-hooks/startup_hook or 002-module/hooks/cleanup'
+	Path           string // Absolute path to executable file
 	Bindings       []BindingType
 	OrderByBinding map[BindingType]float64
 
