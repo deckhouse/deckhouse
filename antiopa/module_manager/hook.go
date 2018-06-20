@@ -75,6 +75,7 @@ type OnKubernetesEventConfig struct {
 	NamespaceSelector *KubeNamespaceSelector  `json:"namespaceSelector"`
 	JqFilter          string                  `json:"jqFilter"`
 	AllowFailure      bool                    `json:"allowFailure"`
+	DisableDebug      bool                    `json:"disableDebug"`
 }
 
 type KubeNamespaceSelector struct {
