@@ -711,7 +711,7 @@ func (mm *MainModuleManager) execHook(hookName string, configValuesJsonPatchPath
 		fmt.Sprintf("VALUES_JSON_PATCH_PATH=%s", valuesJsonPatchPath),
 	)
 
-	err := executor.Run(cmd)
+	err := executor.Run(cmd, true)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s FAILED: %s", hookName, err)
 	}

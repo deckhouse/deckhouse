@@ -637,7 +637,7 @@ func execJq(jqFilter string, jsonData []byte) (stdout string, stderr string, err
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = &stderrBuf
 
-	err = executor.Run(cmd)
+	err = executor.Run(cmd, true)
 	stdout = strings.TrimSpace(stdoutBuf.String())
 	stderr = strings.TrimSpace(stderrBuf.String())
 
