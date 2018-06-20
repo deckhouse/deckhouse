@@ -58,8 +58,7 @@ func reapChildren(config Config) {
 	opts := config.Options
 
 	for {
-		var sig = <-notifications
-		rlog.Debugf(" - Received signal %v\n", sig)
+		<-notifications
 		func() {
 			// Acquire lock
 			ExecutorLock.Lock()
