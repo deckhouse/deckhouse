@@ -89,7 +89,7 @@ func (helm *CliHelm) InitTiller() error {
 		override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].effect=%s", i, spec.Effect))
 
 		if spec.TolerationSeconds != nil {
-			override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].tolerationSeconds=%s", i, *spec.TolerationSeconds))
+			override = append(override, fmt.Sprintf("spec.template.spec.tolerations[%d].tolerationSeconds=%d", i, *spec.TolerationSeconds))
 		}
 	}
 	if len(override) > 0 {

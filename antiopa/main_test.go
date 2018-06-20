@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_events_manager"
+	"github.com/deckhouse/deckhouse/antiopa/metrics_storage"
 	"github.com/deckhouse/deckhouse/antiopa/module_manager"
 	"github.com/deckhouse/deckhouse/antiopa/schedule_manager"
 	"github.com/deckhouse/deckhouse/antiopa/task"
@@ -130,6 +132,19 @@ func (m *ModuleManagerMock) GetGlobalHook(name string) (*module_manager.GlobalHo
 				},
 			},
 		}, nil
+	} else {
+		// Global hook run task handler requires Path field
+		return &module_manager.GlobalHook{
+			Hook: &module_manager.Hook{
+				Name:           name,
+				Path:           "/antiopa/hooks/global_hook_1_1",
+				Bindings:       []module_manager.BindingType{module_manager.BeforeAll},
+				OrderByBinding: map[module_manager.BindingType]float64{},
+			},
+			Config: &module_manager.GlobalHookConfig{
+				BeforeAll: 10,
+			},
+		}, nil
 	}
 	return nil, nil
 }
@@ -224,6 +239,10 @@ func (m *ModuleManagerMock) RunModuleHook(hookName string, binding module_manage
 		return fmt.Errorf("fake module hook error: /bin/ash not found")
 	}
 	return nil
+}
+
+func (m *ModuleManagerMock) Retry() {
+	fmt.Println("ModuleManagerMock Retry")
 }
 
 type MockHelmClient struct {
@@ -360,6 +379,13 @@ func TestMain_ModulesEventsHandler(t *testing.T) {
 	expectedCount += 1 // DiscoverModulesState task
 
 	assert.Equal(t, expectedCount, TasksQueue.Length())
+}
+
+func TestMain(m *testing.M) {
+
+	MetricsStorage = metrics_storage.Init()
+
+	m.Run()
 }
 
 // Тест совместной работы ManagersEventsHandler и TaskRunner.
@@ -626,4 +652,42 @@ func TestGlog(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	t.Error("Error call to get stdout")
+}
+
+// Dump global hooks and modules and modules hooks info
+func TestDumpModuleManagerInfo(t *testing.T) {
+	t.SkipNow()
+	rlog.Debugf("=== START ModuleManager Dump ===")
+	bindings := []module_manager.BindingType{module_manager.OnStartup, module_manager.BeforeHelm, module_manager.AfterHelm,
+		module_manager.AfterDeleteHelm, module_manager.BeforeAll, module_manager.AfterAll, module_manager.Schedule, module_manager.KubeEvents,
+	}
+	rlog.Debugf("  GlobalHooks")
+
+	for _, binding := range bindings {
+		ghNames := ModuleManager.GetGlobalHooksInOrder(binding)
+		if len(ghNames) > 0 {
+			rlog.Debugf("  %s:", binding)
+			for idx, ghName := range ghNames {
+				gh, _ := ModuleManager.GetGlobalHook(ghName)
+				rlog.Debugf("%d. %s %s %s safe: %s, bind: %+v", idx, ghName, gh.Name, path.Base(gh.Path), gh.SafeName())
+			}
+		}
+	}
+
+	rlog.Debugf("  Modules and module hooks")
+	mNames := ModuleManager.GetModuleNamesInOrder()
+	for idx, mName := range mNames {
+		rlog.Debugf("%d. %s", idx, mName)
+		for _, binding := range bindings {
+			mhNames, _ := ModuleManager.GetModuleHooksInOrder(mName, binding)
+			if len(mhNames) > 0 {
+				rlog.Debugf("  %s:", binding)
+				for _, mhName := range mhNames {
+					mh, _ := ModuleManager.GetModuleHook(mhName)
+					rlog.Debugf("    %s '%s' safe:'%s' %s module: '%s' safe:'%s'", mhName, mh.Name, mh.SafeName(), path.Base(mh.Path), mh.Module.Name, mh.Module.SafeName())
+				}
+			}
+		}
+	}
+	rlog.Debugf("=== END ModuleManager Dump ===")
 }

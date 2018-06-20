@@ -7,6 +7,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -182,11 +183,6 @@ func Run() {
 
 	// обработчик добавления метрик
 	go MetricsStorage.Run()
-	// счётчик работы antiopa
-	go func() {
-		MetricsStorage.SendCounterMetric("antiopa_live_ticks", 1.0, map[string]string{})
-		time.Sleep(15 * time.Second)
-	}()
 
 	// обработчик событий от менеджеров — события превращаются в таски и
 	// добавляются в очередь
@@ -195,6 +191,7 @@ func Run() {
 	// TasksRunner запускает задания из очереди
 	go TasksRunner()
 
+	RunAntiopaMetrics()
 }
 
 func ManagersEventsHandler() {
@@ -398,7 +395,7 @@ func TasksRunner() {
 			case task.DiscoverModulesState:
 				err := runDiscoverModulesState(t)
 				if err != nil {
-					MetricsStorage.SendCounterMetric("antiopa_discover_errors", 1.0, map[string]string{})
+					MetricsStorage.SendCounterMetric("antiopa_modules_discover_errors", 1.0, map[string]string{})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -410,7 +407,7 @@ func TasksRunner() {
 			case task.ModuleRun:
 				err := ModuleManager.RunModule(t.GetName())
 				if err != nil {
-					MetricsStorage.SendCounterMetric("antiopa_module_run_errors", 1.0, map[string]string{"name": t.GetName()})
+					MetricsStorage.SendCounterMetric("antiopa_module_run_errors", 1.0, map[string]string{"module": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -420,7 +417,7 @@ func TasksRunner() {
 			case task.ModuleDelete:
 				err := ModuleManager.DeleteModule(t.GetName())
 				if err != nil {
-					MetricsStorage.SendCounterMetric("antiopa_module_delete_errors", 1.0, map[string]string{"name": t.GetName()})
+					MetricsStorage.SendCounterMetric("antiopa_module_delete_errors", 1.0, map[string]string{"module": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -430,11 +427,15 @@ func TasksRunner() {
 			case task.ModuleHookRun:
 				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
 				if err != nil {
+					moduleHook, _ := ModuleManager.GetModuleHook(t.GetName())
+					hookLabel := path.Base(moduleHook.Path)
+					moduleLabel := moduleHook.Module.Name
+
 					if t.GetAllowFailure() {
-						MetricsStorage.SendCounterMetric("antiopa_module_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+						MetricsStorage.SendCounterMetric("antiopa_module_hook_allowed_errors", 1.0, map[string]string{"module": moduleLabel, "hook": hookLabel})
 						TasksQueue.Pop()
 					} else {
-						MetricsStorage.SendCounterMetric("antiopa_module_errors", 1.0, map[string]string{"name": t.GetName()})
+						MetricsStorage.SendCounterMetric("antiopa_module_hook_errors", 1.0, map[string]string{"module": moduleLabel, "hook": hookLabel})
 						t.IncrementFailureCount()
 						rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -445,11 +446,14 @@ func TasksRunner() {
 			case task.GlobalHookRun:
 				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
 				if err != nil {
+					globalHook, _ := ModuleManager.GetGlobalHook(t.GetName())
+					hookLabel := path.Base(globalHook.Path)
+
 					if t.GetAllowFailure() {
-						MetricsStorage.SendCounterMetric("antiopa_global_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+						MetricsStorage.SendCounterMetric("antiopa_global_hook_allowed_errors", 1.0, map[string]string{"hook": hookLabel})
 						TasksQueue.Pop()
 					} else {
-						MetricsStorage.SendCounterMetric("antiopa_global_errors", 1.0, map[string]string{"name": t.GetName()})
+						MetricsStorage.SendCounterMetric("antiopa_global_hook_errors", 1.0, map[string]string{"hook": hookLabel})
 						t.IncrementFailureCount()
 						rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
 						TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
@@ -468,7 +472,7 @@ func TasksRunner() {
 			case task.ModuleManagerRetry:
 				rlog.Debugf("MODULE_MANAGER_RETRY task")
 				// TODO метрику нужно отсылать из module_manager. Cделать metric_storage глобальным!
-				MetricsStorage.SendCounterMetric("antiopa_discover_errors", 1.0, map[string]string{})
+				MetricsStorage.SendCounterMetric("antiopa_modules_discover_errors", 1.0, map[string]string{})
 				ModuleManager.Retry()
 				TasksQueue.Pop()
 				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
@@ -669,6 +673,21 @@ func CreateReloadAllTasks() {
 
 	TasksQueue.Add(task.NewTask(task.DiscoverModulesState, ""))
 	rlog.Debugf("ReloadAll: queued discover of modules state")
+}
+
+func RunAntiopaMetrics() {
+	// antiopa live ticks
+	go func() {
+		MetricsStorage.SendCounterMetric("antiopa_live_ticks", 1.0, map[string]string{})
+		time.Sleep(10 * time.Second)
+	}()
+
+	// TasksQueue length
+	go func() {
+		queueLen := float64(TasksQueue.Length())
+		MetricsStorage.SendGaugeMetric("antiopa_tasks_queue_length", queueLen, map[string]string{})
+		time.Sleep(5 * time.Second)
+	}()
 }
 
 func InitHttpServer() {
