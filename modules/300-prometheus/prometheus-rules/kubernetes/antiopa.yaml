@@ -1,0 +1,101 @@
+
+groups:
+- name: kubernetes.antiopa
+  rules:
+  - alert: AntiopaIsNotRunning
+    expr: min(kube_pod_status_ready{condition="true", namespace="antiopa", pod=~"antiopa-.*"}) != 1
+    for: 30m
+    labels:
+      severity: error
+    annotations:
+      summary: Antiopa не работает
+      description: |
+        Pod antiopa более 30 минут НЕ находится в состоянии Ready.
+  - alert: AntiopaIsNotRunning
+    expr: max(increase(antiopa_live_ticks[1m])) < 1
+    for: 30m
+    labels:
+      severity: error
+    annotations:
+      summary: Antiopa не работает
+      description: |
+        В prometheus более 30 минут не увеличивается метрика antiopa_live_ticks (а должна каждые 10 секунд).
+  - alert: AntiopaIsHung
+    expr: max(min_over_time(antiopa_tasks_queue_length[2m])) > 0
+    for: 30m
+    labels:
+      severity: error
+    annotations:
+      summary: Antiopa зависла
+      description: |
+        Antiopa более 30 минут не может обработать очередь, в которой скопилось {{ $value }} заданий.
+
+  - alert: AntiopaIsRestartingTooOften
+    expr: max(increase(kube_pod_container_status_restarts_total{namespace="antiopa", pod=~"antiopa-.*"}[1h])) > 3
+    for: 3h
+    labels:
+      severity: error
+    annotations:
+      summary: Antiopa слишком часто перезагружается
+      description: |
+        Количество перезапусков за последний час: {{ $value }}.
+
+        Частый перезапуск Antiopa не является нормальной ситуацией — antiopa должна быть постоянно запущена и работать.
+
+  - alert: AntiopaHasNoAccessToRegistry
+    expr: max(increase(antiopa_registry_errors[5m])) > 0
+    for: 6h
+    labels:
+      severity: warning
+    annotations:
+      summary: Antiopa не может подключиться к registry
+      description: |
+        У antiopa более 6 часов нет доступа к registry (обычно registry.flant.com), в котором она каждые 15 секунд проверяет наличие нового Docker образа. Пока у antiopa нет доступа к registry — она не будет автоматически обновляться.
+
+        Обычно этот алерт означает, что у pod'а antiopa есть какие-то проблемы с доступом в интернет.
+
+  - alert: AntiopaGlobalHookFailsTooOften
+    expr: max(increase({job="antiopa", __name__=~"antiopa_global_hook.*_errors"}[1h])) by (hook) > 1
+    for: 12h
+    labels:
+      severity: warning
+    annotations:
+      summary: Глобальный хук Antiopa падает слишком часто
+      descritipion: |
+        Глобальный хук {{ $labels.hook }} падает каждый час уже на протяжении более 12 часов
+  - alert: AntiopaModuleHookFailsTooOften
+    expr: max(increase({job="antiopa", __name__=~"antiopa_module_hook.*_errors"}[1h])) by (module, hook) > 1
+    for: 12h
+    labels:
+      severity: warning
+    annotations:
+      summary: Модульный хук Antiopa падает слишком часто
+      descritipion: |
+        Хук {{ $labels.hook }} модуля {{ $labels.module }} падает каждый час уже на протяжении более 12 часов
+
+
+  - alert: AntiopaCouldNotDiscoverModules
+    expr: max(increase(antiopa_modules_discover_errors[2m])) > 1
+    for: 30m
+    labels:
+      severity: debug
+  - alert: AntiopaCouldNotRunModule
+    expr: max(increase(antiopa_module_run_errors[2m])) by (module) > 1
+    for: 30m
+    labels:
+      severity: debug
+  - alert: AntiopaCouldNotDeleteModule
+    expr: max(increase(antiopa_module_delete_errors[2m])) by (module) > 1
+    for: 30m
+    labels:
+      severity: debug
+  - alert: AntiopaCouldNotRunGlobalHook
+    expr: max(increase(antiopa_global_hook_errors[2m])) by (hook) > 1
+    for: 30m
+    labels:
+      severity: debug
+  - alert: AntiopaCouldNotRunModuleHook
+    expr: max(increase(antiopa_module_hook_errors[2m])) by (module, hook) > 1
+    for: 30m
+    labels:
+      severity: debug
