@@ -27,6 +27,7 @@ type ModuleManager interface {
 	RunModule(moduleName string) error
 	RunGlobalHook(hookName string, binding BindingType) error
 	RunModuleHook(hookName string, binding BindingType) error
+	Retry()
 }
 
 // All modules are in the right order to run/disable/purge
@@ -84,6 +85,10 @@ type MainModuleManager struct {
 
 	helm              helm.HelmClient
 	kubeConfigManager kube_config_manager.KubeConfigManager
+
+	// Сохранение новых конфигов из kube, на случай ошибки обработки
+	moduleConfigsUpdateBeforeAmbiguos kube_config_manager.ModuleConfigs
+	retryOnAmbigous                   chan bool
 }
 
 var (
@@ -114,6 +119,7 @@ type EventType string
 const (
 	ModulesChanged EventType = "MODULES_CHANGED"
 	GlobalChanged  EventType = "GLOBAL_CHANGED"
+	AmbigousState  EventType = "AMBIGOUS_STATE"
 )
 
 type ChangeType string
@@ -200,6 +206,9 @@ func NewMainModuleManager(helmClient helm.HelmClient, kubeConfigManager kube_con
 
 		helm:              helmClient,
 		kubeConfigManager: kubeConfigManager,
+
+		moduleConfigsUpdateBeforeAmbiguos: make(kube_config_manager.ModuleConfigs),
+		retryOnAmbigous:                   make(chan bool, 1),
 	}
 }
 
@@ -460,7 +469,8 @@ DisableOldDisabledModules:
 
 	newEnabledModules, err := mm.getEnabledModulesInOrder(res.KubeDisabledModules)
 	if err != nil {
-		return nil, err
+		res.Events = append(res.Events, Event{Type: AmbigousState})
+		return res, err
 	}
 
 	rlog.Debugf("Module manager: new enabled modules list: %v", newEnabledModules)
@@ -524,8 +534,12 @@ func (mm *MainModuleManager) Run() {
 			}
 
 		case newModuleConfigs := <-kube_config_manager.ModuleConfigsUpdated:
+			// Сбросить запомненные перед ошибкой конфиги
+			mm.moduleConfigsUpdateBeforeAmbiguos = kube_config_manager.ModuleConfigs{}
+
 			handleRes, err := mm.handleNewKubeModuleConfigs(newModuleConfigs)
 			if err != nil {
+				mm.moduleConfigsUpdateBeforeAmbiguos = newModuleConfigs
 				modulesNames := make([]string, 0)
 				for _, newModuleConfig := range newModuleConfigs {
 					modulesNames = append(modulesNames, fmt.Sprintf("'%s'", newModuleConfig.ModuleName))
@@ -542,8 +556,22 @@ func (mm *MainModuleManager) Run() {
 					rlog.Errorf("Module manager: cannot apply modules %s kube config update: %s", strings.Join(modulesNames, ", "), err)
 				}
 			}
+
+		case <-mm.retryOnAmbigous:
+			if len(mm.moduleConfigsUpdateBeforeAmbiguos) != 0 {
+				rlog.Debugf("ModuleManager Retry saved moduleConfigs")
+				kube_config_manager.ModuleConfigsUpdated <- mm.moduleConfigsUpdateBeforeAmbiguos
+			} else {
+				rlog.Debugf("ModuleManager Retry IS NOT needed")
+			}
 		}
+
 	}
+}
+
+func (mm *MainModuleManager) Retry() {
+	rlog.Debugf("ModuleManager Retry")
+	mm.retryOnAmbigous <- true
 }
 
 func (mm *MainModuleManager) discoverModulesState(kubeDisabledModules []string) (*ModulesState, error) {

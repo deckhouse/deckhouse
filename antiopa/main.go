@@ -170,11 +170,13 @@ func Run() {
 
 	TasksQueue.ChangesEnable(true)
 
-	// менеджеры - отдельные go-рутины, посылающие события в свои каналы
-	RegistryManager.SetErrorCallback(func() {
-		MetricsStorage.SendCounterMetric("antiopa_registry_errors", 1.0, map[string]string{})
-	})
-	go RegistryManager.Run()
+	if RegistryManager != nil {
+		// менеджеры - отдельные go-рутины, посылающие события в свои каналы
+		RegistryManager.SetErrorCallback(func() {
+			MetricsStorage.SendCounterMetric("antiopa_registry_errors", 1.0, map[string]string{})
+		})
+		go RegistryManager.Run()
+	}
 	go ModuleManager.Run()
 	go ScheduleManager.Run()
 
@@ -261,6 +263,17 @@ func ManagersEventsHandler() {
 				TasksQueue.ChangesEnable(true)
 				// Пересоздать индекс хуков по расписанию
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
+			case module_manager.AmbigousState:
+				rlog.Debug("main: got AmbigousState event")
+				TasksQueue.ChangesDisable()
+				// Это ошибка в module_manager. Нужно добавить задачу в начало очереди,
+				// чтобы module_manager имел возможность восстановить своё состояние
+				// перед запуском других задач в очереди.
+				newTask := task.NewTask(task.ModuleManagerRetry, "")
+				TasksQueue.Push(newTask)
+				// Задержка перед выполнением retry
+				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				TasksQueue.ChangesEnable(true)
 			}
 		case crontab := <-schedule_manager.ScheduleCh:
 			scheduleHooks := ScheduledHooks.GetHooksForSchedule(crontab)
@@ -419,6 +432,7 @@ func TasksRunner() {
 				if err != nil {
 					if t.GetAllowFailure() {
 						MetricsStorage.SendCounterMetric("antiopa_module_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+						TasksQueue.Pop()
 					} else {
 						MetricsStorage.SendCounterMetric("antiopa_module_errors", 1.0, map[string]string{"name": t.GetName()})
 						t.IncrementFailureCount()
@@ -433,6 +447,7 @@ func TasksRunner() {
 				if err != nil {
 					if t.GetAllowFailure() {
 						MetricsStorage.SendCounterMetric("antiopa_global_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+						TasksQueue.Pop()
 					} else {
 						MetricsStorage.SendCounterMetric("antiopa_global_errors", 1.0, map[string]string{"name": t.GetName()})
 						t.IncrementFailureCount()
@@ -450,6 +465,13 @@ func TasksRunner() {
 					rlog.Errorf("%s helm delete '%s' failed. Error: %s", t.GetType(), t.GetName(), err)
 				}
 				TasksQueue.Pop()
+			case task.ModuleManagerRetry:
+				rlog.Debugf("MODULE_MANAGER_RETRY task")
+				// TODO метрику нужно отсылать из module_manager. Cделать metric_storage глобальным!
+				MetricsStorage.SendCounterMetric("antiopa_discover_errors", 1.0, map[string]string{})
+				ModuleManager.Retry()
+				TasksQueue.Pop()
+				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 			case task.Delay:
 				TasksQueue.Pop()
 				time.Sleep(t.GetDelay())
@@ -461,6 +483,7 @@ func TasksRunner() {
 
 			// break if empty to prevent infinity loop
 			if TasksQueue.IsEmpty() {
+				rlog.Info("Task queue is cleared. Will sleep now.")
 				break
 			}
 		}
