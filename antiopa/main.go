@@ -430,6 +430,7 @@ func TasksRunner() {
 				if err != nil {
 					if t.GetAllowFailure() {
 						MetricsStorage.SendCounterMetric("antiopa_module_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+						TasksQueue.Pop()
 					} else {
 						MetricsStorage.SendCounterMetric("antiopa_module_errors", 1.0, map[string]string{"name": t.GetName()})
 						t.IncrementFailureCount()
@@ -444,6 +445,7 @@ func TasksRunner() {
 				if err != nil {
 					if t.GetAllowFailure() {
 						MetricsStorage.SendCounterMetric("antiopa_global_allowed_errors", 1.0, map[string]string{"name": t.GetName()})
+						TasksQueue.Pop()
 					} else {
 						MetricsStorage.SendCounterMetric("antiopa_global_errors", 1.0, map[string]string{"name": t.GetName()})
 						t.IncrementFailureCount()
