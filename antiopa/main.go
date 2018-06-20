@@ -266,11 +266,13 @@ func ManagersEventsHandler() {
 			case module_manager.AmbigousState:
 				rlog.Debug("main: got AmbigousState event")
 				TasksQueue.ChangesDisable()
-				newTask := task.NewTask(task.ModuleManagerRetry, "")
 				// Это ошибка в module_manager. Нужно добавить задачу в начало очереди,
 				// чтобы module_manager имел возможность восстановить своё состояние
 				// перед запуском других задач в очереди.
+				newTask := task.NewTask(task.ModuleManagerRetry, "")
 				TasksQueue.Push(newTask)
+				// Задержка перед выполнением retry
+				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 				TasksQueue.ChangesEnable(true)
 			}
 		case crontab := <-schedule_manager.ScheduleCh:
@@ -469,6 +471,7 @@ func TasksRunner() {
 				MetricsStorage.SendCounterMetric("antiopa_discover_errors", 1.0, map[string]string{})
 				ModuleManager.Retry()
 				TasksQueue.Pop()
+				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 			case task.Delay:
 				TasksQueue.Pop()
 				time.Sleep(t.GetDelay())
