@@ -75,6 +75,7 @@ type OnKubernetesEventConfig struct {
 	NamespaceSelector *KubeNamespaceSelector  `json:"namespaceSelector"`
 	JqFilter          string                  `json:"jqFilter"`
 	AllowFailure      bool                    `json:"allowFailure"`
+	DisableDebug      bool                    `json:"disableDebug"`
 }
 
 type KubeNamespaceSelector struct {
@@ -711,7 +712,7 @@ func (mm *MainModuleManager) execHook(hookName string, configValuesJsonPatchPath
 		fmt.Sprintf("VALUES_JSON_PATCH_PATH=%s", valuesJsonPatchPath),
 	)
 
-	err := executor.Run(cmd)
+	err := executor.Run(cmd, true)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s FAILED: %s", hookName, err)
 	}

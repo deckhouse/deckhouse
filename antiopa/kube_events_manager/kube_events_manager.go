@@ -32,7 +32,7 @@ var (
 )
 
 type KubeEventsManager interface {
-	Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metaV1.LabelSelector, jqFilter string) (string, error)
+	Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metaV1.LabelSelector, jqFilter string, debug bool) (string, error)
 	Stop(configId string) error
 }
 
@@ -52,8 +52,8 @@ func Init() (KubeEventsManager, error) {
 	return em, nil
 }
 
-func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metaV1.LabelSelector, jqFilter string) (string, error) {
-	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, eventTypes, jqFilter, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
+func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metaV1.LabelSelector, jqFilter string, debug bool) (string, error) {
+	kubeEventsInformer, err := em.addKubeEventsInformer(kind, namespace, labelSelector, eventTypes, jqFilter, debug, func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs {
 		return cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				objectId, err := runtimeResourceId(obj)
@@ -62,7 +62,7 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 					return
 				}
 
-				filtered, err := resourceFilter(obj, jqFilter)
+				filtered, err := resourceFilter(obj, jqFilter, debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -70,10 +70,12 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 
 				checksum := utils.CalculateChecksum(filtered)
 
-				rlog.Debugf("Kube events manager: %+v informer %s: add %s object %s: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
-					eventTypes, kubeEventsInformer.ConfigId, kind, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+				if debug {
+					rlog.Debugf("Kube events manager: %+v informer %s: add %s object %s: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
+						eventTypes, kubeEventsInformer.ConfigId, kind, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+				}
 
-				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnAdd))
+				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnAdd), debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -86,7 +88,7 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 					return
 				}
 
-				filtered, err := resourceFilter(obj, jqFilter)
+				filtered, err := resourceFilter(obj, jqFilter, debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -94,10 +96,12 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 
 				checksum := utils.CalculateChecksum(filtered)
 
-				rlog.Debugf("Kube events manager: %+v informer %s: update %s object %s: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
-					eventTypes, kubeEventsInformer.ConfigId, kind, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+				if debug {
+					rlog.Debugf("Kube events manager: %+v informer %s: update %s object %s: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
+						eventTypes, kubeEventsInformer.ConfigId, kind, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+				}
 
-				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnUpdate))
+				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnUpdate), debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -110,9 +114,11 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 					return
 				}
 
-				rlog.Debugf("Kube events manager: %+v informer %s: delete %s object %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId)
+				if debug {
+					rlog.Debugf("Kube events manager: %+v informer %s: delete %s object %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId)
+				}
 
-				err = kubeEventsInformer.HandleKubeEvent(obj, "", kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnDelete))
+				err = kubeEventsInformer.HandleKubeEvent(obj, "", kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnDelete), debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -130,7 +136,7 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 	return kubeEventsInformer.ConfigId, nil
 }
 
-func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metaV1.LabelSelector, eventTypes []module_manager.OnKubernetesEventType, jqFilter string, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
+func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, labelSelector *metaV1.LabelSelector, eventTypes []module_manager.OnKubernetesEventType, jqFilter string, debug bool, resourceEventHandlerFuncs func(kubeEventsInformer *KubeEventsInformer) cache.ResourceEventHandlerFuncs) (*KubeEventsInformer, error) {
 	kubeEventsInformer := NewKubeEventsInformer()
 	kubeEventsInformer.ConfigId = uuid.NewV4().String()
 	kubeEventsInformer.Kind = kind
@@ -171,7 +177,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +195,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +213,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +231,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +249,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -261,7 +267,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +285,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -297,7 +303,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +321,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -333,7 +339,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -351,7 +357,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -369,7 +375,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -387,7 +393,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -405,7 +411,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +429,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -441,7 +447,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -459,7 +465,7 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 			objects = append(objects, &obj)
 		}
 
-		err = kubeEventsInformer.InitializeItemsList(objects)
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -485,14 +491,14 @@ func formatLabelSelector(selector *metaV1.LabelSelector) (string, error) {
 	return res.String(), nil
 }
 
-func resourceFilter(obj interface{}, jqFilter string) (res string, err error) {
+func resourceFilter(obj interface{}, jqFilter string, debug bool) (res string, err error) {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		return "", err
 	}
 
 	if jqFilter != "" {
-		stdout, stderr, err := execJq(jqFilter, data)
+		stdout, stderr, err := execJq(jqFilter, data, debug)
 		if err != nil {
 			return "", fmt.Errorf("failed exec jq: \nerr: '%s'\nstderr: '%s'", err, stderr)
 		}
@@ -536,31 +542,33 @@ type ListItemObject interface {
 	GetNamespace() string
 }
 
-func (ei *KubeEventsInformer) InitializeItemsList(objects []ListItemObject) error {
+func (ei *KubeEventsInformer) InitializeItemsList(objects []ListItemObject, debug bool) error {
 	for _, obj := range objects {
 		resourceId := generateChecksumId(obj.GetName(), obj.GetNamespace())
 
-		filtered, err := resourceFilter(obj, ei.JqFilter)
+		filtered, err := resourceFilter(obj, ei.JqFilter, debug)
 		if err != nil {
 			return err
 		}
 
 		ei.Checksum[resourceId] = utils.CalculateChecksum(filtered)
 
-		rlog.Debugf("Kube events manager: %+v informer %s: %s object %s initialization: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
-			ei.EventTypes,
-			ei.ConfigId,
-			ei.Kind,
-			resourceId,
-			ei.JqFilter,
-			ei.Checksum[resourceId],
-			utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+		if debug {
+			rlog.Debugf("Kube events manager: %+v informer %s: %s object %s initialization: jqFilter '%s': calculated checksum '%s' of object being watched:\n%s",
+				ei.EventTypes,
+				ei.ConfigId,
+				ei.Kind,
+				resourceId,
+				ei.JqFilter,
+				ei.Checksum[resourceId],
+				utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
+		}
 	}
 
 	return nil
 }
 
-func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum string, sendSignal bool) error {
+func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum string, sendSignal bool, debug bool) error {
 	objectId, err := runtimeResourceId(obj.(runtime.Object))
 	if err != nil {
 		return fmt.Errorf("failed to get object id: %s", err)
@@ -570,13 +578,17 @@ func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum strin
 		oldChecksum := ei.Checksum[objectId]
 		ei.Checksum[objectId] = newChecksum
 
-		rlog.Debugf("Kube events manager: %+v informer %s: %s object %s: checksum has changed: '%s' -> '%s'", ei.EventTypes, ei.ConfigId, ei.Kind, objectId, oldChecksum, newChecksum)
+		if debug {
+			rlog.Debugf("Kube events manager: %+v informer %s: %s object %s: checksum has changed: '%s' -> '%s'", ei.EventTypes, ei.ConfigId, ei.Kind, objectId, oldChecksum, newChecksum)
+		}
 
 		if sendSignal {
-			rlog.Infof("Kube events manager: %+v informer %s: %s object %s: sending EVENT", ei.EventTypes, ei.ConfigId, ei.Kind, objectId)
+			if debug {
+				rlog.Debugf("Kube events manager: %+v informer %s: %s object %s: sending EVENT", ei.EventTypes, ei.ConfigId, ei.Kind, objectId)
+			}
 			KubeEventCh <- ei.ConfigId
 		}
-	} else {
+	} else if debug {
 		rlog.Debugf("Kube events manager: %+v informer %s: %s object %s: checksum '%s' has not changed", ei.EventTypes, ei.ConfigId, ei.Kind, objectId, newChecksum)
 	}
 
@@ -623,7 +635,7 @@ func (ei *KubeEventsInformer) Stop() {
 	close(ei.SharedInformerStop)
 }
 
-func execJq(jqFilter string, jsonData []byte) (stdout string, stderr string, err error) {
+func execJq(jqFilter string, jsonData []byte, debug bool) (stdout string, stderr string, err error) {
 	cmd := exec.Command("/usr/bin/jq", jqFilter)
 
 	var stdinBuf bytes.Buffer
@@ -637,7 +649,7 @@ func execJq(jqFilter string, jsonData []byte) (stdout string, stderr string, err
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = &stderrBuf
 
-	err = executor.Run(cmd)
+	err = executor.Run(cmd, debug)
 	stdout = strings.TrimSpace(stdoutBuf.String())
 	stderr = strings.TrimSpace(stderrBuf.String())
 

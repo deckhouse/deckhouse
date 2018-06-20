@@ -439,7 +439,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		},
 	)
 
-	if err := executor.Run(cmd); err != nil {
+	if err := executor.Run(cmd, true); err != nil {
 		return false, err
 	}
 

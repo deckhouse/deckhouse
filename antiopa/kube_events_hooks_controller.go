@@ -19,6 +19,7 @@ type KubeEventHook struct {
 	Namespace  string
 	Selector   *metav1.LabelSelector
 	JqFilter   string
+	Debug      bool
 
 	Config module_manager.OnKubernetesEventConfig
 }
@@ -35,6 +36,7 @@ func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_
 				Namespace:  "",
 				Selector:   config.Selector,
 				JqFilter:   config.JqFilter,
+				Debug:      !config.DisableDebug,
 			})
 		} else {
 			for _, namespace := range config.NamespaceSelector.MatchNames {
@@ -45,6 +47,7 @@ func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_
 					Namespace:  namespace,
 					Selector:   config.Selector,
 					JqFilter:   config.JqFilter,
+					Debug:      !config.DisableDebug,
 				})
 			}
 		}
@@ -81,7 +84,7 @@ func (obj *MainKubeEventsHooksController) EnableGlobalHooks(moduleManager module
 		globalHook, _ := ModuleManager.GetGlobalHook(globalHookName)
 
 		for _, desc := range MakeKubeEventHookDescriptors(globalHook.Hook, &globalHook.Config.HookConfig) {
-			configId, err := eventsManager.Run(desc.EventTypes, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
+			configId, err := eventsManager.Run(desc.EventTypes, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter, desc.Debug)
 			if err != nil {
 				return err
 			}
@@ -111,7 +114,7 @@ func (obj *MainKubeEventsHooksController) EnableModuleHooks(moduleName string, m
 		moduleHook, _ := ModuleManager.GetModuleHook(moduleHookName)
 
 		for _, desc := range MakeKubeEventHookDescriptors(moduleHook.Hook, &moduleHook.Config.HookConfig) {
-			configId, err := eventsManager.Run(desc.EventTypes, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter)
+			configId, err := eventsManager.Run(desc.EventTypes, desc.Kind, desc.Namespace, desc.Selector, desc.JqFilter, desc.Debug)
 			if err != nil {
 				return err
 			}

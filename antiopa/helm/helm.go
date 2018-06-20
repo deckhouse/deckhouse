@@ -128,7 +128,7 @@ func (helm *CliHelm) Cmd(args ...string) (stdout string, stderr string, err erro
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = &stderrBuf
 
-	err = executor.Run(cmd)
+	err = executor.Run(cmd, true)
 	stdout = strings.TrimSpace(stdoutBuf.String())
 	stderr = strings.TrimSpace(stderrBuf.String())
 
@@ -351,7 +351,7 @@ func (helm *CliHelm) ListReleasesNames(labelSelector map[string]string) ([]strin
 	}
 
 	releasesNames := make([]string, 0)
-	for releaseName, _ := range releasesNamesMap {
+	for releaseName := range releasesNamesMap {
 		releasesNames = append(releasesNames, releaseName)
 	}
 
