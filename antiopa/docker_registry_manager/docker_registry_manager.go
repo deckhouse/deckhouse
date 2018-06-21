@@ -79,7 +79,7 @@ func (rm *MainRegistryManager) Run() {
 		return
 	}
 
-	rlog.Infof("Registry manager: start watch for image '%s'", rm.AntiopaImageName)
+	rlog.Infof("Registry manager: start")
 
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 
@@ -121,7 +121,12 @@ func (rm *MainRegistryManager) CheckIsImageUpdated() {
 		}
 
 		rm.AntiopaImageName = podImageName
-		rm.AntiopaImageDigest = FindImageDigest(podImageId)
+		rm.AntiopaImageDigest, err = FindImageDigest(podImageId)
+		if err != nil {
+			rlog.Errorf("RegistryManager: %s", err)
+			ImageUpdated <- "NO_DIGEST_FOUND"
+			return
+		}
 	}
 
 	// Второй шаг — после получения id начать мониторить его изменение в registry.
