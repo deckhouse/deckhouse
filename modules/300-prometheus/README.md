@@ -49,7 +49,7 @@ prometheus: |
 * `userPassword` — пароль пользователя `user` (генерируется автоматически, но можно изменять).
 * `adminPassword` — пароль пользователя `admin` (генерируется автоматически, но можно изменять).
 * `madisonAuthKey` — ключ для отправки алертов в Madison ([подробнее об интеграции с Madison](docs/MADISON.md)).
-* `longtermRetendionDays` — сколько дней хранить данные в longterm Prometheus. Если параметр не установлен, то longterm Prometheus не создается.
+* `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus. Если параметр не установлен, то longterm Prometheus не создается.
 * `madisonSelfSetupKey` — ключ для автоматической регистрации в Madison, значение по-умолчанию лежит в [values.yaml](values.yaml).
     * Если указать `false` — автоматическая регистрация будет отключена.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
