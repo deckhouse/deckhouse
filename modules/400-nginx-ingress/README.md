@@ -24,7 +24,7 @@
         * `LoadBalancer` (автоматически для `GCE` и `ACS`) — заказывает автоматом LoadBalancer.
         * `AWSClassicLoadBalancer` (автоматически для`AWS`) — заказывает автоматом LoadBalancer и включает proxy protocol, используется по-умолчанию для AWS.
         * `Direct` (автоматически `Manual`) — pod'ы работают в host network, nginx слушает на 80 и 443 порту, хитрая схема с direct-fallback.
-        * `NodePort` — создает сервис с типом NodePort, подходит в тех ситуациях, когда необходимо настроить "сторонний" балансировщик (например, использовать AWS Application Load Balancer, Qrator или  CloudFLare).
+        * `NodePort` — создает сервис с типом NodePort, подходит в тех ситуациях, когда необходимо настроить "сторонний" балансировщик (например, использовать AWS Application Load Balancer, Qrator или  CloudFLare). Допустимый диапазон 30000-32767 (настраивается параметром `kube-apiserver --service-node-port-range`).
     * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](templates/controller.yaml).
 * `nodePortHTTP` — для инлетов с типом `NodePort` позволяет задать конкретный nodePort для публикации 80-го порта (по-умолчанию ничего не указывается и kube-controller-manager подбирает случайный свободный).
 * `nodePortHTTPS` — для инлетов с типом `NodePort` позволяет задать конкретный nodePort для публикации порта 443 (по-умолчанию аналогично `nodePortHTTP`).
