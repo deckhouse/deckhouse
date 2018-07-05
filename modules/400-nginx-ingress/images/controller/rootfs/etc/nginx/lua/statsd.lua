@@ -44,7 +44,7 @@ function _M.call()
   local buffer = {}
   buffer["len"] = 0
 
-  local var_server_name = ngx.var.server_name
+  local var_server_name = ngx.var.server_name:gsub("^*", "")
   if var_server_name == "_" then
     _incr(buffer, "l#")
   else
