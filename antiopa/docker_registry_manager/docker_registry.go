@@ -2,6 +2,7 @@ package docker_registry_manager
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"regexp"
@@ -22,6 +23,9 @@ type DockerImageInfo struct {
 
 // regex для определения валидного docker image digest (image id)
 var DockerImageDigestRe = regexp.MustCompile("(sha256:?)?[a-fA-F0-9]{64}")
+var KubeDigestRe = regexp.MustCompile("docker-pullable://.*@sha256:[a-fA-F0-9]{64}")
+
+//var KubeImageIdRe = regexp.MustCompile("docker://sha256:[a-fA-F0-9]{64}")
 
 // Отправить запрос в registry, из заголовка ответа достать digest.
 // Если произошла какая-то ошибка, то сообщить в лог и вернуть пустую
@@ -78,9 +82,15 @@ func DockerParseImageName(imageName string) (imageInfo DockerImageInfo, err erro
 	return
 }
 
-// Поиск digest в строке
-// Например, в строке из kubernetes: docker-pullable://registry/repo:tag@sha256:DIGEST-HASH
-func FindImageDigest(imageId string) (image string) {
+// Поиск digest в строке.
+// Учитывается специфика kubernetes — если есть префикс docker-pullable://, то в строке digest.
+// Если префикс docker:// или нет префикса, то скорее всего там imageId, который нельзя
+// применить для обновления, поэтому возвращается ошибка
+// Пример строки с digest из kubernetes: docker-pullable://registry/repo:tag@sha256:DIGEST-HASH
+func FindImageDigest(imageId string) (image string, err error) {
+	if !KubeDigestRe.MatchString(imageId) {
+		err = fmt.Errorf("Pod status contains image_id and not digest. Antiopa update process not working in clusters with Docker 1.11 or earlier.")
+	}
 	image = DockerImageDigestRe.FindString(imageId)
 	return
 }
