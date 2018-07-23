@@ -76,7 +76,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(container) (container_memory_rss{pod=\"$pod\", container=~\"$container\", container!=\"POD\"})",
+          "expr": "sum by(container) (container_memory_rss{namespace=\"$namespace\",pod=\"$pod\", container=~\"$container\", container!=\"POD\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -86,7 +86,7 @@
           "step": 15
         },
         {
-          "expr": "kube_pod_container_resource_requests_memory_bytes{pod=\"$pod\", container=~\"$container\"}",
+          "expr": "kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\",pod=\"$pod\", container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -96,7 +96,7 @@
           "step": 20
         },
         {
-          "expr": "kube_pod_container_resource_limits_memory_bytes{pod=\"$pod\", container=~\"$container\"}",
+          "expr": "kube_pod_container_resource_limits_memory_bytes{namespace=\"$namespace\",pod=\"$pod\", container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
