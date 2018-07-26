@@ -10,8 +10,10 @@
     {{- include "template.config" (dict "context" .) }}
     {{- include "template.service" (dict "context" . "type" "LoadBalancer") }}
   {{- else if eq $inlet "AWSClassicLoadBalancer" }}
-    {{- if and (hasKey . "config") (hasKey .config "setRealIPFrom") }}
-      {{- fail "Error!!! AWSClassicLoadBalancer inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
+    {{- if hasKey . "config" }}
+      {{- if hasKey .config "setRealIPFrom" }}
+        {{- fail "Error!!! AWSClassicLoadBalancer inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
+      {{- end }}
     {{- end }}
 
     {{- include "template.nginx" (dict "context" . "publishService" true) }}
