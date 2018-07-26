@@ -22,8 +22,10 @@
     {{- include "template.config" (dict "context" .) }}
     {{- include "template.service" (dict "context" . "type" "NodePort") }}
   {{- else if eq $inlet "Direct" }}
-    {{- if and (hasKey . "config") (hasKey .config "setRealIPFrom") }}
-      {{- fail "Error!!! Direct inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
+    {{- if hasKey . "config" }}
+      {{- if hasKey .config "setRealIPFrom" }}
+        {{- fail "Error!!! Direct inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
+      {{- end }}
     {{- end }}
 
     {{- include "template.nginx" (dict "context" . "hostNetwork" true) }}
