@@ -1,0 +1,28 @@
+{{- if or (hasKey .Values.certManager "cloudflareGlobalAPIKey") (hasKey .Values.certManager "cloudflareEmail") }}
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: cloudflare
+  namespace: kube-cert-manager
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    {{- if and (hasKey .Values.certManager "cloudflareEmail") (.Values.certManager.cloudflareEmail) }}
+    email: "{{ .Values.certManager.cloudflareEmail }}"
+    {{- else }}
+      {{ cat "No key cloudflareEmail in antiopa configmap" .Values.certManager.cloudflareEmail | fail }}
+    {{- end }}
+    privateKeySecretRef:
+      name: cloudflare-tls-key
+    dns01:
+      providers:
+      - name: cloudflare
+        cloudflare:
+          email: "{{ .Values.certManager.cloudflareEmail }}"
+          apiKeySecretRef:
+            name: cloudflare
+            key: global-api-key
+{{- end }}
