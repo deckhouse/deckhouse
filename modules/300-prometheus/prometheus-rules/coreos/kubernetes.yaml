@@ -90,17 +90,17 @@ groups:
       description: No API servers are reachable or all have disappeared from service
         discovery
       summary: No API servers are reachable
-  - alert: K8sCertificateExpirationNotice
-    expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="604800"}) > 0
+  - alert: K8sClientCertificateExpiration
+    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
       severity: warning
     annotations:
-      description: Kubernetes API Certificate is expiring soon (less than 7 days)
-      summary: Kubernetes API Certificate is expiering soon
-  - alert: K8sCertificateExpirationNotice
-    expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="86400"}) > 0
+      description: Some clients connect to {{$labels.component}} with Certificate which expiring soon (less than 7 days) on node {{$labels.node}}
+      summary: Kubernetes has API clients with soon expiring certificates
+  - alert: K8sClientCertificateExpiration
+    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
       severity: critical
     annotations:
-      description: Kubernetes API Certificate is expiring in less than 1 day
-      summary: Kubernetes API Certificate is expiering
+      description: Some clients connect to {{$labels.component}} with Certificate which expiring soon (less than 1 day) on node {{$labels.component}}
+      summary: Kubernetes has API clients with soon expiring certificates
