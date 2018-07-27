@@ -27,4 +27,4 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: memcahced
+      prometheus-target: memcached
