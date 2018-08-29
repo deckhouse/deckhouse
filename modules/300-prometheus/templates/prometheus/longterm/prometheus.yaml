@@ -28,14 +28,14 @@ spec:
       memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 16384) 1048576) 500 }}Mi
   {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
-  {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
+{{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
   {{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
   nodeSelector:
     node-role/system: ""
   {{- end }}
   {{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
   tolerations:
-  {{ .Values.prometheus.tolerations | toYaml | trim | indent 2 }}
+{{ .Values.prometheus.tolerations | toYaml | trim | indent 2 }}
   {{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
   tolerations:
   - key: node-role/system
