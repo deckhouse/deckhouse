@@ -23,7 +23,7 @@ spec:
       containers:
   {{- if eq .Values.global.discovery.clusterType "Manual" }}
       - name: prometheus-auth-proxy-for-kube-scheduler
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10360"
         - "--proxy-pass=http://127.0.0.1:10251/metrics"
@@ -43,7 +43,7 @@ spec:
             memory: 40Mi
             cpu: 20m
       - name: prometheus-auth-proxy-for-kube-controller-manager
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10361"
         - "--proxy-pass=http://127.0.0.1:10252/metrics"
@@ -63,10 +63,18 @@ spec:
             memory: 40Mi
             cpu: 20m
       - name: prometheus-auth-proxy-for-kube-etcd
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10362"
+        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+        - "--proxy-pass=https://127.0.0.1:2379/metrics"
+        {{- else }}
         - "--proxy-pass=http://127.0.0.1:2379/metrics"
+        {{- end }}
+        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/apiserver-etcd-client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/apiserver-etcd-client.key"
+        {{- end }}
         env:
         - name: MY_POD_IP
           valueFrom:
@@ -82,9 +90,16 @@ spec:
           limits:
             memory: 40Mi
             cpu: 20m
+      {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+        volumeMounts:
+        - mountPath: /etc/nginx/certs/apiserver-etcd-client.crt
+          name: crt
+        - mountPath: /etc/nginx/certs/apiserver-etcd-client.key
+          name: key
+      {{- end }}
   {{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
       - name: prometheus-auth-proxy-for-kube-etcd
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10362"
         - "--proxy-pass=http://127.0.0.1:4001/metrics"
@@ -104,7 +119,7 @@ spec:
             memory: 40Mi
             cpu: 20m
       - name: prometheus-auth-proxy-for-kube-etcd-events
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10363"
         - "--proxy-pass=http://127.0.0.1:4002/metrics"
@@ -123,6 +138,17 @@ spec:
           limits:
             memory: 40Mi
             cpu: 20m
+  {{- end }}
+  {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/pki/apiserver-etcd-client.crt
+          type: File
+        name: crt
+      - hostPath:
+          path: /etc/kubernetes/pki/apiserver-etcd-client.key
+          type: File
+        name: key
   {{- end }}
       nodeSelector:
   {{- if eq .Values.global.discovery.clusterType "ACS" }}
