@@ -20,6 +20,8 @@
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 *  `cloudflareGlobalAPIKey` — Cloudflare Global API key для управления DNS записями (Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат, находятся под управлением cert-manager у DNS провайдера Cloudflare. Проверка происходит добавлением специальных TXT записей для домена [ACME DNS01 Challenge Provider](https://github.com/jetstack/cert-manager/blob/master/docs/reference/issuers/acme/dns01.rst))
 *  `cloudflareEmail` — Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare
+*  `route53AccessKeyID` — Access Key ID пользователя с необходимыми правами [Amazon Route53 IAM Policy](https://cert-manager.readthedocs.io/en/latest/reference/issuers/acme/dns01.html#amazon-route53) для управления доменными записями домена
+*  `route53SecretAccessKey` — Secret Access Key пользователя с необходимыми правами для управления доменными записями домена
 
 ### Пример конфига
 
@@ -144,6 +146,76 @@ spec:
     - "*.domain.com"
     secretName: tls-wildcard
 ```
+
+### Как заказать wildcard сертификат с DNS в Route53
+
+1. Создаем пользователя с необходимыми правами
+
+* Заходим на страницу управления политиками: https://console.aws.amazon.com/iam/home?region=us-east-2#/policies . Создаем политику с такими правами:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "route53:GetChange",
+            "Resource": "arn:aws:route53:::change/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "route53:ChangeResourceRecordSets",
+            "Resource": "arn:aws:route53:::hostedzone/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "route53:ListHostedZonesByName",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+* Заходим на страницу управления пользоватяли: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользоватяли с созданной ранее политикой.
+
+2. Редактируем конфигурационный ConfigMap antiop'ы, добавляя такую секцию:
+
+```
+kubectl -n antiopa edit cm antiopa
+```
+
+```yaml
+certManager: |
+  route53AccessKeyID: AKIABROTAITAJMPASA4A
+  route53SecretAccessKey: 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
+```
+
+После чего antiopa автоматически создаст ClusterIssuer и Secret для route53 в Namespace kube-cert-manager.
+
+3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек route53AccessKeyID и route53SecretAccessKey в antiop'е:
+
+```yaml
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: domain-wildcard
+  namespace: app-namespace
+spec:
+  secretName: tls-wildcard
+  issuerRef:
+    name: route53
+    kind: ClusterIssuer
+  commonName: "*.domain.com"
+  dnsNames:
+  - "*.domain.com"
+  acme:
+    config:
+    - dns01:
+        provider: route53
+      domains:
+      - "*.domain.com"
+```
+
 
 ### Как посмотреть состояние сертификата?
 
