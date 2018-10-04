@@ -66,12 +66,12 @@ spec:
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10362"
-        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10-0" .Capabilities.KubeVersion.GitVersion) }}
         - "--proxy-pass=https://127.0.0.1:2379/metrics"
         {{- else }}
         - "--proxy-pass=http://127.0.0.1:2379/metrics"
         {{- end }}
-        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10-0" .Capabilities.KubeVersion.GitVersion) }}
         - "--proxy-ssl-cert-file=/etc/nginx/certs/apiserver-etcd-client.crt"
         - "--proxy-ssl-key-file=/etc/nginx/certs/apiserver-etcd-client.key"
         {{- end }}
@@ -90,7 +90,7 @@ spec:
           limits:
             memory: 40Mi
             cpu: 20m
-      {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+      {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10-0" .Capabilities.KubeVersion.GitVersion) }}
         volumeMounts:
         - mountPath: /etc/nginx/certs/apiserver-etcd-client.crt
           name: crt
@@ -139,7 +139,7 @@ spec:
             memory: 40Mi
             cpu: 20m
   {{- end }}
-  {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.9-0" .Capabilities.KubeVersion.GitVersion) }}
+  {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10-0" .Capabilities.KubeVersion.GitVersion) }}
       volumes:
       - hostPath:
           path: /etc/kubernetes/pki/apiserver-etcd-client.crt
