@@ -140,9 +140,18 @@ func KubeGetPodImageInfo(podName string) (imageName string, imageId string) {
 		return "", ""
 	}
 
+	// Get image name from container spec. ContainerStatus contains bad name
+	// if multiple tags has one digest!
+	// https://github.com/kubernetes/kubernetes/issues/51017
+	for _, spec := range res.Spec.Containers {
+		if spec.Name == AntiopaContainerName {
+			imageName = spec.Image
+			break
+		}
+	}
+
 	for _, status := range res.Status.ContainerStatuses {
 		if status.Name == AntiopaContainerName {
-			imageName = status.Image
 			imageId = status.ImageID
 			break
 		}
