@@ -17,8 +17,20 @@ data:
   proxy-connect-timeout: "2"
   proxy-read-timeout: "3600"
   proxy-send-timeout: "3600"
-  # the ingress problem!!!
-  worker-shutdown-timeout: "3"
+  # The ingress problem
+  #  * If we set this param to some big value (more than several seconds), we will have serious problems
+  #    for HTTP/2 clients, because they will keep a connection to the old instance of nginx worker (one,
+  #    that is shutting down). And after some time this old worker instance will have only wrong pod's IP
+  #    addresses in the upstream and will respond with 504 till the worker will die by timeout (or until
+  #    user restart browser).
+  #  * If we set this param to some small value (less than at least several minutes), we will have another
+  #    problem — any change of any pod (creation, deletion, restart, etc) will initiate interruption of
+  #    all connections. And if we need some long-running connections (websocket, or file download, or
+  #    anything else) — we will have serious problems with often connections restarts.
+  #
+  # So we end up with 2 minutes as some bearable balance between two problems.
+  #
+  worker-shutdown-timeout: "120"
   http-redirect-code: "301"
   hsts: {{ $config.hsts | default false | quote }}
   hsts-include-subdomains: "false"
