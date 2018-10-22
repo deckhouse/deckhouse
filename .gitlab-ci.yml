@@ -1,7 +1,8 @@
 stages:
   - build
   - deploy
-  - cleanup
+  - cleanup_registry
+  - cleanup_builder
 
 Build:
   stage: build
@@ -66,27 +67,38 @@ stable:
   only:
     - tags
 
-Cleanup:
-  stage: cleanup
+Cleanup registry:
+  stage: cleanup_registry
   script:
+    - set -x
     - source dapp_use latest
-    - dapp --version
-    - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE}/dev --registry-username=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
+    - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE}/dev
+  only:
+  - schedules
+  tags:
+    - deploy
+  retry: 2
+
+Cleanup builder:
+  stage: cleanup_builder
+  script:
+    - set -x
+    - source dapp_use latest
     - dapp dimg stages cleanup local
         --improper-cache-version
         --improper-git-commit
         --improper-repo-cache
         ${CI_REGISTRY_IMAGE}/dev
   only:
-    - schedules
+  - schedules
   tags:
     - build
   retry: 2
 
 Cleanup modules images:
-  stage: cleanup
+  stage: cleanup_builder
   script:
-    - ./modules_images cleanup --registry-user=registry-cleaner --registry-password=$REGISTRY_CLEANER_TOKEN
+    - ./modules_images cleanup --registry-user=sample-user --registry-password=$REGISTRY_CLEANER_TOKEN
   only:
     - schedules
   tags:
