@@ -53,6 +53,9 @@ data:
   proxy-real-ip-cidr: {{ $config.setRealIPFrom | default (list "0.0.0.0/32") | join "," | quote }}
     {{- end }}
   server-tokens: "false"
+    {{- if $config.underscoresInHeaders }}
+  enable-underscores-in-headers: "true"
+    {{- end }}
   log-format-escape-json: "true"
   log-format-upstream: '{
     "time": "$time_iso8601",
