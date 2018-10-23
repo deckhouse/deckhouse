@@ -168,13 +168,17 @@ function _M.call()
         _count(buffer, "id#" .. detail_key, upstream_retries)
       end
 
+      n = 0
       for status in string.gmatch(ngx.var.upstream_status, "[%d]+") do
         -- responses (for each backend)
+        n = n + 1
         _incr(buffer, "kb#" .. backend_key .. "#" .. backends[n] .. "#" .. string.sub(status, 1, 1))
       end
 
+      n = 0
       for upstream_bytes_received in string.gmatch(ngx.var.upstream_bytes_received, "[%d]+") do
         -- upstream bytes received (for each backend)
+        n = n + 1
         _count(buffer, "kc#" .. backend_key .. "#" .. backends[n], upstream_bytes_received)
       end
     end

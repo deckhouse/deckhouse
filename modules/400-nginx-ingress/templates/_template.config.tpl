@@ -28,10 +28,16 @@ data:
   #    all connections. And if we need some long-running connections (websocket, or file download, or
   #    anything else) — we will have serious problems with often connections restarts.
   #
-  # So we end up with 2 minutes as some bearable balance between two problems.
-  #
-  worker-shutdown-timeout: "120"
+  # The new lua based upstream reloader should minimize such reloads, alas we've got to take care
+  # of the edge cases. We've ended up with 5 minutes as some bearable balance between two problems.
+  worker-shutdown-timeout: "300"
   http-redirect-code: "301"
+  # Upstream Nginx Ingress Controller have decided to switch the option to nginx' defaults: "error timeout"
+  # https://github.com/kubernetes/ingress-nginx/pull/2554
+  # We modify this option to better accomodate end users, since they become unhappy upon geting 5xx in their browsers.
+  # Yes, it lacks immediate feedback if something goes awry, but it leverages
+  # Nginx Ingress controller load balancing capabilities to its full extent.
+  proxy-next-upstream: "error timeout invalid_header http_502 http_503 http_504"
   hsts: {{ $config.hsts | default false | quote }}
   hsts-include-subdomains: "false"
   body-size: "64m"
@@ -84,7 +90,7 @@ data:
     "vhost": "$server_name",
     "location": "$location_path",
     "nginx_upstream_addr": "$upstream_addr",
-    "nginx_upstream_response_length": "$upstream_response_length",
+    "nginx_upstream_bytes_received": "$upstream_bytes_received",
     "nginx_upstream_response_time": "$upstream_response_time",
     "nginx_upstream_status": "$upstream_status"
   }'
