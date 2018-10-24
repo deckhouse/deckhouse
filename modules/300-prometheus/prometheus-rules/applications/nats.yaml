@@ -1,13 +1,13 @@
 groups:
 - name: applications.nats
   rules:
-    - alert: NatsClusterNotEnoughRoutes
-      expr: >-
-        (min by (namespace, service, pod) (nats_routes{job="nats"})) - on (namespace, service) group_left()
+  - alert: NatsClusterNotEnoughRoutes
+    expr: >-
+      (min by (namespace, service, pod) (nats_routes{job="nats"})) - on (namespace, service) group_left()
         (sum by (namespace, service) (nats_up{job="nats"})) + 1 != 0
-      for: 2m
-      labels:
-        severity: critical
+    for: 2m
+    labels:
+      severity: critical
     annotations:
       polk_flant_com_markup_format: markdown
       summary: Not enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}
