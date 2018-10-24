@@ -37,6 +37,9 @@ data:
   body-size: "64m"
   server-name-hash-bucket-size: "256"
   variables-hash-bucket-size: "256"
+    {{- if $config.disableHTTP2 }}
+  use-http2: "false"
+    {{- end }}
     {{- if $config.legacySSL }}
   ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"
   ssl-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:\

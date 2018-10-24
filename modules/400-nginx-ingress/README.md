@@ -32,6 +32,8 @@
     * По-умолчанию выключен.
 * `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](modules/400-nginx-ingress/templates/_template.config.tpl).
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
+* `config.disableHTTP2` — bool, выключить ли HTTP/2.
+    * По умолчанию HTTP/2 включен: `false`.
 * `config.underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers)
     * По-умолчанию `false`.
 * `config.setRealIPFrom` — список CIDR'ов, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
