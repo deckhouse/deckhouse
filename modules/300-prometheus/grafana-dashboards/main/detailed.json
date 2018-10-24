@@ -288,7 +288,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(pod, container, namespace) \n                                              (rate(container_cpu_user_seconds_total{container!=\"POD\",pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\"}[$__interval_rv]))",
+          "expr": "sum by(pod, container, namespace) (rate(container_cpu_user_seconds_total{container!=\"POD\",pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "User {{namespace}} / {{pod}} / {{container}}",
@@ -296,7 +296,7 @@
           "step": 2
         },
         {
-          "expr": "sum by(pod, container, namespace) \n                                              (rate(container_cpu_system_seconds_total{container!=\"POD\",pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\"}[$__interval_rv]))",
+          "expr": "sum by(pod, container, namespace) (rate(container_cpu_system_seconds_total{container!=\"POD\",pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "System {{namespace}} / {{pod}} / {{container}}",
