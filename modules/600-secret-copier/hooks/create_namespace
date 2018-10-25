@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onKubernetesEvent="$(jo -a "$(jo kind=namespace event='["add"]')")"
+}
+
+function __main__() {
+  # для каждого Namespace без лейбла "antiopa-secret-copier=yes"
+  for namespace in $(kubectl get namespace -o json | jq -r '.items[] | select(.metadata.labels."antiopa-secret-copier"=="yes" | not) | .metadata.name')
+  do
+    # копируем секреты, предварительно удалив лишние поля из metadata
+    for secret in $(kubectl -n default get secret -l antiopa-secret-copier=yes -o name);
+    do
+      echo "creating $secret on namespace $namespace"
+      kubectl -n default get $secret  -o json | \
+        jq -r ".metadata.namespace=\"${namespace}\" |
+                  .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
+        | kubectl::replace_or_create
+    done
+    kubectl::jq_patch default namespace/${namespace} '.metadata.labels."antiopa-secret-copier" = "yes"'
+  done
+}
+
+hook::run $@
