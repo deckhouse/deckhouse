@@ -55,8 +55,6 @@
 nginxIngress: |
   config:
     hsts: true
-    setRealIPFrom:
-    - 4.4.4.4
   nodeSelector: false
   tolerations:
   - key: node-role/frontend
