@@ -1,0 +1,40 @@
+groups:
+- name: applications.rabbitmq
+  rules:
+  - alert: ApplicationRabbitMQMemoryUsage
+    expr: rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"} * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        RabbitMQ Node {{$labels.node}} is using more than 85% of memory limit.
+        Consider the following:
+
+        1. Raise `vm_memory_high_watermark` in RMQ command line arguments
+        2. Raise Pod' Requests and Limits.
+
+        More info: https://www.rabbitmq.com/memory.html
+      summary: >
+        RabbitMQ node {{$labels.node}} in Pod {{$labels.namespace}}/{{$labels.pod}}
+        is using more than 85% of memory limit.
+
+  - alert: ApplicationRabbitMQMemoryUsage
+    expr: rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"} * 100 > 95
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        RabbitMQ Node {{$labels.node}} is using more than 85% of memory limit.
+        Consider the following:
+
+        1. Raise `vm_memory_high_watermark` in RMQ command line arguments
+        2. Raise Pod' Requests and Limits.
+
+        More info: https://www.rabbitmq.com/memory.html
+      summary: >
+        RabbitMQ node {{$labels.node}} in Pod {{$labels.namespace}}/{{$labels.pod}}
+        is using more than 95% of memory limit.
