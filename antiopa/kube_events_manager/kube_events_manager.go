@@ -164,6 +164,24 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	var sharedInformer cache.SharedIndexInformer
 
 	switch kind {
+	case "namespace":
+		sharedInformer = coreV1.NewFilteredNamespaceInformer(kube.Kubernetes, resyncPeriod, indexers, tweakListOptions)
+
+		list, err := kube.Kubernetes.CoreV1().Namespaces().List(listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed list resources: %s", err)
+		}
+
+		objects := make([]ListItemObject, 0)
+		for _, obj := range list.Items {
+			objects = append(objects, &obj)
+		}
+
+		err = kubeEventsInformer.InitializeItemsList(objects, debug)
+		if err != nil {
+			return nil, err
+		}
+
 	case "cronjob":
 		sharedInformer = batchV2Alpha1.NewFilteredCronJobInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
 
