@@ -34,6 +34,18 @@ data:
   http-redirect-code: "301"
   hsts: {{ $config.hsts | default false | quote }}
   hsts-include-subdomains: "false"
+  # This is a formula to calculate maximum theoretical amount of accepted connections: worker_processes * worker_connections.
+  # By taking default values from upstream nginx-ingress we get this many connections at worst: 16384 * 4 = 65536.
+  # 4 * 8 / 1024 = .03125 MiB is the default buffer size for each connection (4 8k, https://nginx.org/en/docs/http/ngx_http_core_module.html#large_client_header_buffers).
+  # 65536 * .03125 = 2048 MiB. It means that we consume 2 GiB of memory just for headers!!!
+  #
+  # We believe that setting this value to `4 16k` should satisfy most use cases. Why aren't we changing the number of buffers?
+  # As explained below, it is unsafe to use HTTP request headers as a medium of large data transfers. 4 such exceptions should be more than enough.
+  #
+  # What should we do if client insists that large headers buffer should be even bigger?
+  # We have to politely explain that the only place in HTTP request for large quantities of information is the request body.
+  # Otherwise, by abusing the hell out of various tunables, we risk creating DoS situation.
+  large-client-header-buffers: "4 16k"
   body-size: "64m"
   server-name-hash-bucket-size: "256"
   variables-hash-bucket-size: "256"
