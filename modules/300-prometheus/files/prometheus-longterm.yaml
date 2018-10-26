@@ -9,6 +9,12 @@ scrape_configs:
   params:
     'match[]':
       - '{job=~".+"}'
-  static_configs:
-    - targets:
-      - 'prometheus.kube-prometheus.svc.cluster.local:9090'
+    kubernetes_sd_configs:
+    - role: endpoints
+      namespaces:
+        names:
+        - kube-prometheus
+      relabel_configs:
+      - action: keep
+        source_labels: [__meta_kubernetes_service_label_heritage, __meta_kubernetes_endpoint_app, __meta_kubernetes_endpoint_prometheus]
+        regex: antiopa;prometheus;longterm

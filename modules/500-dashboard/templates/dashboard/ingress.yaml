@@ -8,7 +8,7 @@ metadata:
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
 {{- if .Values.dashboard.gitlabBaseUrl }}
     ingress.kubernetes.io/auth-signin: https://$host/oauth2/sign_in
-    ingress.kubernetes.io/auth-url: http://dashboard-oauth2-proxy.kube-system.svc.cluster.local:4180/oauth2/auth
+    ingress.kubernetes.io/auth-url: http://dashboard-oauth2-proxy.kube-system.svc.{{ .Values.global.discovery.clusterDomain }}:4180/oauth2/auth
 {{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth

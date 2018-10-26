@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Автоопределятор внутреннего домена DNS кластера Kubernetes (cluster.local, например).
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=100
+}
+
+function __main__() {
+  cluster_domain=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o=jsonpath='{.items[0].spec.containers[0].command}  {.items[0].spec.containers[0].args}' 2>/dev/null | grep -Eo -- '--domain=[^\ ]+' | sed -e s/--domain=//g -e s/.$//g)
+  if [[ $cluster_domain == "" ]]; then
+	  cluster_domain="cluster.local"
+  fi
+  values::set global.discovery.clusterDomain $cluster_domain
+}
+
+hook::run $@
