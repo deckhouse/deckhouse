@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 function cluster::has_system_nodes() {
-  if $(kubectl get nodes -l node-role/system -o name | grep . > /dev/null); then
+  if kubectl get nodes -l node-role/system -o name | grep . >/dev/null; then
     return 0
   else
     return 1
