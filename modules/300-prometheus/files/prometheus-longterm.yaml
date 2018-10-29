@@ -8,13 +8,13 @@ scrape_configs:
   metrics_path: '/federate'
   params:
     'match[]':
-      - '{job=~".+"}'
-    kubernetes_sd_configs:
-    - role: endpoints
-      namespaces:
-        names:
-        - kube-prometheus
-      relabel_configs:
-      - action: keep
-        source_labels: [__meta_kubernetes_service_label_heritage, __meta_kubernetes_endpoint_app, __meta_kubernetes_endpoint_prometheus]
-        regex: antiopa;prometheus;longterm
+    - '{job=~".+"}'
+  kubernetes_sd_configs:
+  - role: endpoints
+    namespaces:
+      names:
+      - kube-prometheus
+  relabel_configs:
+  - action: keep
+    source_labels: [__meta_kubernetes_service_label_heritage, __meta_kubernetes_service_label_app, __meta_kubernetes_service_label_prometheus]
+    regex: antiopa;prometheus;main
