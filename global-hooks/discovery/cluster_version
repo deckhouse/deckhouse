@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Возникла проблема: при обновлении кластера Kubernetes SemVer comparison не срабатывал, что приводило к отвалу etcd из мониторинга Prometheus.
+# Не помогал рестарт antiopa, а только полное удаление Helm релиза prometheus и последующая установка.
+# Целью данного хука является введение независимого от Helm механизма определения версии кластера.
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=100
+}
+
+function __main__() {
+  cluster_version=$(kubectl version -o json | jq -er '.serverVersion.gitVersion[1:]')
+
+  if [ -n "$cluster_version" ]; then
+    values::set global.discovery.clusterVersion "$cluster_version"
+  fi
+}
+
+hook::run $@
