@@ -9,6 +9,8 @@ function __config__() {
 function __main__() {
   fltr='.'
 
+count_system_nodes=$(cluster::count_system_nodes)
+
   ###
   # Политика #1: kube-dns должен выполняться на system-узлах, если они есть
   if cluster::has_system_nodes; then
@@ -17,14 +19,44 @@ function __main__() {
       . + [{"key":"node-role/system","operator":"Exists"}] | unique
     )'
 
-    # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
-    fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-      if . then . else [{}] end | map(
-        .matchExpressions |= (
-          . + [{"key":"node-role/system","operator":"Exists"}] | unique
+    if (( "$count_system_nodes" == 1 )); then
+      # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
+      # Используем preferredDuringSchedulingIgnoredDuringExecution, т.к. у нас всего одна system нода
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (
+        if . then . else [{}] end | map(
+          .weight = (.weight // 1) |
+          .preference.matchExpressions |= (
+            . + [{"key":"node-role/system","operator":"Exists"}] | unique
+          )
         )
-      )
-    )'
+      )'
+      # Удаляем из каждого nodeSelectorTerm в requiredDuringSchedulingIgnoredDuringExecution по matchExpression, если он был добавлен
+      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
+        .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
+          . | map(
+            .matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
+          )
+        )
+      else . end'
+    else
+      # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
+      # Используем requiredDuringSchedulingIgnoredDuringExecution, т.к. у нас есть необходимый минимум system нод
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
+        if . then . else [{}] end | map(
+          .matchExpressions |= (
+            . + [{"key":"node-role/system","operator":"Exists"}] | unique
+          )
+        )
+      )'
+      # Удаляем из каждого preference в preferredDuringSchedulingIgnoredDuringExecution по matchExpression, если он был добавлен
+      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution then
+        .spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (
+          . | map(
+            .preference.matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
+          )
+        )
+      else . end'
+    fi
   else
     # Удаляем toleration, если был добавлен
     fltr=$fltr' | if .spec.template.spec.tolerations then
@@ -51,14 +83,16 @@ function __main__() {
   #  * В AWS и GCE — работает kube-dns-autoscaler (который ставит kops, и мы не хотим с ним спорить)
   #  * В других случаях:
   #    * Если есть system-узлы, то kube-dns должен выполняться на каждом system-узле
+  #      * если системный узел один, то количество реплик должно равняться 2, чтобы избежать перебоев сервиса при перекате kube-dns
   #    * Иначе количество реплик должно быть:
   #      * равно 2 или больше (если руками кто-то поставил),
   #      * но не больше, чем количество неспецифичных нод в кластере (без наших специальных taint)
   cluster_type=$(values::get --required global.discovery.clusterType)
   if [[ "$cluster_type" != "AWS" && "$cluster_type" != "GCE" ]] ; then
-    if cluster::has_system_nodes; then
-      count_system_nodes=$(cluster::count_system_nodes)
+    if (( "$count_system_nodes" > 1 )); then
       fltr=$fltr' | .spec.replicas = '$count_system_nodes
+    elif (( "$count_system_nodes" == 1 )); then
+      fltr=$fltr' | .spec.replicas = 2'
     else
       count_nonspecific_nodes=$(cluster::nonspecific_nodes | wc -l)
       fltr=$fltr' | .spec.replicas |= ([[2,.] | max, '$count_nonspecific_nodes'] | min)'
