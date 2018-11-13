@@ -79,6 +79,13 @@ spec:
     {{- else }}
         - --ingress-class=nginx-{{ .name }}
     {{- end }}
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+          runAsUser: 33
         volumeMounts:
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
