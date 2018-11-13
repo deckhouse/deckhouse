@@ -146,15 +146,11 @@ func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*Modu
 	moduleValuesKey := ModuleNameToValuesKey(moduleName)
 
 	if moduleValuesData, hasModuleData := data[moduleValuesKey]; hasModuleData {
-		if moduleEnabled, isBool := moduleValuesData.(bool); isBool {
-			moduleConfig.IsEnabled = moduleEnabled
-		} else {
-			moduleValues, moduleValuesOk := moduleValuesData.(map[interface{}]interface{})
-			if !moduleValuesOk {
-				return nil, fmt.Errorf("required map or bool data, got: %#v", moduleValuesData)
-			}
-
-			data := map[interface{}]interface{}{moduleValuesKey: moduleValues}
+		switch v := moduleValuesData.(type) {
+		case bool:
+			moduleConfig.IsEnabled = v
+		case map[interface{}]interface{}, []interface{}:
+			data := map[interface{}]interface{}{moduleValuesKey: v}
 
 			values, err := NewValues(data)
 			if err != nil {
@@ -162,6 +158,9 @@ func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*Modu
 			}
 
 			moduleConfig.Values = values
+
+		default:
+			return nil, fmt.Errorf("module config should be bool, array or map, got: %#v", moduleValuesData)
 		}
 	}
 
