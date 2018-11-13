@@ -61,12 +61,17 @@ func TestModuleConfig(t *testing.T) {
 }
 
 func TestNewModuleConfigByValuesYamlData(t *testing.T) {
+	configStr := `
+testModule:
+  a: 1
+  b: 2
+`
 	expectedData := Values{
 		"testModule": map[string]interface{}{
 			"a": 1.0, "b": 2.0,
 		},
 	}
-	config, err := NewModuleConfigByValuesYamlData("test-module", []byte("testModule:\n  a: 1\n  b: 2"))
+	config, err := NewModuleConfigByValuesYamlData("test-module", []byte(configStr))
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,9 +91,32 @@ func TestNewModuleConfigByValuesYamlData(t *testing.T) {
 	}
 
 	config, err = NewModuleConfigByValuesYamlData("test-module", []byte("testModule: falsee\n"))
-	if !strings.HasPrefix(err.Error(), "required map or bool data") {
+	if !strings.HasPrefix(err.Error(), "module config should be bool, array or map") {
 		t.Errorf("Got unexpected error: %s", err.Error())
 	}
+
+	configStr = `
+testModule:
+  - a: 1
+  - b: 2
+`
+	expectedData = Values{
+		"testModule": []interface{}{
+			map[string]interface{}{"a": 1.0},
+			map[string]interface{}{"b": 2.0},
+		},
+	}
+	config, err = NewModuleConfigByValuesYamlData("test-module", []byte(configStr))
+	if err != nil {
+		t.Error(err)
+	}
+	if !config.IsEnabled {
+		t.Errorf("Expected module to be enabled")
+	}
+	if !reflect.DeepEqual(config.Values, expectedData) {
+		t.Errorf("Got unexpected config values: %+v", config.Values)
+	}
+
 }
 
 func TestMergeValues(t *testing.T) {
