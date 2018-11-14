@@ -1,0 +1,614 @@
+From ef3e896bfc836f96398194fdc33f119540c91e13 Mon Sep 17 00:00:00 2001
+From: Ivan Mikheykin <ivan.mikheykin@flant.com>
+Date: Tue, 13 Nov 2018 19:50:27 +0300
+Subject: [PATCH 1/3] Replace Metrics with Collectors
+
+- dynamic labels values instead of ConstLabels
+- error if labels names mismatched
+
+Signed-off-by: Ivan Mikheykin <ivan.mikheykin@flant.com>
+---
+ exporter.go | 136 +++++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 98 insertions(+), 38 deletions(-)
+
+diff --git a/exporter.go b/exporter.go
+index b227516..f635349 100644
+--- a/exporter.go
++++ b/exporter.go
+@@ -22,6 +22,7 @@ import (
+ 	"io"
+ 	"net"
+ 	"regexp"
++	"sort"
+ 	"strconv"
+ 	"strings"
+ 	"unicode/utf8"
+@@ -38,6 +39,7 @@ const (
+ 	regErrF     = "A change of configuration created inconsistent metrics for " +
+ 		"%q. You have to restart the statsd_exporter, and you should " +
+ 		"consider the effects on your monitoring setup. Error: %s"
++	regErrNames = "labels names set mismatch with new set: %v"
+ )
+
+ var (
+@@ -63,75 +65,119 @@ func hashNameAndLabels(name string, labels prometheus.Labels) uint64 {
+ 	return hash.Sum64()
+ }
+
++func labelsNames(labels prometheus.Labels) []string {
++	names := make([]string, 0, len(labels))
++	for labelName := range labels {
++		names = append(names, labelName)
++	}
++	sort.Strings(names)
++	return names
++}
++
++// hashNameAndLabels returns a hash value of the provided name string and all
++// the label names in the provided labels map.
++//
++// Not safe for concurrent use! (Uses a shared buffer and hasher to save on
++// allocations.)
++func hashNameAndLabelNames(name string, labels prometheus.Labels) uint64 {
++	hash.Reset()
++	strBuf.Reset()
++	strBuf.WriteString(name)
++	for _, labelName := range labelsNames(labels) {
++		strBuf.WriteByte(255)
++		strBuf.WriteString(labelName)
++	}
++	hash.Write(strBuf.Bytes())
++	return hash.Sum64()
++}
++
+ type CounterContainer struct {
+-	Elements map[uint64]prometheus.Counter
++	//               metric     labels names hash
++	Elements     map[string]map[uint64]*prometheus.CounterVec
+ }
+
+ func NewCounterContainer() *CounterContainer {
+ 	return &CounterContainer{
+-		Elements: make(map[uint64]prometheus.Counter),
++		Elements:     make(map[string]map[uint64]*prometheus.CounterVec),
+ 	}
+ }
+
+ func (c *CounterContainer) Get(metricName string, labels prometheus.Labels, help string) (prometheus.Counter, error) {
+-	hash := hashNameAndLabels(metricName, labels)
+-	counter, ok := c.Elements[hash]
++	hash := hashNameAndLabelNames(metricName, labels)
++	var counter *prometheus.CounterVec
++	_, ok := c.Elements[metricName]
+ 	if !ok {
+-		counter = prometheus.NewCounter(prometheus.CounterOpts{
+-			Name:        metricName,
+-			Help:        help,
+-			ConstLabels: labels,
+-		})
++		counter = prometheus.NewCounterVec(prometheus.CounterOpts{
++			Name: metricName,
++			Help: help,
++		}, labelsNames(labels))
+ 		if err := prometheus.Register(counter); err != nil {
+ 			return nil, err
+ 		}
+-		c.Elements[hash] = counter
++		c.Elements[metricName] = map[uint64]*prometheus.CounterVec{
++			hash: counter,
++		}
++	}
++	counter, ok = c.Elements[metricName][hash]
++	if !ok {
++		err := fmt.Errorf(regErrNames, labelsNames(labels))
++		return nil, err
+ 	}
+-	return counter, nil
++
++	return counter.With(labels), nil
+ }
+
+ type GaugeContainer struct {
+-	Elements map[uint64]prometheus.Gauge
++	Elements map[string]map[uint64]*prometheus.GaugeVec
+ }
+
+ func NewGaugeContainer() *GaugeContainer {
+ 	return &GaugeContainer{
+-		Elements: make(map[uint64]prometheus.Gauge),
++		Elements: make(map[string]map[uint64]*prometheus.GaugeVec),
+ 	}
+ }
+
+ func (c *GaugeContainer) Get(metricName string, labels prometheus.Labels, help string) (prometheus.Gauge, error) {
+-	hash := hashNameAndLabels(metricName, labels)
+-	gauge, ok := c.Elements[hash]
++	hash := hashNameAndLabelNames(metricName, labels)
++	var gauge *prometheus.GaugeVec
++	_, ok := c.Elements[metricName]
+ 	if !ok {
+-		gauge = prometheus.NewGauge(prometheus.GaugeOpts{
++		gauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+ 			Name:        metricName,
+ 			Help:        help,
+-			ConstLabels: labels,
+-		})
++		}, labelsNames(labels))
+ 		if err := prometheus.Register(gauge); err != nil {
+ 			return nil, err
+ 		}
+-		c.Elements[hash] = gauge
++		c.Elements[metricName] = map[uint64]*prometheus.GaugeVec{
++			hash: gauge,
++		}
++	}
++	gauge, ok = c.Elements[metricName][hash]
++	if !ok {
++		err := fmt.Errorf(regErrNames, labelsNames(labels))
++		return nil, err
+ 	}
+-	return gauge, nil
++
++	return gauge.With(labels), nil
+ }
+
+ type SummaryContainer struct {
+-	Elements map[uint64]prometheus.Summary
++	Elements map[string]map[uint64]*prometheus.SummaryVec
+ 	mapper   *mapper.MetricMapper
+ }
+
+ func NewSummaryContainer(mapper *mapper.MetricMapper) *SummaryContainer {
+ 	return &SummaryContainer{
+-		Elements: make(map[uint64]prometheus.Summary),
++		Elements: make(map[string]map[uint64]*prometheus.SummaryVec),
+ 		mapper:   mapper,
+ 	}
+ }
+
+ func (c *SummaryContainer) Get(metricName string, labels prometheus.Labels, help string, mapping *mapper.MetricMapping) (prometheus.Summary, error) {
+-	hash := hashNameAndLabels(metricName, labels)
+-	summary, ok := c.Elements[hash]
++	hash := hashNameAndLabelNames(metricName, labels)
++	var summary *prometheus.SummaryVec
++	_, ok := c.Elements[metricName]
+ 	if !ok {
+ 		quantiles := c.mapper.Defaults.Quantiles
+ 		if mapping != nil && mapping.Quantiles != nil && len(mapping.Quantiles) > 0 {
+@@ -141,54 +187,68 @@ func (c *SummaryContainer) Get(metricName string, labels prometheus.Labels, help
+ 		for _, q := range quantiles {
+ 			objectives[q.Quantile] = q.Error
+ 		}
+-		summary = prometheus.NewSummary(
++		summary = prometheus.NewSummaryVec(
+ 			prometheus.SummaryOpts{
+ 				Name:        metricName,
+ 				Help:        help,
+-				ConstLabels: labels,
+ 				Objectives:  objectives,
+-			})
++			}, labelsNames(labels))
+ 		if err := prometheus.Register(summary); err != nil {
+ 			return nil, err
+ 		}
+-		c.Elements[hash] = summary
++		c.Elements[metricName] = map[uint64]*prometheus.SummaryVec{
++			hash: summary,
++		}
++	}
++	summary, ok = c.Elements[metricName][hash]
++	if !ok {
++		err := fmt.Errorf(regErrNames, labelsNames(labels))
++		return nil, err
+ 	}
+-	return summary, nil
++	return summary.With(labels), nil
+ }
+
+ type HistogramContainer struct {
+-	Elements map[uint64]prometheus.Histogram
++	Elements map[string]map[uint64]*prometheus.HistogramVec
+ 	mapper   *mapper.MetricMapper
+ }
+
+ func NewHistogramContainer(mapper *mapper.MetricMapper) *HistogramContainer {
+ 	return &HistogramContainer{
+-		Elements: make(map[uint64]prometheus.Histogram),
++		Elements: make(map[string]map[uint64]*prometheus.HistogramVec),
+ 		mapper:   mapper,
+ 	}
+ }
+
+ func (c *HistogramContainer) Get(metricName string, labels prometheus.Labels, help string, mapping *mapper.MetricMapping) (prometheus.Histogram, error) {
+-	hash := hashNameAndLabels(metricName, labels)
+-	histogram, ok := c.Elements[hash]
++	hash := hashNameAndLabelNames(metricName, labels)
++	var histogram *prometheus.HistogramVec
++	_, ok := c.Elements[metricName]
+ 	if !ok {
+ 		buckets := c.mapper.Defaults.Buckets
+ 		if mapping != nil && mapping.Buckets != nil && len(mapping.Buckets) > 0 {
+ 			buckets = mapping.Buckets
+ 		}
+-		histogram = prometheus.NewHistogram(
++		histogram = prometheus.NewHistogramVec(
+ 			prometheus.HistogramOpts{
+ 				Name:        metricName,
+ 				Help:        help,
+-				ConstLabels: labels,
+ 				Buckets:     buckets,
+-			})
+-		c.Elements[hash] = histogram
++			}, labelsNames(labels))
+ 		if err := prometheus.Register(histogram); err != nil {
+ 			return nil, err
+ 		}
++		c.Elements[metricName] = map[uint64]*prometheus.HistogramVec{
++			hash: histogram,
++		}
++	}
++	histogram, ok = c.Elements[metricName][hash]
++	if !ok {
++		err := fmt.Errorf(regErrNames, labelsNames(labels))
++		return nil, err
+ 	}
+-	return histogram, nil
++
++	return histogram.With(labels), nil
+ }
+
+ type Event interface {
+
+From e14e76cb229f55eeb8c6baf41eadd63e66cf148f Mon Sep 17 00:00:00 2001
+From: Ivan Mikheykin <ivan.mikheykin@flant.com>
+Date: Tue, 13 Nov 2018 21:41:33 +0300
+Subject: [PATCH 2/3] Remove stale timeseries
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- ttl is hardcoded — should be in mapping.yaml
+- works with metrics without labels
+
+Signed-off-by: Ivan Mikheykin <ivan.mikheykin@flant.com>
+---
+ exporter.go | 98 +++++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 91 insertions(+), 7 deletions(-)
+
+diff --git a/exporter.go b/exporter.go
+index f635349..5cc920f 100644
+--- a/exporter.go
++++ b/exporter.go
+@@ -25,6 +25,7 @@ import (
+ 	"sort"
+ 	"strconv"
+ 	"strings"
++	"time"
+ 	"unicode/utf8"
+
+ 	"github.com/prometheus/client_golang/prometheus"
+@@ -42,6 +43,9 @@ const (
+ 	regErrNames = "labels names set mismatch with new set: %v"
+ )
+
++// TODO move to mapping config
++const metricTtl = time.Duration(5 * time.Second)
++
+ var (
+ 	illegalCharsRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+
+@@ -127,6 +131,13 @@ func (c *CounterContainer) Get(metricName string, labels prometheus.Labels, help
+ 	return counter.With(labels), nil
+ }
+
++func (c *CounterContainer) Delete(metricName string, labels prometheus.Labels) {
++	if _, ok := c.Elements[metricName]; ok {
++		hash := hashNameAndLabelNames(metricName, labels)
++		c.Elements[metricName][hash].Delete(labels)
++	}
++}
++
+ type GaugeContainer struct {
+ 	Elements map[string]map[uint64]*prometheus.GaugeVec
+ }
+@@ -162,6 +173,13 @@ func (c *GaugeContainer) Get(metricName string, labels prometheus.Labels, help s
+ 	return gauge.With(labels), nil
+ }
+
++func (c *GaugeContainer) Delete(metricName string, labels prometheus.Labels) {
++	if _, ok := c.Elements[metricName]; ok {
++		hash := hashNameAndLabelNames(metricName, labels)
++		c.Elements[metricName][hash].Delete(labels)
++	}
++}
++
+ type SummaryContainer struct {
+ 	Elements map[string]map[uint64]*prometheus.SummaryVec
+ 	mapper   *mapper.MetricMapper
+@@ -208,6 +226,13 @@ func (c *SummaryContainer) Get(metricName string, labels prometheus.Labels, help
+ 	return summary.With(labels), nil
+ }
+
++func (c *SummaryContainer) Delete(metricName string, labels prometheus.Labels) {
++	if _, ok := c.Elements[metricName]; ok {
++		hash := hashNameAndLabelNames(metricName, labels)
++		c.Elements[metricName][hash].Delete(labels)
++	}
++}
++
+ type HistogramContainer struct {
+ 	Elements map[string]map[uint64]*prometheus.HistogramVec
+ 	mapper   *mapper.MetricMapper
+@@ -251,6 +276,13 @@ func (c *HistogramContainer) Get(metricName string, labels prometheus.Labels, he
+ 	return histogram.With(labels), nil
+ }
+
++func (c *HistogramContainer) Delete(metricName string, labels prometheus.Labels) {
++	if _, ok := c.Elements[metricName]; ok {
++		hash := hashNameAndLabelNames(metricName, labels)
++		c.Elements[metricName][hash].Delete(labels)
++	}
++}
++
+ type Event interface {
+ 	MetricName() string
+ 	Value() float64
+@@ -294,12 +326,18 @@ func (c *TimerEvent) MetricType() mapper.MetricType { return mapper.MetricTypeTi
+
+ type Events []Event
+
++type LabelsValues struct {
++	lastRegisteredAt time.Time
++	labels prometheus.Labels
++}
++
+ type Exporter struct {
+ 	Counters   *CounterContainer
+ 	Gauges     *GaugeContainer
+ 	Summaries  *SummaryContainer
+ 	Histograms *HistogramContainer
+ 	mapper     *mapper.MetricMapper
++	labelsValues map[string]map[uint64]*LabelsValues
+ }
+
+ func escapeMetricName(metricName string) string {
+@@ -316,14 +354,22 @@ func escapeMetricName(metricName string) string {
+ // Listen handles all events sent to the given channel sequentially. It
+ // terminates when the channel is closed.
+ func (b *Exporter) Listen(e <-chan Events) {
++	// Start ticker with probe period
++	removeStaleMetricsTicker := time.NewTicker(time.Second)
++
+ 	for {
+-		events, ok := <-e
+-		if !ok {
+-			log.Debug("Channel is closed. Break out of Exporter.Listener.")
+-			return
+-		}
+-		for _, event := range events {
+-			b.handleEvent(event)
++		select {
++		case <-removeStaleMetricsTicker.C:
++			b.removeStaleMetrics()
++		case events, ok := <-e:
++			if !ok {
++				log.Debug("Channel is closed. Break out of Exporter.Listener.")
++				removeStaleMetricsTicker.Stop()
++				return
++			}
++			for _, event := range events {
++				b.handleEvent(event)
++			}
+ 		}
+ 	}
+ }
+@@ -373,6 +419,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 		)
+ 		if err == nil {
+ 			counter.Add(event.Value())
++			b.saveLabelsValues(metricName, prometheusLabels)
+
+ 			eventStats.WithLabelValues("counter").Inc()
+ 		} else {
+@@ -393,6 +440,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 			} else {
+ 				gauge.Set(event.Value())
+ 			}
++			b.saveLabelsValues(metricName, prometheusLabels)
+
+ 			eventStats.WithLabelValues("gauge").Inc()
+ 		} else {
+@@ -419,6 +467,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 			)
+ 			if err == nil {
+ 				histogram.Observe(event.Value() / 1000) // prometheus presumes seconds, statsd millisecond
++				b.saveLabelsValues(metricName, prometheusLabels)
+ 				eventStats.WithLabelValues("timer").Inc()
+ 			} else {
+ 				log.Debugf(regErrF, metricName, err)
+@@ -434,6 +483,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 			)
+ 			if err == nil {
+ 				summary.Observe(event.Value())
++				b.saveLabelsValues(metricName, prometheusLabels)
+ 				eventStats.WithLabelValues("timer").Inc()
+ 			} else {
+ 				log.Debugf(regErrF, metricName, err)
+@@ -450,6 +500,39 @@ func (b *Exporter) handleEvent(event Event) {
+ 	}
+ }
+
++// removeStaleMetrics removes metrics from collectors with stale values
++func (b *Exporter) removeStaleMetrics() {
++	now := time.Now()
++	// delete timeseries with expired ttl
++	for metricName := range b.labelsValues {
++		for hash, lvs := range b.labelsValues[metricName] {
++			if lvs.lastRegisteredAt.Add(metricTtl).Before(now) {
++				b.Counters.Delete(metricName, lvs.labels)
++				b.Gauges.Delete(metricName, lvs.labels)
++				b.Summaries.Delete(metricName, lvs.labels)
++				b.Histograms.Delete(metricName, lvs.labels)
++				delete(b.labelsValues[metricName], hash)
++			}
++		}
++	}
++}
++
++func (b *Exporter) saveLabelsValues(metricName string, labels prometheus.Labels) {
++	_, hasMetric := b.labelsValues[metricName]
++	if !hasMetric {
++		b.labelsValues[metricName] = make(map[uint64]*LabelsValues)
++	}
++	hash := hashNameAndLabels(metricName, labels)
++	_, ok := b.labelsValues[metricName][hash]
++	if !ok {
++		b.labelsValues[metricName][hash] = &LabelsValues{
++			labels: labels,
++		}
++	}
++	now := time.Now()
++	b.labelsValues[metricName][hash].lastRegisteredAt = now
++}
++
+ func NewExporter(mapper *mapper.MetricMapper) *Exporter {
+ 	return &Exporter{
+ 		Counters:   NewCounterContainer(),
+@@ -457,6 +540,7 @@ func NewExporter(mapper *mapper.MetricMapper) *Exporter {
+ 		Summaries:  NewSummaryContainer(mapper),
+ 		Histograms: NewHistogramContainer(mapper),
+ 		mapper:     mapper,
++		labelsValues: make(map[string]map[uint64]*LabelsValues, 0),
+ 	}
+ }
+
+
+From b1f99c5587050caa22a6bdb1b0b129b639cdb9a7 Mon Sep 17 00:00:00 2001
+From: Ivan Mikheykin <ivan.mikheykin@flant.com>
+Date: Tue, 13 Nov 2018 22:02:58 +0300
+Subject: [PATCH 3/3] Configured ttl value for stale metrics
+
+Signed-off-by: Ivan Mikheykin <ivan.mikheykin@flant.com>
+---
+ exporter.go          | 20 +++++++++++---------
+ pkg/mapper/mapper.go |  6 ++++++
+ 2 files changed, 17 insertions(+), 9 deletions(-)
+
+diff --git a/exporter.go b/exporter.go
+index 5cc920f..8ef0b7c 100644
+--- a/exporter.go
++++ b/exporter.go
+@@ -43,9 +43,6 @@ const (
+ 	regErrNames = "labels names set mismatch with new set: %v"
+ )
+
+-// TODO move to mapping config
+-const metricTtl = time.Duration(5 * time.Second)
+-
+ var (
+ 	illegalCharsRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+
+@@ -329,6 +326,7 @@ type Events []Event
+ type LabelsValues struct {
+ 	lastRegisteredAt time.Time
+ 	labels prometheus.Labels
++	ttl uint64
+ }
+
+ type Exporter struct {
+@@ -419,7 +417,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 		)
+ 		if err == nil {
+ 			counter.Add(event.Value())
+-			b.saveLabelsValues(metricName, prometheusLabels)
++			b.saveLabelsValues(metricName, prometheusLabels, mapping.Ttl)
+
+ 			eventStats.WithLabelValues("counter").Inc()
+ 		} else {
+@@ -440,7 +438,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 			} else {
+ 				gauge.Set(event.Value())
+ 			}
+-			b.saveLabelsValues(metricName, prometheusLabels)
++			b.saveLabelsValues(metricName, prometheusLabels, mapping.Ttl)
+
+ 			eventStats.WithLabelValues("gauge").Inc()
+ 		} else {
+@@ -467,7 +465,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 			)
+ 			if err == nil {
+ 				histogram.Observe(event.Value() / 1000) // prometheus presumes seconds, statsd millisecond
+-				b.saveLabelsValues(metricName, prometheusLabels)
++				b.saveLabelsValues(metricName, prometheusLabels, mapping.Ttl)
+ 				eventStats.WithLabelValues("timer").Inc()
+ 			} else {
+ 				log.Debugf(regErrF, metricName, err)
+@@ -483,7 +481,7 @@ func (b *Exporter) handleEvent(event Event) {
+ 			)
+ 			if err == nil {
+ 				summary.Observe(event.Value())
+-				b.saveLabelsValues(metricName, prometheusLabels)
++				b.saveLabelsValues(metricName, prometheusLabels, mapping.Ttl)
+ 				eventStats.WithLabelValues("timer").Inc()
+ 			} else {
+ 				log.Debugf(regErrF, metricName, err)
+@@ -506,7 +504,10 @@ func (b *Exporter) removeStaleMetrics() {
+ 	// delete timeseries with expired ttl
+ 	for metricName := range b.labelsValues {
+ 		for hash, lvs := range b.labelsValues[metricName] {
+-			if lvs.lastRegisteredAt.Add(metricTtl).Before(now) {
++			if lvs.ttl == 0 {
++				continue
++			}
++			if lvs.lastRegisteredAt.Add(time.Duration(lvs.ttl)*time.Second).Before(now) {
+ 				b.Counters.Delete(metricName, lvs.labels)
+ 				b.Gauges.Delete(metricName, lvs.labels)
+ 				b.Summaries.Delete(metricName, lvs.labels)
+@@ -517,7 +518,7 @@ func (b *Exporter) removeStaleMetrics() {
+ 	}
+ }
+
+-func (b *Exporter) saveLabelsValues(metricName string, labels prometheus.Labels) {
++func (b *Exporter) saveLabelsValues(metricName string, labels prometheus.Labels, ttl uint64) {
+ 	_, hasMetric := b.labelsValues[metricName]
+ 	if !hasMetric {
+ 		b.labelsValues[metricName] = make(map[uint64]*LabelsValues)
+@@ -527,6 +528,7 @@ func (b *Exporter) saveLabelsValues(metricName string, labels prometheus.Labels)
+ 	if !ok {
+ 		b.labelsValues[metricName][hash] = &LabelsValues{
+ 			labels: labels,
++			ttl: ttl,
+ 		}
+ 	}
+ 	now := time.Now()
+diff --git a/pkg/mapper/mapper.go b/pkg/mapper/mapper.go
+index 46e90e6..621f5a2 100644
+--- a/pkg/mapper/mapper.go
++++ b/pkg/mapper/mapper.go
+@@ -39,6 +39,7 @@ type mapperConfigDefaults struct {
+ 	Quantiles           []metricObjective `yaml:"quantiles"`
+ 	MatchType           MatchType         `yaml:"match_type"`
+ 	GlobDisableOrdering bool              `yaml:"glob_disable_ordering"`
++	Ttl                 uint64            `yaml:"ttl"`
+ }
+
+ type MetricMapper struct {
+@@ -69,6 +70,7 @@ type MetricMapping struct {
+ 	HelpText        string            `yaml:"help"`
+ 	Action          ActionType        `yaml:"action"`
+ 	MatchMetricType MetricType        `yaml:"match_metric_type"`
++	Ttl             uint64            `yaml:"ttl"`
+ }
+
+ type metricObjective struct {
+@@ -177,6 +179,10 @@ func (m *MetricMapper) InitFromYAMLString(fileContents string) error {
+ 			currentMapping.Quantiles = n.Defaults.Quantiles
+ 		}
+
++		if currentMapping.Ttl == 0 && n.Defaults.Ttl > 0 {
++			currentMapping.Ttl = n.Defaults.Ttl
++		}
++
+ 	}
+
+ 	m.mutex.Lock()
