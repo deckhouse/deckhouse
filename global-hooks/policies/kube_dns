@@ -18,29 +18,8 @@ count_system_nodes=$(cluster::count_system_nodes)
     fltr=$fltr' | .spec.template.spec.tolerations |= (
       . + [{"key":"node-role/system","operator":"Exists"}] | unique
     )'
-
-    if (( "$count_system_nodes" == 1 )); then
+    if (( "$count_system_nodes" > 1 )); then
       # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
-      # Используем preferredDuringSchedulingIgnoredDuringExecution, т.к. у нас всего одна system нода
-      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (
-        if . then . else [{}] end | map(
-          .weight = (.weight // 1) |
-          .preference.matchExpressions |= (
-            . + [{"key":"node-role/system","operator":"Exists"}] | unique
-          )
-        )
-      )'
-      # Удаляем из каждого nodeSelectorTerm в requiredDuringSchedulingIgnoredDuringExecution по matchExpression, если он был добавлен
-      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
-        .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-          . | map(
-            .matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
-          )
-        )
-      else . end'
-    else
-      # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
-      # Используем requiredDuringSchedulingIgnoredDuringExecution, т.к. у нас есть необходимый минимум system нод
       fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
         if . then . else [{}] end | map(
           .matchExpressions |= (
@@ -48,15 +27,17 @@ count_system_nodes=$(cluster::count_system_nodes)
           )
         )
       )'
-      # Удаляем из каждого preference в preferredDuringSchedulingIgnoredDuringExecution по matchExpression, если он был добавлен
-      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution then
-        .spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (
+    else
+      # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
+      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
+        .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
           . | map(
-            .preference.matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
+            .matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
           )
         )
       else . end'
     fi
+
   else
     # Удаляем toleration, если был добавлен
     fltr=$fltr' | if .spec.template.spec.tolerations then
