@@ -25,36 +25,6 @@ groups:
       description: etcd node {{ $labels.node }} ({{ $labels.component }}) has seen {{ $value }} leader
         changes within the last hour
       summary: a high number of leader changes within the etcd cluster are happening
-  - alert: KubeEtcd3HighNumberOfFailedGRPCRequests
-    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",job="kube-etcd3"}[5m])) BY (node, component, grpc_service, grpc_method)
-      / sum(rate(grpc_server_handled_total{job="kube-etcd3"}[5m])) BY (node, component, grpc_service, grpc_method) > 0.01
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed
-        on etcd node {{ $labels.node }} ({{ $labels.component }})'
-      summary: a high number of gRPC requests are failing
-  - alert: KubeEtcd3HighNumberOfFailedGRPCRequests
-    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",job="kube-etcd3"}[5m])) BY (node, component, grpc_service, grpc_method)
-      / sum(rate(grpc_server_handled_total{job="kube-etcd3"}[5m])) BY (node, component, grpc_service, grpc_method) > 0.05
-    for: 5m
-    labels:
-      severity: critical
-    annotations:
-      description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed
-        on etcd node {{ $labels.node }} ({{ $labels.component }})'
-      summary: a high number of gRPC requests are failing
-#  - alert: KubeEtcd3GRPCRequestsSlow
-#    expr: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{job="kube-etcd3",grpc_type="unary"}[5m])) by (node, component, grpc_service, grpc_method, le))
-#      > 0.15
-#    for: 10m
-#    labels:
-#      severity: critical
-#    annotations:
-#      description: on etcd node {{ $labels.node }} ({{ $labels.component }}) gRPC requests to {{ $labels.grpc_method
-#        }} are slow
-#      summary: slow gRPC requests
   - alert: KubeEtcd3HighNumberOfFailedHTTPRequests
     expr: sum(rate(etcd_http_failed_total{job="kube-etcd3"}[5m])) BY (node, component, method) / sum(rate(etcd_http_received_total{job="kube-etcd3"}[5m]))
       BY (node, component, method) > 0.01
