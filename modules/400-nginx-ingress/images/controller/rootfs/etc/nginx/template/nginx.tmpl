@@ -780,8 +780,6 @@ stream {
             {{ if not $isLuaDisabled }}
             log_by_lua_block {
                 local statsd = require "statsd"
-                ngx.log(ngx.ERR, "Custom error page: " .. ngx.var.request_id)
-
                 statsd.call()
             }
             {{ end }}
@@ -1032,7 +1030,6 @@ stream {
                 {{ end }}
 
                 local statsd = require "statsd"
-                ngx.log(ngx.ERR, "Main: " .. ngx.var.request_id)
                 statsd.call()
             }
             {{ end }}
