@@ -83,21 +83,21 @@ func Init() {
 		rlog.Errorf("MAIN Fatal: Cannot determine antiopa working dir: %s", err)
 		os.Exit(1)
 	}
-	rlog.Infof("WORKING_DIR=%s", WorkingDir)
+	rlog.Infof("Antiopa working dir: %s", WorkingDir)
 
 	TempDir, err = ioutil.TempDir("", "antiopa-")
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot create antiopa temporary dir: %s", err)
 		os.Exit(1)
 	}
-	rlog.Infof("TEMP_DIR=%s", TempDir)
+	rlog.Infof("Antiopa temporary dir: %s", TempDir)
 
 	Hostname, err = os.Hostname()
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %s", err)
 		os.Exit(1)
 	}
-	rlog.Infof("HOSTNAME=%s", Hostname)
+	rlog.Infof("Antiopa hostname: %s", Hostname)
 
 	// Инициализация подключения к kube
 	kube.InitKube()
@@ -199,6 +199,7 @@ func ManagersEventsHandler() {
 		select {
 		// Образ antiopa изменился, нужен рестарт деплоймента (можно и не выходить)
 		case newImageId := <-docker_registry_manager.ImageUpdated:
+			rlog.Infof("EVENT ImageUpdated")
 			err := kube.KubeUpdateDeployment(newImageId)
 			if err == nil {
 				rlog.Infof("KUBE deployment update successful, exiting ...")
@@ -215,38 +216,45 @@ func ManagersEventsHandler() {
 			switch moduleEvent.Type {
 			// Изменились отдельные модули
 			case module_manager.ModulesChanged:
-				rlog.Debug("main: got ModulesChanged event")
 				for _, moduleChange := range moduleEvent.ModulesChanges {
 					switch moduleChange.ChangeType {
 					case module_manager.Enabled:
+						rlog.Infof("EVENT ModulesChanged, type=Enabled")
 						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
 						TasksQueue.Add(newTask)
+						rlog.Infof("QUEUE add ModuleRun %s", newTask.Name)
 
 						err := KubeEventsHooks.EnableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
 						if err != nil {
-							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+							rlog.Errorf("MAIN_LOOP module '%s' enabled: cannot enable hooks: %s", moduleChange.Name, err)
 						}
 
 					case module_manager.Changed:
+						rlog.Infof("EVENT ModulesChanged, type=Changed")
 						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
 						TasksQueue.Add(newTask)
+						rlog.Infof("QUEUE add ModuleRun %s", newTask.Name)
 
 					case module_manager.Disabled:
+						rlog.Infof("EVENT ModulesChanged, type=Disabled")
 						newTask := task.NewTask(task.ModuleDelete, moduleChange.Name)
 						TasksQueue.Add(newTask)
+						rlog.Infof("QUEUE add ModuleDelete %s", newTask.Name)
 
 						err := KubeEventsHooks.DisableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
 						if err != nil {
-							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+							rlog.Errorf("MAIN_LOOP module '%s' disabled: cannot disable hooks: %s", moduleChange.Name, err)
 						}
 
 					case module_manager.Purged:
+						rlog.Infof("EVENT ModulesChanged, type=Purged")
 						newTask := task.NewTask(task.ModulePurge, moduleChange.Name)
 						TasksQueue.Add(newTask)
+						rlog.Infof("QUEUE add ModulePurge %s", newTask.Name)
 
 						err := KubeEventsHooks.DisableModuleHooks(moduleChange.Name, ModuleManager, KubeEventsManager)
 						if err != nil {
-							rlog.Errorf("main: cannot enable module '%s' hooks: %s", moduleChange.Name, err)
+							rlog.Errorf("MAIN_LOOP module '%s' purged: cannot disable hooks: %s", moduleChange.Name, err)
 						}
 					}
 				}
@@ -254,14 +262,14 @@ func ManagersEventsHandler() {
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			// Изменились глобальные values, нужен рестарт всех модулей
 			case module_manager.GlobalChanged:
-				rlog.Debug("main: got GlobalChanged event")
+				rlog.Infof("EVENT GlobalChanged")
 				TasksQueue.ChangesDisable()
 				CreateReloadAllTasks()
 				TasksQueue.ChangesEnable(true)
 				// Пересоздать индекс хуков по расписанию
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
 			case module_manager.AmbigousState:
-				rlog.Debug("main: got AmbigousState event")
+				rlog.Infof("EVENT AmbigousState")
 				TasksQueue.ChangesDisable()
 				// Это ошибка в module_manager. Нужно добавить задачу в начало очереди,
 				// чтобы module_manager имел возможность восстановить своё состояние
@@ -271,6 +279,7 @@ func ManagersEventsHandler() {
 				// Задержка перед выполнением retry
 				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 				TasksQueue.ChangesEnable(true)
+				rlog.Infof("QUEUE push ModuleManagerRetry, push FailedModuleDelay")
 			}
 		case crontab := <-schedule_manager.ScheduleCh:
 			scheduleHooks := ScheduledHooks.GetHooksForSchedule(crontab)
@@ -288,8 +297,8 @@ func ManagersEventsHandler() {
 							WithBinding(module_manager.Schedule).
 							WithBindingContext(module_manager.BindingContext{Binding: bindingName}).
 							WithAllowFailure(scheduleConfig.AllowFailure)
-						rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
 						TasksQueue.Add(newTask)
+						rlog.Debugf("QUEUE add GlobalHookRun@Schedule '%s'", hook.Name)
 					}
 					continue
 				}
@@ -305,28 +314,29 @@ func ManagersEventsHandler() {
 							WithBinding(module_manager.Schedule).
 							WithBindingContext(module_manager.BindingContext{Binding: bindingName}).
 							WithAllowFailure(scheduleConfig.AllowFailure)
-						rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
 						TasksQueue.Add(newTask)
+						rlog.Debugf("QUEUE add ModuleHookRun@Schedule '%s'", hook.Name)
 					}
 					continue
 				}
 
-				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
+				rlog.Errorf("MAIN_LOOP hook '%s' scheduled but not found by module_manager", hook.Name)
 			}
 		case kubeEvent := <-kube_events_manager.KubeEventCh:
-			rlog.Debugf("main: got kube event '%s': %+v", kubeEvent.ConfigId, kubeEvent)
+			rlog.Infof("EVENT Kube event '%s'", kubeEvent.ConfigId)
 
 			res, err := KubeEventsHooks.HandleEvent(kubeEvent)
 			if err != nil {
-				rlog.Errorf("main: error handling kube event '%s': %s", kubeEvent.ConfigId, err)
+				rlog.Errorf("MAIN_LOOP error handling kube event '%s': %s", kubeEvent.ConfigId, err)
 				break
 			}
 
 			for _, task := range res.Tasks {
 				TasksQueue.Add(task)
-				rlog.Debugf("main: queued %s '%s' with binding %s", task.GetType(), task.GetName(), task.GetBinding())
+				rlog.Infof("QUEUE add %s@%s %s", task.GetType(), task.GetBinding(), task.GetName())
 			}
 		case <-ManagersEventsHandlerStopCh:
+			rlog.Infof("EVENT Stop")
 			return
 		}
 	}
@@ -340,20 +350,20 @@ func runDiscoverModulesState(_ task.Task) error {
 
 	for _, moduleName := range modulesState.EnabledModules {
 		newTask := task.NewTask(task.ModuleRun, moduleName)
-		rlog.Debugf("DiscoverModulesState: queued module run '%s'", moduleName)
 		TasksQueue.Add(newTask)
+		rlog.Infof("QUEUE add ModuleRun %s", moduleName)
 	}
 
 	for _, moduleName := range modulesState.ModulesToDisable {
 		newTask := task.NewTask(task.ModuleDelete, moduleName)
 		TasksQueue.Add(newTask)
-		rlog.Debugf("DiscoverModulesState: queued module delete for disabled module '%s'", moduleName)
+		rlog.Infof("QUEUE add ModuleDelete %s", moduleName)
 	}
 
 	for _, moduleName := range modulesState.ReleasedUnknownModules {
 		newTask := task.NewTask(task.ModulePurge, moduleName)
 		TasksQueue.Add(newTask)
-		rlog.Debugf("DiscoverModulesState: queued module purge for unknown module '%s'", moduleName)
+		rlog.Infof("QUEUE add ModulePurge %s", moduleName)
 	}
 
 	// Queue afterAll global hooks
@@ -363,7 +373,10 @@ func runDiscoverModulesState(_ task.Task) error {
 			WithBinding(module_manager.AfterAll).
 			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.AfterAll]})
 		TasksQueue.Add(newTask)
-		rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
+		rlog.Debugf("QUEUE add GlobalHookRun@AfterAll '%s'", hookName)
+	}
+	if len(afterAllHooks) > 0 {
+		rlog.Infof("QUEUE add all GlobalHookRun@AfterAll")
 	}
 
 	ScheduledHooks = UpdateScheduleHooks(nil)
@@ -405,38 +418,45 @@ func TasksRunner() {
 
 			switch t.GetType() {
 			case task.DiscoverModulesState:
+				rlog.Infof("TASK_RUN DiscoverModulesState")
 				err := runDiscoverModulesState(t)
 				if err != nil {
 					MetricsStorage.SendCounterMetric("antiopa_modules_discover_errors", 1.0, map[string]string{})
 					t.IncrementFailureCount()
-					rlog.Errorf("%s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
+					rlog.Errorf("TASK_RUN %s failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+					rlog.Infof("QUEUE push FailedModuleDelay")
 					break
 				}
 
 				TasksQueue.Pop()
 
 			case task.ModuleRun:
+				rlog.Infof("TASK_RUN ModuleRun %s", t.GetName())
 				err := ModuleManager.RunModule(t.GetName())
 				if err != nil {
 					MetricsStorage.SendCounterMetric("antiopa_module_run_errors", 1.0, map[string]string{"module": t.GetName()})
 					t.IncrementFailureCount()
-					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
+					rlog.Errorf("TASK_RUN %s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+					rlog.Infof("QUEUE push FailedModuleDelay")
 				} else {
 					TasksQueue.Pop()
 				}
 			case task.ModuleDelete:
+				rlog.Infof("TASK_RUN ModuleDelete %s", t.GetName())
 				err := ModuleManager.DeleteModule(t.GetName())
 				if err != nil {
 					MetricsStorage.SendCounterMetric("antiopa_module_delete_errors", 1.0, map[string]string{"module": t.GetName()})
 					t.IncrementFailureCount()
 					rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 					TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+					rlog.Infof("QUEUE push FailedModuleDelay")
 				} else {
 					TasksQueue.Pop()
 				}
 			case task.ModuleHookRun:
+				rlog.Infof("TASK_RUN ModuleHookRun@%s %s", t.GetBinding(), t.GetName())
 				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding(), t.GetBindingContext())
 				if err != nil {
 					moduleHook, _ := ModuleManager.GetModuleHook(t.GetName())
@@ -451,11 +471,13 @@ func TasksRunner() {
 						t.IncrementFailureCount()
 						rlog.Errorf("%s '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetFailureCount(), err)
 						TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+						rlog.Infof("QUEUE push FailedModuleDelay")
 					}
 				} else {
 					TasksQueue.Pop()
 				}
 			case task.GlobalHookRun:
+				rlog.Infof("TASK_RUN GlobalHookRun@%s %s", t.GetBinding(), t.GetName())
 				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding(), t.GetBindingContext())
 				if err != nil {
 					globalHook, _ := ModuleManager.GetGlobalHook(t.GetName())
@@ -467,32 +489,35 @@ func TasksRunner() {
 					} else {
 						MetricsStorage.SendCounterMetric("antiopa_global_hook_errors", 1.0, map[string]string{"hook": hookLabel})
 						t.IncrementFailureCount()
-						rlog.Errorf("%s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
+						rlog.Errorf("TASK_RUN %s '%s' on '%s' failed. Will retry after delay. Failed count is %d. Error: %s", t.GetType(), t.GetName(), t.GetBinding(), t.GetFailureCount(), err)
 						TasksQueue.Push(task.NewTaskDelay(FailedHookDelay))
 					}
 				} else {
 					TasksQueue.Pop()
 				}
 			case task.ModulePurge:
+				rlog.Infof("TASK_RUN ModulePurge %s", t.GetName())
 				// если вызван purge, то про модуль ничего неизвестно, поэтому ошибку
 				// удаления достаточно записать в лог
 				err := HelmClient.DeleteRelease(t.GetName())
 				if err != nil {
-					rlog.Errorf("%s helm delete '%s' failed. Error: %s", t.GetType(), t.GetName(), err)
+					rlog.Errorf("TASK_RUN %s helm delete '%s' failed. Error: %s", t.GetType(), t.GetName(), err)
 				}
 				TasksQueue.Pop()
 			case task.ModuleManagerRetry:
-				rlog.Debugf("MODULE_MANAGER_RETRY task")
+				rlog.Infof("TASK_RUN ModuleManagerRetry")
 				// TODO метрику нужно отсылать из module_manager. Cделать metric_storage глобальным!
 				MetricsStorage.SendCounterMetric("antiopa_modules_discover_errors", 1.0, map[string]string{})
 				ModuleManager.Retry()
 				TasksQueue.Pop()
 				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
+				rlog.Infof("QUEUE push FailedModuleDelay")
 			case task.Delay:
+				rlog.Infof("TASK_RUN Delay for %d", t.GetDelay().String())
 				TasksQueue.Pop()
 				time.Sleep(t.GetDelay())
 			case task.Stop:
-				rlog.Infof("TaskRunner got stop task. Exiting runner loop.")
+				rlog.Infof("TASK_RUN Stop: Exiting TASK_RUN loop.")
 				TasksQueue.Pop()
 				return
 			}
@@ -662,6 +687,8 @@ LOOP_GLOBAL_HOOKS:
 }
 
 func CreateOnStartupTasks() {
+	rlog.Infof("QUEUE add all GlobalHookRun@OnStartup")
+
 	onStartupHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
 
 	for _, hookName := range onStartupHooks {
@@ -669,13 +696,15 @@ func CreateOnStartupTasks() {
 			WithBinding(module_manager.OnStartup).
 			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.OnStartup]})
 		TasksQueue.Add(newTask)
-		rlog.Debugf("OnStartup: queued global hook '%s'", hookName)
+		rlog.Debugf("QUEUE add GlobalHookRun@OnStartup '%s'", hookName)
 	}
 
 	return
 }
 
 func CreateReloadAllTasks() {
+	rlog.Infof("QUEUE add all GlobalHookRun@BeforeAll, add DiscoverModulesState")
+
 	// Queue beforeAll global hooks
 	beforeAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll)
 
@@ -685,11 +714,10 @@ func CreateReloadAllTasks() {
 			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.BeforeAll]})
 
 		TasksQueue.Add(newTask)
-		rlog.Debugf("ReloadAll: queued global %s hook '%s'", module_manager.BeforeAll, hookName)
+		rlog.Debugf("QUEUE GlobalHookRun@BeforeAll '%s'", module_manager.BeforeAll, hookName)
 	}
 
 	TasksQueue.Add(task.NewTask(task.DiscoverModulesState, ""))
-	rlog.Debugf("ReloadAll: queued discover of modules state")
 }
 
 func RunAntiopaMetrics() {

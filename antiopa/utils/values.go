@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strings"
 
 	"github.com/evanphx/json-patch"
 	ghodssyaml "github.com/ghodss/yaml"
 	"github.com/go-yaml/yaml"
 	"github.com/peterbourgon/mergemap"
 	"github.com/segmentio/go-camelcase"
-	"strings"
 )
 
 const (
 	GlobalValuesKey = "global"
 )
 
+// Values stores values for modules or hooks by name
 type Values map[string]interface{}
 
 type ValuesPatch struct {
@@ -50,20 +51,6 @@ func (op *ValuesPatchOperation) ToString() string {
 		panic(err)
 	}
 	return string(data)
-}
-
-type ModuleConfig struct {
-	ModuleName string
-	IsEnabled  bool
-	Values     Values
-}
-
-func (mc ModuleConfig) String() string {
-	return fmt.Sprintf("ModuleName=%s IsEnabled=%v Values:\n%s", mc.ModuleName, mc.IsEnabled, ValuesToString(mc.Values))
-}
-
-func ModuleConfigToString(mc ModuleConfig) string {
-	return mc.String()
 }
 
 func ModuleNameToValuesKey(moduleName string) string {
@@ -101,17 +88,6 @@ func ModuleNameFromValuesKey(moduleValuesKey string) string {
 	return string(b)
 }
 
-func NewModuleConfigByValuesYamlData(moduleName string, data []byte) (*ModuleConfig, error) {
-	var values map[interface{}]interface{}
-
-	err := yaml.Unmarshal(data, &values)
-	if err != nil {
-		return nil, fmt.Errorf("bad module %s values data: %s\n%s", moduleName, err, string(data))
-	}
-
-	return NewModuleConfig(moduleName, values)
-}
-
 func NewValuesFromBytes(data []byte) (Values, error) {
 	var rawValues map[interface{}]interface{}
 
@@ -130,41 +106,6 @@ func NewValues(data map[interface{}]interface{}) (Values, error) {
 	}
 
 	return values, nil
-}
-
-func NewEmptyModuleConfig(moduleName string) *ModuleConfig {
-	return &ModuleConfig{
-		ModuleName: moduleName,
-		IsEnabled:  true,
-		Values:     make(Values),
-	}
-}
-
-func NewModuleConfig(moduleName string, data map[interface{}]interface{}) (*ModuleConfig, error) {
-	moduleConfig := NewEmptyModuleConfig(moduleName)
-
-	moduleValuesKey := ModuleNameToValuesKey(moduleName)
-
-	if moduleValuesData, hasModuleData := data[moduleValuesKey]; hasModuleData {
-		switch v := moduleValuesData.(type) {
-		case bool:
-			moduleConfig.IsEnabled = v
-		case map[interface{}]interface{}, []interface{}:
-			data := map[interface{}]interface{}{moduleValuesKey: v}
-
-			values, err := NewValues(data)
-			if err != nil {
-				return nil, err
-			}
-
-			moduleConfig.Values = values
-
-		default:
-			return nil, fmt.Errorf("module config should be bool, array or map, got: %#v", moduleValuesData)
-		}
-	}
-
-	return moduleConfig, nil
 }
 
 func FormatValues(someValues map[interface{}]interface{}) (Values, error) {

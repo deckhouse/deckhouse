@@ -61,12 +61,12 @@ func (m *Module) cleanup() error {
 	chartExists, err := m.checkHelmChart()
 	if !chartExists {
 		if err != nil {
-			rlog.Debugf("Module '%s': cleanup not needed: %s", m.Name, err)
+			rlog.Debugf("MODULE '%s': cleanup not needed: %s", m.Name, err)
 			return nil
 		}
 	}
 
-	rlog.Infof("Module '%s': deleting failed helm release from first installation", m.Name)
+	//rlog.Infof("MODULE '%s': cleanup helm revisions...", m.Name)
 	if err := m.moduleManager.helm.DeleteSingleFailedRevision(m.generateHelmReleaseName()); err != nil {
 		return err
 	}
@@ -128,9 +128,9 @@ func (m *Module) execRun() error {
 					if recordedChecksumStr, ok := recordedChecksum.(string); ok {
 						if recordedChecksumStr == checksum {
 							doRelease = false
-							rlog.Debugf("Module manager: helm release '%s' checksum '%s' does not changed: will skip helm release", helmReleaseName, checksum)
+							rlog.Infof("MODULE '%s': helm release '%s' checksum '%s' does not changed: skip helm upgrade", m.Name, helmReleaseName, checksum)
 						} else {
-							rlog.Debugf("Module manager: helm release '%s' checksum changed '%s' -> '%s': will make helm release", helmReleaseName, recordedChecksumStr, checksum)
+							rlog.Debugf("MODULE '%s': helm release '%s' checksum changed '%s' -> '%s': upgrade helm release", m.Name, helmReleaseName, recordedChecksumStr, checksum)
 						}
 					}
 				}
@@ -138,7 +138,7 @@ func (m *Module) execRun() error {
 		}
 
 		if doRelease {
-			rlog.Debugf("Module manager: helm release '%s' checksum '%s': installing/upgrading release", helmReleaseName, checksum)
+			rlog.Debugf("MODULE '%s': helm release '%s' checksum '%s': installing/upgrading release", m.Name, helmReleaseName, checksum)
 
 			return m.moduleManager.helm.UpgradeRelease(
 				helmReleaseName, runChartPath,
@@ -147,7 +147,7 @@ func (m *Module) execRun() error {
 				m.moduleManager.helm.TillerNamespace(),
 			)
 		} else {
-			rlog.Debugf("Module manager: helm release '%s' checksum '%s': release install/upgrade is skipped", helmReleaseName, checksum)
+			rlog.Debugf("MODULE '%s': helm release '%s' checksum '%s': release install/upgrade is skipped", m.Name, helmReleaseName, checksum)
 		}
 
 		return nil
@@ -405,7 +405,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 
 	f, err := os.Stat(enabledScriptPath)
 	if os.IsNotExist(err) {
-		rlog.Debugf("Enabled script for module '%s' is not exist", m.Name)
+		rlog.Debugf("MODULE '%s':  ENABLED. Enabled script is not exist!", m.Name)
 		return true, nil
 	} else if err != nil {
 		return false, err
@@ -430,7 +430,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 		return false, err
 	}
 
-	rlog.Infof("Running enabled script '%s' for module '%s' ...", enabledScriptPath, m.Name)
+	rlog.Infof("MODULE '%s': run enabled script '%s'...", m.Name, enabledScriptPath)
 
 	cmd := m.moduleManager.makeHookCommand(
 		WorkingDir, configValuesPath, valuesPath, "", enabledScriptPath, []string{},
@@ -449,14 +449,16 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 	}
 
 	if moduleEnabled {
-		rlog.Infof("Got enabled script result for module '%s': module ENABLED", m.Name)
+		rlog.Debugf("Module '%s'  ENABLED with script. Preceding: %s", m.Name, precedingEnabledModules)
 		return true, nil
 	}
 
-	rlog.Infof("Got enabled script result for module '%s': module DISABLED", m.Name)
+	rlog.Debugf("Module '%s' DISABLED with script. Preceding: %s ", m.Name, precedingEnabledModules)
 	return false, nil
 }
 
+// initModulesIndex load all available modules from modules directory
+//
 func (mm *MainModuleManager) initModulesIndex() error {
 	rlog.Info("Initializing modules ...")
 
@@ -489,7 +491,7 @@ func (mm *MainModuleManager) initModulesIndex() error {
 			matchRes := validModuleName.FindStringSubmatch(file.Name())
 			if matchRes != nil {
 				moduleName := matchRes[1]
-				rlog.Infof("Initializing module '%s' ...", moduleName)
+				rlog.Infof("Load and register module '%s' ...", moduleName)
 
 				modulePath := filepath.Join(modulesDir, file.Name())
 
@@ -534,13 +536,13 @@ func (mm *MainModuleManager) initModulesIndex() error {
 func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
 	values, err := readModulesValues()
 	if err != nil {
-		return err
+		return
 	}
 	mm.globalStaticValues = values
 
 	rlog.Debugf("Initialized global static values:\n%s", utils.ValuesToString(mm.globalStaticValues))
 
-	return nil
+	return
 }
 
 func (mm *MainModuleManager) getModuleConfig(module *Module) (*utils.ModuleConfig, error) {
@@ -555,7 +557,7 @@ func (mm *MainModuleManager) getModuleConfig(module *Module) (*utils.ModuleConfi
 		return nil, fmt.Errorf("cannot read '%s': %s", module.Path, err)
 	}
 
-	moduleConfig, err := utils.NewModuleConfigByValuesYamlData(module.Name, data)
+	moduleConfig, err := utils.NewModuleConfig(module.Name).FromYaml(data)
 	if err != nil {
 		return nil, err
 	}

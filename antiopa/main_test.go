@@ -45,7 +45,7 @@ func (obj *KubeEventsHooksControllerMock) HandleEvent(configId string) (*struct{
 
 type KubeEventsManagerMock struct{}
 
-func (kem *KubeEventsManagerMock) Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string) (string, error) {
+func (kem *KubeEventsManagerMock) Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metav1.LabelSelector, jqFilter string, debug bool) (string, error) {
 	return uuid.NewV4().String(), nil
 }
 
@@ -385,7 +385,7 @@ func TestMain(m *testing.M) {
 
 	MetricsStorage = metrics_storage.Init()
 
-	m.Run()
+	os.Exit(m.Run())
 }
 
 // Тест совместной работы ManagersEventsHandler и TaskRunner.

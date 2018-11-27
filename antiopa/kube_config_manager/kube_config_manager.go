@@ -339,8 +339,8 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 		kcm.GlobalValuesChecksum = newGlobalValuesChecksum
 		kcm.ModulesValuesChecksum = newModulesValuesChecksum
 
-		rlog.Debugf("Kube config manager: got kube global config update:")
-		rlog.Debug(utils.ValuesToString(newConfig.Values))
+		rlog.Debugf("Kube config manager: got kube global config update:\n%s",
+			utils.ValuesToString(newConfig.Values))
 		for _, moduleConfig := range newConfig.ModuleConfigs {
 			rlog.Debugf("%s", moduleConfig.String())
 		}
@@ -373,7 +373,7 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 
 			delete(kcm.ModulesValuesChecksum, module)
 
-			moduleConfigsUpdate[module] = *utils.NewEmptyModuleConfig(module)
+			moduleConfigsUpdate[module] = *utils.NewModuleConfig(module)
 		}
 
 		if len(moduleConfigsUpdate) > 0 {

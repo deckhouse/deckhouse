@@ -110,7 +110,6 @@ func TestTasksQueue_MultiThread(t *testing.T) {
 				fmt.Println("consumer got stop")
 				queueHandled <- count
 			default:
-				break
 			}
 
 			fmt.Println("consumer check IsEmpty")

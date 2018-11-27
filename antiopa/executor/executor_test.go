@@ -161,13 +161,14 @@ func TestExecutorCmdRun(t *testing.T) {
 	}
 
 	counter := 0
+WAIT_LOOP:
 	for {
 		select {
 		case <-stopCh:
 			rlog.Info("Got stopCh")
 			counter++
 			if counter == 10 {
-				break
+				break WAIT_LOOP
 			}
 
 		}

@@ -15,7 +15,11 @@ func Run(cmd *exec.Cmd, debug bool) error {
 	defer ExecutorLock.Unlock()
 
 	if debug {
-		rlog.Debugf("Executing command in '%s': '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
+		dir := ""
+		if cmd.Dir != "" {
+			dir = " in '" + cmd.Dir + "'"
+		}
+		rlog.Debugf("Executing command%s: '%s'", dir, strings.Join(cmd.Args, " "))
 	}
 
 	return cmd.Run()

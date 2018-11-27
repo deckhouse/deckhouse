@@ -653,6 +653,11 @@ func (mm *MainModuleManager) initGlobalHooks() error {
 }
 
 func (mm *MainModuleManager) initModuleHooks(module *Module) error {
+	if _, ok := mm.modulesHooksOrderByName[module.Name]; ok {
+		rlog.Debugf("Initializing module '%s' hooks: already initialized", module.Name)
+		return nil
+	}
+
 	rlog.Infof("Initializing module '%s' hooks ...", module.Name)
 
 	hooksDir := filepath.Join(module.Path, "hooks")
@@ -784,16 +789,16 @@ func makeCommand(dir string, entrypoint string, envs []string, args []string) *e
 }
 
 func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
-	rlog.Debugf("Executing command in %s: '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
+	rlog.Debugf("Executing hook in %s: '%s'", cmd.Dir, strings.Join(cmd.Args, " "))
 	cmd.Stdout = nil
 
 	output, err := executor.Output(cmd)
 	if err != nil {
-		rlog.Errorf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
+		rlog.Errorf("Hook '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
 		return output, err
 	}
 
-	rlog.Debugf("Command '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
+	rlog.Debugf("Hook '%s' output:\n%s", strings.Join(cmd.Args, " "), string(output))
 
 	return output, nil
 }

@@ -585,7 +585,6 @@ func (mm *MainModuleManager) Run() {
 				rlog.Debugf("ModuleManager Retry IS NOT needed")
 			}
 		}
-
 	}
 }
 

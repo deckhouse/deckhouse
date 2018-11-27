@@ -21,7 +21,7 @@ func TestMainModuleManager_GetModule(t *testing.T) {
 		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModule, module)
 	}
 
-	module, err = mm.GetModule("non-exist")
+	_, err = mm.GetModule("non-exist")
 	if err == nil {
 		t.Error("Expected error!")
 	} else if !strings.HasPrefix(err.Error(), "module 'non-exist' not found") {
@@ -43,7 +43,7 @@ func TestMainModuleManager_GetModuleHook(t *testing.T) {
 		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedModuleHook, moduleHook)
 	}
 
-	moduleHook, err = mm.GetModuleHook("non-exist")
+	_, err = mm.GetModuleHook("non-exist")
 	if err == nil {
 		t.Error("Expected error!")
 	} else if !strings.HasPrefix(err.Error(), "module hook 'non-exist' not found") {
@@ -148,7 +148,7 @@ func TestMainModuleManager_GetGlobalHook(t *testing.T) {
 		t.Errorf("\n[EXPECTED]: %#v\n[GOT]: %#v", expectedGlobalHook, moduleHook)
 	}
 
-	moduleHook, err = mm.GetGlobalHook("non-exist")
+	_, err = mm.GetGlobalHook("non-exist")
 	if err == nil {
 		t.Error("Expected error!")
 	} else if !strings.HasPrefix(err.Error(), "global hook 'non-exist' not found") {

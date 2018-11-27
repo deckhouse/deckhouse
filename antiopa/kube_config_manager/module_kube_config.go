@@ -88,5 +88,5 @@ func NewModuleConfig(moduleName string, moduleYamlData string) (*utils.ModuleCon
 
 	data := map[interface{}]interface{}{utils.ModuleNameToValuesKey(moduleName): valuesAtModuleKey}
 
-	return utils.NewModuleConfig(moduleName, data)
+	return utils.NewModuleConfig(moduleName).WithValues(data)
 }

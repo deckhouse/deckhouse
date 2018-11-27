@@ -11,14 +11,14 @@ func TestModuleConfig(t *testing.T) {
 	var config *ModuleConfig
 	var err error
 
-	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"testModule": 1234})
+	config, err = NewModuleConfig("test-module").WithValues(map[interface{}]interface{}{"testModule": 1234})
 	if err == nil {
 		t.Errorf("Expected error, got ModuleConfig: %v", config)
 	} else if !strings.HasPrefix(err.Error(), "required map or bool data") {
 		t.Errorf("Got unexpected error: %s", err)
 	}
 
-	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"testModule": false})
+	config, err = NewModuleConfig("test-module").WithValues(map[interface{}]interface{}{"testModule": false})
 	if err != nil {
 		t.Error(err)
 	}
@@ -26,7 +26,7 @@ func TestModuleConfig(t *testing.T) {
 		t.Errorf("Expected module to be disabled, got: %v", config)
 	}
 
-	config, err = NewModuleConfig("test-module", map[interface{}]interface{}{"testModule": true})
+	config, err = NewModuleConfig("test-module").WithValues(map[interface{}]interface{}{"testModule": true})
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,7 +47,7 @@ func TestModuleConfig(t *testing.T) {
 		},
 	}
 
-	config, err = NewModuleConfig("test-module", inputData)
+	config, err = NewModuleConfig("test-module").WithValues(inputData)
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +71,7 @@ testModule:
 			"a": 1.0, "b": 2.0,
 		},
 	}
-	config, err := NewModuleConfigByValuesYamlData("test-module", []byte(configStr))
+	config, err := NewModuleConfig("test-module").FromYaml([]byte(configStr))
 	if err != nil {
 		t.Error(err)
 	}
@@ -82,7 +82,7 @@ testModule:
 		t.Errorf("Got unexpected config values: %+v", config.Values)
 	}
 
-	config, err = NewModuleConfigByValuesYamlData("test-module", []byte("testModule: false\n"))
+	config, err = NewModuleConfig("test-module").FromYaml([]byte("testModule: false\n"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +90,7 @@ testModule:
 		t.Errorf("Expected module to be disabled")
 	}
 
-	config, err = NewModuleConfigByValuesYamlData("test-module", []byte("testModule: falsee\n"))
+	_, err = NewModuleConfig("test-module").FromYaml([]byte("testModule: falsee\n"))
 	if !strings.HasPrefix(err.Error(), "module config should be bool, array or map") {
 		t.Errorf("Got unexpected error: %s", err.Error())
 	}
@@ -106,7 +106,7 @@ testModule:
 			map[string]interface{}{"b": 2.0},
 		},
 	}
-	config, err = NewModuleConfigByValuesYamlData("test-module", []byte(configStr))
+	config, err = NewModuleConfig("test-module").FromYaml([]byte(configStr))
 	if err != nil {
 		t.Error(err)
 	}

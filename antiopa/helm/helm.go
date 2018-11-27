@@ -140,24 +140,24 @@ func (helm *CliHelm) DeleteSingleFailedRevision(releaseName string) (err error) 
 	if err != nil {
 		if revision == "0" {
 			// revision 0 is not an error. just skip deletion.
-			rlog.Infof("helm: release '%s' not found. No cleanup required.", releaseName)
+			rlog.Debugf("helm release '%s': Release not found, no cleanup required.", releaseName)
 			return nil
 		}
-		rlog.Debugf("helm.LastReleaseStatus of '%s' return error: %s", releaseName, err)
+		rlog.Errorf("helm release '%s': got error from LastReleaseStatus: %s", releaseName, err)
 		return err
 	}
 
-	//  No interest of revisions older than 1
 	if revision == "1" && status == "FAILED" {
 		// delete and purge!
 		err = helm.DeleteRelease(releaseName)
 		if err != nil {
-			rlog.Infof("Error deleting first failed release '%s': %v", releaseName, err)
+			rlog.Errorf("helm release '%s': cleanup of failed revision got error: %v", releaseName, err)
 			return err
 		}
-		rlog.Infof("  Single failed release for '%s' deleted", releaseName)
+		rlog.Infof("helm release '%s': cleanup of failed revision succeeded", releaseName)
 	} else {
-		rlog.Debugf("Release '%s' has revision '%s' with status %s", releaseName, revision, status)
+		// No interest of revisions older than 1
+		rlog.Debugf("helm release '%s': has revision '%s' with status %s", releaseName, revision, status)
 	}
 
 	return
@@ -169,7 +169,7 @@ func (helm *CliHelm) DeleteOldFailedRevisions(releaseName string) error {
 		return err
 	}
 
-	rlog.Debugf("Found release '%s' ConfigMaps: %v", cmNames)
+	rlog.Debugf("helm release '%s': found ConfigMaps: %v", cmNames)
 
 	var releaseCmNamePattern = regexp.MustCompile(`^(.*).v([0-9]+)$`)
 
@@ -192,11 +192,12 @@ func (helm *CliHelm) DeleteOldFailedRevisions(releaseName string) error {
 	}
 
 	for _, revision := range revisions {
-		rlog.Infof("Deleting old FAILED revision ConfigMap %s.v%d", releaseName, revision)
+		cmName := fmt.Sprintf("%s.v%d", releaseName, revision)
+		rlog.Infof("helm release '%s': delete old FAILED revision cm/%s", releaseName, cmName)
 
 		err := kube.KubernetesClient.CoreV1().
 			ConfigMaps(kube.KubernetesAntiopaNamespace).
-			Delete(fmt.Sprintf("%s.v%d", releaseName, revision), &metav1.DeleteOptions{})
+			Delete(cmName, &metav1.DeleteOptions{})
 
 		if err != nil {
 			return err
@@ -217,18 +218,18 @@ func (helm *CliHelm) LastReleaseStatus(releaseName string) (revision string, sta
 		errLine := strings.Split(stderr, "\n")[0]
 		if strings.Contains(errLine, "Error:") && strings.Contains(errLine, "not found") {
 			// Bad module name or no releases installed
-			err = fmt.Errorf("No release '%s' found\n%v %v", releaseName, stdout, stderr)
+			err = fmt.Errorf("release '%s' not found\n%v %v", releaseName, stdout, stderr)
 			revision = "0"
 			return
 		}
 
-		err = fmt.Errorf("Cannot get history for release '%s'\n%v %v", releaseName, stdout, stderr)
+		err = fmt.Errorf("cannot get history for release '%s'\n%v %v", releaseName, stdout, stderr)
 		return
 	}
 
 	historyLines := strings.Split(stdout, "\n")
 	lastLine := historyLines[len(historyLines)-1]
-	fields := regexp.MustCompile("\\t").Split(lastLine, 5)
+	fields := strings.SplitN(lastLine, "\t", 5) //regexp.MustCompile("\\t").Split(lastLine, 5)
 	revision = strings.TrimSpace(fields[0])
 	status = strings.TrimSpace(fields[2])
 	return
@@ -281,7 +282,7 @@ func (helm *CliHelm) GetReleaseValues(releaseName string) (utils.Values, error) 
 }
 
 func (helm *CliHelm) DeleteRelease(releaseName string) (err error) {
-	rlog.Debugf("Running helm delete --purge for '%s' release", releaseName)
+	rlog.Debugf("helm release '%s': execute helm delete --purge", releaseName)
 
 	stdout, stderr, err := helm.Cmd("delete", "--purge", releaseName)
 	if err != nil {
@@ -316,7 +317,7 @@ func (helm *CliHelm) ListReleases(labelSelector map[string]string) ([]string, er
 		ConfigMaps(kube.KubernetesAntiopaNamespace).
 		List(metav1.ListOptions{LabelSelector: labelsSet.AsSelector().String()})
 	if err != nil {
-		rlog.Debugf("helm releases ConfigMaps list failed: %s", err)
+		rlog.Debugf("helm: list of releases ConfigMaps failed: %s", err)
 		return nil, err
 	}
 
