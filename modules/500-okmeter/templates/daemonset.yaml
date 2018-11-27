@@ -1,0 +1,63 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  name: okmeter
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: okmeter
+spec:
+  selector:
+    matchLabels:
+      name: okmeter
+  template:
+    metadata:
+      labels:
+        name: okmeter
+    spec:
+      serviceAccountName: okmeter
+      hostNetwork: true
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: okagent
+        image: okmeter/okagent:latest
+        securityContext:
+          privileged: true
+        env:
+        - name: OKMETER_API_TOKEN
+          value: {{ .Values.okmeter.apiKey }}
+        - name: OKMETER_STATSD_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 10m
+          limits:
+            memory: 1Gi
+            cpu: 0.5
+        volumeMounts:
+        - name: dockersocket
+          mountPath: /var/run/docker.sock
+          readOnly: true
+        - name: hostproc
+          mountPath: /host/proc
+          readOnly: true
+        - name: okagentdir
+          mountPath: /usr/local/okagent
+      volumes:
+      - name: dockersocket
+        hostPath:
+          path: /var/run/docker.sock
+      - name: hostproc
+        hostPath:
+          path: /proc
+      - name: okagentdir
+        emptyDir: {}
