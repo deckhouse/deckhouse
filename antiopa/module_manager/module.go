@@ -23,6 +23,7 @@ type Module struct {
 	Name          string
 	DirectoryName string
 	Path          string
+	StaticConfig  *utils.ModuleConfig
 
 	moduleManager *MainModuleManager
 }
@@ -117,7 +118,7 @@ func (m *Module) execRun() error {
 				return err
 			}
 
-			// Ignore skiping of helm release process for FAILED releases
+			// Skip helm release for unchanged modules only for non FAILED releases
 			if status != "FAILED" {
 				releaseValues, err := m.moduleManager.helm.GetReleaseValues(helmReleaseName)
 				if err != nil {
@@ -128,9 +129,9 @@ func (m *Module) execRun() error {
 					if recordedChecksumStr, ok := recordedChecksum.(string); ok {
 						if recordedChecksumStr == checksum {
 							doRelease = false
-							rlog.Infof("MODULE '%s': helm release '%s' checksum '%s' does not changed: skip helm upgrade", m.Name, helmReleaseName, checksum)
+							rlog.Infof("MODULE_RUN '%s': helm release '%s' checksum '%s' does not changed: skip helm upgrade", m.Name, helmReleaseName, checksum)
 						} else {
-							rlog.Debugf("MODULE '%s': helm release '%s' checksum changed '%s' -> '%s': upgrade helm release", m.Name, helmReleaseName, recordedChecksumStr, checksum)
+							rlog.Debugf("MODULE_RUN '%s': helm release '%s' checksum changed '%s' -> '%s': upgrade helm release", m.Name, helmReleaseName, recordedChecksumStr, checksum)
 						}
 					}
 				}
@@ -138,7 +139,7 @@ func (m *Module) execRun() error {
 		}
 
 		if doRelease {
-			rlog.Debugf("MODULE '%s': helm release '%s' checksum '%s': installing/upgrading release", m.Name, helmReleaseName, checksum)
+			rlog.Debugf("MODULE_RUN '%s': helm release '%s' checksum '%s': installing/upgrading release", m.Name, helmReleaseName, checksum)
 
 			return m.moduleManager.helm.UpgradeRelease(
 				helmReleaseName, runChartPath,
@@ -147,7 +148,7 @@ func (m *Module) execRun() error {
 				m.moduleManager.helm.TillerNamespace(),
 			)
 		} else {
-			rlog.Debugf("MODULE '%s': helm release '%s' checksum '%s': release install/upgrade is skipped", m.Name, helmReleaseName, checksum)
+			rlog.Debugf("MODULE_RUN '%s': helm release '%s' checksum '%s': release install/upgrade is skipped", m.Name, helmReleaseName, checksum)
 		}
 
 		return nil
@@ -322,24 +323,36 @@ func (m *Module) generateHelmReleaseName() string {
 	return m.Name
 }
 
+// configValues returns values from ConfigMap: global section and module section
 func (m *Module) configValues() utils.Values {
 	return utils.MergeValues(
+		// global section
 		utils.Values{"global": map[string]interface{}{}},
-		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
 		m.moduleManager.kubeGlobalConfigValues,
+		// module section
+		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
 		m.moduleManager.kubeModulesConfigValues[m.Name],
 	)
 }
 
+// constructValues returns effective values for module hook:
+//
+// global: static + kube + patches from hooks
+//
+// module: static + kube + patches from hooks
+//
+// global section also contains enabledModules key with previously enabled modules
 func (m *Module) constructValues(enabledModules []string) utils.Values {
 	var err error
 
 	res := utils.MergeValues(
+		// global
 		utils.Values{"global": map[string]interface{}{}},
-		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
 		m.moduleManager.globalStaticValues,
-		m.moduleManager.modulesStaticValues[m.Name],
 		m.moduleManager.kubeGlobalConfigValues,
+		// module
+		utils.Values{utils.ModuleNameToValuesKey(m.Name): map[string]interface{}{}},
+		m.StaticConfig.Values,
 		m.moduleManager.kubeModulesConfigValues[m.Name],
 	)
 
@@ -358,9 +371,17 @@ func (m *Module) constructValues(enabledModules []string) utils.Values {
 		}
 	}
 
-	res = utils.MergeValues(res, m.moduleManager.constructEnabledModulesValues(enabledModules))
+	res = utils.MergeValues(res, m.constructEnabledModulesValues(enabledModules))
 
 	return res
+}
+
+func (m *Module) constructEnabledModulesValues(enabledModules []string) utils.Values {
+	return utils.Values{
+		"global": map[string]interface{}{
+			"enabledModules": enabledModules,
+		},
+	}
 }
 
 func (m *Module) valuesForEnabledScript(precedingEnabledModules []string) utils.Values {
@@ -462,10 +483,6 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 func (mm *MainModuleManager) initModulesIndex() error {
 	rlog.Info("Initializing modules ...")
 
-	mm.modulesByName = make(map[string]*Module)
-	mm.modulesHooksByName = make(map[string]*ModuleHook)
-	mm.modulesHooksOrderByName = make(map[string]map[BindingType][]*ModuleHook)
-
 	modulesDir := filepath.Join(WorkingDir, "modules")
 
 	files, err := ioutil.ReadDir(modulesDir) // returns a list of modules sorted by filename
@@ -473,14 +490,10 @@ func (mm *MainModuleManager) initModulesIndex() error {
 		return fmt.Errorf("cannot list modules directory '%s': %s", modulesDir, err)
 	}
 
-	if err := mm.setGlobalConfigValues(); err != nil {
+	if err := mm.initGlobalConfigValues(); err != nil {
 		return err
 	}
 	rlog.Debugf("Set mm.configValues:\n%s", utils.ValuesToString(mm.globalStaticValues))
-
-	mm.modulesStaticValues = make(map[string]utils.Values)
-
-	mm.modulesDynamicValuesPatches = make(map[string][]utils.ValuesPatch)
 
 	var validModuleName = regexp.MustCompile(`^[0-9][0-9][0-9]-(.*)$`)
 
@@ -500,31 +513,21 @@ func (mm *MainModuleManager) initModulesIndex() error {
 				module.DirectoryName = file.Name()
 				module.Path = modulePath
 
-				moduleConfig, err := mm.getModuleConfig(module)
+				// load config from values.yaml
+				err := module.loadStaticValues()
 				if err != nil {
 					return err
 				}
 
-				if moduleConfig == nil || moduleConfig.IsEnabled {
-					mm.modulesByName[module.Name] = module
-					mm.allModuleNamesInOrder = append(mm.allModuleNamesInOrder, module.Name)
-
-					if moduleConfig != nil {
-						mm.modulesStaticValues[moduleName] = moduleConfig.Values
-						rlog.Debugf("Set modulesStaticValues[%s]:\n%s", moduleName, utils.ValuesToString(mm.modulesStaticValues[moduleName]))
-					}
-
-					mm.modulesDynamicValuesPatches[moduleName] = make([]utils.ValuesPatch, 0)
-
-					if err = mm.initModuleHooks(module); err != nil {
-						return err
-					}
-				}
+				mm.allModulesByName[module.Name] = module
+				mm.allModulesNamesInOrder = append(mm.allModulesNamesInOrder, module.Name)
 			} else {
 				badModulesDirs = append(badModulesDirs, filepath.Join(modulesDir, file.Name()))
 			}
 		}
 	}
+
+	rlog.Debugf("initModulesIndex: %v", mm.allModulesByName)
 
 	if len(badModulesDirs) > 0 {
 		return fmt.Errorf("bad module directory names, must match regex '%s': %s", validModuleName, strings.Join(badModulesDirs, ", "))
@@ -533,8 +536,8 @@ func (mm *MainModuleManager) initModulesIndex() error {
 	return nil
 }
 
-func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
-	values, err := readModulesValues()
+func (mm *MainModuleManager) initGlobalConfigValues() (err error) {
+	values, err := loadGlobalModulesValues()
 	if err != nil {
 		return
 	}
@@ -545,27 +548,31 @@ func (mm *MainModuleManager) setGlobalConfigValues() (err error) {
 	return
 }
 
-func (mm *MainModuleManager) getModuleConfig(module *Module) (*utils.ModuleConfig, error) {
-	valuesYamlPath := filepath.Join(module.Path, "values.yaml")
+// loadStaticValues loads config for module from values.yaml
+// Module is considered as enabled if values.yaml is not exists.
+func (m *Module) loadStaticValues() error {
+	valuesYamlPath := filepath.Join(m.Path, "values.yaml")
 
 	if _, err := os.Stat(valuesYamlPath); os.IsNotExist(err) {
-		return nil, nil
+		m.StaticConfig = utils.NewModuleConfig(m.Name).WithEnabled(true)
+		rlog.Debugf("module %s is enabled: no values.yaml exists", m.Name)
+		return nil
 	}
 
 	data, err := ioutil.ReadFile(valuesYamlPath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read '%s': %s", module.Path, err)
+		return fmt.Errorf("cannot read '%s': %s", m.Path, err)
 	}
 
-	moduleConfig, err := utils.NewModuleConfig(module.Name).FromYaml(data)
+	m.StaticConfig, err = utils.NewModuleConfig(m.Name).FromYaml(data)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	return moduleConfig, nil
+	rlog.Debugf("module %s static values: %s", m.Name, utils.ValuesToString(m.StaticConfig.Values))
+	return nil
 }
 
-func readModulesValues() (utils.Values, error) {
+func loadGlobalModulesValues() (utils.Values, error) {
 	filePath := filepath.Join(WorkingDir, "modules", "values.yaml")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return make(utils.Values), nil

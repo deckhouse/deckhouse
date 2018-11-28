@@ -7,8 +7,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func GetModulesNamesFromConfigData(configData map[string]string) []string {
-	res := make([]string, 0)
+// GetModulesNamesFromConfigData returns all keys in kube config except global
+func GetModulesNamesFromConfigData(configData map[string]string) map[string]bool {
+	res := make(map[string]bool, 0)
 
 	for key := range configData {
 		if key != utils.GlobalValuesKey {
@@ -16,7 +17,7 @@ func GetModulesNamesFromConfigData(configData map[string]string) []string {
 				rlog.Warnf("Bad module name '%s': should be camelCased module name: ignoring data", key)
 				continue
 			}
-			res = append(res, utils.ModuleNameFromValuesKey(key))
+			res[utils.ModuleNameFromValuesKey(key)] = true
 		}
 	}
 

@@ -497,8 +497,7 @@ func TasksRunner() {
 				}
 			case task.ModulePurge:
 				rlog.Infof("TASK_RUN ModulePurge %s", t.GetName())
-				// если вызван purge, то про модуль ничего неизвестно, поэтому ошибку
-				// удаления достаточно записать в лог
+				// Module for purge is unknown so log deletion error is enough
 				err := HelmClient.DeleteRelease(t.GetName())
 				if err != nil {
 					rlog.Errorf("TASK_RUN %s helm delete '%s' failed. Error: %s", t.GetType(), t.GetName(), err)
@@ -510,10 +509,11 @@ func TasksRunner() {
 				MetricsStorage.SendCounterMetric("antiopa_modules_discover_errors", 1.0, map[string]string{})
 				ModuleManager.Retry()
 				TasksQueue.Pop()
+				// Add delay before retry module/hook task again
 				TasksQueue.Push(task.NewTaskDelay(FailedModuleDelay))
 				rlog.Infof("QUEUE push FailedModuleDelay")
 			case task.Delay:
-				rlog.Infof("TASK_RUN Delay for %d", t.GetDelay().String())
+				rlog.Infof("TASK_RUN Delay for %s", t.GetDelay().String())
 				TasksQueue.Pop()
 				time.Sleep(t.GetDelay())
 			case task.Stop:

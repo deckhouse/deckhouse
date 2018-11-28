@@ -51,8 +51,10 @@ func NewConfig() *Config {
 }
 
 var (
-	VerboseDebug         bool
-	ConfigUpdated        chan Config
+	VerboseDebug bool
+	// ConfigUpdated chan receives a new Config when global values are changed
+	ConfigUpdated chan Config
+	// ModuleConfigsUpdated chan receives a list of all ModuleConfig in configData. Updated items marked as IsUpdated.
 	ModuleConfigsUpdated chan ModuleConfigs
 )
 
@@ -232,7 +234,7 @@ func (kcm *MainKubeConfigManager) initConfig() error {
 		globalValuesChecksum = globalKubeConfig.Checksum
 	}
 
-	for _, module := range GetModulesNamesFromConfigData(obj.Data) {
+	for module := range GetModulesNamesFromConfigData(obj.Data) {
 		// all GetModulesNamesFromConfigData must exist
 		moduleKubeConfig, err := ModuleKubeConfigMustExist(GetModuleKubeConfigFromConfigData(module, obj.Data))
 		if err != nil {
@@ -299,6 +301,12 @@ func (kcm *MainKubeConfigManager) setValuesChecksums(cm *v1.ConfigMap, checksums
 	cm.Annotations[ValuesChecksumsAnnotation] = string(data)
 }
 
+// handleNewCm determine changes in kube config.
+//
+// New Config is send over ConfigUpdate channel if global section is changed.
+//
+// Array of actual ModuleConfig is send over ModuleConfigsUpdated channel
+// if module sections are changed or deleted.
 func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 	savedChecksums, err := kcm.getValuesChecksums(obj)
 	if err != nil {
@@ -310,22 +318,27 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 		return err
 	}
 
-	shouldUpdateValues := (globalKubeConfig != nil &&
+	// if global values are changed or deleted then new config should be sent over ConfigUpdated channel
+	isGlobalUpdated := globalKubeConfig != nil &&
 		globalKubeConfig.Checksum != savedChecksums[utils.GlobalValuesKey] &&
-		globalKubeConfig.Checksum != kcm.GlobalValuesChecksum) ||
-		(globalKubeConfig == nil && kcm.GlobalValuesChecksum != "")
+		globalKubeConfig.Checksum != kcm.GlobalValuesChecksum
+	isGlobalDeleted := globalKubeConfig == nil && kcm.GlobalValuesChecksum != ""
 
-	if shouldUpdateValues {
+	if isGlobalUpdated || isGlobalDeleted {
+		rlog.Infof("Kube config manager: detect changes in global section")
 		newConfig := NewConfig()
-		newGlobalValuesChecksum := ""
-		newModulesValuesChecksum := make(map[string]string)
 
+		// calculate new checksum of a global section
+		newGlobalValuesChecksum := ""
 		if globalKubeConfig != nil {
 			newConfig.Values = globalKubeConfig.Values
 			newGlobalValuesChecksum = globalKubeConfig.Checksum
 		}
+		kcm.GlobalValuesChecksum = newGlobalValuesChecksum
 
-		for _, module := range GetModulesNamesFromConfigData(obj.Data) {
+		// calculate new checksums of a module sections
+		newModulesValuesChecksum := make(map[string]string)
+		for module := range GetModulesNamesFromConfigData(obj.Data) {
 			// all GetModulesNamesFromConfigData must exist
 			moduleKubeConfig, err := ModuleKubeConfigMustExist(GetModuleKubeConfigFromConfigData(module, obj.Data))
 			if err != nil {
@@ -335,22 +348,25 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 			newConfig.ModuleConfigs[moduleKubeConfig.ModuleName] = moduleKubeConfig.ModuleConfig
 			newModulesValuesChecksum[moduleKubeConfig.ModuleName] = moduleKubeConfig.Checksum
 		}
-
-		kcm.GlobalValuesChecksum = newGlobalValuesChecksum
 		kcm.ModulesValuesChecksum = newModulesValuesChecksum
 
-		rlog.Debugf("Kube config manager: got kube global config update:\n%s",
+		rlog.Debugf("Kube config manager: global section new values:\n%s",
 			utils.ValuesToString(newConfig.Values))
 		for _, moduleConfig := range newConfig.ModuleConfigs {
 			rlog.Debugf("%s", moduleConfig.String())
 		}
+
 		ConfigUpdated <- *newConfig
 	} else {
 		actualModulesNames := GetModulesNamesFromConfigData(obj.Data)
 
-		moduleConfigsUpdate := make(ModuleConfigs)
+		moduleConfigsActual := make(ModuleConfigs)
+		updatedCount := 0
+		removedCount := 0
 
-		for _, module := range actualModulesNames {
+		// create ModuleConfig for each module in configData
+		// IsUpdated flag set for updated configs
+		for module := range actualModulesNames {
 			// all GetModulesNamesFromConfigData must exist
 			moduleKubeConfig, err := ModuleKubeConfigMustExist(GetModuleKubeConfigFromConfigData(module, obj.Data))
 			if err != nil {
@@ -359,29 +375,29 @@ func (kcm *MainKubeConfigManager) handleNewCm(obj *v1.ConfigMap) error {
 
 			if moduleKubeConfig.Checksum != savedChecksums[module] && moduleKubeConfig.Checksum != kcm.ModulesValuesChecksum[module] {
 				kcm.ModulesValuesChecksum[module] = moduleKubeConfig.Checksum
-				moduleConfigsUpdate[module] = moduleKubeConfig.ModuleConfig
+				moduleKubeConfig.ModuleConfig.IsUpdated = true
+				updatedCount++
+			} else {
+				moduleKubeConfig.ModuleConfig.IsUpdated = false
 			}
+			moduleConfigsActual[module] = moduleKubeConfig.ModuleConfig
 		}
 
-	SearchModulesWithDeletedConfig:
+		// delete checksums for removed module sections
 		for module := range kcm.ModulesValuesChecksum {
-			for _, actualModule := range actualModulesNames {
-				if actualModule == module {
-					continue SearchModulesWithDeletedConfig
-				}
+			if _, isActual := actualModulesNames[module]; isActual {
+				continue
 			}
-
 			delete(kcm.ModulesValuesChecksum, module)
-
-			moduleConfigsUpdate[module] = *utils.NewModuleConfig(module)
+			removedCount++
 		}
 
-		if len(moduleConfigsUpdate) > 0 {
-			rlog.Debugf("Kube config manager: got kube modules configs update:")
-			for _, moduleConfig := range moduleConfigsUpdate {
+		if updatedCount > 0 || removedCount > 0 {
+			rlog.Infof("KUBE_CONFIG Detect module sections changes: %d updated, %d removed", updatedCount, removedCount)
+			for _, moduleConfig := range moduleConfigsActual {
 				rlog.Debugf("%s", moduleConfig.String())
 			}
-			ModuleConfigsUpdated <- moduleConfigsUpdate
+			ModuleConfigsUpdated <- moduleConfigsActual
 		}
 	}
 
