@@ -12,7 +12,7 @@ function __main__() {
   registry=$(kubectl -n antiopa get deploy/antiopa -o json | jq '.spec.template.spec.containers[0].image' -r | cut -d: -f1 | sed 's/\/dev$//')
   values::set global.modulesImages.registry "$registry"
 
-  registry_dockercfg=$(kubectl -n antiopa get secret/registrysecret -o json | jq '.data.".dockercfg"' -r)
+  registry_dockercfg=$(kubectl -n antiopa get secret/antiopa-registry -o json | jq '.data.".dockercfg"' -r)
   values::set global.modulesImages.registryDockercfg "$registry_dockercfg"
 
   images_tags=$(cat /antiopa/modules/images_tags.json)

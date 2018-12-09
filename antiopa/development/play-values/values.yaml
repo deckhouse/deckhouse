@@ -1,5 +1,5 @@
 registry:
-  secret_name: registrysecret
+  secret_name: antiopa-registry
 
 sentry:
   release_hook:
