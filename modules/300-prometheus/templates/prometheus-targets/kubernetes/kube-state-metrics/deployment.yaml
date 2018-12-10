@@ -65,21 +65,21 @@ spec:
             memory: 40Mi
             cpu: 20m
       - name: kube-state-metrics
-        image: quay.io/coreos/kube-state-metrics:v1.3.0-rc.0
+        image: quay.io/coreos/kube-state-metrics:v1.5.0-alpha.0
         args:
         - "--host=127.0.0.1"
         - "--port=8081"
         - "--telemetry-host=127.0.0.1"
         - "--telemetry-port=8082"
       - name: addon-resizer
-        image: gcr.io/google_containers/addon-resizer:1.8.1
+        image: gcr.io/google_containers/addon-resizer:1.8.3
         resources:
           limits:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 150m
+            memory: 50Mi
           requests:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 150m
+            memory: 50Mi
         env:
           - name: MY_POD_NAME
             valueFrom:
