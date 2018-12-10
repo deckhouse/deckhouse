@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=30
+}
+
+function __main__() {
+  #### Миграция 2018-12-12: https://github.com/deckhouse/deckhouse/merge_requests/572
+  # Этот хук можно удалить, после выката релиза с данным коммитом
+  for namespace in $(kubectl get namespace -o json | \
+                      jq -r '.items[] |
+                      select(.metadata.labels."antiopa-secret-copier" == "yes") |
+                      .metadata.name')
+  do
+    kubectl label namespace $namespace antiopa-secret-copier-
+  done
+}
+
+hook::run $@
