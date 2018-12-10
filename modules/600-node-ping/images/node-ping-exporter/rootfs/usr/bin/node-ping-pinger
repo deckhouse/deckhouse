@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+shopt -s inherit_errexit
+shopt -s failglob
+
+PROMETHEUS_TEXTFILE="${PROMETHEUS_TEXTFILE_DIR}/${PROMETHEUS_TEXTFILE_PREFIX}${1}.prom"
+PROMETHEUS_TMP_TEXTFILE="${PROMETHEUS_TEXTFILE_DIR}/${PROMETHEUS_TEXTFILE_PREFIX}${1}.tmp"
+
+# Init-им переменные-счетчики для counter-ов
+packets_sent=0
+packets_received=0
+milliseconds_sum=0
+
+# Запускаем непосредственно команду ping и собираем результат во временный файл
+while true; do
+  ping_result=$(ping -W0.5 -i0.5 -c10 -q $2)
+
+  # Парсинг вывода
+  send_count=$(echo $ping_result | egrep -o "[[:digit:]]{2}[ packets]* transmitted" | awk '{print $1}')
+  received_count=$(echo $ping_result | egrep -o "[[:digit:]]{1,2}[ packets]* received" | awk '{print $1}')
+  rtt_min=$(echo $ping_result | awk -F= '{print $2}' | awk -F/ '{print $1}' | tr -d ' ')
+  rtt_max=$(echo $ping_result | awk -F= '{print $2}' | awk -F/ '{print $3}')
+  rtt_mdev=$(echo $ping_result | awk -F= '{print $2}' | awk -F/ '{print $4}' | cut -d' ' -f1)
+  rtt_avg=$(echo $ping_result | awk -F= '{print $2}' | awk -F/ '{print $2}')
+
+  # Делаем сложные вычисления
+  received_msec_sum=$(echo "${rtt_avg}*${received_count}" | bc -l)
+
+  # Увеличиваем counter'ы
+  packets_sent=$(( ${packets_sent} + ${send_count} ))
+  packets_received=$(( ${packets_received} + ${received_count} ))
+  milliseconds_sum=$( echo ${milliseconds_sum} + ${received_msec_sum} | bc -l )
+
+  # Записываем результат
+  cat > $PROMETHEUS_TMP_TEXTFILE << EOF
+# HELP kube_node_ping_packets_sent The total number of ping packets sent
+# TYPE kube_node_ping_packets_sent counter
+kube_node_ping_packets_sent{destination_node="${1}",destination_node_ip_address="${2}"} ${packets_sent}
+
+# HELP kube_node_ping_packets_received The total number of ping packets received
+# TYPE kube_node_ping_packets_received counter
+kube_node_ping_packets_received{destination_node="${1}",destination_node_ip_address="${2}"} ${packets_received}
+
+# HELP kube_node_ping_rtt_milliseconds_sum The total number of milliseconds spent in ping round-trip
+# TYPE kube_node_ping_rtt_milliseconds_sum counter
+kube_node_ping_rtt_milliseconds_sum{destination_node="${1}",destination_node_ip_address="${2}"} ${milliseconds_sum}
+
+# HELP kube_node_ping_rtt_min Minimal observed RTT from the latest pinging sequence
+# TYPE kube_node_ping_rtt_min gauge
+kube_node_ping_rtt_min{destination_node="${1}",destination_node_ip_address="${2}"} ${rtt_min}
+
+# HELP kube_node_ping_rtt_max Maximal observed RTT from the latest pinging sequence
+# TYPE kube_node_ping_rtt_max gauge
+kube_node_ping_rtt_max{destination_node="${1}",destination_node_ip_address="${2}"} ${rtt_max}
+
+# HELP kube_node_ping_rtt_mdev Mean deviation between RTTs observed from the latest pinging sequence
+# TYPE kube_node_ping_rtt_mdev gauge
+kube_node_ping_rtt_mdev{destination_node="${1}",destination_node_ip_address="${2}"} ${rtt_mdev}
+EOF
+  mv $PROMETHEUS_TMP_TEXTFILE $PROMETHEUS_TEXTFILE
+done

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=20 onKubernetesEvent="$(jo -a \
+    "$(jo kind=node jqFilter=".status.addresses" disableDebug=true)" \
+  )"
+}
+
+function __main__() {
+  nodes=$(kubectl get no -o json | jq -c '.items | map ({name: (.status.addresses | map (select(.type=="Hostname").address) | first), ipAddress: (.status.addresses | map (select(.type=="InternalIP").address) | first) }) | sort')
+  values::set nodePing.nodes "$nodes"
+}
+
+hook::run $@

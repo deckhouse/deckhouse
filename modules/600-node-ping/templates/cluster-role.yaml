@@ -1,0 +1,11 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kube-prometheus:node-ping
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
