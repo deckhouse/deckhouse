@@ -34,6 +34,8 @@ spec:
         - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)'
         - "--collector.filesystem.ignored-fs-types"
         - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$'
+        - '--collector.textfile.directory'
+        - '/host/textfile'
         name: node-exporter
         resources:
           requests:
@@ -52,6 +54,9 @@ spec:
         - name: sys
           readOnly: true
           mountPath: /host/sys
+        - name: textfile
+          readOnly: true
+          mountPath: /host/textfile
       - name: prometheus-auth-proxy
         image: flant/kube-prometheus-auth-proxy:v0.1.0
         args:
@@ -75,6 +80,10 @@ spec:
       tolerations:
       - operator: Exists
       volumes:
+      - name: textfile
+        hostPath:
+          path: /var/run/node-exporter-textfile
+          type: DirectoryOrCreate
       - name: root
         hostPath:
           path: /

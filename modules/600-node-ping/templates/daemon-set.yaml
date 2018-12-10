@@ -1,0 +1,54 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: node-ping
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    tier: monitoring
+    app: node-ping
+    version: v1
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: node-ping
+    spec:
+      terminationGracePeriodSeconds: 0
+      tolerations:
+      - operator: "Exists"
+      serviceAccountName: node-ping
+      containers:
+      - resources:
+          requests:
+            cpu: 0.10
+        image: {{ .Values.global.modulesImages.registry }}/node-ping/node-ping-exporter:{{ .Values.global.modulesImages.tags.nodePing.nodePingExporter }}
+        args:
+{{- range .Values.nodePing.nodes }}
+        - {{ .name }}
+        - {{ .ipAddress }}
+{{- end }}
+        imagePullPolicy: Always
+        name: node-ping
+        workingDir: /scripts
+        env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: PROMETHEUS_TEXTFILE_DIR
+            value: /node-exporter-textfile
+          - name: PROMETHEUS_TEXTFILE_PREFIX
+            value: node-ping_
+        volumeMounts:
+          - name: textfile
+            mountPath: /node-exporter-textfile
+      volumes:
+        - name: textfile
+          hostPath:
+            path: /var/run/node-exporter-textfile
+      imagePullSecrets:
+      - name: antiopa-registry
