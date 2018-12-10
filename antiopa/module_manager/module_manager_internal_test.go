@@ -14,6 +14,7 @@ import (
 	"github.com/deckhouse/deckhouse/antiopa/helm"
 	"github.com/deckhouse/deckhouse/antiopa/kube_config_manager"
 	"github.com/deckhouse/deckhouse/antiopa/utils"
+	"github.com/romana/rlog"
 )
 
 func runInitModulesIndex(t *testing.T, mm *MainModuleManager, subPath string) {
@@ -39,6 +40,7 @@ func initTempAndWorkingDirectories(t *testing.T, subPath string) {
 
 	var err error
 	TempDir, err = ioutil.TempDir("", "antiopa-")
+	rlog.Infof("TEMP DIR %s", TempDir)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -25,8 +25,8 @@ type ModuleManager interface {
 	GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error)
 	DeleteModule(moduleName string) error
 	RunModule(moduleName string) error
-	RunGlobalHook(hookName string, binding BindingType) error
-	RunModuleHook(hookName string, binding BindingType) error
+	RunGlobalHook(hookName string, binding BindingType, bindingContext BindingContext) error
+	RunModuleHook(hookName string, binding BindingType, bindingContext BindingContext) error
 	Retry()
 }
 
@@ -110,6 +110,26 @@ const (
 	OnStartup       BindingType = "ON_STARTUP"
 	KubeEvents      BindingType = "KUBE_EVENTS"
 )
+
+var ContextBindingType = map[BindingType]string{
+	BeforeHelm:      "beforeHelm",
+	AfterHelm:       "afterHelm",
+	AfterDeleteHelm: "afterDeleteHelm",
+	BeforeAll:       "beforeAll",
+	AfterAll:        "afterAll",
+	Schedule:        "schedule",
+	OnStartup:       "onStartup",
+	KubeEvents:      "onKubernetesEvent",
+}
+
+// Additional info from schedule and kube events
+type BindingContext struct {
+	Binding           string `json:"binding"`
+	ResourceEvent     string `json:"resourceEvent,omitempty"`
+	ResourceNamespace string `json:"resourceNamespace,omitempty"`
+	ResourceKind      string `json:"resourceKind,omitempty"`
+	ResourceName      string `json:"resourceName,omitempty"`
+}
 
 // Типы событий, отправляемые в Main — либо изменились какие-то модули и нужно
 // пройти по списку и запустить/удалить/проапгрейдить модуль,
@@ -739,7 +759,7 @@ func valuesChecksum(valuesArr ...utils.Values) (string, error) {
 	return utils.CalculateChecksum(string(valuesJson)), nil
 }
 
-func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType) error {
+func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType, bindingContext BindingContext) error {
 	globalHook, err := mm.GetGlobalHook(hookName)
 	if err != nil {
 		return err
@@ -750,7 +770,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 		return err
 	}
 
-	if err := globalHook.run(binding); err != nil {
+	if err := globalHook.run(binding, bindingContext); err != nil {
 		return err
 	}
 
@@ -769,7 +789,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType)
 	return nil
 }
 
-func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType) error {
+func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType, bindingContext BindingContext) error {
 	moduleHook, err := mm.GetModuleHook(hookName)
 	if err != nil {
 		return err
@@ -780,7 +800,7 @@ func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType)
 		return err
 	}
 
-	if err := moduleHook.run(binding); err != nil {
+	if err := moduleHook.run(binding, bindingContext); err != nil {
 		return err
 	}
 

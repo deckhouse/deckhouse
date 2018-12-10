@@ -10,6 +10,7 @@ import (
 
 	"github.com/romana/rlog"
 	"gopkg.in/satori/go.uuid.v1"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,8 +29,17 @@ import (
 )
 
 var (
-	KubeEventCh chan string
+	KubeEventCh chan KubeEvent
 )
+
+// KubeEvent contains event type and k8s object identification
+type KubeEvent struct {
+	ConfigId  string
+	Event     string
+	Namespace string
+	Kind      string
+	Name      string
+}
 
 type KubeEventsManager interface {
 	Run(eventTypes []module_manager.OnKubernetesEventType, kind, namespace string, labelSelector *metaV1.LabelSelector, jqFilter string, debug bool) (string, error)
@@ -48,7 +58,7 @@ func NewMainKubeEventsManager() *MainKubeEventsManager {
 
 func Init() (KubeEventsManager, error) {
 	em := NewMainKubeEventsManager()
-	KubeEventCh = make(chan string, 1)
+	KubeEventCh = make(chan KubeEvent, 1)
 	return em, nil
 }
 
@@ -75,7 +85,7 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 						eventTypes, kubeEventsInformer.ConfigId, kind, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
 				}
 
-				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnAdd), debug)
+				err = kubeEventsInformer.HandleKubeEvent(obj, kind, checksum, "ADDED", kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnAdd), debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -101,7 +111,7 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 						eventTypes, kubeEventsInformer.ConfigId, kind, objectId, jqFilter, checksum, utils.FormatJsonDataOrError(utils.FormatPrettyJson(filtered)))
 				}
 
-				err = kubeEventsInformer.HandleKubeEvent(obj, checksum, kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnUpdate), debug)
+				err = kubeEventsInformer.HandleKubeEvent(obj, kind, checksum, "MODIFIED", kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnUpdate), debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -118,7 +128,7 @@ func (em *MainKubeEventsManager) Run(eventTypes []module_manager.OnKubernetesEve
 					rlog.Debugf("Kube events manager: %+v informer %s: delete %s object %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId)
 				}
 
-				err = kubeEventsInformer.HandleKubeEvent(obj, "", kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnDelete), debug)
+				err = kubeEventsInformer.HandleKubeEvent(obj, kind, "", "DELETED", kubeEventsInformer.ShouldHandleEvent(module_manager.KubernetesEventOnDelete), debug)
 				if err != nil {
 					rlog.Error("Kube events manager: %+v informer %s: %s object %s: %s", eventTypes, kubeEventsInformer.ConfigId, kind, objectId, err)
 					return
@@ -586,7 +596,10 @@ func (ei *KubeEventsInformer) InitializeItemsList(objects []ListItemObject, debu
 	return nil
 }
 
-func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum string, sendSignal bool, debug bool) error {
+// HandleKubeEvent sends new KubeEvent to KubeEventCh
+// obj doesn't contains Kind information, so kind is passed from Run() argument.
+// TODO refactor: pass KubeEvent as argument
+func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, kind string, newChecksum string, eventType string, sendSignal bool, debug bool) error {
 	objectId, err := runtimeResourceId(obj.(runtime.Object))
 	if err != nil {
 		return fmt.Errorf("failed to get object id: %s", err)
@@ -604,7 +617,15 @@ func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum strin
 			if debug {
 				rlog.Debugf("Kube events manager: %+v informer %s: %s object %s: sending EVENT", ei.EventTypes, ei.ConfigId, ei.Kind, objectId)
 			}
-			KubeEventCh <- ei.ConfigId
+			// Safe to ignore an error because of previous call to runtimeResourceId()
+			namespace, name, _ := metaFromEventObject(obj.(runtime.Object))
+			KubeEventCh <- KubeEvent{
+				ConfigId:  ei.ConfigId,
+				Event:     eventType,
+				Namespace: namespace,
+				Kind:      kind,
+				Name:      name,
+			}
 		}
 	} else if debug {
 		rlog.Debugf("Kube events manager: %+v informer %s: %s object %s: checksum '%s' has not changed", ei.EventTypes, ei.ConfigId, ei.Kind, objectId, newChecksum)
@@ -613,16 +634,19 @@ func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, newChecksum strin
 	return nil
 }
 
-func runtimeResourceId(obj interface{}) (string, error) {
-	runtimeObj := obj.(runtime.Object)
-	accessor := meta.NewAccessor()
-
-	name, err := accessor.Name(runtimeObj)
+// metaFromEventObject returns name and namespace from api object
+func metaFromEventObject(obj interface{}) (namespace string, name string, err error) {
+	accessor, err := meta.Accessor(obj)
 	if err != nil {
-		return "", err
+		return
 	}
+	namespace = accessor.GetNamespace()
+	name = accessor.GetName()
+	return
+}
 
-	namespace, err := accessor.Namespace(runtimeObj)
+func runtimeResourceId(obj interface{}) (string, error) {
+	namespace, name, err := metaFromEventObject(obj)
 	if err != nil {
 		return "", err
 	}

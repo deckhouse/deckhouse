@@ -29,6 +29,7 @@ type Task interface {
 	GetName() string
 	GetType() TaskType
 	GetBinding() module_manager.BindingType
+	GetBindingContext() module_manager.BindingContext
 	GetFailureCount() int
 	IncrementFailureCount()
 	GetDelay() time.Duration
@@ -36,12 +37,13 @@ type Task interface {
 }
 
 type BaseTask struct {
-	FailureCount int    // failed executions count
-	Name         string // name of module or hook
-	Type         TaskType
-	Binding      module_manager.BindingType
-	Delay        time.Duration
-	AllowFailure bool // task considered ok if hook failed. false by default. can be true for some schedule hooks
+	FailureCount   int    // failed executions count
+	Name           string // name of module or hook
+	Type           TaskType
+	Binding        module_manager.BindingType
+	BindingContext module_manager.BindingContext
+	Delay          time.Duration
+	AllowFailure   bool // task considered ok if hook failed. false by default. can be true for some schedule hooks
 }
 
 func NewTask(taskType TaskType, name string) *BaseTask {
@@ -65,6 +67,10 @@ func (t *BaseTask) GetBinding() module_manager.BindingType {
 	return t.Binding
 }
 
+func (t *BaseTask) GetBindingContext() module_manager.BindingContext {
+	return t.BindingContext
+}
+
 func (t *BaseTask) GetDelay() time.Duration {
 	return t.Delay
 }
@@ -75,6 +81,11 @@ func (t *BaseTask) GetAllowFailure() bool {
 
 func (t *BaseTask) WithBinding(binding module_manager.BindingType) *BaseTask {
 	t.Binding = binding
+	return t
+}
+
+func (t *BaseTask) WithBindingContext(context module_manager.BindingContext) *BaseTask {
+	t.BindingContext = context
 	return t
 }
 
