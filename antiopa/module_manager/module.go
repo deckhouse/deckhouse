@@ -235,7 +235,7 @@ func (m *Module) runHooksByBinding(binding BindingType) error {
 			return err
 		}
 
-		if err := moduleHook.run(binding); err != nil {
+		if err := moduleHook.run(binding, BindingContext{Binding: ContextBindingType[binding]}); err != nil {
 			return err
 		}
 	}
@@ -433,7 +433,7 @@ func (m *Module) checkIsEnabledByScript(precedingEnabledModules []string) (bool,
 	rlog.Infof("Running enabled script '%s' for module '%s' ...", enabledScriptPath, m.Name)
 
 	cmd := m.moduleManager.makeHookCommand(
-		WorkingDir, configValuesPath, valuesPath, enabledScriptPath, []string{},
+		WorkingDir, configValuesPath, valuesPath, "", enabledScriptPath, []string{},
 		[]string{
 			fmt.Sprintf("MODULE_ENABLED_RESULT=%s", enabledResultFilePath),
 		},

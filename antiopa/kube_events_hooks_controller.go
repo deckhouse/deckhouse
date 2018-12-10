@@ -13,13 +13,15 @@ import (
 
 type KubeEventHook struct {
 	HookName string
+	Name     string
 
-	EventTypes []module_manager.OnKubernetesEventType
-	Kind       string
-	Namespace  string
-	Selector   *metav1.LabelSelector
-	JqFilter   string
-	Debug      bool
+	EventTypes   []module_manager.OnKubernetesEventType
+	Kind         string
+	Namespace    string
+	Selector     *metav1.LabelSelector
+	JqFilter     string
+	AllowFailure bool
+	Debug        bool
 
 	Config module_manager.OnKubernetesEventConfig
 }
@@ -29,26 +31,10 @@ func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_
 
 	for _, config := range hookConfig.OnKubernetesEvent {
 		if config.NamespaceSelector.Any {
-			res = append(res, &KubeEventHook{
-				HookName:   hook.Name,
-				EventTypes: config.EventTypes,
-				Kind:       config.Kind,
-				Namespace:  "",
-				Selector:   config.Selector,
-				JqFilter:   config.JqFilter,
-				Debug:      !config.DisableDebug,
-			})
+			res = append(res, ConvertOnKubernetesEventToKubeEventHook(hook, config, ""))
 		} else {
 			for _, namespace := range config.NamespaceSelector.MatchNames {
-				res = append(res, &KubeEventHook{
-					HookName:   hook.Name,
-					EventTypes: config.EventTypes,
-					Kind:       config.Kind,
-					Namespace:  namespace,
-					Selector:   config.Selector,
-					JqFilter:   config.JqFilter,
-					Debug:      !config.DisableDebug,
-				})
+				res = append(res, ConvertOnKubernetesEventToKubeEventHook(hook, config, namespace))
 			}
 		}
 	}
@@ -56,11 +42,25 @@ func MakeKubeEventHookDescriptors(hook *module_manager.Hook, hookConfig *module_
 	return res
 }
 
+func ConvertOnKubernetesEventToKubeEventHook(hook *module_manager.Hook, config module_manager.OnKubernetesEventConfig, namespace string) *KubeEventHook {
+	return &KubeEventHook{
+		HookName:     hook.Name,
+		Name:         config.Name,
+		EventTypes:   config.EventTypes,
+		Kind:         config.Kind,
+		Namespace:    namespace,
+		Selector:     config.Selector,
+		JqFilter:     config.JqFilter,
+		AllowFailure: config.AllowFailure,
+		Debug:        !config.DisableDebug,
+	}
+}
+
 type KubeEventsHooksController interface {
 	EnableGlobalHooks(moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error
 	EnableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error
 	DisableModuleHooks(moduleName string, moduleManager module_manager.ModuleManager, eventsManager kube_events_manager.KubeEventsManager) error
-	HandleEvent(configId string) (*struct{ Tasks []task.Task }, error)
+	HandleEvent(kubeEvent kube_events_manager.KubeEvent) (*struct{ Tasks []task.Task }, error)
 }
 
 type MainKubeEventsHooksController struct {
@@ -165,23 +165,38 @@ func (obj *MainKubeEventsHooksController) DisableModuleHooks(moduleName string, 
 	return nil
 }
 
-func (obj *MainKubeEventsHooksController) HandleEvent(configId string) (*struct{ Tasks []task.Task }, error) {
+func (obj *MainKubeEventsHooksController) HandleEvent(kubeEvent kube_events_manager.KubeEvent) (*struct{ Tasks []task.Task }, error) {
 	res := &struct{ Tasks []task.Task }{Tasks: make([]task.Task, 0)}
+	var desc *KubeEventHook
+	var taskType task.TaskType
 
-	if desc, hasKey := obj.ModuleHooks[configId]; hasKey {
-		newTask := task.NewTask(task.ModuleHookRun, desc.HookName).
-			WithBinding(module_manager.KubeEvents).
-			WithAllowFailure(desc.Config.AllowFailure)
+	if moduleDesc, hasKey := obj.ModuleHooks[kubeEvent.ConfigId]; hasKey {
+		desc = moduleDesc
+		taskType = task.ModuleHookRun
+	} else if globalDesc, hasKey := obj.GlobalHooks[kubeEvent.ConfigId]; hasKey {
+		desc = globalDesc
+		taskType = task.GlobalHookRun
+	}
 
-		res.Tasks = append(res.Tasks, newTask)
-	} else if desc, hasKey := obj.GlobalHooks[configId]; hasKey {
-		newTask := task.NewTask(task.GlobalHookRun, desc.HookName).
+	if desc != nil && taskType != "" {
+		bindingName := desc.Name
+		if desc.Name == "" {
+			bindingName = module_manager.ContextBindingType[module_manager.KubeEvents]
+		}
+		newTask := task.NewTask(taskType, desc.HookName).
 			WithBinding(module_manager.KubeEvents).
+			WithBindingContext(module_manager.BindingContext{
+				Binding:           bindingName,
+				ResourceEvent:     kubeEvent.Event,
+				ResourceNamespace: kubeEvent.Namespace,
+				ResourceKind:      kubeEvent.Kind,
+				ResourceName:      kubeEvent.Name,
+			}).
 			WithAllowFailure(desc.Config.AllowFailure)
 
 		res.Tasks = append(res.Tasks, newTask)
 	} else {
-		return nil, fmt.Errorf("unknown kube event: no such config id '%s' registered", configId)
+		return nil, fmt.Errorf("unknown kube event: no such config id '%s' registered", kubeEvent.ConfigId)
 	}
 
 	return res, nil

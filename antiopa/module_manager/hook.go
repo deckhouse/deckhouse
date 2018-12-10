@@ -56,6 +56,7 @@ type HookConfig struct {
 }
 
 type ScheduleConfig struct {
+	Name         string `json:"name"`
 	Crontab      string `json:"crontab"`
 	AllowFailure bool   `json:"allowFailure"`
 }
@@ -69,6 +70,7 @@ const (
 )
 
 type OnKubernetesEventConfig struct {
+	Name              string                  `json:"name"`
 	EventTypes        []OnKubernetesEventType `json:"event"`
 	Kind              string                  `json:"kind"`
 	Selector          *metav1.LabelSelector   `json:"selector"`
@@ -254,10 +256,10 @@ func (h *GlobalHook) handleGlobalValuesPatch(currentValues utils.Values, valuesP
 	return result, nil
 }
 
-func (h *GlobalHook) run(bindingType BindingType) error {
+func (h *GlobalHook) run(bindingType BindingType, context BindingContext) error {
 	rlog.Infof("Running global hook '%s' binding '%s' ...", h.Name, bindingType)
 
-	configValuesPatch, valuesPatch, err := h.exec()
+	configValuesPatch, valuesPatch, err := h.exec(context)
 	if err != nil {
 		return fmt.Errorf("global hook '%s' failed: %s", h.Name, err)
 	}
@@ -298,7 +300,7 @@ func (h *GlobalHook) run(bindingType BindingType) error {
 	return nil
 }
 
-func (h *GlobalHook) exec() (*utils.ValuesPatch, *utils.ValuesPatch, error) {
+func (h *GlobalHook) exec(context BindingContext) (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	configValuesPath, err := h.prepareConfigValuesJsonFile()
 	if err != nil {
 		return nil, nil, err
@@ -307,7 +309,11 @@ func (h *GlobalHook) exec() (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, h.Path, []string{}, []string{})
+	contextPath, err := h.prepareBindingContextJsonFile(context)
+	if err != nil {
+		return nil, nil, err
+	}
+	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, contextPath, h.Path, []string{}, []string{})
 
 	configValuesPatchPath, err := h.prepareConfigValuesJsonPatchFile()
 	if err != nil {
@@ -408,6 +414,20 @@ func (h *GlobalHook) prepareValuesJsonFile() (string, error) {
 	return path, nil
 }
 
+func (h *GlobalHook) prepareBindingContextJsonFile(context BindingContext) (string, error) {
+	data, _ := json.Marshal(context)
+	//data := utils.MustDump(utils.DumpValuesJson(context))
+	path := filepath.Join(TempDir, fmt.Sprintf("global-hook-%s-binding-context.json", h.SafeName()))
+	err := dumpData(path, data)
+	if err != nil {
+		return "", err
+	}
+
+	rlog.Debugf("Prepared global hook %s binding context:\n%s", h.Name, utils.YamlToString(context))
+
+	return path, nil
+}
+
 type moduleValuesMergeResult struct {
 	// global values with root ModuleValuesKey key
 	Values utils.Values
@@ -471,11 +491,11 @@ func validateHookValuesPatch(valuesPatch utils.ValuesPatch, acceptableKey string
 	return nil
 }
 
-func (h *ModuleHook) run(bindingType BindingType) error {
+func (h *ModuleHook) run(bindingType BindingType, context BindingContext) error {
 	moduleName := h.Module.Name
 	rlog.Infof("Running module hook '%s' binding '%s' ...", h.Name, bindingType)
 
-	configValuesPatch, valuesPatch, err := h.exec()
+	configValuesPatch, valuesPatch, err := h.exec(context)
 	if err != nil {
 		return fmt.Errorf("module hook '%s' failed: %s", h.Name, err)
 	}
@@ -516,7 +536,7 @@ func (h *ModuleHook) run(bindingType BindingType) error {
 	return nil
 }
 
-func (h *ModuleHook) exec() (*utils.ValuesPatch, *utils.ValuesPatch, error) {
+func (h *ModuleHook) exec(context BindingContext) (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	configValuesPath, err := h.prepareConfigValuesJsonFile()
 	if err != nil {
 		return nil, nil, err
@@ -525,7 +545,11 @@ func (h *ModuleHook) exec() (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, h.Path, []string{}, []string{})
+	contextPath, err := h.prepareBindingContextJsonFile(context)
+	if err != nil {
+		return nil, nil, err
+	}
+	cmd := h.moduleManager.makeHookCommand(WorkingDir, configValuesPath, valuesPath, contextPath, h.Path, []string{}, []string{})
 
 	configValuesPatchPath, err := h.prepareConfigValuesJsonPatchFile()
 	if err != nil {
@@ -563,6 +587,20 @@ func (h *ModuleHook) prepareConfigValuesYamlFile() (string, error) {
 	return h.Module.prepareConfigValuesYamlFile()
 }
 
+func (h *ModuleHook) prepareBindingContextJsonFile(context BindingContext) (string, error) {
+	data, _ := json.Marshal(context)
+	//data := utils.MustDump(utils.DumpValuesJson(context))
+	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-hook-%s-binding-context.json", h.Module.SafeName(), h.SafeName()))
+	err := dumpData(path, data)
+	if err != nil {
+		return "", err
+	}
+
+	rlog.Debugf("Prepared module %s hook %s binding context:\n%s", h.Module.SafeName(), h.Name, utils.YamlToString(context))
+
+	return path, nil
+}
+
 func prepareHookConfig(hookConfig *HookConfig) {
 	for i := range hookConfig.OnKubernetesEvent {
 		config := &hookConfig.OnKubernetesEvent[i]
@@ -595,7 +633,7 @@ func (mm *MainModuleManager) initGlobalHooks() error {
 
 		hookConfig := &GlobalHookConfig{}
 		if err := json.Unmarshal(output, hookConfig); err != nil {
-			return fmt.Errorf("unmarshaling global hook '%s' json failed: %s", hookName, err.Error())
+			return fmt.Errorf("unmarshaling global hook '%s' json failed: %s\nhook --config output: %s", hookName, err.Error(), output)
 		}
 
 		prepareHookConfig(&hookConfig.HookConfig)
@@ -760,8 +798,11 @@ func execCommandOutput(cmd *exec.Cmd) ([]byte, error) {
 	return output, nil
 }
 
-func (mm *MainModuleManager) makeHookCommand(dir string, configValuesPath string, valuesPath string, entrypoint string, args []string, envs []string) *exec.Cmd {
+func (mm *MainModuleManager) makeHookCommand(dir string, configValuesPath string, valuesPath string, contextPath string, entrypoint string, args []string, envs []string) *exec.Cmd {
 	envs = append(envs, fmt.Sprintf("CONFIG_VALUES_PATH=%s", configValuesPath))
 	envs = append(envs, fmt.Sprintf("VALUES_PATH=%s", valuesPath))
+	if contextPath != "" {
+		envs = append(envs, fmt.Sprintf("BINDING_CONTEXT_PATH=%s", contextPath))
+	}
 	return mm.makeCommand(dir, entrypoint, args, envs)
 }

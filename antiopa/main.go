@@ -83,21 +83,21 @@ func Init() {
 		rlog.Errorf("MAIN Fatal: Cannot determine antiopa working dir: %s", err)
 		os.Exit(1)
 	}
-	rlog.Debugf("Antiopa working dir: %s", WorkingDir)
+	rlog.Infof("WORKING_DIR=%s", WorkingDir)
 
 	TempDir, err = ioutil.TempDir("", "antiopa-")
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot create antiopa temporary dir: %s", err)
 		os.Exit(1)
 	}
-	rlog.Debugf("Antiopa temporary dir: %s", TempDir)
+	rlog.Infof("TEMP_DIR=%s", TempDir)
 
 	Hostname, err = os.Hostname()
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot get pod name from hostname: %s", err)
 		os.Exit(1)
 	}
-	rlog.Debugf("Antiopa hostname: %s", Hostname)
+	rlog.Infof("HOSTNAME=%s", Hostname)
 
 	// Инициализация подключения к kube
 	kube.InitKube()
@@ -280,8 +280,13 @@ func ManagersEventsHandler() {
 				_, getHookErr = ModuleManager.GetGlobalHook(hook.Name)
 				if getHookErr == nil {
 					for _, scheduleConfig := range hook.Schedule {
+						bindingName := scheduleConfig.Name
+						if bindingName == "" {
+							bindingName = module_manager.ContextBindingType[module_manager.Schedule]
+						}
 						newTask := task.NewTask(task.GlobalHookRun, hook.Name).
 							WithBinding(module_manager.Schedule).
+							WithBindingContext(module_manager.BindingContext{Binding: bindingName}).
 							WithAllowFailure(scheduleConfig.AllowFailure)
 						rlog.Debugf("Schedule: queued global hook '%s'", hook.Name)
 						TasksQueue.Add(newTask)
@@ -292,8 +297,13 @@ func ManagersEventsHandler() {
 				_, getHookErr = ModuleManager.GetModuleHook(hook.Name)
 				if getHookErr == nil {
 					for _, scheduleConfig := range hook.Schedule {
+						bindingName := scheduleConfig.Name
+						if bindingName == "" {
+							bindingName = module_manager.ContextBindingType[module_manager.Schedule]
+						}
 						newTask := task.NewTask(task.ModuleHookRun, hook.Name).
 							WithBinding(module_manager.Schedule).
+							WithBindingContext(module_manager.BindingContext{Binding: bindingName}).
 							WithAllowFailure(scheduleConfig.AllowFailure)
 						rlog.Debugf("Schedule: queued hook '%s'", hook.Name)
 						TasksQueue.Add(newTask)
@@ -303,12 +313,12 @@ func ManagersEventsHandler() {
 
 				rlog.Errorf("hook '%s' scheduled but not found by module_manager", hook.Name)
 			}
-		case configId := <-kube_events_manager.KubeEventCh:
-			rlog.Debugf("main: got kube event '%s'", configId)
+		case kubeEvent := <-kube_events_manager.KubeEventCh:
+			rlog.Debugf("main: got kube event '%s': %+v", kubeEvent.ConfigId, kubeEvent)
 
-			res, err := KubeEventsHooks.HandleEvent(configId)
+			res, err := KubeEventsHooks.HandleEvent(kubeEvent)
 			if err != nil {
-				rlog.Errorf("main: error handling kube event '%s': %s", configId, err)
+				rlog.Errorf("main: error handling kube event '%s': %s", kubeEvent.ConfigId, err)
 				break
 			}
 
@@ -349,7 +359,9 @@ func runDiscoverModulesState(_ task.Task) error {
 	// Queue afterAll global hooks
 	afterAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.AfterAll)
 	for _, hookName := range afterAllHooks {
-		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.AfterAll)
+		newTask := task.NewTask(task.GlobalHookRun, hookName).
+			WithBinding(module_manager.AfterAll).
+			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.AfterAll]})
 		TasksQueue.Add(newTask)
 		rlog.Debugf("DiscoverModulesState: queued global %s hook '%s'", module_manager.AfterAll, hookName)
 	}
@@ -425,7 +437,7 @@ func TasksRunner() {
 					TasksQueue.Pop()
 				}
 			case task.ModuleHookRun:
-				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding())
+				err := ModuleManager.RunModuleHook(t.GetName(), t.GetBinding(), t.GetBindingContext())
 				if err != nil {
 					moduleHook, _ := ModuleManager.GetModuleHook(t.GetName())
 					hookLabel := path.Base(moduleHook.Path)
@@ -444,7 +456,7 @@ func TasksRunner() {
 					TasksQueue.Pop()
 				}
 			case task.GlobalHookRun:
-				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding())
+				err := ModuleManager.RunGlobalHook(t.GetName(), t.GetBinding(), t.GetBindingContext())
 				if err != nil {
 					globalHook, _ := ModuleManager.GetGlobalHook(t.GetName())
 					hookLabel := path.Base(globalHook.Path)
@@ -653,7 +665,9 @@ func CreateOnStartupTasks() {
 	onStartupHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.OnStartup)
 
 	for _, hookName := range onStartupHooks {
-		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.OnStartup)
+		newTask := task.NewTask(task.GlobalHookRun, hookName).
+			WithBinding(module_manager.OnStartup).
+			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.OnStartup]})
 		TasksQueue.Add(newTask)
 		rlog.Debugf("OnStartup: queued global hook '%s'", hookName)
 	}
@@ -666,7 +680,10 @@ func CreateReloadAllTasks() {
 	beforeAllHooks := ModuleManager.GetGlobalHooksInOrder(module_manager.BeforeAll)
 
 	for _, hookName := range beforeAllHooks {
-		newTask := task.NewTask(task.GlobalHookRun, hookName).WithBinding(module_manager.BeforeAll)
+		newTask := task.NewTask(task.GlobalHookRun, hookName).
+			WithBinding(module_manager.BeforeAll).
+			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.BeforeAll]})
+
 		TasksQueue.Add(newTask)
 		rlog.Debugf("ReloadAll: queued global %s hook '%s'", module_manager.BeforeAll, hookName)
 	}
