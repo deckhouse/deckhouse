@@ -29,7 +29,7 @@ type Task interface {
 	GetName() string
 	GetType() TaskType
 	GetBinding() module_manager.BindingType
-	GetBindingContext() module_manager.BindingContext
+	GetBindingContext() []module_manager.BindingContext
 	GetFailureCount() int
 	IncrementFailureCount()
 	GetDelay() time.Duration
@@ -41,17 +41,18 @@ type BaseTask struct {
 	Name           string // name of module or hook
 	Type           TaskType
 	Binding        module_manager.BindingType
-	BindingContext module_manager.BindingContext
+	BindingContext []module_manager.BindingContext
 	Delay          time.Duration
 	AllowFailure   bool // task considered ok if hook failed. false by default. can be true for some schedule hooks
 }
 
 func NewTask(taskType TaskType, name string) *BaseTask {
 	return &BaseTask{
-		FailureCount: 0,
-		Name:         name,
-		Type:         taskType,
-		AllowFailure: false,
+		FailureCount:   0,
+		Name:           name,
+		Type:           taskType,
+		AllowFailure:   false,
+		BindingContext: make([]module_manager.BindingContext, 0),
 	}
 }
 
@@ -67,7 +68,7 @@ func (t *BaseTask) GetBinding() module_manager.BindingType {
 	return t.Binding
 }
 
-func (t *BaseTask) GetBindingContext() module_manager.BindingContext {
+func (t *BaseTask) GetBindingContext() []module_manager.BindingContext {
 	return t.BindingContext
 }
 
@@ -84,8 +85,13 @@ func (t *BaseTask) WithBinding(binding module_manager.BindingType) *BaseTask {
 	return t
 }
 
-func (t *BaseTask) WithBindingContext(context module_manager.BindingContext) *BaseTask {
+func (t *BaseTask) WithBindingContext(context []module_manager.BindingContext) *BaseTask {
 	t.BindingContext = context
+	return t
+}
+
+func (t *BaseTask) AppendBindingContext(context module_manager.BindingContext) *BaseTask {
+	t.BindingContext = append(t.BindingContext, context)
 	return t
 }
 
