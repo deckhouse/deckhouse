@@ -7,11 +7,18 @@ function values::json_patch() {
   set -f
   if [[ "$1" == "--config" ]] ; then
     shift
-    config_values_json_patch+=($(jo $@))
-    printf '%s\n' "${config_values_json_patch[@]}" | jo -a > $CONFIG_VALUES_JSON_PATCH_PATH
+
+    config_values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "$3" \
+                                '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end'))
+
+    echo "${config_values_json_patch[@]}" | \
+      jq -sec '.' > $CONFIG_VALUES_JSON_PATCH_PATH
   else
-    values_json_patch+=($(jo $@))
-    printf '%s\n' "${values_json_patch[@]}" | jo -a > $VALUES_JSON_PATCH_PATH
+    values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "$3" \
+                                '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end'))
+
+    echo "${values_json_patch[@]}" | \
+      jq -sec '.' > $VALUES_JSON_PATCH_PATH
   fi
   set +f
 }
@@ -54,7 +61,7 @@ function values::set() {
     shift
   fi
 
-  values::json_patch $config op=add path=/$(echo $1 | sed 's/\./\//g') value="$2"
+  values::json_patch $config add /$(echo $1 | sed 's/\./\//g') "$2"
 }
 
 function values::has() {
@@ -66,7 +73,7 @@ function values::has() {
 
   local path=.$(echo $1 | rev | cut -d. -f2- | rev)
   local key=$(echo $1 | rev | cut -d. -f1 | rev)
-    
+
   if [[ "$(values::get $config | jq $path' | has("'$key'")' -r)" == "true" ]] ; then
     return 0
   else
@@ -82,7 +89,7 @@ function values::unset() {
   fi
 
   if values::has $config $1 ; then
-    values::json_patch $config op=remove path=/$(echo $1 | sed 's/\./\//g')
+    values::json_patch $config remove /$(echo $1 | sed 's/\./\//g')
   fi
 }
 
