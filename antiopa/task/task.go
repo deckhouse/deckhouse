@@ -34,6 +34,7 @@ type Task interface {
 	IncrementFailureCount()
 	GetDelay() time.Duration
 	GetAllowFailure() bool
+	GetOnStartupHooks() bool
 }
 
 type BaseTask struct {
@@ -44,6 +45,8 @@ type BaseTask struct {
 	BindingContext []module_manager.BindingContext
 	Delay          time.Duration
 	AllowFailure   bool // task considered ok if hook failed. false by default. can be true for some schedule hooks
+
+	OnStartupHooks bool // run module onStartup hooks on antiopa startup or on module enabled
 }
 
 func NewTask(taskType TaskType, name string) *BaseTask {
@@ -80,6 +83,10 @@ func (t *BaseTask) GetAllowFailure() bool {
 	return t.AllowFailure
 }
 
+func (t *BaseTask) GetOnStartupHooks() bool {
+	return t.OnStartupHooks
+}
+
 func (t *BaseTask) WithBinding(binding module_manager.BindingType) *BaseTask {
 	t.Binding = binding
 	return t
@@ -97,6 +104,11 @@ func (t *BaseTask) AppendBindingContext(context module_manager.BindingContext) *
 
 func (t *BaseTask) WithAllowFailure(allowFailure bool) *BaseTask {
 	t.AllowFailure = allowFailure
+	return t
+}
+
+func (t *BaseTask) WithOnStartupHooks(onStartupHooks bool) *BaseTask {
+	t.OnStartupHooks = onStartupHooks
 	return t
 }
 

@@ -38,9 +38,15 @@ func (m *Module) SafeName() string {
 	return sanitize.BaseName(m.Name)
 }
 
-func (m *Module) run() error {
+func (m *Module) run(onStartup bool) error {
 	if err := m.cleanup(); err != nil {
 		return err
+	}
+
+	if onStartup {
+		if err := m.runHooksByBinding(OnStartup); err != nil {
+			return err
+		}
 	}
 
 	if err := m.runHooksByBinding(BeforeHelm); err != nil {
