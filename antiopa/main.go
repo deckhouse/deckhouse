@@ -165,7 +165,7 @@ func Run() {
 	TasksQueue.ChangesDisable()
 
 	CreateOnStartupTasks()
-	CreateReloadAllTasks()
+	CreateReloadAllTasks(true)
 
 	KubeEventsHooks.EnableGlobalHooks(ModuleManager, KubeEventsManager)
 
@@ -219,8 +219,10 @@ func ManagersEventsHandler() {
 				for _, moduleChange := range moduleEvent.ModulesChanges {
 					switch moduleChange.ChangeType {
 					case module_manager.Enabled:
+						// TODO этого события по сути нет. Нужно реализовать для вызова onStartup!
 						rlog.Infof("EVENT ModulesChanged, type=Enabled")
-						newTask := task.NewTask(task.ModuleRun, moduleChange.Name)
+						newTask := task.NewTask(task.ModuleRun, moduleChange.Name).
+							WithOnStartupHooks(true)
 						TasksQueue.Add(newTask)
 						rlog.Infof("QUEUE add ModuleRun %s", newTask.Name)
 
@@ -264,7 +266,7 @@ func ManagersEventsHandler() {
 			case module_manager.GlobalChanged:
 				rlog.Infof("EVENT GlobalChanged")
 				TasksQueue.ChangesDisable()
-				CreateReloadAllTasks()
+				CreateReloadAllTasks(false)
 				TasksQueue.ChangesEnable(true)
 				// Пересоздать индекс хуков по расписанию
 				ScheduledHooks = UpdateScheduleHooks(ScheduledHooks)
@@ -342,14 +344,16 @@ func ManagersEventsHandler() {
 	}
 }
 
-func runDiscoverModulesState(_ task.Task) error {
+func runDiscoverModulesState(t task.Task) error {
 	modulesState, err := ModuleManager.DiscoverModulesState()
 	if err != nil {
 		return err
 	}
 
 	for _, moduleName := range modulesState.EnabledModules {
-		newTask := task.NewTask(task.ModuleRun, moduleName)
+		newTask := task.NewTask(task.ModuleRun, moduleName).
+			WithOnStartupHooks(t.GetOnStartupHooks())
+
 		TasksQueue.Add(newTask)
 		rlog.Infof("QUEUE add ModuleRun %s", moduleName)
 	}
@@ -433,7 +437,7 @@ func TasksRunner() {
 
 			case task.ModuleRun:
 				rlog.Infof("TASK_RUN ModuleRun %s", t.GetName())
-				err := ModuleManager.RunModule(t.GetName())
+				err := ModuleManager.RunModule(t.GetName(), t.GetOnStartupHooks())
 				if err != nil {
 					MetricsStorage.SendCounterMetric("antiopa_module_run_errors", 1.0, map[string]string{"module": t.GetName()})
 					t.IncrementFailureCount()
@@ -702,7 +706,7 @@ func CreateOnStartupTasks() {
 	return
 }
 
-func CreateReloadAllTasks() {
+func CreateReloadAllTasks(onStartup bool) {
 	rlog.Infof("QUEUE add all GlobalHookRun@BeforeAll, add DiscoverModulesState")
 
 	// Queue beforeAll global hooks
@@ -717,7 +721,7 @@ func CreateReloadAllTasks() {
 		rlog.Debugf("QUEUE GlobalHookRun@BeforeAll '%s'", module_manager.BeforeAll, hookName)
 	}
 
-	TasksQueue.Add(task.NewTask(task.DiscoverModulesState, ""))
+	TasksQueue.Add(task.NewTask(task.DiscoverModulesState, "").WithOnStartupHooks(onStartup))
 }
 
 func RunAntiopaMetrics() {

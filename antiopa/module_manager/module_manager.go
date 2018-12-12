@@ -24,7 +24,7 @@ type ModuleManager interface {
 	GetGlobalHooksInOrder(bindingType BindingType) []string
 	GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error)
 	DeleteModule(moduleName string) error
-	RunModule(moduleName string) error
+	RunModule(moduleName string, onStartup bool) error
 	RunGlobalHook(hookName string, binding BindingType, bindingContext []BindingContext) error
 	RunModuleHook(hookName string, binding BindingType, bindingContext []BindingContext) error
 	Retry()
@@ -659,13 +659,13 @@ func (mm *MainModuleManager) DeleteModule(moduleName string) error {
 	return nil
 }
 
-func (mm *MainModuleManager) RunModule(moduleName string) error { // запускает before-helm + helm + after-helm
+func (mm *MainModuleManager) RunModule(moduleName string, onStartup bool) error { // запускает before-helm + helm + after-helm
 	module, err := mm.GetModule(moduleName)
 	if err != nil {
 		return err
 	}
 
-	if err := module.run(); err != nil {
+	if err := module.run(onStartup); err != nil {
 		return err
 	}
 
