@@ -183,15 +183,21 @@ func (obj *MainKubeEventsHooksController) HandleEvent(kubeEvent kube_events_mana
 		if desc.Name == "" {
 			bindingName = module_manager.ContextBindingType[module_manager.KubeEvents]
 		}
-		newTask := task.NewTask(taskType, desc.HookName).
-			WithBinding(module_manager.KubeEvents).
-			WithBindingContext(module_manager.BindingContext{
+
+		bindingContext := make([]module_manager.BindingContext, 0)
+		for _, kEvent := range kubeEvent.Events {
+			bindingContext = append(bindingContext, module_manager.BindingContext{
 				Binding:           bindingName,
-				ResourceEvent:     kubeEvent.Event,
+				ResourceEvent:     kEvent,
 				ResourceNamespace: kubeEvent.Namespace,
 				ResourceKind:      kubeEvent.Kind,
 				ResourceName:      kubeEvent.Name,
-			}).
+			})
+		}
+
+		newTask := task.NewTask(taskType, desc.HookName).
+			WithBinding(module_manager.KubeEvents).
+			WithBindingContext(bindingContext).
 			WithAllowFailure(desc.Config.AllowFailure)
 
 		res.Tasks = append(res.Tasks, newTask)

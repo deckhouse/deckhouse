@@ -236,7 +236,7 @@ func (m *Module) runHooksByBinding(binding BindingType) error {
 			return err
 		}
 
-		if err := moduleHook.run(binding, BindingContext{Binding: ContextBindingType[binding]}); err != nil {
+		if err := moduleHook.run(binding, []BindingContext{{Binding: ContextBindingType[binding]}}); err != nil {
 			return err
 		}
 	}

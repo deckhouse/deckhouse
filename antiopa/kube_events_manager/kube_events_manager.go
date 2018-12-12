@@ -35,7 +35,7 @@ var (
 // KubeEvent contains event type and k8s object identification
 type KubeEvent struct {
 	ConfigId  string
-	Event     string
+	Events    []string
 	Namespace string
 	Kind      string
 	Name      string
@@ -599,6 +599,7 @@ func (ei *KubeEventsInformer) InitializeItemsList(objects []ListItemObject, debu
 // HandleKubeEvent sends new KubeEvent to KubeEventCh
 // obj doesn't contains Kind information, so kind is passed from Run() argument.
 // TODO refactor: pass KubeEvent as argument
+// TODO add delay to merge Added and Modified events (node added and then labels applied — one hook run on Added+Modifed is enough)
 func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, kind string, newChecksum string, eventType string, sendSignal bool, debug bool) error {
 	objectId, err := runtimeResourceId(obj.(runtime.Object))
 	if err != nil {
@@ -621,7 +622,7 @@ func (ei *KubeEventsInformer) HandleKubeEvent(obj interface{}, kind string, newC
 			namespace, name, _ := metaFromEventObject(obj.(runtime.Object))
 			KubeEventCh <- KubeEvent{
 				ConfigId:  ei.ConfigId,
-				Event:     eventType,
+				Events:    []string{eventType},
 				Namespace: namespace,
 				Kind:      kind,
 				Name:      name,

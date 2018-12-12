@@ -256,7 +256,7 @@ func (h *GlobalHook) handleGlobalValuesPatch(currentValues utils.Values, valuesP
 	return result, nil
 }
 
-func (h *GlobalHook) run(bindingType BindingType, context BindingContext) error {
+func (h *GlobalHook) run(bindingType BindingType, context []BindingContext) error {
 	rlog.Infof("Running global hook '%s' binding '%s' ...", h.Name, bindingType)
 
 	configValuesPatch, valuesPatch, err := h.exec(context)
@@ -300,7 +300,7 @@ func (h *GlobalHook) run(bindingType BindingType, context BindingContext) error 
 	return nil
 }
 
-func (h *GlobalHook) exec(context BindingContext) (*utils.ValuesPatch, *utils.ValuesPatch, error) {
+func (h *GlobalHook) exec(context []BindingContext) (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	configValuesPath, err := h.prepareConfigValuesJsonFile()
 	if err != nil {
 		return nil, nil, err
@@ -414,7 +414,7 @@ func (h *GlobalHook) prepareValuesJsonFile() (string, error) {
 	return path, nil
 }
 
-func (h *GlobalHook) prepareBindingContextJsonFile(context BindingContext) (string, error) {
+func (h *GlobalHook) prepareBindingContextJsonFile(context []BindingContext) (string, error) {
 	data, _ := json.Marshal(context)
 	//data := utils.MustDump(utils.DumpValuesJson(context))
 	path := filepath.Join(TempDir, fmt.Sprintf("global-hook-%s-binding-context.json", h.SafeName()))
@@ -491,7 +491,7 @@ func validateHookValuesPatch(valuesPatch utils.ValuesPatch, acceptableKey string
 	return nil
 }
 
-func (h *ModuleHook) run(bindingType BindingType, context BindingContext) error {
+func (h *ModuleHook) run(bindingType BindingType, context []BindingContext) error {
 	moduleName := h.Module.Name
 	rlog.Infof("Running module hook '%s' binding '%s' ...", h.Name, bindingType)
 
@@ -536,7 +536,7 @@ func (h *ModuleHook) run(bindingType BindingType, context BindingContext) error 
 	return nil
 }
 
-func (h *ModuleHook) exec(context BindingContext) (*utils.ValuesPatch, *utils.ValuesPatch, error) {
+func (h *ModuleHook) exec(context []BindingContext) (*utils.ValuesPatch, *utils.ValuesPatch, error) {
 	configValuesPath, err := h.prepareConfigValuesJsonFile()
 	if err != nil {
 		return nil, nil, err
@@ -587,7 +587,7 @@ func (h *ModuleHook) prepareConfigValuesYamlFile() (string, error) {
 	return h.Module.prepareConfigValuesYamlFile()
 }
 
-func (h *ModuleHook) prepareBindingContextJsonFile(context BindingContext) (string, error) {
+func (h *ModuleHook) prepareBindingContextJsonFile(context []BindingContext) (string, error) {
 	data, _ := json.Marshal(context)
 	//data := utils.MustDump(utils.DumpValuesJson(context))
 	path := filepath.Join(TempDir, fmt.Sprintf("%s.module-hook-%s-binding-context.json", h.Module.SafeName(), h.SafeName()))

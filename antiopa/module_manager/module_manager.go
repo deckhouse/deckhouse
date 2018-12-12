@@ -25,8 +25,8 @@ type ModuleManager interface {
 	GetModuleHooksInOrder(moduleName string, bindingType BindingType) ([]string, error)
 	DeleteModule(moduleName string) error
 	RunModule(moduleName string) error
-	RunGlobalHook(hookName string, binding BindingType, bindingContext BindingContext) error
-	RunModuleHook(hookName string, binding BindingType, bindingContext BindingContext) error
+	RunGlobalHook(hookName string, binding BindingType, bindingContext []BindingContext) error
+	RunModuleHook(hookName string, binding BindingType, bindingContext []BindingContext) error
 	Retry()
 }
 
@@ -680,7 +680,7 @@ func valuesChecksum(valuesArr ...utils.Values) (string, error) {
 	return utils.CalculateChecksum(string(valuesJson)), nil
 }
 
-func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType, bindingContext BindingContext) error {
+func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType, bindingContext []BindingContext) error {
 	globalHook, err := mm.GetGlobalHook(hookName)
 	if err != nil {
 		return err
@@ -710,7 +710,7 @@ func (mm *MainModuleManager) RunGlobalHook(hookName string, binding BindingType,
 	return nil
 }
 
-func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType, bindingContext BindingContext) error {
+func (mm *MainModuleManager) RunModuleHook(hookName string, binding BindingType, bindingContext []BindingContext) error {
 	moduleHook, err := mm.GetModuleHook(hookName)
 	if err != nil {
 		return err

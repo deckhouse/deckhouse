@@ -295,7 +295,7 @@ func ManagersEventsHandler() {
 						}
 						newTask := task.NewTask(task.GlobalHookRun, hook.Name).
 							WithBinding(module_manager.Schedule).
-							WithBindingContext(module_manager.BindingContext{Binding: bindingName}).
+							AppendBindingContext(module_manager.BindingContext{Binding: bindingName}).
 							WithAllowFailure(scheduleConfig.AllowFailure)
 						TasksQueue.Add(newTask)
 						rlog.Debugf("QUEUE add GlobalHookRun@Schedule '%s'", hook.Name)
@@ -312,7 +312,7 @@ func ManagersEventsHandler() {
 						}
 						newTask := task.NewTask(task.ModuleHookRun, hook.Name).
 							WithBinding(module_manager.Schedule).
-							WithBindingContext(module_manager.BindingContext{Binding: bindingName}).
+							AppendBindingContext(module_manager.BindingContext{Binding: bindingName}).
 							WithAllowFailure(scheduleConfig.AllowFailure)
 						TasksQueue.Add(newTask)
 						rlog.Debugf("QUEUE add ModuleHookRun@Schedule '%s'", hook.Name)
@@ -371,7 +371,7 @@ func runDiscoverModulesState(_ task.Task) error {
 	for _, hookName := range afterAllHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).
 			WithBinding(module_manager.AfterAll).
-			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.AfterAll]})
+			AppendBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.AfterAll]})
 		TasksQueue.Add(newTask)
 		rlog.Debugf("QUEUE add GlobalHookRun@AfterAll '%s'", hookName)
 	}
@@ -694,7 +694,7 @@ func CreateOnStartupTasks() {
 	for _, hookName := range onStartupHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).
 			WithBinding(module_manager.OnStartup).
-			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.OnStartup]})
+			AppendBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.OnStartup]})
 		TasksQueue.Add(newTask)
 		rlog.Debugf("QUEUE add GlobalHookRun@OnStartup '%s'", hookName)
 	}
@@ -711,7 +711,7 @@ func CreateReloadAllTasks() {
 	for _, hookName := range beforeAllHooks {
 		newTask := task.NewTask(task.GlobalHookRun, hookName).
 			WithBinding(module_manager.BeforeAll).
-			WithBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.BeforeAll]})
+			AppendBindingContext(module_manager.BindingContext{Binding: module_manager.ContextBindingType[module_manager.BeforeAll]})
 
 		TasksQueue.Add(newTask)
 		rlog.Debugf("QUEUE GlobalHookRun@BeforeAll '%s'", module_manager.BeforeAll, hookName)

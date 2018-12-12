@@ -895,7 +895,7 @@ func TestMainModuleManager_RunGlobalHook(t *testing.T) {
 			mm.kubeGlobalConfigValues = expectation.kubeGlobalConfigValues
 			mm.globalDynamicValuesPatches = expectation.globalDynamicValuesPatches
 
-			if err := mm.RunGlobalHook(expectation.hookName, BeforeHelm); err != nil {
+			if err := mm.RunGlobalHook(expectation.hookName, BeforeHelm, []BindingContext{}); err != nil {
 				t.Fatal(err)
 			}
 
