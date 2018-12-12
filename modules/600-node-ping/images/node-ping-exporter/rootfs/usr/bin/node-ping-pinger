@@ -13,7 +13,20 @@ milliseconds_sum=0
 
 # Запускаем непосредственно команду ping и собираем результат во временный файл
 while true; do
-  ping_result=$(ping -W0.5 -i0.5 -c10 -q $2)
+  set +e
+
+  ping_result=$(timeout -t 10 -s INT ping -W0.5 -i0.5 -c10 -q $2)
+  case $? in
+      0|1)
+          ;;
+      *)
+          continue ;;
+  esac
+
+  set -e
+
+  # TODO: REMOVE
+  echo "$ping_result"
 
   # Парсинг вывода
   send_count=$(echo $ping_result | egrep -o "[[:digit:]]{2}[ packets]* transmitted" | awk '{print $1}')
