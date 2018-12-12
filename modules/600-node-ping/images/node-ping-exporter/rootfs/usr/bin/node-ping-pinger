@@ -25,9 +25,6 @@ while true; do
 
   set -e
 
-  # TODO: REMOVE
-  echo "$ping_result"
-
   # Парсинг вывода
   send_count=$(echo $ping_result | egrep -o "[[:digit:]]{2}[ packets]* transmitted" | awk '{print $1}')
   received_count=$(echo $ping_result | egrep -o "[[:digit:]]{1,2}[ packets]* received" | awk '{print $1}')
