@@ -172,334 +172,94 @@ func (em *MainKubeEventsManager) addKubeEventsInformer(kind, namespace string, l
 	}
 
 	var sharedInformer cache.SharedIndexInformer
+	var resourceList runtime.Object
+	var listErr error
 
-	switch kind {
+	switch strings.ToLower(kind) {
 	case "namespace":
 		sharedInformer = coreV1.NewFilteredNamespaceInformer(kube.Kubernetes, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().Namespaces().List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().Namespaces().List(listOptions)
 
 	case "cronjob":
 		sharedInformer = batchV2Alpha1.NewFilteredCronJobInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.BatchV2alpha1().CronJobs(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.BatchV2alpha1().CronJobs(namespace).List(listOptions)
 
 	case "daemonset":
 		sharedInformer = appsV1.NewFilteredDaemonSetInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.AppsV1().DaemonSets(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.AppsV1().DaemonSets(namespace).List(listOptions)
 
 	case "deployment":
 		sharedInformer = appsV1.NewFilteredDeploymentInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.AppsV1().Deployments(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.AppsV1().Deployments(namespace).List(listOptions)
 
 	case "job":
 		sharedInformer = batchV1.NewFilteredJobInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.BatchV1().Jobs(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.BatchV1().Jobs(namespace).List(listOptions)
 
 	case "pod":
 		sharedInformer = coreV1.NewFilteredPodInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().Pods(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().Pods(namespace).List(listOptions)
 
 	case "replicaset":
 		sharedInformer = appsV1.NewFilteredReplicaSetInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.AppsV1().ReplicaSets(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.AppsV1().ReplicaSets(namespace).List(listOptions)
 
 	case "replicationcontroller":
 		sharedInformer = coreV1.NewFilteredReplicationControllerInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().ReplicationControllers(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().ReplicationControllers(namespace).List(listOptions)
 
 	case "statefulset":
 		sharedInformer = appsV1.NewFilteredStatefulSetInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.AppsV1().StatefulSets(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.AppsV1().StatefulSets(namespace).List(listOptions)
 
 	case "endpoints":
 		sharedInformer = coreV1.NewFilteredEndpointsInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().Endpoints(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().Endpoints(namespace).List(listOptions)
 
 	case "ingress":
 		sharedInformer = extensionsV1Beta1.NewFilteredIngressInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.ExtensionsV1beta1().Ingresses(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.ExtensionsV1beta1().Ingresses(namespace).List(listOptions)
 
 	case "service":
 		sharedInformer = coreV1.NewFilteredServiceInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().Services(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().Services(namespace).List(listOptions)
 
 	case "configmap":
 		sharedInformer = coreV1.NewFilteredConfigMapInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().ConfigMaps(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().ConfigMaps(namespace).List(listOptions)
 
 	case "secret":
 		sharedInformer = coreV1.NewFilteredSecretInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().Secrets(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().Secrets(namespace).List(listOptions)
 
 	case "persistentvolumeclaim":
 		sharedInformer = coreV1.NewFilteredPersistentVolumeClaimInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().PersistentVolumeClaims(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().PersistentVolumeClaims(namespace).List(listOptions)
 
 	case "storageclass":
 		sharedInformer = storageV1.NewFilteredStorageClassInformer(kube.Kubernetes, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.StorageV1().StorageClasses().List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.StorageV1().StorageClasses().List(listOptions)
 
 	case "node":
 		sharedInformer = coreV1.NewFilteredNodeInformer(kube.Kubernetes, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().Nodes().List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, listErr = kube.Kubernetes.CoreV1().Nodes().List(listOptions)
 
 	case "serviceaccount":
 		sharedInformer = coreV1.NewFilteredServiceAccountInformer(kube.Kubernetes, namespace, resyncPeriod, indexers, tweakListOptions)
-
-		list, err := kube.Kubernetes.CoreV1().ServiceAccounts(namespace).List(listOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed list resources: %s", err)
-		}
-
-		objects := make([]ListItemObject, 0)
-		for _, obj := range list.Items {
-			objects = append(objects, &obj)
-		}
-
-		err = kubeEventsInformer.InitializeItemsList(objects, debug)
-		if err != nil {
-			return nil, err
-		}
+		resourceList, err = kube.Kubernetes.CoreV1().ServiceAccounts(namespace).List(listOptions)
 
 	default:
 		return nil, fmt.Errorf("kind '%s' isn't supported", kind)
+	}
+
+	if listErr != nil {
+		return nil, fmt.Errorf("failed to list '%s' resources: %v", kind, err)
+	}
+
+	// Save already existed resources to IGNORE watch.Added events about them
+	err = kubeEventsInformer.InitializeItemsList(resourceList, debug)
+	if err != nil {
+		return nil, err
 	}
 
 	kubeEventsInformer.SharedInformer = sharedInformer
@@ -565,14 +325,17 @@ func NewKubeEventsInformer() *KubeEventsInformer {
 	return kubeEventsInformer
 }
 
-type ListItemObject interface {
-	GetName() string
-	GetNamespace() string
-}
+func (ei *KubeEventsInformer) InitializeItemsList(list runtime.Object, debug bool) error {
+	objects, err := meta.ExtractList(list)
+	if err != nil {
+		rlog.Errorf("InitializeItemsList got invalid List of type %T from API: %v", list, err)
+	}
 
-func (ei *KubeEventsInformer) InitializeItemsList(objects []ListItemObject, debug bool) error {
 	for _, obj := range objects {
-		resourceId := generateChecksumId(obj.GetName(), obj.GetNamespace())
+		resourceId, err := runtimeResourceId(obj)
+		if err != nil {
+			return err
+		}
 
 		filtered, err := resourceFilter(obj, ei.JqFilter, debug)
 		if err != nil {
