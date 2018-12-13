@@ -52,11 +52,11 @@ spec:
           value: "light"
         - name: GF_PATHS_PROVISIONING
           value: /grafana/conf/provisioning
-        - name: GF_INSTALL_PLUGINS
-          value: grafana-piechart-panel, grafana-worldmap-panel
+        - name: GF_PATHS_DATA
+          value: /var/lib/grafana-storage
         volumeMounts:
         - name: grafana-storage
-          mountPath: /var/lib/grafana
+          mountPath: /var/lib/grafana-storage
         - name: grafana-datasources
           mountPath: /grafana/conf/provisioning/datasources
         - name: grafana-dashboards
