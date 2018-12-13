@@ -1,14 +1,13 @@
---- a/public/app/plugins/datasource/prometheus/datasource.ts	2018-03-31 00:55:44.311730859 +0300
-+++ b/public/app/plugins/datasource/prometheus/datasource.ts	2018-03-31 01:08:45.001737703 +0300
-@@ -151,6 +151,11 @@
-         __interval_ms: { text: interval * 1000, value: interval * 1000 },
+--- a/public/app/plugins/datasource/prometheus/datasource.ts	2018-12-10 17:08:32.000000000 +0300
++++ b/public/app/plugins/datasource/prometheus/datasource.ts	2018-12-10 19:03:15.791337923 +0300
+@@ -235,6 +235,10 @@
+         ...this.getRangeScopedVars(),
        });
      }
-+    var intervalForRangeVectors = Math.max(minInterval * 2, interval);
++    const intervalForRangeVectors = Math.max(kbn.interval_to_seconds(this.interval) * 2, interval);
 +    scopedVars = Object.assign({}, scopedVars, {
-+      __range: { text: range + 's', value: range + 's' },
-+      __interval_rv: { text: intervalForRangeVectors + 's', value: intervalForRangeVectors + 's' },
++    __interval_rv: { text: intervalForRangeVectors + 's', value: intervalForRangeVectors + 's' },
 +    });
      query.step = interval;
- 
-     // Only replace vars in expression after having (possibly) updated interval vars
+
+     let expr = target.expr;
