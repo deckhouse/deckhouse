@@ -45,6 +45,10 @@ spec:
   {{- $storageClassName := .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
   {{- if $storageClassName }}
   storage:
+    # TODO: Remove the following 3 lines with empty values after prometheus-operator update
+    class: ""
+    selector: {}
+    resources: {}
     volumeClaimTemplate:
       spec:
         accessModes:
