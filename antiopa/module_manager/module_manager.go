@@ -34,6 +34,7 @@ type ModuleManager interface {
 type ModulesState struct {
 	EnabledModules         []string
 	ModulesToDisable       []string
+	ModulesToEnable        []string
 	ReleasedUnknownModules []string
 }
 
@@ -539,6 +540,10 @@ func (mm *MainModuleManager) discoverModulesState() (*ModulesState, error) {
 	state.ModulesToDisable = utils.ListSubtract(mm.allModulesNamesInOrder, enabledModules)
 	state.ModulesToDisable = utils.ListIntersection(state.ModulesToDisable, releasedModules)
 	state.ModulesToDisable = utils.SortReverseByReference(state.ModulesToDisable, mm.allModulesNamesInOrder)
+
+	// Calculate modules that was not enabled but should be enabled now.
+	// Subtract previous enabled from now enabled == modules to enable
+	state.ModulesToEnable = utils.ListSubtract(enabledModules, mm.enabledModulesInOrder)
 
 	return state, nil
 }
