@@ -25,6 +25,9 @@ backtrace() {
 
 trap backtrace ERR
 
+# override jq first
+source "/antiopa/shell_lib/jq.sh"
+
 for f in $(find /antiopa/shell_lib/ -type f -iname "*.sh"); do
   source $f
 done

@@ -8,6 +8,7 @@ git:
   - global-hooks
   - shell_lib.sh
   - shell_lib
+  - jq_lib
   excludePaths:
   - modules/*/images
   - modules/*/docs
