@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  fltr='.'
+  fltr='include "remove_empty"; .'
 
 count_system_nodes=$(cluster::count_system_nodes)
 
@@ -87,6 +87,9 @@ count_system_nodes=$(cluster::count_system_nodes)
 
   # Определяем имя deployment'а (в Azure он называется не kube-dns)
   kube_dns_deployment_name=$(kubectl -n kube-system get deployment -l k8s-app=kube-dns -o name)
+
+  # Удаляем пустые поля в affinity
+  fltr=$fltr' | .spec.template.spec.affinity |= remove_empty'
 
   # Применяем
   kubectl::jq_patch kube-system ${kube_dns_deployment_name} "$fltr"
