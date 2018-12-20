@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:91",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -16,7 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1544638066784,
+  "id": 36,
+  "iteration": 1545754930251,
   "links": [],
   "panels": [
     {
@@ -130,21 +130,21 @@
       ],
       "targets": [
         {
-          "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "B"
         },
         {
-          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -194,13 +194,13 @@
       "repeatDirection": "v",
       "seriesOverrides": [
         {
-          "alias": "RTT+mdev",
-          "fillBelowTo": "RTT-mdev",
+          "alias": "RTT max",
+          "fillBelowTo": "RTT min",
           "legend": false,
           "lines": false
         },
         {
-          "alias": "RTT-mdev",
+          "alias": "RTT min",
           "legend": false,
           "lines": false
         }
@@ -210,31 +210,33 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
           "legendFormat": "RTT",
           "refId": "A"
         },
         {
-          "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+          "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "RTT+mdev",
+          "legendFormat": "RTT max",
           "refId": "B"
         },
         {
-          "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+          "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "RTT-mdev",
+          "legendFormat": "RTT min",
           "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
-      "title": "Average mean RTT with mdev",
+      "title": "Average mean RTT with min/max",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -316,8 +318,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "$$hashKey": "object:275",
-          "expr": "( \n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "( \n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{destination_node}}",
@@ -326,6 +327,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Mean packet loss",
       "tooltip": {
@@ -409,7 +411,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{destination_node}}",
@@ -418,6 +420,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Mean RTT",
       "tooltip": {
@@ -500,7 +503,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$destination_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{destination_node}}",
@@ -509,6 +512,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Mean deviation",
       "tooltip": {
@@ -663,21 +667,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -735,13 +739,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -751,31 +755,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -864,7 +869,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -873,6 +878,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -962,7 +968,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -971,6 +977,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -1060,7 +1067,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -1069,6 +1076,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -1144,7 +1152,7 @@
           "id": 779,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1238,21 +1246,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -1301,7 +1309,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1313,13 +1321,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -1329,31 +1337,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -1429,7 +1438,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1445,7 +1454,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -1454,6 +1463,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -1530,7 +1540,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1546,7 +1556,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -1555,6 +1565,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -1631,7 +1642,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1647,7 +1658,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -1656,6 +1667,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -1697,7 +1709,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
@@ -1733,7 +1745,7 @@
           "id": 785,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1827,21 +1839,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -1890,7 +1902,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
@@ -1902,13 +1914,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -1918,31 +1930,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -2018,7 +2031,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2034,7 +2047,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -2043,6 +2056,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -2119,7 +2133,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2135,7 +2149,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -2144,6 +2158,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -2220,7 +2235,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2236,7 +2251,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -2245,6 +2260,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -2286,7 +2302,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
@@ -2322,7 +2338,7 @@
           "id": 791,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2416,21 +2432,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -2479,7 +2495,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2491,13 +2507,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -2507,31 +2523,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -2607,7 +2624,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2623,7 +2640,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -2632,6 +2649,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -2708,7 +2726,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2724,7 +2742,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -2733,6 +2751,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -2809,7 +2828,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2825,7 +2844,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -2834,6 +2853,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -2875,7 +2895,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
@@ -2911,7 +2931,7 @@
           "id": 797,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3005,21 +3025,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -3068,7 +3088,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3080,13 +3100,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -3096,31 +3116,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -3196,7 +3217,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3212,7 +3233,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -3221,6 +3242,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -3297,7 +3319,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3313,7 +3335,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -3322,6 +3344,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -3398,7 +3421,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3414,7 +3437,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -3423,6 +3446,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -3464,7 +3488,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
@@ -3500,7 +3524,7 @@
           "id": 803,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3594,21 +3618,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -3657,7 +3681,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3669,13 +3693,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -3685,31 +3709,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -3785,7 +3810,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3801,7 +3826,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -3810,6 +3835,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -3886,7 +3912,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3902,7 +3928,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -3911,6 +3937,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -3987,7 +4014,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4003,7 +4030,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -4012,6 +4039,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -4053,7 +4081,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
@@ -4089,7 +4117,7 @@
           "id": 809,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4183,21 +4211,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -4246,7 +4274,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4258,13 +4286,13 @@
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -4274,31 +4302,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -4374,7 +4403,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4390,7 +4419,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -4399,6 +4428,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -4475,7 +4505,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4491,7 +4521,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -4500,6 +4530,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -4576,7 +4607,7 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4592,7 +4623,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -4601,6 +4632,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -4642,7 +4674,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
@@ -4678,14 +4710,14 @@
           "id": 815,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-a-3",
-              "value": "kube-a-3"
+              "text": "hetzner-helsinki",
+              "value": "hetzner-helsinki"
             }
           },
           "scroll": true,
@@ -4772,21 +4804,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -4835,25 +4867,25 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-a-3",
-              "value": "kube-a-3"
+              "text": "hetzner-helsinki",
+              "value": "hetzner-helsinki"
             }
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -4863,31 +4895,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -4963,14 +4996,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-a-3",
-              "value": "kube-a-3"
+              "text": "hetzner-helsinki",
+              "value": "hetzner-helsinki"
             }
           },
           "seriesOverrides": [],
@@ -4979,7 +5012,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -4988,6 +5021,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -5064,14 +5098,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-a-3",
-              "value": "kube-a-3"
+              "text": "hetzner-helsinki",
+              "value": "hetzner-helsinki"
             }
           },
           "seriesOverrides": [],
@@ -5080,7 +5114,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -5089,6 +5123,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -5165,14 +5200,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-a-3",
-              "value": "kube-a-3"
+              "text": "hetzner-helsinki",
+              "value": "hetzner-helsinki"
             }
           },
           "seriesOverrides": [],
@@ -5181,7 +5216,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -5190,6 +5225,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -5231,13 +5267,13 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
           "selected": false,
-          "text": "kube-a-3",
-          "value": "kube-a-3"
+          "text": "hetzner-helsinki",
+          "value": "hetzner-helsinki"
         }
       },
       "title": "From $source_node",
@@ -5267,14 +5303,14 @@
           "id": 821,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-b-3",
-              "value": "kube-b-3"
+              "text": "kube-a-3",
+              "value": "kube-a-3"
             }
           },
           "scroll": true,
@@ -5361,21 +5397,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -5424,25 +5460,25 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-b-3",
-              "value": "kube-b-3"
+              "text": "kube-a-3",
+              "value": "kube-a-3"
             }
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -5452,31 +5488,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -5552,14 +5589,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-b-3",
-              "value": "kube-b-3"
+              "text": "kube-a-3",
+              "value": "kube-a-3"
             }
           },
           "seriesOverrides": [],
@@ -5568,7 +5605,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -5577,6 +5614,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -5653,14 +5691,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-b-3",
-              "value": "kube-b-3"
+              "text": "kube-a-3",
+              "value": "kube-a-3"
             }
           },
           "seriesOverrides": [],
@@ -5669,7 +5707,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -5678,6 +5716,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -5754,14 +5793,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-b-3",
-              "value": "kube-b-3"
+              "text": "kube-a-3",
+              "value": "kube-a-3"
             }
           },
           "seriesOverrides": [],
@@ -5770,7 +5809,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -5779,6 +5818,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -5820,13 +5860,13 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
           "selected": false,
-          "text": "kube-b-3",
-          "value": "kube-b-3"
+          "text": "kube-a-3",
+          "value": "kube-a-3"
         }
       },
       "title": "From $source_node",
@@ -5856,14 +5896,14 @@
           "id": 827,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-c-3",
-              "value": "kube-c-3"
+              "text": "kube-b-3",
+              "value": "kube-b-3"
             }
           },
           "scroll": true,
@@ -5950,21 +5990,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -6013,25 +6053,25 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-c-3",
-              "value": "kube-c-3"
+              "text": "kube-b-3",
+              "value": "kube-b-3"
             }
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -6041,31 +6081,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -6141,14 +6182,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-c-3",
-              "value": "kube-c-3"
+              "text": "kube-b-3",
+              "value": "kube-b-3"
             }
           },
           "seriesOverrides": [],
@@ -6157,7 +6198,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -6166,6 +6207,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -6242,14 +6284,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-c-3",
-              "value": "kube-c-3"
+              "text": "kube-b-3",
+              "value": "kube-b-3"
             }
           },
           "seriesOverrides": [],
@@ -6258,7 +6300,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -6267,6 +6309,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -6343,14 +6386,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "kube-c-3",
-              "value": "kube-c-3"
+              "text": "kube-b-3",
+              "value": "kube-b-3"
             }
           },
           "seriesOverrides": [],
@@ -6359,7 +6402,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -6368,6 +6411,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -6409,13 +6453,13 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
           "selected": false,
-          "text": "kube-c-3",
-          "value": "kube-c-3"
+          "text": "kube-b-3",
+          "value": "kube-b-3"
         }
       },
       "title": "From $source_node",
@@ -6445,14 +6489,14 @@
           "id": 833,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "hetzner-helsinki",
-              "value": "hetzner-helsinki"
+              "text": "kube-c-3",
+              "value": "kube-c-3"
             }
           },
           "scroll": true,
@@ -6539,21 +6583,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "min by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -6602,25 +6646,25 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "hetzner-helsinki",
-              "value": "hetzner-helsinki"
+              "text": "kube-c-3",
+              "value": "kube-c-3"
             }
           },
           "seriesOverrides": [
             {
-              "alias": "RTT+mdev",
-              "fillBelowTo": "RTT-mdev",
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
               "legend": false,
               "lines": false
             },
             {
-              "alias": "RTT-mdev",
+              "alias": "RTT min",
               "legend": false,
               "lines": false
             }
@@ -6630,31 +6674,32 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) + \n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT+mdev",
+              "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "avg (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) -\n(avg (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv])) / 2)",
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "RTT-mdev",
+              "legendFormat": "RTT min",
               "refId": "C"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
-          "title": "Average mean RTT with mdev",
+          "title": "Average mean RTT with min/max",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -6730,14 +6775,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "hetzner-helsinki",
-              "value": "hetzner-helsinki"
+              "text": "kube-c-3",
+              "value": "kube-c-3"
             }
           },
           "seriesOverrides": [],
@@ -6746,7 +6791,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (rate(kube_node_ping_packets_received{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (rate(kube_node_ping_packets_sent{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -6755,6 +6800,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean packet loss",
           "tooltip": {
@@ -6831,14 +6877,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "hetzner-helsinki",
-              "value": "hetzner-helsinki"
+              "text": "kube-c-3",
+              "value": "kube-c-3"
             }
           },
           "seriesOverrides": [],
@@ -6847,7 +6893,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (rate(kube_node_ping_rtt_milliseconds_sum{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -6856,6 +6902,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean RTT",
           "tooltip": {
@@ -6932,14 +6979,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1544638066784,
+          "repeatIteration": 1545754930251,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "hetzner-helsinki",
-              "value": "hetzner-helsinki"
+              "text": "kube-c-3",
+              "value": "kube-c-3"
             }
           },
           "seriesOverrides": [],
@@ -6948,7 +6995,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_node}}",
@@ -6957,6 +7004,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Mean deviation",
           "tooltip": {
@@ -6998,13 +7046,13 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1544638066784,
+      "repeatIteration": 1545754930251,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
           "selected": false,
-          "text": "hetzner-helsinki",
-          "value": "hetzner-helsinki"
+          "text": "kube-c-3",
+          "value": "kube-c-3"
         }
       },
       "title": "From $source_node",
@@ -7029,24 +7077,29 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "allValue": null,
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Source",
         "multi": true,
         "name": "source_node",
         "options": [],
-        "query": "label_values(kube_node_ping_packets_sent, node)",
+        "query": "label_values(kube_node_ping_packets_sent_total, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -7058,18 +7111,22 @@
         "allValue": null,
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Destination",
         "multi": true,
         "name": "destination_node",
         "options": [],
-        "query": "label_values(kube_node_ping_packets_sent, node)",
+        "query": "label_values(kube_node_ping_packets_sent_total, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -7111,5 +7168,5 @@
   "timezone": "",
   "title": "Nodes ping",
   "uid": "U8z-arLik",
-  "version": 2
+  "version": 10
 }
