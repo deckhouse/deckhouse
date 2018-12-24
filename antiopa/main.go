@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"io"
-	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -85,7 +84,8 @@ func Init() {
 	}
 	rlog.Infof("Antiopa working dir: %s", WorkingDir)
 
-	TempDir, err = ioutil.TempDir("", "antiopa-")
+	TempDir := "/tmp/antiopa"
+	err = os.Mkdir(TempDir, os.FileMode(0777))
 	if err != nil {
 		rlog.Errorf("MAIN Fatal: Cannot create antiopa temporary dir: %s", err)
 		os.Exit(1)
