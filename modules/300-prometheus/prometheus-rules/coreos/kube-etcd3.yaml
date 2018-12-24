@@ -1,4 +1,3 @@
-groups:
 - name: coreos.kube-etcd3
   rules:
   - alert: KubeEtcd3InsufficientMembers

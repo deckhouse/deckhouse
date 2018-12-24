@@ -1,4 +1,3 @@
-groups:
 - name: coreos.prometheus
   rules:
   - alert: PrometheusConfigReloadFailed

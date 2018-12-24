@@ -1,4 +1,3 @@
-groups:
 - name: coreos.kubelet
   rules:
   - alert: K8SNodeNotReady

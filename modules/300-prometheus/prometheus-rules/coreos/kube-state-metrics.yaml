@@ -1,4 +1,3 @@
-groups:
 - name: coreos.kube-state-metrics
   rules:
   - alert: DeploymentGenerationMismatch

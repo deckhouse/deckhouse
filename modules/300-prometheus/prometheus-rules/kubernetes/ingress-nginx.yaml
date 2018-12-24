@@ -1,4 +1,3 @@
-groups:
 - name: kubernetes.ingress-nginx.info
   rules:
   - record: ingress_nginx_overall_info

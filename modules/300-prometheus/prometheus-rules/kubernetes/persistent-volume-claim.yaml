@@ -1,4 +1,3 @@
-groups:
 - name: kubernetes.persistent-volume-claim
   rules:
   - alert: PersistentVolumeClaimRunningFull
