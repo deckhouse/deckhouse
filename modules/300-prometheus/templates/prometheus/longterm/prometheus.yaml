@@ -42,7 +42,7 @@ spec:
   - key: node-role/system
     effect: NoExecute
   {{- end }}
-  {{- $storageClassName := .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
+  {{- $storageClassName := .Values.prometheus.longtermStorageClassName | default .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
   {{- if $storageClassName }}
   storage:
     # TODO: Remove the following 3 lines with empty values after prometheus-operator update
