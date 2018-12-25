@@ -1,3 +1,2 @@
-groups:
 - name: applications.redis
   rules: []

@@ -1,4 +1,3 @@
-groups:
 - name: coreos.node
   rules:
   - record: node:node_cpu:rate:sum

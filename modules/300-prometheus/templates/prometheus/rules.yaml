@@ -1,9 +1,9 @@
 {{- range (tuple "coreos" "kubernetes" "applications") }}
 ---
-apiVersion: v1
-kind: ConfigMap
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
 metadata:
-  name: prometheus-rules-{{ . }}
+  name: {{ . }}
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -11,6 +11,10 @@ metadata:
     app: prometheus
     prometheus: main
     component: rules
-data:
-{{ ($.Files.Glob (print "prometheus-rules/" . "/*.yaml") ).AsConfig | indent 2 }}
+spec:
+  groups:
+  {{- $root := $ }}
+  {{- range $path, $bytes := $.Files.Glob (print "prometheus-rules/" . "/*.yaml") }}
+{{ $root.Files.Get $path | indent 4 }}
+  {{- end }}
 {{- end }}

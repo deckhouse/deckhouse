@@ -1,4 +1,3 @@
-groups:
 - name: coreos.kubernetes
   rules:
   - record: pod:container_memory_usage_bytes:sum

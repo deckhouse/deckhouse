@@ -1,4 +1,3 @@
-groups:
 - name: coreos.kube-scheduler
   rules:
   - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile

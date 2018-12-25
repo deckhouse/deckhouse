@@ -1,4 +1,3 @@
-groups:
 - name: applications.rabbitmq
   rules:
   - alert: ApplicationRabbitMQMemoryUsage

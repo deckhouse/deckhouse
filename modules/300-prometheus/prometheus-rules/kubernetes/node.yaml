@@ -1,4 +1,3 @@
-groups:
 - name: kubernetes.node
   rules:
   - alert: NodeDiskRunningOutOfInodes
