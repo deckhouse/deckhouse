@@ -24,7 +24,7 @@ spec:
       hostNetwork: true
       hostPID: true
       containers:
-      - image: {{ $.Values.global.modulesImages.registry }}/prometheus/node-exporter:{{ $.Values.global.modulesImages.tags.prometheus.nodeExporter }}
+      - image: prom/node-exporter:v0.17.0
         args:
         - "--web.listen-address=127.0.0.1:9101"
         - "--path.procfs=/host/proc"
