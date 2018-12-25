@@ -26,29 +26,28 @@ spec:
           requests:
             cpu: 0.10
         image: {{ .Values.global.modulesImages.registry }}/node-ping/node-ping-exporter:{{ .Values.global.modulesImages.tags.nodePing.nodePingExporter }}
-        args:
-{{- range .Values.nodePing.nodes }}
-        - {{ .name }}
-        - {{ .ipAddress }}
-{{- end }}
         imagePullPolicy: Always
         name: node-ping
-        workingDir: /scripts
         env:
           - name: MY_NODE_NAME
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: PROMETHEUS_TEXTFILE_DIR
-            value: /node-exporter-textfile
+            value: /node-exporter-textfile/
           - name: PROMETHEUS_TEXTFILE_PREFIX
             value: node-ping_
         volumeMounts:
           - name: textfile
             mountPath: /node-exporter-textfile
+          - name: config
+            mountPath: /config
       volumes:
         - name: textfile
           hostPath:
             path: /var/run/node-exporter-textfile
+        - name: config
+          configMap:
+            name: node-ping-config
       imagePullSecrets:
       - name: antiopa-registry

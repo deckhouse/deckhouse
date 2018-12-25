@@ -30,3 +30,7 @@
 
 # local development antiopa binary
 /antiopa/antiopa
+
+venv/
+.vscode
+.editorconfig

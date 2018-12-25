@@ -1,7 +1,5 @@
-FROM alpine
-
-RUN apk add --no-cache iputils jq bc bash dumb-init
-
+FROM python:3.6-alpine3.8
 COPY rootfs /
-
-ENTRYPOINT ["/usr/bin/dumb-init", "--", "node-ping-runner"]
+WORKDIR /app
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt && apk add --no-cache fping
+ENTRYPOINT ["python3", "/app/node-ping.py"]
