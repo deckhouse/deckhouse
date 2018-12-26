@@ -11,7 +11,7 @@ metadata:
 spec:
   replicas: 1
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
-  version: v2.2.1
+  version: v2.6.0
   scrapeInterval: 5m
   evaluationInterval: 5m
   {{- if .Values.global.ingressACME }}
