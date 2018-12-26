@@ -1,4 +1,3 @@
-groups:
 - name: kubernetes.controller
   rules:
   - record: kube_controller_pod
