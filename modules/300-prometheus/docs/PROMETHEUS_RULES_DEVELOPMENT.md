@@ -14,7 +14,7 @@
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя antiopa, пока отработает Prometheus Operator и компания).
 * Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator](../../200-prometheus-operator/docs/INTERNALS.md)):
     * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
-        * `kubectl -n kube-prometheus get cm/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
+        * `kubectl -n kube-prometheus get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
         * Если изменений нет, то надо проверить, что antiopa сдеплоилась успешно:
             * `helm --tiller-namespace=antiopa list` — prometheus должен быть в статусе DEPLOYED
             * `kubectl -n antiopa logs deploy/antiopa -f` — в логе не должно быть ошибок

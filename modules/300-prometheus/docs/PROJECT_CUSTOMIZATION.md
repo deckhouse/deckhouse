@@ -46,36 +46,33 @@
 
 ### Как добавлять кастомные rule'ы в конкретном проекте?
 
-А очень просто! Любой ConfigMap с лейблами `component=rules` и `prometheus=main` в namespace `kube-prometheus` будет автоматически подхвачен prometheus'ом (см. [подробнее](../../200-prometheus-operator/docs/INTERNALS.md) о том, как это работает).
-* Рекомендуется называть этот cm `prometheus-rules-custom`. В названиях групп правил рекомендуется использовать или `custom.<имя файла>.<имя группы>` или просто `custom.<имя файла>`.
+А очень просто! Любой PrometheusRule объект с лейблами `component=rules` и `prometheus=main` в namespace `kube-prometheus` будет автоматически подхвачен prometheus'ом (см. [подробнее](../../200-prometheus-operator/docs/INTERNALS.md) о том, как это работает).
+* Рекомендуется называть этот PrometheusRule `prometheus-rules-custom`. В названиях групп правил рекомендуется использовать или `custom.<имя файла>.<имя группы>` или просто `custom.<имя файла>`.
 
     ```yaml
     apiVersion: v1
-    kind: ConfigMap
+    kind: PrometheusRule
     metadata:
       name: prometheus-rules-custom
       namespace: kube-prometheus
       labels:
         component: rules
         prometheus: main
-    data:
-      foo.yaml: |
-        groups:
-        - name: custom.foo.xxx
-          rules:
-          - ...
-          - ...
-        - name: custom.foo.yyy
-          rules:
-          - ...
-          - ...
-      bar.yaml: |
-        groups:
-        - name: custom.bar
-          rules:
-          - ...
-          - ...
+    spec:
+      groups:
+      - name: custom.foo.xxx
+        rules:
+        - ...
+        - ...
+      - name: custom.foo.yyy
+        rules:
+        - ...
+        - ...
+      - name: custom.bar
+        rules:
+        - ...
+        - ...
     ```
-* Любые изменения (в том числе и добавление/удаление) этого cm отрабатываются полностью автоматически, но требуется подождать около минуты (пока отработает Prometheus Operator и компания).
+* Любые изменения (в том числе и добавление/удаление) этого PrometheusRule отрабатываются полностью автоматически, но требуется подождать около минуты (пока отработает Prometheus Operator и компания).
 
 [Читайте подробнее](PROMETHEUS_RULES_DEVELOPMENT.md) в документации по разработке правил Prometheus.
