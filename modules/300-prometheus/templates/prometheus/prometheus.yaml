@@ -23,12 +23,23 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
-{{- if hasKey .Values.prometheus "madisonAuthKey" }}
+{{- if or (hasKey .Values.prometheus "madisonAuthKey") (hasKey .Values.prometheus "additionalAlertmanagers") }}
   alerting:
     alertmanagers:
+  {{- if hasKey .Values.prometheus "madisonAuthKey" }}
     - namespace: kube-prometheus
       name: madison-proxy
       port: http
+  {{- end }}
+  {{- if hasKey .Values.prometheus "additionalAlertmanagers" }}
+    {{- range .Values.prometheus.additionalAlertmanagers }}
+    - namespace: {{ .namespace }}
+      name: {{ .name }}
+      port: {{ .port }}
+      scheme: http
+      pathPrefix: {{ .pathPrefix }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 {{- if .Values.global.ingressACME }}
   externalUrl: https://prometheus.{{ .Values.global.clusterHostname }}/prometheus/

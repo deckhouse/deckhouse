@@ -69,6 +69,28 @@ prometheus: |
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus. Если параметр не установлен, то longterm Prometheus не создается.
 * `madisonSelfSetupKey` — ключ для автоматической регистрации в Madison, значение по-умолчанию лежит в [values.yaml](values.yaml).
     * Если указать `false` — автоматическая регистрация будет отключена.
+* `additionalAlertmanagers` — массив, позволяющий указать дополнительные Endpoints, указывающие на внешние Alertmanager'ы. Endpoints объект необходимо создать вручную. **ВНИМАНИЕ!** В данный момент поддерживается только plain HTTP протокол.
+    * Пример массива:
+      ```yaml
+      additionalAlertmanagers:
+      - namespace: default
+        name: external-alertmanager
+        port: 8080
+        pathPrefix: "/"
+      ```
+    * Пример Endpoint'а:
+        ```yaml
+        kind: Endpoints
+        apiVersion: v1
+        metadata:
+          name: external-alertmanager
+          namespace: default
+        subsets:
+          - addresses:
+              - ip: 1.2.3.4
+            ports:
+              - port: 8080
+        ```
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
