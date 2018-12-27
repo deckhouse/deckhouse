@@ -35,7 +35,7 @@ spec:
       - args:
         - --kubelet-service=kube-system/kubelet
         - --logtostderr=true
-        image: quay.io/coreos/prometheus-operator:v0.26.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus-operator/prometheus-operator:{{ $.Values.global.modulesImages.tags.prometheusOperator.prometheusOperator }}
         name: prometheus-operator
         ports:
         - containerPort: 8080
