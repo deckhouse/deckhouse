@@ -116,7 +116,11 @@ rules:
     resources:
       - configmaps
     resourceNames:
+  {{- if and (not .name) (hasKey . "additionalControllers") }}
       - "ingress-controller-leader-nginx"
+  {{- else }}
+      - "ingress-controller-leader-nginx-{{ .name }}"
+  {{- end }}
     verbs:
       - get
       - update
