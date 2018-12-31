@@ -19,6 +19,7 @@ spec:
   endpoints:
   - port: https
     scheme: https
+    scrapeTimeout: 20s
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
