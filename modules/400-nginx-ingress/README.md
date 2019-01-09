@@ -18,27 +18,27 @@
 ### Параметры
 
 Модуль поддерживает несколько контроллеров — один **основной** и сколько угодно **дополнительных**, для них можно указывать следующие параметры:
-* `inlet` — способа поступления трафика из внешнего мира.
+* `inlet` — способ поступления трафика из внешнего мира.
     * Определяется автоматически в зависимости от типа кластера (GCE и ACS — LoadBalancer, AWS — AWSClassicLoadBalancer, Manual — Direct; подробнее [здесь](templates/_helpers.tpl#L22-30))!
-    * Поддерживаются следующие inlet'ы
+    * Поддерживаются следующие inlet'ы:
         * `LoadBalancer` (автоматически для `GCE` и `ACS`) — заказывает автоматом LoadBalancer.
         * `AWSClassicLoadBalancer` (автоматически для`AWS`) — заказывает автоматом LoadBalancer и включает proxy protocol, используется по-умолчанию для AWS.
         * `Direct` (автоматически `Manual`) — pod'ы работают в host network, nginx слушает на 80 и 443 порту, хитрая схема с direct-fallback.
         * `NodePort` — создает сервис с типом NodePort, подходит в тех ситуациях, когда необходимо настроить "сторонний" балансировщик (например, использовать AWS Application Load Balancer, Qrator или  CloudFLare). Допустимый диапазон 30000-32767 (настраивается параметром `kube-apiserver --service-node-port-range`).
     * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](templates/controller.yaml).
-* `nodePortHTTP` — для инлетов с типом `NodePort` позволяет задать конкретный nodePort для публикации 80-го порта (по-умолчанию ничего не указывается и kube-controller-manager подбирает случайный свободный).
-* `nodePortHTTPS` — для инлетов с типом `NodePort` позволяет задать конкретный nodePort для публикации порта 443 (по-умолчанию аналогично `nodePortHTTP`).
+* `nodePortHTTP` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации 80-го порта (по-умолчанию ничего не указывается и kube-controller-manager подбирает случайный свободный).
+* `nodePortHTTPS` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации порта 443 (по-умолчанию аналогично `nodePortHTTP`).
 * `config.hsts` — bool, включен ли hsts.
-    * По-умолчанию выключен.
-* `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](modules/400-nginx-ingress/templates/_template.config.tpl).
+    * По-умолчанию — выключен (`false`).
+* `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](../../modules/400-nginx-ingress/templates/_template.config.tpl).
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `config.disableHTTP2` — bool, выключить ли HTTP/2.
-    * По умолчанию HTTP/2 включен: `false`.
+    * По умолчанию HTTP/2 включен (`false`).
 * `config.underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers)
     * По-умолчанию `false`.
-* `config.setRealIPFrom` — список CIDR'ов, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
-    * Список строк, именно YAML list, а не строка со значениями через запятую!
-    * **Важно!** Так-как nginx ingress (как и сам nginx) не поддерживает получение адреса клиента из `X-Forwarded-For` при одновременном использовании proxy protocol параметр запрещено использовать для inlet'ов `Direct` и `AWSClassicLoadBalancer`.
+* `config.setRealIPFrom` — список CIDR, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
+    * Список строк - именно **YAML list**, а не строка со значениями через запятую!
+    * **Важно!** Так как nginx ingress (как и сам nginx) не поддерживает получение адреса клиента из `X-Forwarded-For`, при одновременном использовании proxy protocol параметр `config.setRealIPFrom` запрещено использовать для inlet'ов `Direct` и `AWSClassicLoadBalancer`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role/frontend":""}`.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
@@ -46,7 +46,7 @@
     * Если ничего не указано — будет использовано значение `[{"key":"node-role/frontend","operator":"Exists"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * (только для дополнительных контроллеров) `name` (обязательно) — название контроллера.
-    * Используется в качестве суффикса к имени namespace `kube-nginx-ingress-{{ $name }}` и в качестве суффикса к названию класса nginx `nginx-{{ $name }}` (того самого класса, который потом указывается аннотации `kubernetes.io/ingress.class` к ingress ресурсам).
+    * Используется в качестве суффикса к имени namespace `kube-nginx-ingress-{{ $name }}` и в качестве суффикса к названию класса nginx `nginx-{{ $name }}` (того самого класса, который потом указывается в аннотации `kubernetes.io/ingress.class` к ingress ресурсам).
 
 
 ### Пример конфига
@@ -81,9 +81,9 @@ nginxIngress: |
 
 ### Особенности использования дополнительных контроллеров
 
-* Для каждого дополнительного контроллера обязательно указывается `name`, при этом разворачивается полная копия всего в отдельном namespace с названием `kube-nginx-ingress-<name>`
+* Для каждого дополнительного контроллера обязательно указывается `name`, при этом разворачивается полная копия всего в отдельном namespace с названием `kube-nginx-ingress-<name>`.
 * Дополнительные экземпляры контроллера работают с отдельным классом, который необходимо указывать в ingress ресурсах через аннотацию `kubernetes.io/ingress.class: "nginx-<name>"`.
-
+.
 Примеры использования
 ---------------------
 
@@ -96,9 +96,9 @@ nginxIngress: |
 Способ реализации:
 * Оставляем основной контроллер работать без измений.
 * Указываем дополнительный контроллер с inlet `NodePort`.
-* Опционально в дополнительном контроллере указываем конкретные nodePort-порты для HTTP и HTTPS (`nodePortHTTP` и `nodePortHTTPS`).
+* Опционально, в дополнительном контроллере указываем конкретные nodePort-порты для HTTP и HTTPS (`nodePortHTTP` и `nodePortHTTPS`).
 * В ingress ресурсах прода указываем аннотацию `kubernetes.io/ingress.class: "nginx-qrator"`.
-* Настраиваем Qrator, чтобы он отправлял трафик на "эфемерные" порты сервиса с типом NodePort. Если не указали конкретные порты (`nodePortHTTP`, `nodePortHTTPS`), то узнать, какие порты выбрал controller-manager, можно с помощью команды: `kubectl -n kube-nginx-ingress-qraror get svc nginx -o yaml`
+* Настраиваем Qrator, чтобы он отправлял трафик на "эфемерные" порты сервиса с типом NodePort. Если не указали конкретные порты (`nodePortHTTP`, `nodePortHTTPS`), то узнать, какие порты выбрал controller-manager, можно с помощью команды: `kubectl -n kube-nginx-ingress-qraror get svc nginx -o yaml`.
 
 ```
 nginxIngress: |
@@ -135,7 +135,7 @@ nginxIngress: |
 
 Кейс:
 * Большая часть production ресурсов, все не production ресурсы (test, stage, etc) и инфраструктурные компоненты (prometheus, dashboard, etc) ходят через обычный AWSClassicLoadBalancer.
-* Однако часть production ресурсов надо отправить через CloudFront, а setRealIPFrom не поддерживается при использовании AWSClassicLoadBalancer (из-за несовместимости с proxy protocol).
+* Однако часть production ресурсов надо отправить через CloudFront, а `setRealIPFrom` не поддерживается при использовании `AWSClassicLoadBalancer` (из-за несовместимости с proxy protocol).
 
 Способ реализации:
 * Оставляем основной контроллер работать без измений.
@@ -172,9 +172,9 @@ nginxIngress: |
 * Не хочется делать несколько контроллеров и несколько LoadBalancer'ов в Amazon, чтобы сэкономить деньги.
 
 Способ реализации:
-* Будем используем в качестве основной и единственной точки входа AWS Application Load Balancer.
+* Будем использовать в качестве основной и единственной точки входа - `AWS Application Load Balancer`.
 * Для этого перенастраиваем основной контроллер с inlet `NodePort`.
-* Настраиваем в AWS Application Load Balancer, чтобы он кидал трафик по "эфемерным" портам сервиса с типом NodePort: `kubectl -n kube-nginx-ingress get svc nginx -o yaml`.
+* Настраиваем в AWS - `Application Load Balancer`, чтобы он кидал трафик по "эфемерным" портам сервиса с типом `NodePort`: `kubectl -n kube-nginx-ingress get svc nginx -o yaml`.
 
 ```
 nginxIngress: |
@@ -187,13 +187,13 @@ nginxIngress: |
 ### AWS + AWS HTTP Classic Load Balancer
 
 Кейс:
-* Все ходит через обычный `AWSClassicLoadBalancer`, но нужно заказать сертификат в Amazon, а его нельзя повесить на существующий AWS Classic Load Balancer.
+* Все ходит через обычный `AWS Classic Load Balancer`, но нужно заказать сертификат в Amazon, а его нельзя повесить на существующий `AWS Classic Load Balancer`.
 
 
 Способ реализации:
 * Оставляем основной контроллер работать без измений.
 * Указываем дополнительный контроллер с inlet `NodePort`.
-* Создаем (руками или через infra проект в gitlab) сколько необходимо сервисов (со специальными аннотацяими для подключения сертификатов)
+* Создаем (руками или через infra проект в gitlab) сколько необходимо сервисов (со специальными аннотацяими для подключения сертификатов).
 
 ```
 apiVersion: v1
@@ -235,11 +235,11 @@ nginxIngress: |
 ### Bare Metal + несколько проектов, которые не должны быть аффилированны
 
 Кейс:
-* Есть основной проект и два дополнительных, но никто не должен знать, что они принадлежат одним владельцам (хостятся в одной площадке).
+* Есть основной проект и два дополнительных, но никто не должен знать что они принадлежат одним владельцам (хостятся на одной площадке).
 
 Способ реализации:
-* Выделяем основной контроллер на отдельные машины (ставим на них label и taint `node-role/frontent`)
-* Создаем два дополнительных контроллера и выделенные для них машины (с label и taint `node-role/frontend-foo` и `node-role/frontend-bar`)
+* Выделяем основной контроллер на отдельные машины (ставим на них label и taint `node-role/frontent`).
+* Создаем два дополнительных контроллера и выделенные для них машины (с label и taint `node-role/frontend-foo` и `node-role/frontend-bar`).
 
 ```
 nginxIngress: |
@@ -263,8 +263,8 @@ nginxIngress: |
 
 ### Основные принципы работы статистики
 
-1. На каждый запрос, на стадии `log_by_lua`, [вызывается наш модуль](images/controller/rootfs/etc/nginx/template/nginx.tmpl#L887-888), который [рассчитывает необходимые данные и шлет их по UDP](images/controller/rootfs/etc/nginx/lua/statsd.lua) в statsd.
-2. Вместо обычного statsd у нас в pod'е с ingress-controller'ом запущен sidecar контейнер с [statsd_exporter'ом](https://github.com/prometheus/statsd_exporter), который принимает данные в формате statsd, разбирает и агрегирует их [[по установленным нами правилам](images/statsd-exporter/rootfs/etc/statsd_mapping.conf) и экспортирует в формате для Prometheus.
+1. На каждый запрос, на стадии `log_by_lua`, [вызывается наш модуль](images/controller/rootfs/etc/nginx/template/nginx.tmpl#L887-888), который [рассчитывает необходимые данные и шлет их по UDP](images/controller/rootfs/etc/nginx/lua/statsd.lua) в `statsd`.
+2. Вместо обычного `statsd` у нас в pod'е с ingress-controller'ом запущен sidecar контейнер с [statsd_exporter'ом](https://github.com/prometheus/statsd_exporter), который принимает данные в формате `statsd`, разбирает и агрегирует их [[по установленным нами правилам](images/statsd-exporter/rootfs/etc/statsd_mapping.conf) и экспортирует в формате для Prometheus.
 3. Prometheus каждые 30 секунд scrape'ает как сам ingress-controller (там есть небольшое количество нужных нам метрик), так и statsd_exporter, и на основании этих данных все и работает!
 
 ### Какая информация собирается и как она представлена?
@@ -287,7 +287,7 @@ nginxIngress: |
     * `..._geohash_total` — counter количества запросов с определенным geohash (дополнительные лейблы: `geohash`, `place`).
 * Для уровня detail_backend собираются следующие метрики:
     * `..._lowres_upstream_response_seconds` — тоже самое, что аналогичная метрика для overall и detail.
-    * `..._responses_total` — counter количества ответов (дополнительный лейбл `status_class`, а не просто `status`)
+    * `..._responses_total` — counter количества ответов (дополнительный лейбл `status_class`, а не просто `status`).
     *  `..._upstream_bytes_received_sum` — counter суммы размеров ответов backend'а.
 
 Дополнительная информация
@@ -297,6 +297,6 @@ nginxIngress: |
 
 * При создании Service с `spec.type=LoadBalancer` Kubernetes создает сервис с типом `NodePort` и, дополнительно, лезет в клауд и настраивает балансировщик клауда, чтобы он бросал трафик на все узлы Kubernetes на определенные `spec.ports[*].nodePort` (генерятся рандомные в диапазоне `30000-32767`).
 * В GCE и Azure балансировщик отправляет трафик на узлы сохраняя source адрес клиента. Если при создании сервиса в Kubernetes указать `spec.externalTrafficPolicy=Local`, то Kubernetes приходящий на узел трафик не будет раскидывать по всем узлам, на которых есть endpoint'ы, а будет кидать только на локальные endpoint'ы, находящиеся на этом узле, а если их нет — соединение не будет устанавливаться. Подробнее об этом [тут](https://kubernetes.io/docs/tutorials/services/source-ip/) и [особенно тут](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip).
-* В AWS все интересней.
-    * До версии Kubernetes 1.9 единственным типом LB, который можно было создать в AWS из Kubernetes, был Classic. При этом по-умолчанию создается AWS Classic LoadBalancer, который проксирует TCP трафик (так же на `spec.ports[*].nodePort`). Трафик при этом приходит не с адреса клиента, а с адресов LoadBalancer'а. И единственный способ узнать адрес клиента — включить proxy protocol (это можно сделать через [аннотацию сервиса в Kubernetes](https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/aws/aws.go).
+* В AWS все интересней:
+    * До версии Kubernetes 1.9 единственным типом LB, который можно было создать в AWS из Kubernetes, был Classic. При этом, по-умолчанию создается `AWS Classic LoadBalancer`, который проксирует TCP трафик (так же на `spec.ports[*].nodePort`). Трафик при этом приходит не с адреса клиента, а с адресов LoadBalancer'а. И единственный способ узнать адрес клиента — включить proxy protocol (это можно сделать через [аннотацию сервиса в Kubernetes](https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/aws/aws.go).
     * Начиная с версии Kubernetes 1.9 [можно заводить Network LoadBalancer'ы](https://kubernetes.io/docs/concepts/services-networking/service/#network-load-balancer-support-on-aws-alpha). Такой LoadBalancer работает аналогично Azure и GCE — отправляет трафик с сохранением source адреса клиента.
