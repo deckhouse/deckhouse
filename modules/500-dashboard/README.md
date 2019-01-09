@@ -15,15 +15,15 @@ Redirect URI(Callback url) устанавливаем вида https://dashboard
 
 ### Параметры
 * `gitlabBaseUrl` — url gitlab для авторизации (https://git.example.com)
-* `oauth2ProxyClientId`  — Application Id в Admin Area -> Applications gitlab
-* `oauth2ProxyClientSecret` — Secret в Admin Area -> Applications gitlab 
-* `oauth2ProxyCookieSecret` —  генерируется автоматически если есть gitlabBaseUrl.
-* `password` — пароль для http авторизации, используется если не задан gitlabBaseUrl, генерируется автоматически.
-* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
+* `oauth2ProxyClientId`  — `Application Id` в Admin Area -> Applications gitlab
+* `oauth2ProxyClientSecret` — `Secret` в `Admin Area -> Applications gitlab` 
+* `oauth2ProxyCookieSecret` —  генерируется автоматически если есть `gitlabBaseUrl`
+* `password` — пароль для http-авторизации, используется если не задан `gitlabBaseUrl` (генерируется автоматически)
+* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов:
+    * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано;
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
-* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет использовано значение `[{"key":"node-role/system","operator":"Exists"}]` (если в кластере есть такие узлы) или ничего не будет указано.
+* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов:
+    * Если ничего не указано — будет использовано значение `[{"key":"node-role/system","operator":"Exists"}]` (если в кластере есть такие узлы) или ничего не будет указано;
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига
