@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -39,6 +40,7 @@ func DockerRegistryGetImageDigest(imageInfo DockerImageInfo, dockerRegistry *reg
 	defer func() {
 		if r := recover(); r != nil {
 			rlog.Debugf("REGISTRY: manifest digest request panic: %s", r)
+			rlog.Debugf("%s", debug.Stack())
 		}
 	}()
 
