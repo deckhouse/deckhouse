@@ -58,7 +58,7 @@ spec:
       {{- end }}
       containers:
       - name: dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.8.3
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.10.1
         resources:
           requests:
             cpu: "100m"
