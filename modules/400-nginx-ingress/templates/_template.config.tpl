@@ -53,7 +53,9 @@ data:
   # Otherwise, by abusing the hell out of various tunables, we risk creating DoS situation.
   large-client-header-buffers: "4 16k"
   body-size: "64m"
+    {{- if $config.ComputeFullForwardedFor }}
   compute-full-forwarded-for: "true"
+    {{- end }}
   server-name-hash-bucket-size: "256"
   variables-hash-bucket-size: "256"
     {{- if $config.disableHTTP2 }}
