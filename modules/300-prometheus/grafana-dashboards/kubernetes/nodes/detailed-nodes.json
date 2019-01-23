@@ -1,25 +1,4 @@
 {
-  "__inputs": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "5.0.4"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": "5.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -36,8 +15,8 @@
   "editable": true,
   "gnetId": 1860,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1522626041935,
+  "id": 34,
+  "iteration": 1548242032535,
   "links": [],
   "panels": [
     {
@@ -118,7 +97,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(((count(count(node_cpu{node=~\"$node\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu{mode='idle',node=~\"$node\"}[$__interval_rv])))) * 100) / count(count(node_cpu{node=~\"$node\"}) by (cpu))",
+          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_rv])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))",
+          "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
           "legendFormat": "",
@@ -204,7 +184,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "((node_memory_MemTotal{node=~\"$node\"} - node_memory_MemFree{node=~\"$node\"}) / (node_memory_MemTotal{node=~\"$node\"} )) * 100",
+          "expr": "((node_memory_MemTotal_bytes{node=~\"$node\"} - node_memory_MemFree_bytes{node=~\"$node\"}) / (node_memory_MemTotal_bytes{node=~\"$node\"} )) * 100",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -212,7 +192,7 @@
           "step": 900
         },
         {
-          "expr": "100 - ((node_memory_MemAvailable{node=~\"$node\"} * 100) / node_memory_MemTotal{node=~\"$node\"})",
+          "expr": "100 - ((node_memory_MemAvailable_bytes{node=~\"$node\"} * 100) / node_memory_MemTotal_bytes{node=~\"$node\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -291,7 +271,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "((node_memory_SwapTotal{node=~\"$node\"} - node_memory_SwapFree{node=~\"$node\"}) / (node_memory_SwapTotal{node=~\"$node\"} )) * 100",
+          "expr": "((node_memory_SwapTotal_bytes{node=~\"$node\"} - node_memory_SwapFree_bytes{node=~\"$node\"}) / (node_memory_SwapTotal_bytes{node=~\"$node\"} )) * 100",
+          "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
           "step": 900
@@ -374,7 +355,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail{node=~\"$node\",mountpoint=\"/\",fstype!=\"rootfs\"} * 100) / node_filesystem_size{node=~\"$node\",mountpoint=\"/\",fstype!=\"rootfs\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{node=~\"$node\",mountpoint=\"/\",fstype!=\"rootfs\"} * 100) / node_filesystem_size_bytes{node=~\"$node\",mountpoint=\"/\",fstype!=\"rootfs\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -458,7 +439,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(node_load1{node=~\"$node\"}) /  count(count(node_cpu{node=~\"$node\"}) by (cpu)) * 100",
+          "expr": "avg(node_load1{node=~\"$node\"}) /  count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu)) * 100",
+          "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
           "refId": "A",
@@ -542,7 +524,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(node_load5{node=~\"$node\"}) /  count(count(node_cpu{node=~\"$node\"}) by (cpu)) * 100",
+          "expr": "avg(node_load5{node=~\"$node\"}) /  count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu)) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -640,7 +622,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count(count(node_cpu{node=~\"$node\"}) by (cpu))",
+          "expr": "count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))",
+          "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
           "step": 900
@@ -723,7 +706,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "node_memory_MemTotal{node=~\"$node\"}",
+          "expr": "node_memory_MemTotal_bytes{node=~\"$node\"}",
+          "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
           "step": 900
@@ -806,7 +790,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "node_memory_SwapTotal{node=~\"$node\"}",
+          "expr": "node_memory_SwapTotal_bytes{node=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -890,7 +874,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "node_filesystem_size{node=~\"$node\",mountpoint=\"/\",fstype!=\"rootfs\"}",
+          "expr": "node_filesystem_size_bytes{node=~\"$node\",mountpoint=\"/\",fstype!=\"rootfs\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1059,7 +1043,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "node_time{node=~\"$node\"} - node_boot_time{node=~\"$node\"}",
+          "expr": "node_time_seconds{node=~\"$node\"} - node_boot_time_seconds{node=~\"$node\"}",
+          "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
           "step": 1800
@@ -1163,7 +1148,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (node)(rate(node_cpu{mode=\"system\",node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\"}[$__interval_rv])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1172,7 +1157,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (node)(rate(node_cpu{mode='user',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\"}[$__interval_rv])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1181,7 +1166,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (node)(rate(node_cpu{mode='iowait',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\"}[$__interval_rv])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Iowait",
@@ -1189,7 +1174,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (node)(rate(node_cpu{mode=~\".*irq\",node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\"}[$__interval_rv])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy IRQs",
@@ -1197,7 +1182,7 @@
           "step": 240
         },
         {
-          "expr": "sum (rate(node_cpu{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\"}[$__interval_rv])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Other",
@@ -1205,7 +1190,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (mode)(rate(node_cpu{mode='idle',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_rv])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1216,6 +1201,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "CPU Basic",
       "tooltip": {
@@ -1249,7 +1235,11 @@
           "min": null,
           "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -1335,7 +1325,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "node_memory_MemTotal{node=~\"$node\"}",
+          "expr": "node_memory_MemTotal_bytes{node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1344,7 +1334,7 @@
           "step": 240
         },
         {
-          "expr": "node_memory_MemTotal{node=~\"$node\"} - node_memory_MemFree{node=~\"$node\"} - (node_memory_Cached{node=~\"$node\"} + node_memory_Buffers{node=~\"$node\"})",
+          "expr": "node_memory_MemTotal_bytes{node=~\"$node\"} - node_memory_MemFree_bytes{node=~\"$node\"} - (node_memory_Cached_bytes{node=~\"$node\"} + node_memory_Buffers_bytes{node=~\"$node\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1353,7 +1343,7 @@
           "step": 240
         },
         {
-          "expr": "node_memory_Cached{node=~\"$node\"} + node_memory_Buffers{node=~\"$node\"}",
+          "expr": "node_memory_Cached_bytes{node=~\"$node\"} + node_memory_Buffers_bytes{node=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RAM Cache + Buffer",
@@ -1361,7 +1351,7 @@
           "step": 240
         },
         {
-          "expr": "node_memory_MemFree{node=~\"$node\"}",
+          "expr": "node_memory_MemFree_bytes{node=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RAM Free",
@@ -1369,7 +1359,7 @@
           "step": 240
         },
         {
-          "expr": "(node_memory_SwapTotal{node=~\"$node\"} - node_memory_SwapFree{node=~\"$node\"})",
+          "expr": "(node_memory_SwapTotal_bytes{node=~\"$node\"} - node_memory_SwapFree_bytes{node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "SWAP Used",
@@ -1379,6 +1369,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Memory Basic",
       "tooltip": {
@@ -1411,7 +1402,11 @@
           "min": null,
           "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "collapsed": false,
@@ -1528,7 +1523,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes{node=~\"$node\"}[$__interval_rv])",
+          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "recv {{device}}",
@@ -1536,7 +1531,7 @@
           "step": 240
         },
         {
-          "expr": "rate(node_network_transmit_bytes{node=~\"$node\"}[$__interval_rv])",
+          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trans {{device}} ",
@@ -1546,6 +1541,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Network Traffic Basic",
       "tooltip": {
@@ -1579,7 +1575,11 @@
           "min": null,
           "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -1626,7 +1626,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail{node=~\"$node\",device!~'rootfs'} * 100) / node_filesystem_size{node=~\"$node\",device!~'rootfs'})",
+          "expr": "100 - ((node_filesystem_avail_bytes{node=~\"$node\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{node=~\"$node\",device!~'rootfs'})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{mountpoint}}",
@@ -1636,6 +1636,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Disk Space Used Basic",
       "tooltip": {
@@ -1668,7 +1669,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "collapsed": true,
@@ -1693,7 +1698,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 26
+            "y": 12
           },
           "id": 3,
           "legend": {
@@ -1759,7 +1764,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode=\"system\",node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1769,7 +1774,7 @@
               "step": 20
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='user',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "User - Normal processes executing in user mode",
@@ -1777,7 +1782,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='nice',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='nice',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Nice - Niced processes executing in user mode",
@@ -1785,7 +1790,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='idle',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Idle - Waiting for something to happen",
@@ -1793,7 +1798,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='iowait',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Iowait - Waiting for I/O to complete",
@@ -1801,7 +1806,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='irq',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='irq',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Irq - Servicing interrupts",
@@ -1809,7 +1814,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='softirq',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='softirq',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Softirq - Servicing softirqs",
@@ -1817,7 +1822,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='steal',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='steal',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Steal - Time spent in other operating systems when running in a virtualized environment",
@@ -1825,7 +1830,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu{mode='guest',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='guest',node=~\"$node\"}[$__interval_rv])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Guest - Time spent running a virtual CPU for a guest operating system",
@@ -1835,6 +1840,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "CPU",
           "tooltip": {
@@ -1868,7 +1874,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -1903,7 +1913,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 26
+            "y": 12
           },
           "id": 24,
           "legend": {
@@ -1940,7 +1950,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_MemTotal{node=~\"$node\"} - node_memory_MemFree{node=~\"$node\"} - node_memory_Buffers{node=~\"$node\"} - node_memory_Cached{node=~\"$node\"} - node_memory_Slab{node=~\"$node\"} - node_memory_PageTables{node=~\"$node\"} - node_memory_SwapCached{node=~\"$node\"}",
+              "expr": "node_memory_MemTotal_bytes{node=~\"$node\"} - node_memory_MemFree_bytes{node=~\"$node\"} - node_memory_Buffers_bytes{node=~\"$node\"} - node_memory_Cached_bytes{node=~\"$node\"} - node_memory_Slab_bytes{node=~\"$node\"} - node_memory_PageTables_bytes{node=~\"$node\"} - node_memory_SwapCached_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1949,7 +1959,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_PageTables{node=~\"$node\"}",
+              "expr": "node_memory_PageTables_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1958,7 +1968,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_SwapCached{node=~\"$node\"}",
+              "expr": "node_memory_SwapCached_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SwapCache - Memory that keeps track of pages that have been fetched from swap but not yet been modified",
@@ -1966,7 +1976,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Slab{node=~\"$node\"}",
+              "expr": "node_memory_Slab_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1975,7 +1985,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Cached{node=~\"$node\"}",
+              "expr": "node_memory_Cached_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1984,7 +1994,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Buffers{node=~\"$node\"}",
+              "expr": "node_memory_Buffers_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1993,7 +2003,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_MemFree{node=~\"$node\"}",
+              "expr": "node_memory_MemFree_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2002,7 +2012,7 @@
               "step": 240
             },
             {
-              "expr": "(node_memory_SwapTotal{node=~\"$node\"} - node_memory_SwapFree{node=~\"$node\"})",
+              "expr": "(node_memory_SwapTotal_bytes{node=~\"$node\"} - node_memory_SwapFree_bytes{node=~\"$node\"})",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2011,7 +2021,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_HardwareCorrupted{node=~\"$node\"}",
+              "expr": "node_memory_HardwareCorrupted_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2022,6 +2032,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Stack",
           "tooltip": {
@@ -2054,7 +2065,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -2072,7 +2087,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 38
+            "y": 24
           },
           "id": 84,
           "legend": {
@@ -2133,7 +2148,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_bytes{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_bytes_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -2141,7 +2156,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_bytes{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -2151,6 +2166,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic",
           "tooltip": {
@@ -2183,7 +2199,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -2198,7 +2218,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 38
+            "y": 24
           },
           "height": "",
           "id": 156,
@@ -2230,7 +2250,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_filesystem_size{node=~\"$node\",device!~'rootfs'} - node_filesystem_avail{node=~\"$node\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{node=~\"$node\",device!~'rootfs'} - node_filesystem_avail_bytes{node=~\"$node\",device!~'rootfs'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}}",
@@ -2240,6 +2260,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk Space Used",
           "tooltip": {
@@ -2272,7 +2293,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -2289,7 +2314,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 50
+            "y": 36
           },
           "id": 42,
           "legend": {
@@ -2345,7 +2370,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_bytes_read{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_rv])",
+              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2354,7 +2379,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_bytes_written{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_rv])",
+              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2365,6 +2390,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "I/O Usage Read / Write",
           "tooltip": {
@@ -2397,7 +2423,11 @@
               "min": null,
               "show": true
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -2414,7 +2444,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 50
+            "y": 36
           },
           "id": 127,
           "legend": {
@@ -2445,7 +2475,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_ms{node=~\"$node\",device=~\"[a-z]*[a-z]\"} [$__interval_rv])",
+              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"} [$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2456,6 +2486,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "I/O Usage Times",
           "tooltip": {
@@ -2474,7 +2505,7 @@
           "yaxes": [
             {
               "format": "ms",
-              "label": "Milliseconds",
+              "label": "Seconds",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -2488,7 +2519,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -2535,7 +2570,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 51
+            "y": 6
           },
           "id": 136,
           "legend": {
@@ -2565,7 +2600,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Inactive{node=~\"$node\"}",
+              "expr": "node_memory_Inactive_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Inactive - Memory which has been less recently used.  It is more eligible to be reclaimed for other purposes",
@@ -2573,7 +2608,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Active{node=~\"$node\"}",
+              "expr": "node_memory_Active_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Active - Memory that has been used more recently and usually not reclaimed unless absolutely necessary",
@@ -2583,6 +2618,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Active / Inactive",
           "tooltip": {
@@ -2615,7 +2651,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -2647,7 +2687,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 51
+            "y": 6
           },
           "id": 135,
           "legend": {
@@ -2686,7 +2726,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Committed_AS{node=~\"$node\"}",
+              "expr": "node_memory_Committed_AS_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Committed_AS - Amount of memory presently allocated on the system",
@@ -2694,7 +2734,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_CommitLimit{node=~\"$node\"}",
+              "expr": "node_memory_CommitLimit_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "CommitLimit - Amount of  memory currently available to be allocated on the system",
@@ -2704,6 +2744,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Commited",
           "tooltip": {
@@ -2736,7 +2777,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -2768,7 +2813,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 61
+            "y": 16
           },
           "id": 191,
           "legend": {
@@ -2798,7 +2843,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Inactive_file{node=~\"$node\"}",
+              "expr": "node_memory_Inactive_file_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2807,7 +2852,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Inactive_anon{node=~\"$node\"}",
+              "expr": "node_memory_Inactive_anon_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2816,7 +2861,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Active_file{node=~\"$node\"}",
+              "expr": "node_memory_Active_file_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2825,7 +2870,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Active_anon{node=~\"$node\"}",
+              "expr": "node_memory_Active_anon_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2836,6 +2881,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Active / Inactive Detail",
           "tooltip": {
@@ -2868,7 +2914,11 @@
               "min": null,
               "show": true
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -2902,7 +2952,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 61
+            "y": 16
           },
           "id": 130,
           "legend": {
@@ -2932,7 +2982,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Writeback{node=~\"$node\"}",
+              "expr": "node_memory_Writeback_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Writeback - Memory which is actively being written back to disk",
@@ -2940,7 +2990,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_WritebackTmp{node=~\"$node\"}",
+              "expr": "node_memory_WritebackTmp_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "WritebackTmp - Memory used by FUSE for temporary writeback buffers",
@@ -2948,7 +2998,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Dirty{node=~\"$node\"}",
+              "expr": "node_memory_Dirty_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Dirty - Memory which is waiting to get written back to the disk",
@@ -2958,6 +3008,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Writeback and Dirty",
           "tooltip": {
@@ -2990,7 +3041,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3022,7 +3077,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 71
+            "y": 26
           },
           "id": 138,
           "legend": {
@@ -3052,7 +3107,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Mapped{node=~\"$node\"}",
+              "expr": "node_memory_Mapped_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Mapped - Used memory in mapped pages files which have been mmaped, such as libraries",
@@ -3060,7 +3115,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Shmem{node=~\"$node\"}",
+              "expr": "node_memory_Shmem_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Shmem - Used shared memory (shared between several processes, thus including RAM disks)",
@@ -3070,6 +3125,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Shared and Mapped",
           "tooltip": {
@@ -3102,7 +3158,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3136,7 +3196,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 71
+            "y": 26
           },
           "id": 131,
           "legend": {
@@ -3166,7 +3226,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_SUnreclaim{node=~\"$node\"}",
+              "expr": "node_memory_SUnreclaim_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SUnreclaim - Part of Slab, that cannot be reclaimed on memory pressure",
@@ -3174,7 +3234,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_SReclaimable{node=~\"$node\"}",
+              "expr": "node_memory_SReclaimable_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SReclaimable - Part of Slab, that might be reclaimed, such as caches",
@@ -3184,6 +3244,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Slab",
           "tooltip": {
@@ -3216,7 +3277,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3249,7 +3314,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 81
+            "y": 36
           },
           "id": 70,
           "legend": {
@@ -3279,7 +3344,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_VmallocChunk{node=~\"$node\"}",
+              "expr": "node_memory_VmallocChunk_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3288,7 +3353,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_VmallocTotal{node=~\"$node\"}",
+              "expr": "node_memory_VmallocTotal_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3297,7 +3362,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_VmallocUsed{node=~\"$node\"}",
+              "expr": "node_memory_VmallocUsed_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3308,6 +3373,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Vmalloc",
           "tooltip": {
@@ -3340,7 +3406,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3372,7 +3442,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 81
+            "y": 36
           },
           "id": 159,
           "legend": {
@@ -3402,7 +3472,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Bounce{node=~\"$node\"}",
+              "expr": "node_memory_Bounce_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Bounce - Memory used for block device bounce buffers",
@@ -3412,6 +3482,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Bounce",
           "tooltip": {
@@ -3444,7 +3515,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3477,7 +3552,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 91
+            "y": 46
           },
           "id": 129,
           "legend": {
@@ -3512,7 +3587,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_AnonHugePages{node=~\"$node\"}",
+              "expr": "node_memory_AnonHugePages_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AnonHugePages - Memory in anonymous huge pages",
@@ -3520,7 +3595,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_AnonPages{node=~\"$node\"}",
+              "expr": "node_memory_AnonPages_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AnonPages - Memory in user pages not backed by files",
@@ -3530,6 +3605,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Anonymous",
           "tooltip": {
@@ -3562,7 +3638,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3594,7 +3674,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 91
+            "y": 46
           },
           "id": 160,
           "legend": {
@@ -3624,7 +3704,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_KernelStack{node=~\"$node\"}",
+              "expr": "node_memory_KernelStack_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "KernelStack - Kernel memory stack. This is not reclaimable",
@@ -3634,6 +3714,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Kernel",
           "tooltip": {
@@ -3666,7 +3747,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3699,7 +3784,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 101
+            "y": 56
           },
           "id": 140,
           "legend": {
@@ -3755,6 +3840,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory HugePages Counter",
           "tooltip": {
@@ -3787,7 +3873,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3820,7 +3910,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 101
+            "y": 56
           },
           "id": 71,
           "legend": {
@@ -3858,7 +3948,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Hugepagesize{node=~\"$node\"}",
+              "expr": "node_memory_Hugepagesize_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Hugepagesize - Huge Page size",
@@ -3868,6 +3958,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory HugePages Size",
           "tooltip": {
@@ -3900,7 +3991,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -3933,7 +4028,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 111
+            "y": 66
           },
           "id": 128,
           "legend": {
@@ -3965,7 +4060,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_DirectMap1G{node=~\"$node\"}",
+              "expr": "node_memory_DirectMap1G_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DirectMap1G - Amount of pages mapped as this size",
@@ -3973,7 +4068,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_DirectMap2M{node=~\"$node\"}",
+              "expr": "node_memory_DirectMap2M_bytes{node=~\"$node\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -3982,7 +4077,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_DirectMap4k{node=~\"$node\"}",
+              "expr": "node_memory_DirectMap4k_bytes{node=~\"$node\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -3993,6 +4088,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory DirectMap",
           "tooltip": {
@@ -4025,7 +4121,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4057,7 +4157,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 111
+            "y": 66
           },
           "id": 137,
           "legend": {
@@ -4087,7 +4187,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_Unevictable{node=~\"$node\"}",
+              "expr": "node_memory_Unevictable_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable - Amount of unevictable memory that can't be swapped out for a variety of reasons",
@@ -4095,7 +4195,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Mlocked{node=~\"$node\"}",
+              "expr": "node_memory_Mlocked_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "MLocked - Size of pages locked to memory using the mlock() system call",
@@ -4105,6 +4205,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Unevictable and MLocked",
           "tooltip": {
@@ -4137,7 +4238,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4171,7 +4276,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 121
+            "y": 76
           },
           "id": 132,
           "legend": {
@@ -4201,7 +4306,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_memory_NFS_Unstable{node=~\"$node\"}",
+              "expr": "node_memory_NFS_Unstable_bytes{node=~\"$node\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NFS Unstable - Memory in NFS pages sent to the server, but not yet commited to the storage",
@@ -4211,6 +4316,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory NFS",
           "tooltip": {
@@ -4243,7 +4349,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -4271,7 +4381,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 122
+            "y": 7
           },
           "id": 176,
           "legend": {
@@ -4323,6 +4433,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Pages In / Out",
           "tooltip": {
@@ -4355,7 +4466,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -4368,7 +4483,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 122
+            "y": 7
           },
           "id": 22,
           "legend": {
@@ -4420,6 +4535,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Pages Swap In / Out",
           "tooltip": {
@@ -4452,7 +4568,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4484,7 +4604,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 132
+            "y": 17
           },
           "id": 197,
           "legend": {
@@ -4540,6 +4660,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Operations",
           "tooltip": {
@@ -4572,7 +4693,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4604,7 +4729,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 132
+            "y": 17
           },
           "id": 175,
           "legend": {
@@ -4666,6 +4791,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Faults",
           "tooltip": {
@@ -4698,7 +4824,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4730,7 +4860,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 142
+            "y": 27
           },
           "id": 172,
           "legend": {
@@ -4778,6 +4908,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Pages Reclaimed",
           "tooltip": {
@@ -4810,7 +4941,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4842,7 +4977,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 142
+            "y": 27
           },
           "id": 184,
           "legend": {
@@ -4881,6 +5016,7 @@
             },
             {
               "expr": "rate(node_vmstat_allocstall{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Allocstall - Direct reclaim calls",
               "refId": "B",
@@ -4888,6 +5024,7 @@
             },
             {
               "expr": "rate(node_vmstat_zone_reclaim_failed{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Zone_reclaim_failed - Zone reclaim failures",
               "refId": "C",
@@ -4896,6 +5033,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Calls Reclaimed",
           "tooltip": {
@@ -4928,7 +5066,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -4960,7 +5102,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 152
+            "y": 37
           },
           "id": 200,
           "legend": {
@@ -5000,6 +5142,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Rotate",
           "tooltip": {
@@ -5032,7 +5175,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5064,7 +5211,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 152
+            "y": 37
           },
           "id": 170,
           "legend": {
@@ -5112,6 +5259,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Drop",
           "tooltip": {
@@ -5144,7 +5292,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5176,7 +5328,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 162
+            "y": 47
           },
           "id": 183,
           "legend": {
@@ -5216,6 +5368,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Scan Slab",
           "tooltip": {
@@ -5248,7 +5401,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5280,7 +5437,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 162
+            "y": 47
           },
           "id": 181,
           "legend": {
@@ -5368,6 +5525,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Unevictable Pages",
           "tooltip": {
@@ -5400,7 +5558,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5432,7 +5594,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 172
+            "y": 57
           },
           "id": 174,
           "legend": {
@@ -5496,6 +5658,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Allocation",
           "tooltip": {
@@ -5528,7 +5691,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5560,7 +5727,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 172
+            "y": 57
           },
           "id": 177,
           "legend": {
@@ -5624,6 +5791,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Refill",
           "tooltip": {
@@ -5656,7 +5824,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5688,7 +5860,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 182
+            "y": 67
           },
           "id": 179,
           "legend": {
@@ -5752,6 +5924,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Steal Direct",
           "tooltip": {
@@ -5784,7 +5957,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5816,7 +5993,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 182
+            "y": 67
           },
           "id": 198,
           "legend": {
@@ -5880,6 +6057,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Steal Kswapd",
           "tooltip": {
@@ -5912,7 +6090,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -5944,7 +6126,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 192
+            "y": 77
           },
           "id": 192,
           "legend": {
@@ -6017,6 +6199,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Scan Direct",
           "tooltip": {
@@ -6049,7 +6232,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6081,7 +6268,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 192
+            "y": 77
           },
           "id": 178,
           "legend": {
@@ -6145,6 +6332,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Scan Kswapd",
           "tooltip": {
@@ -6177,7 +6365,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6211,7 +6403,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 202
+            "y": 87
           },
           "id": 169,
           "legend": {
@@ -6272,6 +6464,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Compact",
           "tooltip": {
@@ -6304,7 +6497,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6338,7 +6535,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 202
+            "y": 87
           },
           "id": 189,
           "legend": {
@@ -6399,6 +6596,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Compactions",
           "tooltip": {
@@ -6431,7 +6629,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6463,7 +6665,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 212
+            "y": 97
           },
           "id": 190,
           "legend": {
@@ -6511,6 +6713,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Kswapd Watermark",
           "tooltip": {
@@ -6543,7 +6746,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6575,7 +6782,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 212
+            "y": 97
           },
           "id": 171,
           "legend": {
@@ -6623,6 +6830,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Buddy Alloc",
           "tooltip": {
@@ -6655,7 +6863,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6687,7 +6899,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 222
+            "y": 107
           },
           "id": 173,
           "legend": {
@@ -6767,6 +6979,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Numa Allocations",
           "tooltip": {
@@ -6799,7 +7012,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6831,7 +7048,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 222
+            "y": 107
           },
           "id": 193,
           "legend": {
@@ -6893,6 +7110,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Numa Page Migrations",
           "tooltip": {
@@ -6925,7 +7143,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -6957,7 +7179,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 232
+            "y": 117
           },
           "id": 194,
           "legend": {
@@ -7005,6 +7227,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Numa Hints",
           "tooltip": {
@@ -7037,7 +7260,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7069,7 +7296,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 232
+            "y": 117
           },
           "id": 196,
           "legend": {
@@ -7116,6 +7343,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Numa Table Updates",
           "tooltip": {
@@ -7148,7 +7376,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7180,7 +7412,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 242
+            "y": 127
           },
           "id": 199,
           "legend": {
@@ -7220,6 +7452,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory THP Splits",
           "tooltip": {
@@ -7252,7 +7485,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7284,7 +7521,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 242
+            "y": 127
           },
           "id": 182,
           "legend": {
@@ -7340,6 +7577,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Workingset",
           "tooltip": {
@@ -7372,7 +7610,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7404,7 +7646,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 252
+            "y": 137
           },
           "id": 180,
           "legend": {
@@ -7482,6 +7724,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory THP Allocations",
           "tooltip": {
@@ -7514,7 +7757,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -7561,7 +7808,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 253
+            "y": 8
           },
           "id": 185,
           "legend": {
@@ -7609,6 +7856,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Active",
           "tooltip": {
@@ -7641,7 +7889,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7673,7 +7925,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 253
+            "y": 8
           },
           "id": 228,
           "legend": {
@@ -7719,6 +7971,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Inactive",
           "tooltip": {
@@ -7751,7 +8004,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7783,7 +8040,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 263
+            "y": 18
           },
           "id": 188,
           "legend": {
@@ -7831,6 +8088,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Reclaimed / Unreclaimed",
           "tooltip": {
@@ -7863,7 +8121,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -7895,7 +8157,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 263
+            "y": 18
           },
           "id": 186,
           "legend": {
@@ -7941,6 +8203,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Free / Written",
           "tooltip": {
@@ -7973,7 +8236,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8005,7 +8272,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 273
+            "y": 28
           },
           "id": 218,
           "legend": {
@@ -8052,6 +8319,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Dirty / Bounce",
           "tooltip": {
@@ -8084,7 +8352,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8116,7 +8388,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 273
+            "y": 28
           },
           "id": 201,
           "legend": {
@@ -8163,6 +8435,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Pages Unevictable / Mlock",
           "tooltip": {
@@ -8195,7 +8468,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8227,7 +8504,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 283
+            "y": 38
           },
           "id": 214,
           "legend": {
@@ -8274,6 +8551,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Shmem / Mapped",
           "tooltip": {
@@ -8306,7 +8584,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8338,7 +8620,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 283
+            "y": 38
           },
           "id": 212,
           "legend": {
@@ -8378,6 +8660,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Kernel_stack",
           "tooltip": {
@@ -8410,7 +8693,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8442,7 +8729,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 293
+            "y": 48
           },
           "id": 203,
           "legend": {
@@ -8490,6 +8777,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Pages Writeback",
           "tooltip": {
@@ -8522,7 +8810,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8554,7 +8846,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 293
+            "y": 48
           },
           "id": 205,
           "legend": {
@@ -8594,6 +8886,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page File_pages",
           "tooltip": {
@@ -8626,7 +8919,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8658,7 +8955,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 303
+            "y": 58
           },
           "id": 206,
           "legend": {
@@ -8706,6 +9003,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Dirty Threshold",
           "tooltip": {
@@ -8738,7 +9036,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8770,7 +9072,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 303
+            "y": 58
           },
           "id": 208,
           "legend": {
@@ -8817,6 +9119,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Unstable / Dirtied",
           "tooltip": {
@@ -8849,7 +9152,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8881,7 +9188,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 313
+            "y": 68
           },
           "id": 209,
           "legend": {
@@ -8921,6 +9228,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Page_table_pages",
           "tooltip": {
@@ -8953,7 +9261,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -8985,7 +9297,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 313
+            "y": 68
           },
           "id": 217,
           "legend": {
@@ -9025,6 +9337,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Alloc_batch",
           "tooltip": {
@@ -9057,7 +9370,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -9089,7 +9406,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 323
+            "y": 78
           },
           "id": 213,
           "legend": {
@@ -9137,6 +9454,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Isolated",
           "tooltip": {
@@ -9169,7 +9487,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -9201,7 +9523,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 323
+            "y": 78
           },
           "id": 216,
           "legend": {
@@ -9249,6 +9571,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Anon",
           "tooltip": {
@@ -9281,7 +9604,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -9313,7 +9640,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 333
+            "y": 88
           },
           "id": 204,
           "legend": {
@@ -9367,6 +9694,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Memory Page Misc",
           "tooltip": {
@@ -9399,7 +9727,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -9427,7 +9759,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 334
+            "y": 9
           },
           "id": 8,
           "legend": {
@@ -9456,7 +9788,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_context_switches{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_context_switches_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Context switches",
@@ -9464,7 +9796,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_intr{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_intr_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Interrupts",
@@ -9474,6 +9806,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Context Switches / Interrupts",
           "tooltip": {
@@ -9506,7 +9839,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -9519,7 +9856,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 334
+            "y": 9
           },
           "id": 151,
           "legend": {
@@ -9557,6 +9894,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Entropy",
           "tooltip": {
@@ -9589,7 +9927,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -9602,7 +9944,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 344
+            "y": 19
           },
           "id": 7,
           "legend": {
@@ -9657,6 +9999,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "System Load",
           "tooltip": {
@@ -9689,7 +10032,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -9702,7 +10049,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 344
+            "y": 19
           },
           "id": 64,
           "legend": {
@@ -9735,7 +10082,8 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "process_max_fds{node=~\"$node\"}",
+              "expr": "process_max_fds{node=~\"$node\", job=\"node-exporter\"}",
+              "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "Maximum open file descriptors",
@@ -9743,7 +10091,8 @@
               "step": 600
             },
             {
-              "expr": "process_open_fds{node=~\"$node\"}",
+              "expr": "process_open_fds{node=~\"$node\", job=\"node-exporter\"}",
+              "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "Open file descriptors",
@@ -9753,6 +10102,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "File Descriptors",
           "tooltip": {
@@ -9785,7 +10135,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -9798,7 +10152,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 354
+            "y": 29
           },
           "id": 62,
           "legend": {
@@ -9844,6 +10198,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Processes State",
           "tooltip": {
@@ -9876,7 +10231,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -9889,7 +10248,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 354
+            "y": 29
           },
           "id": 148,
           "legend": {
@@ -9917,7 +10276,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_forks{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_forks_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -9928,6 +10287,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Processes  Forks",
           "tooltip": {
@@ -9960,7 +10320,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -9973,7 +10337,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 364
+            "y": 39
           },
           "id": 149,
           "legend": {
@@ -10000,7 +10364,8 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "process_virtual_memory_bytes{node=~\"$node\"}",
+              "expr": "process_virtual_memory_bytes{node=~\"$node\", job=\"node-exporter\"}",
+              "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -10008,7 +10373,8 @@
               "step": 600
             },
             {
-              "expr": "process_resident_memory_bytes{node=~\"$node\"}",
+              "expr": "process_resident_memory_bytes{node=~\"$node\", job=\"node-exporter\"}",
+              "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "Processes resident memory size in bytes",
@@ -10018,6 +10384,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Processes Memory",
           "tooltip": {
@@ -10050,7 +10417,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -10064,7 +10435,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 364
+            "y": 39
           },
           "id": 168,
           "legend": {
@@ -10096,7 +10467,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_time{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_time_seconds{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -10105,7 +10476,7 @@
               "step": 600
             },
             {
-              "expr": "rate(process_start_time_seconds{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(process_start_time_seconds{node=~\"$node\", job=\"node-exporter\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Of the process since unix epoch in seconds",
@@ -10115,6 +10486,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Time Variation",
           "tooltip": {
@@ -10147,7 +10519,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -10160,7 +10536,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 374
+            "y": 49
           },
           "id": 158,
           "legend": {
@@ -10248,6 +10624,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Hardware temperature monitor",
           "tooltip": {
@@ -10280,7 +10657,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -10309,7 +10690,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 375
+            "y": 10
           },
           "id": 37,
           "legend": {
@@ -10337,7 +10718,7 @@
           "renderer": "flot",
           "seriesOverrides": [
             {
-              "alias": "/.*read.*/",
+              "alias": "/.*Read.*/",
               "transform": "negative-Y"
             },
             {
@@ -10426,24 +10807,27 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_read_time_ms{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_read_time_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{device}} - Read time ms",
+              "legendFormat": "{{device}} - Read time",
               "refId": "A",
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_write_time_ms{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_write_time_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{device}} - Write time ms",
+              "legendFormat": "{{device}} - Write time",
               "refId": "B",
               "step": 600
             }
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk R/W Time",
           "tooltip": {
@@ -10461,8 +10845,8 @@
           },
           "yaxes": [
             {
-              "format": "ms",
-              "label": "Millisec. read (-) / write (+)",
+              "format": "s",
+              "label": "Seconds. read (-) / write (+)",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -10476,7 +10860,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -10490,7 +10878,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 375
+            "y": 10
           },
           "id": 33,
           "legend": {
@@ -10605,7 +10993,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_bytes_read{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_nfsd_disk_bytes_read_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Bytes read",
@@ -10613,7 +11001,7 @@
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_bytes_written{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_nfsd_disk_bytes_written_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Bytes written",
@@ -10623,6 +11011,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk R/W Data",
           "tooltip": {
@@ -10655,7 +11044,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -10669,7 +11062,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 385
+            "y": 20
           },
           "id": 9,
           "legend": {
@@ -10785,14 +11178,16 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_completed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_writes_completed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -10801,6 +11196,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk IOs Completed",
           "tooltip": {
@@ -10833,7 +11229,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -10847,7 +11247,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 385
+            "y": 20
           },
           "id": 134,
           "legend": {
@@ -10964,7 +11364,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_sectors_read{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_sectors_read_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -10973,7 +11373,7 @@
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_sectors_written{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_sectors_written_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -10984,6 +11384,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk R/W Sectors",
           "tooltip": {
@@ -11016,7 +11417,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -11030,7 +11435,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 395
+            "y": 30
           },
           "id": 35,
           "legend": {
@@ -11143,7 +11548,8 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_weighted{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_io_time_weighted_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO time weighted",
               "refId": "A",
@@ -11152,6 +11558,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk IOs Weighted",
           "tooltip": {
@@ -11169,8 +11576,8 @@
           },
           "yaxes": [
             {
-              "format": "ms",
-              "label": "Milliseconds",
+              "format": "s",
+              "label": "",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -11184,7 +11591,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -11198,7 +11609,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 395
+            "y": 30
           },
           "id": 133,
           "legend": {
@@ -11315,14 +11726,16 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_merged{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_reads_merged_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Merged read",
               "refId": "C",
               "step": 600
             },
             {
-              "expr": "rate(node_disk_writes_merged{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_writes_merged_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Merged write",
               "refId": "D",
@@ -11331,6 +11744,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk R/W Merged",
           "tooltip": {
@@ -11363,7 +11777,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -11377,7 +11795,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 405
+            "y": 40
           },
           "id": 36,
           "legend": {
@@ -11490,7 +11908,8 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_ms{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO time ms",
               "refId": "A",
@@ -11499,6 +11918,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Milliseconds Spent Doing I/Os",
           "tooltip": {
@@ -11516,8 +11936,8 @@
           },
           "yaxes": [
             {
-              "format": "ms",
-              "label": "Milliseconds",
+              "format": "s",
+              "label": "",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -11531,7 +11951,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -11545,7 +11969,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 405
+            "y": 40
           },
           "id": 34,
           "legend": {
@@ -11659,6 +12083,7 @@
           "targets": [
             {
               "expr": "rate(node_disk_io_now{node=~\"$node\"}[$__interval_rv])",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO now",
               "refId": "A",
@@ -11667,6 +12092,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Disk IOs Current in Progress",
           "tooltip": {
@@ -11699,7 +12125,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -11713,7 +12143,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 415
+            "y": 50
           },
           "id": 66,
           "legend": {
@@ -11824,6 +12254,7 @@
           "targets": [
             {
               "expr": "node_textfile_scrape_error{node=~\"$node\"}",
+              "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Textfile scrape error (1 = true)",
               "refId": "A",
@@ -11832,6 +12263,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Open Error File",
           "tooltip": {
@@ -11864,7 +12296,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -11894,7 +12330,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 416
+            "y": 11
           },
           "id": 43,
           "legend": {
@@ -11923,7 +12359,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "node_filesystem_avail{node=~\"$node\",device!~'rootfs'}",
+              "expr": "node_filesystem_avail_bytes{node=~\"$node\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -11933,7 +12369,7 @@
               "step": 600
             },
             {
-              "expr": "node_filesystem_free{node=~\"$node\",device!~'rootfs'}",
+              "expr": "node_filesystem_free_bytes{node=~\"$node\",device!~'rootfs'}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -11942,7 +12378,7 @@
               "step": 2
             },
             {
-              "expr": "node_filesystem_size{node=~\"$node\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{node=~\"$node\",device!~'rootfs'}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -11953,6 +12389,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Filesystem space available",
           "tooltip": {
@@ -11985,7 +12422,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -11999,7 +12440,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 416
+            "y": 11
           },
           "id": 41,
           "legend": {
@@ -12039,6 +12480,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "File Nodes Free",
           "tooltip": {
@@ -12071,7 +12513,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -12085,7 +12531,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 426
+            "y": 21
           },
           "id": 28,
           "legend": {
@@ -12131,6 +12577,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "File Descriptor",
           "tooltip": {
@@ -12163,7 +12610,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -12177,7 +12628,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 426
+            "y": 21
           },
           "id": 219,
           "legend": {
@@ -12217,6 +12668,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "File Nodes Size",
           "tooltip": {
@@ -12249,7 +12701,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {
@@ -12266,7 +12722,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 436
+            "y": 31
           },
           "id": 44,
           "legend": {
@@ -12307,6 +12763,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Filesystem in ReadOnly",
           "tooltip": {
@@ -12339,7 +12796,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -12372,7 +12833,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 437
+            "y": 12
           },
           "id": 60,
           "legend": {
@@ -12434,7 +12895,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_packets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_packets_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -12442,7 +12903,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_packets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_packets_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -12452,6 +12913,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic by Packets",
           "tooltip": {
@@ -12484,7 +12946,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -12497,7 +12963,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 437
+            "y": 12
           },
           "id": 142,
           "legend": {
@@ -12563,7 +13029,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_errs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_errs_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive errors",
@@ -12571,7 +13037,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_errs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_errs_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Rransmit errors",
@@ -12581,6 +13047,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic Errors",
           "tooltip": {
@@ -12613,7 +13080,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -12626,7 +13097,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 447
+            "y": 22
           },
           "id": 143,
           "legend": {
@@ -12692,7 +13163,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_drop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_drop_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive drop",
@@ -12700,7 +13171,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_drop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_drop_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit drop",
@@ -12710,6 +13181,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic Drop",
           "tooltip": {
@@ -12742,7 +13214,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -12755,7 +13231,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 447
+            "y": 22
           },
           "id": 141,
           "legend": {
@@ -12821,7 +13297,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_compressed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_compressed_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive compressed",
@@ -12829,7 +13305,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_compressed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_compressed_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit compressed",
@@ -12839,6 +13315,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic Compressed",
           "tooltip": {
@@ -12871,7 +13348,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -12884,7 +13365,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 457
+            "y": 32
           },
           "id": 146,
           "legend": {
@@ -12950,7 +13431,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_multicast{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_multicast_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive multicast",
@@ -12958,7 +13439,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_multicast{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_multicast_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit multicast",
@@ -12968,6 +13449,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic Multicast",
           "tooltip": {
@@ -13000,7 +13482,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13013,7 +13499,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 457
+            "y": 32
           },
           "id": 144,
           "legend": {
@@ -13079,7 +13565,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_fifo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_fifo_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive fifo",
@@ -13087,7 +13573,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_fifo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_fifo_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit fifo",
@@ -13097,6 +13583,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic Fifo",
           "tooltip": {
@@ -13129,7 +13616,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13142,7 +13633,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 467
+            "y": 42
           },
           "id": 145,
           "legend": {
@@ -13208,7 +13699,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_frame{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_frame_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13217,7 +13708,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_frame{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_frame_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13228,6 +13719,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Network Traffic Frame",
           "tooltip": {
@@ -13260,7 +13752,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13273,7 +13769,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 467
+            "y": 42
           },
           "id": 61,
           "legend": {
@@ -13325,6 +13821,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "NF Contrack",
           "tooltip": {
@@ -13357,7 +13854,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -13385,7 +13886,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 468
+            "y": 13
           },
           "id": 63,
           "legend": {
@@ -13458,6 +13959,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Sockstat TCP",
           "tooltip": {
@@ -13490,7 +13992,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13503,7 +14009,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 468
+            "y": 13
           },
           "id": 124,
           "legend": {
@@ -13560,6 +14066,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Sockstat UDP",
           "tooltip": {
@@ -13592,7 +14099,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13605,7 +14116,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 478
+            "y": 23
           },
           "id": 126,
           "legend": {
@@ -13646,6 +14157,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Sockstat Used",
           "tooltip": {
@@ -13678,7 +14190,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13691,7 +14207,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 478
+            "y": 23
           },
           "id": 220,
           "legend": {
@@ -13740,6 +14256,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Sockstat Memory Size",
           "tooltip": {
@@ -13772,7 +14289,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -13785,7 +14306,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 488
+            "y": 33
           },
           "id": 125,
           "legend": {
@@ -13842,6 +14363,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Sockstat FRAG / RAW",
           "tooltip": {
@@ -13874,7 +14396,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -13902,7 +14428,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 489
+            "y": 14
           },
           "height": "",
           "id": 49,
@@ -13968,7 +14494,7 @@
               "step": 10
             },
             {
-              "expr": "rate(node_netstat_Ip_InDelivers{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InDelivers_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDelivers - Ip indelivers",
@@ -13976,7 +14502,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_OutRequests{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_OutRequests_total{node=~\"$node\"}[$__interval_rv])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13987,6 +14513,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP In / Out",
           "tooltip": {
@@ -14019,7 +14546,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14032,7 +14563,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 489
+            "y": 14
           },
           "height": "",
           "id": 221,
@@ -14110,6 +14641,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP In / Out Octets",
           "tooltip": {
@@ -14142,7 +14674,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14155,7 +14691,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 499
+            "y": 24
           },
           "height": "",
           "id": 119,
@@ -14233,6 +14769,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Bcast",
           "tooltip": {
@@ -14265,7 +14802,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14278,7 +14819,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 499
+            "y": 24
           },
           "height": "",
           "id": 222,
@@ -14356,6 +14897,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Bcast Octets",
           "tooltip": {
@@ -14388,7 +14930,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14401,7 +14947,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 509
+            "y": 34
           },
           "height": "",
           "id": 120,
@@ -14481,6 +15027,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Mcast",
           "tooltip": {
@@ -14513,7 +15060,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14526,7 +15077,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 509
+            "y": 34
           },
           "height": "",
           "id": 223,
@@ -14606,6 +15157,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Mcast Octets",
           "tooltip": {
@@ -14638,7 +15190,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14651,7 +15207,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 519
+            "y": 44
           },
           "height": "",
           "id": 81,
@@ -14704,6 +15260,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Forwarding",
           "tooltip": {
@@ -14736,7 +15293,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14749,7 +15310,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 519
+            "y": 44
           },
           "height": "",
           "id": 122,
@@ -14810,6 +15371,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Fragmented",
           "tooltip": {
@@ -14842,7 +15404,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14855,7 +15421,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 529
+            "y": 54
           },
           "height": "",
           "id": 51,
@@ -14924,6 +15490,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP ECT / CEP",
           "tooltip": {
@@ -14956,7 +15523,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -14969,7 +15540,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 529
+            "y": 54
           },
           "height": "",
           "id": 123,
@@ -15038,6 +15609,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Reasambled",
           "tooltip": {
@@ -15070,7 +15642,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -15083,7 +15659,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 539
+            "y": 64
           },
           "height": "",
           "id": 118,
@@ -15205,6 +15781,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Netstat IP Errors / Discards",
           "tooltip": {
@@ -15237,7 +15814,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -15265,7 +15846,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 540
+            "y": 15
           },
           "height": "",
           "id": 52,
@@ -15366,6 +15947,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "TCP Segments",
           "tooltip": {
@@ -15398,7 +15980,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -15411,7 +15997,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 540
+            "y": 15
           },
           "height": "",
           "id": 85,
@@ -15469,6 +16055,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "TCP Connections",
           "tooltip": {
@@ -15501,7 +16088,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -15514,7 +16105,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 550
+            "y": 25
           },
           "height": "",
           "id": 86,
@@ -15575,6 +16166,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "TCP Retransmission",
           "tooltip": {
@@ -15607,7 +16199,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -15620,7 +16216,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 550
+            "y": 25
           },
           "height": "",
           "id": 82,
@@ -15686,6 +16282,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "TCP Direct Transition",
           "tooltip": {
@@ -15718,7 +16315,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -18854,7 +19455,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 682
+            "y": 17
           },
           "height": "",
           "id": 55,
@@ -18918,6 +19519,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "UDP In / Out",
           "tooltip": {
@@ -18950,7 +19552,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -18963,7 +19569,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 682
+            "y": 17
           },
           "height": "",
           "id": 109,
@@ -19051,6 +19657,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "UDP Errors",
           "tooltip": {
@@ -19083,7 +19690,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -19096,7 +19707,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 692
+            "y": 27
           },
           "height": "",
           "id": 57,
@@ -19156,6 +19767,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "UDP Lite In / Out",
           "tooltip": {
@@ -19188,7 +19800,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -19201,7 +19817,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 692
+            "y": 27
           },
           "height": "",
           "id": 110,
@@ -19285,6 +19901,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "UDP Lite Errors",
           "tooltip": {
@@ -19317,7 +19934,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -19346,7 +19967,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 693
+            "y": 18
           },
           "height": "",
           "id": 50,
@@ -19464,6 +20085,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "ICMP Errors 1",
           "tooltip": {
@@ -19496,7 +20118,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -19510,7 +20136,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 693
+            "y": 18
           },
           "height": "",
           "id": 147,
@@ -19641,6 +20267,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "ICMP Errors 2",
           "tooltip": {
@@ -19673,7 +20300,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -19687,7 +20318,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 703
+            "y": 28
           },
           "height": "",
           "id": 115,
@@ -19767,6 +20398,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "ICMP In / Out - Messages / Redirects",
           "tooltip": {
@@ -19799,7 +20431,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -19813,7 +20449,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 703
+            "y": 28
           },
           "height": "",
           "id": 112,
@@ -19893,6 +20529,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "ICMP Timestamps",
           "tooltip": {
@@ -19925,7 +20562,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -19939,7 +20580,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 713
+            "y": 38
           },
           "height": "",
           "id": 114,
@@ -20019,6 +20660,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "ICMP Echos",
           "tooltip": {
@@ -20051,7 +20693,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -20065,7 +20711,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 713
+            "y": 38
           },
           "height": "",
           "id": 113,
@@ -20145,6 +20791,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "ICMP Masks",
           "tooltip": {
@@ -20177,7 +20824,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -20206,7 +20857,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 714
+            "y": 19
           },
           "id": 40,
           "legend": {
@@ -20244,6 +20895,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Node Exporter Scrape Time",
           "tooltip": {
@@ -20276,7 +20928,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "aliasColors": {},
@@ -20290,7 +20946,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 714
+            "y": 19
           },
           "id": 157,
           "legend": {
@@ -20328,6 +20984,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Node Exporter Scrape Counter",
           "tooltip": {
@@ -20360,7 +21017,11 @@
               "min": null,
               "show": false
             }
-          ]
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
@@ -20386,12 +21047,17 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "kube-a-3",
+          "value": "kube-a-3"
+        },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": "Node",
@@ -20401,6 +21067,7 @@
         "query": "label_values(up{job=\"node-exporter\"}, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -20411,7 +21078,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now/d",
     "to": "now"
   },
   "timepicker": {
@@ -20441,6 +21108,6 @@
   },
   "timezone": "browser",
   "title": "Node Metrics Detailed",
-  "uid": "4UCtXvkmk",
-  "version": 6
+  "uid": "4UCtXvkmsk",
+  "version": 4
 }

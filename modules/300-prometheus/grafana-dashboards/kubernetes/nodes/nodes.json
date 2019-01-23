@@ -1,25 +1,4 @@
 {
-  "__inputs": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "5.0.4"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": "5.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -37,8 +16,8 @@
   "editable": true,
   "gnetId": 22,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1522626315324,
+  "id": 28,
+  "iteration": 1548245655984,
   "links": [],
   "panels": [
     {
@@ -82,7 +61,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - (avg by (cpu) (rate(node_cpu{mode=\"idle\", node=\"$node\"}[$__interval_rv])) * 100)",
+          "expr": "100 - (avg by (cpu) (rate(node_cpu_seconds_total{mode=\"idle\", node=\"$node\"}[$__interval_rv])) * 100)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -93,6 +72,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Idle cpu",
       "tooltip": {
@@ -126,7 +106,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "alerting": {},
@@ -198,6 +182,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "System load",
       "tooltip": {
@@ -231,7 +216,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "alerting": {},
@@ -283,7 +272,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "node_memory_MemTotal{node=\"$node\"} - node_memory_MemFree{node=\"$node\"} - node_memory_Buffers{node=\"$node\"} - node_memory_Cached{node=\"$node\"}",
+          "expr": "node_memory_MemTotal_bytes{node=\"$node\"} - node_memory_MemFree_bytes{node=\"$node\"} - node_memory_Buffers_bytes{node=\"$node\"} - node_memory_Cached_bytes{node=\"$node\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -294,7 +283,7 @@
           "step": 10
         },
         {
-          "expr": "node_memory_Buffers{node=\"$node\"}",
+          "expr": "node_memory_Buffers_bytes{node=\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -304,7 +293,7 @@
           "step": 10
         },
         {
-          "expr": "node_memory_Cached{node=\"$node\"}",
+          "expr": "node_memory_Cached_bytes{node=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "memory cached",
@@ -313,7 +302,7 @@
           "step": 10
         },
         {
-          "expr": "node_memory_MemFree{node=\"$node\"}",
+          "expr": "node_memory_MemFree_bytes{node=\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "memory free",
@@ -324,6 +313,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Memory usage",
       "tooltip": {
@@ -357,7 +347,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "cacheTimeout": null,
@@ -422,7 +416,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "((node_memory_MemTotal{node=\"$node\"} - node_memory_MemFree{node=\"$node\"}  - node_memory_Buffers{node=\"$node\"} - node_memory_Cached{node=\"$node\"}) / node_memory_MemTotal{node=\"$node\"}) * 100",
+          "expr": "((node_memory_MemTotal_bytes{node=\"$node\"} - node_memory_MemFree_bytes{node=\"$node\"}  - node_memory_Buffers_bytes{node=\"$node\"} - node_memory_Cached_bytes{node=\"$node\"}) / node_memory_MemTotal_bytes{node=\"$node\"}) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -497,7 +491,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_bytes_read{node=\"$node\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_nfsd_disk_bytes_read_total{node=\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -507,7 +501,7 @@
           "target": ""
         },
         {
-          "expr": "sum by (node) (rate(node_disk_bytes_written{node=\"$node\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "written",
@@ -515,7 +509,7 @@
           "step": 20
         },
         {
-          "expr": "sum by (node) (rate(node_disk_io_time_ms{node=\"$node\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_disk_io_time_seconds_total{node=\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "io time",
@@ -525,6 +519,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Disk I/O",
       "tooltip": {
@@ -558,7 +553,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "cacheTimeout": null,
@@ -623,7 +622,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(sum(node_filesystem_size{device!=\"rootfs\",node=\"$node\"}) - sum(node_filesystem_free{device!=\"rootfs\",node=\"$node\"})) / sum(node_filesystem_size{device!=\"rootfs\",node=\"$node\"})",
+          "expr": "(sum(node_filesystem_size_bytes{device!=\"rootfs\",node=\"$node\"}) - sum(node_filesystem_free_bytes{device!=\"rootfs\",node=\"$node\"})) / sum(node_filesystem_size_bytes{device!=\"rootfs\",node=\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -690,7 +689,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes{node=\"$node\",device!~\"lo\"}[$__interval_rv])",
+          "expr": "rate(node_network_receive_bytes_total{node=\"$node\",device!~\"lo\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -702,6 +701,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Network received",
       "tooltip": {
@@ -735,7 +735,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "alerting": {},
@@ -783,7 +787,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_transmit_bytes{node=\"$node\",device!~\"lo\"}[$__interval_rv])",
+          "expr": "rate(node_network_transmit_bytes_total{node=\"$node\",device!~\"lo\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -795,6 +799,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Network transmitted",
       "tooltip": {
@@ -828,7 +833,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "30s",
@@ -849,12 +858,17 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "kube-a-3",
+          "value": "kube-a-3"
+        },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": "Node",
@@ -864,6 +878,7 @@
         "query": "label_values(up{job=\"node-exporter\"}, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -905,5 +920,5 @@
   "timezone": "browser",
   "title": "Nodes",
   "uid": "HB3tuvkmk",
-  "version": 8
+  "version": 1
 }
