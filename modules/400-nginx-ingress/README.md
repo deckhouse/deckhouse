@@ -34,6 +34,8 @@
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `config.disableHTTP2` — bool, выключить ли HTTP/2.
     * По умолчанию HTTP/2 включен (`false`).
+* `config.ComputeFullForwardedFor` - bool, дополнять ли заголовок X-Forwarded-For прокси адресами или заменять его, нужно только в тех случаях, если на входе стоит балансер не под нашим управлением.
+    * По умолчанию `compute-full-forwarded-for выключен (`false`).
 * `config.underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers)
     * По-умолчанию `false`.
 * `config.setRealIPFrom` — список CIDR, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
