@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trickster-config
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: trickster
+data:
+  trickster.conf: |
+    [main]
+      [proxy_server]
+        listen_port = 8000
+      [cache]
+        record_ttl_secs = 21600
+
+      [origins]
+        [origins.main]
+          origin_url = 'http://prometheus:9090'
+          api_path = '/api/v1'
+          max_value_age_secs = {{ mul .Values.prometheus.retentionDays 86400 }}
+          fast_forward_disable = true
+          default_step = 30
+
+{{- if .Values.prometheus.longtermRetentionDays }}
+        [origins.longterm]
+          origin_url = 'http://prometheus-longterm:9090'
+          api_path = '/api/v1'
+          max_value_age_secs = {{ mul .Values.prometheus.longtermRetentionDays 86400 }}
+          fast_forward_disable = true
+          default_step = 300
+{{- end }}
+
+      [metrics]
+        listen_port = 8001
+      [logging]
+        log_level = 'debug'

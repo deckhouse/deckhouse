@@ -1,0 +1,72 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: trickster
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: trickster
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: trickster
+  template:
+    metadata:
+      labels:
+        app: trickster
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/trickster/configmap.yaml") . | sha256sum }}
+    spec:
+{{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
+      nodeSelector:
+{{ .Values.prometheus.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
+      tolerations:
+{{ .Values.prometheus.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      containers:
+      - name: trickster
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/trickster:{{ $.Values.global.modulesImages.tags.prometheus.trickster }}
+        volumeMounts:
+        - mountPath: /etc/trickster/trickster.conf
+          name: trickster-config
+          subPath: trickster.conf
+        ports:
+        - containerPort: 8000
+          name: web
+        - containerPort: 8001
+          name: metrics
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 8000
+        readinessProbe:
+          httpGet:
+            path: /main/health
+            port: 8000
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 100m
+          limits:
+            memory: 500Mi
+            cpu: 200m
+      volumes:
+      - name: trickster-config
+        configMap:
+          name: trickster-config
+      imagePullSecrets:
+      - name: antiopa-registry
