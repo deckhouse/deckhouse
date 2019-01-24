@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-metrics-adapter-apiserver-proxy-client-ca
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+data:
+  ca.crt: |
+{{ .Values.prometheusMetricsAdapter.apiserverProxyClientCa | indent 4 }}

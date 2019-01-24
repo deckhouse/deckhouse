@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: prometheus-metrics-adapter
+  namespace: kube-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-metrics-adapter
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ .Values.prometheusMetricsAdapter.apiserverProxyClientCa | sha256sum }}
+        checksum/cert: {{ .Values.prometheusMetricsAdapter.adapterPem | sha256sum }}
+      labels:
+        app: prometheus-metrics-adapter
+      name: prometheus-metrics-adapter
+    spec:
+{{- if and (hasKey .Values.prometheusMetricsAdapter "nodeSelector") (.Values.prometheusMetricsAdapter.nodeSelector) }}
+      nodeSelector:
+{{ .Values.prometheusMetricsAdapter.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.prometheusMetricsAdapter "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+      tolerations:
+{{- if and (hasKey .Values.prometheusMetricsAdapter "tolerations") (.Values.prometheusMetricsAdapter.tolerations) }}
+{{ .Values.prometheusMetricsAdapter.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.prometheusMetricsAdapter "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+      serviceAccountName: prometheus-metrics-adapter
+      imagePullSecrets:
+      - name: antiopa-registry
+      containers:
+      - name: prometheus-metrics-adapter
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/k8s-prometheus-adapter:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}
+        args:
+        - --secure-port=6443
+        - --tls-cert-file=/var/run/adapter-cert/tls.crt
+        - --tls-private-key-file=/var/run/adapter-cert/tls.key
+        - --logtostderr=true
+        - --prometheus-url=http://prometheus.kube-prometheus.svc.cluster.local.:9090/
+        - --metrics-relist-interval=30s
+        - --config=/etc/adapter/config.yaml
+        - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
+        ports:
+        - containerPort: 6443
+        volumeMounts:
+        - mountPath: /var/run/adapter-cert
+          name: adapter-cert
+          readOnly: true
+        - mountPath: /etc/adapter/
+          name: adapter-config
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /var/run/apiserver-proxy-client/
+          name: apiserver-proxy-client-ca
+      volumes:
+      - name: adapter-cert
+        secret:
+          secretName: prometheus-metrics-adapter-cert
+      - name: adapter-config
+        configMap:
+          name: prometheus-metrics-adapter-config
+      - name: tmp
+        emptyDir: {}
+      - name: apiserver-proxy-client-ca
+        configMap:
+          name: prometheus-metrics-adapter-apiserver-proxy-client-ca

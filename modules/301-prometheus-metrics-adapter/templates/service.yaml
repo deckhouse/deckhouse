@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-metrics-adapter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  ports:
+  - port: 443
+    targetPort: 6443
+  selector:
+    app: prometheus-metrics-adapter
