@@ -10743,8 +10743,8 @@
       {
         "allValue": ".*",
         "current": {
-          "text": "main",
-          "value": "main"
+          "text": "default",
+          "value": "default"
         },
         "datasource": "$ds_prometheus",
         "hide": 0,
