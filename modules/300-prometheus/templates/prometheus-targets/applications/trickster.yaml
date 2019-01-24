@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: trickster
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  endpoints:
+  - port: http-metrics
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      prometheus-target: trickster

@@ -1,0 +1,33 @@
+{{- if .Values.global.clusterHostname }}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: trickster
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: trickster
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: basic-auth
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+    ingress.kubernetes.io/affinity: cookie
+    ingress.kubernetes.io/rewrite-target: "/"
+spec:
+  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
+  tls:
+  - hosts:
+    - prometheus.{{ .Values.global.clusterHostname }}
+    secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: prometheus.{{ .Values.global.clusterHostname }}
+    http:
+      paths:
+      - path: /trickster/
+        backend:
+          serviceName: trickster
+          servicePort: web
+{{- end }}

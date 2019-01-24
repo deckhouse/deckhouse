@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: trickster
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: trickster
+    prometheus-target: trickster
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 8000
+    name: web
+  - port: 8001
+    name: http-metrics
+  selector:
+    app: trickster

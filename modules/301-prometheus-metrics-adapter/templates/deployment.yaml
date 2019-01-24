@@ -48,7 +48,7 @@ spec:
         - --tls-cert-file=/var/run/adapter-cert/tls.crt
         - --tls-private-key-file=/var/run/adapter-cert/tls.key
         - --logtostderr=true
-        - --prometheus-url=http://prometheus.kube-prometheus.svc.cluster.local.:9090/
+        - --prometheus-url=http://trickster:8000/main/
         - --metrics-relist-interval=30s
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
