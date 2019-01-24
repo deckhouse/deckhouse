@@ -1048,8 +1048,8 @@
     "list": [
       {
         "current": {
-          "text": "main",
-          "value": "main"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "label": "Prometheus",
