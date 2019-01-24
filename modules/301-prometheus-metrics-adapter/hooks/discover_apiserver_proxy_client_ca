@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=5
+}
+
+function __main__() {
+  apiserver_proxy_client_ca="$(kubectl -n kube-system  get cm extension-apiserver-authentication  -o json | jq -r '.data."requestheader-client-ca-file"')"
+  values::set prometheusMetricsAdapter.apiserverProxyClientCa "$apiserver_proxy_client_ca"
+}
+
+hook::run $@
