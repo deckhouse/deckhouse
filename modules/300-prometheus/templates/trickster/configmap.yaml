@@ -35,4 +35,4 @@ data:
       [metrics]
         listen_port = 8001
       [logging]
-        log_level = 'debug'
+        log_level = 'info'
