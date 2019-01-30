@@ -66,7 +66,11 @@ spec:
           timeoutSeconds: 5
         args:
         - /nginx-ingress-controller
+        {{- if and (hasKey . "customErrorsNamespace") (hasKey . "customErrorsServiceName") (.customErrorsNamespace) (.customErrorsServiceName) }}
+        - --default-backend-service={{ .customErrorsNamespace }}/{{ .customErrorsServiceName }}
+        {{- else }}
         - --default-backend-service=$(POD_NAMESPACE)/default-http-backend
+        {{- end }}
         - --configmap=$(POD_NAMESPACE)/{{ $name }}
         - --annotations-prefix=ingress.kubernetes.io
     {{- if $publishService }}
