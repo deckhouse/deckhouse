@@ -34,7 +34,7 @@ spec:
       serviceAccountName: cert-manager
       containers:
         - name: cert-manager
-          image: "quay.io/jetstack/cert-manager-controller:v0.3.2"
+          image: "quay.io/jetstack/cert-manager-controller:v0.4.1"
           imagePullPolicy: Always
           args:
           - --cluster-resource-namespace=kube-cert-manager
