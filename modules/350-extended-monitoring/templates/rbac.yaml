@@ -1,0 +1,62 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kube-prometheus:extended-monitoring
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+rules:
+- apiGroups: [""]
+  resources:
+  - namespaces
+  - pods
+  - nodes
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  verbs:
+  - list
+  - watch
+  - get
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: extended-monitoring
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kube-prometheus:extended-monitoring
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+subjects:
+- kind: ServiceAccount
+  name: extended-monitoring
+  namespace: kube-prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-prometheus:extended-monitoring

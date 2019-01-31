@@ -1,0 +1,45 @@
+- name: kubernetes.extended-monitoring.cfs-throttling
+  rules:
+  - alert: KubernetesContainerCFSThrottling
+    expr: |
+      max by (namespace, pod, container) (
+        (
+          rate(container_cpu_cfs_throttled_periods_total[5m])
+          /
+          rate(container_cpu_cfs_periods_total[5m])
+        )
+        > on (namespace, pod) group_left
+          max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-throttling-warning"}) / 100
+      )
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: |-
+        Container {{$labels.container}} in Pod {{$labels.namespace}}/{{$labels.pod}} is CPU throttled.
+      description: |-
+        Container {{$labels.container}} in Pod {{$labels.namespace}}/{{$labels.pod}} is CPU throttled.
+        Currently at: {{ .Value }}%
+        Threshold at: {{ printf "extended_monitoring_pod_threshold{threshold=\"container-throttling-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}%
+
+  - alert: KubernetesContainerCFSThrottling
+    expr: |
+      max by (namespace, pod, container) (
+        (
+          rate(container_cpu_cfs_throttled_periods_total[5m])
+          /
+          rate(container_cpu_cfs_periods_total[5m])
+        )
+        > on (namespace, pod) group_left
+          max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-throttling-critical"}) / 100
+      )
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: |-
+        Container {{$labels.container}} in Pod {{$labels.namespace}}/{{$labels.pod}} is CPU throttled.
+      description: |-
+        Container {{$labels.container}} in Pod {{$labels.namespace}}/{{$labels.pod}} is CPU throttled.
+        Currently at: {{ .Value }}%
+        Threshold at: {{ printf "extended_monitoring_pod_threshold{threshold=\"container-throttling-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}%

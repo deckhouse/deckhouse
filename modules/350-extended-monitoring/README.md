@@ -1,0 +1,102 @@
+Модуль extended-monitoring
+==========================
+
+Модуль экспортирует в Prometheus специальные аннотации Kubernetes объектов. Позволяет улучшить Prometheus правила, путём добавления порога срабатывания для алертов. Использование метрик, экспортируемых данным модулем, позволяет, например, заменить "магические" константы в правилах.
+
+Правила, добавляемые в Prometheus этим модулем, лежат [здесь](modules/350-extended-monitoring/prometheus-rules).
+
+До:
+```
+max by (namespace, pod, container) (
+  (
+    rate(container_cpu_cfs_throttled_periods_total[5m])
+    /
+    rate(container_cpu_cfs_periods_total[5m])
+  )
+  > 0.85
+)
+```
+
+После:
+```
+max by (namespace, pod, container) (
+  (
+    rate(container_cpu_cfs_throttled_periods_total[5m])
+    /
+    rate(container_cpu_cfs_periods_total[5m])
+  )
+  > on (namespace, pod) group_left
+    max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-throttling-critical"}) / 100
+)
+```
+
+Конфигурация
+------------
+
+## Что нужно настраивать?
+
+Чтобы включить экспортирование extended-monitoring метрик, нужно навесить на Namespace аннотацию `extended-monitoring.flant.com/enabled`. Сразу же после этого для всех поддерживаемых Kubernetes объектов в данном Namespace в Prometheus появятся default метрики + любые кастомные с префиксом `threshold.extended-monitoring.flant.com/`. Для ряда non-namespace Kubernetes объектов, описанных ниже, мониторинг и стандартные аннотации включаются автоматически.
+
+К Kubernetes объектам `threshold.extended-monitoring.flant.com/что-то своё` можно добавить любые другие аннотации с указанным значением. Пример: `kubectl annotate pod test monitoring.flant.com/disk-inodes-warning-threshold=30`.
+В таком случае, значение из аннотации заменит значение по-умолчанию.
+
+## Стандартные аннотации и поддерживаемые Kubernetes объекты
+
+Далее приведён список используемых в Prometheus Rules аннотаций, а также их стандартные значения. Внимание, все аннотации:
+1. Начинатся с префикса `threshold.extended-monitoring.flant.com/`;
+2. Имеют целочисленное значение в качестве value, за исключением Namespace аннотации `extended-monitoring.flant.com/enabled`, в ней value можно опустить. Обозначают порог срабатывания алерта.
+
+### Non-namespaced Kubernetes objects
+
+Не нуждаются в аннотации на Namespace. Включены по-умолчанию.
+
+#### Node
+
+| Annotation                              | Type          | Default value  |
+|-----------------------------------------|---------------|----------------|
+| disk-bytes-warning            | int (percent) | 85             |
+| disk-bytes-critical           | int (percent) | 95             |
+| disk-inodes-warning           | int (percent) | 85             |
+| disk-inodes-critical          | int (percent) | 95             |
+
+### Namespaced Kubernetes objects
+
+#### Pod
+
+| Annotation                              | Type          | Default value  |
+|-----------------------------------------|---------------|----------------|
+| disk-bytes-warning            | int (percent) | 85             |
+| disk-bytes-critical           | int (percent) | 95             |
+| disk-inodes-warning           | int (percent) | 85             |
+| disk-inodes-critical          | int (percent) | 95             |
+| container-throttling-warning  | int (percent) | 25             |
+| container-throttling-critical | int (percent) | 50             |
+
+#### Ingress
+
+| Annotation             | Type          | Default value |
+|------------------------|---------------|---------------|
+| 5xx-warning  | int (percent) | 10            |
+| 5xx-critical | int (percent) | 20            |
+
+#### Deployment
+
+| Annotation             | Type          | Default value |
+|------------------------|---------------|---------------|
+| replicas-not-ready  | int (count) | 0            |
+
+#### Statefulset
+
+| Annotation             | Type          | Default value |
+|------------------------|---------------|---------------|
+| replicas-not-ready  | int (count) | 0            |
+
+#### DaemonSet
+
+| Annotation             | Type          | Default value |
+|------------------------|---------------|---------------|
+| replicas-not-ready  | int (count) | 0            |
+
+### Development
+
+Информацию о разработке можно получить в [DEVELOPMENT.md](modules/350-extended-monitoring/DEVELOPMENT.md).

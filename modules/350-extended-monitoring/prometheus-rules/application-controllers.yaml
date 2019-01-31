@@ -1,0 +1,88 @@
+- name: kubernetes.extended-monitoring.application-controllers
+  rules:
+  - alert: KubernetesDeploymentReplicasUnavailable
+    expr: |
+      kube_deployment_status_replicas_unavailable
+      > on (namespace, deployment)
+      (
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+        + on (namespace, deployment)
+        kube_deployment_spec_strategy_rollingupdate_max_unavailable
+      )
+    for: 3m
+    labels:
+      severity: critical
+    annotations:
+      summary: |-
+        Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
+      description: |-
+        Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: KubernetesDeploymentStuck
+    expr: |
+      kube_deployment_status_replicas_unavailable
+      * on (namespace, deployment)
+      (
+        (
+          max by (namespace, name) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+        ) ^ 0
+      )
+      > 0
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: |-
+        One or more replicas is not Ready in Deployment {{$labels.namespace}}/{{$labels.deployment}} for more than 15 minutes.
+      description: |-
+        One or more replicas is not Ready in Deployment {{$labels.namespace}}/{{$labels.deployment}} for more than 15 minutes.
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: KubernetesDaemonSetReplicasUnavailable
+    expr: |
+      kube_daemonset_status_number_unavailable
+      > on (namespace, daemonset)
+      (
+        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
+      )
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: |-
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
+      description: |-
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: KubernetesStatefulSetReplicasUnavailable
+    expr: |
+      (
+        kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
+      )
+      > on (namespace, statefulset)
+      (
+        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
+      )
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: |-
+        Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+      description: |-
+        Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_statefulset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", statefulset=\"%s\"}" $labels.namespace $labels.statefulset | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
