@@ -1,0 +1,10 @@
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: production-medium
+value: 6000
+globalDefault: false
+description: >
+  The bulk of stateless workloads in production environment.
+  Those workloads are responsible for handling user requests.

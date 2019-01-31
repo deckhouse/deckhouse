@@ -1,0 +1,12 @@
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: production-low
+value: 4000
+globalDefault: false
+description: >
+  Non-essential production environment workloads
+  (e.g., crons, admin pages, other types of batch processing).
+  If a cron or another type of batch workload must not be interrupted,
+  then they should be classified as production-medium.

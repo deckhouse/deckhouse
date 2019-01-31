@@ -54,6 +54,9 @@ spec:
       - key: node-role/system
         effect: NoExecute
 {{- end }}
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
       containers:
       - name: trickster
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/trickster:{{ $.Values.global.modulesImages.tags.prometheus.trickster }}

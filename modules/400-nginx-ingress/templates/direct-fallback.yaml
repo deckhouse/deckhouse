@@ -68,6 +68,9 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 300
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
+      {{- end }}
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/direct-fallback:{{ $.Values.global.modulesImages.tags.nginxIngress.directFallback }}
         name: nginx

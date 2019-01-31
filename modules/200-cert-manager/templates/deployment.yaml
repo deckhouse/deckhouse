@@ -49,6 +49,9 @@ spec:
 {{- end }}
       serviceAccount: cert-manager
       serviceAccountName: cert-manager
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
       containers:
         - name: cert-manager
           image: "quay.io/jetstack/cert-manager-controller:v0.4.1"

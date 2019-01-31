@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
+    cluster_type=$(values::get --required global.discovery.clusterType)
+    # Подам kube-flannel необходимо задать максимальный priorityClass, так как без подов kube-flannel
+    # работа всего кластера может быть нарушена
+
+    # flannel есть только в Manual кластерах
+    [[ "$cluster_type" != "Manual" ]] && return 0
+
+    fltr='.'
+
+    # Необходимо проставить наивысший priorityClassName kube-flannel
+    fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+
+    # Применяем
+    kubectl::jq_patch kube-system ds/kube-flannel-ds "$fltr"
+  fi
+}
+
+hook::run $@
+

@@ -53,6 +53,9 @@ spec:
       - key: node-role/system
         effect: NoExecute
 {{- end }}
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
       containers:
       - name: dashboard
         image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.8.3

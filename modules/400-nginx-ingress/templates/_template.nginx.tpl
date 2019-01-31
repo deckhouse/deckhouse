@@ -54,6 +54,9 @@ spec:
       terminationGracePeriodSeconds: 300
       imagePullSecrets:
       - name: registry
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
+      {{- end }}
       containers:
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/controller:{{ .Values.global.modulesImages.tags.nginxIngress.controller }}
         name: nginx
