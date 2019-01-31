@@ -1,3 +1,20 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: kube-state-metrics
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kube-state-metrics
+spec:
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:

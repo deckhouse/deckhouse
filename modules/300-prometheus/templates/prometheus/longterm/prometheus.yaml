@@ -1,4 +1,22 @@
 {{- if .Values.prometheus.longtermRetentionDays }}
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: longterm
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+      prometheus: longterm
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:

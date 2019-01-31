@@ -1,0 +1,71 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-recommender
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: vpa-recommender
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-recommender
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: vpa-recommender
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vpa-recommender
+    spec:
+      serviceAccountName: vpa-recommender
+      imagePullSecrets:
+      - name: vertical-pod-autoscaler-antiopa-registry
+      containers:
+      - name: recommender
+        image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/recommender:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.recommender }}
+        imagePullPolicy: Always
+        args:
+        - /recommender
+        - --address=:8942
+        - --checkpoints-gc-interval=10m0s
+        - --checkpoints-timeout=1m0s
+        - --kube-api-burst=10
+        - --kube-api-qps=5
+        - --min-checkpoints=10
+        - --pod-recommendation-min-cpu-millicores=25
+        - --pod-recommendation-min-memory-mb=100
+        - --prometheus-address=http://trickster.kube-prometheus:8000/main/
+        - --recommendation-margin-fraction=0.15
+        - --recommender-interval=1m0s
+        - --stderrthreshold=0
+        - --v=4
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1000Mi
+          requests:
+            cpu: 50m
+            memory: 200Mi
+        ports:
+        - containerPort: 8080

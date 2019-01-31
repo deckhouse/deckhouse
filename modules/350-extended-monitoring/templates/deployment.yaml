@@ -1,3 +1,21 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: extended-monitoring
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: extended-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: extended-monitoring
+      module: {{ $.Chart.Name }}
+  updatePolicy:
+    updateMode: "Off"
+---
 kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:

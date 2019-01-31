@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: vpa-tls-certs
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+data:
+  caCert.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.caCert | b64enc }}
+  caKey.pem:  {{ printf "%s\n" .Values.verticalPodAutoscaler.caKey | b64enc }}
+  serverCert.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.serverCert | b64enc }}
+  serverKey.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.serverKey | b64enc }}

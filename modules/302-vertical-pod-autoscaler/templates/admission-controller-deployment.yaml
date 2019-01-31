@@ -1,0 +1,90 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-admission-controller
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: vpa-admission-controller
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-admission-controller
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: vpa-admission-controller
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vpa-admission-controller
+    spec:
+      serviceAccountName: vpa-admission-controller
+      imagePullSecrets:
+      - name: vertical-pod-autoscaler-antiopa-registry
+      containers:
+      - name: admission-controller
+        image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/admission-controller:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.admissionController }}
+        imagePullPolicy: Always
+        args:
+        - /admission-controller
+        - --address=:8944
+        - --certs-dir=/etc/tls-certs
+        - --stderrthreshold=0
+        - --v=4
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+          - name: tls-certs
+            mountPath: "/etc/tls-certs"
+            readOnly: true
+        resources:
+          limits:
+            cpu: 200m
+            memory: 300Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        ports:
+        - containerPort: 8000
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: vpa-tls-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpa-webhook
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  ports:
+    - port: 443
+      targetPort: 8000
+  selector:
+    app: vpa-admission-controller

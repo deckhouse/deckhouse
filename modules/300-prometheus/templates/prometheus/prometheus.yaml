@@ -1,3 +1,21 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: prometheus
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+      prometheus: main
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:

@@ -23,6 +23,22 @@ spec:
   selector:
     app: nginx-for-direct-fallback
 ---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: direct-fallback
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: direct-fallback
+spec:
+  selector:
+    matchLabels:
+      app: direct-fallback
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:

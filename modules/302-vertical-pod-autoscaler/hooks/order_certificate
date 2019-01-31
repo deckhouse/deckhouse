@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=5 crontab="13 4 * * *"
+}
+
+function __main__() {
+  if ! kubectl -n kube-system get secret/vpa-tls-certs > /dev/null 2> /dev/null ; then
+    # Создаем root CA для vertical pod autoscaler
+    ca=$(jo CN=vpa_webhook key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca - )
+
+    # Создаем конфиг для cfssl gencert
+    config='{"signing":{"default":{"expiry":"87600h","usages":["signing","serverAuth","clientAuth"]}}}'
+
+    # Создаем и подписываем сертификат для admission controller
+    cert=$(jo CN=vpa-webhook hosts="$(jo -a vpa-webhook.kube-system vpa-webhook.kube-system.svc)" key="$(jo algo=ecdsa size=256)"  | cfssl gencert -ca=<(echo "$ca" | jq .cert -r) -ca-key=<(echo "$ca" | jq .key -r) -config=<(echo "$config") -)
+
+    caCert=$(echo $ca | jq .cert -r)
+    caKey=$(echo $ca | jq .key -r)
+    serverCert=$(echo $cert | jq .cert -r)
+    serverKey=$(echo $cert | jq .key -r)
+  else
+    cert=$(kubectl -n kube-system get secret/vpa-tls-certs -o json)
+    caCert=$(echo $cert | jq '.data."caCert.pem"' -r | base64 -d)
+    caKey=$(echo $cert | jq '.data."caKey.pem"' -r | base64 -d)
+    serverCert=$(echo $cert | jq '.data."serverCert.pem"' -r | base64 -d)
+    serverKey=$(echo $cert | jq '.data."serverKey.pem"' -r | base64 -d)
+  fi
+
+  values::set verticalPodAutoscaler.caCert "$caCert"
+  values::set verticalPodAutoscaler.caKey "$caKey"
+  values::set verticalPodAutoscaler.serverCert "$serverCert"
+  values::set verticalPodAutoscaler.serverKey "$serverKey"
+}
+
+hook::run $@
+
