@@ -1,4 +1,22 @@
 {{- if .Values.dashboard.gitlabBaseUrl }}
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: oauth2-proxy
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oauth2-proxy
+spec:
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+      module: {{ $.Chart.Name }}
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:

@@ -1,5 +1,21 @@
 {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
 ---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: default-http-backend
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: default-http-backend
+spec:
+  selector:
+    matchLabels:
+      app: default-http-backend
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:

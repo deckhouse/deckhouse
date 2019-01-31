@@ -1,6 +1,24 @@
 {{- if hasKey .Values.prometheus "madisonAuthKey" }}
   {{- range $.Values.prometheus.madisonBackends }}
 ---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: madison-proxy-{{ . | sha256sum }}
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: madison-proxy
+    madison-backend: {{ . }}
+spec:
+  selector:
+    matchLabels:
+      app: madison-proxy
+      madison-backend: {{ . }}
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:

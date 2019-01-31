@@ -4,6 +4,22 @@
   {{- $hostNetwork := (.hostNetwork | default false) }}
   {{- with .context }}
 ---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ $name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:

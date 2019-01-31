@@ -1,0 +1,65 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: vpa-updater
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vpa-updater
+    spec:
+      serviceAccountName: vpa-updater
+      imagePullSecrets:
+      - name: vertical-pod-autoscaler-antiopa-registry
+      containers:
+      - name: updater
+        image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/updater:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.updater }}
+        imagePullPolicy: Always
+        args:
+        - /updater
+        - --address=:8943
+        - --evict-after-oom-treshold=10m0s
+        - --eviction-tolerance=0.5
+        - --min-replicas=1
+        - --stderrthreshold=0
+        - --updater-interval=1m0s
+        - --v=4
+        resources:
+          limits:
+            cpu: 200m
+            memory: 300Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        ports:
+        - containerPort: 8080

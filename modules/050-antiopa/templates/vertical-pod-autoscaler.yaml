@@ -1,0 +1,33 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: antiopa
+  namespace: antiopa
+  labels:
+    heritage: antiopa
+    module: antiopa
+    app: antiopa
+spec:
+  selector:
+    matchLabels:
+      service: antiopa
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: tiller-deploy
+  namespace: antiopa
+  labels:
+    heritage: antiopa
+    module: antiopa
+    app: helm
+spec:
+  selector:
+    matchLabels:
+      app: helm
+      name: tiller
+  updatePolicy:
+    updateMode: "Off"

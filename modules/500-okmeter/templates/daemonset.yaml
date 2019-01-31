@@ -1,3 +1,20 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: okmeter
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: okmeter
+spec:
+  selector:
+    matchLabels:
+      name: okmeter
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: apps/v1beta2
 kind: DaemonSet
 metadata:

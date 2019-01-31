@@ -1,4 +1,21 @@
 {{- if not (eq .Values.global.discovery.clusterType "ACS") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: kube-prometheus-kube-master-proxy
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kube-prometheus-kube-master-proxy
+spec:
+  selector:
+    matchLabels:
+      app: kube-prometheus-kube-master-proxy
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:

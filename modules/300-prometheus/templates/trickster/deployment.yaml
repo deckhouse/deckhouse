@@ -1,3 +1,20 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: trickster
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: trickster
+spec:
+  selector:
+    matchLabels:
+      app: trickster
+  updatePolicy:
+    updateMode: "Off"
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
