@@ -56,6 +56,9 @@ spec:
       serviceAccountName: prometheus-metrics-adapter
       imagePullSecrets:
       - name: antiopa-registry
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
       containers:
       - name: prometheus-metrics-adapter
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/k8s-prometheus-adapter:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}

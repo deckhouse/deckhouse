@@ -37,6 +37,9 @@ spec:
         app: kube-prometheus-kube-master-proxy
     spec:
       hostNetwork: true
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
       containers:
   {{- if eq .Values.global.discovery.clusterType "Manual" }}
       - name: prometheus-auth-proxy-for-kube-scheduler

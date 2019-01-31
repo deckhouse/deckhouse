@@ -64,6 +64,9 @@ spec:
   - key: node-role/system
     effect: NoExecute
   {{- end }}
+  {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+  priorityClassName: cluster-low
+  {{- end }}
   {{- $storageClassName := .Values.prometheus.longtermStorageClassName | default .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
   {{- if $storageClassName }}
   storage:

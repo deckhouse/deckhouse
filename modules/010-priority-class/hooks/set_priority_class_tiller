@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; the
+    # Необходимо проставить priorityClassName антиопе и tiller'у используемого антиопой
+    fltr='.'
+    fltr=$fltr' | .spec.template.spec.priorityClassName = "deployment-machinery"'
+    kubectl::jq_patch kube-system deploy/tiller-deploy "$fltr"
+  fi
+}
+
+hook::run $@
+

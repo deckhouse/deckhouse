@@ -40,6 +40,9 @@ spec:
     spec:
       hostNetwork: true
       hostPID: true
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
       containers:
       - image: prom/node-exporter:v0.17.0
         args:

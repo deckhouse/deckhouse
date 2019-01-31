@@ -37,6 +37,9 @@ spec:
       hostNetwork: true
       tolerations:
       - operator: Exists
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
       containers:
       - name: okagent
         image: okmeter/okagent:latest

@@ -32,10 +32,10 @@ spec:
     metadata:
       labels:
         app: heapster
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
-      priorityClassName: system-cluster-critical
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
 {{- if and (hasKey .Values.heapster "nodeSelector") (.Values.heapster.nodeSelector) }}
       nodeSelector:
 {{ .Values.heapster.nodeSelector | toYaml | trim | indent 8 }}

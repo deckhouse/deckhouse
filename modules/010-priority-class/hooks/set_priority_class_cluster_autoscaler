@@ -1,0 +1,32 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
+    cluster_type=$(values::get --required global.discovery.clusterType)
+    # Поду cluster-autoscaler необходимо задать максимальный priorityClass, так как без cluster-autoscaler
+    # мы не сможем скейлить кластер
+
+    # В Manual кластерах нет cluster-autoscaler
+    [[ "$cluster_type" == "Manual" ]] && return 0
+
+    # Убедимся, что не забыли поставить cluster-autoscaler
+    if kubectl -n kube-system get deploy cluster-autoscaler > /dev/null 2> /dev/null ; then
+      fltr='.'
+      # Необходимо проставить наивысший priorityClassName cluster-autoscaler
+      fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+
+      # Применяем
+      kubectl::jq_patch kube-system deploy/cluster-autoscaler "$fltr"
+    fi
+  fi
+}
+
+hook::run $@
+

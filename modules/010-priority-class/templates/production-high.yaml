@@ -1,0 +1,10 @@
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: production-high
+value: 9000
+globalDefault: false
+description: >
+  Stateful workloads in production environment whose unavailability
+  will directly impact production services or will lead to data loss.

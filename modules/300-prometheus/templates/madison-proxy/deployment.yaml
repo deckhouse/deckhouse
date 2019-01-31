@@ -67,6 +67,9 @@ spec:
                 matchLabels:
                   app: madison-proxy
               topologyKey: kubernetes.io/hostname
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
       containers:
       - name: nginx
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/madison-proxy:{{ $.Values.global.modulesImages.tags.prometheus.madisonProxy }}

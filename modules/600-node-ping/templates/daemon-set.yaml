@@ -38,6 +38,9 @@ spec:
       tolerations:
       - operator: "Exists"
       serviceAccountName: node-ping
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
       containers:
       - resources:
           requests:

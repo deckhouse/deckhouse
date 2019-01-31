@@ -55,6 +55,9 @@ spec:
   {{- end }}
       imagePullSecrets:
       - name: dashboard-oauth2-proxy-antiopa-registry
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
       containers:
       - args:
         - --provider=gitlab

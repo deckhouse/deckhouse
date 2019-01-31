@@ -50,6 +50,9 @@ spec:
       - key: node-role/system
         effect: NoExecute
 {{- end }}
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
       containers:
       - name: prometheus-auth-proxy-main
         image: flant/kube-prometheus-auth-proxy:v0.1.0
