@@ -28,6 +28,7 @@ metadata:
 spec:
   replicas: 1
   retention: {{ .Values.prometheus.retentionDays }}d
+  retentionSize: {{ .Values.prometheus.retentionGigabytes }}GB
   version: v2.6.0
   scrapeInterval: 30s
   evaluationInterval: 30s
@@ -37,6 +38,9 @@ spec:
       prometheus: main
   secrets:
   - prometheus-scraper-cert
+  rules:
+    alert:
+      resendDelay: 29s
   ruleSelector:
     matchLabels:
       prometheus: main
