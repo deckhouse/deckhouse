@@ -18,3 +18,18 @@
       description: device {{$labels.device}} on node {{$labels.node}} is running
         out of inodes within the next 2 hours (mounted at {{$labels.mountpoint}})
       summary: Node disk is running out of inodes within 2 hours
+  - alert: NodePingPacketLoss
+    expr: >-
+      (
+        sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))
+        -
+        sum by (destination_node) (increase(kube_node_ping_packets_received_total[5m]))
+      )
+      /
+      sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))  > 0.05
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
+      summary: Ping loss more than 5%
