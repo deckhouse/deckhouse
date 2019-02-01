@@ -41,7 +41,7 @@
     expr: min(prometheus_notifications_alertmanagers_discovered) BY (namespace, pod) < 1
     for: 10m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: Prometheus {{ $labels.namespace }}/{{ $labels.pod }} is not connected
         to any Alertmanagers
@@ -68,7 +68,7 @@
     expr: max(prometheus_tsdb_wal_corruptions_total) BY (namespace, pod) > 0
     for: 4h
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: 'Prometheus {{ $labels.namespace }}/{{ $labels.pod }} has a corrupted write-ahead
         log (WAL).'
@@ -77,7 +77,7 @@
     expr: min(rate(prometheus_tsdb_head_samples_appended_total[5m])) by (namespace, pod) <= 0
     for: 10m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: "Prometheus {{ $labels.namespace }}/{{ $labels.pod }} isn't ingesting samples."
       summary: "Prometheus isn't ingesting samples"

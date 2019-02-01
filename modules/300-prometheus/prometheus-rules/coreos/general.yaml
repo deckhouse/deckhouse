@@ -4,7 +4,7 @@
     expr: 100 * (count(up == 0) BY (job) / count(up) BY (job)) > 10
     for: 10m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: '{{ $value }}% of {{ $labels.job }} targets are down.'
       summary: Targets are down

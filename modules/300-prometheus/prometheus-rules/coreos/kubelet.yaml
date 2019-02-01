@@ -4,7 +4,7 @@
     expr: min(kube_node_status_condition{condition="Ready",status="true"}) BY (node) == 0
     for: 1h
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: The Kubelet on {{ $labels.node }} has not checked in with the API,
         or has set itself to NotReady, for more than an hour
@@ -23,7 +23,7 @@
     expr: count(up{job="kubelet"} == 0) / count(up{job="kubelet"}) * 100 > 3
     for: 1h
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: Prometheus failed to scrape {{ $value }}% of kubelets.
       summary: Prometheus failed to scrape
@@ -41,7 +41,7 @@
     expr: kubelet_running_pod_count > on(node) kube_node_status_capacity_pods * 0.9
     for: 10m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: Kubelet {{ $labels.node }} is running {{$value}} pods, close
         to the limit of {{ print "kube_node_status_capacity_pods{node='" $labels.node "'}" | query | first | value }}
