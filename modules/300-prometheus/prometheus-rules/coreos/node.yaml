@@ -21,17 +21,8 @@
     expr: absent(up{job="node-exporter"} == 1)
     for: 10m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       description: Prometheus could not scrape a node-exporter for more than 10m,
         or node-exporters have disappeared from discovery
       summary: Prometheus could not scrape a node-exporter
-  - alert: NodeDiskRunningFull
-    expr: max(predict_linear(node_filesystem_free[30m], 3600 * 2)) BY (node, device, mountpoint, fstype) < 0
-    for: 10m
-    labels:
-      severity: critical
-    annotations:
-      description: device {{$labels.device}} on node {{$labels.node}} is running
-        full within the next 2 hours (mounted at {{$labels.mountpoint}})
-      summary: Node disk is running full within 2 hours
