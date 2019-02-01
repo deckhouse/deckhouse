@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vpa-exporter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: vpa-exporter
+  endpoints:
+  - port: http-metrics
+    honorLabels: true
+    relabelings:
+    - regex: endpoint|namespace|service
+      action: labeldrop
+    - sourceLabels: ["pod"]
+      targetLabel: pod
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: vertical-pod-autoscaler
+      prometheus-target: vpa-exporter
+  namespaceSelector:
+    matchNames:
+    - kube-system

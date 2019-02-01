@@ -1,0 +1,72 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-exporter
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: vpa-exporter
+spec:
+  selector:
+    matchLabels:
+      app: vpa-exporter
+      module: {{ $.Chart.Name }}
+  updatePolicy:
+    updateMode: "Off"
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: vpa-exporter
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: vpa-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      module: {{ $.Chart.Name }}
+      app: vpa-exporter
+  template:
+    metadata:
+      labels:
+        module: {{ $.Chart.Name }}
+        app: vpa-exporter
+    spec:
+{{- if and (hasKey .Values.verticalPodAutoscaler "nodeSelector") (.Values.verticalPodAutoscaler.nodeSelector) }}
+      nodeSelector:
+{{ .Values.verticalPodAutoscaler.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.verticalPodAutoscaler "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.verticalPodAutoscaler "tolerations") (.Values.verticalPodAutoscaler.tolerations) }}
+      tolerations:
+{{ .Values.verticalPodAutoscaler.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.verticalPodAutoscaler "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      imagePullSecrets:
+      - name: antiopa-registry
+      containers:
+      - name: vpa-exporter
+        image: {{ .Values.global.modulesImages.registry }}/vertical-pod-autoscaler/exporter:{{ .Values.global.modulesImages.tags.verticalPodAutoscaler.exporter }}
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "32Mi"
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        args:
+        - "/app/vpa-exporter.py"
+        env:
+        - name: "PYTHONUNBUFFERED"
+          value: "1"
+      serviceAccountName: vpa-exporter

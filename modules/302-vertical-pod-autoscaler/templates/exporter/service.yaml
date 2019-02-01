@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus-target: vpa-exporter
+  name: vpa-exporter
+  namespace: kube-system
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+  selector:
+    module: {{ $.Chart.Name }}
+    app: vpa-exporter
