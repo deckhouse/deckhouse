@@ -61,7 +61,8 @@ def compute_results(results):
     for match in matches:
         ip = match.group(1)
         ping_results = match.group(2)
-
+        if "duplicate" in ping_results:
+            continue
         splitted = ping_results.split(" ")
         if len(splitted) != 30:
             raise ValueError("ping returned wrong number of results: \"{}\"".format(splitted))
