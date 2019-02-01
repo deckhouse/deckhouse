@@ -68,7 +68,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 300
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-high
       {{- end }}
       containers:
