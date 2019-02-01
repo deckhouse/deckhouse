@@ -41,12 +41,18 @@ class GetHandler(BaseHTTPRequestHandler):
 # TYPE vpa_recommendation gauge\n"""
 
         for vpa in vpas:
-            vpa_label_selector = vpa["spec"]["selector"]["matchLabels"]
+            try:
+                vpa_label_selector = vpa["spec"]["selector"]["matchLabels"]
+                vpa_container_recommendations = vpa["status"]["recommendation"]["containerRecommendations"]
+            except KeyError as e:
+                print('One of required fields on a VPA object {}/{} does not exist: {}'.format(
+                    vpa["metadata"]["namespace"], vpa["metadata"]["name"], e))
+                continue
             pods_in_ns = (pod_ns for pod_ns in pods[vpa["metadata"]["namespace"]])
             matching_pods = (matching_pod for matching_pod in pods_in_ns if
                              matching_pod.metadata.labels.items() >= vpa_label_selector.items())
             for pod in matching_pods:
-                for container in vpa["status"]["recommendation"]["containerRecommendations"]:
+                for container in vpa_container_recommendations:
                     container_name = container["containerName"]
                     for recommendation_type, recommendation_value in container.items():
                         if recommendation_type != "containerName":
