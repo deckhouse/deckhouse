@@ -53,7 +53,7 @@ spec:
         effect: NoExecute
 {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: vertical-pod-autoscaler-antiopa-registry
       containers:
       - name: vpa-exporter
         image: {{ .Values.global.modulesImages.registry }}/vertical-pod-autoscaler/exporter:{{ .Values.global.modulesImages.tags.verticalPodAutoscaler.exporter }}
