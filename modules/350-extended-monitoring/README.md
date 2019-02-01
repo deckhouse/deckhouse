@@ -42,9 +42,11 @@ max by (namespace, pod, container) (
 
 ## Стандартные аннотации и поддерживаемые Kubernetes объекты
 
-Далее приведён список используемых в Prometheus Rules аннотаций, а также их стандартные значения. Внимание, все аннотации:
-1. Начинатся с префикса `threshold.extended-monitoring.flant.com/`;
-2. Имеют целочисленное значение в качестве value, за исключением Namespace аннотации `extended-monitoring.flant.com/enabled`, в ней value можно опустить. Обозначают порог срабатывания алерта.
+Далее приведён список используемых в Prometheus Rules аннотаций, а также их стандартные значения. 
+
+**Внимание!** Все аннотации:
+1. Начинаются с префикса `threshold.extended-monitoring.flant.com/`;
+2. Имеют целочисленное значение в качестве value, за исключением Namespace аннотации `extended-monitoring.flant.com/enabled` (в которой value можно опустить). Указанное в value значение устанавливает порог срабатывания алерта.
 
 ### Non-namespaced Kubernetes objects
 
