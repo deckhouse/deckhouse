@@ -12,13 +12,507 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 22,
-  "iteration": 1545567727809,
+  "id": 49,
+  "iteration": 1550094125327,
   "links": [],
   "panels": [
+    {
+      "columns": [],
+      "datasource": "$ds_prometheus",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 141,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Container Name",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "container",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #A",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
+        },
+        {
+          "alias": "VPA Type",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #B",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short",
+          "valueMaps": [
+            {
+              "text": "Off",
+              "value": "0"
+            },
+            {
+              "text": "Initial",
+              "value": "1"
+            },
+            {
+              "text": "Auto",
+              "value": "2"
+            },
+            {
+              "text": "Recreate",
+              "value": "3"
+            },
+            {
+              "text": "-",
+              "value": "5"
+            }
+          ]
+        },
+        {
+          "alias": "CPU",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #C",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Req CPU",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #D",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "VPA CPU",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #E",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Over-req CPU",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #F",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Under-req CPU",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #G",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Throttling cores",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #H",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #I",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "Req Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #J",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "VPA Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #K",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "Over-req Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #L",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "Under-req Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #M",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "RX Network (Pod)",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #N",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bps"
+        },
+        {
+          "alias": "TX Network (Pod)",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #O",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bps"
+        },
+        {
+          "alias": "Read IOPS",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #P",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Write IOPS",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #Q",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "expr": "kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Container Name",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", update_policy=\"Off\"})) * 0\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", update_policy=\"Recreate\"})) * 0 + 3\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}) * 0 + 5",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "VPA Type",
+          "refId": "B"
+        },
+        {
+          "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "CPU",
+          "refId": "C"
+        },
+        {
+          "expr": "sum by (container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Req CPU",
+          "refId": "D"
+        },
+        {
+          "expr": "sum by (container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range]))\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "VPA CPU",
+          "refId": "E"
+        },
+        {
+          "expr": "(\n  sum by (container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  -\n  sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Over-req CPU",
+          "refId": "F"
+        },
+        {
+          "expr": "(\n  (\n    sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n    -\n    sum by (container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  ) or sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Under-req CPU",
+          "refId": "G"
+        },
+        {
+          "expr": "(\n  (\n    sum by (container) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range])) \n    / \n    sum by (container) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  )\n  * sum by (container) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n)\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Thottling cores",
+          "refId": "H"
+        },
+        {
+          "expr": "sum by (container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Memory",
+          "refId": "I"
+        },
+        {
+          "expr": "sum by (container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Req Memory",
+          "refId": "J"
+        },
+        {
+          "expr": "sum by (container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range]))\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "VPA Memory",
+          "refId": "K"
+        },
+        {
+          "expr": "(\n  sum by (container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  -\n  sum by (container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Over-req Memory",
+          "refId": "L"
+        },
+        {
+          "expr": "(\n  (\n    sum by (container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n    -\n    sum by (container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  ) or sum by (container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Under-req Memory",
+          "refId": "M"
+        },
+        {
+          "expr": "(\n  kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}\n  * on (pod) group_left() \n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "RX Network",
+          "refId": "N"
+        },
+        {
+          "expr": "(\n  kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}\n  * on (pod) group_left() \n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "TX Network",
+          "refId": "O"
+        },
+        {
+          "expr": "sum by(container) (rate(container_fs_reads_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Read IOPS",
+          "refId": "P"
+        },
+        {
+          "expr": "sum by(container) (rate(container_fs_writes_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Write IOPS",
+          "refId": "Q"
+        }
+      ],
+      "title": "Containers",
+      "transform": "table",
+      "type": "table"
+    },
     {
       "cards": {
         "cardHSpacing": 2,
@@ -65,7 +559,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 9
       },
       "highlightCards": true,
       "id": 47,
@@ -103,12 +597,6 @@
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "D"
-        },
-        {
-          "expr": "",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "E"
         }
       ],
       "title": "Status",
@@ -136,7 +624,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 17
       },
       "id": 55,
       "panels": [
@@ -370,7 +858,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 18
       },
       "id": 14,
       "panels": [],
@@ -388,13 +876,13 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 19
       },
       "id": 2,
       "legend": {
         "alignAsTable": true,
         "avg": true,
-        "current": false,
+        "current": true,
         "max": false,
         "min": false,
         "rightSide": true,
@@ -492,7 +980,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 19
       },
       "id": 3,
       "legend": {
@@ -606,13 +1094,223 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько еще CPU необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "id": 76,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum by (namespace, pod, container)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval_rv]))\n    ) > 0\n  )",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "C"
+        },
+        {
+          "expr": "sum\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval_rv]))\n    ) > 0\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Over-requested by container",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "cores",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько еще CPU необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "id": 123,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum by (namespace, pod, container)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval_rv]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n      ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval_rv]))\n    ) > 0\n  )",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "C"
+        },
+        {
+          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval_rv]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n      ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval_rv]))\n    ) > 0\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Over-requested by container",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "cores",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
       "description": "Если на графике нет данных, значит не заданы ресурсы для контейнеров",
       "fill": 1,
       "gridPos": {
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 36
       },
       "id": 36,
       "legend": {
@@ -711,7 +1409,430 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 42
+      },
+      "id": 95,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 0,
+            "y": 43
+          },
+          "id": 102,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "container",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "prometheus",
+              "value": "prometheus"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\"}[$__interval]) )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", recommendation_type=\"upperBound\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 8,
+            "y": 43
+          },
+          "id": 142,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1550094125327,
+          "repeatPanelId": 102,
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "prometheus-config-reloader",
+              "value": "prometheus-config-reloader"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\"}[$__interval]) )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", recommendation_type=\"upperBound\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 16,
+            "y": 43
+          },
+          "id": 143,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1550094125327,
+          "repeatPanelId": 102,
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "rules-configmap-reloader",
+              "value": "rules-configmap-reloader"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\"}[$__interval]) )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", recommendation_type=\"upperBound\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "Containers CPU",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
       },
       "id": 5,
       "panels": [
@@ -725,9 +1846,9 @@
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 24,
+            "w": 8,
             "x": 0,
-            "y": 26
+            "y": 44
           },
           "id": 7,
           "legend": {
@@ -754,8 +1875,264 @@
           "scopedVars": {
             "container": {
               "selected": false,
-              "text": "antiopa",
-              "value": "antiopa"
+              "text": "prometheus",
+              "value": "prometheus"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            },
+            {
+              "alias": "System",
+              "color": "#e24d42"
+            },
+            {
+              "alias": "User",
+              "color": "#1f78c1"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum by(container) (rate(container_cpu_system_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "System",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by(container) (rate(container_cpu_user_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "User",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "fill": 1,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 8,
+            "y": 44
+          },
+          "id": 144,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1550094125327,
+          "repeatPanelId": 7,
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "prometheus-config-reloader",
+              "value": "prometheus-config-reloader"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            },
+            {
+              "alias": "System",
+              "color": "#e24d42"
+            },
+            {
+              "alias": "User",
+              "color": "#1f78c1"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum by(container) (rate(container_cpu_system_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "System",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by(container) (rate(container_cpu_user_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "User",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "fill": 1,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 16,
+            "y": 44
+          },
+          "id": 145,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1550094125327,
+          "repeatPanelId": 7,
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "rules-configmap-reloader",
+              "value": "rules-configmap-reloader"
             }
           },
           "seriesOverrides": [
@@ -843,7 +2220,7 @@
         }
       ],
       "repeat": null,
-      "title": "Containers CPU",
+      "title": "Containers CPU by state",
       "type": "row"
     },
     {
@@ -852,7 +2229,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 44
       },
       "id": 12,
       "panels": [],
@@ -870,7 +2247,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 45
       },
       "id": 6,
       "legend": {
@@ -881,6 +2258,8 @@
         "min": false,
         "rightSide": false,
         "show": false,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": false
       },
@@ -892,18 +2271,31 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(container) (container_memory_working_set_bytes{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"})",
+          "expr": "sum by(container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "A"
+        },
+        {
+          "expr": "sum (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -959,7 +2351,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 45
       },
       "id": 8,
       "legend": {
@@ -970,6 +2362,8 @@
         "min": false,
         "rightSide": false,
         "show": false,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": false
       },
@@ -996,7 +2390,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(pod) (container_memory_rss{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"})",
+          "expr": "sum by(pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1004,21 +2398,21 @@
           "refId": "A"
         },
         {
-          "expr": "sum by(pod) (container_memory_cache{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"})",
+          "expr": "sum by(pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Cache",
           "refId": "B"
         },
         {
-          "expr": "sum by(pod) (container_memory_swap{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"})",
+          "expr": "sum by(pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Swap",
           "refId": "C"
         },
         {
-          "expr": "sum by(pod) (container_memory_working_set_bytes{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"})",
+          "expr": "sum by(pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Working set bytes",
@@ -1049,7 +2443,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1067,33 +2461,20 @@
       }
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 36
-      },
-      "id": 16,
-      "panels": [],
-      "title": "Containers Memory",
-      "type": "row"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+      "description": "На данном графике отображается запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
       "fill": 1,
       "gridPos": {
-        "h": 9,
-        "w": 24,
+        "h": 8,
+        "w": 12,
         "x": 0,
-        "y": 37
+        "y": 54
       },
-      "id": 19,
+      "id": 106,
       "legend": {
         "alignAsTable": false,
         "avg": false,
@@ -1102,46 +2483,22 @@
         "min": false,
         "rightSide": false,
         "show": false,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": false
       },
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "repeat": "container",
-      "repeatDirection": "h",
-      "scopedVars": {
-        "container": {
-          "selected": false,
-          "text": "sidekiq",
-          "value": "sidekiq"
-        }
-      },
       "seriesOverrides": [
         {
-          "alias": "Working set bytes",
-          "color": "rgb(0, 0, 0)",
-          "dashes": true,
-          "fill": 0,
-          "linewidth": 2,
-          "stack": false
-        },
-        {
-          "alias": "Limits",
-          "color": "#e24d42",
-          "dashes": true,
-          "fill": 0,
-          "lines": false,
-          "linewidth": 2,
-          "stack": false
-        },
-        {
-          "alias": "Requests",
+          "alias": "Total",
           "lines": false,
           "stack": false
         }
@@ -1151,55 +2508,26 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(container) (container_memory_rss{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"})",
+          "expr": "sum by (container)\n  (\n    (\n      sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n      -\n      sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", container!=\"POD\"}[$__interval]))\n    ) > 0\n  )",
           "format": "time_series",
-          "instant": false,
+          "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "RSS",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by(container) (container_memory_cache{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"})",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "Cache",
-          "refId": "B"
-        },
-        {
-          "expr": "sum by(container) (container_memory_swap{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Swap",
+          "legendFormat": "{{ container }}",
           "refId": "C"
         },
         {
-          "expr": "sum by(container) (container_memory_working_set_bytes{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"})",
+          "expr": "sum\n  (\n    (\n      sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n      -\n      sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", container!=\"POD\"}[$__interval]))\n    ) > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Working set bytes",
-          "refId": "D"
-        },
-        {
-          "expr": "sum by(container) (kube_pod_container_resource_limits_memory_bytes{pod=\"$pod\", container=\"$container\", namespace=\"$namespace\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Limits",
-          "refId": "E"
-        },
-        {
-          "expr": "sum by(container) (kube_pod_container_resource_requests_memory_bytes{pod=\"$pod\", container=\"$container\", namespace=\"$namespace\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Requests",
-          "refId": "F"
+          "legendFormat": "Total",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "$container",
+      "title": "Over-requested by container",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1215,15 +2543,17 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "bytes",
-          "label": null,
+          "label": "",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
-          "format": "short",
+          "decimals": null,
+          "format": "bytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1237,12 +2567,673 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "id": 136,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (container)\n  (\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", container!=\"POD\"}[$__interval]))\n      ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", container!=\"POD\"}[$__interval]))\n    ) > 0\n  )",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "C"
+        },
+        {
+          "expr": "sum\n  (\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__interval]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", container!=\"POD\"}[$__interval]))\n      ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\", container!=\"POD\"}[$__interval]))\n    ) > 0\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Under-requested by container",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "bytes",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 16,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "fill": 1,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 0,
+            "y": 63
+          },
+          "id": 19,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "container",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "prometheus",
+              "value": "prometheus"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Working set bytes",
+              "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_rss{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "RSS",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_cache{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Cache",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_swap{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Swap",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Working set bytes",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "F"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "G"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "fill": 1,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 8,
+            "y": 63
+          },
+          "id": 146,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1550094125327,
+          "repeatPanelId": 19,
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "prometheus-config-reloader",
+              "value": "prometheus-config-reloader"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Working set bytes",
+              "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_rss{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "RSS",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_cache{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Cache",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_swap{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Swap",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Working set bytes",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "F"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "G"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "fill": 1,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 16,
+            "y": 63
+          },
+          "id": 147,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1550094125327,
+          "repeatPanelId": 19,
+          "scopedVars": {
+            "container": {
+              "selected": false,
+              "text": "rules-configmap-reloader",
+              "value": "rules-configmap-reloader"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Working set bytes",
+              "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_rss{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "RSS",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_cache{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Cache",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_swap{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Swap",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Working set bytes",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "F"
+            },
+            {
+              "expr": "sum by(container) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", pod=\"$pod\", container=\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "G"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$container",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "Containers Memory",
+      "type": "row"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 63
       },
       "id": 25,
       "panels": [],
@@ -1260,7 +3251,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 64
       },
       "id": 27,
       "legend": {
@@ -1349,7 +3340,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 64
       },
       "id": 62,
       "legend": {
@@ -1433,7 +3424,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 72
+        "y": 71
       },
       "id": 30,
       "panels": [],
@@ -1451,7 +3442,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 73
+        "y": 72
       },
       "id": 32,
       "legend": {
@@ -1553,7 +3544,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 73
+        "y": 72
       },
       "id": 63,
       "legend": {
@@ -1669,8 +3660,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "madison-production",
-          "value": "madison-production"
+          "text": "kube-prometheus",
+          "value": "kube-prometheus"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -1694,8 +3685,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "madison-sidekiq-events-gogomonia-cd4bccf94-28mlp",
-          "value": "madison-sidekiq-events-gogomonia-cd4bccf94-28mlp"
+          "text": "prometheus-main-0",
+          "value": "prometheus-main-0"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -1775,5 +3766,5 @@
   "timezone": "",
   "title": "Namespace / Controller / Pod",
   "uid": "m41rB4yiz1",
-  "version": 4
+  "version": 2
 }

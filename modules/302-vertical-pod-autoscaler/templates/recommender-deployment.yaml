@@ -53,8 +53,8 @@ spec:
         - --kube-api-burst=10
         - --kube-api-qps=5
         - --min-checkpoints=10
-        - --pod-recommendation-min-cpu-millicores=25
-        - --pod-recommendation-min-memory-mb=100
+        - --pod-recommendation-min-cpu-millicores=5
+        - --pod-recommendation-min-memory-mb=25
         - --prometheus-address=http://trickster.kube-prometheus:8000/main/
         - --recommendation-margin-fraction=0.15
         - --recommender-interval=1m0s
