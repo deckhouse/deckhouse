@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import kubernetes
-import copy
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 kubernetes.config.load_incluster_config()
@@ -26,11 +25,26 @@ def gather():
     return pods_by_ns, vpas
 
 
-def convert_cpu(cpu: str):
-    if cpu.endswith("m"):
-        stripped = cpu.rstrip("m")
-        return int(stripped) / 1000
-    return cpu
+def convert(resource: str):
+    unit = {
+        "Ki": 2 ** 10,
+        "Mi": 2 ** 20,
+        "Gi": 2 ** 30,
+        "Ti": 2 ** 40,
+        "Pi": 2 ** 50,
+        "Ei": 2 ** 60,
+        "n": 0.000000001,
+        "u": 0.000001,
+        "m": 0.001,
+        "k": 10 ** 3,
+        "M": 10 ** 6,
+        "G": 10 ** 9,
+        "T": 10 ** 12,
+        "P": 10 ** 15,
+        "E": 10 ** 18,
+
+    }
+    return int(''.join(c for c in resource if c.isdigit())) * unit.get(''.join(c for c in resource if c.isalpha()), 1)
 
 
 class GetHandler(BaseHTTPRequestHandler):
@@ -49,8 +63,14 @@ class GetHandler(BaseHTTPRequestHandler):
                     vpa["metadata"]["namespace"], vpa["metadata"]["name"], e))
                 continue
             pods_in_ns = (pod_ns for pod_ns in pods[vpa["metadata"]["namespace"]])
-            matching_pods = (matching_pod for matching_pod in pods_in_ns if
-                             matching_pod.metadata.labels.items() >= vpa_label_selector.items())
+            matching_pods = []
+            for pod in pods_in_ns:
+                try:
+                    if pod.metadata.labels.items() >= vpa_label_selector.items():
+                        matching_pods.append(pod)
+                except AttributeError:
+                    print('Pod "{}" has no labels, skipping'.format(pod.metadata.name))
+
             for pod in matching_pods:
                 for container in vpa_container_recommendations:
                     container_name = container["containerName"]
@@ -59,7 +79,7 @@ class GetHandler(BaseHTTPRequestHandler):
                             for resource_type, resource_value in recommendation_value.items():
                                 response += 'vpa_recommendation{{namespace="{}", pod="{}", container="{}", recommendation_type="{}", resource_type ="{}"}} {}\n'.format(
                                     vpa["metadata"]["namespace"], pod.metadata.name, container_name,
-                                    recommendation_type, resource_type, convert_cpu(resource_value))
+                                    recommendation_type, resource_type, convert(resource_value))
 
         self.send_response(200)
         self.send_header('Content-Type',
