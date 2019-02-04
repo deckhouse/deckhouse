@@ -1,0 +1,71 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: sysctl-tuner
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ $.Chart.Name }}
+  template:
+    metadata:
+      labels:
+        heritage: antiopa
+        module: {{ $.Chart.Name }}
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - |
+          while true; do
+            # http://www.brendangregg.com/blog/2017-12-31/reinvent-netflix-ec2-tuning.html
+            sysctl -w vm.swappiness=0 ;
+            sysctl -w net.core.somaxconn=1000 ;
+            sysctl -w net.core.netdev_max_backlog=5000 ; # увеличим бэклог пакетов, забранных с ring buffer'а сетевой карты, но ещё не переданные вверх по сетевому стеку ядра
+            sysctl -w net.core.rmem_max=16777216 ;
+            sysctl -w net.core.wmem_max=16777216 ;
+            sysctl -w net.ipv4.tcp_wmem="4096 12582912 16777216" ;
+            sysctl -w net.ipv4.tcp_rmem="4096 12582912 16777216" ;
+            sysctl -w net.ipv4.tcp_max_syn_backlog=8096 ;
+            sysctl -w net.ipv4.tcp_no_metrics_save=1 ; # не кэшируем TCP метрики для последующих коннектов, использующих тот же (dst_ip, src_ip, dst_port, src_port) tuple, ибо вредно и не нужно в современных WAN сетях
+            sysctl -w net.ipv4.tcp_slow_start_after_idle=0 ; # не нужно в современных сетях, ибо начинает агрессивно снижать TCP cwnd на idle коннектах
+            sysctl -w net.ipv4.tcp_tw_reuse=1 ; # безопасная опция, позволяющая переиспользовать TIME-WAIT сокет в исходящем соединении
+            sysctl -w net.ipv4.ip_local_port_range="10240 65535" ;
+            sysctl -w vm.dirty_ratio=80 ; # включаем синхронный writeback dirty страниц как можно позже
+            sysctl -w vm.dirty_background_ratio=5 ; # включаем параллельный writeback как можно раньше
+            sysctl -w vm.dirty_expire_centisecs=12000 ; # через 12 секунд делаем writeback dirty страниц
+            sysctl -w fs.file-max=1000000 ;
+            sysctl -w vm.min_free_kbytes=131072 ; # увеличиваем безопасный лимит для немедленных аллокаций страниц в ядре (Jumbo Frames, разные IRQ handlers)
+            sysctl -w kernel.numa_balancing=0 ; # отключаем чересчур умный балансировщик NUMA нод, чтобы не было провисаний. NUMA affinity лучше настраивать заранее и по-другому
+            echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null ; # помещаем больше в очередь запросов, повышаем throughput
+            echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null ; # самая спорная вещь, Netflix рекомендует чуть-чуть увеличить, но надо тестить на разных сетапах, это число выглядит безопасным
+            echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null ;
+            echo never | tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null ;
+            echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null ;
+            echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null ;
+            # фикс kube-proxy и IPVS режиме, нет в 1.11
+            # https://github.com/kubernetes/kubernetes/pull/70530
+            echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore ;
+            echo 2 > /proc/sys/net/ipv4/conf/all/arp_announce ;
+            sleep 600 ;
+          done
+        image: busybox
+        imagePullPolicy: Always
+        name: busybox
+        resources: {}
+        securityContext:
+          privileged: true
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: system-node-critical
+{{- end }}
+
+      tolerations:
+      - operator: Exists
