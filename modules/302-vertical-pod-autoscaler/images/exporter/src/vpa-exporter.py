@@ -77,8 +77,9 @@ class GetHandler(BaseHTTPRequestHandler):
                     for recommendation_type, recommendation_value in container.items():
                         if recommendation_type != "containerName":
                             for resource_type, resource_value in recommendation_value.items():
-                                response += 'vpa_recommendation{{namespace="{}", pod="{}", container="{}", recommendation_type="{}", resource_type ="{}"}} {}\n'.format(
-                                    vpa["metadata"]["namespace"], pod.metadata.name, container_name,
+                                response += 'vpa_recommendation{{namespace="{}", vpa="{}", update_policy="{}", pod="{}", container="{}", recommendation_type="{}", resource_type ="{}"}} {}\n'.format(
+                                    vpa["metadata"]["namespace"], vpa["metadata"]["name"],
+                                    vpa["spec"]["updatePolicy"]["updateMode"], pod.metadata.name, container_name,
                                     recommendation_type, resource_type, convert(resource_value))
 
         self.send_response(200)
