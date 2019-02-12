@@ -2,7 +2,7 @@
   rules:
   - alert: K8SNodeNotReady
     expr: min(kube_node_status_condition{condition="Ready",status="true"}) BY (node) == 0
-    for: 1h
+    for: 10m
     labels:
       severity: critical
     annotations:
@@ -21,7 +21,7 @@
       summary: Too many nodes are not ready
   - alert: K8SKubeletDown
     expr: count(up{job="kubelet"} == 0) / count(up{job="kubelet"}) * 100 > 3
-    for: 1h
+    for: 10m
     labels:
       severity: critical
     annotations:
