@@ -350,9 +350,20 @@ func runDiscoverModulesState(t task.Task) error {
 		return err
 	}
 
+	modulesToEnable := make(map[string]bool)
+	for _, moduleName := range modulesState.ModulesToEnable {
+		modulesToEnable[moduleName] = true
+	}
+
 	for _, moduleName := range modulesState.EnabledModules {
+		// Run onStartup hooks on start or for newly enabled modules
+		onStartupHooks := t.GetOnStartupHooks()
+		if _, moduleToEnable := modulesToEnable[moduleName]; moduleToEnable {
+			onStartupHooks = true
+		}
+
 		newTask := task.NewTask(task.ModuleRun, moduleName).
-			WithOnStartupHooks(t.GetOnStartupHooks())
+			WithOnStartupHooks(onStartupHooks)
 
 		TasksQueue.Add(newTask)
 		rlog.Infof("QUEUE add ModuleRun %s", moduleName)
