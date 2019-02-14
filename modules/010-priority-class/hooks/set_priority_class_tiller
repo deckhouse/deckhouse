@@ -5,6 +5,7 @@ source /antiopa/shell_lib.sh
 function __config__() {
   echo '
 {
+  "beforeHelm": 30,
   "onKubernetesEvent": [
     {
       "kind": "deployment",
