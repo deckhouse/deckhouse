@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 17,
-  "iteration": 1545321977935,
+  "id": 39,
+  "iteration": 1550091574972,
   "links": [],
   "panels": [
     {
@@ -35,7 +35,7 @@
       "scroll": true,
       "showHeader": true,
       "sort": {
-        "col": 6,
+        "col": 7,
         "desc": true
       },
       "styles": [
@@ -82,6 +82,40 @@
           "unit": "short"
         },
         {
+          "alias": "VPA Type",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #B",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short",
+          "valueMaps": [
+            {
+              "text": "Off",
+              "value": "0"
+            },
+            {
+              "text": "Initial",
+              "value": "1"
+            },
+            {
+              "text": "Auto",
+              "value": "2"
+            },
+            {
+              "text": "Recreate",
+              "value": "3"
+            }
+          ]
+        },
+        {
           "alias": "CPU",
           "colorMode": null,
           "colors": [
@@ -92,29 +126,13 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 6,
           "mappingType": 1,
-          "pattern": "Value #B",
+          "pattern": "Value #C",
           "thresholds": [],
           "type": "number",
           "unit": "short"
         },
         {
-          "alias": "Memory",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "Value #C",
-          "thresholds": [],
-          "type": "number",
-          "unit": "bytes"
-        },
-        {
-          "alias": "RX Network",
+          "alias": "Req CPU",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -127,10 +145,10 @@
           "pattern": "Value #D",
           "thresholds": [],
           "type": "number",
-          "unit": "bps"
+          "unit": "short"
         },
         {
-          "alias": "TX Network",
+          "alias": "VPA CPU",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -143,10 +161,10 @@
           "pattern": "Value #E",
           "thresholds": [],
           "type": "number",
-          "unit": "bps"
+          "unit": "short"
         },
         {
-          "alias": "Read IOPS",
+          "alias": "Over-req CPU",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -159,10 +177,10 @@
           "pattern": "Value #F",
           "thresholds": [],
           "type": "number",
-          "unit": "iops"
+          "unit": "short"
         },
         {
-          "alias": "Write IOPS",
+          "alias": "Under-req CPU",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -178,6 +196,166 @@
           "unit": "short"
         },
         {
+          "alias": "Throttling cores",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #H",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #I",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "Req Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #J",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "VPA Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #K",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "Over-req Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #L",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "Under-req Memory",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #M",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "RX Network",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #N",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bps"
+        },
+        {
+          "alias": "TX Network",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #O",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bps"
+        },
+        {
+          "alias": "Read IOPS",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #P",
+          "thresholds": [],
+          "type": "number",
+          "unit": "iops"
+        },
+        {
+          "alias": "Write IOPS",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #Q",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
           "alias": "Total replicas count",
           "colorMode": null,
           "colors": [
@@ -188,7 +366,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 0,
           "mappingType": 1,
-          "pattern": "Value #H",
+          "pattern": "Value #R",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -204,23 +382,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #I",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "Throttling cores",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "Value #J",
+          "pattern": "Value #S",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -248,70 +410,152 @@
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
+          "legendFormat": "Controller",
           "refId": "A"
+        },
+        {
+          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "VPA Type",
+          "refId": "B"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__range])))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "B"
+          "legendFormat": "CPU",
+          "refId": "C"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__range]))\n  )\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Req CPU",
+          "refId": "D"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range]))\n  ) \nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "VPA CPU",
+          "refId": "E"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__range]))\n          -\n          sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Over-req CPU",
+          "refId": "F"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\"}[$__range]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n          ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Under-req CPU",
+          "refId": "G"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() ((sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\"}[$__range])) / sum by (pod) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\"}[$__range]))) * sum by (pod) (kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\"})))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "J"
+          "legendFormat": "Throttling cores",
+          "refId": "H"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range])))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "C"
+          "legendFormat": "Memory",
+          "refId": "I"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (namespace, pod)\n      (\n        avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range])\n      )\n    )\n  or\n  count (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Req Memory",
+          "refId": "J"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range]))\n  ) \n  or  \ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "VPA Memory",
+          "refId": "K"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__range]))\n          -\n          sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Over-req Memory",
+          "refId": "L"
+        },
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\"}[$__range]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n          ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Under-req Memory",
+          "refId": "M"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\"}[$__range])))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "D"
+          "legendFormat": "RX Network",
+          "refId": "N"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\"}[$__range])))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "E"
+          "legendFormat": "TX Network",
+          "refId": "O"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_fs_reads_total{container!=\"POD\", namespace=\"$namespace\"}[$__range])))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "F"
+          "legendFormat": "Read IOPS",
+          "refId": "P"
         },
         {
           "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_fs_writes_total{container!=\"POD\", namespace=\"$namespace\"}[$__range])))\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "G"
+          "legendFormat": "Write IOPS",
+          "refId": "Q"
         },
         {
           "expr": "(max by (job, namespace, controller_type, controller_name) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) * on(controller_type, controller_name) kube_controller_replicas{namespace=\"$namespace\"})\nor\nmax by (controller_type, controller_name) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "H"
+          "legendFormat": "Total replicas count",
+          "refId": "R"
         },
         {
           "expr": "((max by (job, namespace, controller_type, controller_name, controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"})) *  on (job, namespace, controller_type, controller_name) group_right(controller)\n(kube_controller_replicas - kube_controller_replicas_ready))\nor\nmax by (job, namespace, controller_type, controller_name, controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "refId": "I"
+          "legendFormat": "Not ready replicas",
+          "refId": "S"
         }
       ],
       "title": "Controllers",
@@ -673,13 +917,220 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько еще CPU необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 404,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__interval]))\n          -\n          sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__interval_rv]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ controller }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__interval]))\n          -\n          sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__interval_rv]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Over-requested by controller",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "cores",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается потребление CPU выше запрошенных (requested) ресурсов CPU. Т.е. по факту, сколько еще CPU необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 538,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\"}[$__interval_rv]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n          ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__interval_rv]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ controller }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\"}[$__interval_rv]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n          ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__interval_rv]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Under-requested by controller",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "cores",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
       "description": "Если на графике нет данных, значит не заданы ресурсы для контейнеров",
       "fill": 1,
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 35
       },
       "id": 262,
       "legend": {
@@ -776,7 +1227,431 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 42
+      },
+      "id": 343,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 0,
+            "y": 43
+          },
+          "id": 341,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "controller",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "controller": {
+              "selected": false,
+              "text": "deploy/hamster",
+              "value": "deploy/hamster"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$controller",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 8,
+            "y": 43
+          },
+          "id": 588,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1549971135806,
+          "repeatPanelId": 341,
+          "scopedVars": {
+            "controller": {
+              "selected": false,
+              "text": "deploy/hamster2",
+              "value": "deploy/hamster2"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$controller",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 16,
+            "y": 43
+          },
+          "id": 589,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1549971135806,
+          "repeatPanelId": 341,
+          "scopedVars": {
+            "controller": {
+              "selected": false,
+              "text": "deploy/hamster3",
+              "value": "deploy/hamster3"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$controller",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeat": null,
+      "title": "Controllers CPU",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
       },
       "id": 12,
       "panels": [
@@ -790,9 +1665,9 @@
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 6,
+            "w": 8,
             "x": 0,
-            "y": 28
+            "y": 44
           },
           "id": 14,
           "legend": {
@@ -819,8 +1694,8 @@
           "scopedVars": {
             "controller": {
               "selected": false,
-              "text": "deploy/grafana",
-              "value": "deploy/grafana"
+              "text": "deploy/hamster",
+              "value": "deploy/hamster"
             }
           },
           "seriesOverrides": [
@@ -836,10 +1711,6 @@
             {
               "alias": "User",
               "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
             }
           ],
           "spaceLength": 10,
@@ -916,14 +1787,15 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 28
+            "w": 8,
+            "x": 8,
+            "y": 44
           },
-          "id": 224,
+          "id": 590,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -945,13 +1817,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
+          "repeatIteration": 1549971135806,
           "repeatPanelId": 14,
           "scopedVars": {
             "controller": {
               "selected": false,
-              "text": "deploy/kube-state-metrics",
-              "value": "deploy/kube-state-metrics"
+              "text": "deploy/hamster2",
+              "value": "deploy/hamster2"
             }
           },
           "seriesOverrides": [
@@ -967,10 +1839,6 @@
             {
               "alias": "User",
               "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
             }
           ],
           "spaceLength": 10,
@@ -1047,14 +1915,15 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 28
+            "w": 8,
+            "x": 16,
+            "y": 44
           },
-          "id": 225,
+          "id": 591,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -1076,13 +1945,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
+          "repeatIteration": 1549971135806,
           "repeatPanelId": 14,
           "scopedVars": {
             "controller": {
               "selected": false,
-              "text": "deploy/madison-proxy-0450d21f50d1e3f3b3131a07bcbcfe85ec02dd9758b7ee12968ee6eaee7057fc",
-              "value": "deploy/madison-proxy-0450d21f50d1e3f3b3131a07bcbcfe85ec02dd9758b7ee12968ee6eaee7057fc"
+              "text": "deploy/hamster3",
+              "value": "deploy/hamster3"
             }
           },
           "seriesOverrides": [
@@ -1098,796 +1967,6 @@
             {
               "alias": "User",
               "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_system_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_user_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 28
-          },
-          "id": 226,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
-          "repeatPanelId": 14,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "deploy/madison-proxy-2c5bdd9ba9f80394e478714dc299d007182bc49fed6c319d67b6645e4812b198",
-              "value": "deploy/madison-proxy-2c5bdd9ba9f80394e478714dc299d007182bc49fed6c319d67b6645e4812b198"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_system_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_user_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 37
-          },
-          "id": 227,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
-          "repeatPanelId": 14,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "deploy/madison-proxy-9c6b5f859895442cb645c7f3d1ef647e1ed5388c159a9e5f7e1cf50163a878c1",
-              "value": "deploy/madison-proxy-9c6b5f859895442cb645c7f3d1ef647e1ed5388c159a9e5f7e1cf50163a878c1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_system_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_user_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 37
-          },
-          "id": 228,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
-          "repeatPanelId": 14,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "ds/node-exporter",
-              "value": "ds/node-exporter"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_system_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_user_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 37
-          },
-          "id": 229,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
-          "repeatPanelId": 14,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "ds/node-ping",
-              "value": "ds/node-ping"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_system_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_user_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 37
-          },
-          "id": 230,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
-          "repeatPanelId": 14,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "rs/frontend",
-              "value": "rs/frontend"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_system_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_user_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 46
-          },
-          "id": 231,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545042409378,
-          "repeatPanelId": 14,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "sts/prometheus-main",
-              "value": "sts/prometheus-main"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            },
-            {
-              "alias": "Other",
-              "color": "#993366"
             }
           ],
           "spaceLength": 10,
@@ -1960,7 +2039,7 @@
         }
       ],
       "repeat": null,
-      "title": "Controllers CPU",
+      "title": "Controllers CPU by state",
       "type": "row"
     },
     {
@@ -1969,7 +2048,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 44
       },
       "id": 38,
       "panels": [],
@@ -1987,7 +2066,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 45
       },
       "id": 40,
       "legend": {
@@ -1998,6 +2077,8 @@
         "min": false,
         "rightSide": false,
         "show": false,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": false
       },
@@ -2021,14 +2102,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}))",
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
           "refId": "A"
         },
         {
-          "expr": "sum(sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
+          "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2089,7 +2170,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 45
       },
       "id": 41,
       "legend": {
@@ -2100,6 +2181,8 @@
         "min": false,
         "rightSide": false,
         "show": false,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": false
       },
@@ -2126,14 +2209,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
+          "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RSS",
           "refId": "A"
         },
         {
-          "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
+          "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2141,7 +2224,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
+          "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2149,7 +2232,7 @@
           "refId": "C"
         },
         {
-          "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
+          "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Working set bytes",
@@ -2198,12 +2281,218 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "id": 489,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__interval]))\n          -\n          sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ controller }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__interval]))\n          -\n          sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Over-requested by controller",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике отображается потребление Memory выше запрошенных (requested) ресурсов Memory. Т.е. по факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "id": 575,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "lines": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\"}[$__interval]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n          ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ controller }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\"}[$__interval]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n          ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))\n        ) > 0\n      )\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Under-requested by controller",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 62
       },
       "id": 43,
       "panels": [
@@ -2217,9 +2506,9 @@
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 6,
+            "w": 8,
             "x": 0,
-            "y": 38
+            "y": 63
           },
           "id": 44,
           "legend": {
@@ -2246,8 +2535,8 @@
           "scopedVars": {
             "controller": {
               "selected": false,
-              "text": "deploy/pult-main-artery-worker",
-              "value": "deploy/pult-main-artery-worker"
+              "text": "deploy/hamster",
+              "value": "deploy/hamster"
             }
           },
           "seriesOverrides": [
@@ -2258,6 +2547,33 @@
               "fill": 0,
               "linewidth": 2,
               "stack": false
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
             }
           ],
           "spaceLength": 10,
@@ -2265,14 +2581,14 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RSS",
               "refId": "A"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2280,7 +2596,7 @@
               "refId": "B"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2288,11 +2604,32 @@
               "refId": "C"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Working set bytes",
               "refId": "D"
+            },
+            {
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  ) ",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "E"
+            },
+            {
+              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "F"
+            },
+            {
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "G"
             }
           ],
           "thresholds": [],
@@ -2346,11 +2683,11 @@
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 38
+            "w": 8,
+            "x": 8,
+            "y": 63
           },
-          "id": 242,
+          "id": 592,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -2372,13 +2709,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
+          "repeatIteration": 1549971135806,
           "repeatPanelId": 44,
           "scopedVars": {
             "controller": {
               "selected": false,
-              "text": "deploy/pult-main-web",
-              "value": "deploy/pult-main-web"
+              "text": "deploy/hamster2",
+              "value": "deploy/hamster2"
             }
           },
           "seriesOverrides": [
@@ -2389,6 +2726,33 @@
               "fill": 0,
               "linewidth": 2,
               "stack": false
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
             }
           ],
           "spaceLength": 10,
@@ -2396,14 +2760,14 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RSS",
               "refId": "A"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2411,7 +2775,7 @@
               "refId": "B"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2419,11 +2783,32 @@
               "refId": "C"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Working set bytes",
               "refId": "D"
+            },
+            {
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  ) ",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "E"
+            },
+            {
+              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "F"
+            },
+            {
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "G"
             }
           ],
           "thresholds": [],
@@ -2477,11 +2862,11 @@
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 38
+            "w": 8,
+            "x": 16,
+            "y": 63
           },
-          "id": 243,
+          "id": 593,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -2503,13 +2888,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
+          "repeatIteration": 1549971135806,
           "repeatPanelId": 44,
           "scopedVars": {
             "controller": {
               "selected": false,
-              "text": "deploy/pult-servers-api-artery-worker",
-              "value": "deploy/pult-servers-api-artery-worker"
+              "text": "deploy/hamster3",
+              "value": "deploy/hamster3"
             }
           },
           "seriesOverrides": [
@@ -2520,135 +2905,31 @@
               "fill": 0,
               "linewidth": 2,
               "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 38
-          },
-          "id": 244,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "deploy/pult-servers-api-web",
-              "value": "deploy/pult-servers-api-web"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
+              "alias": "VPA Target",
+              "color": "#447ebc",
               "dashes": true,
               "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17",
+              "dashes": true,
+              "fill": 0,
+              "lines": false,
               "linewidth": 2,
               "stack": false
             }
@@ -2658,14 +2939,14 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RSS",
               "refId": "A"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2673,7 +2954,7 @@
               "refId": "B"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2681,2107 +2962,32 @@
               "refId": "C"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Working set bytes",
               "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 47
-          },
-          "id": 245,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/first-backup",
-              "value": "job/first-backup"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 47
-          },
-          "id": 246,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/first-backupp",
-              "value": "job/first-backupp"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 47
-          },
-          "id": 247,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-main-mysql-migrate-job",
-              "value": "job/pult-main-mysql-migrate-job"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 47
-          },
-          "id": 248,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-main-sentry-release-hook-job",
-              "value": "job/pult-main-sentry-release-hook-job"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 56
-          },
-          "id": 249,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544410080",
-              "value": "job/pult-mysql-backup-1544410080"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 56
-          },
-          "id": 250,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544496480",
-              "value": "job/pult-mysql-backup-1544496480"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 56
-          },
-          "id": 251,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544582880",
-              "value": "job/pult-mysql-backup-1544582880"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 56
-          },
-          "id": 252,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544669280",
-              "value": "job/pult-mysql-backup-1544669280"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 65
-          },
-          "id": 253,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544755680",
-              "value": "job/pult-mysql-backup-1544755680"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 65
-          },
-          "id": 254,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544842080",
-              "value": "job/pult-mysql-backup-1544842080"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 65
-          },
-          "id": 255,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1544928480",
-              "value": "job/pult-mysql-backup-1544928480"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 65
-          },
-          "id": 256,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1545014880",
-              "value": "job/pult-mysql-backup-1545014880"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 74
-          },
-          "id": 257,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1545101280",
-              "value": "job/pult-mysql-backup-1545101280"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 74
-          },
-          "id": 258,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-mysql-backup-1545187680",
-              "value": "job/pult-mysql-backup-1545187680"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 74
-          },
-          "id": 259,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "job/pult-servers-api-sentry-release-hook-job",
-              "value": "job/pult-servers-api-sentry-release-hook-job"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 74
-          },
-          "id": 260,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1545256051609,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "sts/mysql-a",
-              "value": "sts/mysql-a"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_rss{namespace=\"$namespace\", container!=\"POD\"})))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_cache{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  ) ",
               "format": "time_series",
-              "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
+              "legendFormat": "Requests",
+              "refId": "E"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_swap{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
               "format": "time_series",
-              "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
+              "legendFormat": "Limits",
+              "refId": "F"
             },
             {
-              "expr": "sum (sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"})))",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
+              "legendFormat": "VPA Target",
+              "refId": "G"
             }
           ],
           "thresholds": [],
@@ -4835,7 +3041,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 63
       },
       "id": 77,
       "panels": [],
@@ -4853,7 +3059,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 64
       },
       "id": 79,
       "legend": {
@@ -4955,7 +3161,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 64
       },
       "id": 240,
       "legend": {
@@ -5052,7 +3258,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 72
       },
       "id": 154,
       "panels": [],
@@ -5070,7 +3276,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 55
+        "y": 73
       },
       "id": 156,
       "legend": {
@@ -5172,7 +3378,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 55
+        "y": 73
       },
       "id": 241,
       "legend": {
@@ -5288,8 +3494,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "pult-production",
-          "value": "pult-production"
+          "text": "kube-system",
+          "value": "kube-system"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -5421,5 +3627,5 @@
   "timezone": "",
   "title": "Namespace",
   "uid": "sZzUB4ymk1",
-  "version": 1
+  "version": 20
 }
