@@ -3,7 +3,29 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=10
+  echo '
+{
+  "onKubernetesEvent": [
+    {
+      "kind": "deployment",
+      "event": [
+        "add",
+        "update"
+      ],
+      "selector": {
+        "matchLabels": {
+          "app": "helm",
+          "name": "tiller"
+        }
+      },
+      "namespaceSelector": {
+        "matchNames": [
+          "kube-system"
+        ]
+      }
+    }
+  ]
+}'
 }
 
 function __main__() {
