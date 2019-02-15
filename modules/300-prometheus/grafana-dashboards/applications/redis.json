@@ -1,25 +1,4 @@
 {
-  "__inputs": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "5.0.4"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": "5.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -37,8 +16,8 @@
   "editable": true,
   "gnetId": 763,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1522521878327,
+  "id": 38,
+  "iteration": 1550218369673,
   "links": [],
   "panels": [
     {
@@ -105,7 +84,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "redis_uptime_in_seconds{pod=\"$pod\",alias=\"$alias\"}",
+          "expr": "redis_uptime_in_seconds{pod=\"$pod\",alias=\"$alias\",namespace=\"$namespace\"}",
+          "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
@@ -191,7 +171,9 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "redis_connected_clients{pod=\"$pod\",alias=\"$alias\"}",
+          "expr": "avg_over_time(redis_connected_clients{pod=\"$pod\",alias=\"$alias\",namespace=\"$namespace\"}[$__interval])",
+          "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
@@ -279,7 +261,8 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (redis_memory_used_bytes{pod=\"$pod\",alias=\"$alias\"}  / redis_memory_max_bytes{pod=\"$pod\",alias=\"$alias\"} )",
+          "expr": "100 \n* \n  (\n    avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\", pod=\"$pod\",alias=\"$alias\"}[$__interval]) \n    / \n    avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])\n  )",
+          "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "",
@@ -342,11 +325,11 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_commands_processed_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_commands_processed_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "",
+          "legendFormat": "Commands processed total sec",
           "metric": "",
           "refId": "A",
           "step": 2,
@@ -355,6 +338,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Commands Executed / sec",
       "tooltip": {
@@ -388,7 +372,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -431,7 +419,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_keyspace_hits_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_keyspace_hits_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -443,7 +431,7 @@
           "target": ""
         },
         {
-          "expr": "rate(redis_keyspace_misses_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_keyspace_misses_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -457,6 +445,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Hits / Misses per Sec",
       "tooltip": {
@@ -490,7 +479,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -536,7 +529,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "redis_memory_used_bytes{pod=\"$pod\",alias=\"$alias\"} ",
+          "expr": "avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "used",
@@ -546,7 +539,7 @@
           "target": ""
         },
         {
-          "expr": "redis_memory_max_bytes{pod=\"$pod\",alias=\"$alias\"} ",
+          "expr": "avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -557,6 +550,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Total Memory Usage",
       "tooltip": {
@@ -590,7 +584,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -632,7 +630,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_net_input_bytes_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_net_input_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ input }}",
@@ -640,7 +638,7 @@
           "step": 2
         },
         {
-          "expr": "rate(redis_net_output_bytes_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_net_output_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -651,6 +649,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Network I/O",
       "tooltip": {
@@ -684,7 +683,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -728,7 +731,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (redis_db_keys{pod=\"$pod\",alias=\"$alias\"}) by (db)",
+          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) by (db)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -740,6 +743,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Total Items per DB",
       "tooltip": {
@@ -773,7 +777,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -815,7 +823,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (redis_db_keys{pod=\"$pod\",alias=\"$alias\"}) - sum (redis_db_keys_expiring{pod=\"$pod\",alias=\"$alias\"}) ",
+          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) - sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -825,7 +833,7 @@
           "target": ""
         },
         {
-          "expr": "sum (redis_db_keys_expiring{pod=\"$pod\",alias=\"$alias\"}) ",
+          "expr": "sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -837,6 +845,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Expiring vs Not-Expiring Keys",
       "tooltip": {
@@ -870,7 +879,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -919,7 +932,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(redis_expired_keys_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "expr": "sum(rate(redis_expired_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -930,7 +943,7 @@
           "target": ""
         },
         {
-          "expr": "sum(rate(redis_evicted_keys_total{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -941,6 +954,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Expired / Evicted",
       "tooltip": {
@@ -974,7 +988,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -1016,7 +1034,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{pod=\"$pod\",alias=\"$alias\"}[$__interval_rv]))",
+          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1028,6 +1046,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Command Calls / sec",
       "tooltip": {
@@ -1061,7 +1080,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "30s",
@@ -1082,12 +1105,17 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "production",
+          "value": "production"
+        },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -1097,6 +1125,7 @@
         "query": "label_values(redis_connected_clients, namespace)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
@@ -1106,8 +1135,12 @@
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "rfr-redis-0",
+          "value": "rfr-redis-0"
+        },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,
@@ -1117,6 +1150,7 @@
         "query": "label_values(redis_connected_clients{namespace=~\"$namespace\"}, pod)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
@@ -1126,8 +1160,12 @@
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "rfr-redis-0",
+          "value": "rfr-redis-0"
+        },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,
@@ -1137,6 +1175,7 @@
         "query": "label_values(redis_connected_clients{pod=\"$pod\"}, alias)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
@@ -1147,7 +1186,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
@@ -1178,5 +1217,5 @@
   "timezone": "browser",
   "title": "Redis",
   "uid": "DV0yeDkmz",
-  "version": 5
+  "version": 2
 }
