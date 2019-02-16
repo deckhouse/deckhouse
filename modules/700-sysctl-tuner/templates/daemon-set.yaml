@@ -43,6 +43,7 @@ spec:
             sysctl -w vm.min_free_kbytes=131072 ; # увеличиваем безопасный лимит для немедленных аллокаций страниц в ядре (Jumbo Frames, разные IRQ handlers)
             sysctl -w kernel.numa_balancing=0 ; # отключаем чересчур умный балансировщик NUMA нод, чтобы не было провисаний. NUMA affinity лучше настраивать заранее и по-другому
             sysctl -w fs.inotify.max_user_watches=524288 # Увеличим inotify (https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers#the-technical-details)
+            sysctl -w fs.inotify.max_user_instances=5120
             sysctl -w kernel.pid_max=2000000
             echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null ; # помещаем больше в очередь запросов, повышаем throughput
             echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null ; # самая спорная вещь, Netflix рекомендует чуть-чуть увеличить, но надо тестить на разных сетапах, это число выглядит безопасным
