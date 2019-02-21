@@ -38,6 +38,21 @@ spec:
       labels:
         app: vpa-updater
     spec:
+{{- if and (hasKey .Values.verticalPodAutoscaler "nodeSelector") (.Values.verticalPodAutoscaler.nodeSelector) }}
+      nodeSelector:
+{{ .Values.verticalPodAutoscaler.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.verticalPodAutoscaler "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.verticalPodAutoscaler "tolerations") (.Values.verticalPodAutoscaler.tolerations) }}
+      tolerations:
+{{ .Values.verticalPodAutoscaler.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.verticalPodAutoscaler "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
       serviceAccountName: vpa-updater
       imagePullSecrets:
       - name: vertical-pod-autoscaler-antiopa-registry
