@@ -738,7 +738,7 @@
       "targets": [
         {
           "$$hashKey": "object:835",
-          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -747,7 +747,7 @@
         },
         {
           "$$hashKey": "object:836",
-          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -854,7 +854,7 @@
         },
         {
           "$$hashKey": "object:836",
-          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
