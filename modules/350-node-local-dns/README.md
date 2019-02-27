@@ -10,12 +10,31 @@
 
 У модуля нет никаких настроек, но по-умолчанию он **выключен** и для его использования нужно изменить настройки kubelet'ов.
 
-Чтобы начать использовать node-local-dns необходимо:
-1. Включить модуль добавив следующий конфиг:
+Чтобы начать использовать node-local-dns, необходимо включить модуль добавив следующий конфиг в ConfigMap antiopa:
+```yaml
+nodeLocalDns: "{}"
+```
+
+### Baremetal
+Настроить все kubelet'ы в кластере на использование нового DNS через опцию `--cluster-dns=169.254.20.10`.
+
+### kops
+1. Указать в спецификациях всех InstanceGroups:
     ```yaml
-    nodeLocalDns: "{}"
+    spec:
+      kubelet:
+        clusterDNS: "169.254.20.10"
     ```
-2. Настроить все kubelet'ы в кластере на использование нового DNS через опцию `--cluster-dns=169.254.20.10`.
+
+2. Перекатить кластер.
+    ```
+    kops update cluster
+    kops rolling-update cluster
+    ```
+
+### aks-engine
+К сожалению, на aks-engine возможности включить node-local-dns пока нет.
+Трекаем [здесь](https://github.com/deckhouse/deckhouse/issues/418).
 
 Прицип работы
 ------------
