@@ -12,7 +12,8 @@ function __config__() {
          "event": [
             "add",
             "update"
-         ]
+         ],
+         "jqFilter": "[.metadata.name, .status.nodeInfo.osImage, .metadata.labels]"
       }
    ]
 }'
@@ -29,7 +30,6 @@ function __main__() {
   do
     kubectl label node $node systemd-slices-cleaner.antiopa.flant.com/enabled=true
   done
-}
 
 # finding out not 16.04 ubuntu with label and unlabeling it
   for node in $(kubectl get nodes -o json | \
