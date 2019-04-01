@@ -1,0 +1,6 @@
+# vi:syntax=crontab
+# vi:filetype=crontab
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+5 * * * * bash /app/systemd-slices-cleaner.sh

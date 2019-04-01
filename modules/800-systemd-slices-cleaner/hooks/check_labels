@@ -1,0 +1,46 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+   "beforeHelm": 20,
+   "onKubernetesEvent": [
+      {
+         "kind": "node",
+         "event": [
+            "add",
+            "update"
+         ]
+      }
+   ]
+}'
+}
+
+function __main__() {
+# finding out 16.04 ubuntu nodes without label and labeling it
+  for node in $(kubectl get nodes -o json | \
+                      jq -r '.items[] |
+                      select ((.status.nodeInfo.osImage|test("16.04"))
+                      and
+                      (.metadata.labels."systemd-slices-cleaner.antiopa.flant.com/enabled" != "true")) |
+                      .metadata.name')
+  do
+    kubectl label node $node systemd-slices-cleaner.antiopa.flant.com/enabled=true
+  done
+}
+
+# finding out not 16.04 ubuntu with label and unlabeling it
+  for node in $(kubectl get nodes -o json | \
+                      jq -r '.items[] |
+                      select ((.status.nodeInfo.osImage|test("16.04") | not)
+                      and
+                      (.metadata.labels."systemd-slices-cleaner.antiopa.flant.com/enabled" == "true")) |
+                      .metadata.name')
+  do
+    kubectl label node $node systemd-slices-cleaner.antiopa.flant.com/enabled-
+  done
+}
+
+hook::run $@

@@ -1,0 +1,75 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $.Chart.Name }}
+  namespace: kube-system
+  labels:
+    app: {{ $.Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $.Chart.Name }}
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: {{ $.Chart.Name }}
+  name: {{ $.Chart.Name }}
+  namespace: kube-system
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: {{ $.Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $.Chart.Name }}
+    spec:
+      containers:
+      - command:
+        - /usr/local/bin/supercronic
+        - -json
+        - /app/crontab
+        image: {{ .Values.global.modulesImages.registry }}/systemd-slices-cleaner/systemd-slices-cleaner:{{ .Values.global.modulesImages.tags.systemdSlicesCleaner.systemdSlicesCleaner }}
+        imagePullPolicy: Always
+        name: {{ $.Chart.Name }}
+        resources: {}
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: systemd
+          mountPath: /run/systemd/private
+        - name: docker
+          mountPath: /run/docker.sock
+        - name: systemd-etc
+          mountPath: /etc/systemd
+        - name: systemd-run
+          mountPath: /run/systemd/system/
+      nodeSelector:
+        systemd-slices-cleaner.antiopa.flant.com/enabled: "true"
+      imagePullSecrets:
+      - name: antiopa-registry
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+{{- end }}
+      tolerations:
+      - operator: Exists
+      volumes:
+      - name: systemd
+        hostPath:
+          path: /run/systemd/private
+      - name: docker
+        hostPath:
+          path: /run/docker.sock
+      - name: systemd-etc
+        hostPath:
+          path: /etc/systemd
+      - name: systemd-run
+        hostPath:
+          path: /run/systemd/system/
