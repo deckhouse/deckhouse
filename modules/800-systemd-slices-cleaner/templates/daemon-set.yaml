@@ -54,7 +54,7 @@ spec:
       nodeSelector:
         systemd-slices-cleaner.antiopa.flant.com/enabled: "true"
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: systemd-slices-cleaner-antiopa-registry
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
 {{- end }}
