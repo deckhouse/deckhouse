@@ -56,8 +56,8 @@ max by (namespace, pod, container) (
 
 | Annotation                              | Type          | Default value  |
 |-----------------------------------------|---------------|----------------|
-| disk-bytes-warning            | int (percent) | 85             |
-| disk-bytes-critical           | int (percent) | 95             |
+| disk-bytes-warning            | int (percent) | 70             |
+| disk-bytes-critical           | int (percent) | 80             |
 | disk-inodes-warning           | int (percent) | 85             |
 | disk-inodes-critical          | int (percent) | 95             |
 

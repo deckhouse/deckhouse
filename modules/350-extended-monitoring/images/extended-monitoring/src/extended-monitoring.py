@@ -113,8 +113,8 @@ class AnnotatedPod(Annotated):
         return cls.api.list_namespaced_pod(namespace).items
 
     default_thresholds = {
-        "disk-bytes-warning": 85,
-        "disk-bytes-critical": 95,
+        "disk-bytes-warning": 70,
+        "disk-bytes-critical": 80,
         "disk-inodes-warning": 85,
         "disk-inodes-critical": 95,
         "container-throttling-warning": 25,
@@ -145,8 +145,8 @@ class AnnotatedNode(Annotated):
         return cls.api.list_node().items
 
     default_thresholds = {
-        "disk-bytes-warning": 85,
-        "disk-bytes-critical": 95,
+        "disk-bytes-warning": 70,
+        "disk-bytes-critical": 80,
         "disk-inodes-warning": 85,
         "disk-inodes-critical": 95
     }
