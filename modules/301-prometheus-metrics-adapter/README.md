@@ -1,6 +1,10 @@
 Модуль prometheus-metrics-adapter
 ==========================
 
+## Назначение
+
+**TLDR;** — модуль позволяет работать автоскейлеру в кластере через [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) и [VPA](https://github.com/deckhouse/deckhouse/blob/master/modules/302-vertical-pod-autoscaler/README.md) по «любым» метрикам.
+
 Данный модуль устанавливает в кластер [имплементацию](https://github.com/DirectXMan12/k8s-prometheus-adapter) Kubernetes [resource metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md) и [custom metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/custom-metrics-api.md) для получения метрик из Prometheus.
 
 Это позволяет:
@@ -19,11 +23,15 @@
 
 Описание метрик, по которым можно производить скейлинг находится в [configmap](templates/config-map.yaml). Описать дополнительные метрики для скейлинга можно с помощью [документации](https://github.com/DirectXMan12/k8s-prometheus-adapter/blob/v0.4.1/docs/walkthrough.md).
 
-### Как это работает
+##  Конфигурация
 
-Данный модуль регистрирует k8s-prometheus-adapter,  как external API сервис, который расширяет возможности Kubernetes API сервера с помощью сторонних приложений (в данном случае k8s-prometheus-adapter). Когда какому-то из компонентов Kubernetes (VPA, HPA) необходима информация об используемых ресурсах, запрос уходит в Kubernetes API сервер, откуда запрос по TLS уходит в адаптер. Адаптер на основе своего [конфигурационного файла](templates/config-map.yaml) узнает, что нужно сделать для получения метрики, и отправляет запрос в Prometheus кластера.
+Не требует конфигурирования. По умолчанию — **включен** в кластерах начиная с версии 1.9, если включен модуль `prometheus`.
 
-### Пример использования Horizontal Pod Autoscaler
+## Как работает
+
+Данный модуль регистрирует k8s-prometheus-adapter, как external API сервис, который расширяет возможности Kubernetes API сервера с помощью сторонних приложений (в данном случае k8s-prometheus-adapter). Когда какому-то из компонентов Kubernetes (VPA, HPA) необходима информация об используемых ресурсах, запрос уходит в Kubernetes API сервер, откуда запрос по TLS уходит в адаптер. Адаптер на основе своего [конфигурационного файла](templates/config-map.yaml) узнает, что нужно сделать для получения метрики, и отправляет запрос в Prometheus кластера.
+
+## Пример использования Horizontal Pod Autoscaler
 
 Пример HPA для скейлинга по всем доступным параметрам [API Reference](https://v1-10.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#horizontalpodautoscaler-v2beta1-autoscaling):
 
