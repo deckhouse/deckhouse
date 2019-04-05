@@ -11,7 +11,7 @@ for unit in $(systemctl list-units | grep subpath | grep "run-" | awk '{print $1
   # finding description file for unit (to find out docker container, who born this unit)
   DropFile=$(systemctl status "${unit}" | grep Drop | awk -F': ' '{print $2}')
   # reading uuid for docker container from description file
-  DockerContainerId=$(awk '{print $5}' "${DropFile}"/50-Description.conf | cut -d/ -f6)
+  DockerContainerId=$(grep Description "${DropFile}"/50-Description.conf | awk '{print $5}' | cut -d/ -f6)
   # checking container status (running or not)
   checkFlag=$(docker ps | grep -c "${DockerContainerId}")
   # if container not running, we will stop unit
