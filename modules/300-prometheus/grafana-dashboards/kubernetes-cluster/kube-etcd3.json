@@ -1,31 +1,4 @@
 {
-  "__inputs": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "5.1.0-beta1"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": "5.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -40,11 +13,11 @@
     ]
   },
   "description": "",
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1525179594663,
+  "id": 27,
+  "iteration": 1554742407619,
   "links": [],
   "panels": [
     {
@@ -193,6 +166,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "RPC Rate",
       "tooltip": {
@@ -292,6 +266,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Active Streams",
       "tooltip": {
@@ -385,6 +360,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "DB Size",
       "tooltip": {
@@ -483,6 +459,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Disk Sync Duration",
       "tooltip": {
@@ -571,6 +548,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Memory",
       "tooltip": {
@@ -661,6 +639,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Client Traffic In",
       "tooltip": {
@@ -751,6 +730,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Client Traffic Out",
       "tooltip": {
@@ -841,6 +821,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Peer Traffic In",
       "tooltip": {
@@ -934,6 +915,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Peer Traffic Out",
       "tooltip": {
@@ -1048,6 +1030,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Raft Proposals",
       "tooltip": {
@@ -1162,12 +1145,17 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Node",
@@ -1177,6 +1165,7 @@
         "query": "label_values(up{job=\"kube-etcd3\"}, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -1217,7 +1206,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "kube-etcd3",
+  "title": "etcd3",
   "uid": "mOkHbAGmk",
   "version": 1
 }

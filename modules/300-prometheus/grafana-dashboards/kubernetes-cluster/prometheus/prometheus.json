@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:1312",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -14,11 +13,11 @@
     ]
   },
   "description": "",
-  "editable": true,
+  "editable": false,
   "gnetId": 3662,
   "graphTooltip": 0,
-  "id": 35,
-  "iteration": 1526055019758,
+  "id": 21,
+  "iteration": 1554743429584,
   "links": [],
   "panels": [
     {
@@ -67,6 +66,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Samples Scraped (after relabeling)",
       "tooltip": {
@@ -151,6 +151,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Samples Scraped (before relabeling)",
       "tooltip": {
@@ -198,7 +199,6 @@
     "list": [
       {
         "current": {
-          "tags": [],
           "text": "default",
           "value": "default"
         },
@@ -209,6 +209,7 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       }
     ]
@@ -245,5 +246,5 @@
   "timezone": "",
   "title": "Prometheus (self)",
   "uid": "U91sydniz",
-  "version": 2
+  "version": 1
 }

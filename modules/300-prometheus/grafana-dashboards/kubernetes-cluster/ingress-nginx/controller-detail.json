@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:1745",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -15,10 +14,11 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1525986004787,
+  "id": 25,
+  "iteration": 1554743086736,
   "links": [],
   "panels": [
     {
@@ -506,7 +506,6 @@
           "steppedLine": true,
           "targets": [
             {
-              "$$hashKey": "object:1986",
               "expr": "sum(nginx_connections_current{state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
               "format": "time_series",
               "intervalFactor": 1,
@@ -515,7 +514,6 @@
               "step": 10
             },
             {
-              "$$hashKey": "object:1987",
               "expr": "sum(nginx_connections_current{state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
               "format": "time_series",
               "intervalFactor": 1,
@@ -613,7 +611,6 @@
           "steppedLine": true,
           "targets": [
             {
-              "$$hashKey": "object:2264",
               "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
@@ -622,7 +619,6 @@
               "step": 10
             },
             {
-              "$$hashKey": "object:2265",
               "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_rv])) $by",
               "format": "time_series",
               "intervalFactor": 1,
@@ -737,7 +733,6 @@
       "steppedLine": true,
       "targets": [
         {
-          "$$hashKey": "object:835",
           "expr": "sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -746,7 +741,6 @@
           "step": 10
         },
         {
-          "$$hashKey": "object:836",
           "expr": "sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
           "format": "time_series",
           "intervalFactor": 1,
@@ -757,6 +751,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Active Connections",
       "tooltip": {
@@ -844,7 +839,6 @@
       "steppedLine": true,
       "targets": [
         {
-          "$$hashKey": "object:835",
           "expr": "",
           "format": "time_series",
           "intervalFactor": 1,
@@ -853,7 +847,6 @@
           "step": 10
         },
         {
-          "$$hashKey": "object:836",
           "expr": "sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -864,6 +857,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Active Connections %",
       "tooltip": {
@@ -881,7 +875,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:4287",
           "format": "percentunit",
           "label": "",
           "logBase": 1,
@@ -890,7 +883,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:4288",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -953,7 +945,6 @@
       "steppedLine": true,
       "targets": [
         {
-          "$$hashKey": "object:835",
           "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -962,7 +953,6 @@
           "step": 10
         },
         {
-          "$$hashKey": "object:836",
           "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_rv])) $by",
           "format": "time_series",
           "intervalFactor": 1,
@@ -973,6 +963,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Requests to Default Server",
       "tooltip": {
@@ -1060,7 +1051,6 @@
       "steppedLine": true,
       "targets": [
         {
-          "$$hashKey": "object:836",
           "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_rv])) $by\n/ scalar(sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_rv])))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1071,6 +1061,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Requests to Default Server %",
       "tooltip": {
@@ -1088,7 +1079,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:4287",
           "format": "percentunit",
           "label": "",
           "logBase": 1,
@@ -1097,7 +1087,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:4288",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -2423,6 +2412,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Requests",
       "tooltip": {
@@ -2514,6 +2504,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Requests %",
       "tooltip": {
@@ -2692,6 +2683,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Upstream Response Time",
       "tooltip": {
@@ -2873,6 +2865,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Upstream Response Time %",
       "tooltip": {
@@ -2981,6 +2974,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Retried Requests",
       "tooltip": {
@@ -3082,6 +3076,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Retries (per Retried Request)",
       "tooltip": {
@@ -3190,6 +3185,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "1xx",
       "tooltip": {
@@ -3296,6 +3292,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "2xx",
       "tooltip": {
@@ -3389,6 +3386,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Request Time",
       "tooltip": {
@@ -3484,6 +3482,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Upstream Response Time",
       "tooltip": {
@@ -3592,6 +3591,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "3xx",
       "tooltip": {
@@ -3685,6 +3685,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Request Size",
       "tooltip": {
@@ -3780,6 +3781,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Response Size",
       "tooltip": {
@@ -3888,6 +3890,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "4xx",
       "tooltip": {
@@ -3991,6 +3994,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Incoming Traffic",
       "tooltip": {
@@ -4093,6 +4097,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Outgoing Traffic",
       "tooltip": {
@@ -4199,6 +4204,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "5xx",
       "tooltip": {
@@ -9726,7 +9732,6 @@
           },
           "styles": [
             {
-              "$$hashKey": "object:2148",
               "alias": "",
               "colorMode": null,
               "colors": [
@@ -9742,7 +9747,6 @@
               "unit": "short"
             },
             {
-              "$$hashKey": "object:2149",
               "alias": "RPS",
               "colorMode": null,
               "colors": [
@@ -9758,7 +9762,6 @@
               "unit": "ops"
             },
             {
-              "$$hashKey": "object:2150",
               "alias": "Retried Req",
               "colorMode": null,
               "colors": [
@@ -9775,7 +9778,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2151",
               "alias": "Req Time",
               "colorMode": null,
               "colors": [
@@ -9791,7 +9793,6 @@
               "unit": "s"
             },
             {
-              "$$hashKey": "object:2152",
               "alias": "Resp Time",
               "colorMode": null,
               "colors": [
@@ -9807,7 +9808,6 @@
               "unit": "s"
             },
             {
-              "$$hashKey": "object:2153",
               "alias": "In Traffic",
               "colorMode": null,
               "colors": [
@@ -9823,7 +9823,6 @@
               "unit": "bps"
             },
             {
-              "$$hashKey": "object:2154",
               "alias": "Out Traffic",
               "colorMode": null,
               "colors": [
@@ -9839,7 +9838,6 @@
               "unit": "bps"
             },
             {
-              "$$hashKey": "object:2155",
               "alias": "Req Size",
               "colorMode": null,
               "colors": [
@@ -9856,7 +9854,6 @@
               "unit": "bytes"
             },
             {
-              "$$hashKey": "object:2156",
               "alias": "Resp Size",
               "colorMode": null,
               "colors": [
@@ -9873,7 +9870,6 @@
               "unit": "bytes"
             },
             {
-              "$$hashKey": "object:2157",
               "alias": "1xx",
               "colorMode": null,
               "colors": [
@@ -9889,7 +9885,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2158",
               "alias": "2xx",
               "colorMode": null,
               "colors": [
@@ -9905,7 +9900,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2159",
               "alias": "3xx",
               "colorMode": null,
               "colors": [
@@ -9921,7 +9915,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2160",
               "alias": "4xx",
               "colorMode": null,
               "colors": [
@@ -9937,7 +9930,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2161",
               "alias": "5xx",
               "colorMode": null,
               "colors": [
@@ -9953,7 +9945,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2162",
               "alias": "HTTPS",
               "colorMode": null,
               "colors": [
@@ -9969,7 +9960,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2163",
               "alias": "GET",
               "colorMode": null,
               "colors": [
@@ -9985,7 +9975,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2164",
               "alias": "POST",
               "colorMode": null,
               "colors": [
@@ -10001,7 +9990,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2165",
               "alias": "HEAD",
               "colorMode": null,
               "colors": [
@@ -10017,7 +10005,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2166",
               "alias": "PUT",
               "colorMode": null,
               "colors": [
@@ -10033,7 +10020,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2167",
               "alias": "DELETE",
               "colorMode": null,
               "colors": [
@@ -10049,7 +10035,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2168",
               "alias": "OPTIONS",
               "colorMode": null,
               "colors": [
@@ -10065,7 +10050,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2169",
               "alias": "PATCH",
               "colorMode": null,
               "colors": [
@@ -10082,7 +10066,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:2170",
               "alias": "Namespace",
               "colorMode": null,
               "colors": [
@@ -10102,7 +10085,6 @@
               "unit": "short"
             },
             {
-              "$$hashKey": "object:2171",
               "alias": "Ingress",
               "colorMode": null,
               "colors": [
@@ -10122,7 +10104,6 @@
               "unit": "short"
             },
             {
-              "$$hashKey": "object:2172",
               "alias": "",
               "colorMode": null,
               "colors": [
@@ -10139,7 +10120,6 @@
           ],
           "targets": [
             {
-              "$$hashKey": "object:2019",
               "expr": "(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "instant": true,
@@ -10147,7 +10127,6 @@
               "refId": "A"
             },
             {
-              "$$hashKey": "object:2020",
               "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by\n  / (sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10157,7 +10136,6 @@
               "refId": "B"
             },
             {
-              "$$hashKey": "object:2021",
               "expr": "sum(increase(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by\n  / (sum(increase(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10167,7 +10145,6 @@
               "refId": "C"
             },
             {
-              "$$hashKey": "object:2022",
               "expr": "sum(increase(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by\n  / (sum(increase(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10177,7 +10154,6 @@
               "refId": "D"
             },
             {
-              "$$hashKey": "object:2023",
               "expr": "(sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by * 8 > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10187,7 +10163,6 @@
               "refId": "E"
             },
             {
-              "$$hashKey": "object:2024",
               "expr": "(sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by * 8 > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10196,7 +10171,6 @@
               "refId": "F"
             },
             {
-              "$$hashKey": "object:2025",
               "expr": "sum(increase(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by\n  / (sum(increase(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10205,7 +10179,6 @@
               "refId": "G"
             },
             {
-              "$$hashKey": "object:2026",
               "expr": "sum(increase(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by\n  / (sum(increase(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10214,7 +10187,6 @@
               "refId": "H"
             },
             {
-              "$$hashKey": "object:2027",
               "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10223,7 +10195,6 @@
               "refId": "I"
             },
             {
-              "$$hashKey": "object:2028",
               "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10232,7 +10203,6 @@
               "refId": "J"
             },
             {
-              "$$hashKey": "object:2029",
               "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10241,7 +10211,6 @@
               "refId": "K"
             },
             {
-              "$$hashKey": "object:2030",
               "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10250,7 +10219,6 @@
               "refId": "L"
             },
             {
-              "$$hashKey": "object:2031",
               "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10259,7 +10227,6 @@
               "refId": "M"
             },
             {
-              "$$hashKey": "object:2032",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", scheme=\"https\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10268,7 +10235,6 @@
               "refId": "N"
             },
             {
-              "$$hashKey": "object:2033",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"GET\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10277,7 +10243,6 @@
               "refId": "O"
             },
             {
-              "$$hashKey": "object:2034",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"POST\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10286,7 +10251,6 @@
               "refId": "P"
             },
             {
-              "$$hashKey": "object:2035",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"HEAD\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10295,7 +10259,6 @@
               "refId": "Q"
             },
             {
-              "$$hashKey": "object:2036",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"PUT\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10304,7 +10267,6 @@
               "refId": "R"
             },
             {
-              "$$hashKey": "object:2037",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"DELETE\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10313,7 +10275,6 @@
               "refId": "S"
             },
             {
-              "$$hashKey": "object:2038",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"OPTIONS\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10322,7 +10283,6 @@
               "refId": "T"
             },
             {
-              "$$hashKey": "object:2039",
               "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"PATCH\"}[$__range])) $alt_by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $alt_by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $alt_by",
               "format": "table",
               "hide": false,
@@ -10629,6 +10589,7 @@
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
@@ -10647,6 +10608,7 @@
           }
         ],
         "query": "detail",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10665,6 +10627,7 @@
           }
         ],
         "query": "by (node, app)",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10683,6 +10646,7 @@
           }
         ],
         "query": "{{node}} ({{app}})",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10695,13 +10659,13 @@
         "name": "alt_name",
         "options": [
           {
-            "$$hashKey": "object:882",
             "selected": true,
             "text": "Namespace and Ingress",
             "value": "Namespace and Ingress"
           }
         ],
         "query": "Namespace and Ingress",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10720,6 +10684,7 @@
           }
         ],
         "query": "by (namespace, ingress)",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10738,15 +10703,17 @@
           }
         ],
         "query": "{{namespace}}/{{ingress}}",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "allValue": ".*",
         "current": {
-          "text": "default",
-          "value": "default"
+          "text": "main",
+          "value": "main"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": "Controller",
@@ -10756,6 +10723,7 @@
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, controller)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -10770,6 +10738,7 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "App",
@@ -10779,6 +10748,7 @@
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\"}, app)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -10793,6 +10763,7 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Node",
@@ -10802,6 +10773,7 @@
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\"}, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -10825,6 +10797,7 @@
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10843,6 +10816,7 @@
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10861,6 +10835,7 @@
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10879,6 +10854,7 @@
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10897,6 +10873,7 @@
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10915,6 +10892,7 @@
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
@@ -10926,6 +10904,7 @@
           ]
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Content Kind",
@@ -10935,6 +10914,7 @@
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\"}, content_kind)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -10949,6 +10929,7 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 2,
         "includeAll": true,
         "label": "Method",
@@ -10958,6 +10939,7 @@
         "query": "label_values(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}, method)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -10972,6 +10954,7 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 2,
         "includeAll": true,
         "label": "Method",
@@ -10981,6 +10964,7 @@
         "query": "label_values(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}, status)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
@@ -11022,5 +11006,5 @@
   "timezone": "",
   "title": "Ingress Nginx Controller Detail",
   "uid": "kZxJEeMmz",
-  "version": 18
+  "version": 1
 }

@@ -12,11 +12,11 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "gnetId": 1860,
   "graphTooltip": 0,
-  "id": 34,
-  "iteration": 1548242032535,
+  "id": 23,
+  "iteration": 1554743280748,
   "links": [],
   "panels": [
     {
@@ -21053,8 +21053,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "kube-a-3",
-          "value": "kube-a-3"
+          "text": "as-kube-node",
+          "value": "as-kube-node"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -21107,7 +21107,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Node Metrics Detailed",
+  "title": "Node",
   "uid": "4UCtXvkmsk",
-  "version": 4
+  "version": 1
 }
