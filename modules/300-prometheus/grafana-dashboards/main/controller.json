@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 42,
-  "iteration": 1550091550611,
+  "id": 10,
+  "iteration": 1554894650836,
   "links": [],
   "panels": [
     {
@@ -35,7 +35,7 @@
       "scroll": true,
       "showHeader": true,
       "sort": {
-        "col": 10,
+        "col": 6,
         "desc": true
       },
       "styles": [
@@ -82,6 +82,23 @@
           "unit": "short"
         },
         {
+          "alias": "Node",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "node",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short",
+          "valueMaps": []
+        },
+        {
           "alias": "VPA Type",
           "colorMode": null,
           "colors": [
@@ -92,7 +109,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #B",
+          "pattern": "Value #C",
           "thresholds": [],
           "type": "string",
           "unit": "short",
@@ -130,7 +147,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 6,
           "mappingType": 1,
-          "pattern": "Value #C",
+          "pattern": "Value #D",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -146,7 +163,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #D",
+          "pattern": "Value #E",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -162,7 +179,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 6,
           "mappingType": 1,
-          "pattern": "Value #E",
+          "pattern": "Value #F",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -178,7 +195,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #F",
+          "pattern": "Value #G",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -194,7 +211,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #G",
+          "pattern": "Value #H",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -210,7 +227,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #H",
+          "pattern": "Value #I",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -226,7 +243,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #I",
+          "pattern": "Value #J",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -242,7 +259,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #J",
+          "pattern": "Value #K",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -258,7 +275,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #K",
+          "pattern": "Value #L",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -274,7 +291,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #L",
+          "pattern": "Value #M",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -290,7 +307,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #M",
+          "pattern": "Value #N",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -306,7 +323,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #N",
+          "pattern": "Value #O",
           "thresholds": [],
           "type": "number",
           "unit": "bps"
@@ -322,7 +339,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #O",
+          "pattern": "Value #P",
           "thresholds": [],
           "type": "number",
           "unit": "bps"
@@ -338,7 +355,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #P",
+          "pattern": "Value #Q",
           "thresholds": [],
           "type": "number",
           "unit": "iops"
@@ -354,10 +371,26 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "Value #Q",
+          "pattern": "Value #R",
           "thresholds": [],
           "type": "number",
           "unit": "iops"
+        },
+        {
+          "alias": "Pod Restarts",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 0,
+          "mappingType": 1,
+          "pattern": "Value #S",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
         },
         {
           "alias": "",
@@ -378,7 +411,7 @@
       ],
       "targets": [
         {
-          "expr": "kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}",
+          "expr": "sum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"})",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -386,132 +419,156 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}) * 0 + 5",
+          "expr": "sum by (pod, node) (\n  sum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}) * on (pod) group_right() kube_pod_info{namespace=\"$namespace\"}\n)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "VPA Type",
+          "legendFormat": "Node",
           "refId": "B"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}) * 0 + 5",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "CPU",
+          "legendFormat": "VPA Type",
           "refId": "C"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "Req CPU",
+          "legendFormat": "CPU",
           "refId": "D"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "VPA CPU",
+          "legendFormat": "Req CPU",
           "refId": "E"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__range]))\n        -\n        sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nkube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "Over-req CPU",
+          "legendFormat": "VPA CPU",
           "refId": "F"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\"}[$__range]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n        ) or sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nkube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\"}[$__range]))\n        -\n        sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "Under-req CPU",
+          "legendFormat": "Over-req CPU",
           "refId": "G"
         },
         {
-          "expr": "(\n  sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n  /\n  sum by (pod) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n)\n  * \n  sum by (pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\"}[$__range]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n        ) or sum by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "Throttling cores",
+          "legendFormat": "Under-req CPU",
           "refId": "H"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n  (\n    sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    /\n    sum by (pod) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n  )\n  * \n  sum by (pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Throttling cores",
+          "refId": "I"
+        },
+        {
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "Memory",
-          "refId": "I"
+          "refId": "J"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "Req Memory",
-          "refId": "J"
+          "refId": "K"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "VPA Memory",
-          "refId": "K"
+          "refId": "L"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__range]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nkube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}[$__range]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "Over-req Memory",
-          "refId": "L"
+          "refId": "M"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\"}[$__range]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n        ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nkube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\"}[$__range]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n        ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "Under-req Memory",
-          "refId": "M"
+          "refId": "N"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod) \n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "RX Network",
-          "refId": "N"
+          "refId": "O"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "TX Network",
-          "refId": "O"
+          "refId": "P"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_fs_reads_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_fs_reads_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "Read IOPS",
-          "refId": "P"
+          "refId": "Q"
         },
         {
-          "expr": "(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_fs_writes_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)\n  sum by (pod) (rate(container_fs_writes_total{container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "Write IOPS",
-          "refId": "Q"
+          "refId": "R"
+        },
+        {
+          "expr": "sum by (pod)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod) group_left()\n  sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\"}[$__range]))\n)\nor\nsum by (pod) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * 0)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Pod restart count",
+          "refId": "S"
         }
       ],
       "title": "Pods",
@@ -3435,6 +3492,725 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "id": 81,
+      "panels": [],
+      "title": "PVC",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 80
+      },
+      "id": 82,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "fill": 0,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace, controller, persistentvolumeclaim) (\n  max by (namespace, controller, persistentvolumeclaim)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Provisioned {{ persistentvolumeclaim }}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Provisioned (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 80
+      },
+      "id": 84,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)  group_left(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n    )\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ persistentvolumeclaim }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Usage (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 87
+      },
+      "id": 83,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total .*/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)  group_left(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n    )\n  )\n)\n/\n(\nsum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)  group_left(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n    )\n  )\n)\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ persistentvolumeclaim }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Usage in % (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 95
+      },
+      "id": 88,
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "$ds_prometheus",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 96
+          },
+          "id": 86,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 0,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Name",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "persistentvolumeclaim",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "StorageClass",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "storageclass",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Requested",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Provisioned",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Capacity",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Used bytes",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #E",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Used inodes",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #F",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Used bytes (%)",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #G",
+              "thresholds": [],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "Used inodes (%)",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #H",
+              "thresholds": [],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "Used by pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "pod",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "/.*/",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  kube_persistentvolumeclaim_info{namespace=\"$namespace\"}\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Name, storageclass",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Requested (pvc)",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  label_replace(\n    kube_persistentvolumeclaim_info{namespace=\"$namespace\"},\n    \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\") \n  * on (persistentvolume) group_left() \n  kube_persistentvolume_capacity_bytes\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned (pv)",
+              "refId": "C"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Capacity (real)",
+              "refId": "D"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used bytes",
+              "refId": "E"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_inodes_used{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used inodes",
+              "refId": "F"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__range])\n  /\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used bytes %",
+              "refId": "G"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_inodes_used{namespace=\"$namespace\"}[$__range])\n  /\n  avg_over_time(kubelet_volume_stats_inodes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used inodes %",
+              "refId": "H"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, pod) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "pod",
+              "refId": "I"
+            }
+          ],
+          "title": "Overview",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+          "fill": 1,
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 105
+          },
+          "id": 89,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "persistentvolumeclaim",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "persistentvolumeclaim": {
+              "selected": false,
+              "text": "data-rabbitmq-0",
+              "value": "data-rabbitmq-0"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "fill": 0,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  label_replace(\n    kube_persistentvolumeclaim_info{namespace=\"$namespace\"},\n    \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\") \n  * on (persistentvolume) group_left() \n  avg_over_time(kube_persistentvolume_capacity_bytes[$__interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "Capacity",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Used bytes",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$persistentvolumeclaim",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "PVC Detailed",
+      "type": "row"
     }
   ],
   "refresh": "30s",
@@ -3461,8 +4237,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "kube-system",
-          "value": "kube-system"
+          "text": "wtis-test-16",
+          "value": "wtis-test-16"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -3486,8 +4262,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "deploy/kube-dns",
-          "value": "deploy/kube-dns"
+          "text": "sts/rabbitmq",
+          "value": "sts/rabbitmq"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{namespace=~\"$namespace\"}, controller)",
@@ -3509,7 +4285,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": "",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -3527,6 +4303,33 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "$ds_prometheus",
+        "definition": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}, persistentvolumeclaim)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "PersistentVolumeClaim",
+        "multi": true,
+        "name": "persistentvolumeclaim",
+        "options": [],
+        "query": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}, persistentvolumeclaim)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -3567,5 +4370,5 @@
   "timezone": "",
   "title": "Namespace / Controller",
   "uid": "IRPuf4ymk1",
-  "version": 16
+  "version": 1
 }

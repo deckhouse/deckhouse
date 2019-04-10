@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 39,
-  "iteration": 1550091574972,
+  "id": 33,
+  "iteration": 1554896388172,
   "links": [],
   "panels": [
     {
@@ -82,7 +82,7 @@
           "unit": "short"
         },
         {
-          "alias": "VPA Type",
+          "alias": "VPA Mode",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -388,6 +388,22 @@
           "unit": "short"
         },
         {
+          "alias": "Pod Restarts",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 0,
+          "mappingType": 1,
+          "pattern": "Value #T",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
           "alias": "",
           "colorMode": null,
           "colors": [
@@ -418,7 +434,7 @@
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "VPA Type",
+          "legendFormat": "VPA Mode",
           "refId": "B"
         },
         {
@@ -556,6 +572,14 @@
           "intervalFactor": 1,
           "legendFormat": "Not ready replicas",
           "refId": "S"
+        },
+        {
+          "expr": "sum by (controller) \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\"}[$__range]))\n  )\nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Pod restart count",
+          "refId": "T"
         }
       ],
       "title": "Controllers",
@@ -3468,6 +3492,1091 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 80
+      },
+      "id": 595,
+      "panels": [],
+      "title": "PVC",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 81
+      },
+      "id": 598,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace, controller) (\n  max by (namespace, controller, persistentvolumeclaim)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Provisioned {{ controller }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum (\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace=\"$namespace\"}[$__interval])\n  ) \n  * \n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n  )\n  unless\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n  ) \n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Unused PVC",
+          "refId": "B"
+        },
+        {
+          "expr": "sum (\n  sum by (namespace, controller) (\n    max by (namespace, controller, persistentvolumeclaim)\n    (\n      sum by (namespace, persistentvolumeclaim) (\n          max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"wtis-test-16\"}[30s])\n      ) \n\n      * max by (namespace, persistentvolumeclaim) (\n          max_over_time(kube_persistentvolumeclaim_info{namespace=\"wtis-test-16\", storageclass!~\"local.+\"}[30s])\n      )\n\n      * on (namespace, persistentvolumeclaim) group_left(pod) \n      max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"wtis-test-16\"}[30s])\n      ) \n\n      * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"wtis-test-16\", controller=~\".*\"} \n    )\n  )\n)\n+\nsum (\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace=\"wtis-test-16\"}[30s])\n  ) \n  * \n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kube_persistentvolumeclaim_info{namespace=\"wtis-test-16\", storageclass!~\"local.+\"}[30s])\n  )\n  unless\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"wtis-test-16\"}[30s])\n  ) \n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Provisioned (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 81
+      },
+      "id": 596,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace, controller) (\n  max by (namespace, controller, persistentvolumeclaim)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ controller }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(\n  sum by (namespace, controller) (\n    max by (namespace, controller, persistentvolumeclaim)\n    (\n      sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n      ) \n\n      * max by (namespace, persistentvolumeclaim) (\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n      )\n\n      * on (namespace, persistentvolumeclaim) group_left(pod) \n      max by (namespace, persistentvolumeclaim, pod) (\n        max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n      ) \n\n      * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n    )\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Usage (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 88
+      },
+      "id": 597,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total .*/",
+          "fill": 0,
+          "linewidth": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace, controller) (\n  max by (namespace, controller, persistentvolumeclaim)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n  )\n)\n/\nsum by (namespace, controller) (\n  max by (namespace, controller, persistentvolumeclaim)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", storageclass!~\"local.+\"}[$__interval])\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ controller }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Usage in % (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 95
+      },
+      "id": 602,
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "$ds_prometheus",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 96
+          },
+          "id": 600,
+          "links": [],
+          "pageSize": 10,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 6,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Name",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "persistentvolumeclaim",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "StorageClass",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "storageclass",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short",
+              "valueMaps": []
+            },
+            {
+              "alias": "Requested",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Provisioned",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Capacity",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Used bytes",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #E",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Used inodes",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #F",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Used bytes (%)",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #G",
+              "thresholds": [],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "Used inodes (%)",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #H",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Used by controller",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "controller",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "/.*/",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "max by (persistentvolumeclaim, storageclass) (\n  max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__range])\n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Name, StorageClass",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (persistentvolumeclaim) (\n  kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace=\"$namespace\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Requested (pvc)",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max by (persistentvolume) (max_over_time(kube_persistentvolume_capacity_bytes[$__range])) \n  * on (persistentvolume) group_right() \n  max by (persistentvolume, persistentvolumeclaim) (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__range]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned (pv)",
+              "refId": "C"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__range])\n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Capacity (real)",
+              "refId": "D"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__range])\n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "used bytes",
+              "refId": "E"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_inodes_used{namespace=\"$namespace\"}[$__range])\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "used inodes",
+              "refId": "F"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__range]) \n  / \n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__range])\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "used byetes %",
+              "refId": "G"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_inodes_used{namespace=\"$namespace\"}[$__range]) \n  / \n  max_over_time(kubelet_volume_stats_inodes{namespace=\"$namespace\"}[$__range])\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "used inodes %",
+              "refId": "H"
+            },
+            {
+              "expr": "sum by (persistentvolumeclaim, controller) (\n  max by (namespace, persistentvolumeclaim, pod) (\n    max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval])\n  ) \n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "used by controller",
+              "refId": "I"
+            }
+          ],
+          "title": "Overview",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 1,
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 0,
+            "y": 103
+          },
+          "id": 603,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "persistentvolumeclaim",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "persistentvolumeclaim": {
+              "selected": false,
+              "text": "data-rabbitmq-0",
+              "value": "data-rabbitmq-0"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Capacity",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Used",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$persistentvolumeclaim",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 1,
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 6,
+            "y": 103
+          },
+          "id": 604,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1554896388172,
+          "repeatPanelId": 603,
+          "scopedVars": {
+            "persistentvolumeclaim": {
+              "selected": false,
+              "text": "datadir-mongodb-0",
+              "value": "datadir-mongodb-0"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Capacity",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Used",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$persistentvolumeclaim",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 1,
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 12,
+            "y": 103
+          },
+          "id": 605,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1554896388172,
+          "repeatPanelId": 603,
+          "scopedVars": {
+            "persistentvolumeclaim": {
+              "selected": false,
+              "text": "sphinx-indexes-sphinx-0",
+              "value": "sphinx-indexes-sphinx-0"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Capacity",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Used",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$persistentvolumeclaim",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 1,
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 18,
+            "y": 103
+          },
+          "id": 606,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1554896388172,
+          "repeatPanelId": 603,
+          "scopedVars": {
+            "persistentvolumeclaim": {
+              "selected": false,
+              "text": "test-claim",
+              "value": "test-claim"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Capacity",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Used",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$persistentvolumeclaim",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "PVC Detailed",
+      "type": "row"
     }
   ],
   "refresh": "30s",
@@ -3494,8 +4603,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "kube-system",
-          "value": "kube-system"
+          "text": "wtis-test-16",
+          "value": "wtis-test-16"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -3517,12 +4626,10 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "value": "$__all"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{namespace=~\"$namespace\"}, controller_type)",
@@ -3544,7 +4651,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -3569,7 +4676,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -3587,6 +4694,33 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "$ds_prometheus",
+        "definition": "label_values(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}, persistentvolumeclaim)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "PersistentVolumeClaim",
+        "multi": true,
+        "name": "persistentvolumeclaim",
+        "options": [],
+        "query": "label_values(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}, persistentvolumeclaim)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -3627,5 +4761,5 @@
   "timezone": "",
   "title": "Namespace",
   "uid": "sZzUB4ymk1",
-  "version": 20
+  "version": 2
 }
