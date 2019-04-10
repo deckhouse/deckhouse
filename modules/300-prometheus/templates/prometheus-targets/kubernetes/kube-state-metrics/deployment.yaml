@@ -34,6 +34,8 @@ spec:
       labels:
         app: kube-state-metrics
     spec:
+      imagePullSecrets:
+      - name: antiopa-registry
       serviceAccountName: kube-state-metrics
 {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
       nodeSelector:
@@ -85,7 +87,7 @@ spec:
             memory: 40Mi
             cpu: 20m
       - name: kube-state-metrics
-        image: quay.io/coreos/kube-state-metrics:v1.5.0-alpha.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-state-metrics:{{ $.Values.global.modulesImages.tags.prometheus.kubeStateMetrics }}
         args:
         - "--host=127.0.0.1"
         - "--port=8081"

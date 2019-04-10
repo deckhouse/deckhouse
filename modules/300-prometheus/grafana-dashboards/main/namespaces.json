@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 46,
-  "iteration": 1550093704060,
+  "id": 17,
+  "iteration": 1554884862798,
   "links": [],
   "panels": [
     {
@@ -35,7 +35,7 @@
       "scroll": true,
       "showHeader": true,
       "sort": {
-        "col": 5,
+        "col": 4,
         "desc": true
       },
       "styles": [
@@ -290,6 +290,22 @@
           "unit": "iops"
         },
         {
+          "alias": "Pod Restarts",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 0,
+          "mappingType": 1,
+          "pattern": "Value #P",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
           "alias": "",
           "colorMode": null,
           "colors": [
@@ -380,7 +396,7 @@
           "refId": "I"
         },
         {
-          "expr": "sum by (namespace)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=~\"$namespace\"}[$__range]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n    ) > 0\n  )",
+          "expr": "sum by (namespace)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{namespace=~\"$namespace\"}[$__range]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n    ) > 0\n  )\nor count(kube_controller_pod) by (namespace) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -429,6 +445,14 @@
           "intervalFactor": 1,
           "legendFormat": "Write IOPS",
           "refId": "O"
+        },
+        {
+          "expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total[$__range]))\nor\ncount (kube_controller_pod) by (namespace) * 0",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Restart count",
+          "refId": "P"
         }
       ],
       "title": "Average",
@@ -1064,7 +1088,7 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "cores",
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -6144,6 +6168,326 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "id": 518,
+      "panels": [],
+      "title": "PVC",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 74
+      },
+      "id": 519,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace) (\n  (\n    sum by (namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes)\n    * on (namespace, persistentvolumeclaim)\n    sum by (namespace, persistentvolume, persistentvolumeclaim) (\n      label_replace(\n        max_over_time(kube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n        \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n    )\n  )\n  or on(namespace, persistentvolumeclaim) (\n    sum by (persistentvolume) (\n      max_over_time(kube_persistentvolume_capacity_bytes[$__interval])\n    )\n    * on(persistentvolume) group_left(namespace, persistentvolumeclaim)\n    sum by (namespace, persistentvolume, persistentvolumeclaim) (\n      label_replace(\n        max_over_time(kube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n        \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n    )\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Provisioned {{ namespace }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(\n  sum by (namespace) (\n    (\n      sum by (namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes)\n      * on (namespace, persistentvolumeclaim)\n      sum by (namespace, persistentvolume, persistentvolumeclaim) (\n        label_replace(\n          max_over_time(kube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n          \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n      )\n    )\n    or on(namespace, persistentvolumeclaim) (\n      sum by (persistentvolume) (\n        max_over_time(kube_persistentvolume_capacity_bytes[$__interval])\n      )\n      * on(persistentvolume) group_left(namespace, persistentvolumeclaim)\n      sum by (namespace, persistentvolume, persistentvolumeclaim) (\n        label_replace(\n          max_over_time(kube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n          \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n      )\n    )\n  )\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Provisioned (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 74
+      },
+      "id": 520,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace) (\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kubelet_volume_stats_used_bytes{namespace=~\"$namespace\"}[$__interval])\n  )\n  * on (namespace, persistentvolumeclaim) group_left(persistentvolume)\n\tsum by (namespace, persistentvolume, persistentvolumeclaim) (\n\t\tlabel_replace(\n\t\t\tmax_over_time(kube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n\t\t\t\"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n\t)\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ namespace }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(\n  sum by (namespace) (\n    sum by (namespace, persistentvolumeclaim) (\n      max_over_time(kubelet_volume_stats_used_bytes{namespace=~\"$namespace\"}[$__interval])\n    )\n   \t* on (namespace, persistentvolumeclaim) group_left(persistentvolume)\n\t\tsum by (namespace, persistentvolume, persistentvolumeclaim) (\n\t\t\tlabel_replace(\n\t\t\t\tmax_over_time(kube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]), \n\t\t\t\t\"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n\t\t)\n  )\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Used (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "id": 521,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (namespace) (\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kubelet_volume_stats_used_bytes{namespace=~\"$namespace\"}[$__interval])\n  )\n  * on (namespace, persistentvolumeclaim)\n\tsum by (namespace, persistentvolumeclaim) (\n\t\tlabel_replace(\n\t\t\tmax_over_time(\n\t\t\t\tkube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n\t\t\t\t\"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n\t)\n)\n/\nsum by (namespace) (\n  sum by (namespace, persistentvolumeclaim) (\n    max_over_time(kubelet_volume_stats_capacity_bytes{namespace=~\"$namespace\"}[$__interval])\n  )\n  * on (namespace, persistentvolumeclaim)\n\tsum by (namespace, persistentvolumeclaim) (\n\t\tlabel_replace(\n\t\t\tmax_over_time(\n\t\t\t\tkube_persistentvolumeclaim_info{namespace=~\"$namespace\", storageclass!~\"local.+\"}[$__interval]),\n\t\t\t\t\"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n\t)\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ namespace }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Used in % (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "30s",
@@ -6154,7 +6498,6 @@
     "list": [
       {
         "current": {
-          "selected": true,
           "text": "default",
           "value": "default"
         },
@@ -6169,7 +6512,7 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -6227,5 +6570,5 @@
   "timezone": "",
   "title": "Namespaces",
   "uid": "V_WjJ-Pmk",
-  "version": 13
+  "version": 1
 }

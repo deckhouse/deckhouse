@@ -12,11 +12,11 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 49,
-  "iteration": 1550094125327,
+  "id": 6,
+  "iteration": 1554894653731,
   "links": [],
   "panels": [
     {
@@ -35,7 +35,7 @@
       "scroll": true,
       "showHeader": true,
       "sort": {
-        "col": 0,
+        "col": 13,
         "desc": true
       },
       "styles": [
@@ -78,7 +78,7 @@
           "unit": "short"
         },
         {
-          "alias": "VPA Type",
+          "alias": "VPA Mode",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -356,6 +356,22 @@
           "unit": "short"
         },
         {
+          "alias": "Pod Restarts",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 0,
+          "mappingType": 1,
+          "pattern": "Value #R",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
           "alias": "",
           "colorMode": null,
           "colors": [
@@ -385,7 +401,7 @@
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "VPA Type",
+          "legendFormat": "VPA Mode",
           "refId": "B"
         },
         {
@@ -507,6 +523,14 @@
           "intervalFactor": 1,
           "legendFormat": "Write IOPS",
           "refId": "Q"
+        },
+        {
+          "expr": "sum by (container) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "Pod Restart count",
+          "refId": "R"
         }
       ],
       "title": "Containers",
@@ -539,14 +563,49 @@
             "value": "1"
           },
           {
-            "color": "#ea6460",
-            "tooltip": "terminated",
+            "color": "#890f02",
+            "tooltip": "terminated/Error",
             "value": "2"
           },
           {
-            "color": "#99440a",
-            "tooltip": "waiting",
+            "color": "#e24d42",
+            "tooltip": "terminated/Completed",
             "value": "3"
+          },
+          {
+            "color": "#f29191",
+            "tooltip": "terminated/ContainerCannotRun",
+            "value": "4"
+          },
+          {
+            "color": "#fce2de",
+            "tooltip": "terminated/OOMKilled",
+            "value": "5"
+          },
+          {
+            "color": "#1f78c1",
+            "tooltip": "waiting/ContainerCreating",
+            "value": "6"
+          },
+          {
+            "color": "#64b0c8",
+            "tooltip": "waiting/CrashLoopBackOff",
+            "value": "7"
+          },
+          {
+            "color": "#65c5db",
+            "tooltip": "waiting/CreateContainerConfigError",
+            "value": "8"
+          },
+          {
+            "color": "#badff4",
+            "tooltip": "waiting/ErrImagePull",
+            "value": "9"
+          },
+          {
+            "color": "#cffaff",
+            "tooltip": "waiting/ImagePullBackOff",
+            "value": "10"
           }
         ]
       },
@@ -585,18 +644,68 @@
           "refId": "B"
         },
         {
-          "expr": "(min_over_time(kube_pod_container_status_terminated{namespace=\"$namespace\", pod=\"$pod\"}[$__interval_rv]) == 1) * 2",
+          "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"Error\"}[$__interval_rv]) == 1) * 2",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "C"
         },
         {
-          "expr": "(min_over_time(kube_pod_container_status_waiting{namespace=\"$namespace\", pod=\"$pod\"}[$__interval_rv]) == 1) * 3",
+          "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"Completed\"}[$__interval_rv]) == 1) * 3",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "D"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ContainerCannotRun\"}[$__interval_rv]) == 1) * 4",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "E"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"OOMKilled\"}[$__interval_rv]) == 1) * 5",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "F"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ContainerCreating\"}[$__interval_rv]) == 1) * 6",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "G"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"CrashLoopBackOff\"}[$__interval_rv]) == 1) * 7",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "H"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"CreateContainerConfigError\"}[$__interval_rv]) == 1) * 8",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "I"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ErrImagePull\"}[$__interval_rv]) == 1) * 9",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "J"
+        },
+        {
+          "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ImagePullBackOff\"}[$__interval_rv]) == 1) * 10",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "K"
         }
       ],
       "title": "Status",
@@ -619,246 +728,12 @@
       "yAxisSort": "metrics"
     },
     {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      },
-      "id": 55,
-      "panels": [
-        {
-          "cards": {
-            "cardHSpacing": 2,
-            "cardMinWidth": 5,
-            "cardRound": null,
-            "cardVSpacing": 2
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateGnYlRd",
-            "defaultColor": "#757575",
-            "exponent": 0.5,
-            "mode": "discrete",
-            "thresholds": [
-              {
-                "color": "#f29191",
-                "tooltip": "Error",
-                "value": "0"
-              },
-              {
-                "color": "#508642",
-                "tooltip": "Completed",
-                "value": "1"
-              },
-              {
-                "color": "#65c5db",
-                "tooltip": "ContainerCannotRun",
-                "value": "2"
-              },
-              {
-                "color": "#bf1b00",
-                "tooltip": "OOMKilled",
-                "value": "3"
-              }
-            ]
-          },
-          "data": {
-            "decimals": null,
-            "unitFormat": "short"
-          },
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 9,
-            "w": 12,
-            "x": 0,
-            "y": 9
-          },
-          "highlightCards": true,
-          "id": 57,
-          "legend": {
-            "show": true
-          },
-          "links": [],
-          "nullPointMode": "as empty",
-          "targets": [
-            {
-              "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"Error\"}[$__interval_rv]) == 1) * 0",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "A"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"Completed\"}[$__interval_rv]) == 1) * 1",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "B"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ContainerCannotRun\"}[$__interval_rv]) == 1) * 2",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "C"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_terminated_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"OOMKilled\"}[$__interval_rv]) == 1) * 3",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "D"
-            }
-          ],
-          "title": "Terminated reason",
-          "tooltip": {
-            "show": true
-          },
-          "type": "flant-statusmap-panel",
-          "useMax": true,
-          "xAxis": {
-            "labelFormat": "%a %m/%d",
-            "minBucketWidthToShowWeekends": 4,
-            "show": true,
-            "showCrosshair": true,
-            "showWeekends": true
-          },
-          "yAxis": {
-            "show": true,
-            "showCrosshair": false
-          },
-          "yAxisSort": "metrics"
-        },
-        {
-          "cards": {
-            "cardHSpacing": 2,
-            "cardMinWidth": 5,
-            "cardRound": null,
-            "cardVSpacing": 2
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateGnYlRd",
-            "defaultColor": "#757575",
-            "exponent": 0.5,
-            "mode": "discrete",
-            "thresholds": [
-              {
-                "color": "#f29191",
-                "tooltip": "ContainerCreating",
-                "value": "0"
-              },
-              {
-                "color": "#508642",
-                "tooltip": "CrashLoopBackOff",
-                "value": "1"
-              },
-              {
-                "color": "#65c5db",
-                "tooltip": "CreateContainerConfigError",
-                "value": "2"
-              },
-              {
-                "color": "#bf1b00",
-                "tooltip": "ErrImagePull",
-                "value": "3"
-              },
-              {
-                "tooltip": "ImagePullBackOff",
-                "value": "4"
-              }
-            ]
-          },
-          "data": {
-            "decimals": null,
-            "unitFormat": "short"
-          },
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 9,
-            "w": 12,
-            "x": 12,
-            "y": 9
-          },
-          "highlightCards": true,
-          "id": 61,
-          "legend": {
-            "show": true
-          },
-          "links": [],
-          "nullPointMode": "as empty",
-          "targets": [
-            {
-              "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ContainerCreating\"}[$__interval_rv]) == 1) * 0",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "A"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"CrashLoopBackOff\"}[$__interval_rv]) == 1) * 1",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "B"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"CreateContainerConfigError\"}[$__interval_rv]) == 1) * 2",
-              "format": "time_series",
-              "instant": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "C"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ErrImagePull\"}[$__interval_rv]) == 1) * 3",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "D"
-            },
-            {
-              "expr": "(max_over_time(kube_pod_container_status_waiting_reason{namespace=\"$namespace\", pod=\"$pod\", reason=\"ImagePullBackOff\"}[$__interval_rv]) == 1) * 4",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{ container }}",
-              "refId": "E"
-            }
-          ],
-          "title": "Waiting reason",
-          "tooltip": {
-            "show": true
-          },
-          "type": "flant-statusmap-panel",
-          "useMax": true,
-          "xAxis": {
-            "labelFormat": "%a %m/%d",
-            "minBucketWidthToShowWeekends": 4,
-            "show": true,
-            "showCrosshair": true,
-            "showWeekends": true
-          },
-          "yAxis": {
-            "show": true,
-            "showCrosshair": false
-          },
-          "yAxisSort": "metrics"
-        }
-      ],
-      "title": "Pods reason down",
-      "type": "row"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 17
       },
       "id": 14,
       "panels": [],
@@ -876,7 +751,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 18
       },
       "id": 2,
       "legend": {
@@ -980,7 +855,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 18
       },
       "id": 3,
       "legend": {
@@ -1100,7 +975,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 27
       },
       "id": 76,
       "legend": {
@@ -1205,7 +1080,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 27
       },
       "id": 123,
       "legend": {
@@ -1310,7 +1185,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 35
       },
       "id": 36,
       "legend": {
@@ -1409,7 +1284,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 41
       },
       "id": 95,
       "panels": [
@@ -1832,7 +1707,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 42
       },
       "id": 5,
       "panels": [
@@ -2229,7 +2104,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 43
       },
       "id": 12,
       "panels": [],
@@ -2247,7 +2122,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 44
       },
       "id": 6,
       "legend": {
@@ -2351,7 +2226,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 44
       },
       "id": 8,
       "legend": {
@@ -2472,7 +2347,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 53
       },
       "id": 106,
       "legend": {
@@ -2578,7 +2453,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 54
+        "y": 53
       },
       "id": 136,
       "legend": {
@@ -2678,7 +2553,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 61
       },
       "id": 16,
       "panels": [
@@ -3233,7 +3108,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 62
       },
       "id": 25,
       "panels": [],
@@ -3251,7 +3126,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 64
+        "y": 63
       },
       "id": 27,
       "legend": {
@@ -3340,7 +3215,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 64
+        "y": 63
       },
       "id": 62,
       "legend": {
@@ -3424,7 +3299,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 71
+        "y": 70
       },
       "id": 30,
       "panels": [],
@@ -3442,7 +3317,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 72
+        "y": 71
       },
       "id": 32,
       "legend": {
@@ -3544,7 +3419,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 72
+        "y": 71
       },
       "id": 63,
       "legend": {
@@ -3634,6 +3509,715 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "id": 150,
+      "panels": [],
+      "title": "PVC",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 80
+      },
+      "id": 148,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n* \non (namespace, persistentvolumeclaim) group_left (pod) \n(\n  avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}[$__interval])\n  * on (namespace, persistentvolumeclaim) group_right (pod)\n  avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Provisioned {{ persistentvolumeclaim }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n  * \n  on (namespace, persistentvolumeclaim) group_left (pod) \n  (\n    avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}[$__interval])\n    * on (namespace, persistentvolumeclaim) group_right (pod)\n    avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Provisioned (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 80
+      },
+      "id": 151,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/Total/",
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n* \non (namespace, persistentvolumeclaim) group_left (pod) \n(\n  avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}[$__interval])\n  * on (namespace, persistentvolumeclaim) group_right (pod)\n  avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ persistentvolumeclaim }}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n  * \n  on (namespace, persistentvolumeclaim) group_left (pod) \n  (\n    avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}[$__interval])\n    * on (namespace, persistentvolumeclaim) group_right (pod)\n    avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Usage (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 88
+      },
+      "id": 152,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n* \non (namespace, persistentvolumeclaim) group_left (pod) \n(\n  avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}[$__interval])\n  * on (namespace, persistentvolumeclaim) group_right (pod)\n  avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n)\n/\n(\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n  * \n  on (namespace, persistentvolumeclaim) group_left (pod) \n  (\n    avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}[$__interval])\n    * on (namespace, persistentvolumeclaim) group_right (pod)\n    avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval])\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Usage {{ persistentvolumeclaim }}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PVC Usage in % (except local storage classes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 96
+      },
+      "id": 156,
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "$ds_prometheus",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 97
+          },
+          "id": 154,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 0,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Name",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "persistentvolumeclaim",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "StorageClass",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "storageclass",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Requested",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Provisioned",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Capacity",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Used bytes",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #E",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            },
+            {
+              "alias": "Used inodes",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #F",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Used bytes (%)",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #G",
+              "thresholds": [],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "Used inodes (%)",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #H",
+              "thresholds": [],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "/.*/",
+              "thresholds": [],
+              "type": "hidden",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  kube_persistentvolumeclaim_info{namespace=\"$namespace\"}\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Name, storageclass",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Requested (pvc)",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  label_replace(\n    kube_persistentvolumeclaim_info{namespace=\"$namespace\"},\n    \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\") \n  * on (persistentvolume) group_left() \n  kube_persistentvolume_capacity_bytes\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned (pv)",
+              "refId": "C"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Capcity (real)",
+              "refId": "D"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used bytes",
+              "refId": "E"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_inodes_used{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used inodes",
+              "refId": "F"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__range])\n  /\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used bytes %",
+              "refId": "G"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_inodes_used{namespace=\"$namespace\"}[$__range])\n  /\n  avg_over_time(kubelet_volume_stats_inodes{namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Used inodes %",
+              "refId": "H"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, pod) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "pod",
+              "refId": "I"
+            }
+          ],
+          "title": "Overview",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "На данном графике не отображается информация о дисках, со StorageClass с названием (/local.+/), так как в local storage дисках потребленное место рассчитывается неверно. \n\nТут рисуются ТОЛЬКО используемые в данный момент (НЕ local storage) диски.",
+          "fill": 1,
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 106
+          },
+          "id": 157,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "persistentvolumeclaim",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "persistentvolumeclaim": {
+              "selected": true,
+              "text": "clickhouse",
+              "value": "clickhouse"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/Total/",
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  label_replace(\n    kube_persistentvolumeclaim_info{namespace=\"$namespace\"},\n    \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\") \n  * on (persistentvolume) group_left() \n  avg_over_time(kube_persistentvolume_capacity_bytes[$__interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\", pod=~\"$pod\"}\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Provisioned",
+              "refId": "A"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\", pod=~\"$pod\"}\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Capacity",
+              "refId": "B"
+            },
+            {
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Used",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$persistentvolumeclaim",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bytes",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "PVC Detailed",
+      "type": "row"
     }
   ],
   "refresh": "30s",
@@ -3660,8 +4244,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "kube-prometheus",
-          "value": "kube-prometheus"
+          "text": "loghouse",
+          "value": "loghouse"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -3685,8 +4269,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "prometheus-main-0",
-          "value": "prometheus-main-0"
+          "text": "clickhouse-server-5b7b64599d-bwpmr",
+          "value": "clickhouse-server-5b7b64599d-bwpmr"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -3731,6 +4315,31 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "clickhouse",
+          "value": "clickhouse"
+        },
+        "datasource": "$ds_prometheus",
+        "definition": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}, persistentvolumeclaim)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "PersistentVolumeClaim",
+        "multi": true,
+        "name": "persistentvolumeclaim",
+        "options": [],
+        "query": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}, persistentvolumeclaim)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -3766,5 +4375,5 @@
   "timezone": "",
   "title": "Namespace / Controller / Pod",
   "uid": "m41rB4yiz1",
-  "version": 2
+  "version": 1
 }
