@@ -116,7 +116,7 @@ class AnnotatedPod(Annotated):
         "disk-bytes-warning": 70,
         "disk-bytes-critical": 80,
         "disk-inodes-warning": 85,
-        "disk-inodes-critical": 95,
+        "disk-inodes-critical": 90,
         "container-throttling-warning": 25,
         "container-throttling-critical": 50
     }
@@ -148,7 +148,7 @@ class AnnotatedNode(Annotated):
         "disk-bytes-warning": 70,
         "disk-bytes-critical": 80,
         "disk-inodes-warning": 85,
-        "disk-inodes-critical": 95
+        "disk-inodes-critical": 90
     }
 
 
