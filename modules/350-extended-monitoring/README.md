@@ -36,7 +36,7 @@
 | disk-bytes-warning            | int (percent) | 70             |
 | disk-bytes-critical           | int (percent) | 80             |
 | disk-inodes-warning           | int (percent) | 85             |
-| disk-inodes-critical          | int (percent) | 95             |
+| disk-inodes-critical          | int (percent) | 90             |
 
 > ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
 
@@ -49,7 +49,7 @@
 | disk-bytes-warning            | int (percent) | 85             |
 | disk-bytes-critical           | int (percent) | 95             |
 | disk-inodes-warning           | int (percent) | 85             |
-| disk-inodes-critical          | int (percent) | 95             |
+| disk-inodes-critical          | int (percent) | 90             |
 | container-throttling-warning  | int (percent) | 25             |
 | container-throttling-critical | int (percent) | 50             |
 
