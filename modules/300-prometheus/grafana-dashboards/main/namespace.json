@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 33,
-  "iteration": 1554896388172,
+  "id": 32,
+  "iteration": 1554984241810,
   "links": [],
   "panels": [
     {
@@ -430,8 +430,9 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3",
+          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "VPA Mode",
@@ -1265,7 +1266,7 @@
           "fill": 0,
           "gridPos": {
             "h": 9,
-            "w": 8,
+            "w": 6,
             "x": 0,
             "y": 43
           },
@@ -1293,9 +1294,9 @@
           "repeatDirection": "h",
           "scopedVars": {
             "controller": {
-              "selected": false,
-              "text": "deploy/hamster",
-              "value": "deploy/hamster"
+              "selected": true,
+              "text": "No Controller",
+              "value": "No Controller"
             }
           },
           "seriesOverrides": [
@@ -1400,11 +1401,11 @@
           "fill": 0,
           "gridPos": {
             "h": 9,
-            "w": 8,
-            "x": 8,
+            "w": 6,
+            "x": 6,
             "y": 43
           },
-          "id": 588,
+          "id": 607,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -1426,13 +1427,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1549971135806,
+          "repeatIteration": 1554984241802,
           "repeatPanelId": 341,
           "scopedVars": {
             "controller": {
-              "selected": false,
-              "text": "deploy/hamster2",
-              "value": "deploy/hamster2"
+              "selected": true,
+              "text": "deploy/dashboard",
+              "value": "deploy/dashboard"
             }
           },
           "seriesOverrides": [
@@ -1537,11 +1538,11 @@
           "fill": 0,
           "gridPos": {
             "h": 9,
-            "w": 8,
-            "x": 16,
+            "w": 6,
+            "x": 12,
             "y": 43
           },
-          "id": 589,
+          "id": 608,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -1563,13 +1564,150 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1549971135806,
+          "repeatIteration": 1554984241802,
           "repeatPanelId": 341,
           "scopedVars": {
             "controller": {
-              "selected": false,
-              "text": "deploy/hamster3",
-              "value": "deploy/hamster3"
+              "selected": true,
+              "text": "deploy/heapster",
+              "value": "deploy/heapster"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "D"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "E"
+            },
+            {
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "F"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$controller",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 43
+          },
+          "id": 609,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1554984241802,
+          "repeatPanelId": 341,
+          "scopedVars": {
+            "controller": {
+              "selected": true,
+              "text": "deploy/tiller-deploy",
+              "value": "deploy/tiller-deploy"
             }
           },
           "seriesOverrides": [
@@ -4225,354 +4363,6 @@
             "align": false,
             "alignLevel": null
           }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "",
-          "fill": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 6,
-            "y": 103
-          },
-          "id": 604,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": true,
-            "show": true,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1554896388172,
-          "repeatPanelId": 603,
-          "scopedVars": {
-            "persistentvolumeclaim": {
-              "selected": false,
-              "text": "datadir-mongodb-0",
-              "value": "datadir-mongodb-0"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Provisioned",
-              "refId": "A"
-            },
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Capacity",
-              "refId": "B"
-            },
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Used",
-              "refId": "C"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$persistentvolumeclaim",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 2,
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "",
-          "fill": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 12,
-            "y": 103
-          },
-          "id": 605,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": true,
-            "show": true,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1554896388172,
-          "repeatPanelId": 603,
-          "scopedVars": {
-            "persistentvolumeclaim": {
-              "selected": false,
-              "text": "sphinx-indexes-sphinx-0",
-              "value": "sphinx-indexes-sphinx-0"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Provisioned",
-              "refId": "A"
-            },
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Capacity",
-              "refId": "B"
-            },
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Used",
-              "refId": "C"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$persistentvolumeclaim",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 2,
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "",
-          "fill": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 18,
-            "y": 103
-          },
-          "id": 606,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": true,
-            "show": true,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1554896388172,
-          "repeatPanelId": 603,
-          "scopedVars": {
-            "persistentvolumeclaim": {
-              "selected": false,
-              "text": "test-claim",
-              "value": "test-claim"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Provisioned",
-              "refId": "A"
-            },
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Capacity",
-              "refId": "B"
-            },
-            {
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__interval])\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Used",
-              "refId": "C"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$persistentvolumeclaim",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 2,
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
         }
       ],
       "title": "PVC Detailed",
@@ -4603,8 +4393,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "wtis-test-16",
-          "value": "wtis-test-16"
+          "text": "gogomonia-production",
+          "value": "gogomonia-production"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -4653,12 +4443,15 @@
       {
         "allValue": ".*",
         "current": {
+          "tags": [],
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{namespace=~\"$namespace\", controller_type=~\"$controller_type\"}, controller)",
-        "hide": 2,
+        "hide": 0,
         "includeAll": true,
         "label": "Controller",
         "multi": true,
@@ -4761,5 +4554,5 @@
   "timezone": "",
   "title": "Namespace",
   "uid": "sZzUB4ymk1",
-  "version": 2
+  "version": 1
 }
