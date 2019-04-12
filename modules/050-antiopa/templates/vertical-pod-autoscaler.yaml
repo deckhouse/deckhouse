@@ -1,5 +1,6 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: antiopa
@@ -9,13 +10,14 @@ metadata:
     module: antiopa
     app: antiopa
 spec:
-  selector:
-    matchLabels:
-      service: antiopa
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: antiopa
   updatePolicy:
     updateMode: "Off"
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: tiller-deploy
@@ -25,9 +27,10 @@ metadata:
     module: antiopa
     app: helm
 spec:
-  selector:
-    matchLabels:
-      app: helm
-      name: tiller
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: tiller-deploy
   updatePolicy:
     updateMode: "Off"
+{{- end }}

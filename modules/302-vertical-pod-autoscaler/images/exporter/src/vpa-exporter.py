@@ -1,28 +1,41 @@
 #!/usr/bin/env python3
 
 import kubernetes
+import collections
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 kubernetes.config.load_incluster_config()
 
 corev1 = kubernetes.client.CoreV1Api()
+appsv1 = kubernetes.client.AppsV1Api()
+batchv1 = kubernetes.client.BatchV1Api()
+extensionsv1beta1 = kubernetes.client.ExtensionsV1beta1Api()
 custom_api = kubernetes.client.CustomObjectsApi()
 
 
-def gather():
-    pods_by_ns = {}
-    vpas = []
+def dict_merge(dct, merge_dct):
+    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
+    updating only top-level keys, dict_merge recurses down into dicts nested
+    to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
+    ``dct``.
+    :param dct: dict onto which the merge is executed
+    :param merge_dct: dct merged into dct
+    :return: None
+    """
+    for k, v in merge_dct.items():
+        if (k in dct and isinstance(dct[k], dict)
+                and isinstance(merge_dct[k], collections.Mapping)):
+            dict_merge(dct[k], merge_dct[k])
+        else:
+            dct[k] = merge_dct[k]
 
-    pods = corev1.list_pod_for_all_namespaces().items
-    for pod in pods:
-        pods_by_ns.setdefault(pod.metadata.namespace, []).append(pod)
 
-    for namespace in corev1.list_namespace().items:
-        for vpa in custom_api.list_namespaced_custom_object("autoscaling.k8s.io", "v1beta1", namespace.metadata.name,
-                                                            "verticalpodautoscalers")["items"]:
-            vpas.append(vpa)
+def tranform_to_dict(object_list):
+    to_return = {}
+    for object in object_list.items:
+        dict_merge(to_return, {object.metadata.namespace: {object.metadata.name: object}})
 
-    return pods_by_ns, vpas
+    return to_return
 
 
 def convert(resource: str):
@@ -49,38 +62,35 @@ def convert(resource: str):
 
 class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        pods, vpas = gather()
+        vpas = []
+        for namespace in corev1.list_namespace().items:
+            for vpa in \
+                    custom_api.list_namespaced_custom_object("autoscaling.k8s.io", "v1beta2", namespace.metadata.name,
+                                                             "verticalpodautoscalers")["items"]:
+                vpas.append(vpa)
 
         response = """# HELP vpa_recommendation Per-container VPA recommendations
 # TYPE vpa_recommendation gauge\n"""
 
         for vpa in vpas:
             try:
-                vpa_label_selector = vpa["spec"]["selector"]["matchLabels"]
+                vpa_target_ref = vpa["spec"]["targetRef"]
                 vpa_container_recommendations = vpa["status"]["recommendation"]["containerRecommendations"]
             except KeyError as e:
-                print('One of required fields on a VPA object {}/{} does not exist: {}'.format(
+                print('One of the required fields on a VPA object {}/{} does not exist: {}'.format(
                     vpa["metadata"]["namespace"], vpa["metadata"]["name"], e))
                 continue
-            pods_in_ns = (pod_ns for pod_ns in pods[vpa["metadata"]["namespace"]])
-            matching_pods = []
-            for pod in pods_in_ns:
-                try:
-                    if pod.metadata.labels.items() >= vpa_label_selector.items():
-                        matching_pods.append(pod)
-                except AttributeError:
-                    print('Pod "{}" has no labels, skipping'.format(pod.metadata.name))
 
-            for pod in matching_pods:
-                for container in vpa_container_recommendations:
-                    container_name = container["containerName"]
-                    for recommendation_type, recommendation_value in container.items():
-                        if recommendation_type != "containerName":
-                            for resource_type, resource_value in recommendation_value.items():
-                                response += 'vpa_recommendation{{namespace="{}", vpa="{}", update_policy="{}", pod="{}", container="{}", recommendation_type="{}", resource_type ="{}"}} {}\n'.format(
-                                    vpa["metadata"]["namespace"], vpa["metadata"]["name"],
-                                    vpa["spec"]["updatePolicy"]["updateMode"], pod.metadata.name, container_name,
-                                    recommendation_type, resource_type, convert(resource_value))
+            for container in vpa_container_recommendations:
+                container_name = container["containerName"]
+                for recommendation_type, recommendation_value in container.items():
+                    if recommendation_type != "containerName":
+                        for resource_type, resource_value in recommendation_value.items():
+                            response += 'vpa_recommendation{{namespace="{}", vpa="{}", update_policy="{}", controller_name="{}", controller_type="{}", container="{}", recommendation_type="{}", resource_type="{}"}} {}\n'.format(
+                                vpa["metadata"]["namespace"], vpa["metadata"]["name"],
+                                vpa["spec"]["updatePolicy"]["updateMode"], vpa_target_ref["name"], vpa_target_ref["kind"],
+                                container_name,
+                                recommendation_type, resource_type, convert(resource_value))
 
         self.send_response(200)
         self.send_header('Content-Type',

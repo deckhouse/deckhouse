@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 29,
-  "iteration": 1554983423103,
+  "id": 19,
+  "iteration": 1555049210290,
   "links": [],
   "panels": [
     {
@@ -1129,7 +1129,7 @@
           "fill": 0,
           "gridPos": {
             "h": 9,
-            "w": 12,
+            "w": 6,
             "x": 0,
             "y": 36
           },
@@ -1157,7 +1157,7 @@
           "repeatDirection": "h",
           "scopedVars": {
             "namespace": {
-              "selected": true,
+              "selected": false,
               "text": "kube-system",
               "value": "kube-system"
             }
@@ -1265,11 +1265,11 @@
           "fill": 0,
           "gridPos": {
             "h": 9,
-            "w": 12,
-            "x": 12,
+            "w": 6,
+            "x": 6,
             "y": 36
           },
-          "id": 522,
+          "id": 525,
           "legend": {
             "alignAsTable": false,
             "avg": false,
@@ -1291,13 +1291,5671 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1554983423101,
+          "repeatIteration": 1555049210290,
           "repeatPanelId": 352,
           "scopedVars": {
             "namespace": {
-              "selected": true,
+              "selected": false,
+              "text": "kube-nginx-ingress",
+              "value": "kube-nginx-ingress"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 36
+          },
+          "id": 526,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
               "text": "loghouse",
               "value": "loghouse"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 36
+          },
+          "id": 527,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kube-nginx-ingress-vpn",
+              "value": "kube-nginx-ingress-vpn"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 45
+          },
+          "id": 528,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kube-prometheus",
+              "value": "kube-prometheus"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 45
+          },
+          "id": 529,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kube-okmeter",
+              "value": "kube-okmeter"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 45
+          },
+          "id": 530,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kube-rook",
+              "value": "kube-rook"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 45
+          },
+          "id": 531,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "bush-stage",
+              "value": "bush-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 54
+          },
+          "id": 532,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "bush-test",
+              "value": "bush-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 54
+          },
+          "id": 533,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "carter-stage",
+              "value": "carter-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 54
+          },
+          "id": 534,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "carter-test",
+              "value": "carter-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 54
+          },
+          "id": 535,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "madison-stage",
+              "value": "madison-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 63
+          },
+          "id": 536,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "madison-test",
+              "value": "madison-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 63
+          },
+          "id": 537,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "ford-test",
+              "value": "ford-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 63
+          },
+          "id": 538,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "my-flant-stage",
+              "value": "my-flant-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 63
+          },
+          "id": 539,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "my-flant-test",
+              "value": "my-flant-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 72
+          },
+          "id": 540,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "nixon-stage",
+              "value": "nixon-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 72
+          },
+          "id": 541,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "nixon-test",
+              "value": "nixon-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 72
+          },
+          "id": 542,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "polk-stage",
+              "value": "polk-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 72
+          },
+          "id": 543,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "pult-test",
+              "value": "pult-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 81
+          },
+          "id": 544,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "pult-stage",
+              "value": "pult-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 81
+          },
+          "id": 545,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "run-stage",
+              "value": "run-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 81
+          },
+          "id": 546,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "run-test",
+              "value": "run-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 81
+          },
+          "id": 547,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "infra-test",
+              "value": "infra-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 90
+          },
+          "id": 548,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "infra-production",
+              "value": "infra-production"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 90
+          },
+          "id": 549,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "antiopa",
+              "value": "antiopa"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 90
+          },
+          "id": 550,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "webdev-other-flant-site-old-stage",
+              "value": "webdev-other-flant-site-old-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 90
+          },
+          "id": 551,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kube-cert-manager",
+              "value": "kube-cert-manager"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 99
+          },
+          "id": 552,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "backup",
+              "value": "backup"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 99
+          },
+          "id": 553,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "docs-updates-test",
+              "value": "docs-updates-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 99
+          },
+          "id": 554,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "flant-site-old-stage",
+              "value": "flant-site-old-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 99
+          },
+          "id": 555,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "ford-stage",
+              "value": "ford-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 108
+          },
+          "id": 556,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "default",
+              "value": "default"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 108
+          },
+          "id": 557,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kb-search-test",
+              "value": "kb-search-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 108
+          },
+          "id": 558,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "company-production",
+              "value": "company-production"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 108
+          },
+          "id": 559,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "frontline-production",
+              "value": "frontline-production"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 117
+          },
+          "id": 560,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "infra-stage",
+              "value": "infra-stage"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 117
+          },
+          "id": 561,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "navigator",
+              "value": "navigator"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 117
+          },
+          "id": 562,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "plivo-test",
+              "value": "plivo-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 117
+          },
+          "id": 563,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "polk-test",
+              "value": "polk-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 126
+          },
+          "id": 564,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "kube-prometheus-operator",
+              "value": "kube-prometheus-operator"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 126
+          },
+          "id": 565,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "werfio-test",
+              "value": "werfio-test"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Usage",
+              "color": "#629e51"
+            },
+            {
+              "alias": "Requests",
+              "color": "#f4d598"
+            },
+            {
+              "alias": "Limits",
+              "color": "#c15c17"
+            },
+            {
+              "alias": "VPA Target",
+              "color": "#447ebc"
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv]))",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "B"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\", namespace=\"$namespace\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Limits",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "VPA Target",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$namespace",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "cores",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fill": 0,
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 126
+          },
+          "id": 566,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1555049210290,
+          "repeatPanelId": 352,
+          "scopedVars": {
+            "namespace": {
+              "selected": false,
+              "text": "cassandra",
+              "value": "cassandra"
             }
           },
           "seriesOverrides": [

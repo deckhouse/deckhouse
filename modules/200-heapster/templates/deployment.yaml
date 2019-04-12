@@ -1,5 +1,6 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: heapster
@@ -9,11 +10,13 @@ metadata:
     module: {{ $.Chart.Name }}
     app: heapster
 spec:
-  selector:
-    matchLabels:
-      app: heapster
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: heapster
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment

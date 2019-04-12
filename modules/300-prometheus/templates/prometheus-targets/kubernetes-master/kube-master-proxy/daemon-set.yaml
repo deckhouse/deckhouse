@@ -1,6 +1,7 @@
 {{- if not (eq .Values.global.discovery.clusterType "ACS") }}
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: kube-prometheus-kube-master-proxy
@@ -10,11 +11,13 @@ metadata:
     module: {{ $.Chart.Name }}
     app: kube-prometheus-kube-master-proxy
 spec:
-  selector:
-    matchLabels:
-      app: kube-prometheus-kube-master-proxy
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: kube-prometheus-kube-master-proxy
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet

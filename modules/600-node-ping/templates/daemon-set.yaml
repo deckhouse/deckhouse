@@ -1,5 +1,6 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: node-ping
@@ -9,11 +10,13 @@ metadata:
     module: {{ $.Chart.Name }}
     app: node-ping
 spec:
-  selector:
-    matchLabels:
-      name: node-ping
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: node-ping
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet

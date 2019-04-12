@@ -1,5 +1,6 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: grafana
@@ -9,11 +10,13 @@ metadata:
     module: {{ $.Chart.Name }}
     app: grafana
 spec:
-  selector:
-    matchLabels:
-      app: grafana
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: grafana
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: apps/v1beta1
 kind: Deployment

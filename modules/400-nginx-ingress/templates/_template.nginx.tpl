@@ -3,8 +3,9 @@
   {{- $publishService := (.publishService | default false) }}
   {{- $hostNetwork := (.hostNetwork | default false) }}
   {{- with .context }}
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $name }}
@@ -14,11 +15,13 @@ metadata:
     module: {{ .Chart.Name }}
     app: {{ $name }}
 spec:
-  selector:
-    matchLabels:
-      app: {{ $name }}
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: {{ $name }}
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet

@@ -1,5 +1,6 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $.Chart.Name }}
@@ -7,11 +8,13 @@ metadata:
   labels:
     app: {{ $.Chart.Name }}
 spec:
-  selector:
-    matchLabels:
-      app: {{ $.Chart.Name }}
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: {{ $.Chart.Name }}
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet

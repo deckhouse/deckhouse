@@ -1,5 +1,5 @@
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: vpa-updater
@@ -8,9 +8,10 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 spec:
-  selector:
-    matchLabels:
-      app: vpa-updater
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: vpa-updater
   updatePolicy:
     updateMode: "Off"
 ---
@@ -38,6 +39,9 @@ spec:
       labels:
         app: vpa-updater
     spec:
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+{{- end }}
 {{- if and (hasKey .Values.verticalPodAutoscaler "nodeSelector") (.Values.verticalPodAutoscaler.nodeSelector) }}
       nodeSelector:
 {{ .Values.verticalPodAutoscaler.nodeSelector | toYaml | trim | indent 8 }}
@@ -60,7 +64,7 @@ spec:
       - name: updater
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/updater:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.updater }}
         imagePullPolicy: Always
-        args:
+        command:
         - /updater
         - --address=:8943
         - --evict-after-oom-treshold=10m0s

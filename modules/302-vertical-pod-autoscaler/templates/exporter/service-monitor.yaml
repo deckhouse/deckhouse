@@ -13,10 +13,8 @@ spec:
   - port: http-metrics
     honorLabels: true
     relabelings:
-    - regex: endpoint|namespace|service
+    - regex: endpoint|namespace|service|pod
       action: labeldrop
-    - sourceLabels: ["pod"]
-      targetLabel: pod
   selector:
     matchLabels:
       heritage: antiopa

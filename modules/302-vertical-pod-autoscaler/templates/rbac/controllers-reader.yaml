@@ -18,8 +18,18 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - daemonsets
+  - deployments
   - statefulsets
   - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
   verbs:
   - get
   - list
@@ -39,4 +49,10 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-updater
+  namespace: kube-system
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: kube-system
+- kind: ServiceAccount
+  name: vpa-admission-controller
   namespace: kube-system
