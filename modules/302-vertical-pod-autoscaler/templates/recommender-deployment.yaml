@@ -1,5 +1,5 @@
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: vpa-recommender
@@ -8,9 +8,10 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 spec:
-  selector:
-    matchLabels:
-      app: vpa-recommender
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: vpa-recommender
   updatePolicy:
     updateMode: "Off"
 ---
@@ -38,6 +39,9 @@ spec:
       labels:
         app: vpa-recommender
     spec:
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+{{- end }}
 {{- if and (hasKey .Values.verticalPodAutoscaler "nodeSelector") (.Values.verticalPodAutoscaler.nodeSelector) }}
       nodeSelector:
 {{ .Values.verticalPodAutoscaler.nodeSelector | toYaml | trim | indent 8 }}
@@ -60,7 +64,7 @@ spec:
       - name: recommender
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/recommender:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.recommender }}
         imagePullPolicy: Always
-        args:
+        command:
         - /recommender
         - --address=:8942
         - --checkpoints-gc-interval=10m0s
@@ -74,6 +78,7 @@ spec:
         - --recommendation-margin-fraction=0.15
         - --recommender-interval=1m0s
         - --stderrthreshold=0
+        - --storage=prometheus
         - --v=4
         resources:
           limits:

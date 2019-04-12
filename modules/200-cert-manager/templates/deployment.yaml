@@ -1,5 +1,5 @@
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: cert-manager
@@ -9,9 +9,10 @@ metadata:
     module: {{ $.Chart.Name }}
     app: cert-manager
 spec:
-  selector:
-    matchLabels:
-      app: cert-manager
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cert-manager
   updatePolicy:
     updateMode: "Off"
 ---

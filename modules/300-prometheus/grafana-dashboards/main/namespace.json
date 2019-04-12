@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 32,
-  "iteration": 1554984241810,
+  "id": 23,
+  "iteration": 1555064221753,
   "links": [],
   "panels": [
     {
@@ -430,7 +430,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (pod) group_left() sum by (pod) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3",
+          "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"})) * 0\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"})) * 0 + 1\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"})) * 0 + 2\nor\nsum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"} * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"})) * 0 + 3",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -455,7 +455,7 @@
           "refId": "D"
         },
         {
-          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range]))\n  ) \nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (controller_type, controller_name) group_left()\n    sum by(controller_type, controller_name) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range]))\n  ) \nor\ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -503,7 +503,7 @@
           "refId": "J"
         },
         {
-          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range]))\n  ) \n  or  \ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
+          "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}\n    * on (controller_type, controller_name) group_left()\n    sum by(controller_type, controller_name) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range]))\n  ) \n  or  \ncount (kube_controller_pod{namespace=\"$namespace\", controller=~\"$controller\"}) by (controller) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -1266,7 +1266,7 @@
           "fill": 0,
           "gridPos": {
             "h": 9,
-            "w": 6,
+            "w": 24,
             "x": 0,
             "y": 43
           },
@@ -1292,143 +1292,6 @@
           "renderer": "flot",
           "repeat": "controller",
           "repeatDirection": "h",
-          "scopedVars": {
-            "controller": {
-              "selected": true,
-              "text": "No Controller",
-              "value": "No Controller"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "E"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "F"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 43
-          },
-          "id": 607,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1554984241802,
-          "repeatPanelId": 341,
           "scopedVars": {
             "controller": {
               "selected": true,
@@ -1480,281 +1343,7 @@
               "refId": "E"
             },
             {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "F"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 43
-          },
-          "id": 608,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1554984241802,
-          "repeatPanelId": 341,
-          "scopedVars": {
-            "controller": {
-              "selected": true,
-              "text": "deploy/heapster",
-              "value": "deploy/heapster"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "E"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "F"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 43
-          },
-          "id": 609,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1554984241802,
-          "repeatPanelId": 341,
-          "scopedVars": {
-            "controller": {
-              "selected": true,
-              "text": "deploy/tiller-deploy",
-              "value": "deploy/tiller-deploy"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by (controller) (kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", container!=\"POD\"}[$__interval_rv])))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "E"
-            },
-            {
-              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
+              "expr": "sum by (controller)\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (controller_type, controller_name) group_left()\n    sum by(controller_type, controller_name) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2668,7 +2257,7 @@
           "fill": 1,
           "gridPos": {
             "h": 9,
-            "w": 8,
+            "w": 24,
             "x": 0,
             "y": 63
           },
@@ -2696,9 +2285,9 @@
           "repeatDirection": "h",
           "scopedVars": {
             "controller": {
-              "selected": false,
-              "text": "deploy/hamster",
-              "value": "deploy/hamster"
+              "selected": true,
+              "text": "deploy/dashboard",
+              "value": "deploy/dashboard"
             }
           },
           "seriesOverrides": [
@@ -2787,365 +2376,7 @@
               "refId": "F"
             },
             {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "G"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 8,
-            "x": 8,
-            "y": 63
-          },
-          "id": 592,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1549971135806,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "deploy/hamster2",
-              "value": "deploy/hamster2"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  ) ",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "E"
-            },
-            {
-              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "F"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "G"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$controller",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 8,
-            "x": 16,
-            "y": 63
-          },
-          "id": 593,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1549971135806,
-          "repeatPanelId": 44,
-          "scopedVars": {
-            "controller": {
-              "selected": false,
-              "text": "deploy/hamster3",
-              "value": "deploy/hamster3"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left() \n    sum by (pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace\", container!=\"POD\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
-              "refId": "D"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  ) ",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "E"
-            },
-            {
-              "expr": "sum\n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"} \n    * on (pod) group_left() \n    sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{container!=\"POD\",namespace=\"$namespace\"}[$__interval]))\n  )",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "F"
-            },
-            {
-              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_left()\n    sum by(pod) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
+              "expr": "sum \n  (\n    kube_controller_pod{namespace=\"$namespace\", controller=\"$controller\"}\n    * on (controller_type, controller_name) group_left()\n    sum by(controller_type, controller_name) (avg_over_time(vpa_recommendation{container!=\"POD\",namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval]))\n  )",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4393,8 +3624,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "gogomonia-production",
-          "value": "gogomonia-production"
+          "text": "kube-system",
+          "value": "kube-system"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -4443,10 +3674,9 @@
       {
         "allValue": ".*",
         "current": {
-          "tags": [],
-          "text": "All",
+          "text": "deploy/dashboard",
           "value": [
-            "$__all"
+            "deploy/dashboard"
           ]
         },
         "datasource": "$ds_prometheus",

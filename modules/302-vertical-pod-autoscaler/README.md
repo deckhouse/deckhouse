@@ -28,6 +28,8 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 
 ##  Конфигурация
 
+Работает только в кластерах начиная с версии 1.11.
+
 ### Настройка модуля
 
 У модуля есть только настройки `nodeSelector/tolerations`:
@@ -53,7 +55,10 @@ verticalPodAutoscaler: |
 > VPA работает не с контроллером пода, а с самим подом — измеряя и изменяя параметры его контейнеров.
 
 Создать ресурс `VerticalPodAutoscaler`, в котором:
-- описать `spec.selector.matchLabels` (DEPRECATED)
+- описать `spec.targetRef`:
+  - `apiVersion` — API версия объекта;
+  - `kind` — тип объекта;
+  - `name` — имя объекта.
 - (не обязательно) указать `spec.updatePolicy.updateMode` один из — `Auto`, `Recreate`, `Initial`, `Off` (не обязательно, по умолчанию — `Auto`)
 - (не обязательно) указать `resourcePolicy.containerPolicies` для конкретных контейнеров:
     - `containerName` — имя контейнера;
@@ -87,14 +92,15 @@ VPA состоит из 3х компонентов:
 Пример полного VPA объекта со всеми параметрами:
 
 ```yaml
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: my-app-vpa
 spec:
-  selector:
-    matchLabels:
-      app: my-app
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: my-app
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -112,14 +118,15 @@ spec:
 Пример минимального VPA объекта:
 
 ```yaml
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: my-app-vpa
 spec:
-  selector:
-    matchLabels:
-      app: my-app
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: my-app
 ```
 
 После деплоя данного VPA мы можем посмотреть рекомендации VPA:

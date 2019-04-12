@@ -15,6 +15,28 @@ rules:
   - list
   - watch
   - get
+- apiGroups: ["extensions"]
+  resources:
+  - deployments
+  - daemonsets
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs:
+  - list
+  - watch
+  - get
 - apiGroups:
   - "autoscaling.k8s.io"
   resources:

@@ -1,6 +1,7 @@
 {{- if .Values.dashboard.gitlabBaseUrl }}
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: oauth2-proxy
@@ -10,12 +11,13 @@ metadata:
     module: {{ $.Chart.Name }}
     app: oauth2-proxy
 spec:
-  selector:
-    matchLabels:
-      app: oauth2-proxy
-      module: {{ $.Chart.Name }}
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: dashboard-oauth2-proxy
   updatePolicy:
     updateMode: "Off"
+{{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment

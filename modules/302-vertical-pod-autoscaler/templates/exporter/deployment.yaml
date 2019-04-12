@@ -1,5 +1,5 @@
 ---
-apiVersion: autoscaling.k8s.io/v1beta1
+apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: vpa-exporter
@@ -9,10 +9,10 @@ metadata:
     module: {{ $.Chart.Name }}
     app: vpa-exporter
 spec:
-  selector:
-    matchLabels:
-      app: vpa-exporter
-      module: {{ $.Chart.Name }}
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: vpa-exporter
   updatePolicy:
     updateMode: "Off"
 ---
@@ -52,6 +52,9 @@ spec:
       - key: node-role/system
         effect: NoExecute
 {{- end }}
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+{{- end }}
       imagePullSecrets:
       - name: vertical-pod-autoscaler-antiopa-registry
       containers:
@@ -64,6 +67,14 @@ spec:
         ports:
         - containerPort: 8080
           protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 120
+          timeoutSeconds: 20
+          periodSeconds: 35
         args:
         - "/app/vpa-exporter.py"
         env:
