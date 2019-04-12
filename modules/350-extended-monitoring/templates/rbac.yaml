@@ -35,6 +35,15 @@ rules:
   - list
   - watch
   - get
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - list
+  - watch
+  - get
 ---
 apiVersion: v1
 kind: ServiceAccount
