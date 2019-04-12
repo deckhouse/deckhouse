@@ -17,6 +17,8 @@
 К Kubernetes объектам `threshold.extended-monitoring.flant.com/что-то своё` можно добавить любые другие аннотации с указанным значением. Пример: `kubectl annotate pod test monitoring.flant.com/disk-inodes-warning-threshold=30`.
 В таком случае, значение из аннотации заменит значение по-умолчанию.
 
+Слежение за объектом можно отключить индивидуально, поставив на него аннотацию `extended-monitoring.flant.com/enabled=false`. Соответственно, отключатся и аннотации по-умолчанию, а также все алерты, привязанные к аннотациям.
+
 ## Стандартные аннотации и поддерживаемые Kubernetes объекты
 
 Далее приведён список используемых в Prometheus Rules аннотаций, а также их стандартные значения.
@@ -85,6 +87,16 @@
 | replicas-not-ready  | int (count) | 0            |
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
+
+#### DaemonSet
+
+| Annotation             | Type          | Default value |
+|------------------------|---------------|---------------|
+| replicas-not-ready  | int (count) | 0            |
+
+#### CronJob
+
+Работает только выключение через аннотацию `extended-monitoring.flant.com/enabled=false`.
 
 ## Как работает
 

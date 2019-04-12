@@ -8,20 +8,26 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 kubernetes.config.load_incluster_config()
 
 EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX = "threshold.extended-monitoring.flant.com/"
-EXTENDED_MONITORING_NAMESPACE_ANNOTATION = "extended-monitoring.flant.com/enabled"
+EXTENDED_MONITORING_ENABLED_ANNOTATION = "extended-monitoring.flant.com/enabled"
 
 
 class Annotated(ABC):
+    default_thresholds = {}
+
     def __init__(self, namespace, name, kube_annotations):
         self.namespace = namespace
         self.name = name
-        self.thresholds = copy.deepcopy(self.default_thresholds)
+        self.enabled = True
 
         if kube_annotations:
-            for name, value in kube_annotations.items():
-                if name.startswith(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
-                    self.thresholds.update(
-                        {name.replace(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, ""): value})
+            if not {EXTENDED_MONITORING_ENABLED_ANNOTATION: "false"}.items() <= kube_annotations.items():
+                self.thresholds = copy.deepcopy(self.default_thresholds)
+                for name, value in kube_annotations.items():
+                    if name.startswith(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
+                        self.thresholds.update(
+                            {name.replace(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, ""): value})
+            else:
+                self.enabled = False
 
     @classmethod
     def list_threshold_annotated_objects(cls, namespace):
@@ -34,13 +40,29 @@ class Annotated(ABC):
     @property
     def formatted(self):
         to_return = ""
-        for k, v in self.thresholds.items():
-            to_return += 'extended_monitoring_{}_threshold{{namespace="{}", threshold="{}", {}="{}"}} {}\n'.format(
+
+        if self.enabled:
+            to_return += 'extended_monitoring_{}_enabled{{namespace="{}", {}="{}"}} {}\n'.format(
                 self.kind.lower(),
                 self.namespace,
-                k,
                 self.kind.lower(),
-                self.name, int(v))
+                self.name, 1)
+
+            if hasattr(self, "thresholds"):
+                for k, v in self.thresholds.items():
+                    to_return += 'extended_monitoring_{}_threshold{{namespace="{}", threshold="{}", {}="{}"}} {}\n'.format(
+                        self.kind.lower(),
+                        self.namespace,
+                        k,
+                        self.kind.lower(),
+                        self.name, int(v))
+        else:
+            to_return += 'extended_monitoring_{}_enabled{{namespace="{}", {}="{}"}} {}\n'.format(
+                self.kind.lower(),
+                self.namespace,
+                self.kind.lower(),
+                self.name, 0)
+
         return to_return
 
     @property
@@ -56,11 +78,6 @@ class Annotated(ABC):
     @classmethod
     @abstractmethod
     def list(cls, namespace):
-        pass
-
-    @property
-    @abstractmethod
-    def default_thresholds(self):
         pass
 
 
@@ -152,9 +169,18 @@ class AnnotatedNode(Annotated):
     }
 
 
+class AnnotatedCronJob(Annotated):
+    kind = "CronJob"
+    api = kubernetes.client.BatchV1beta1Api()
+
+    @classmethod
+    def list(cls, namespace):
+        return cls.api.list_namespaced_cron_job(namespace).items
+
+
 KUBERNETES_OBJECTS = (AnnotatedNode,)
 KUBERNETES_NAMESPACED_OBJECTS = (
-    AnnotatedDeployment, AnnotatedStatefulSet, AnnotatedDaemonSet, AnnotatedPod, AnnotatedIngress)
+    AnnotatedDeployment, AnnotatedStatefulSet, AnnotatedDaemonSet, AnnotatedPod, AnnotatedIngress, AnnotatedCronJob)
 
 corev1 = kubernetes.client.CoreV1Api()
 
@@ -167,7 +193,7 @@ class GetHandler(BaseHTTPRequestHandler):
         # iterate over namespaced objects in explicitly enabled via annotation Namespaces
         ns_list = corev1.list_namespace()
         for namespace in (ns for ns in ns_list.items if ns.metadata.annotations and
-                                                        EXTENDED_MONITORING_NAMESPACE_ANNOTATION in ns.metadata.annotations.keys()):
+                                                        EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()):
             for kube_object in KUBERNETES_NAMESPACED_OBJECTS:
                 exported.extend(kube_object.list_threshold_annotated_objects(namespace.metadata.name))
 
@@ -190,4 +216,3 @@ if __name__ == '__main__':
     server = HTTPServer(('0.0.0.0', 8080), GetHandler)
     print('Starting server...')
     server.serve_forever()
-
