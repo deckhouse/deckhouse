@@ -8,44 +8,77 @@
     annotations:
       description: Reloading Prometheus' configuration has failed for {{$labels.namespace}}/{{$labels.pod}}
       summary: Reloading Promehteus' configuration failed
-#  - alert: PrometheusNotificationQueueRunningFull
-#    expr: max(predict_linear(prometheus_notifications_queue_length[5m], 60 * 30) > prometheus_notifications_queue_capacity) BY (namespace, pod)
-#    for: 10m
-#    labels:
-#      severity: warning
-#    annotations:
-#      description: Prometheus' alert notification queue is running full for {{$labels.namespace}}/{{
-#        $labels.pod}}
-#      summary: Prometheus' alert notification queue is running full
-#  - alert: PrometheusErrorSendingAlerts
-#    expr: max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
-#      > 0.01) BY (namespace, pod, alertmanager)
-#    for: 30m
-#    labels:
-#      severity: warning
-#    annotations:
-#      description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{
-#        $labels.pod}} to Alertmanager {{$labels.alertmanager}}
-#      summary: Errors while sending alert from Prometheus
-#  - alert: PrometheusErrorSendingAlerts
-#    expr: max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
-#      > 0.03) by (namespace, pod, alertmanager)
-#    for: 1h
-#    labels:
-#      severity: critical
-#    annotations:
-#      description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{
-#        $labels.pod}} to Alertmanager {{$labels.alertmanager}}
-#      summary: Errors while sending alerts from Prometheus
-  - alert: PrometheusNotConnectedToAlertmanagers
+  - alert: PrometheusNotificationQueueRunningFull
+    expr: |
+      max by (namespace, pod) (
+        (
+          max_over_time(prometheus_notifications_queue_length[5m])
+          /
+          prometheus_notifications_queue_capacity
+        ) * 100
+        > 10
+      )
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      description: |
+        Prometheus' alert notification queue is running full for Prometheus {{$labels.namespace}}/{{$labels.pod}}
+        Currently at: {{$value}}%
+      summary: Prometheus' alert notification queue is running full
+  - alert: PrometheusMadisonErrorSendingAlerts
+    expr: |
+      max by (prometheus_namespace, prometheus_pod, pod_ip) (
+        label_replace(
+          label_replace(
+            label_replace(
+              max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
+                > 0.01) by (namespace, pod, alertmanager),
+              "pod_ip", "$1", "alertmanager", ".*://(.*):.*"),
+            "prometheus_namespace", "$1", "namespace", "(.*)"),
+          "prometheus_pod", "$1", "pod", "(.*)")
+      )
+      * on (pod_ip) group_right(prometheus_namespace, prometheus_pod)
+      max by (namespace, pod, pod_ip) (kube_pod_info)
+      * on (namespace, pod) group_left(label_madison_backend)
+      kube_pod_labels{label_madison_backend!=""}
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      description: Errors while sending alerts from Prometheus {{$labels.prometheus_namespace}}/{{ $labels.prometheus_pod}} to madison backend {{$labels.label_madison_backend}} via madison-proxy {{$labels.namespace}}/{{$labels.pod}}
+      summary: Errors while sending alert from Prometheus {{$labels.prometheus_namespace}}/{{$labels.prometheus_pod}}
+  - alert: PrometheusMadisonErrorSendingAlerts
+    expr: |
+      max by (prometheus_namespace, prometheus_pod, pod_ip) (
+        label_replace(
+          label_replace(
+            label_replace(
+              max(rate(prometheus_notifications_errors_total[5m]) / rate(prometheus_notifications_sent_total[5m])
+                > 0.05) by (namespace, pod, alertmanager),
+              "pod_ip", "$1", "alertmanager", ".*://(.*):.*"),
+            "prometheus_namespace", "$1", "namespace", "(.*)"),
+          "prometheus_pod", "$1", "pod", "(.*)")
+      )
+      * on (pod_ip) group_right(prometheus_namespace, prometheus_pod)
+      max by (namespace, pod, pod_ip) (kube_pod_info)
+      * on (namespace, pod) group_left(label_madison_backend)
+      kube_pod_labels{label_madison_backend!=""}
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      description: Errors while sending alerts from Prometheus {{$labels.prometheus_namespace}}/{{ $labels.prometheus_pod}} to madison backend {{$labels.label_madison_backend}} via madison-proxy {{$labels.namespace}}/{{$labels.pod}}
+      summary: Errors while sending alert from Prometheus {{$labels.prometheus_namespace}}/{{$labels.prometheus_pod}}
+  - alert: PrometheusNotConnectedToMadison
     expr: min(prometheus_notifications_alertmanagers_discovered) BY (namespace, pod) < 1
-    for: 10m
+    for: 3m
     labels:
       severity: critical
     annotations:
       description: Prometheus {{ $labels.namespace }}/{{ $labels.pod }} is not connected
-        to any Alertmanagers
-      summary: Prometheus is not connected to any Alertmanagers
+        to Madison
+      summary: Prometheus is not connected to Madison
   - alert: PrometheusTSDBReloadsFailing
     expr: max(increase(prometheus_tsdb_reloads_failures_total[2h])) BY (namespace, pod) > 0
     for: 12h
