@@ -1,0 +1,64 @@
+{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
+{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
+
+{{- if and ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name) }}
+  {{- fail "Error!!! Use only certmanagerClusterIssuerName or customCertificateSecretName" }}
+{{- end }}
+
+{{- if .Values.global.clusterHostname }}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: admin
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+    ingress.kubernetes.io/auth-secret: basic-auth
+spec:
+  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
+  tls:
+  - hosts:
+    - openvpn-admin.{{ .Values.global.clusterHostname }}
+    secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: openvpn-admin.{{ .Values.global.clusterHostname }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: {{ .Chart.Name }}
+          servicePort: 8000
+{{- end }}
+{{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: admin
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+spec:
+  secretName: ingress-tls
+  dnsNames:
+  - openvpn-admin.{{ .Values.global.clusterHostname }}
+  acme:
+    config:
+    - http01:
+        ingressClass: nginx
+      domains:
+      - openvpn-admin.{{ .Values.global.clusterHostname }}
+  issuerRef:
+    name: {{ $certmanager_cluster_issuer_name }}
+    kind: ClusterIssuer
+{{- end }}

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  KUBE_NODES_INFO=$(kubectl get nodes -o json)
+  KUBE_SERVICE_NETWORK=$(awk '{gsub("\\.", " "); print $1"."$2"."$3".0/255.255.0.0"}' <<< $KUBERNETES_SERVICE_HOST)
+  KUBE_POD_NETWORK=$(jq -r '.items[].spec.podCIDR' <<< $KUBE_NODES_INFO | awk '{gsub("\\.", " ");print $1"."$2".0.0/255.255.0.0"}' | head -n1 || true)
+  KUBE_NODE_NETWORK=$(jq -r '.items[].status.addresses | .[] | select(.type == "InternalIP") | .address' <<< $KUBE_NODES_INFO | awk '{gsub("\\.", " ");print $1"."$2"."$3".0/255.255.255.0"}' | uniq)
+
+  if ! values::has 'openvpn.pushToClientRoutes' ; then
+    values::set --config openvpn.pushToClientRoutes "[\"$KUBE_SERVICE_NETWORK\",\"$KUBE_POD_NETWORK\",\"$KUBE_NODE_NETWORK\"]"
+  fi
+}
+
+hook::run $@

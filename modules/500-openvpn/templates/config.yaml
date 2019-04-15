@@ -1,0 +1,81 @@
+{{ $defaultTunnelNetwork := "172.25.175.0/255.255.255.0" }}
+{{ $tunnelNetworkAddress := index (splitList "/" (.Values.tunnelNetwork | default $defaultTunnelNetwork)) 0 }}
+{{ $tunnelNetworkNetmask := index (splitList "/" (.Values.tunnelNetwork | default $defaultTunnelNetwork)) 1 }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+data:
+  openvpn.conf: |-
+    server {{ $tunnelNetworkAddress }} {{ $tunnelNetworkNetmask }}
+    verb 3
+    tls-server
+    ca /etc/openvpn/certs/pki/ca.crt
+    key /etc/openvpn/certs/pki/private/server.key
+    cert /etc/openvpn/certs/pki/issued/server.crt
+    dh /etc/openvpn/certs/pki/dh.pem
+    crl-verify /etc/openvpn/certs/pki/crl.pem
+    tls-auth /etc/openvpn/certs/pki/ta.key
+    key-direction 0
+    cipher AES-128-CBC
+    management 127.0.0.1 8989
+    keepalive 10 60
+    persist-key
+    persist-tun
+    topology subnet
+    proto tcp
+    port 1194
+    dev tun0
+    status /tmp/openvpn-status.log
+    user nobody
+    group nogroup
+    push "topology subnet"
+    push "route-metric 9999"
+    {{- if hasKey .Values.openvpn "pushToClientRoutes" }}
+    {{- range $route := .Values.openvpn.pushToClientRoutes }}
+    push "route {{ $route | replace "/" " " }}"
+    {{- end }}
+    {{- else }}
+    {{- end }}
+    {{- if hasKey .Values.openvpn "pushToClientDns" }}
+    push "dhcp-option DNS {{ .Values.openvpn.pushToClientDns }}"
+    {{- end }}
+
+  configure.sh: |-
+    #!/bin/sh
+    /etc/openvpn/setup/setup-certs.sh
+    iptables -t nat -A POSTROUTING -s {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} ! -d {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} -j MASQUERADE
+
+    mkdir -p /dev/net
+    if [ ! -c /dev/net/tun ]; then
+        mknod /dev/net/tun c 10 200
+    fi
+
+    cp -f /etc/openvpn/setup/openvpn.conf /etc/openvpn/openvpn.conf
+
+    [ -d /etc/openvpn/certs/pki ] && chmod 755 /etc/openvpn/certs/pki
+    [ -f /etc/openvpn/certs/pki/crl.pem ] && chmod 644 /etc/openvpn/certs/pki/crl.pem
+
+    openvpn --config /etc/openvpn/openvpn.conf
+
+  setup-certs.sh: |-
+    #!/bin/bash
+    EASY_RSA_LOC="/etc/openvpn/certs"
+    SERVER_CERT="${EASY_RSA_LOC}/pki/issued/server.crt"
+    cd $EASY_RSA_LOC
+    if [ -e "$SERVER_CERT" ]; then
+      echo "found existing certs - reusing"
+    else
+      cp -R /usr/share/easy-rsa/* $EASY_RSA_LOC
+      ./easyrsa init-pki
+      echo "ca\n" | ./easyrsa build-ca nopass
+      ./easyrsa build-server-full server nopass
+      ./easyrsa gen-dh
+      openvpn --genkey --secret ./pki/ta.key
+    fi
+    ./easyrsa gen-crl

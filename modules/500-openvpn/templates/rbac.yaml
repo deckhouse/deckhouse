@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-{{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: kube-{{ .Chart.Name }}:openvpn
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: kube-{{ .Chart.Name }}:openvpn
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kube-{{ .Chart.Name }}:openvpn
+subjects:
+- kind: ServiceAccount
+  name: kube-{{ .Chart.Name }}
