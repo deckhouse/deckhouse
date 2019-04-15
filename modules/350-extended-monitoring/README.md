@@ -88,12 +88,6 @@
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
-#### DaemonSet
-
-| Annotation             | Type          | Default value |
-|------------------------|---------------|---------------|
-| replicas-not-ready  | int (count) | 0            |
-
 #### CronJob
 
 Работает только выключение через аннотацию `extended-monitoring.flant.com/enabled=false`.
