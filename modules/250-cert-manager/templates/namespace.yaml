@@ -6,3 +6,4 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
+    certmanager.k8s.io/disable-validation: "true"

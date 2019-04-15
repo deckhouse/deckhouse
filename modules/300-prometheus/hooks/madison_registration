@@ -38,7 +38,7 @@ function __main__() {
   )
 
   if values::has global.clusterHostname ; then
-    if ! values::has global.ingressACME || [[ "$(values::get --required global.ingressACME)" == "true" ]] ; then
+    if values::get_first_defined prometheus.certificateForIngress.certmanagerClusterIssuerName prometheus.certificateForIngress.customCertificateSecretName global.certificateForIngress.certmanagerClusterIssuerName global.certificateForIngress.customCertificateSecretName ; then
       scheme=https
     else
       scheme=http

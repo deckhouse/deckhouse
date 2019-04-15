@@ -1,0 +1,19 @@
+#!/bin/bash
+
+### Миграция 2019-04-14: https://github.com/deckhouse/deckhouse/merge_requests/677
+#
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции. Он удаляет сертификат созданный с помощью аннотации к ингрессу
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  if kubectl -n kube-system get certificate ingress-tls > /dev/null 2>&1 ; then
+    kubectl -n kube-system delete certificate ingress-tls
+  fi
+}
+
+hook::run $@

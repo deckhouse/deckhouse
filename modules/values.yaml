@@ -1,3 +1,5 @@
 global:
   ingressClass: nginx
-  ingressACME: true
+  certificateForIngress:
+    certmanagerClusterIssuerName: letsencrypt
+    customCertificateSecretName: false

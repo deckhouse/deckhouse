@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-cert-manager:webhook:requester
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: webhook
+rules:
+- apiGroups:
+  - admission.certmanager.k8s.io
+  resources:
+  - certificates
+  - issuers
+  - clusterissuers
+  verbs:
+  - create

@@ -1,4 +1,7 @@
 {{- if .Values.prometheus.longtermRetentionDays }}
+{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
+{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
+
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -34,7 +37,7 @@ spec:
   version: v2.6.0
   scrapeInterval: 5m
   evaluationInterval: 5m
-  {{- if .Values.global.ingressACME }}
+  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
   externalUrl: https://prometheus.{{ .Values.global.clusterHostname }}/prometheus/longterm/
   {{- else }}
   externalUrl: http://prometheus.{{ .Values.global.clusterHostname }}/prometheus/longterm/

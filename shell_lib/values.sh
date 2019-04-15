@@ -7,14 +7,13 @@ function values::json_patch() {
   set -f
   if [[ "$1" == "--config" ]] ; then
     shift
-
-    config_values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "$3" \
+    config_values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "${3:-""}" \
                                 '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end'))
 
     echo "${config_values_json_patch[@]}" | \
       jq -sec '.' > $CONFIG_VALUES_JSON_PATCH_PATH
   else
-    values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "$3" \
+    values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "${3:-""}" \
                                 '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end'))
 
     echo "${values_json_patch[@]}" | \
@@ -136,4 +135,20 @@ function values::is_false() {
 
 function values::generate_password() {
   makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20
+}
+
+function values::get_first_defined() {
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  for var in "$@"
+  do
+    if values::has $config $var ; then
+      values::get $config $var
+    fi
+    return
+  done
 }

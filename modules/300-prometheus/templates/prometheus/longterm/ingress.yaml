@@ -1,3 +1,6 @@
+{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
+{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
+
 {{- if and .Values.global.clusterHostname .Values.prometheus.longtermRetentionDays }}
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -16,7 +19,7 @@ metadata:
     ingress.kubernetes.io/affinity: cookie
     ingress.kubernetes.io/rewrite-target: "/"
 spec:
-  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
   tls:
   - hosts:
     - prometheus.{{ .Values.global.clusterHostname }}

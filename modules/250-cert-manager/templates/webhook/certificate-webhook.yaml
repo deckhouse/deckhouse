@@ -1,0 +1,20 @@
+# generate a serving certificate for the webhook to use
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: cert-manager-webhook-tls
+  namespace: kube-cert-manager
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: webhook
+spec:
+  secretName: cert-manager-webhook-tls
+  duration: 8760h #1y
+  issuerRef:
+    name: cert-manager-webhook-ca
+  dnsNames:
+  - cert-manager-webhook
+  - cert-manager-webhook.kube-cert-manager
+  - cert-manager-webhook.kube-cert-manager.svc
+

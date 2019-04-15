@@ -1,4 +1,12 @@
+{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
+{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
+
+{{- if and ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name) }}
+  {{- fail "Error!!! Use only certmanagerClusterIssuerName or customCertificateSecretName" }}
+{{- end }}
+
 {{- if .Values.global.clusterHostname }}
+---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -13,14 +21,11 @@ metadata:
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
-  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
-    kubernetes.io/tls-acme: "true"
-  {{- end }}
     ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header X-WEBAUTH-USER $remote_user;
     ingress.kubernetes.io/affinity: cookie
 spec:
-  {{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
   tls:
   - hosts:
     - prometheus.{{ .Values.global.clusterHostname }}
@@ -34,4 +39,29 @@ spec:
         backend:
           serviceName: grafana
           servicePort: web
+{{- end }}
+{{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: grafana
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: grafana
+spec:
+  secretName: ingress-tls
+  dnsNames:
+  - prometheus.{{ .Values.global.clusterHostname }}
+  acme:
+    config:
+    - http01:
+        ingressClass: nginx
+      domains:
+      - prometheus.{{ .Values.global.clusterHostname }}
+  issuerRef:
+    name: {{ $certmanager_cluster_issuer_name }}
+    kind: ClusterIssuer
 {{- end }}
