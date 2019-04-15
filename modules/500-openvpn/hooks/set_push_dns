@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  KUBE_DNS=$(kubectl --namespace kube-system get service kube-dns -o json | jq -r '.spec.clusterIP')
+
+  if ! values::has openvpn.pushToClientDns ; then
+    values::set --config openvpn.pushToClientDns "$KUBE_DNS"
+  fi
+}
+
+hook::run $@

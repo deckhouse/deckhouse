@@ -1,0 +1,147 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ .Chart.Name }}
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      imagePullSecrets:
+      - name: antiopa-registry
+      terminationGracePeriodSeconds: 5
+      serviceAccountName: kube-{{ .Chart.Name }}
+      {{- if and (hasKey .Values.openvpn "nodeSelector") (.Values.openvpn.nodeSelector) }}
+      nodeSelector:
+      {{ .Values.openvpn.nodeSelector | toYaml | trim | indent 8 }}
+      {{- else if and (not (hasKey .Values.openvpn "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+      {{- end }}
+      {{- if and (hasKey .Values.openvpn "tolerations") (.Values.openvpn.tolerations) }}
+      tolerations:
+      {{ .Values.openvpn.tolerations | toYaml | trim | indent 6 }}
+      {{- else if and (not (hasKey .Values.openvpn "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+      {{- end }}
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn:{{ $.Values.global.modulesImages.tags.openvpn.openvpn }}
+        imagePullPolicy: Always
+        command: [ '/etc/openvpn/setup/configure.sh' ]
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+        ports:
+        - name: ovpn-tcp
+          containerPort: 1194
+          protocol: TCP
+        volumeMounts:
+          - mountPath: /etc/openvpn/setup
+            name: openvpn
+            readOnly: false
+          - mountPath: /etc/openvpn/certs
+            name: certs
+            readOnly: false
+          - name: tmp
+            mountPath: /tmp
+      - name: {{ .Chart.Name }}-admin
+        image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn-web-ui:{{ $.Values.global.modulesImages.tags.openvpn.openvpnWebUi }}
+        imagePullPolicy: Always
+        command:
+        - /bin/sh
+        - -c
+        - uwsgi --http :8000  --processes 1 --master --die-on-term --enable-threads --single-interpreter --vacuum --lazy-apps --wsgi-disable-file-wrapper --harakiri 80 -b 32768 --file app.py --callable app --check-static /app/frontend
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: EASYRSA_PATH
+          value: /mnt/easyrsa
+        - name: EXTERNAL_PORT
+          value: {{ .Values.openvpn.externalPort | default 5416 | quote }}
+        {{- if hasKey .Values.openvpn "externalHost" }}
+        - name: EXTERNAL_HOST
+          value: {{ .Values.openvpn.externalHost }}
+        {{- end }}
+        - name: CLUSTER_TYPE
+          value: {{ .Values.global.discovery.clusterType }}
+        volumeMounts:
+          - mountPath: /mnt/easyrsa
+            name: certs
+            readOnly: false
+      volumes:
+      - name: openvpn
+        configMap:
+          name: {{ .Chart.Name }}
+          defaultMode: 0775
+      - name: tmp
+        emptyDir: {}
+      - name: certs
+{{- $storageClassName := .Values.openvpn.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
+{{- if $storageClassName }}
+        persistentVolumeClaim:
+          claimName: {{ .Chart.Name }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 256Mi
+  storageClassName: {{ $storageClassName }}
+{{- else }}
+        emptyDir: {}
+{{- end }}
