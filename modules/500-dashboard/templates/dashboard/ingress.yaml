@@ -1,10 +1,16 @@
+{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
+{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
+
+{{- if and ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name) }}
+  {{- fail "Error!!! Use only certmanagerClusterIssuerName or customCertificateSecretName" }}
+{{- end }}
+
+{{- if .Values.global.clusterHostname }}
+---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
-{{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
-    kubernetes.io/tls-acme: "true"
-{{- end }}
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
 {{- if .Values.dashboard.gitlabBaseUrl }}
     ingress.kubernetes.io/auth-signin: https://$host/oauth2/sign_in
@@ -29,9 +35,35 @@ spec:
           serviceName: dashboard
           servicePort: 80
         path: /
-{{- if and (.Values.global.ingressACME) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
   tls:
   - hosts:
       - dashboard.{{ .Values.global.clusterHostname }}
     secretName: ingress-tls
+  {{- end }}
+{{- end }}
+{{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: dashboard
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: dashboard
+spec:
+  secretName: ingress-tls
+  dnsNames:
+  - dashboard.{{ .Values.global.clusterHostname }}
+  acme:
+    config:
+    - http01:
+        ingressClass: nginx
+      domains:
+      - dashboard.{{ .Values.global.clusterHostname }}
+  issuerRef:
+    name: {{ $certmanager_cluster_issuer_name }}
+    kind: ClusterIssuer
 {{- end }}

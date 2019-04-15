@@ -1,0 +1,13 @@
+# Create an Issuer that uses the above generated CA certificate to issue certs
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Issuer
+metadata:
+  name: cert-manager-webhook-ca
+  namespace: kube-cert-manager
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: webhook
+spec:
+  ca:
+    secretName: cert-manager-webhook-ca

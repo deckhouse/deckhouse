@@ -1,0 +1,70 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: cainjector
+  namespace: kube-cert-manager
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: cainjector
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cainjector
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: cainjector
+  namespace: "kube-cert-manager"
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: cainjector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cainjector
+  template:
+    metadata:
+      labels:
+        app: cainjector
+      annotations:
+    spec:
+      serviceAccountName: cert-manager-cainjector
+{{- if and (hasKey .Values.certManager "nodeSelector") (.Values.certManager.nodeSelector) }}
+      nodeSelector:
+{{ .Values.certManager.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.certManager "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.certManager "tolerations") (.Values.certManager.tolerations) }}
+      tolerations:
+{{ .Values.certManager.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.certManager "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+      {{- end }}
+      containers:
+        - name: cainjector
+          image: "quay.io/jetstack/cert-manager-cainjector:v0.7.0"
+          imagePullPolicy: IfNotPresent
+          args:
+          - --leader-election-namespace=$(POD_NAMESPACE)
+          env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace

@@ -99,6 +99,13 @@ prometheus: |
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет использовано значение `[{"key":"node-role/system","operator":"Exists"}]` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
+* `certificateForIngress` — выбираем, какой типа сертификата использовать для pormetheus/grafana.
+    * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для prometheus/grafana (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
+        * По-умолчанию `letsencrypt`.
+    * `customCertificateSecretName` — указываем имя secret'а в namespace `antiopa`, который будет использоваться для prometheus/grafana (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+        * По-умолчанию `false`.
+        * При указании этого параметра не забудьте выставить `certmanagerClusterIssuerName` в значение `false`.
+    * Если вы хотите отключить https, то оба параметра необходимо выставить в `false`.
 
 ### Пример конфига
 

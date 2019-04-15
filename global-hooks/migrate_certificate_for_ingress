@@ -1,0 +1,24 @@
+#!/bin/bash
+
+### Миграция 2019-04-14: https://github.com/deckhouse/deckhouse/merge_requests/677
+#
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции.
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=1
+}
+
+function __main__() {
+  if values::has --config global.ingressACME ; then
+    if values::is_false --config global.ingressACME ; then
+      values::set --config global.certificateForIngress "{}"
+      values::set --config global.certificateForIngress.certmanagerClusterIssuerName false
+    fi
+
+    values::unset --config global.ingressACME
+  fi
+}
+
+hook::run $@

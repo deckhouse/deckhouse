@@ -8,8 +8,253 @@ metadata:
     app: cert-manager
 spec:
   group: certmanager.k8s.io
-  version: v1alpha1
   names:
     kind: Issuer
     plural: issuers
   scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            acme:
+              properties:
+                email:
+                  description: Email is the email for this account
+                  type: string
+                privateKeySecretRef:
+                  description: PrivateKey is the name of a secret containing the private
+                    key for this user account.
+                  properties:
+                    key:
+                      description: The key of the secret to select from. Must be a
+                        valid secret key.
+                      type: string
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        TODO: Add other useful fields. apiVersion, kind, uid?'
+                      type: string
+                  required:
+                  - name
+                  type: object
+                server:
+                  description: Server is the ACME server URL
+                  type: string
+                skipTLSVerify:
+                  description: If true, skip verifying the ACME server TLS certificate
+                  type: boolean
+              required:
+              - email
+              - server
+              - privateKeySecretRef
+              type: object
+            ca:
+              properties:
+                secretName:
+                  description: SecretName is the name of the secret used to sign Certificates
+                    issued by this Issuer.
+                  type: string
+              required:
+              - secretName
+              type: object
+            selfSigned:
+              type: object
+            vault:
+              properties:
+                auth:
+                  description: Vault authentication
+                  properties:
+                    appRole:
+                      description: This Secret contains a AppRole and Secret
+                      properties:
+                        path:
+                          description: Where the authentication path is mounted in
+                            Vault.
+                          type: string
+                        roleId:
+                          type: string
+                        secretRef:
+                          properties:
+                            key:
+                              description: The key of the secret to select from. Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              type: string
+                          required:
+                          - name
+                          type: object
+                      required:
+                      - path
+                      - roleId
+                      - secretRef
+                      type: object
+                    tokenSecretRef:
+                      description: This Secret contains the Vault token key
+                      properties:
+                        key:
+                          description: The key of the secret to select from. Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      required:
+                      - name
+                      type: object
+                  type: object
+                caBundle:
+                  description: Base64 encoded CA bundle to validate Vault server certificate.
+                    Only used if the Server URL is using HTTPS protocol. This parameter
+                    is ignored for plain HTTP protocol connection. If not set the
+                    system root certificates are used to validate the TLS connection.
+                  format: byte
+                  type: string
+                path:
+                  description: Vault URL path to the certificate role
+                  type: string
+                server:
+                  description: Server is the vault connection address
+                  type: string
+              required:
+              - auth
+              - server
+              - path
+              type: object
+            venafi:
+              properties:
+                cloud:
+                  description: Cloud specifies the Venafi cloud configuration settings.
+                    Only one of TPP or Cloud may be specified.
+                  properties:
+                    apiTokenSecretRef:
+                      description: APITokenSecretRef is a secret key selector for
+                        the Venafi Cloud API token.
+                      properties:
+                        key:
+                          description: The key of the secret to select from. Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    url:
+                      description: URL is the base URL for Venafi Cloud
+                      type: string
+                  required:
+                  - url
+                  - apiTokenSecretRef
+                  type: object
+                tpp:
+                  description: TPP specifies Trust Protection Platform configuration
+                    settings. Only one of TPP or Cloud may be specified.
+                  properties:
+                    caBundle:
+                      description: CABundle is a PEM encoded TLS certifiate to use
+                        to verify connections to the TPP instance. If specified, system
+                        roots will not be used and the issuing CA for the TPP instance
+                        must be verifiable using the provided root. If not specified,
+                        the connection will be verified using the cert-manager system
+                        root certificates.
+                      format: byte
+                      type: string
+                    credentialsRef:
+                      description: CredentialsRef is a reference to a Secret containing
+                        the username and password for the TPP server. The secret must
+                        contain two keys, 'username' and 'password'.
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    url:
+                      description: URL is the base URL for the Venafi TPP instance
+                      type: string
+                  required:
+                  - url
+                  - credentialsRef
+                  type: object
+                zone:
+                  description: Zone is the Venafi Policy Zone to use for this issuer.
+                    All requests made to the Venafi platform will be restricted by
+                    the named zone policy. This field is required.
+                  type: string
+              required:
+              - zone
+              type: object
+          type: object
+        status:
+          properties:
+            acme:
+              properties:
+                uri:
+                  description: URI is the unique account identifier, which can also
+                    be used to retrieve account details from the CA
+                  type: string
+              type: object
+            conditions:
+              items:
+                properties:
+                  lastTransitionTime:
+                    description: LastTransitionTime is the timestamp corresponding
+                      to the last status change of this condition.
+                    format: date-time
+                    type: string
+                  message:
+                    description: Message is a human readable description of the details
+                      of the last transition, complementing reason.
+                    type: string
+                  reason:
+                    description: Reason is a brief machine readable explanation for
+                      the condition's last transition.
+                    type: string
+                  status:
+                    description: Status of the condition, one of ('True', 'False',
+                      'Unknown').
+                    enum:
+                    - "True"
+                    - "False"
+                    - Unknown
+                    type: string
+                  type:
+                    description: Type of the condition, currently ('Ready').
+                    type: string
+                required:
+                - type
+                - status
+                - lastTransitionTime
+                - reason
+                - message
+                type: object
+              type: array
+          type: object
+  version: v1alpha1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+
