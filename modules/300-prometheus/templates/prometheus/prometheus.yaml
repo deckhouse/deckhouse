@@ -18,7 +18,13 @@ spec:
     kind: StatefulSet
     name: prometheus-main
   updatePolicy:
-    updateMode: "Off"
+    updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus"
+      maxAllowed:
+        cpu: {{ .Values.prometheus.vpa.maxCPU | quote }}
+        memory: {{ .Values.prometheus.vpa.maxMemory | quote }}
 {{- end }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -34,7 +40,7 @@ spec:
   replicas: 1
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.retentionGigabytes }}GB
-  version: v2.6.0
+  version: v2.7.0
   scrapeInterval: 30s
   evaluationInterval: 30s
   serviceAccountName: prometheus
@@ -78,11 +84,9 @@ spec:
     runAsUser: 1000
   resources:
     requests:
-      {{- /* 8Кб × количество метрик */}}
-      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 8192) 1048576) 500 }}Mi
+      memory: 2048Mi
     limits:
-      {{- /* 16Кб × количество метрик */}}
-      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 16384) 1048576) 500 }}Mi
+      memory: 4096Mi
 {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
 {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
@@ -110,7 +114,6 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            {{- /* 2 раза в минуту * 60 минут * 24 часа * 2 байта на метрику + 30% запас = 7488 байт на метрику в сутки */}}
-            storage: {{ add (div (mul (mul .Values.prometheus.estimatedNumberOfMetrics 7488) .Values.prometheus.retentionDays) 1073741824) 1 }}G
+            storage: {{ .Values.prometheus.diskSize }}G
         storageClassName: {{ $storageClassName }}
 {{- end }}

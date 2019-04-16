@@ -1,5 +1,8 @@
 prometheus:
-  retentionDays: 7
-  retentionGigabytes: 200
-  estimatedNumberOfMetrics: 200000
+  retentionDays: 15
+  retentionGigabytes: 30
   madisonSelfSetupKey: ***REMOVED***
+  longtermRetentionDays: 1095
+  longtermRetentionGigabytes: 30
+  vpa:
+    updateMode: Initial

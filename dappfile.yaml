@@ -30,6 +30,7 @@ ansible:
   - apk: name=curl
   - apk: name=makepasswd
   - apk: name=apache2-utils
+  - apk: name=bc
 
   # Зависимости хуков (из edge/testing)
   - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
@@ -40,6 +41,12 @@ ansible:
     get_url:
       url: https://storage.googleapis.com/kubernetes-release/release/v1.10.12/bin/linux/amd64/kubectl
       dest: /usr/local/bin/kubectl
+      mode: +x
+
+  - name: Install kube-resource-converter
+    get_url:
+      url: https://github.com/zuzzas/kube-resource-converter/releases/download/0.1/kube-resource-unit-converter
+      dest: /usr/local/bin/kube-resource-unit-converter
       mode: +x
 
   # Ставим semver
