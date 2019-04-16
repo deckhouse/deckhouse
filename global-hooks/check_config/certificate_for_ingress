@@ -7,9 +7,11 @@ function __config__() {
 }
 
 function __main__() {
-  if [ "$(values::get global.certificateForIngress.customCertificateSecretName)" != "false" ] && [ "$(values::get global.certificateForIngress.certmanagerClusterIssuerName)" != "false" ] ; then
-    >&2 echo "You need to use only one of the parameters: global.certificateForIngress.certmanagerClusterIssuerName or global.certificateForIngress.customCertificateSecretName"
-    exit 1
+  if values::has global.certificateForIngress.customCertificateSecretName && ! values::is_false global.certificateForIngress.customCertificateSecretName && \
+     values::has global.certificateForIngress.certmanagerClusterIssuerName && ! values::is_false global.certificateForIngress.certmanagerClusterIssuerName
+     then
+       >&2 echo "You need to use only one of the parameters: global.certificateForIngress.certmanagerClusterIssuerName or global.certificateForIngress.customCertificateSecretName"
+       exit 1
   fi
 }
 
