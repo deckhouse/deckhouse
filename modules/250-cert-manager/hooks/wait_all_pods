@@ -8,15 +8,15 @@ function __config__() {
 
 function __main__() {
   for i in $(seq 1 120); do
-    if [[ $(kubectl -n kube-cert-manager get pod --no-headers | grep -c Running) -eq 3 ]] ; then
+    if kubectl -n kube-cert-manager get pod -l app=webhook -o json  | jq -e '.items[].status.conditions | all(.[] ; .status == "True")' ; then
       return 0
     fi
 
-    echo "Waiting for pod in kube-cert-manager namespace"
+    echo "Waiting for webhook pod in kube-cert-manager namespace"
     sleep 1
   done
   if [[ $i -gt 120 ]] ; then
-    >&2 echo "Timeout waiting for pod in kube-cert-manager namespace"
+    >&2 echo "Timeout waiting for webhook pod in kube-cert-manager namespace"
     return 1
   fi
 }
