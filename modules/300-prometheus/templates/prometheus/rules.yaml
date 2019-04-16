@@ -1,4 +1,4 @@
-{{- range (tuple "coreos" "kubernetes" "applications") }}
+{{- range (tuple "coreos" "kubernetes" "applications" "cert-manager") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule

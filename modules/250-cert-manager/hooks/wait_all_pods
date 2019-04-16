@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  for i in $(seq 1 120); do
+    if [[ $(kubectl -n kube-cert-manager get pod --no-headers | grep -c Running) -eq 3 ]] ; then
+      return 0
+    fi
+
+    echo "Waiting for pod in kube-cert-manager namespace"
+    sleep 1
+  done
+  if [[ $i -gt 120 ]] ; then
+    >&2 echo "Timeout waiting for pod in kube-cert-manager namespace"
+    return 1
+  fi
+}
+
+hook::run $@
