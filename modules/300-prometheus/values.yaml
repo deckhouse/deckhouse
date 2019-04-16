@@ -3,4 +3,3 @@ prometheus:
   retentionGigabytes: 200
   estimatedNumberOfMetrics: 200000
   madisonSelfSetupKey: ***REMOVED***
-  certificateForIngress: {}
