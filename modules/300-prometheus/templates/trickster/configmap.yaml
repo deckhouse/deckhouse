@@ -23,14 +23,12 @@ data:
           fast_forward_disable = true
           default_step = 30
 
-{{- if .Values.prometheus.longtermRetentionDays }}
         [origins.longterm]
           origin_url = 'http://prometheus-longterm:9090'
           api_path = '/api/v1'
           max_value_age_secs = {{ mul .Values.prometheus.longtermRetentionDays 86400 }}
           fast_forward_disable = true
           default_step = 300
-{{- end }}
 
       [metrics]
         listen_port = 8001

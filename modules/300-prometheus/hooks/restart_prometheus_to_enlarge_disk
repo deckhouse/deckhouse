@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p schedule="$(jo -a \
+    "$(jo allowFailure=true crontab="* * * * *")"
+  )"
+}
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [ "$(semver compare "$cluster_version" 1.11.0)" -ne "-1" ] ; then
+    for pvc in prometheus-main-db-prometheus-main-0 prometheus-longterm-db-prometheus-longterm-0; do
+      if [ "$pvc" == "prometheus-main-db-prometheus-main-0" ]; then
+        pod_name="prometheus-main-0"
+      else
+        pod_name="prometheus-longterm-0"
+      fi
+      # Если PVC находится в статусе ожидания рестарта пода, то надо пересоздать под и тогда диск расширится
+      if kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.conditions[] | select (.type=="FileSystemResizePending" and .status=="True") | .message' > /dev/null 2> /dev/null ; then
+        kubectl -n kube-prometheus delete pod "$pod_name"
+      fi
+    done
+  fi
+}
+
+hook::run "$@"

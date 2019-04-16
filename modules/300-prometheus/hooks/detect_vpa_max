@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+   "beforeHelm": 20,
+   "onKubernetesEvent": [
+      {
+         "kind": "node",
+         "event": [
+            "add",
+            "update",
+            "delete"
+         ],
+         "jqFilter": ".status.capacity.pods"
+      }
+   ]
+}'
+}
+
+function __main__() {
+  memory_modifier="2.5"
+  cpu_modifier="0.01"
+  pod_count=$(kubectl get node -o json | jq -r '[.items[].status.capacity.pods | tonumber] | add')
+  max_memory="$(bc -l <<< "scale=2; $pod_count * $memory_modifier / 1")Mi"
+  max_cpu="$(bc -l <<< "scale=2; $pod_count * $cpu_modifier / 1")"
+  values::set prometheus.vpa.maxMemory "$max_memory"
+  values::set prometheus.vpa.maxCPU "$max_cpu"
+}
+
+hook::run "$@"

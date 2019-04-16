@@ -19,7 +19,13 @@ spec:
     kind: StatefulSet
     name: prometheus-longterm
   updatePolicy:
-    updateMode: "Off"
+    updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus"
+      maxAllowed:
+        cpu: {{ .Values.prometheus.vpa.maxCPU | quote }}
+        memory: {{ .Values.prometheus.vpa.maxMemory | quote }}
 {{- end }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -34,7 +40,8 @@ metadata:
 spec:
   replicas: 1
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
-  version: v2.6.0
+  retentionSize: {{ .Values.prometheus.longtermRetentionGigabytes }}GB
+  version: v2.7.0
   scrapeInterval: 5m
   evaluationInterval: 5m
   {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
@@ -47,13 +54,29 @@ spec:
     runAsNonRoot: true
     runAsUser: 1000
   serviceAccountName: prometheus
+{{- if or (hasKey .Values.prometheus "madisonAuthKey") (hasKey .Values.prometheus "additionalAlertmanagers") }}
+  alerting:
+    alertmanagers:
+  {{- if hasKey .Values.prometheus "madisonAuthKey" }}
+    - namespace: kube-prometheus
+      name: madison-proxy
+      port: http
+  {{- end }}
+  {{ if hasKey .Values.prometheus "additionalAlertmanagers" }}
+    {{- range .Values.prometheus.additionalAlertmanagers }}
+    - namespace: {{ .namespace }}
+      name: {{ .name }}
+      port: {{ .port }}
+      scheme: http
+      pathPrefix: {{ .pathPrefix }}
+    {{- end }}
+  {{- end }}
+{{- end }}
   resources:
     requests:
-      {{- /* 8Кб × количество метрик */}}
-      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 8192) 1048576) 500 }}Mi
+      memory: 2048Mi
     limits:
-      {{- /* 16Кб × количество метрик */}}
-      memory: {{ max (div (mul .Values.prometheus.estimatedNumberOfMetrics 16384) 1048576) 500 }}Mi
+      memory: 4096Mi
   {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
 {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
@@ -85,8 +108,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            {{- /* 12 раз в час (1 раз в 5 минут) * 24 часа * 2 байта на метрику + 30% запас = 748 байт на метрику в сутки */}}
-            storage: {{ add (div (mul (mul .Values.prometheus.estimatedNumberOfMetrics 748) .Values.prometheus.longtermRetentionDays) 1073741824) 1 }}G
+            storage: {{ .Values.prometheus.longtermDiskSize }}G
         storageClassName: {{ $storageClassName }}
   {{- end }}
 {{- end }}
