@@ -14,9 +14,9 @@
   },
   "description": "",
   "editable": false,
-  "gnetId": 3662,
+  "gnetId": null,
   "graphTooltip": 0,
-  "id": 21,
+  "id": null,
   "iteration": 1554743429584,
   "links": [],
   "panels": [
@@ -244,7 +244,7 @@
     ]
   },
   "timezone": "",
-  "title": "Prometheus (self)",
+  "title": "Prometheus-(self)",
   "uid": "U91sydniz",
   "version": 1
 }

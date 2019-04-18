@@ -14,9 +14,9 @@
   },
   "description": "Prometheus dashboard for Redis servers (by pod and alias)",
   "editable": true,
-  "gnetId": 763,
+  "gnetId": null,
   "graphTooltip": 0,
-  "id": 38,
+  "id": null,
   "iteration": 1550218369673,
   "links": [],
   "panels": [

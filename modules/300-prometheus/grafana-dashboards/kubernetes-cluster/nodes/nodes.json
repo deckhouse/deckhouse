@@ -14,9 +14,9 @@
   },
   "description": "Dashboard to get an overview of one server",
   "editable": false,
-  "gnetId": 22,
+  "gnetId": null,
   "graphTooltip": 0,
-  "id": 10,
+  "id": null,
   "iteration": 1554817885528,
   "links": [],
   "panels": [

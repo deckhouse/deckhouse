@@ -65,7 +65,7 @@ spec:
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/admission-controller:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.admissionController }}
         imagePullPolicy: Always
         command:
-        - /bin/admission-controller
+        - /admission-controller
         - --address=:8944
         - --tls-cert-file=/etc/tls-certs/serverCert.pem
         - --tls-private-key=/etc/tls-certs/serverKey.pem
