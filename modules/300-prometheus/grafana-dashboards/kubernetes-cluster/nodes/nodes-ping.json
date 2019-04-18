@@ -15,7 +15,7 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 34,
+  "id": null,
   "iteration": 1554743380933,
   "links": [],
   "panels": [
@@ -1829,7 +1829,7 @@
     ]
   },
   "timezone": "",
-  "title": "Nodes ping",
+  "title": "Nodes-ping",
   "uid": "U8z-arLik",
   "version": 1
 }

@@ -21,8 +21,8 @@ function __config__() {
 }
 
 function __main__() {
-  memory_modifier="2.5"
-  cpu_modifier="0.01"
+  memory_modifier="15"
+  cpu_modifier="0.02"
   pod_count=$(kubectl get node -o json | jq -r '[.items[].status.capacity.pods | tonumber] | add')
   max_memory="$(bc -l <<< "scale=2; $pod_count * $memory_modifier / 1")Mi"
   max_cpu="$(bc -l <<< "scale=2; $pod_count * $cpu_modifier / 1")"

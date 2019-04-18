@@ -82,11 +82,6 @@ spec:
   securityContext:
     fsGroup: 2000
     runAsUser: 1000
-  resources:
-    requests:
-      memory: 2048Mi
-    limits:
-      memory: 4096Mi
 {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
 {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
