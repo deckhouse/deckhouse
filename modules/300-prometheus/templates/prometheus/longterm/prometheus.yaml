@@ -54,24 +54,6 @@ spec:
     runAsNonRoot: true
     runAsUser: 1000
   serviceAccountName: prometheus
-{{- if or (hasKey .Values.prometheus "madisonAuthKey") (hasKey .Values.prometheus "additionalAlertmanagers") }}
-  alerting:
-    alertmanagers:
-  {{- if hasKey .Values.prometheus "madisonAuthKey" }}
-    - namespace: kube-prometheus
-      name: madison-proxy
-      port: http
-  {{- end }}
-  {{ if hasKey .Values.prometheus "additionalAlertmanagers" }}
-    {{- range .Values.prometheus.additionalAlertmanagers }}
-    - namespace: {{ .namespace }}
-      name: {{ .name }}
-      port: {{ .port }}
-      scheme: http
-      pathPrefix: {{ .pathPrefix }}
-    {{- end }}
-  {{- end }}
-{{- end }}
   {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
 {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
