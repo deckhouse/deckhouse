@@ -4,7 +4,7 @@ source /antiopa/shell_lib.sh
 
 function __config__() {
   jo -p beforeHelm=20 schedule="$(jo -a \
-    "$(jo allowFailure=true crontab="*/10 * * * *")"
+    "$(jo allowFailure=true crontab="*/15 * * * *")"
   )"
 }
 
