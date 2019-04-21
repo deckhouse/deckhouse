@@ -18,8 +18,12 @@ function __main__() {
         pod_name="prometheus-longterm-0"
       fi
       # Если PVC находится в статусе ожидания рестарта пода, то надо пересоздать под и тогда диск расширится
-      if kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.conditions[] | select (.type=="FileSystemResizePending" and .status=="True") | .message' > /dev/null 2> /dev/null ; then
-        kubectl -n kube-prometheus delete pod "$pod_name"
+      if kubectl -n kube-prometheus get pvc "$pvc" > /dev/null 2>&1 ; then
+        if kubectl -n kube-prometheus get pvc "$pvc" -o json | jq -e '. | select(.status.phase=="Bound")' > /dev/null 2>&1 ; then
+          if kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.conditions[] | select (.type=="FileSystemResizePending" and .status=="True") | .message' > /dev/null 2> /dev/null
+            kubectl -n kube-prometheus delete pod "$pod_name"
+          fi
+        fi
       fi
     done
   fi
