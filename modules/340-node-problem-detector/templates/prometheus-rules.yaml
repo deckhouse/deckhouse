@@ -1,0 +1,19 @@
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: prometheus
+    prometheus: main
+    component: rules
+spec:
+  groups:
+{{- range $path, $bytes := .Files.Glob "prometheus-rules/*.yaml" }}
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}
