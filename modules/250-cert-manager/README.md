@@ -315,3 +315,17 @@ spec:
     - admin.example.com                      # еще один дополнительный домен
     secretName: example-com-tls              # так будут называться и certificate и secret
 ```
+
+### Возможные проблемы
+
+#### CAA record does not match issuer
+
+Если cert-manager не может заказать сертификаты с ошибкой:
+
+```
+CAA record does not match issuer
+```
+
+То необходимо проверить `CAA (Certificate Authority Authorization)` DNS запись у домена, для которого заказывается сертификат.
+Если вы хотите использовать LetsEncrypt сертификаты, то у домена должна быть CAA запись: `issue "letsencrypt.org"`.
+Подробнее про CAA можно почитать [тут](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) и [тут](https://letsencrypt.org/docs/caa/).
