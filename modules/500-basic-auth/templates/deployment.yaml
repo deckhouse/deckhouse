@@ -1,0 +1,106 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: nginx
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+{{- if and (hasKey .Values.basicAuth "nodeSelector") (.Values.basicAuth.nodeSelector) }}
+      nodeSelector:
+{{ .Values.basicAuth.nodeSelector | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.basicAuth "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+      nodeSelector:
+        node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.basicAuth "tolerations") (.Values.basicAuth.tolerations) }}
+      tolerations:
+{{ .Values.basicAuth.tolerations | toYaml | trim | indent 6 }}
+{{- else if and (not (hasKey .Values.basicAuth "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+      tolerations:
+      - key: node-role/system
+        effect: NoExecute
+{{- end }}
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+{{- end }}
+      containers:
+      - name: nginx
+        image: nginx:1.15-alpine
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/usr/sbin/nginx", "-s", "quit" ]
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+            scheme: HTTP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+            scheme: HTTP
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: htpasswd
+          mountPath: /etc/nginx/htpasswd
+          readOnly: true
+        env:
+        - name: KUBERNETES_DEPLOYED
+          value: {{ now | quote }}
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      - name: htpasswd
+        secret:
+          secretName: htpasswd
+          items:
+{{- range $location := .Values.basicAuth.locations }}
+  {{- if eq $location.location "/" }}
+          - key: htpasswd
+            path: htpasswd
+  {{- else }}
+          - key: {{ $location.location | trimPrefix "/" }}
+            path: {{ $location.location | trimPrefix "/" }}
+  {{- end }}
+{{- end }}

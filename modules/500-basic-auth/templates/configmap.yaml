@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes 1;
+
+    error_log  /dev/stderr warn;
+    pid        /var/run/nginx.pid;
+
+    events {
+      worker_connections  1000;
+    }
+
+    http {
+      include       mime.types;
+      default_type  application/octet-stream;
+
+      log_format json_combined escape=json
+        '{'
+          '"time_local":"$time_local",'
+          '"remote_addr":"$remote_addr",'
+          '"remote_user":"$remote_user",'
+          '"request":"$request",'
+          '"status": "$status",'
+          '"body_bytes_sent":"$body_bytes_sent",'
+          '"request_time":"$request_time",'
+          '"http_referrer":"$http_referer",'
+          '"http_user_agent":"$http_user_agent"'
+        '}';
+
+      access_log /dev/stdout json_combined;
+
+      sendfile on;
+      keepalive_timeout  65;
+
+      server {
+        listen 80 default_server;
+        server_name _ default;
+
+        set_real_ip_from 0.0.0.0/0;
+
+        location /healthz {
+          access_log off;
+          return 200;
+        }
+
+        {{- range $location := .Values.basicAuth.locations }}
+          {{- if eq $location.location "/" }}
+        location / {
+          {{- else }}
+        location /{{ $location.location | trimPrefix "/" }} {
+          {{- end }}
+          satisfy any;
+
+          {{- if hasKey $location "users" }}
+          auth_basic "Authentication Required!";
+            {{- if eq $location.location "/" }}
+          auth_basic_user_file /etc/nginx/htpasswd/htpasswd;
+            {{- else }}
+          auth_basic_user_file /etc/nginx/htpasswd/{{ $location.location | trimPrefix "/" }};
+            {{- end }}
+          {{- end }}
+
+          {{- if hasKey $location "whitelist" }}
+            {{- range $value := $location.whitelist }}
+          allow {{ $value }};
+            {{- end }}
+          {{- end }}
+
+          deny  all;
+
+          # return 200 simplest crutch
+          try_files FAKE_NON_EXISTENT @return200;
+        }
+        {{- end }}
+
+        location @return200 {
+          return 200 Ok;
+        }
+      }
+    }
