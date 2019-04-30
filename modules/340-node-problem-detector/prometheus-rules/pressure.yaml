@@ -1,0 +1,17 @@
+- name: kubernetes.pressure.node
+  rules:
+  - alert: NodePressureConditions
+    expr: kube_node_status_condition{condition!="Ready", status="true"} > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        NodeCondition {{$labels.condition}} has come on {{$labels.node}}.
+        Consider the following:
+
+        1. Run `kubectl describe node {{$labels.node}}` to see has come condition
+
+      summary: >
+        NodeCondition {{$labels.condition}} has come on {{$labels.node}}.
