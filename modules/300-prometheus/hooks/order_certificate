@@ -3,7 +3,15 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=5 crontab="42 4 * * *"
+  echo '
+{
+  "afterHelm": 5,
+  "schedule": [
+    {
+      "crontab": "42 4 * * *"
+    }
+  ]
+}'
 }
 
 function __main__() {
@@ -77,6 +85,8 @@ data:
   tls.key: $key
 kind: Secret
 EOF
+  # Перезапустим поды prometheus, что бы подхватились новые сертификаты
+  kubectl -n kube-prometheus delete pod prometheus-main-0 prometheus-longterm-0 > /dev/null 2>&1
 }
 
 hook::run $@

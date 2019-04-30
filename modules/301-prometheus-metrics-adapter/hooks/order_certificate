@@ -3,7 +3,15 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=5 crontab="42 4 * * *"
+  echo '
+{
+  "beforeHelm": 5,
+  "schedule": [
+    {
+      "crontab": "42 4 * * *"
+    }
+  ]
+}'
 }
 
 function __main__() {
