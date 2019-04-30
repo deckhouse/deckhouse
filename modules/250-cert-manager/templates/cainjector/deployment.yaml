@@ -59,7 +59,7 @@ spec:
       {{- end }}
       containers:
         - name: cainjector
-          image: "quay.io/jetstack/cert-manager-cainjector:v0.7.0"
+          image: "quay.io/jetstack/cert-manager-cainjector:v0.7.1"
           imagePullPolicy: IfNotPresent
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)
