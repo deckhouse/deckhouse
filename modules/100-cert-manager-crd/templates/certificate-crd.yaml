@@ -180,9 +180,6 @@ spec:
                 required:
                 - type
                 - status
-                - lastTransitionTime
-                - reason
-                - message
                 type: object
               type: array
             lastFailureTime:

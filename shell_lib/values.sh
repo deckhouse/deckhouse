@@ -149,6 +149,5 @@ function values::get_first_defined() {
     if values::has $config $var ; then
       values::get $config $var
     fi
-    return
   done
 }
