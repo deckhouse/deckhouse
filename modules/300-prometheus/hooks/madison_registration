@@ -3,7 +3,7 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=0
+  jo -p beforeHelm=1 #after madison_revoke
 }
 
 function madison_api() {
