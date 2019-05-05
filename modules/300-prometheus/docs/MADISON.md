@@ -15,13 +15,11 @@
 
 ![](img/madison.png)
 
-* У модуля есть секретный value `prometheus.madisonBackends`, который заполняется автоматически [^1] списком адресов, в которые резолвится madison.flant.com (каждые 10 минут)ю
+* У модуля есть секретный value `prometheus.madisonBackends`, который заполняется автоматически списком адресов, в которые резолвится madison.flant.com (каждые 10 минут)ю
 * Для каждого адреса в `prometheus.madisonBackends` генерируется отдельный deployment с `madison-proxy` (в названии используется sha256sum от IP-адреса), который отправляет все запросы на соответствующий ему бекенд Madison'а (там нет mash, один `madison-proxy` шлет запросы на один бекенд Madison'а)ю
 * `madison-proxy` это Nginx с [простейшим конфигом](../images/madison-proxy/rootfs/etc/nginx/nginx.tmpl), задача которого — эмулировать Alertmanager для Prometheus'а и передавать все пришедшие запросы в Madison. Он использует `prometheus.madisonAuthKey` для аутентификации в Madison.
 * Штатное поведение Prometheus'а — отправлять все алерты всем известным Alertmanager'ам. Так и просиходит — каждый экземпляр Prometheus шлет информацию о каждом алерте каждому `madison-proxy`, который, в свою очередь, шлет алерт своему бекенду Madison'а (дедуплицировать алерты — задача Madison).
 * Доставка алертов до Madison работает до тех пор, пока жива хотя бы одна цепочка `madison-proxy` -> `madison backend`.
-
-[^1]: Пока автоматически ничего не происходит, так как нет необходимого функционала в antiopa, а просто в values.yaml захардкожены три IP-адреса (#145).
 
 ### Зачем так сделано?
 
@@ -39,3 +37,6 @@
     * если в `prometheus.madisonAuthKey` ничего нет — модуль ([хук initial_values](../initial_values)) пытается получить новый ключ через API самонастройки Madison и записать его в `prometheus.madisonAuthKey` (этот ключ и используется в `madison-proxy` для аутентификации в Madison);
     * если в `prometheus.madisonAuthKey` уже есть ключ — модуль пытается обновить сведения для этого ключа (имя проекта и URL для grafana и prometheus).
 * Список зарегистрированных ключей можно найти в Madison у каждого проекта — ключи называются `kubernetes-{{ global.clusterName }}`, например для someproject можно [посмотреть здесь](https://madison.flant.com/projects/someproject/prometheus_setups).
+* При архивации кластера в Madison срабатывает механизм автоматического отключения алертов. Хук `madison_revoke` регулярно (раз в 5 минут) проверяет статус кластера в Madison и если тот архивирован, то хук делает следующее:
+    * выключает механизм саморегистрации, установив `prometheus.madisonSelfSetupKey` = `false`,
+    * удаляет ключ `prometheus.madisonAuthKey` из хранилища values.
