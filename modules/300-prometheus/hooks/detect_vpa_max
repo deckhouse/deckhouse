@@ -21,6 +21,7 @@ function __config__() {
 }
 
 function __main__() {
+  # Prometheus resources
   memory_modifier="15"
   cpu_modifier="0.02"
   pod_count=$(kubectl get node -o json | jq -r '[.items[].status.capacity.pods | tonumber] | add')
@@ -28,6 +29,15 @@ function __main__() {
   max_cpu="$(bc -l <<< "scale=2; $pod_count * $cpu_modifier / 1")"
   values::set prometheus.vpa.maxMemory "$max_memory"
   values::set prometheus.vpa.maxCPU "$max_cpu"
+
+  # Kube-state-metrics resources
+  memory_modifier="30"
+  cpu_modifier="15"
+  node_count=$(kubectl get nodes -o json | jq '.items | length')
+  max_memory="$(bc -l <<< "scale=0; 150 + ($node_count * $memory_modifier / 1)")Mi"
+  max_cpu="$(bc -l <<< "scale=0; 100 + ($node_count * $cpu_modifier / 1)")"
+  values::set prometheus.vpa.ksmMaxMemory "$max_memory"
+  values::set prometheus.vpa.ksmMaxCPU "$max_cpu"
 }
 
 hook::run "$@"

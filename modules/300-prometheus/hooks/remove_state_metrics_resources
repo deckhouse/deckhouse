@@ -1,0 +1,20 @@
+#!/bin/bash
+
+### Миграция 2019-04-30: https://github.com/deckhouse/deckhouse/merge_requests/745
+#
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции. Он удаляет ресурсы у kube-state-metrics деплоймента
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  if kubectl -n kube-prometheus get deploy kube-state-metrics > /dev/null 2>&1 ; then
+    fltr='. | .spec.template.spec.containers[2].resources = {}'
+    kubectl::jq_patch "kube-prometheus" "deploy/kube-state-metrics" "$fltr"
+  fi
+}
+
+hook::run $@
