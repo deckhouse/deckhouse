@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "configmap",
+      "name": "prometheus-metrics-adapter-custom",
+      "event": [
+        "add",
+        "update"
+      ],
+      "namespaceSelector": {
+        "matchNames": [
+          "kube-prometheus"
+        ]
+      }
+    }
+  ]
+}'
+}
+
+function __main__() {
+  if kubectl -n kube-prometheus get configmap prometheus-metrics-adapter-custom > /dev/null 2>&1 ; then
+    sha=$(kubectl -n kube-prometheus get configmap prometheus-metrics-adapter-custom -o json | jq -r '.data' | sha256sum | awk '{print $1}')
+    values::set prometheusMetricsAdapter.customConfigSHA "${sha}"
+  fi
+}
+
+hook::run $@
