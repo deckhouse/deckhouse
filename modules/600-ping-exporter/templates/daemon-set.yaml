@@ -3,17 +3,17 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: node-ping
+  name: ping-exporter
   namespace: kube-prometheus
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-    app: node-ping
+    app: ping-exporter
 spec:
   targetRef:
     apiVersion: "extensions/v1beta1"
     kind: DaemonSet
-    name: node-ping
+    name: ping-exporter
   updatePolicy:
     updateMode: "Off"
 {{- end }}
@@ -21,13 +21,13 @@ spec:
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
-  name: node-ping
+  name: ping-exporter
   namespace: kube-prometheus
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
     tier: monitoring
-    app: node-ping
+    app: ping-exporter
     version: v1
 spec:
   updateStrategy:
@@ -35,12 +35,12 @@ spec:
   template:
     metadata:
       labels:
-        name: node-ping
+        name: ping-exporter
     spec:
       terminationGracePeriodSeconds: 0
       tolerations:
       - operator: "Exists"
-      serviceAccountName: node-ping
+      serviceAccountName: ping-exporter
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
       {{- end }}
@@ -48,9 +48,9 @@ spec:
       - resources:
           requests:
             cpu: 0.10
-        image: {{ .Values.global.modulesImages.registry }}/node-ping/node-ping-exporter:{{ .Values.global.modulesImages.tags.nodePing.nodePingExporter }}
+        image: {{ .Values.global.modulesImages.registry }}/ping-exporter/ping-exporter:{{ .Values.global.modulesImages.tags.pingExporter.pingExporter }}
         imagePullPolicy: Always
-        name: node-ping
+        name: ping-exporter
         env:
           - name: MY_NODE_NAME
             valueFrom:
@@ -59,7 +59,7 @@ spec:
           - name: PROMETHEUS_TEXTFILE_DIR
             value: /node-exporter-textfile/
           - name: PROMETHEUS_TEXTFILE_PREFIX
-            value: node-ping_
+            value: ping-exporter_
         volumeMounts:
           - name: textfile
             mountPath: /node-exporter-textfile
@@ -71,6 +71,6 @@ spec:
             path: /var/run/node-exporter-textfile
         - name: config
           configMap:
-            name: node-ping-config
+            name: ping-exporter-config
       imagePullSecrets:
       - name: antiopa-registry

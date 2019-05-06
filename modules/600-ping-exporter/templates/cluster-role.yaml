@@ -1,7 +1,7 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kube-prometheus:node-ping
+  name: kube-prometheus:ping-exporter
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
