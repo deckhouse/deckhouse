@@ -36,6 +36,7 @@ spec:
       annotations:
         checksum/config: {{ .Values.prometheusMetricsAdapter.apiserverProxyClientCa | sha256sum }}
         checksum/cert: {{ .Values.prometheusMetricsAdapter.adapterPem | sha256sum }}
+        checksum/custom-config: {{ .Values.prometheusMetricsAdapter.customConfigSHA | sha256sum }}
       labels:
         app: prometheus-metrics-adapter
       name: prometheus-metrics-adapter
@@ -62,6 +63,23 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}
+      initContainers:
+      - name: prepare-config
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          cat /opt/adapter/* >> /etc/adapter/config.yaml
+          cat /opt/custom-adapter/* >> /etc/adapter/config.yaml
+          true
+        volumeMounts:
+        - mountPath: /opt/adapter
+          name: prometheus-metrics-adapter-config
+        - mountPath: /opt/custom-adapter
+          name: prometheus-metrics-adapter-custom
+        - mountPath: /etc/adapter
+          name: config
       containers:
       - name: prometheus-metrics-adapter
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/k8s-prometheus-adapter:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}
@@ -80,8 +98,8 @@ spec:
         - mountPath: /var/run/adapter-cert
           name: adapter-cert
           readOnly: true
-        - mountPath: /etc/adapter/
-          name: adapter-config
+        - mountPath: /etc/adapter
+          name: config
           readOnly: true
         - mountPath: /tmp
           name: tmp
@@ -91,7 +109,7 @@ spec:
       - name: adapter-cert
         secret:
           secretName: prometheus-metrics-adapter-cert
-      - name: adapter-config
+      - name: prometheus-metrics-adapter-config
         configMap:
           name: prometheus-metrics-adapter-config
       - name: tmp
@@ -99,3 +117,9 @@ spec:
       - name: apiserver-proxy-client-ca
         configMap:
           name: prometheus-metrics-adapter-apiserver-proxy-client-ca
+      - name: prometheus-metrics-adapter-custom
+        configMap:
+          name: prometheus-metrics-adapter-custom
+          optional: true
+      - name: config
+        emptyDir: {}

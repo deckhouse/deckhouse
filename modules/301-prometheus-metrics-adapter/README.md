@@ -72,3 +72,32 @@ spec:
       name: memory
       targetAverageValue: 10Mi
 ```
+
+## Как добавить кастомные правила
+
+А очень просто! Любое правило, добавленное в `cm/prometheus-metrics-adapter-custom`, автоматически попадает в конфигурационный файл `prometheus-metrics-adapter`.
+
+* Для custom правил поддерживается только один cm (и пока это не является ограничением)
+* Этот cm не создается автоматически (и не управляется antiop'ой), так что если его нет — его нужно просто создать: `kubectl -n kube-prometheus create cm prometheus-metrics-adapter-custom`.
+* Любые изменения (в том числе и создание/удаление cm/prometheus-metrics-adapter-custom) подхватываются полностью автоматически, но требуется подождать около минуты (пока kubernetes зальет данные из cm в pod).
+* Пример того, что нужно складывать в этот cm:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-metrics-adapter-custom
+  namespace: kube-prometheus
+data:
+  rabbitmq-queue: |
+    - seriesQuery: 'rabbitmq_queue_messages{job="rabbitmq",namespace!="",pod=~"rabbitmq-0",queue=~"stock_changes",service="rmq",vhost="/"}'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+      name:
+        matches: ".*"
+        as: "last_queue_depth_stock_changes"
+      metricsQuery: 'sum (<<.Series>>{<<.LabelMatchers>>,queue=~"stock_changes"}) by (<<.GroupBy>>)'
+```
+
+ где `stock_changes` - имя очереди, `last_queue_depth_stock_changes` - имя метрики, в которую мы будем выдавать значение, полученное из prometheus.
