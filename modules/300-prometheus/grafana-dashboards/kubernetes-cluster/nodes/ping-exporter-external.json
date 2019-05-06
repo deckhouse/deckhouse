@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1554743380933,
+  "iteration": 1556784450311,
   "links": [],
   "panels": [
     {
@@ -60,7 +60,7 @@
           "type": "hidden"
         },
         {
-          "alias": "Destination Node",
+          "alias": "Destination Name",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -68,10 +68,15 @@
             "rgba(50, 172, 45, 0.97)"
           ],
           "decimals": 2,
-          "pattern": "destination_node",
+          "link": false,
+          "linkTooltip": "",
+          "linkUrl": "/d/ak39dqlcds/external-ping?var-destination_name=${__cell}",
+          "mappingType": 1,
+          "pattern": "destination_name",
           "thresholds": [],
           "type": "string",
-          "unit": "short"
+          "unit": "short",
+          "valueMaps": []
         },
         {
           "alias": "Avg packet loss",
@@ -130,21 +135,21 @@
       ],
       "targets": [
         {
-          "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n/\nsum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "B"
         },
         {
-          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -210,7 +215,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "sum (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -218,14 +223,14 @@
           "refId": "A"
         },
         {
-          "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+          "expr": "max (max_over_time(external_ping_rtt_max{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RTT max",
           "refId": "B"
         },
         {
-          "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+          "expr": "min (min_over_time(external_ping_rtt_min{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RTT min",
@@ -299,7 +304,7 @@
         "min": true,
         "rightSide": false,
         "show": true,
-        "sort": "max",
+        "sort": "current",
         "sortDesc": true,
         "total": false,
         "values": true
@@ -318,10 +323,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "( \n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "( \n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{destination_node}}",
+          "legendFormat": "{{destination_name}}",
           "refId": "A"
         }
       ],
@@ -411,10 +416,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+          "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{destination_node}}",
+          "legendFormat": "{{destination_name}}",
           "refId": "A"
         }
       ],
@@ -503,10 +508,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+          "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{destination_node}}",
+          "legendFormat": "{{destination_name}}",
           "refId": "A"
         }
       ],
@@ -579,8 +584,8 @@
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-node",
-              "value": "as-kube-node"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "scroll": true,
@@ -597,7 +602,7 @@
               "type": "hidden"
             },
             {
-              "alias": "Destination Node",
+              "alias": "Destination Name",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -605,7 +610,7 @@
                 "rgba(50, 172, 45, 0.97)"
               ],
               "decimals": 2,
-              "pattern": "destination_node",
+              "pattern": "destination_name",
               "thresholds": [],
               "type": "string",
               "unit": "short"
@@ -667,21 +672,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -733,8 +738,8 @@
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-node",
-              "value": "as-kube-node"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [
@@ -755,21 +760,21 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+              "expr": "max (max_over_time(external_ping_rtt_max{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+              "expr": "min (min_over_time(external_ping_rtt_min{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT min",
@@ -859,8 +864,8 @@
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-node",
-              "value": "as-kube-node"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -869,10 +874,10 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{destination_node}}",
+              "legendFormat": "{{destination_name}}",
               "refId": "A"
             }
           ],
@@ -958,8 +963,8 @@
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-node",
-              "value": "as-kube-node"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -968,10 +973,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{destination_node}}",
+              "legendFormat": "{{destination_name}}",
               "refId": "A"
             }
           ],
@@ -1057,8 +1062,8 @@
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-node",
-              "value": "as-kube-node"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -1067,10 +1072,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{destination_node}}",
+              "legendFormat": "{{destination_name}}",
               "refId": "A"
             }
           ],
@@ -1121,8 +1126,8 @@
       "scopedVars": {
         "source_node": {
           "selected": false,
-          "text": "as-kube-node",
-          "value": "as-kube-node"
+          "text": "kube-c-1",
+          "value": "kube-c-1"
         }
       },
       "title": "From $source_node",
@@ -1147,19 +1152,19 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 23
+            "y": 24
           },
           "id": 779,
           "links": [],
           "pageSize": null,
-          "repeatIteration": 1554743380933,
+          "repeatIteration": 1556784450311,
           "repeatPanelId": 643,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-master",
-              "value": "as-kube-master"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "scroll": true,
@@ -1176,7 +1181,7 @@
               "type": "hidden"
             },
             {
-              "alias": "Destination Node",
+              "alias": "Destination Name",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -1184,7 +1189,7 @@
                 "rgba(50, 172, 45, 0.97)"
               ],
               "decimals": 2,
-              "pattern": "destination_node",
+              "pattern": "destination_name",
               "thresholds": [],
               "type": "string",
               "unit": "short"
@@ -1246,21 +1251,21 @@
           ],
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "A"
             },
             {
-              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
               "refId": "B"
             },
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -1283,7 +1288,7 @@
             "h": 5,
             "w": 24,
             "x": 0,
-            "y": 29
+            "y": 30
           },
           "id": 780,
           "legend": {
@@ -1309,14 +1314,14 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "v",
-          "repeatIteration": 1554743380933,
+          "repeatIteration": 1556784450311,
           "repeatPanelId": 28,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-master",
-              "value": "as-kube-master"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [
@@ -1337,21 +1342,21 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
               "refId": "A"
             },
             {
-              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+              "expr": "max (max_over_time(external_ping_rtt_max{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT max",
               "refId": "B"
             },
             {
-              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+              "expr": "min (min_over_time(external_ping_rtt_min{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT min",
@@ -1412,7 +1417,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 34
+            "y": 35
           },
           "id": 781,
           "legend": {
@@ -1438,14 +1443,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1554743380933,
+          "repeatIteration": 1556784450311,
           "repeatPanelId": 676,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-master",
-              "value": "as-kube-master"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -1454,10 +1459,10 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{destination_node}}",
+              "legendFormat": "{{destination_name}}",
               "refId": "A"
             }
           ],
@@ -1515,7 +1520,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 34
+            "y": 35
           },
           "id": 782,
           "legend": {
@@ -1540,14 +1545,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1554743380933,
+          "repeatIteration": 1556784450311,
           "repeatPanelId": 677,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-master",
-              "value": "as-kube-master"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -1556,10 +1561,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval_rv]))",
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{destination_node}}",
+              "legendFormat": "{{destination_name}}",
               "refId": "A"
             }
           ],
@@ -1617,7 +1622,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 34
+            "y": 35
           },
           "id": 783,
           "legend": {
@@ -1642,14 +1647,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "v",
-          "repeatIteration": 1554743380933,
+          "repeatIteration": 1556784450311,
           "repeatPanelId": 678,
           "repeatedByRow": true,
           "scopedVars": {
             "source_node": {
               "selected": false,
-              "text": "as-kube-master",
-              "value": "as-kube-master"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -1658,10 +1663,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__interval]))",
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{destination_node}}",
+              "legendFormat": "{{destination_name}}",
               "refId": "A"
             }
           ],
@@ -1709,13 +1714,606 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1554743380933,
+      "repeatIteration": 1556784450311,
       "repeatPanelId": 17,
       "scopedVars": {
         "source_node": {
           "selected": false,
-          "text": "as-kube-master",
-          "value": "as-kube-master"
+          "text": "kube-b-1",
+          "value": "kube-b-1"
+        }
+      },
+      "title": "From $source_node",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 784,
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "$ds_prometheus",
+          "description": "Средние значения измерений, сгруппированные по источникам ping запросов",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 25
+          },
+          "id": 785,
+          "links": [],
+          "pageSize": null,
+          "repeatIteration": 1556784450311,
+          "repeatPanelId": 643,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "source_node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 2,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Destination Name",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "destination_name",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Avg packet loss",
+              "colorMode": "value",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 3,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [
+                "0.01",
+                "0.1"
+              ],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "Avg mean RTT",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "ms"
+            },
+            {
+              "alias": "Avg mean deviation",
+              "colorMode": "value",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [
+                "0.5",
+                "1"
+              ],
+              "type": "number",
+              "unit": "ms"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "B"
+            },
+            {
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "C"
+            }
+          ],
+          "title": "",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 0,
+          "gridPos": {
+            "h": 5,
+            "w": 24,
+            "x": 0,
+            "y": 31
+          },
+          "id": 786,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "current",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "v",
+          "repeatIteration": 1556784450311,
+          "repeatPanelId": 28,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "source_node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "RTT max",
+              "fillBelowTo": "RTT min",
+              "legend": false,
+              "lines": false
+            },
+            {
+              "alias": "RTT min",
+              "legend": false,
+              "lines": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "RTT",
+              "refId": "A"
+            },
+            {
+              "expr": "max (max_over_time(external_ping_rtt_max{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "RTT max",
+              "refId": "B"
+            },
+            {
+              "expr": "min (min_over_time(external_ping_rtt_min{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "RTT min",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Average mean RTT with min/max",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 3,
+          "fill": 1,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 36
+          },
+          "id": 787,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "hideEmpty": true,
+            "hideZero": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "max",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1556784450311,
+          "repeatPanelId": 676,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "source_node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{destination_name}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Mean packet loss",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 36
+          },
+          "id": 788,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "current",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "v",
+          "repeatIteration": 1556784450311,
+          "repeatPanelId": 677,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "source_node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{destination_name}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Mean RTT",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 36
+          },
+          "id": 789,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "current",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "v",
+          "repeatIteration": 1556784450311,
+          "repeatPanelId": 678,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "source_node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{destination_name}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Mean deviation",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 2,
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1556784450311,
+      "repeatPanelId": 17,
+      "scopedVars": {
+        "source_node": {
+          "selected": false,
+          "text": "kube-a-1",
+          "value": "kube-a-1"
         }
       },
       "title": "From $source_node",
@@ -1723,18 +2321,21 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "text": "default",
-          "value": "default"
+          "selected": true,
+          "text": "main",
+          "value": "main"
         },
         "hide": 0,
+        "includeAll": false,
         "label": "Prometheus",
+        "multi": false,
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
@@ -1747,19 +2348,17 @@
         "allValue": null,
         "current": {
           "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "value": "$__all"
         },
         "datasource": "$ds_prometheus",
-        "definition": "",
+        "definition": "label_values(external_ping_packets_sent_total, node)",
         "hide": 0,
         "includeAll": true,
         "label": "Source",
         "multi": true,
         "name": "source_node",
         "options": [],
-        "query": "label_values(kube_node_ping_packets_sent_total, node)",
+        "query": "label_values(external_ping_packets_sent_total, node)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1774,19 +2373,17 @@
         "allValue": null,
         "current": {
           "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "value": "$__all"
         },
         "datasource": "$ds_prometheus",
-        "definition": "",
+        "definition": "label_values(external_ping_packets_sent_total, destination_name)",
         "hide": 0,
         "includeAll": true,
         "label": "Destination",
         "multi": true,
-        "name": "destination_node",
+        "name": "destination_name",
         "options": [],
-        "query": "label_values(kube_node_ping_packets_sent_total, node)",
+        "query": "label_values(external_ping_packets_sent_total, destination_name)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1829,7 +2426,7 @@
     ]
   },
   "timezone": "",
-  "title": "Nodes-ping",
-  "uid": "U8z-arLik",
-  "version": 1
+  "title": "External ping",
+  "uid": "ak39dqlcds",
+  "version": 2
 }
