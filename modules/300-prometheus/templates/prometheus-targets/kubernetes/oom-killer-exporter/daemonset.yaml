@@ -1,0 +1,91 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: oom-killer-exporter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oom-killer-exporter
+spec:
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: oom-killer-exporter
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: oom-killer-exporter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oom-killer-exporter
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: oom-killer-exporter
+  template:
+    metadata:
+      labels:
+        app: oom-killer-exporter
+      name: oom-killer-exporter
+    spec:
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
+      containers:
+      - name: oom-killer-exporter
+        image: sapcc/kubernetes-oomkill-exporter:0.2.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - -logtostderr
+        - -v=2
+        - -listen-address=127.0.0.1:9102
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 20m
+          limits:
+            memory: 100Mi
+            cpu: 100m
+        env:
+        - name: DOCKER_HOST
+          value: "unix:///var/run/docker.sock"
+        volumeMounts:
+        - name: kmsg
+          mountPath: /dev/kmsg
+          readOnly: true
+        - name: docker
+          mountPath: /var/run/docker.sock
+      - name: prometheus-auth-proxy
+        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        args:
+        - "--listen=9101"
+        - "--proxy-pass=http://127.0.0.1:9102/metrics"
+        ports:
+        - containerPort: 9101
+          name: https
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+      volumes:
+      - name: kmsg
+        hostPath:
+          path: /dev/kmsg
+      - name: docker
+        hostPath:
+          path: /var/run/docker.sock
+      tolerations:
+      - operator: Exists

@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: oom-killer-exporter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oom-killer-exporter
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  selector:
+    matchLabels:
+      prometheus-target: oom-killer-exporter
+  namespaceSelector:
+    matchNames:
+    - kube-prometheus
+  endpoints:
+  - port: https
+    scheme: https
+    scrapeTimeout: 20s
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
