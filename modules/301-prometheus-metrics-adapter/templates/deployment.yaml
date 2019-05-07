@@ -36,7 +36,9 @@ spec:
       annotations:
         checksum/config: {{ .Values.prometheusMetricsAdapter.apiserverProxyClientCa | sha256sum }}
         checksum/cert: {{ .Values.prometheusMetricsAdapter.adapterPem | sha256sum }}
+{{- if .Values.prometheusMetricsAdapter.customConfigSHA }}
         checksum/custom-config: {{ .Values.prometheusMetricsAdapter.customConfigSHA | sha256sum }}
+{{- end }}
       labels:
         app: prometheus-metrics-adapter
       name: prometheus-metrics-adapter
