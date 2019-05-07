@@ -1,0 +1,24 @@
+{{- if (hasKey .Values.certManager "digitalOceanCredentials") }}
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: digitalocean
+  namespace: kube-cert-manager
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: cert-manager
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: "{{ .Values.global.project }}+letsencrypt-digitalocean-{{ .Values.global.clusterName }}@notice.flant.com"
+    privateKeySecretRef:
+      name: digitalocean-tls-key
+    dns01:
+      providers:
+      - name: digitalocean
+        digitalocean:
+          tokenSecretRef:
+            name: digitalocean
+            key: access-token
+{{- end }}

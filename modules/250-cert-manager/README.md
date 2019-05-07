@@ -22,6 +22,7 @@
 *  `cloudflareEmail` — Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare
 *  `route53AccessKeyID` — Access Key ID пользователя с необходимыми правами [Amazon Route53 IAM Policy](https://cert-manager.readthedocs.io/en/latest/reference/issuers/acme/dns01.html#amazon-route53) для управления доменными записями домена
 *  `route53SecretAccessKey` — Secret Access Key пользователя с необходимыми правами для управления доменными записями домена
+*  `digitalOceanCredentials` — Access Token от Digital Ocean API, который можно создать в разделе `API`
 
 ### Пример конфига
 
