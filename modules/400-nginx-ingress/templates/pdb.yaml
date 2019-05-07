@@ -1,0 +1,17 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: default-http-backend
+  namespace: {{ include "helper.namespace" . }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: default-http-backend
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: default-http-backend
+{{- end }}

@@ -1,0 +1,14 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: prometheus-operator
+  namespace: kube-prometheus-operator
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus-operator
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: prometheus-operator

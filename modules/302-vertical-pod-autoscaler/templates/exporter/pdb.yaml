@@ -1,0 +1,14 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: vpa-exporter
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: vpa-exporter
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: vpa-exporter

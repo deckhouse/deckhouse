@@ -1,0 +1,14 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: prometheus-metrics-adapter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus-metrics-adapter
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: prometheus-metrics-adapter
