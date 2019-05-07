@@ -1,0 +1,16 @@
+{{- if hasKey .Values.prometheus "madisonAuthKey" }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: madison-proxy
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: madison-proxy
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: madison-proxy
+{{- end }}

@@ -1,0 +1,14 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: webhook
+  namespace: kube-cert-manager
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: webhook
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: webhook

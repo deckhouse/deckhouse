@@ -1,0 +1,16 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: prometheus-longterm
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+    prometheus: longterm
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: prometheus
+      prometheus: longterm

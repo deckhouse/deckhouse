@@ -1,0 +1,16 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: prometheus-main
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: prometheus
+    prometheus: main
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: prometheus
+      prometheus: main

@@ -1,0 +1,44 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: vpa-admission-controller
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: vpa-admission-controller
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: vpa-admission-controller
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: vpa-recommender
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: vpa-recommender
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: vpa-recommender
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: vpa-updater
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: vpa-updater
