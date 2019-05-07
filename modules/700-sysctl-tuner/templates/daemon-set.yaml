@@ -23,6 +23,13 @@ spec:
         - -c
         - |
           while true; do
+            CPU_NUM=`cat /proc/cpuinfo | grep -E '^processor\s+:\s+[0-9]+$' | wc -l` ;
+            CONNTRACK_BY_CPU=$(( $CPU_NUM * {{ .Values.sysctlTuner.conntrackMaxPerCore }} )) ;
+            NF_CONNTRACK_MAX=$(( $CONNTRACK_BY_CPU > {{ .Values.sysctlTuner.conntrackMin }} ? $CONNTRACK_BY_CPU : {{ .Values.sysctlTuner.conntrackMin }} )) ;
+            sysctl -w net.netfilter.nf_conntrack_max=$NF_CONNTRACK_MAX ; # устанавливаем лимит количества conntrack-ов
+            sysctl -w net.nf_conntrack_max=$NF_CONNTRACK_MAX ;           #
+            echo $(( $NF_CONNTRACK_MAX / 4 )) > /sys/module/nf_conntrack/parameters/hashsize ; # устанавливаем пропорциональный размер хеш-таблицы для поиска по коннтракам
+
             # http://www.brendangregg.com/blog/2017-12-31/reinvent-netflix-ec2-tuning.html
             sysctl -w vm.swappiness=0 ;
             sysctl -w net.core.somaxconn=1000 ;

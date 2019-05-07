@@ -1,1 +1,3 @@
-sysctlTuner: {}
+sysctlTuner:
+  conntrackMaxPerCore: 131072
+  conntrackMin: 524288
