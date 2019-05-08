@@ -33,31 +33,28 @@ function __main__() {
           # параметр, который позволяет производить расширение диска. Если такой параметр есть у storage class, то создаем диск с размером в 10гб
           if values::has prometheus."$storage_class_name" || values::has global.storageClassName || values::has global.discovery.defaultStorageClassName ; then
             values::set prometheus."$disk_size" "30"
-            values::set prometheus."$retention_gigabytes" "27"
+            values::set prometheus."$retention_gigabytes" "25"
           fi
 
           if values::has global.discovery.defaultStorageClassName ; then
             if [ "$(kubectl get sc $(values::get global.discovery.defaultStorageClassName) -o json | jq '.allowVolumeExpansion')" = "true" ] ; then
-              # При задании диска в размере 10 GiB у Prometheus (statefulset) создается диск в мебибайтах, т.е. из 10GiB диска будет
-              # создан PVC размером ~9537 мебибайт, при этом из-за разбивки ФС на дисках, kubelet резервирует место (Reserved block count).
-              # Тогда в поде у нас окажется физически 9 GiB дискового места и Prometheus для retention нужно именно эти 9 GiB места указать.
-              # Посчитав на примерах, вывели, что из исходных GiB Prometheus у нас "теряется" 10% дискового пространства.
-              values::set prometheus."$disk_size" "10"
-              values::set prometheus."$retention_gigabytes" "9"
+              # Посчитав на примерах, вывели, что из исходных GiB Prometheus у нас "теряется" 30% дискового пространства.
+              values::set prometheus."$disk_size" "15"
+              values::set prometheus."$retention_gigabytes" "10"
             fi
           fi
 
           if values::has global.storageClassName ; then
             if [ "$(kubectl get sc $(values::get global.$storage_class_name) -o json | jq '.allowVolumeExpansion')" = "true" ] ; then
-              values::set prometheus."$disk_size" "10"
-              values::set prometheus."$retention_gigabytes" "9"
+              values::set prometheus."$disk_size" "15"
+              values::set prometheus."$retention_gigabytes" "10"
             fi
           fi
 
           if values::has prometheus."$storage_class_name" ; then
             if [ "$(kubectl get sc $(values::get prometheus.$storage_class_name) -o json | jq '.allowVolumeExpansion')" = "true" ] ; then
-              values::set prometheus."$disk_size" "10"
-              values::set prometheus."$retention_gigabytes" "9"
+              values::set prometheus."$disk_size" "15"
+              values::set prometheus."$retention_gigabytes" "10"
             fi
           fi
 
@@ -65,7 +62,7 @@ function __main__() {
           # Если это kubernetes ниже 1.11 версии, создаем диск с размером в 30 гб
           if values::has prometheus."$storage_class_name" || values::has global.storageClassName || values::has global.discovery.defaultStorageClassName ; then
             values::set prometheus."$disk_size" "30"
-            values::set prometheus."$retention_gigabytes" "27"
+            values::set prometheus."$retention_gigabytes" "25"
           fi
         fi
       fi
@@ -73,7 +70,7 @@ function __main__() {
       # Если pvc уже есть для prometheus выставляем retention по диску в его размер
       if kubectl -n kube-prometheus get sts $sts > /dev/null 2> /dev/null; then
         size=$(kubectl -n kube-prometheus get pvc $pvc -o json | jq '.spec.resources.requests.storage'  -r | kube-resource-unit-converter)
-        new_retention=$(bc <<< "$size * 0.9" | cut -f1 -d'.')
+        new_retention=$(bc <<< "$size * 0.8" | cut -f1 -d'.')
         new_retention_gigabytes=$(bc <<< "$new_retention / 1024 / 1024 / 1024")
         values::set prometheus."$disk_size" "$(bc <<< "$size / 1024 / 1024 / 1024")"
         values::set prometheus."$retention_gigabytes" "$new_retention_gigabytes"
