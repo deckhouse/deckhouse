@@ -14,6 +14,12 @@
         kube_pod_spec_volumes_persistentvolumeclaims_info
         * on (namespace, persistentvolumeclaim) group_right (pod)
         kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_right(pod)
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info
+        )
       )
     for: 5m
     labels:
@@ -41,6 +47,12 @@
         kube_pod_spec_volumes_persistentvolumeclaims_info
         * on (namespace, persistentvolumeclaim) group_right (pod)
         kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_right(pod)
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info
+        )
       )
     for: 1m
     labels:
@@ -63,11 +75,17 @@
       ) * 100
       > on (namespace, persistentvolumeclaim) group_left (pod)
       (
-        max by (namespace, name) (extended_monitoring_pod_threshold{threshold="disk-inodes-warning"})
+        max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-inodes-warning"})
         * on (namespace, pod) group_left (persistentvolumeclaim)
         kube_pod_spec_volumes_persistentvolumeclaims_info
         * on (namespace, persistentvolumeclaim) group_right (pod)
         kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_right(pod)
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info
+        )
       )
     for: 5m
     labels:
@@ -90,11 +108,17 @@
       ) * 100
       > on (namespace, persistentvolumeclaim) group_left (pod)
       (
-        max by (namespace, name) (extended_monitoring_pod_threshold{threshold="disk-inodes-critical"})
+        max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-inodes-critical"})
         * on (namespace, pod) group_left (persistentvolumeclaim)
         kube_pod_spec_volumes_persistentvolumeclaims_info
         * on (namespace, persistentvolumeclaim) group_right (pod)
         kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_right(pod)
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info
+        )
       )
     for: 1m
     labels:

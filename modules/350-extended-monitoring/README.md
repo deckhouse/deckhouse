@@ -54,6 +54,8 @@
 | disk-inodes-critical          | int (percent) | 90             |
 | container-throttling-warning  | int (percent) | 25             |
 | container-throttling-critical | int (percent) | 50             |
+| container-cores-throttling-warning  | int (cores) |              |
+| container-cores-throttling-critical | int (cores) |              |
 
 > ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
 
