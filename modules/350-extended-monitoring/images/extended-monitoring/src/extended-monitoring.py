@@ -183,33 +183,41 @@ KUBERNETES_NAMESPACED_OBJECTS = (
     AnnotatedDeployment, AnnotatedStatefulSet, AnnotatedDaemonSet, AnnotatedPod, AnnotatedIngress, AnnotatedCronJob)
 
 corev1 = kubernetes.client.CoreV1Api()
-
+apis = kubernetes.client.ApisApi()
 
 class GetHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        exported = []
+        if self.path == "/ready":
+            api_response = apis.get_api_versions()
+            self.send_response(200)
+            self.end_headers()
+        elif self.path == "/healthz":
+            self.send_response(200)
+            self.end_headers()
+        else:
+            exported = []
 
-        # iterate over namespaced objects in explicitly enabled via annotation Namespaces
-        ns_list = corev1.list_namespace()
-        for namespace in (ns for ns in ns_list.items if ns.metadata.annotations and
-                                                        EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()):
-            for kube_object in KUBERNETES_NAMESPACED_OBJECTS:
-                exported.extend(kube_object.list_threshold_annotated_objects(namespace.metadata.name))
+            # iterate over namespaced objects in explicitly enabled via annotation Namespaces
+            ns_list = corev1.list_namespace()
+            for namespace in (ns for ns in ns_list.items if ns.metadata.annotations and
+                                                            EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()):
+                for kube_object in KUBERNETES_NAMESPACED_OBJECTS:
+                    exported.extend(kube_object.list_threshold_annotated_objects(namespace.metadata.name))
 
-        for kube_object in KUBERNETES_OBJECTS:
-            exported.extend(kube_object.list_threshold_annotated_objects(None))
+            for kube_object in KUBERNETES_OBJECTS:
+                exported.extend(kube_object.list_threshold_annotated_objects(None))
 
-        response = """# HELP extended_monitoring_annotations Extended monitoring annotations
-        # TYPE extended_monitoring_annotations gauge\n"""
-        for annotated_object in exported:
-            response += annotated_object.formatted
+            response = """# HELP extended_monitoring_annotations Extended monitoring annotations
+            # TYPE extended_monitoring_annotations gauge\n"""
+            for annotated_object in exported:
+                response += annotated_object.formatted
 
-        self.send_response(200)
-        self.send_header('Content-Type',
-                         'text/plain; charset=utf-8')
-        self.end_headers()
-        self.wfile.write(response.encode(encoding="utf-8"))
+            self.send_response(200)
+            self.send_header('Content-Type',
+                             'text/plain; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(response.encode(encoding="utf-8"))
 
 
 if __name__ == '__main__':
