@@ -1,6 +1,9 @@
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
   name: prometheus-metrics-adapter
   namespace: kube-prometheus
   labels:
@@ -8,7 +11,7 @@ metadata:
     module: {{ $.Chart.Name }}
     app: prometheus-metrics-adapter
 spec:
-  minAvailable: 0
+  minAvailable: {{ include "is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app: prometheus-metrics-adapter

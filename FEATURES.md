@@ -62,3 +62,40 @@ Statusmap (второй блок сверху на всех досках, кро
 В группе графиков Controllers memory есть параметр `Working set bytes` - показывает минимально необходимую процессам контейнера память, включая кэш открытых файлов, сетевые сокеты, RSS, память ядра. Соответственно памяти контейнеру дожно быть выделенно больше, чем указано в `Working set bytes`.
 
 > Если под работает в `host network`, то сетевой трафик будет дублироваться на графиках по количеству таких подов. Анализ трафика на ноде нужно делать на графике `Kubernetes / Nodes` по соответствующей ноде.
+
+## Отказоустойчивость
+
+Некоторые модули поддерживают режим отказоустойчивости, в этом режиме модуль должен продолжать работу при выходе из строя одной ноды. Например, некоторые компоненты дополняются репликами, а также принимаются иные меры, такие как настройка кворума и пр.
+
+Как управлять? В порядке приоритета:
+
+* Вручную, с помощью настроек в CM:
+    * Локальный флаг `moduleName.highAvailability`. По-умолчанию не определён.
+    * Глобальный флаг `global.highAvailability`. По-умолчанию не определён.
+* Автоматически — есть autodiscovery-параметр `global.discovery.clusterControlPlaneIsHighlyAvailable`, который отражает наличие реплик у apiserver. Если они есть, значит инженеры посчитали кластер важным и позаботились о репликах для control plane, а значит — и дополнения должны работать в отказоустойчивом режиме.
+
+| Модуль   |      Статус   |
+|----------|---------------|
+| 010-priority-class              | Не требуется |
+| 010-vertical-pod-autoscaler-crd | Не требуется |
+| 050-antiopa                     | Нет возможности |
+| 100-cert-manager-crd            | Не требуется |
+| 200-heapster                    | Не требуется |
+| 200-prometheus-operator         | [Пока нет](https://github.com/deckhouse/deckhouse/issues/519) |
+| 250-cert-manager                | [Пока нет](https://github.com/deckhouse/deckhouse/issues/515) |
+| 300-prometheus                  | Да |
+| 301-prometheus-metrics-adapter  | Да |
+| 302-vertical-pod-autoscaler     | [Пока нет](https://github.com/deckhouse/deckhouse/issues/520) |
+| 340-node-problem-detector       | DaemonSet |
+| 350-extended-monitoring         | [Пока нет](https://github.com/deckhouse/deckhouse/issues/510) |
+| 350-node-local-dns              | DaemonSet |
+| 400-nginx-ingress               | DaemonSet |
+| 500-basic-auth                  | [Пока нет](https://github.com/deckhouse/deckhouse/issues/516) |
+| 500-dashboard                   | [Пока нет](https://github.com/deckhouse/deckhouse/issues/517) |
+| 500-okmeter                     | DaemonSet |
+| 500-openvpn                     | [Пока нет](https://github.com/deckhouse/deckhouse/issues/518) |
+| 600-ping-exporter               | DaemonSet |
+| 600-secret-copier               | Не требуется |
+| 700-sysctl-tuner                | DaemonSet |
+| 800-systemd-slices-cleaner      | DaemonSet |
+| 999-helm                        | Не требуется |
