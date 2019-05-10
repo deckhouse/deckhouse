@@ -47,7 +47,7 @@ spec:
       priorityClassName: cluster-medium
       {{- end }}
       containers:
-      - image: prom/node-exporter:v0.17.0
+      - image: prom/node-exporter:v0.18.0
         args:
         - "--web.listen-address=127.0.0.1:9101"
         - "--path.procfs=/host/proc"

@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  if kubectl -n kube-prometheus get statefulset/prometheus-main > /dev/null 2> /dev/null; then
+  if kubectl -n kube-prometheus get statefulset/prometheus-main -o json 2>/dev/null | jq -e '.spec.volumeClaimTemplates' >/dev/null; then
     as_is=$(kubectl -n kube-prometheus get pvc prometheus-main-db-prometheus-main-0 -o json | jq -r '.spec.storageClassName')
     to_be=$(kubectl -n kube-prometheus get statefulset/prometheus-main -o json | jq '.spec.volumeClaimTemplates[0].spec.storageClassName' -r)
 
@@ -17,7 +17,7 @@ function __main__() {
     fi
   fi
 
-  if kubectl -n kube-prometheus get statefulset/prometheus-longterm > /dev/null 2> /dev/null; then
+  if kubectl -n kube-prometheus get statefulset/prometheus-longterm -o json 2>/dev/null | jq -e '.spec.volumeClaimTemplates' >/dev/null; then
     as_is=$(kubectl -n kube-prometheus get pvc prometheus-longterm-db-prometheus-longterm-0 -o json | jq -r '.spec.storageClassName')
     to_be=$(kubectl -n kube-prometheus get statefulset/prometheus-longterm -o json | jq '.spec.volumeClaimTemplates[0].spec.storageClassName' -r)
 
