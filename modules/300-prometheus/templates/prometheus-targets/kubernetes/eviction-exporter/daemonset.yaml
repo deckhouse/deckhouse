@@ -1,0 +1,87 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: node-exporter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kubelet-eviction-thresholds-exporter
+spec:
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: kubelet-eviction-thresholds-exporter
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: kubelet-eviction-thresholds-exporter
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: kubelet-eviction-thresholds-exporter
+spec:
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: kubelet-eviction-thresholds-exporter
+  template:
+    metadata:
+      labels:
+        app: kubelet-eviction-thresholds-exporter
+      name: kubelet-eviction-thresholds-exporter
+    spec:
+      serviceAccountName: kubelet-eviction-thresholds-exporter
+      hostNetwork: true
+      hostPID: true
+      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+      {{- end }}
+      containers:
+      - image: {{ $.Values.global.modulesImages.registry }}/prometheus/kubelet-eviction-thresholds-exporter:{{ $.Values.global.modulesImages.tags.prometheus.kubeletEvictionThresholdsExporter }}
+        name: kubelet-eviction-thresholds-exporter
+        resources:
+          requests:
+            memory: 50Mi
+            cpu: 50m
+          limits:
+            memory: 150Mi
+            cpu: 400m
+        env:
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: root
+          readOnly:  true
+          mountPath: /host/
+        - name: textfile
+          mountPath: /var/run/node-exporter-textfile
+        - name: dockersock
+          mountPath: /var/run/docker.sock
+      tolerations:
+      - operator: Exists
+      volumes:
+      - name: textfile
+        hostPath:
+          path: /var/run/node-exporter-textfile
+          type: DirectoryOrCreate
+      - name: root
+        hostPath:
+          path: /
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock
+      imagePullSecrets:
+      - name: antiopa-registry

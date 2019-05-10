@@ -3,10 +3,11 @@
   - alert: NodeDiskBytesUsage
     expr: |
       (
-        (node_filesystem_size_bytes - node_filesystem_avail_bytes)
-        /
-        node_filesystem_size_bytes
-      ) * 100
+        max by (node, mountpoint) (
+          (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+          /
+          node_filesystem_size_bytes
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-warning"})
@@ -22,10 +23,11 @@
   - alert: NodeDiskBytesUsage
     expr: |
       (
-        (node_filesystem_size_bytes - node_filesystem_avail_bytes)
-        /
-        node_filesystem_size_bytes
-      ) * 100
+        max by (node, mountpoint) (
+          (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+          /
+          node_filesystem_size_bytes
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-critical"})
@@ -41,10 +43,11 @@
   - alert: NodeDiskInodesUsage
     expr: |
       (
-        (node_filesystem_files - node_filesystem_files_free)
-        /
-        node_filesystem_files
-      ) * 100
+        max by (node, mountpoint) (
+          (node_filesystem_files - node_filesystem_files_free)
+          /
+          node_filesystem_files
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-warning"})
@@ -60,10 +63,11 @@
   - alert: NodeDiskInodesUsage
     expr: |
       (
-        (node_filesystem_files - node_filesystem_files_free)
-        /
-        node_filesystem_files
-      ) * 100
+        max by (node, mountpoint) (
+          (node_filesystem_files - node_filesystem_files_free)
+          /
+          node_filesystem_files
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})

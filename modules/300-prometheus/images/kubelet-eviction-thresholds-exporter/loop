@@ -1,0 +1,105 @@
+#!/bin/bash
+
+set -euf -o pipefail
+set -x
+
+mountpoint () {
+  stat -c "%m" "/host$1" | sed 's#/host#/#g' | sed 's#//#/#g'
+}
+
+total_bytes () {
+  df -B1 "/host$1" --output=size | tail -n 1
+}
+
+total_inodes () {
+  df "/host$1" --output=itotal | tail -n 1
+}
+
+docker_root_dir () {
+  curl -sS --unix-sock /var/run/docker.sock http://system/info | jq -re '.DockerRootDir'
+}
+
+kubelet_root_dir () {
+  # shellcheck disable=SC2009
+  kube_root_dir=$(ps axu | grep kubelet | grep -Po '(?<=root-dir.)\S+')
+  if [ -n "$kube_root_dir" ]; then
+    echo -n "$kube_root_dir"
+  else
+    echo -n "/var/lib/kubelet"
+  fi
+}
+
+normalize_to_pcnt () {
+  # if contains a percent sign, return as-is
+  case $1 in *%)
+    echo "100 - ${1%"%"}" | bc -l
+    return
+  esac
+
+  # else make it proportional to the output of "df"
+  evict_bytes=$(echo "$1" | kube-resource-unit-converter)
+
+  echo "scale=5; (1 - $evict_bytes / $2) * 100" | bc -l
+}
+
+while true; do
+  evictions=$(kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME/proxy/configz" |
+    jq -r '.kubeletconfig | {"evictionHard": .evictionHard, "evictionSoft": .evictionSoft}')
+
+  nodefs=$(kubelet_root_dir)
+  imagefs=$(docker_root_dir)
+  nodefs_mountpoint=$(mountpoint "$nodefs")
+  imagefs_mountpoint=$(mountpoint "$imagefs")
+  nodefs_bytes=$(total_bytes "$nodefs_mountpoint")
+  imagefs_bytes=$(total_bytes "$imagefs_mountpoint")
+  nodefs_inodes=$(total_inodes "$nodefs_mountpoint")
+  imagefs_inodes=$(total_inodes "$imagefs_mountpoint")
+
+  eviction_hard_nodefs_available=$(echo "$evictions" | jq -r '.evictionHard."nodefs.available" // empty')
+  eviction_hard_nodefs_inodesfree=$(echo "$evictions" | jq -r '.evictionHard."nodefs.inodesFree" // empty')
+  eviction_hard_imagefs_available=$(echo "$evictions" | jq -r '.evictionHard."imagefs.available" // empty')
+  eviction_hard_imagefs_inodesfree=$(echo "$evictions" | jq -r '.evictionHard."imagefs.inodesFree" // empty')
+
+  eviction_soft_nodefs_available=$(echo "$evictions" | jq -r '.evictionSoft."nodefs.available" // empty')
+  eviction_soft_nodefs_inodesfree=$(echo "$evictions" | jq -r '.evictionSoft."nodefs.inodesFree" // empty')
+  eviction_soft_imagefs_available=$(echo "$evictions" | jq -r '.evictionSoft."imagefs.available" // empty')
+  eviction_soft_imagefs_inodesfree=$(echo "$evictions" | jq -r '.evictionSoft."imagefs.inodesFree" // empty')
+
+  nl='
+'
+  accumulator=""
+  if [ -n "$eviction_hard_nodefs_available" ]; then
+    accumulator+="kubelet_eviction_nodefs_bytes{mountpoint=\"$nodefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_nodefs_available" "$nodefs_bytes")$nl"
+  fi
+
+  if [ -n "$eviction_hard_nodefs_inodesfree" ]; then
+    accumulator+="kubelet_eviction_nodefs_inodes{mountpoint=\"$nodefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_nodefs_inodesfree" "$nodefs_inodes")$nl"
+  fi
+
+  if [ -n "$eviction_hard_imagefs_available" ]; then
+    accumulator+="kubelet_eviction_nodefs_bytes{mountpoint=\"$imagefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_imagefs_available" "$imagefs_bytes")$nl"
+  fi
+
+  if [ -n "$eviction_hard_imagefs_inodesfree" ]; then
+    accumulator+="kubelet_eviction_nodefs_inodes{mountpoint=\"$imagefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_imagefs_inodesfree" "$imagefs_inodes")$nl"
+  fi
+
+  if [ -n "$eviction_soft_nodefs_available" ]; then
+    accumulator+="kubelet_eviction_nodefs_bytes{mountpoint=\"$nodefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_nodefs_available" "$nodefs_bytes")$nl"
+  fi
+
+  if [ -n "$eviction_soft_nodefs_inodesfree" ]; then
+    accumulator+="kubelet_eviction_nodefs_inodes{mountpoint=\"$nodefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_nodefs_inodesfree" "$nodefs_inodes")$nl"
+  fi
+
+  if [ -n "$eviction_soft_imagefs_available" ]; then
+    accumulator+="kubelet_eviction_nodefs_bytes{mountpoint=\"$imagefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_imagefs_available" "$imagefs_bytes")$nl"
+  fi
+
+  if [ -n "$eviction_soft_imagefs_inodesfree" ]; then
+    accumulator+="kubelet_eviction_nodefs_inodes{mountpoint=\"$imagefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_imagefs_inodesfree" "$imagefs_inodes")$nl"
+  fi
+
+  echo "$accumulator" > /host/var/run/node-exporter-textfile/kubelet-eviction.prom
+  sleep 300
+done
