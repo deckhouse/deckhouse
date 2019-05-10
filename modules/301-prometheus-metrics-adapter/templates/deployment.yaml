@@ -27,7 +27,7 @@ metadata:
   name: prometheus-metrics-adapter
   namespace: kube-prometheus
 spec:
-  replicas: 1
+  replicas: {{ include "is_ha_to_value" (list . 2 1) }}
   selector:
     matchLabels:
       app: prometheus-metrics-adapter

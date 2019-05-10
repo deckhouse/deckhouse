@@ -1,6 +1,9 @@
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
   name: {{ .Chart.Name }}
   namespace: kube-{{ .Chart.Name }}
   labels:

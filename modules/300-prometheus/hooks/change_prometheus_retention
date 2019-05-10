@@ -10,17 +10,25 @@ function __config__() {
 
 function __main__() {
   cluster_version=$(values::get global.discovery.clusterVersion)
-  for pvc in prometheus-main-db-prometheus-main-0 prometheus-longterm-db-prometheus-longterm-0; do
-    if [ "$pvc" == "prometheus-main-db-prometheus-main-0" ]; then
+  pvc_list="prometheus-main-db-prometheus-main-0 prometheus-longterm-db-prometheus-longterm-0"
+  if module::is_ha_enabled; then
+    pvc_list="$pvc_list prometheus-main-db-prometheus-main-1"
+  fi
+
+  for pvc in $pvc_list; do
+    if [[ $pvc =~ ^prometheus-main-db-prometheus-main ]]; then
       storage_class_name="storageClassName"
       disk_size="diskSize"
       retention_gigabytes="retentionGigabytes"
       sts="prometheus-main"
-    else
+    elif [[ $pvc =~ ^prometheus-longterm-db-prometheus-longterm ]]; then
       storage_class_name="longtermStorageClassName"
       disk_size="longtermDiskSize"
       retention_gigabytes="longtermRetentionGigabytes"
       sts="prometheus-longterm"
+    else 
+      echo "Wrong pvc name: $pvc. Should be like prometheus-main-db-prometheus-main-X or prometheus-longterm-db-prometheus-main-X"
+      exit 1
     fi
 
     # Проверяем, существует ли pvc

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Автоопределятор отказоустойчивости control plane  в кластере.
+# 
+# Если apiserver-ов больше одного, значит кто-то об этом позаботился и можно считать,
+# что кластеру требуется отказоустойчивость. Далее это значение используется,
+# например, в качестве значения по-умолчанию для режима отказоустойчивости
+# (см. подробнее global.highAvailability в /README.md).
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=100 onKubernetesEvent="$(jo -a $(jo kind=endpoints namespaceSelector=$(jo -a default)) )"
+}
+
+function __main__() {
+  num_apiservers=$(kubectl -n default get ep kubernetes -o json | jq '.subsets[].addresses | length')
+
+  if [ $num_apiservers -gt 1 ]; then
+    values::set global.discovery.clusterControlPlaneIsHighlyAvailable true
+  else
+    values::set global.discovery.clusterControlPlaneIsHighlyAvailable false
+  fi
+}
+
+hook::run $@
