@@ -15,3 +15,24 @@
     annotations:
       description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
       summary: Ping loss more than 5%
+
+  # remove after https://github.com/prometheus/node_exporter/issues/1339 gets fixed
+  - alert: NodeExporterMountStuck
+    expr: >-
+      max by (node) (node_filesystem_size_bytes{mountpoint="/"}) == on (node) group_right() node_filesystem_size_bytes{mountpoint!="/", fstype!~"ceph|nfs.*"}
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |
+        Restart node_exporter on node {{$labels.node}}:
+
+        ```bash
+        kubectl -n kube-prometheus get pod -o wide | grep node-exporter | grep {{$labels.node}}
+        kubectl delete pod ...
+        ```
+        
+        See https://github.com/deckhouse/deckhouse/issues/491 for details.
+      summary: >
+        node_exporter on Node {{$labels.node}} is stuck
