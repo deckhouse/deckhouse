@@ -32,7 +32,8 @@
         kubectl -n kube-prometheus get pod -o wide | grep node-exporter | grep {{$labels.node}}
         kubectl delete pod ...
         ```
-        
+
         See https://github.com/deckhouse/deckhouse/issues/491 for details.
       summary: >
         node_exporter on Node {{$labels.node}} is stuck
+
