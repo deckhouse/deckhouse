@@ -1,6 +1,6 @@
 FROM golang:1.12.1-alpine3.9
 RUN mkdir -p /src/kube-state-metrics && \
-  wget https://github.com/kubernetes/kube-state-metrics/archive/v1.6.0-rc.0.tar.gz -O - | tar -xz --strip-components=1 -C /src/kube-state-metrics
+  wget https://github.com/kubernetes/kube-state-metrics/archive/v1.6.0.tar.gz -O - | tar -xz --strip-components=1 -C /src/kube-state-metrics
 WORKDIR /src/kube-state-metrics
 ADD kube-persistentvolume-is-local.patch .
 ADD kube-pod-spec-host-network.patch .
