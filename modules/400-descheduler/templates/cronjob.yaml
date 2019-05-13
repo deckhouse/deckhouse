@@ -1,0 +1,55 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: descheduler
+  namespace: kube-descheduler
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 6
+  failedJobsHistoryLimit: 6
+  jobTemplate:
+    spec:
+      parallelism: 1
+      completions: 1
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: descheduler
+          imagePullSecrets:
+          - name: antiopa-registry
+{{- if and (hasKey .Values.descheduler "nodeSelector") (.Values.descheduler.nodeSelector) }}
+          nodeSelector:
+{{ .Values.descheduler.nodeSelector | toYaml | trim | indent 10 }}
+{{- else if and (not (hasKey .Values.descheduler "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
+          nodeSelector:
+            node-role/system: ""
+{{- end }}
+{{- if and (hasKey .Values.descheduler "tolerations") (.Values.descheduler.tolerations) }}
+          tolerations:
+{{ .Values.descheduler.tolerations | toYaml | trim | indent 8 }}
+{{- else if and (not (hasKey .Values.descheduler "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
+          tolerations:
+          - key: node-role/system
+            effect: NoExecute
+{{- end }}
+          {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+          priorityClassName: cluster-low
+          {{- end }}
+          containers:
+          - name: descheduler
+            image: {{ $.Values.global.modulesImages.registry }}/descheduler/descheduler:{{ $.Values.global.modulesImages.tags.descheduler.descheduler }}
+            volumeMounts:
+            - mountPath: /policy
+              name: policy-volume
+            command:
+            - "/bin/descheduler"
+            args:
+            - "--policy-config-file"
+            - "/policy/policy.yaml"
+            - "--v"
+            - "6"
+          volumes:
+          - name: policy-volume
+            configMap:
+              name: descheduler-policy-configmap

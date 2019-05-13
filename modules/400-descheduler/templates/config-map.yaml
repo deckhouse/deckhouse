@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: descheduler-policy-configmap
+  namespace: kube-descheduler
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+data:
+  policy.yaml: |
+    apiVersion: "descheduler/v1alpha1"
+    kind: "DeschedulerPolicy"
+    strategies:
+{{- if .Values.descheduler.removePodsViolatingNodeAffinity }}
+      "RemovePodsViolatingNodeAffinity":
+        enabled: true
+        params:
+          nodeAffinityType:
+          - "requiredDuringSchedulingIgnoredDuringExecution"
+{{- else }}
+      "RemovePodsViolatingNodeAffinity":
+        enabled: false
+{{- end }}
+{{- if .Values.descheduler.removePodsViolatingInterPodAntiAffinity }}
+      "RemovePodsViolatingInterPodAntiAffinity":
+        enabled: true
+{{- else }}
+      "RemovePodsViolatingInterPodAntiAffinity":
+        enabled: false
+{{- end }}
+{{- if .Values.descheduler.removeDuplicates }}
+      "RemoveDuplicates":
+        enabled: true
+{{- else }}
+      "RemoveDuplicates":
+        enabled: false
+{{- end }}
+{{- if .Values.descheduler.lowNodeUtilization }}
+      "LowNodeUtilization":
+         enabled: true
+         params:
+           nodeResourceUtilizationThresholds:
+             thresholds:
+               "cpu" : 40
+               "memory": 50
+               "pods": 40
+             targetThresholds:
+               "cpu" : 80
+               "memory": 90
+               "pods": 80
+{{- else }}
+      "LowNodeUtilization":
+        enabled: false
+{{- end }}
