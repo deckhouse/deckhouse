@@ -13,7 +13,13 @@ spec:
     kind: Deployment
     name: vpa-recommender
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "admission-controller"
+      maxAllowed:
+        cpu: 100m
+        memory: 300Mi
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -81,9 +87,6 @@ spec:
         - --storage=prometheus
         - --v=4
         resources:
-          limits:
-            cpu: 200m
-            memory: 1000Mi
           requests:
             cpu: 50m
             memory: 200Mi

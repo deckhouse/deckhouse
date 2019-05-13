@@ -14,7 +14,7 @@ spec:
     kind: Deployment
     name: vpa-exporter
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 ---
 kind: Deployment
 apiVersion: extensions/v1beta1

@@ -15,7 +15,7 @@ spec:
     kind: Deployment
     name: prometheus-operator
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -58,15 +58,14 @@ spec:
       - args:
         - --kubelet-service=kube-system/kubelet
         - --logtostderr=true
+        - --config-reloader-cpu=0
+        - --prometheus-config-reloader-cpu=0
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-operator/prometheus-operator:{{ $.Values.global.modulesImages.tags.prometheusOperator.prometheusOperator }}
         name: prometheus-operator
         ports:
         - containerPort: 8080
           name: http
         resources:
-          limits:
-            cpu: 100m
-            memory: 300Mi
           requests:
             cpu: 100m
             memory: 300Mi

@@ -13,7 +13,13 @@ spec:
     kind: Deployment
     name: vpa-admission-controller
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "admission-controller"
+      maxAllowed:
+        cpu: 100m
+        memory: 100Mi
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -84,9 +90,6 @@ spec:
             mountPath: "/etc/tls-certs"
             readOnly: true
         resources:
-          limits:
-            cpu: 200m
-            memory: 300Mi
           requests:
             cpu: 50m
             memory: 50Mi

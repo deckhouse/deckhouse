@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  kubectl::jq_patch antiopa namespace/antiopa ".metadata.annotations += {\"extended-monitoring.flant.com/enabled\":\"\"}"
+  kubectl::jq_patch kube-system namespace/kube-system ".metadata.annotations += {\"extended-monitoring.flant.com/enabled\":\"\"}"
+}
+
+hook::run $@

@@ -56,9 +56,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 20m
-          limits:
-            memory: 100Mi
-            cpu: 100m
         env:
         - name: DOCKER_HOST
           value: "unix:///var/run/docker.sock"

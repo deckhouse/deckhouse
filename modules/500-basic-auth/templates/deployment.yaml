@@ -15,7 +15,7 @@ spec:
     kind: Deployment
     name: nginx
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: apps/v1

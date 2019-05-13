@@ -15,7 +15,7 @@ spec:
     kind: DaemonSet
     name: okmeter
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: apps/v1beta2
@@ -63,9 +63,6 @@ spec:
           requests:
             memory: 100Mi
             cpu: 10m
-          limits:
-            memory: 1Gi
-            cpu: 0.5
         volumeMounts:
         - name: dockersocket
           mountPath: /var/run/docker.sock

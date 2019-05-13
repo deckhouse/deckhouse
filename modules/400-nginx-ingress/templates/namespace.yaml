@@ -4,6 +4,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ include "helper.namespace" . }}
+  annotations:
+    extended-monitoring.flant.com/enabled: ""
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}

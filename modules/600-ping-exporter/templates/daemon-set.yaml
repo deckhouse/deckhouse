@@ -15,7 +15,7 @@ spec:
     kind: DaemonSet
     name: ping-exporter
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: extensions/v1beta1

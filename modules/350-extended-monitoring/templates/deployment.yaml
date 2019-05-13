@@ -15,7 +15,7 @@ spec:
     kind: Deployment
     name: extended-monitoring
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 kind: Deployment
