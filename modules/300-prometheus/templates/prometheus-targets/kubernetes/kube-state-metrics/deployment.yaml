@@ -77,9 +77,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       - name: prometheus-auth-proxy-self
         image: flant/kube-prometheus-auth-proxy:v0.1.0
         args:
@@ -92,9 +89,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       - name: kube-state-metrics
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-state-metrics:{{ $.Values.global.modulesImages.tags.prometheus.kubeStateMetrics }}
         args:

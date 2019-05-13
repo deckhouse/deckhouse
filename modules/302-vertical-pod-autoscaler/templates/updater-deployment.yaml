@@ -13,7 +13,13 @@ spec:
     kind: Deployment
     name: vpa-updater
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "admission-controller"
+      maxAllowed:
+        cpu: 100m
+        memory: 100Mi
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -74,9 +80,6 @@ spec:
         - --updater-interval=1m0s
         - --v=4
         resources:
-          limits:
-            cpu: 200m
-            memory: 300Mi
           requests:
             cpu: 50m
             memory: 50Mi

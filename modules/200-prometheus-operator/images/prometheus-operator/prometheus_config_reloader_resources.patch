@@ -1,0 +1,54 @@
+diff --git a/cmd/operator/main.go b/cmd/operator/main.go
+index 3f7647ba..c04ca8f5 100644
+--- a/cmd/operator/main.go
++++ b/cmd/operator/main.go
+@@ -122,6 +122,8 @@ func init() {
+ 	// the Prometheus Operator version if no Prometheus config reloader image is
+ 	// specified.
+ 	flagset.StringVar(&cfg.PrometheusConfigReloader, "prometheus-config-reloader", fmt.Sprintf("quay.io/coreos/prometheus-config-reloader:v%v", version.Version), "Prometheus config reloader image")
++	flagset.StringVar(&cfg.PrometheusConfigReloaderCPU, "prometheus-config-reloader-cpu", "100m", "Prometheus Config Reloader CPU")
++	flagset.StringVar(&cfg.PrometheusConfigReloaderMemory, "prometheus-config-reloader-memory", "50Mi", "Prometheus Config Reloader Memory")
+ 	flagset.StringVar(&cfg.ConfigReloaderImage, "config-reloader-image", "quay.io/coreos/configmap-reload:v0.0.1", "Reload Image")
+ 	flagset.StringVar(&cfg.ConfigReloaderCPU, "config-reloader-cpu", "100m", "Config Reloader CPU")
+ 	flagset.StringVar(&cfg.ConfigReloaderMemory, "config-reloader-memory", "25Mi", "Config Reloader Memory")
+diff --git a/pkg/prometheus/operator.go b/pkg/prometheus/operator.go
+index 90049ae3..951e68ef 100644
+--- a/pkg/prometheus/operator.go
++++ b/pkg/prometheus/operator.go
+@@ -139,6 +139,8 @@ type Config struct {
+ 	ConfigReloaderCPU            string
+ 	ConfigReloaderMemory         string
+ 	PrometheusConfigReloader     string
++	PrometheusConfigReloaderCPU  string
++	PrometheusConfigReloaderMemory string
+ 	AlertmanagerDefaultBaseImage string
+ 	PrometheusDefaultBaseImage   string
+ 	ThanosDefaultBaseImage       string
+diff --git a/pkg/prometheus/statefulset.go b/pkg/prometheus/statefulset.go
+index dc839a0c..e0e8b51f 100644
+--- a/pkg/prometheus/statefulset.go
++++ b/pkg/prometheus/statefulset.go
+@@ -875,8 +875,8 @@ func makeStatefulSetSpec(p monitoringv1.Prometheus, c *Config, ruleConfigMapName
+ 						VolumeMounts: configReloadVolumeMounts,
+ 						Resources: v1.ResourceRequirements{
+ 							Limits: v1.ResourceList{
+-								v1.ResourceCPU:    resource.MustParse("50m"),
+-								v1.ResourceMemory: resource.MustParse("50Mi"),
++								v1.ResourceCPU:    resource.MustParse(c.PrometheusConfigReloaderCPU),
++								v1.ResourceMemory: resource.MustParse(c.PrometheusConfigReloaderMemory),
+ 							},
+ 						},
+ 					},
+diff --git a/pkg/prometheus/statefulset_test.go b/pkg/prometheus/statefulset_test.go
+index 76637720..df968ccf 100644
+--- a/pkg/prometheus/statefulset_test.go
++++ b/pkg/prometheus/statefulset_test.go
+@@ -34,6 +34,8 @@ var (
+ 		ConfigReloaderImage:        "quay.io/coreos/configmap-reload:latest",
+ 		ConfigReloaderCPU:          "100m",
+ 		ConfigReloaderMemory:       "25Mi",
++		PrometheusConfigReloaderCPU: "50m",
++		PrometheusConfigReloaderMemory: "50Mi",
+ 		PrometheusDefaultBaseImage: "quay.io/prometheus/prometheus",
+ 		ThanosDefaultBaseImage:     "improbable/thanos",
+ 	}

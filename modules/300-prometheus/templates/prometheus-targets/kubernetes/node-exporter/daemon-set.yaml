@@ -15,7 +15,7 @@ spec:
     kind: DaemonSet
     name: node-exporter
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -64,9 +64,6 @@ spec:
           requests:
             memory: 100Mi
             cpu: 200m
-          limits:
-            memory: 150Mi
-            cpu: 400m
         volumeMounts:
         - name: root
           readOnly:  true
@@ -97,9 +94,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       tolerations:
       - operator: Exists
       volumes:

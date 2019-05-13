@@ -15,7 +15,7 @@ spec:
     kind: Deployment
     name: heapster
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -73,16 +73,10 @@ spec:
             requests:
               cpu: 80m
               memory: 140Mi
-            limits:
-              cpu: 80m
-              memory: 140Mi
         - image: k8s.gcr.io/addon-resizer:1.8.1
           name: heapster-nanny
           resources:
             requests:
-              cpu: 50m
-              memory: 90Mi
-            limits:
               cpu: 50m
               memory: 90Mi
           env:

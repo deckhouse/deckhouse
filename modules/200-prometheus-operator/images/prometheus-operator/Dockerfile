@@ -1,9 +1,11 @@
 FROM golang:1.11-alpine3.7
 WORKDIR /go/src/github.com/coreos/prometheus-operator
-RUN wget https://github.com/coreos/prometheus-operator/archive/v0.28.0.tar.gz -O - | tar -xz --strip-components=1 && \
+RUN wget https://github.com/coreos/prometheus-operator/archive/v0.29.0.tar.gz -O - | tar -xz --strip-components=1 && \
     apk --update add bash make git
 ADD disk-based-retention.patch .
+ADD prometheus_config_reloader_resources.patch .
 RUN patch -p1 < disk-based-retention.patch && \
+    patch -p1 < prometheus_config_reloader_resources.patch && \
     make build
 
 FROM alpine:3.7

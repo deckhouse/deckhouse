@@ -16,7 +16,7 @@ spec:
     kind: DaemonSet
     name: kube-prometheus-kube-master-proxy
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -62,9 +62,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       - name: prometheus-auth-proxy-for-kube-controller-manager
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
@@ -82,9 +79,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       - name: prometheus-auth-proxy-for-kube-etcd
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
@@ -110,9 +104,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
         volumeMounts:
         - mountPath: /etc/nginx/certs/apiserver-etcd-client.crt
@@ -138,9 +129,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       - name: prometheus-auth-proxy-for-kube-etcd-events
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
@@ -158,9 +146,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
   {{- end }}
   {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
       volumes:
