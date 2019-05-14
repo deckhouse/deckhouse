@@ -29,6 +29,8 @@ metadata:
     app: extended-monitoring
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}

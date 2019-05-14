@@ -1,0 +1,19 @@
+#!/bin/bash
+
+### Миграция 2019-05-14: https://github.com/deckhouse/deckhouse/merge_requests/783
+#
+# Этот хук нужен для изменения стратегии выката для kube-state-metrics и решения проблемы с одновременной доступностью двух kub-state-metrics, что приводит к проблемам на графиках в Grafana
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=15
+}
+
+function __main__ () {
+  if kubectl -n kube-prometheus get deploy kube-state-metrics  -o json | jq -e '. | select(.spec.strategy.type == "RollingUpdate") | .metadata.name' > /dev/null ; then
+    kubectl -n kube-prometheus delete deploy kube-state-metrics
+  fi
+}
+
+hook::run $@
