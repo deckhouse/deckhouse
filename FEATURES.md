@@ -74,6 +74,11 @@ Statusmap (второй блок сверху на всех досках, кро
     * Глобальный флаг `global.highAvailability`. По-умолчанию не определён.
 * Автоматически — есть autodiscovery-параметр `global.discovery.clusterControlPlaneIsHighlyAvailable`, который отражает наличие реплик у apiserver. Если они есть, значит инженеры посчитали кластер важным и позаботились о репликах для control plane, а значит — и дополнения должны работать в отказоустойчивом режиме.
 
+> Внимание! Следующие компоненты, от которых зависит работа apiserver, отправляются на master сервера с количеством реплик, соответствующим количеству мастеров в кластере:
+> 1. cainjector и webhook из 250-cert-manager
+> 2. prometheus-metrics-adapter из 301-prometheus-metrics-adapter
+> 3. vpa-admission-controller из 302-vertical-pod-autoscaler
+
 | Модуль   |      Статус   |
 |----------|---------------|
 | 010-priority-class              | Не требуется |

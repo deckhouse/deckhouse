@@ -39,30 +39,26 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
   template:
     metadata:
       labels:
         app: vpa-admission-controller
     spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-medium
+      priorityClassName: system-cluster-critical
 {{- end }}
-{{- if and (hasKey .Values.verticalPodAutoscaler "nodeSelector") (.Values.verticalPodAutoscaler.nodeSelector) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: vpa-admission-controller
+            topologyKey: kubernetes.io/hostname
       nodeSelector:
-{{ .Values.verticalPodAutoscaler.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.verticalPodAutoscaler "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.verticalPodAutoscaler "tolerations") (.Values.verticalPodAutoscaler.tolerations) }}
+        node-role.kubernetes.io/master: ""
       tolerations:
-{{ .Values.verticalPodAutoscaler.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.verticalPodAutoscaler "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
+      - operator: Exists
       serviceAccountName: vpa-admission-controller
       imagePullSecrets:
       - name: vertical-pod-autoscaler-antiopa-registry
