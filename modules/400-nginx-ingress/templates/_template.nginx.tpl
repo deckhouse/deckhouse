@@ -141,9 +141,6 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-          limits:
-            memory: 40Mi
-            cpu: 20m
       volumes:
       - name: client-body-temp-path
         emptyDir: {}

@@ -55,10 +55,6 @@ spec:
           timeoutSeconds: 5
         ports:
         - containerPort: 8080
-        resources:
-          limits:
-            cpu: 10m
-            memory: 20Mi
 ---
 apiVersion: v1
 kind: Service
