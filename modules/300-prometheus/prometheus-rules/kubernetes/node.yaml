@@ -1,5 +1,35 @@
 - name: kubernetes.node
   rules:
+  - record: node_ntp_offset_seconds:abs
+    expr: abs(node_ntp_offset_seconds)
+
+  - alert: NodeNtpInsane
+    expr: (min by (node) (node_ntp_sanity)) == 0
+    for: 1m
+    labels:
+      impact: critical
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |
+        Please, check the following values:
+        1. Absolute offset: {{ printf "node_ntp_offset_seconds:abs{node=\"%s\"}" $labels.node | query | first | value }}. Should be less than 0.001 seconds.
+        2. Root distance: {{ printf "(node_ntp_rtt_seconds{node=\"%s\"} + node_ntp_root_delay_seconds{node=\"%s\"}) / 2 + node_ntp_root_dispersion_seconds{node=\"%s\"}" $labels.node $labels.node $labels.node | query | first | value }}. Should be less than 3.46608 seconds.
+        3. Stratum: {{ printf "node_ntp_stratum{node=\"%s\"}" $labels.node | query | first | value }}. Should be less than 16.
+      summary: Node {{$labels.node}} is not sane
+
+  - alert: NodeTimeOutOfSync
+    expr: max by (node) ((time() - node_time_seconds) > 10)
+    for: 5m
+    labels:
+      impact: critical
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |
+        Node's {{$labels.node}} time is out of sync from Prometheus node by {{ $value }} seconds
+      summary: Node's {{$labels.node}} clock is drifting
+
   - alert: NodePingPacketLoss
     expr: >-
       (
@@ -36,4 +66,3 @@
         See https://github.com/deckhouse/deckhouse/issues/491 for details.
       summary: >
         node_exporter on Node {{$labels.node}} is stuck
-

@@ -53,6 +53,8 @@ spec:
         - "--path.procfs=/host/proc"
         - "--path.sysfs=/host/sys"
         - "--path.rootfs=/host/root"
+        - "--collector.ntp"
+        - "--collector.ntp.server-is-local"
         - "--collector.filesystem.ignored-mount-points"
         - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)'
         - "--collector.filesystem.ignored-fs-types"
