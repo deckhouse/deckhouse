@@ -13,7 +13,7 @@ spec:
     kind: Deployment
     name: vpa-recommender
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
     - containerName: "admission-controller"

@@ -1,3 +1,23 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: sysctl-tuner
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: sysctl-tuner
+spec:
+  targetRef:
+    apiVersion: "extensions/v1beta1"
+    kind: DaemonSet
+    name: sysctl-tuner
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:

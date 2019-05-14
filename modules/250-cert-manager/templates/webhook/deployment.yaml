@@ -15,7 +15,7 @@ spec:
     kind: Deployment
     name: webhook
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
 {{- end }}
 ---
 apiVersion: apps/v1beta1
