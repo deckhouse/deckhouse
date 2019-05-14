@@ -114,3 +114,61 @@
     annotations:
       description: "Prometheus {{ $labels.namespace }}/{{ $labels.pod }} isn't ingesting samples."
       summary: "Prometheus isn't ingesting samples"
+  - alert: PrometheusOperatorDown
+    expr: absent(up{job="prometheus-operator"} == 1)
+    for: 1h
+    labels:
+      impact: negligible
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Под с prometheus-operator недоступен.
+        В кластере не могут примениться новые настройки `Prometheus`, `PrometheusRules`, `ServiceMonitor`, но при этом все уже созданные и сконфигурированные элементы работают корректно.
+        Данная проблема никак не повлияет на работу алертов или мониторинга в переспективах небольшого промежутка времени (нескольких дней).
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n kube-prometheus-operator describe deploy prometheus-operator`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n kube-prometheus-operator describe pod -l app=prometheus-operator`
+      summary: >
+        Prometheus operator is down
+  - alert: PrometheusLongtermDown
+    expr: absent(up{job="prometheus", service="prometheus-longterm"} == 1)
+    for: 15m
+    labels:
+      impact: negligible
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Под с Prometheus longterm не запущен.
+        Данный Prometheus используется только для отображения исторических данных и его недоступность может быть совсем не критичной, однако если он будет долгое время недоступен, в будущем вы не сможете посмотреть статистику.
+
+        Чаще всего у данного пода проблемы из-за недоступности диска (например, под переехал на ноду, где диск не цепляется).
+
+        Куда следует смотреть:
+        1. Посмотреть информацию о Statefulset: `kubectl -n kube-prometheus describe statefulset prometheus-longterm`
+        2. В каком статусе находится его PVC (если он используется): `kubectl -n kube-prometheus describe pvc prometheus-longterm-db-prometheus-longterm-0`
+        3. В каком состоянии находится сам под: `kubectl -n kube-prometheus describe pod prometheus-longterm-0`
+      summary: >
+        Longterm prometheus is down
+  - alert: TricksterDown
+    expr: absent(up{job="trickster"} == 1)
+    for: 5m
+    laels:
+      impact: critical
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Под trickster (компонент для кеширования запросов к Prometheus) недоступен. Данный компонент используют:
+        `prometheus-metrics-adapter` — мы остаемся без работающего HPA (автоскейлинг) и не можем посмотреть потребление ресурсов с помощью `kubectl`.
+        `vertical-pod-autoscaler` — для него этот и нцидент не так страшен, так как VPA смотрит историю потребления за 8 дней.
+        `grafana` — по-умолчанию все дашборды используют trickster для кеширования запросов к Prometheus. Можно забирать данные напрямую из Prometheus, минуя trickster, однако это может привести к повышенному потреблению памяти Prometheus и, соответственно, к недоступности.
+
+        Куда смотреть:
+        1. Информация о deployment: `kubectl -n kube-prometheus describe deployment trickster`
+        2. Информация о pod: `kubectl -n kube-prometheus describe pod -l app=trickster`
+        3. Чаще всего trickster становится недоступным из-за проблем с самим Prometheus, так как readinessProbe trickster'а проверяет доступность Prometheus. Поэтому, убедитесь, что prometheus работает: `kubectl -n kube-prometheus describe pod -l app=prometheus,prometheus=main`
+      summary: >
+        Trickster is down

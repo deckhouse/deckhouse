@@ -18,3 +18,75 @@ spec:
 {{ $root.Files.Get $path | indent 4 }}
   {{- end }}
 {{- end }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: docker-version
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: prometheus
+    prometheus: main
+    component: rules
+spec:
+  groups:
+  - name: docker.version
+    rules:
+    - alert: UnsupportedDockerVersion
+{{- if and (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) (semverCompare "<1.12" .Values.global.discovery.clusterVersion) }}
+      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.1[01].+",container_runtime_version!~"docker://1.1[1-3].+|docker://17.0?3.+"})
+{{- else if and (semverCompare ">=1.12" .Values.global.discovery.clusterVersion) (semverCompare "<1.14" .Values.global.discovery.clusterVersion) }}
+      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.1[23].+", container_runtime_version!~"docker://1.1[1-3].+|docker://17.0?[369].+|docker://18.0?6"})
+{{- else if semverCompare ">=1.14" .Values.global.discovery.clusterVersion }}
+      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.14.+", container_runtime_version!~"docker://1.13.+|docker://17.0?[369].+|docker://18.0?[69].+"})
+{{- end }}
+      for: 20m
+      labels:
+        impact: negligible
+        likelihood: certain
+      annotations:
+        polk_flant_com_markup_format: markdown
+        description: |-
+          Unsupported version {{`{{$labels.container_runtime_version}}`}} of Docker installed on {{`{{$labels.node}}`}} node.
+          Supported version of Docker for kubernetes {{`{{$labels.kubelet_version}}`}} version:
+{{- if and (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) (semverCompare "<1.12" .Values.global.discovery.clusterVersion) }}
+          * 1.11.x
+          * 1.12.x
+          * 1.13.x
+          * 17.3.x
+{{- else if and (semverCompare ">=1.12" .Values.global.discovery.clusterVersion) (semverCompare "<1.14" .Values.global.discovery.clusterVersion) }}
+          * 1.11.x
+          * 1.12.x
+          * 1.13.x
+          * 17.3.x
+          * 17.6.x
+          * 17.9.x
+          * 18.6x
+{{- else if semverCompare ">=1.14" .Values.global.discovery.clusterVersion }}
+          * 1.13.x
+          * 17.3.x
+          * 17.6.x
+          * 17.9.x
+          * 18.6.x
+          * 18.9.x
+{{- end }}
+        summary: >
+          Unsupported version of Docker {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}
+  - name: kubernetes.version
+    rules:
+    - alert: ControlPlaneAndKubeletVersionsDiffer
+      expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{gitVersion!="v{{ .Values.global.discovery.clusterVersion }}", job!="kube-dns"})
+      for: 20m
+      labels:
+        impact: negligible
+        likelihood: certain
+      annotations:
+        polk_flant_com_markup_format: markdown
+        description: |-
+          Control plane have {{ .Values.global.discovery.clusterVersion }} version, but kubelet on {{`{{$labels.node}}`}} have different version.
+          1. Check it: `kubectl get nodes`
+          2. Correct kubelet version or control plane version on kubernetes master static pod manifests
+        summary: >
+          Different version of kubelet on {{`{{$labels.node}}`}} nodes and kubernetes control plane
