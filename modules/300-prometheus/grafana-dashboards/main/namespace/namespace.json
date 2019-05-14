@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1557836323881,
+  "iteration": 1557846180302,
   "links": [],
   "panels": [
     {
@@ -742,6 +742,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "decimals": 0,
       "description": "Количество подов в каждом контроллере",
       "fill": 1,
       "gridPos": {
@@ -755,8 +756,8 @@
         "alignAsTable": false,
         "avg": false,
         "current": false,
-        "hideEmpty": false,
-        "hideZero": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
         "rightSide": false,
@@ -848,6 +849,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "decimals": 0,
       "description": "Количество рестартов подов",
       "fill": 1,
       "gridPos": {
@@ -861,6 +863,8 @@
         "alignAsTable": false,
         "avg": false,
         "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
         "rightSide": false,
@@ -952,6 +956,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "decimals": 0,
       "description": "Количество OOM Killer срабатываний у подов",
       "fill": 1,
       "gridPos": {
@@ -965,6 +970,8 @@
         "alignAsTable": false,
         "avg": false,
         "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
         "rightSide": false,
@@ -9519,8 +9526,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "kube-system",
-          "value": "kube-system"
+          "text": "kube-prometheus",
+          "value": "kube-prometheus"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
@@ -9545,7 +9552,9 @@
         "allValue": ".*",
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}, controller_type)",
@@ -9677,5 +9686,5 @@
   "timezone": "",
   "title": "Namespace",
   "uid": "sZzUB4ymk1",
-  "version": 6
+  "version": 2
 }
