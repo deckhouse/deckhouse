@@ -54,6 +54,10 @@ spec:
     runAsNonRoot: true
     runAsUser: 1000
   serviceAccountName: prometheus
+  podMetadata:
+    annotations:
+      threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
+      threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
   {{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
   nodeSelector:
 {{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
