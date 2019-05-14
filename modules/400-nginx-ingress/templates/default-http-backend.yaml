@@ -16,7 +16,7 @@ spec:
     kind: Deployment
     name: default-http-backend
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -29,7 +29,7 @@ metadata:
     module: {{ $.Chart.Name }}
     app: default-http-backend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: default-http-backend
