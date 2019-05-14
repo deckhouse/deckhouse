@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:1301",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -15,10 +14,11 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1525718649057,
+  "id": null,
+  "iteration": 1557140993447,
   "links": [],
   "panels": [
     {
@@ -708,7 +708,6 @@
       },
       "styles": [
         {
-          "$$hashKey": "object:9226",
           "alias": "",
           "colorMode": null,
           "colors": [
@@ -724,7 +723,6 @@
           "unit": "short"
         },
         {
-          "$$hashKey": "object:9228",
           "alias": "RPS",
           "colorMode": null,
           "colors": [
@@ -740,7 +738,6 @@
           "unit": "ops"
         },
         {
-          "$$hashKey": "object:9229",
           "alias": "Retried Req",
           "colorMode": null,
           "colors": [
@@ -757,7 +754,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9230",
           "alias": "Req Time",
           "colorMode": null,
           "colors": [
@@ -773,7 +769,6 @@
           "unit": "s"
         },
         {
-          "$$hashKey": "object:9231",
           "alias": "Upstr Time",
           "colorMode": null,
           "colors": [
@@ -789,7 +784,6 @@
           "unit": "s"
         },
         {
-          "$$hashKey": "object:9232",
           "alias": "In Traffic",
           "colorMode": null,
           "colors": [
@@ -805,7 +799,6 @@
           "unit": "bps"
         },
         {
-          "$$hashKey": "object:9233",
           "alias": "Out Traffic",
           "colorMode": null,
           "colors": [
@@ -821,7 +814,6 @@
           "unit": "bps"
         },
         {
-          "$$hashKey": "object:9234",
           "alias": "Req Size",
           "colorMode": null,
           "colors": [
@@ -838,7 +830,6 @@
           "unit": "bytes"
         },
         {
-          "$$hashKey": "object:9235",
           "alias": "Resp Size",
           "colorMode": null,
           "colors": [
@@ -855,7 +846,6 @@
           "unit": "bytes"
         },
         {
-          "$$hashKey": "object:9236",
           "alias": "1xx",
           "colorMode": null,
           "colors": [
@@ -871,7 +861,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9237",
           "alias": "2xx",
           "colorMode": null,
           "colors": [
@@ -887,7 +876,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9238",
           "alias": "3xx",
           "colorMode": null,
           "colors": [
@@ -903,7 +891,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9239",
           "alias": "4xx",
           "colorMode": null,
           "colors": [
@@ -919,7 +906,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9240",
           "alias": "5xx",
           "colorMode": null,
           "colors": [
@@ -935,7 +921,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9241",
           "alias": "HTTPS",
           "colorMode": null,
           "colors": [
@@ -951,7 +936,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9242",
           "alias": "GET",
           "colorMode": null,
           "colors": [
@@ -967,7 +951,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9243",
           "alias": "POST",
           "colorMode": null,
           "colors": [
@@ -983,7 +966,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9244",
           "alias": "HEAD",
           "colorMode": null,
           "colors": [
@@ -999,7 +981,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9245",
           "alias": "PUT",
           "colorMode": null,
           "colors": [
@@ -1015,7 +996,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9246",
           "alias": "DELETE",
           "colorMode": null,
           "colors": [
@@ -1031,7 +1011,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9247",
           "alias": "OPTIONS",
           "colorMode": null,
           "colors": [
@@ -1047,7 +1026,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9248",
           "alias": "PATCH",
           "colorMode": null,
           "colors": [
@@ -1064,7 +1042,6 @@
           "unit": "percentunit"
         },
         {
-          "$$hashKey": "object:9343",
           "alias": "Namespace",
           "colorMode": null,
           "colors": [
@@ -1084,7 +1061,6 @@
           "unit": "short"
         },
         {
-          "$$hashKey": "object:9249",
           "alias": "",
           "colorMode": null,
           "colors": [
@@ -1101,7 +1077,6 @@
       ],
       "targets": [
         {
-          "$$hashKey": "object:9097",
           "expr": "(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "instant": true,
@@ -1109,7 +1084,6 @@
           "refId": "A"
         },
         {
-          "$$hashKey": "object:9098",
           "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by\n  / (sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1119,7 +1093,6 @@
           "refId": "B"
         },
         {
-          "$$hashKey": "object:9099",
           "expr": "sum(increase(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by\n  / (sum(increase(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1129,7 +1102,6 @@
           "refId": "C"
         },
         {
-          "$$hashKey": "object:9100",
           "expr": "sum(increase(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by\n  / (sum(increase(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1139,7 +1111,6 @@
           "refId": "D"
         },
         {
-          "$$hashKey": "object:9101",
           "expr": "(sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by * 8 > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1149,7 +1120,6 @@
           "refId": "E"
         },
         {
-          "$$hashKey": "object:9102",
           "expr": "(sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by * 8 > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1158,7 +1128,6 @@
           "refId": "F"
         },
         {
-          "$$hashKey": "object:9103",
           "expr": "sum(increase(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by\n  / (sum(increase(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1167,7 +1136,6 @@
           "refId": "G"
         },
         {
-          "$$hashKey": "object:9104",
           "expr": "sum(increase(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by\n  / (sum(increase(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1176,7 +1144,6 @@
           "refId": "H"
         },
         {
-          "$$hashKey": "object:9105",
           "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1185,7 +1152,6 @@
           "refId": "I"
         },
         {
-          "$$hashKey": "object:9106",
           "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1194,7 +1160,6 @@
           "refId": "J"
         },
         {
-          "$$hashKey": "object:9107",
           "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1203,7 +1168,6 @@
           "refId": "K"
         },
         {
-          "$$hashKey": "object:9108",
           "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1212,7 +1176,6 @@
           "refId": "L"
         },
         {
-          "$$hashKey": "object:9109",
           "expr": "sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1221,7 +1184,6 @@
           "refId": "M"
         },
         {
-          "$$hashKey": "object:9110",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", scheme=\"https\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1230,7 +1192,6 @@
           "refId": "N"
         },
         {
-          "$$hashKey": "object:9111",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"GET\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1239,7 +1200,6 @@
           "refId": "O"
         },
         {
-          "$$hashKey": "object:9112",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"POST\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1248,7 +1208,6 @@
           "refId": "P"
         },
         {
-          "$$hashKey": "object:9113",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"HEAD\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1257,7 +1216,6 @@
           "refId": "Q"
         },
         {
-          "$$hashKey": "object:9114",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"PUT\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1266,7 +1224,6 @@
           "refId": "R"
         },
         {
-          "$$hashKey": "object:9115",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"DELETE\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1275,7 +1232,6 @@
           "refId": "S"
         },
         {
-          "$$hashKey": "object:9116",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"OPTIONS\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1284,7 +1240,6 @@
           "refId": "T"
         },
         {
-          "$$hashKey": "object:9117",
           "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"PATCH\"}[$__range])) $by\n/ (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
           "hide": false,
@@ -1295,7 +1250,6 @@
       ],
       "title": "Average",
       "transform": "table",
-      "transparent": false,
       "type": "table"
     },
     {
@@ -1365,6 +1319,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Requests",
       "tooltip": {
@@ -1456,8 +1411,214 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Requests %",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "",
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 0,
+        "y": 14
+      },
+      "id": 212,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        },
+        {
+          "alias": "2xx",
+          "color": "#73BF69"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ status_group }}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Responses",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "id": 229,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]))) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{status_group}}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Responses %",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -1506,7 +1667,7 @@
         "h": 6,
         "w": 16,
         "x": 0,
-        "y": 14
+        "y": 20
       },
       "hideTimeOverride": false,
       "id": 4,
@@ -1634,6 +1795,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Upstream Response Time",
       "tooltip": {
@@ -1687,7 +1849,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 20
       },
       "hideTimeOverride": false,
       "id": 81,
@@ -1815,6 +1977,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Upstream Response Time %",
       "tooltip": {
@@ -1867,7 +2030,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 26
       },
       "hideTimeOverride": false,
       "id": 62,
@@ -1923,6 +2086,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Retried Requests",
       "tooltip": {
@@ -1975,7 +2139,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 26
       },
       "hideTimeOverride": false,
       "id": 112,
@@ -2024,6 +2188,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Retries (per Retried Request)",
       "tooltip": {
@@ -2080,7 +2245,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 26
       },
       "id": 196,
       "legend": {
@@ -2132,6 +2297,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "1xx",
       "tooltip": {
@@ -2186,7 +2352,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 24
+        "y": 30
       },
       "id": 87,
       "legend": {
@@ -2238,6 +2404,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "2xx",
       "tooltip": {
@@ -2288,7 +2455,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 25
+        "y": 31
       },
       "hideTimeOverride": false,
       "id": 49,
@@ -2331,6 +2498,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Request Time",
       "tooltip": {
@@ -2383,7 +2551,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 25
+        "y": 31
       },
       "hideTimeOverride": false,
       "id": 63,
@@ -2426,6 +2594,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Upstream Response Time",
       "tooltip": {
@@ -2482,7 +2651,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 28
+        "y": 34
       },
       "id": 10,
       "legend": {
@@ -2534,6 +2703,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "3xx",
       "tooltip": {
@@ -2584,7 +2754,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 30
+        "y": 36
       },
       "hideTimeOverride": false,
       "id": 58,
@@ -2627,6 +2797,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Request Size",
       "tooltip": {
@@ -2679,7 +2850,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 30
+        "y": 36
       },
       "hideTimeOverride": false,
       "id": 73,
@@ -2722,6 +2893,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg Response Size",
       "tooltip": {
@@ -2778,7 +2950,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 32
+        "y": 38
       },
       "id": 18,
       "legend": {
@@ -2830,6 +3002,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "4xx",
       "tooltip": {
@@ -2879,7 +3052,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 35
+        "y": 41
       },
       "id": 12,
       "legend": {
@@ -2933,6 +3106,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Incoming Traffic",
       "tooltip": {
@@ -2982,7 +3156,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 35
+        "y": 41
       },
       "id": 9,
       "legend": {
@@ -3035,6 +3209,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Outgoing Traffic",
       "tooltip": {
@@ -3089,7 +3264,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 42
       },
       "id": 17,
       "legend": {
@@ -3141,6 +3316,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "5xx",
       "tooltip": {
@@ -3185,7 +3361,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 46
       },
       "id": 195,
       "panels": [
@@ -3205,7 +3381,7 @@
             "h": 4,
             "w": 8,
             "x": 0,
-            "y": 1
+            "y": 47
           },
           "id": 189,
           "legend": {
@@ -3250,6 +3426,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "1xx",
           "tooltip": {
@@ -3304,7 +3481,7 @@
             "h": 4,
             "w": 8,
             "x": 8,
-            "y": 1
+            "y": 47
           },
           "id": 190,
           "legend": {
@@ -3349,6 +3526,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "2xx",
           "tooltip": {
@@ -3403,7 +3581,7 @@
             "h": 4,
             "w": 8,
             "x": 16,
-            "y": 1
+            "y": 47
           },
           "id": 191,
           "legend": {
@@ -3448,6 +3626,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "3xx",
           "tooltip": {
@@ -3502,7 +3681,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 5
+            "y": 51
           },
           "id": 192,
           "legend": {
@@ -3547,6 +3726,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "4xx",
           "tooltip": {
@@ -3601,7 +3781,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 5
+            "y": 51
           },
           "id": 193,
           "legend": {
@@ -3646,6 +3826,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "5xx",
           "tooltip": {
@@ -3700,7 +3881,7 @@
             "h": 4,
             "w": 6,
             "x": 0,
-            "y": 10
+            "y": 56
           },
           "id": 86,
           "legend": {
@@ -3718,7 +3899,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -3762,6 +3943,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -3816,9 +3998,9 @@
             "h": 4,
             "w": 6,
             "x": 6,
-            "y": 10
+            "y": 56
           },
-          "id": 197,
+          "id": 213,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3834,7 +4016,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -3842,7 +4024,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
@@ -3880,6 +4062,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -3934,9 +4117,9 @@
             "h": 4,
             "w": 6,
             "x": 12,
-            "y": 10
+            "y": 56
           },
-          "id": 198,
+          "id": 214,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3952,7 +4135,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -3960,7 +4143,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
@@ -3998,6 +4181,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4052,9 +4236,9 @@
             "h": 4,
             "w": 6,
             "x": 18,
-            "y": 10
+            "y": 56
           },
-          "id": 199,
+          "id": 215,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4070,7 +4254,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4078,7 +4262,245 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "206",
+              "value": "206"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 60
+          },
+          "id": 216,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "301",
+              "value": "301"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 60
+          },
+          "id": 217,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
@@ -4116,6 +4538,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4169,10 +4592,10 @@
           "gridPos": {
             "h": 4,
             "w": 6,
-            "x": 0,
-            "y": 14
+            "x": 12,
+            "y": 60
           },
-          "id": 200,
+          "id": 218,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4188,7 +4611,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4196,7 +4619,7 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
@@ -4234,242 +4657,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
-          "timeShift": null,
-          "title": "$status",
-          "tooltip": {
-            "shared": true,
-            "sort": 2,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "ops",
-              "label": "",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {
-            "3xx": "#6ED0E0",
-            "4xx": "#EAB839",
-            "5xx": "#BF1B00"
-          },
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "decimals": 2,
-          "fill": 1,
-          "gridPos": {
-            "h": 4,
-            "w": 6,
-            "x": 6,
-            "y": 14
-          },
-          "id": 201,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": true,
-            "min": true,
-            "show": false,
-            "sort": "max",
-            "sortDesc": true,
-            "total": true,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "minSpan": 6,
-          "nullPointMode": "null as zero",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
-          "repeatPanelId": 86,
-          "scopedVars": {
-            "status": {
-              "selected": false,
-              "text": "304",
-              "value": "304"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "A"
-            },
-            {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "$legend_format",
-              "refId": "B",
-              "step": 40
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$status",
-          "tooltip": {
-            "shared": true,
-            "sort": 2,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "ops",
-              "label": "",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {
-            "3xx": "#6ED0E0",
-            "4xx": "#EAB839",
-            "5xx": "#BF1B00"
-          },
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "decimals": 2,
-          "fill": 1,
-          "gridPos": {
-            "h": 4,
-            "w": 6,
-            "x": 12,
-            "y": 14
-          },
-          "id": 202,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": true,
-            "min": true,
-            "show": false,
-            "sort": "max",
-            "sortDesc": true,
-            "total": true,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "minSpan": 6,
-          "nullPointMode": "null as zero",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
-          "repeatPanelId": 86,
-          "scopedVars": {
-            "status": {
-              "selected": false,
-              "text": "400",
-              "value": "400"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "A"
-            },
-            {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "$legend_format",
-              "refId": "B",
-              "step": 40
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4524,9 +4712,9 @@
             "h": 4,
             "w": 6,
             "x": 18,
-            "y": 14
+            "y": 60
           },
-          "id": 203,
+          "id": 219,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4542,7 +4730,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4550,13 +4738,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
               "selected": false,
-              "text": "401",
-              "value": "401"
+              "text": "304",
+              "value": "304"
             }
           },
           "seriesOverrides": [
@@ -4588,6 +4776,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4642,9 +4831,9 @@
             "h": 4,
             "w": 6,
             "x": 0,
-            "y": 18
+            "y": 64
           },
-          "id": 204,
+          "id": 220,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4660,7 +4849,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4668,13 +4857,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
               "selected": false,
-              "text": "404",
-              "value": "404"
+              "text": "400",
+              "value": "400"
             }
           },
           "seriesOverrides": [
@@ -4706,6 +4895,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4760,9 +4950,9 @@
             "h": 4,
             "w": 6,
             "x": 6,
-            "y": 18
+            "y": 64
           },
-          "id": 205,
+          "id": 221,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4778,7 +4968,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4786,13 +4976,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
               "selected": false,
-              "text": "422",
-              "value": "422"
+              "text": "401",
+              "value": "401"
             }
           },
           "seriesOverrides": [
@@ -4824,6 +5014,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4878,9 +5069,9 @@
             "h": 4,
             "w": 6,
             "x": 12,
-            "y": 18
+            "y": 64
           },
-          "id": 206,
+          "id": 222,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4896,7 +5087,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4904,13 +5095,13 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
               "selected": false,
-              "text": "499",
-              "value": "499"
+              "text": "403",
+              "value": "403"
             }
           },
           "seriesOverrides": [
@@ -4942,6 +5133,7 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -4996,9 +5188,9 @@
             "h": 4,
             "w": 6,
             "x": 18,
-            "y": 18
+            "y": 64
           },
-          "id": 207,
+          "id": 223,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -5014,7 +5206,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5022,7 +5214,364 @@
           "renderer": "flot",
           "repeat": null,
           "repeatDirection": "h",
-          "repeatIteration": 1525552175514,
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "404",
+              "value": "404"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 68
+          },
+          "id": 224,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "408",
+              "value": "408"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 68
+          },
+          "id": 225,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "499",
+              "value": "499"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 68
+          },
+          "id": 226,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
           "repeatPanelId": 86,
           "scopedVars": {
             "status": {
@@ -5060,6 +5609,245 @@
           ],
           "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 68
+          },
+          "id": 227,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "502",
+              "value": "502"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$status",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ops",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "3xx": "#6ED0E0",
+            "4xx": "#EAB839",
+            "5xx": "#BF1B00"
+          },
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 2,
+          "fill": 1,
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 72
+          },
+          "id": 228,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "max",
+            "sortDesc": true,
+            "total": true,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 4,
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1556787478854,
+          "repeatPanelId": 86,
+          "scopedVars": {
+            "status": {
+              "selected": false,
+              "text": "503",
+              "value": "503"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_rv])) $by > 0",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "$legend_format",
+              "refId": "B",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "$status",
           "tooltip": {
@@ -5108,7 +5896,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 47
       },
       "id": 150,
       "panels": [
@@ -6006,7 +6794,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 48
       },
       "id": 211,
       "panels": [
@@ -6144,7 +6932,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 49
       },
       "id": 160,
       "panels": [
@@ -7042,7 +7830,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 50
       },
       "id": 209,
       "panels": [
@@ -7180,7 +7968,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 51
       },
       "id": 89,
       "panels": [
@@ -8643,7 +9431,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 52
       },
       "id": 79,
       "panels": [
@@ -8704,7 +9492,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 47
+        "y": 53
       },
       "id": 46,
       "panels": [
@@ -8729,7 +9517,6 @@
           },
           "styles": [
             {
-              "$$hashKey": "object:9545",
               "alias": "",
               "colorMode": null,
               "colors": [
@@ -8745,7 +9532,6 @@
               "unit": "short"
             },
             {
-              "$$hashKey": "object:9547",
               "alias": "RPS",
               "colorMode": null,
               "colors": [
@@ -8761,7 +9547,6 @@
               "unit": "ops"
             },
             {
-              "$$hashKey": "object:9548",
               "alias": "Retried Req",
               "colorMode": null,
               "colors": [
@@ -8778,7 +9563,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9549",
               "alias": "Req Time",
               "colorMode": null,
               "colors": [
@@ -8794,7 +9578,6 @@
               "unit": "s"
             },
             {
-              "$$hashKey": "object:9550",
               "alias": "Resp Time",
               "colorMode": null,
               "colors": [
@@ -8810,7 +9593,6 @@
               "unit": "s"
             },
             {
-              "$$hashKey": "object:9551",
               "alias": "In Traffic",
               "colorMode": null,
               "colors": [
@@ -8826,7 +9608,6 @@
               "unit": "bps"
             },
             {
-              "$$hashKey": "object:9552",
               "alias": "Out Traffic",
               "colorMode": null,
               "colors": [
@@ -8842,7 +9623,6 @@
               "unit": "bps"
             },
             {
-              "$$hashKey": "object:9553",
               "alias": "Req Size",
               "colorMode": null,
               "colors": [
@@ -8859,7 +9639,6 @@
               "unit": "bytes"
             },
             {
-              "$$hashKey": "object:9554",
               "alias": "Resp Size",
               "colorMode": null,
               "colors": [
@@ -8876,7 +9655,6 @@
               "unit": "bytes"
             },
             {
-              "$$hashKey": "object:9555",
               "alias": "1xx",
               "colorMode": null,
               "colors": [
@@ -8892,7 +9670,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9556",
               "alias": "2xx",
               "colorMode": null,
               "colors": [
@@ -8908,7 +9685,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9557",
               "alias": "3xx",
               "colorMode": null,
               "colors": [
@@ -8924,7 +9700,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9558",
               "alias": "4xx",
               "colorMode": null,
               "colors": [
@@ -8940,7 +9715,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9559",
               "alias": "5xx",
               "colorMode": null,
               "colors": [
@@ -8956,7 +9730,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9560",
               "alias": "HTTPS",
               "colorMode": null,
               "colors": [
@@ -8972,7 +9745,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9561",
               "alias": "GET",
               "colorMode": null,
               "colors": [
@@ -8988,7 +9760,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9562",
               "alias": "POST",
               "colorMode": null,
               "colors": [
@@ -9004,7 +9775,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9563",
               "alias": "HEAD",
               "colorMode": null,
               "colors": [
@@ -9020,7 +9790,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9564",
               "alias": "PUT",
               "colorMode": null,
               "colors": [
@@ -9036,7 +9805,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9565",
               "alias": "DELETE",
               "colorMode": null,
               "colors": [
@@ -9052,7 +9820,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9566",
               "alias": "OPTIONS",
               "colorMode": null,
               "colors": [
@@ -9068,7 +9835,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9567",
               "alias": "PATCH",
               "colorMode": null,
               "colors": [
@@ -9085,7 +9851,6 @@
               "unit": "percentunit"
             },
             {
-              "$$hashKey": "object:9709",
               "alias": "VHost",
               "colorMode": null,
               "colors": [
@@ -9106,7 +9871,6 @@
               "unit": "short"
             },
             {
-              "$$hashKey": "object:9568",
               "alias": "",
               "colorMode": null,
               "colors": [
@@ -9575,27 +10339,32 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
+          "selected": true,
           "text": "default",
           "value": "default"
         },
         "hide": 0,
+        "includeAll": false,
         "label": "Prometheus",
+        "multi": false,
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "current": {
+          "selected": true,
           "text": "overall",
           "value": "overall"
         },
@@ -9604,17 +10373,18 @@
         "name": "metric",
         "options": [
           {
-            "$$hashKey": "object:2637",
             "selected": true,
             "text": "overall",
             "value": "overall"
           }
         ],
         "query": "overall",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": "by (namespace)",
           "value": "by (namespace)"
         },
@@ -9623,17 +10393,18 @@
         "name": "by",
         "options": [
           {
-            "$$hashKey": "object:2673",
             "selected": true,
             "text": "by (namespace)",
             "value": "by (namespace)"
           }
         ],
         "query": "by (namespace)",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": "{{namespace}}",
           "value": "{{namespace}}"
         },
@@ -9642,17 +10413,18 @@
         "name": "legend_format",
         "options": [
           {
-            "$$hashKey": "object:2709",
             "selected": true,
             "text": "{{namespace}}",
             "value": "{{namespace}}"
           }
         ],
         "query": "{{namespace}}",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": "VHost",
           "value": "VHost"
         },
@@ -9661,17 +10433,18 @@
         "name": "alt_name",
         "options": [
           {
-            "$$hashKey": "object:2745",
             "selected": true,
             "text": "VHost",
             "value": "VHost"
           }
         ],
         "query": "VHost",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": "by (vhost)",
           "value": "by (vhost)"
         },
@@ -9680,17 +10453,18 @@
         "name": "alt_by",
         "options": [
           {
-            "$$hashKey": "object:2781",
             "selected": true,
             "text": "by (vhost)",
             "value": "by (vhost)"
           }
         ],
         "query": "by (vhost)",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": "{{vhost}}",
           "value": "{{vhost}}"
         },
@@ -9699,17 +10473,18 @@
         "name": "alt_legend_format",
         "options": [
           {
-            "$$hashKey": "object:2817",
             "selected": true,
             "text": "{{vhost}}",
             "value": "{{vhost}}"
           }
         ],
         "query": "{{vhost}}",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9718,17 +10493,18 @@
         "name": "controller",
         "options": [
           {
-            "$$hashKey": "object:2853",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9737,17 +10513,18 @@
         "name": "app",
         "options": [
           {
-            "$$hashKey": "object:16340",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9756,24 +10533,23 @@
         "name": "node",
         "options": [
           {
-            "$$hashKey": "object:2889",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "allValue": ".*",
         "current": {
           "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
@@ -9783,6 +10559,7 @@
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, namespace)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -9792,6 +10569,7 @@
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9800,17 +10578,18 @@
         "name": "ingress",
         "options": [
           {
-            "$$hashKey": "object:2972",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9819,17 +10598,18 @@
         "name": "service",
         "options": [
           {
-            "$$hashKey": "object:3080",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9838,17 +10618,18 @@
         "name": "service_port",
         "options": [
           {
-            "$$hashKey": "object:3116",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9857,17 +10638,18 @@
         "name": "vhost",
         "options": [
           {
-            "$$hashKey": "object:3152",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "current": {
+          "selected": true,
           "text": ".*",
           "value": ".*"
         },
@@ -9876,24 +10658,23 @@
         "name": "location",
         "options": [
           {
-            "$$hashKey": "object:3307",
             "selected": true,
             "text": ".*",
             "value": ".*"
           }
         ],
         "query": ".*",
+        "skipUrlSync": false,
         "type": "constant"
       },
       {
         "allValue": ".*",
         "current": {
           "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
         "label": "Content Kind",
@@ -9903,6 +10684,7 @@
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\"}, content_kind)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -9917,6 +10699,7 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 2,
         "includeAll": true,
         "label": "Method",
@@ -9926,6 +10709,7 @@
         "query": "label_values(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}, method)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -9936,11 +10720,11 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
           "text": "All",
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
+        "definition": "",
         "hide": 2,
         "includeAll": true,
         "label": "Method",
@@ -9950,6 +10734,7 @@
         "query": "label_values(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}, status)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
@@ -9991,5 +10776,5 @@
   "timezone": "",
   "title": "Namespaces",
   "uid": "Z-phNqGmz",
-  "version": 1
+  "version": 2
 }
