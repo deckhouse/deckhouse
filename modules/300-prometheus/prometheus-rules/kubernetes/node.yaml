@@ -19,7 +19,7 @@
       summary: Node {{$labels.node}} is not sane
 
   - alert: NodeTimeOutOfSync
-    expr: max by (node) ((time() - node_time_seconds) > 10)
+    expr: max by (node) (abs(node_time_seconds - timestamp(node_time_seconds)) > 10)
     for: 5m
     labels:
       impact: critical
