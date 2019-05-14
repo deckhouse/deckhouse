@@ -27,7 +27,7 @@ metadata:
   name: prometheus-metrics-adapter
   namespace: kube-prometheus
 spec:
-  replicas: {{ include "is_ha_to_value" (list . 2 1) }}
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
   selector:
     matchLabels:
       app: prometheus-metrics-adapter
@@ -43,28 +43,23 @@ spec:
         app: prometheus-metrics-adapter
       name: prometheus-metrics-adapter
     spec:
-{{- if and (hasKey .Values.prometheusMetricsAdapter "nodeSelector") (.Values.prometheusMetricsAdapter.nodeSelector) }}
-      nodeSelector:
-{{ .Values.prometheusMetricsAdapter.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.prometheusMetricsAdapter "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
 {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: prometheus-metrics-adapter
+            topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
       tolerations:
-{{- if and (hasKey .Values.prometheusMetricsAdapter "tolerations") (.Values.prometheusMetricsAdapter.tolerations) }}
-{{ .Values.prometheusMetricsAdapter.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.prometheusMetricsAdapter "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
-      - key: "CriticalAddonsOnly"
-        operator: "Exists"
+      - operator: Exists
       serviceAccountName: prometheus-metrics-adapter
       imagePullSecrets:
       - name: antiopa-registry
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-medium
-      {{- end }}
       initContainers:
       - name: prepare-config
         image: busybox

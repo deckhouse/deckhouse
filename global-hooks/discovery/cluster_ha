@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Автоопределятор отказоустойчивости control plane  в кластере.
-# 
+#
 # Если apiserver-ов больше одного, значит кто-то об этом позаботился и можно считать,
 # что кластеру требуется отказоустойчивость. Далее это значение используется,
 # например, в качестве значения по-умолчанию для режима отказоустойчивости
@@ -15,6 +15,8 @@ function __config__() {
 
 function __main__() {
   num_apiservers=$(kubectl -n default get ep kubernetes -o json | jq '.subsets[].addresses | length')
+
+  values::set global.discovery.clusterMasterCount "$num_apiservers"
 
   if [ $num_apiservers -gt 1 ]; then
     values::set global.discovery.clusterControlPlaneIsHighlyAvailable true

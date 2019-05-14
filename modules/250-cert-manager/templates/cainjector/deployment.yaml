@@ -28,7 +28,7 @@ metadata:
     module: {{ $.Chart.Name }}
     app: cainjector
 spec:
-  replicas: 1
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
   selector:
     matchLabels:
       app: cainjector
@@ -39,24 +39,20 @@ spec:
       annotations:
     spec:
       serviceAccountName: cert-manager-cainjector
-{{- if and (hasKey .Values.certManager "nodeSelector") (.Values.certManager.nodeSelector) }}
-      nodeSelector:
-{{ .Values.certManager.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.certManager "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
 {{- end }}
-{{- if and (hasKey .Values.certManager "tolerations") (.Values.certManager.tolerations) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: cainjector
+            topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
       tolerations:
-{{ .Values.certManager.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.certManager "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-      {{- end }}
+      - operator: Exists
       containers:
         - name: cainjector
           image: "quay.io/jetstack/cert-manager-cainjector:v0.7.1"
