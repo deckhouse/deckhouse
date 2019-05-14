@@ -30,9 +30,10 @@
   - alert: K8SKubeletDown
     expr: (absent(up{job="kubelet"} == 1) or count(up{job="kubelet"} == 0) / count(up{job="kubelet"}))
       * 100 > 1
-    for: 1h
+    for: 10m
     labels:
-      severity: critical
+      impact: critical
+      likelihood: certain
     annotations:
       description: Prometheus failed to scrape {{ $value }}% of kubelets, or all Kubelets
         have disappeared from service discovery.

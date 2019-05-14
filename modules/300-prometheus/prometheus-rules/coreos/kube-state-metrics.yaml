@@ -9,6 +9,24 @@
       description: Observed deployment generation does not match expected one for
         deployment {{$labels.namespace}}/{{$labels.deployment}}
       summary: Deployment is outdated
+  - alert: KubeStateMetricsDown
+    expr: absent(up{job="kube-state-metrics"} == 1)
+    for: 5m
+    labels:
+      impact: deadly
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Нет запущенных подов kube-state-metrics.
+        При отсутствии корреткно работающих подов kube-state-metrics большая часть графиков и алертов перестает работать.
+        Т.е. мы не сможем получить корреткную информацию от мониторинга.
+
+        Что нужно посмотреть:
+        1. Логи деплоймента: `kubectl -n kube-prometheus describe deploy kube-state-metrics`
+        2. Найти поды и посмотреть его состояние: `kubectl -n kube-prometheus describe pod -l app=kube-state-metrics`
+      summary: >
+        Kube-state-metrics под недоступен
 #  - alert: DeploymentReplicasNotUpdated
 #    expr: max(((kube_deployment_status_replicas_updated != kube_deployment_spec_replicas)
 #      or (kube_deployment_status_replicas_available != kube_deployment_spec_replicas))

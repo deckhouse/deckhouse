@@ -6,3 +6,43 @@
     expr: count({__name__=~"ingress_nginx_detail_.*", __name__!="ingress_nginx_detail_info", __name__!~"ingress_nginx_detail_backend_.*"}) by (job, controller, app, node, endpoint, content_kind, namespace, ingress, service, service_port, vhost, location) * 0 + 1
   - record: ingress_nginx_detail_backend_info
     expr: count({__name__=~"ingress_nginx_detail_backend_.*", __name__!="ingress_nginx_detail_backend_info"}) by (job, controller, app, node, endpoint, namespace, ingress, service, service_port, vhost, location, pod_ip) * 0 + 1
+  - alert: NginxIngressConfigTestFailed
+    expr: nginx_ingress_controller_config_last_reload_successful == 0
+    for: 10m
+    labels:
+      impact: marginal
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Ingress controller {{ $labels.controller }} in namespace {{ $labels.controller_namespace }} failed config test (nginx -t)
+        Consider the following:
+        1. Check controllers log:
+        `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c nginx`
+        2. Find the newest ingress on cluster:
+        `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`
+        3. Most likely an error in configuration-snippet or server-snippet
+      summary: >
+        Config test failed on nginx ingress {{ $labels.controller }} in {{ $labels.controller_namespcae }} namespace.
+  - alert: NginxIngressSslExpired
+    expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
+    for: 1h
+    labels:
+      impact: critical
+      likelihood: possible
+    annotations:
+      description: |-
+        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks
+      summary: >
+        Certificate expires soon.
+  - alert: NginxIngressSslExpired
+    expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
+    for: 1m
+    labels:
+      impact: critical
+      likelihood: certain
+    annotations:
+      description: |-
+        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired. https://{{ $labels.host }} version of site doesn't work!
+      summary: >
+        Certificate has expired
