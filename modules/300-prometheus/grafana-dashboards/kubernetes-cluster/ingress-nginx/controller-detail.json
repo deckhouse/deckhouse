@@ -18,7 +18,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": null,
-  "iteration": 1554743086736,
+  "iteration": 1557294538577,
   "links": [],
   "panels": [
     {
@@ -2171,6 +2171,7 @@
         {
           "expr": "(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) $by > 0)\nor sum(irate(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range]) * 0) $by",
           "format": "table",
+          "hide": false,
           "instant": true,
           "intervalFactor": 1,
           "refId": "A"
@@ -2342,7 +2343,6 @@
       ],
       "title": "Average",
       "transform": "table",
-      "transparent": false,
       "type": "table"
     },
     {
@@ -2544,6 +2544,216 @@
       }
     },
     {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 16,
+        "x": 0,
+        "y": 27
+      },
+      "id": 238,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        },
+        {
+          "alias": "2xx",
+          "color": "#73BF69"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ status_group }}",
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Responses",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "3xx": "#6ED0E0",
+        "4xx": "#EAB839",
+        "5xx": "#BF1B00"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "decimals": 2,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 27
+      },
+      "id": 239,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_rv]))) > 0",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ status_group }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Responses %",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "",
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "aliasColors": {},
       "bars": true,
       "dashLength": 10,
@@ -2555,7 +2765,7 @@
         "h": 6,
         "w": 16,
         "x": 0,
-        "y": 27
+        "y": 32
       },
       "hideTimeOverride": false,
       "id": 4,
@@ -2737,7 +2947,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 32
       },
       "hideTimeOverride": false,
       "id": 81,
@@ -2918,7 +3128,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 33
+        "y": 38
       },
       "hideTimeOverride": false,
       "id": 62,
@@ -3027,7 +3237,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 33
+        "y": 38
       },
       "hideTimeOverride": false,
       "id": 112,
@@ -3133,7 +3343,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 33
+        "y": 38
       },
       "id": 196,
       "legend": {
@@ -3240,7 +3450,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 37
+        "y": 42
       },
       "id": 87,
       "legend": {
@@ -3343,7 +3553,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 38
+        "y": 43
       },
       "hideTimeOverride": false,
       "id": 49,
@@ -3439,7 +3649,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 38
+        "y": 43
       },
       "hideTimeOverride": false,
       "id": 63,
@@ -3539,7 +3749,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 41
+        "y": 46
       },
       "id": 10,
       "legend": {
@@ -3642,7 +3852,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 43
+        "y": 48
       },
       "hideTimeOverride": false,
       "id": 58,
@@ -3738,7 +3948,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 43
+        "y": 48
       },
       "hideTimeOverride": false,
       "id": 73,
@@ -3838,7 +4048,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 45
+        "y": 50
       },
       "id": 18,
       "legend": {
@@ -3940,7 +4150,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 48
+        "y": 53
       },
       "id": 12,
       "legend": {
@@ -4044,7 +4254,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 48
+        "y": 53
       },
       "id": 9,
       "legend": {
@@ -4152,7 +4362,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 49
+        "y": 54
       },
       "id": 17,
       "legend": {
@@ -4249,7 +4459,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 58
       },
       "id": 195,
       "panels": [
@@ -4782,7 +4992,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -4898,7 +5108,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5016,7 +5226,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5134,7 +5344,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5252,7 +5462,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5370,7 +5580,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5488,7 +5698,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5606,7 +5816,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5724,7 +5934,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5842,7 +6052,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -5960,7 +6170,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -6078,7 +6288,7 @@
           "lines": false,
           "linewidth": 1,
           "links": [],
-          "minSpan": 6,
+          "maxPerRow": 4,
           "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
@@ -6172,7 +6382,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 59
       },
       "id": 150,
       "panels": [
@@ -7070,7 +7280,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 60
       },
       "id": 211,
       "panels": [
@@ -7208,7 +7418,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 61
       },
       "id": 160,
       "panels": [
@@ -8106,7 +8316,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 62
       },
       "id": 209,
       "panels": [
@@ -8244,7 +8454,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 63
       },
       "id": 89,
       "panels": [
@@ -9707,7 +9917,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 64
       },
       "id": 46,
       "panels": [
@@ -10572,7 +10782,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -10583,7 +10793,9 @@
           "value": "default"
         },
         "hide": 0,
+        "includeAll": false,
         "label": "Prometheus",
+        "multi": false,
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
@@ -11006,5 +11218,5 @@
   "timezone": "",
   "title": "Ingress Nginx Controller Detail",
   "uid": "kZxJEeMmz",
-  "version": 1
+  "version": 2
 }
