@@ -41,8 +41,7 @@ spec:
       - dashboard.{{ .Values.global.clusterHostname }}
     secretName: ingress-tls
   {{- end }}
-{{- end }}
-{{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
@@ -66,4 +65,5 @@ spec:
   issuerRef:
     name: {{ $certmanager_cluster_issuer_name }}
     kind: ClusterIssuer
+  {{- end }}
 {{- end }}
