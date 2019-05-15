@@ -7,14 +7,15 @@ function __config__() {
 }
 
 function __main__() {
-  # Никто не защищен от ошибки, и чтобы максимально обезопасить себя — ставим
-  # жесткий лимит на память и CPU.
+  # По новой политике мы убираем все лимиты для служебных комонентов
   #
   # Важно! Изменять необходимо синхронно и здесь и в install.sh!
   #
   fltr='.'
   fltr=$fltr' | .spec.template.spec.containers[0].resources.requests = {"cpu":"50m","memory":"512Mi"}'
-  fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {"cpu":"500m","memory":"2Gi"}'
+  if kubectl -n antiopa get deploy antiopa -o json | jq -e '.spec.template.spec.containers[0].resources.limits' >/dev/null ; then
+    fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {}'
+  fi
   kubectl::jq_patch antiopa deploy/antiopa "$fltr"
 }
 

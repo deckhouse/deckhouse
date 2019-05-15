@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "onStartup": 350,
+  "onKubernetesEvent": [
+    {
+      "kind": "deployment",
+      "name": "cluster-autoscaler",
+      "event": [
+        "add",
+        "update"
+      ],
+      "namespaceSelector": {
+        "matchNames": [
+          "kube-system"
+        ]
+      },
+      "jqFilter": "[.spec.template.spec.containers[0].resources]"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  # cluster-autoscaler в данный момент ставится НЕ antiop'ой, поэтому нужно хуком убирать лимиты ресурсов
+  if kubectl -n kube-system get deploy cluster-autoscaler >/dev/null 2>/dev/null ; then
+    if kubectl -n kube-system get deploy cluster-autoscaler -o json | jq -e '.spec.template.spec.containers[0].resources.limits' > /dev/null ; then
+      fltr='. | .spec.template.spec.containers[0].resources.limits = {}'
+      kubectl::jq_patch "kube-system" "deploy/cluster-autoscaler" "$fltr"
+    fi
+  fi
+}
+
+hook::run $@
+

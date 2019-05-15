@@ -64,6 +64,8 @@ spec:
           - --leader-election-namespace=kube-cert-manager
           - --default-issuer-name=letsencrypt
           - --default-issuer-kind=ClusterIssuer
+          - --acme-http01-solver-resource-limits-cpu=0
+          - --acme-http01-solver-resource-request-cpu=0
           resources:
             requests:
               cpu: 10m
