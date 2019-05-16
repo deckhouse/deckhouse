@@ -85,8 +85,8 @@ spec:
       annotations:
         polk_flant_com_markup_format: markdown
         description: |-
-          Control plane have {{ .Values.global.discovery.clusterVersion }} version, but kubelet on {{`{{$labels.node}}`}} have different version.
+          kube-apiserver is at version {{ .Values.global.discovery.clusterVersion }}, but cluster component {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} is at version {{`{{$labels.gitVersion}}`}}.
           1. Check it: `kubectl get nodes`
-          2. Correct kubelet version or control plane version on kubernetes master static pod manifests
+          2. Correct {{`{{$labels.job}}`}} version or control plane version on kubernetes master static pod manifests
         summary: >
-          Different version of kubelet on {{`{{$labels.node}}`}} nodes and kubernetes control plane
+          Different version of {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} node and kubernetes apiserver version
