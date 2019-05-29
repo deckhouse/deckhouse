@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -euf -o pipefail
-set -x
 
 mountpoint () {
   stat -c "%m" "/host$1" | sed 's#/host#/#g' | sed 's#//#/#g'
@@ -77,11 +76,11 @@ while true; do
   fi
 
   if [ -n "$eviction_hard_imagefs_available" ]; then
-    accumulator+="kubelet_eviction_nodefs_bytes{mountpoint=\"$imagefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_imagefs_available" "$imagefs_bytes")$nl"
+    accumulator+="kubelet_eviction_imagefs_bytes{mountpoint=\"$imagefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_imagefs_available" "$imagefs_bytes")$nl"
   fi
 
   if [ -n "$eviction_hard_imagefs_inodesfree" ]; then
-    accumulator+="kubelet_eviction_nodefs_inodes{mountpoint=\"$imagefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_imagefs_inodesfree" "$imagefs_inodes")$nl"
+    accumulator+="kubelet_eviction_imagefs_inodes{mountpoint=\"$imagefs_mountpoint\", type=\"hard\"} $(normalize_to_pcnt "$eviction_hard_imagefs_inodesfree" "$imagefs_inodes")$nl"
   fi
 
   if [ -n "$eviction_soft_nodefs_available" ]; then
@@ -93,11 +92,11 @@ while true; do
   fi
 
   if [ -n "$eviction_soft_imagefs_available" ]; then
-    accumulator+="kubelet_eviction_nodefs_bytes{mountpoint=\"$imagefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_imagefs_available" "$imagefs_bytes")$nl"
+    accumulator+="kubelet_eviction_imagefs_bytes{mountpoint=\"$imagefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_imagefs_available" "$imagefs_bytes")$nl"
   fi
 
   if [ -n "$eviction_soft_imagefs_inodesfree" ]; then
-    accumulator+="kubelet_eviction_nodefs_inodes{mountpoint=\"$imagefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_imagefs_inodesfree" "$imagefs_inodes")$nl"
+    accumulator+="kubelet_eviction_imagefs_inodes{mountpoint=\"$imagefs_mountpoint\", type=\"soft\"} $(normalize_to_pcnt "$eviction_soft_imagefs_inodesfree" "$imagefs_inodes")$nl"
   fi
 
   echo "$accumulator" > /host/var/run/node-exporter-textfile/kubelet-eviction.prom
