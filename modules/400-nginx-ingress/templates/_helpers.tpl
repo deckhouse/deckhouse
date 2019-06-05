@@ -52,6 +52,24 @@ tolerations:
   {{- end }}
 {{- end }}
 
+{{ define "helper.nodeSelectorForDirectFallback" }}
+  {{- if and (hasKey . "nodeSelector") (.nodeSelector) -}}
+nodeSelector:
+{{ .nodeSelector | toYaml | trim | indent 2 }}
+  {{- else if not (hasKey . "nodeSelector") -}}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-role.flant.com/frontend
+          operator: Exists
+      - matchExpressions:
+        - key: node-role/frontend
+          operator: Exists
+  {{- end }}
+{{- end }}
+
 {{- define "helper.tolerationsForDirectFallback" }}
   {{- if and (hasKey . "tolerations") (.tolerations) -}}
 tolerations:
@@ -60,6 +78,10 @@ tolerations:
 tolerations:
 - key: node-role/frontend
   effect: NoExecute
+- key: dedicated.flant.com
+  effect: NoExecute
+  operator: Equal
+  value: frontend
   {{- else }}
 tolerations:
   {{- end }}
