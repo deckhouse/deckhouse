@@ -30,7 +30,7 @@
   {{- if eq $strategy "monitoring" }}
     {{- if $module_args.nodeSelector }}
 nodeSelector:
-      {{- $module_args.nodeSelector | toYaml | indent 2 }}
+{{ $module_args.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $context.Chart.Name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
@@ -45,7 +45,7 @@ nodeSelector:
   {{- else if eq $strategy "frontend" }}
     {{- if $module_args.nodeSelector }}
 nodeSelector:
-      {{- $module_args.nodeSelector | toYaml | indent 2 }}
+{{ $module_args.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $context.Chart.Name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
@@ -57,7 +57,7 @@ nodeSelector:
   {{- else if eq $strategy "system" }}
     {{- if $module_args.nodeSelector }}
 nodeSelector:
-      {{- $module_args.nodeSelector | toYaml | indent 2 }}
+{{ $module_args.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $context.Chart.Name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
@@ -77,7 +77,7 @@ nodeSelector:
   {{- if eq $strategy "monitoring" }}
     {{- if $module_args.tolerations }}
 tolerations:
-      {{- $module_args.tolerations | toYaml }}
+{{ $module_args.tolerations | toYaml }}
     {{- else }}
 tolerations:
 - key: dedicated.flant.com
@@ -97,7 +97,7 @@ tolerations:
   {{- else if eq $strategy "frontend" }}
     {{- if $module_args.tolerations }}
 tolerations:
-      {{- $module_args.tolerations | toYaml }}
+{{ $module_args.tolerations | toYaml }}
     {{- else }}
 tolerations:
 - key: dedicated.flant.com
@@ -114,7 +114,7 @@ tolerations:
   {{- else if eq $strategy "system" }}
     {{- if $module_args.tolerations }}
 tolerations:
-      {{- $module_args.tolerations | toYaml }}
+{{ $module_args.tolerations | toYaml }}
     {{- else }}
 tolerations:
 - key: dedicated.flant.com
