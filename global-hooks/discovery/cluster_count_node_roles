@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
+    "$(jo kind=node jqFilter=".metadata.labels" disableDebug=true)" \
+  )"
+}
+
+function __main__() {
+  node_counts=$(kubectl get node -o json | jq -r '[.items[].metadata.labels | keys[] | select(startswith("node-role.flant.com/")) |
+                                            split("/")[1]] | group_by(.) | map({(unique_by(.)[]): length}) | add')
+  values::set global.discovery.nodeCountByRole "$node_counts"
+}
+
+hook::run "$@"

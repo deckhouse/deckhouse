@@ -1,38 +1,35 @@
-{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
-  {{- $_ := set . "Values" $.Values }}
-  {{- $_ := set . "Files" $.Files }}
-  {{- $_ := set . "Chart" $.Chart }}
-  {{- $_ := set . "Template" $.Template }}
-  {{- $inlet := (include "helper.inlet" .) }}
+{{- range $config := prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress }}
+  {{- $context := merge ($config | toJson | fromJson) $ }}
+  {{- $inlet := (include "helper.inlet" $context) }}
 
   {{- if eq $inlet "LoadBalancer" }}
-    {{- include "template.nginx" (dict "context" . "publishService" true) }}
-    {{- include "template.config" (dict "context" .) }}
-    {{- include "template.service" (dict "context" . "type" "LoadBalancer") }}
+    {{- include "template.nginx" (dict "context" $context "publishService" true) }}
+    {{- include "template.config" (dict "context" $context) }}
+    {{- include "template.service" (dict "context" $context "type" "LoadBalancer") }}
   {{- else if eq $inlet "AWSClassicLoadBalancer" }}
-    {{- if hasKey . "config" }}
-      {{- if hasKey .config "setRealIPFrom" }}
+    {{- if hasKey $context "config" }}
+      {{- if hasKey $context.config "setRealIPFrom" }}
         {{- fail "Error!!! AWSClassicLoadBalancer inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
       {{- end }}
     {{- end }}
 
-    {{- include "template.nginx" (dict "context" . "publishService" true) }}
-    {{- include "template.config" (dict "context" . "useProxyProtocol" true) }}
-    {{- include "template.service" (dict "context" . "type" "LoadBalancer" "annotations" (dict "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol" "*" "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" "600")) }}
+    {{- include "template.nginx" (dict "context" $context "publishService" true) }}
+    {{- include "template.config" (dict "context" $context "useProxyProtocol" true) }}
+    {{- include "template.service" (dict "context" $context "type" "LoadBalancer" "annotations" (dict "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol" "*" "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" "600")) }}
   {{- else if eq $inlet "NodePort" }}
-    {{- include "template.nginx" (dict "context" .) }}
-    {{- include "template.config" (dict "context" .) }}
-    {{- include "template.service" (dict "context" . "type" "NodePort") }}
+    {{- include "template.nginx" (dict "context" $context) }}
+    {{- include "template.config" (dict "context" $context) }}
+    {{- include "template.service" (dict "context" $context "type" "NodePort") }}
   {{- else if eq $inlet "Direct" }}
-    {{- if hasKey . "config" }}
-      {{- if hasKey .config "setRealIPFrom" }}
+    {{- if hasKey $context "config" }}
+      {{- if hasKey $context.config "setRealIPFrom" }}
         {{- fail "Error!!! Direct inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
       {{- end }}
     {{- end }}
 
-    {{- include "template.nginx" (dict "context" . "hostNetwork" true) }}
-    {{- include "template.config" (dict "context" .) }}
-    {{- include "template.nginxForDirectFallback" (dict "context" . "suffix" "-for-direct-fallback") }}
-    {{- include "template.config" (dict "context" . "suffix" "-for-direct-fallback" "useProxyProtocol" "true" ) }}
+    {{- include "template.nginx" (dict "context" $context "hostNetwork" true) }}
+    {{- include "template.config" (dict "context" $context) }}
+    {{- include "template.nginxForDirectFallback" (dict "context" $context "suffix" "-for-direct-fallback") }}
+    {{- include "template.config" (dict "context" $context "suffix" "-for-direct-fallback" "useProxyProtocol" "true" ) }}
   {{- end }}
 {{- end }}

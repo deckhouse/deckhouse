@@ -7,6 +7,7 @@ function __config__() {
 }
 
 function __main__() {
+  system_node_count=$(cluster::count_nodes_by_role "system")
   fltr='.'
 
   if values::has antiopa.nodeSelector ; then
@@ -15,8 +16,8 @@ function __main__() {
     else
       fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
     fi
-  elif values::is_true global.discovery.clusterHasSystemNodes ; then
-    fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role/system":""}'
+  elif (( "$system_node_count" > 0 )); then
+    fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role.flant.com/system":""}'
   else
     fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
   fi
@@ -27,8 +28,8 @@ function __main__() {
     else
       fltr=$fltr' | del(.spec.template.spec.tolerations)'
     fi
-  elif values::is_true global.discovery.clusterHasSystemNodes ; then
-    fltr=$fltr' | .spec.template.spec.tolerations = [{"effect":"NoExecute","key":"node-role/system"}]'
+  elif (( "$system_node_count" > 0 )) ; then
+    fltr=$fltr' | .spec.template.spec.tolerations = [{"key":"dedicated.flant.com","value":"system"}]'
   else
     fltr=$fltr' | del(.spec.template.spec.tolerations)'
   fi

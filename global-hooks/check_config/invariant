@@ -11,6 +11,7 @@ function __main__() {
   values::require_in_config global.clusterName
 
   values::set global.discovery '{}'
+  values::set global.discovery.nodeCountByRole '{}'
 }
 
-hook::run $@
+hook::run "$@"

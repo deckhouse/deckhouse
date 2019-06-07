@@ -44,6 +44,8 @@ spec:
       serviceAccountName: kubelet-eviction-thresholds-exporter
       hostNetwork: true
       hostPID: true
+      tolerations:
+      - operator: Exists
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}

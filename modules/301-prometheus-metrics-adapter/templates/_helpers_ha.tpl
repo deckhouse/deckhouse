@@ -1,1 +1,0 @@
-/antiopa/modules/300-prometheus/templates/_helpers_ha.tpl

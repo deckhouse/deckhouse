@@ -1,13 +1,13 @@
-{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
-  {{- $_ := set . "Values" $.Values }}
-  {{- $inlet := (include "helper.inlet" .) }}
+{{- range $config := prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress }}
+  {{- $context := merge ($config | toJson | fromJson) $ }}
+  {{- $inlet := (include "helper.inlet" $context) }}
   {{- if eq $inlet "Direct" }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nginx-for-direct-fallback
-  namespace: {{ include "helper.namespace" . }}
+  namespace: {{ include "helper.namespace" $context }}
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
@@ -22,13 +22,13 @@ spec:
     protocol: TCP
   selector:
     app: nginx-for-direct-fallback
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+    {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: direct-fallback
-  namespace: {{ include "helper.namespace" . }}
+  namespace: {{ include "helper.namespace" $context }}
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
@@ -40,13 +40,13 @@ spec:
     name: direct-fallback
   updatePolicy:
     updateMode: "Off"
-{{- end }}
+    {{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: direct-fallback
-  namespace: {{ include "helper.namespace" . }}
+  namespace: {{ include "helper.namespace" $context }}
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
@@ -65,8 +65,8 @@ spec:
 #      annotations:
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
-{{ include "helper.nodeSelectorForDirectFallback" . | indent 6 }}
-{{ include "helper.tolerationsForDirectFallback" . | indent 6 }}
+{{ include "helper.nodeSelectorForDirectFallback" $context | indent 6 }}
+{{ include "helper.tolerationsForDirectFallback" $context | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

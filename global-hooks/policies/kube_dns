@@ -9,30 +9,50 @@ function __config__() {
 function __main__() {
   fltr='include "remove_empty"; .'
 
-count_system_nodes=$(cluster::count_system_nodes)
+count_system_nodes=$(cluster::count_nodes_by_role "system")
+count_kube_dns_nodes=$(cluster::count_nodes_by_role "kube-dns")
 
   ###
   # Политика #1: kube-dns должен выполняться на system-узлах, если они есть
-  if cluster::has_system_nodes; then
+  if (( count_system_nodes > 0 )); then
     # Добавляем toleration, если не добавлен
-    fltr=$fltr' | .spec.template.spec.tolerations |= (
-      . + [{"key":"node-role/system","operator":"Exists"}] | unique
-    )'
-    if (( "$count_system_nodes" > 1 )); then
+    if (( "$count_kube_dns_nodes" > 1 )); then
       # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
       fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
         if . then . else [{}] end | map(
           .matchExpressions |= (
-            . + [{"key":"node-role/system","operator":"Exists"}] | unique
+            . + [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}] | unique
           )
         )
+      )'
+      fltr=$fltr' | .spec.template.spec.tolerations |= (
+        . + [{"key":"dedicated.flant.com","operator":"Equals", "value": "kube-dns"}] | unique
+      )'
+    elif (( "$count_system_nodes" > 1 )); then
+      # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
+        if . then . else [{}] end | map(
+          .matchExpressions |= (
+            . + [{"key":"node-role.flant.com/system","operator":"Exists"}] | unique
+          )
+        )
+      )'
+      fltr=$fltr' | .spec.template.spec.tolerations |= (
+        . + [{"key":"dedicated.flant.com","operator":"Equals", "value": "system"}] | unique
       )'
     else
       # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
       fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
         .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
           . | map(
-            .matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
+            .matchExpressions -= [{"key":"node-role.flant.com/system","operator":"Exists"}]
+          )
+        )
+      else . end'
+      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
+        .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
+          . | map(
+            .matchExpressions -= [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]
           )
         )
       else . end'
@@ -41,14 +61,24 @@ count_system_nodes=$(cluster::count_system_nodes)
   else
     # Удаляем toleration, если был добавлен
     fltr=$fltr' | if .spec.template.spec.tolerations then
-      .spec.template.spec.tolerations |= . - [{"key":"node-role/system","operator":"Exists"}]
+      .spec.template.spec.tolerations |= . - [{"key":"node-role.flant.com/system","operator":"Exists"}]
+    else . end'
+    fltr=$fltr' | if .spec.template.spec.tolerations then
+      .spec.template.spec.tolerations |= . - [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]
     else . end'
 
     # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
     fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
       .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
         . | map(
-          .matchExpressions -= [{"key":"node-role/system","operator":"Exists"}]
+          .matchExpressions -= [{"key":"node-role.flant.com/system","operator":"Exists"}]
+        )
+      )
+    else . end'
+    fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
+      .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
+        . | map(
+          .matchExpressions -= [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]
         )
       )
     else . end'
@@ -70,7 +100,11 @@ count_system_nodes=$(cluster::count_system_nodes)
   #      * но не больше, чем количество неспецифичных нод в кластере (без наших специальных taint)
   cluster_type=$(values::get --required global.discovery.clusterType)
   if [[ "$cluster_type" != "AWS" && "$cluster_type" != "GCE" ]] ; then
-    if (( "$count_system_nodes" > 1 )); then
+    if (( "$count_kube_dns_nodes" > 1 )); then
+      fltr=$fltr' | .spec.replicas = '$count_kube_dns_nodes
+    elif (( "$count_kube_dns_nodes" == 1 )); then
+      fltr=$fltr' | .spec.replicas = 2'
+    elif (( "$count_system_nodes" > 1 )); then
       fltr=$fltr' | .spec.replicas = '$count_system_nodes
     elif (( "$count_system_nodes" == 1 )); then
       fltr=$fltr' | .spec.replicas = 2'

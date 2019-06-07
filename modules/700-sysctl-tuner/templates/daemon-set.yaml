@@ -96,6 +96,5 @@ spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: system-node-critical
 {{- end }}
-
       tolerations:
       - operator: Exists

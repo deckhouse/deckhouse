@@ -20,10 +20,10 @@ Heapster работает в standalone режиме (не использует 
 ### Параметры
 
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
+    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/heapster":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет использовано значение `[{"key":"node-role/system","operator":"Exists"}]` (если в кластере есть такие узлы) или ничего не будет указано.
+    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"heapster"},{"key":"dedicated.flant.com","operator":"Equal","value":"monitoring"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига
@@ -31,8 +31,9 @@ Heapster работает в standalone режиме (не использует 
 ```yaml
 heapster: |
   nodeSelector:
-    node-role/other: ""
+    node-role/example: ""
   tolerations:
-  - key: node-role/other
-    operator: Exists
+  - key: dedicated
+    operator: Equal
+    value: example
 ```

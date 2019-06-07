@@ -43,21 +43,8 @@ spec:
       - name: antiopa-registry
       terminationGracePeriodSeconds: 5
       serviceAccountName: kube-{{ .Chart.Name }}
-{{- if and (hasKey .Values.openvpn "nodeSelector") (.Values.openvpn.nodeSelector) }}
-      nodeSelector:
-{{ .Values.openvpn.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.openvpn "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.openvpn "tolerations") (.Values.openvpn.tolerations) }}
-      tolerations:
-{{ .Values.openvpn.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.openvpn "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
 {{- end }}

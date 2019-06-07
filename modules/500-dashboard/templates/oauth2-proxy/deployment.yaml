@@ -40,21 +40,8 @@ spec:
         module: {{ $.Chart.Name }}
         app: oauth2-proxy
     spec:
-  {{- if and (hasKey .Values.dashboard "nodeSelector") (.Values.dashboard.nodeSelector) }}
-      nodeSelector:
-{{ .Values.dashboard.nodeSelector | toYaml | trim | indent 8 }}
-  {{- else if and (not (hasKey .Values.dashboard "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
-  {{- end }}
-  {{- if and (hasKey .Values.dashboard "tolerations") (.Values.dashboard.tolerations) }}
-      tolerations:
-{{ .Values.dashboard.tolerations | toYaml | trim | indent 6 }}
-  {{- else if and (not (hasKey .Values.dashboard "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-  {{- end }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       imagePullSecrets:
       - name: dashboard-oauth2-proxy-antiopa-registry
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}

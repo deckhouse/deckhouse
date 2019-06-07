@@ -3,7 +3,7 @@
   {{- $publishService := (.publishService | default false) }}
   {{- $hostNetwork := (.hostNetwork | default false) }}
   {{- with .context }}
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+    {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -21,7 +21,7 @@ spec:
     name: {{ $name }}
   updatePolicy:
     updateMode: "Off"
-{{- end }}
+    {{- end }}
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
@@ -45,8 +45,8 @@ spec:
 #TODO: Docker before 1.12 does not support sysctls
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
-{{ include "helper.nodeSelector" . | indent 6 }}
-{{ include "helper.tolerations" . | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "frontend") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "frontend") | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: {{ $hostNetwork }}
     {{- if eq $hostNetwork true }}
