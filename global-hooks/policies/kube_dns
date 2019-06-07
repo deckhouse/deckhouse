@@ -26,7 +26,7 @@ count_kube_dns_nodes=$(cluster::count_nodes_by_role "kube-dns")
         )
       )'
       fltr=$fltr' | .spec.template.spec.tolerations |= (
-        . + [{"key":"dedicated.flant.com","operator":"Equals", "value": "kube-dns"}] | unique
+        . + [{"key":"dedicated.flant.com","operator":"Equal", "value": "kube-dns"}] | unique
       )'
     elif (( "$count_system_nodes" > 1 )); then
       # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
@@ -38,7 +38,7 @@ count_kube_dns_nodes=$(cluster::count_nodes_by_role "kube-dns")
         )
       )'
       fltr=$fltr' | .spec.template.spec.tolerations |= (
-        . + [{"key":"dedicated.flant.com","operator":"Equals", "value": "system"}] | unique
+        . + [{"key":"dedicated.flant.com","operator":"Equal", "value": "system"}] | unique
       )'
     else
       # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
