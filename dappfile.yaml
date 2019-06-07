@@ -9,6 +9,7 @@ git:
   - shell_lib.sh
   - shell_lib
   - jq_lib
+  - helm_lib
   excludePaths:
   - modules/*/images
   - modules/*/docs

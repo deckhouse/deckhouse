@@ -31,27 +31,6 @@
   {{- end }}
 {{- end }}
 
-{{ define "helper.nodeSelector" }}
-  {{- if and (hasKey . "nodeSelector") (.nodeSelector) -}}
-nodeSelector:
-{{ .nodeSelector | toYaml | trim | indent 2 }}
-  {{- else if not (hasKey . "nodeSelector") -}}
-nodeSelector:
-  node-role/frontend: ""
-  {{- end }}
-{{- end }}
-
-{{- define "helper.tolerations" }}
-  {{- if and (hasKey . "tolerations") (.tolerations) -}}
-tolerations:
-{{ .tolerations | toYaml | trim }}
-  {{- else if not (hasKey . "tolerations") -}}
-tolerations:
-- key: node-role/frontend
-  effect: NoExecute
-  {{- end }}
-{{- end }}
-
 {{ define "helper.nodeSelectorForDirectFallback" }}
   {{- if and (hasKey . "nodeSelector") (.nodeSelector) -}}
 nodeSelector:

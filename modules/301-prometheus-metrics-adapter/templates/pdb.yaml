@@ -11,7 +11,7 @@ metadata:
     module: {{ $.Chart.Name }}
     app: prometheus-metrics-adapter
 spec:
-  minAvailable: {{ include "is_ha_to_value" (list . 1 0) }}
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app: prometheus-metrics-adapter

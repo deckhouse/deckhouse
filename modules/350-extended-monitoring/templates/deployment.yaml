@@ -41,21 +41,8 @@ spec:
         module: {{ $.Chart.Name }}
         app: extended-monitoring
     spec:
-{{- if and (hasKey .Values.extendedMonitoring "nodeSelector") (.Values.extendedMonitoring.nodeSelector) }}
-      nodeSelector:
-{{ .Values.extendedMonitoring.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.extendedMonitoring "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.extendedMonitoring "tolerations") (.Values.extendedMonitoring.tolerations) }}
-      tolerations:
-{{ .Values.extendedMonitoring.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.extendedMonitoring "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       imagePullSecrets:
       - name: antiopa-registry
       containers:

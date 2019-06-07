@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterAll=100
+}
+
+function __main__() {
+  # Удаляем старые системные лейблы
+  old_labeled_system_nodes=$(kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels."node-role/system") | .metadata.name')
+  old_labeled_frontend_nodes=$(kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels."node-role/frontend") | .metadata.name')
+  for node in $old_labeled_system_nodes; do
+    kubectl label node "$node" node-role/system-
+  done
+  for node in $old_labeled_frontend_nodes; do
+    kubectl label node "$node" node-role/frontend-
+  done
+
+
+  # Меняем старые системные теинты на новые
+  old_tainted_system_nodes=$(kubectl get node -o json | jq -r '.items[] | if .spec.taints then select(.spec.taints[] |
+                                                                .key=="node-role/system")  else empty end | .metadata.name')
+  old_tainted_frontend_nodes=$(kubectl get node -o json | jq -r '.items[] | if .spec.taints then select(.spec.taints[] |
+                                                                .key=="node-role/frontend")  else empty end | .metadata.name')
+  for node in $old_tainted_system_nodes; do
+    kubectl taint node "$node" node-role/system-
+    kubectl taint node --overwrite "$node" dedicated.flant.com=system:NoExecute
+  done
+  for node in $old_tainted_frontend_nodes; do
+    kubectl taint node "$node" node-role/frontend-
+    kubectl taint node --overwrite "$node" dedicated.flant.com=frontend:NoExecute
+  done
+
+}
+
+hook::run "$@"

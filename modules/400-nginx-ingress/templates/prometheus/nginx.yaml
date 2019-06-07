@@ -1,15 +1,15 @@
 {{- if (.Values.global.enabledModules | has "prometheus") }}
-  {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
-    {{- $_ := set . "Values" $.Values }}
-    {{- $inlet := (include "helper.inlet" .) }}
+  {{- range $config := prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress }}
+    {{- $context := merge ($config | toJson | fromJson) $ }}
+    {{- $inlet := (include "helper.inlet" $context) }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-    {{- if not .name }}
+    {{- if not $context.name }}
   name: nginx-ingress-controller
     {{- else }}
-  name: nginx-ingress-controller-{{ .name }}
+  name: nginx-ingress-controller-{{ $context.name }}
     {{- end }}
   namespace: kube-prometheus
   labels:
@@ -29,10 +29,10 @@ spec:
       regex: kube-prometheus-discovery-of-(.*)
       targetLabel: app
     - targetLabel: controller
-    {{- if not .name }}
+    {{- if not $context.name }}
       replacement: main
     {{- else }}
-      replacement: {{ .name }}
+      replacement: {{ $context.name }}
     {{- end }}
     - targetLabel: scrape_source
       replacement: controller
@@ -55,10 +55,10 @@ spec:
       regex: kube-prometheus-discovery-of-(.*)
       targetLabel: app
     - targetLabel: controller
-    {{- if not .name }}
+    {{- if not $context.name }}
       replacement: main
     {{- else }}
-      replacement: {{ .name }}
+      replacement: {{ $context.name }}
     {{- end }}
     - targetLabel: scrape_source
       replacement: statsd
@@ -67,13 +67,13 @@ spec:
       prometheus-target: nginx-ingress-controller
   namespaceSelector:
     matchNames:
-    - {{ include "helper.namespace" . }}
+    - {{ include "helper.namespace" $context }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: kube-prometheus-discovery-of-nginx
-  namespace: {{ include "helper.namespace" . }}
+  namespace: {{ include "helper.namespace" $context }}
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
@@ -98,7 +98,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kube-prometheus-discovery-of-nginx-for-direct-fallback
-  namespace: {{ include "helper.namespace" . }}
+  namespace: {{ include "helper.namespace" $context }}
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}

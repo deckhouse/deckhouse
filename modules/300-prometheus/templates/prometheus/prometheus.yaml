@@ -37,7 +37,7 @@ metadata:
     module: {{ $.Chart.Name }}
     app: prometheus
 spec:
-  replicas: {{ include "is_ha_to_value" (list . 2 1) }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.retentionGigabytes }}GB
   version: v2.7.0
@@ -86,21 +86,8 @@ spec:
   securityContext:
     fsGroup: 2000
     runAsUser: 1000
-{{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
-  nodeSelector:
-{{ .Values.prometheus.nodeSelector | toYaml | trim | indent 4 }}
-{{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-  nodeSelector:
-    node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
-  tolerations:
-{{ .Values.prometheus.tolerations | toYaml | trim | indent 2 }}
-{{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-  tolerations:
-  - key: node-role/system
-    effect: NoExecute
-{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
+{{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
   priorityClassName: cluster-medium
 {{- end }}

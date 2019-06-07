@@ -1,5 +1,5 @@
 {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+  {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -38,8 +38,6 @@ spec:
       labels:
         app: default-http-backend
     spec:
-{{ include "helper.nodeSelector" . | indent 6 }}
-{{ include "helper.tolerations" . | indent 6 }}
       containers:
       - name: default-http-backend
         # Any image is permissable as long as:

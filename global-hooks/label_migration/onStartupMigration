@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=1
+}
+
+function __main__() {
+  # Добавляем системные лейблы
+  old_labeled_system_nodes=$(kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels."node-role/system") | .metadata.name')
+  old_labeled_frontend_nodes=$(kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels."node-role/frontend") | .metadata.name')
+  for node in $old_labeled_system_nodes; do
+    kubectl label node --overwrite "$node" node-role.flant.com/system=
+  done
+  for node in $old_labeled_frontend_nodes; do
+    kubectl label node --overwrite "$node" node-role.flant.com/frontend=
+  done
+}
+
+hook::run "$@"

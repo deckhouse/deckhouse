@@ -42,10 +42,10 @@
     * Список строк - именно **YAML list**, а не строка со значениями через запятую!
     * **Важно!** Так как nginx ingress (как и сам nginx) не поддерживает получение адреса клиента из `X-Forwarded-For`, при одновременном использовании proxy protocol параметр `config.setRealIPFrom` запрещено использовать для inlet'ов `Direct` и `AWSClassicLoadBalancer`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role/frontend":""}`.
+    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/nginx-ingress":""}` или `{"node-role.flant.com/frontend":""}`.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет использовано значение `[{"key":"node-role/frontend","operator":"Exists"}]`.
+    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"nginx-ingress"},{"key":"dedicated.flant.com","operator":"Equal","value":"frontend"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * (только для дополнительных контроллеров) `name` (обязательно) — название контроллера.
     * Используется в качестве суффикса к имени namespace `kube-nginx-ingress-{{ $name }}` и в качестве суффикса к названию класса nginx `nginx-{{ $name }}` (того самого класса, который потом указывается в аннотации `kubernetes.io/ingress.class` к ingress ресурсам).
@@ -69,8 +69,9 @@ nginxIngress: |
     hsts: true
   nodeSelector: false
   tolerations:
-  - key: node-role/frontend
-    operator: Exists
+  - key: dedicated
+    operator: Equal
+    value: example
   additionalControllers:
   - name: direct
     inlet: Direct
@@ -85,10 +86,11 @@ nginxIngress: |
     - 404
     - 502
     nodeSelector:
-      node-role/direct-frontend: ""
+      node-role/example: ""
     tolerations:
-    - key: node-role/direct-frontend
-      operator: Exists
+    - key: dedicated
+      operator: Equal
+      value: example
   - name: someproject
     inlet: NodePort
     nodeSelector: false
@@ -259,7 +261,7 @@ nginxIngress: |
 * Есть основной проект и два дополнительных, но никто не должен знать что они принадлежат одним владельцам (хостятся на одной площадке).
 
 Способ реализации:
-* Выделяем основной контроллер на отдельные машины (ставим на них label и taint `node-role/frontent`).
+* Выделяем основной контроллер на отдельные машины (ставим на них label и taint `node-role.flant.com/frontend`).
 * Создаем два дополнительных контроллера и выделенные для них машины (с label и taint `node-role/frontend-foo` и `node-role/frontend-bar`).
 
 ```

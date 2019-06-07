@@ -28,7 +28,7 @@ metadata:
     module: {{ $.Chart.Name }}
     app: trickster
 spec:
-  replicas: {{ include "is_ha_to_value" (list . 2 1) }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   strategy:
     rollingUpdate:
       maxUnavailable: 0
@@ -42,21 +42,8 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/trickster/configmap.yaml") . | sha256sum }}
     spec:
-{{- if and (hasKey .Values.prometheus "nodeSelector") (.Values.prometheus.nodeSelector) }}
-      nodeSelector:
-{{ .Values.prometheus.nodeSelector | toYaml | trim | indent 8 }}
-{{- else if and (not (hasKey .Values.prometheus "nodeSelector")) .Values.global.discovery.clusterHasSystemNodes }}
-      nodeSelector:
-        node-role/system: ""
-{{- end }}
-{{- if and (hasKey .Values.prometheus "tolerations") (.Values.prometheus.tolerations) }}
-      tolerations:
-{{ .Values.prometheus.tolerations | toYaml | trim | indent 6 }}
-{{- else if and (not (hasKey .Values.prometheus "tolerations")) .Values.global.discovery.clusterHasSystemNodes }}
-      tolerations:
-      - key: node-role/system
-        effect: NoExecute
-{{- end }}
+  {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
+  {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}

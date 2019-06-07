@@ -7,6 +7,7 @@ function __config__() {
 }
 
 function __main__() {
+  system_node_count=$(cluster::count_nodes_by_role "system")
   fltr='.'
 
   node_selector='null'
@@ -14,8 +15,8 @@ function __main__() {
     if ! values::is_false antiopa.nodeSelector ; then
       node_selector="$(values::get --required antiopa.nodeSelector | jq -c .)"
     fi
-  elif values::is_true global.discovery.clusterHasSystemNodes ; then
-    node_selector='{"node-role/system":""}'
+  elif (( "$system_node_count" > 0 )) ; then
+    node_selector='{"node-role.flant.com/system":""}'
   fi
 
   tolerations='null'
@@ -23,8 +24,8 @@ function __main__() {
     if ! values::is_false antiopa.tolerations ; then
       tolerations="$(values::get --required antiopa.tolerations | jq -c .)"
     fi
-  elif values::is_true global.discovery.clusterHasSystemNodes ; then
-    tolerations='[{"effect":"NoExecute","key":"node-role/system"}]'
+  elif (( "$system_node_count" > 0 )) ; then
+    tolerations='[{"key":"dedicated.flant.com","value":"system"}]'
   fi
 
   res=$(kubectl -n antiopa get deploy/tiller-deploy -o json | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')

@@ -16,14 +16,14 @@ Redirect URI(Callback url) устанавливаем вида https://dashboard
 ### Параметры
 * `gitlabBaseUrl` — url gitlab для авторизации (https://git.example.com)
 * `oauth2ProxyClientId`  — `Application Id` в Admin Area -> Applications gitlab
-* `oauth2ProxyClientSecret` — `Secret` в `Admin Area -> Applications gitlab` 
+* `oauth2ProxyClientSecret` — `Secret` в `Admin Area -> Applications gitlab`
 * `oauth2ProxyCookieSecret` —  генерируется автоматически если есть `gitlabBaseUrl`
 * `password` — пароль для http-авторизации, используется если не задан `gitlabBaseUrl` (генерируется автоматически)
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов:
-    * Если ничего не указано — будет использоваться значение `{"node-role/system":""}` (если в кластере есть такие узлы) или ничего не будет указано;
+    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/dashboard":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано;
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов:
-    * Если ничего не указано — будет использовано значение `[{"key":"node-role/system","operator":"Exists"}]` (если в кластере есть такие узлы) или ничего не будет указано;
+    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"dashboard"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * `certificateForIngress` — выбираем, какой типа сертификата использовать для dashboard.
     * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для dashboard (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
@@ -37,8 +37,9 @@ Redirect URI(Callback url) устанавливаем вида https://dashboard
 ```yaml
 dashboard: |
   nodeSelector:
-    node-role/other: ""
+    node-role/example: ""
   tolerations:
-  - key: node-role/other
-    operator: Exists
+  - key: dedicated
+    operator: Equal
+    value: example
 ```

@@ -18,4 +18,3 @@ function __main__() {
 }
 
 hook::run $@
-
