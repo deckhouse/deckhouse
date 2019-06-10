@@ -25,7 +25,7 @@ function __main__() {
       tolerations="$(values::get --required antiopa.tolerations | jq -c .)"
     fi
   elif (( "$system_node_count" > 0 )) ; then
-    tolerations='[{"key":"dedicated.flant.com","value":"system"}]'
+    tolerations='[{"key":"dedicated.flant.com","value":"system"},{"key":"node-role/system"}]'
   fi
 
   res=$(kubectl -n antiopa get deploy/tiller-deploy -o json | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')
