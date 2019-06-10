@@ -29,7 +29,7 @@ function __main__() {
       fltr=$fltr' | del(.spec.template.spec.tolerations)'
     fi
   elif (( "$system_node_count" > 0 )) ; then
-    fltr=$fltr' | .spec.template.spec.tolerations = [{"key":"dedicated.flant.com","value":"system"}]'
+    fltr=$fltr' | .spec.template.spec.tolerations = [{"key":"dedicated.flant.com","value":"system"},{"key":"node-role/system"}]'
   else
     fltr=$fltr' | del(.spec.template.spec.tolerations)'
   fi
