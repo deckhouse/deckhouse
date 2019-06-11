@@ -3,91 +3,34 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=520
+  jo -p onStartup=520 onKubernetesEvent="$(jo -a \
+    "$(jo kind=node jqFilter=".metadata.labels" disableDebug=true)" \
+  )"
 }
+
+
 
 function __main__() {
   fltr='include "remove_empty"; .'
 
-count_system_nodes=$(cluster::count_nodes_by_role "system")
-count_kube_dns_nodes=$(cluster::count_nodes_by_role "kube-dns")
+  count_system_nodes=$(cluster::count_nodes_by_role "system")
+  count_kube_dns_nodes=$(cluster::count_nodes_by_role "kubeDns")
 
   ###
   # Политика #1: kube-dns должен выполняться на system-узлах, если они есть
-  if (( count_system_nodes > 0 )); then
-    # Добавляем toleration, если не добавлен
-    if (( "$count_kube_dns_nodes" > 1 )); then
-      # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
-      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-        if . then . else [{}] end | map(
-          .matchExpressions |= (
-            . + [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}] | unique
-          )
-        )
-      )'
-      fltr=$fltr' | .spec.template.spec.tolerations |= (
-        . + [{"key":"dedicated.flant.com","operator":"Equal", "value": "kube-dns"}] | unique
-      )'
-    elif (( "$count_system_nodes" > 1 )); then
-      # Добавляем в каждый nodeSelectorTerm по matchExpression, если он еще не добавлен
-      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-        if . then . else [{}] end | map(
-          .matchExpressions |= (
-            . + [{"key":"node-role.flant.com/system","operator":"Exists"}] | unique
-          )
-        )
-      )'
-      fltr=$fltr' | .spec.template.spec.tolerations |= (
-        . + [{"key":"dedicated.flant.com","operator":"Equal", "value": "system"}] | unique
-      )'
+
+  # Добавляем toleration, если не добавлен
+  if (( "$count_system_nodes" > 0 || "$count_kube_dns_nodes" > 0 )); then
+      fltr=$fltr' | .spec.template.spec.tolerations = ([{"key":"dedicated.flant.com","operator":"Equal","value": "kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value": "system"},{"key":"node-role/system"},{"key":"node-role.kubernetes.io/master"}] | unique)'
+    if (( "$count_kube_dns_nodes" > 0 )); then
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms = [{"matchExpressions": [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]}]'
+    elif (( "$count_system_nodes" > 0 )); then
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms = [{"matchExpressions": [{"key":"node-role.flant.com/system","operator":"Exists"}]}]'
     else
       # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
-      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
-        .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-          . | map(
-            .matchExpressions -= [{"key":"node-role.flant.com/system","operator":"Exists"}]
-          )
-        )
-      else . end'
-      fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
-        .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-          . | map(
-            .matchExpressions -= [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]
-          )
-        )
-      else . end'
+      fltr=$fltr' | del(.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms)'
     fi
-
-  else
-    # Удаляем toleration, если был добавлен
-    fltr=$fltr' | if .spec.template.spec.tolerations then
-      .spec.template.spec.tolerations |= . - [{"key":"node-role.flant.com/system","operator":"Exists"}]
-    else . end'
-    fltr=$fltr' | if .spec.template.spec.tolerations then
-      .spec.template.spec.tolerations |= . - [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]
-    else . end'
-
-    # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
-    fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
-      .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-        . | map(
-          .matchExpressions -= [{"key":"node-role.flant.com/system","operator":"Exists"}]
-        )
-      )
-    else . end'
-    fltr=$fltr' | if .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms then
-      .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms |= (
-        . | map(
-          .matchExpressions -= [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]
-        )
-      )
-    else . end'
   fi
-  # В любом случае, есть system-узлы или нет, удаляем "старые" toleration'ы, с явно указанным effect
-  fltr=$fltr' | if .spec.template.spec.tolerations then
-    .spec.template.spec.tolerations |= . - [{"effect":"NoExecute","key":"node-role/system","operator":"Exists"}]
-  else . end'
-
 
   ###
   # Политика #2: Количество реплик kube-dns
@@ -117,7 +60,7 @@ count_kube_dns_nodes=$(cluster::count_nodes_by_role "kube-dns")
 
   ###
   # Политика #3: Не нужно запускать больше одного kube-dns на узле
-  fltr=$fltr' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution |= (. + [{"weight":100,"podAffinityTerm":{"labelSelector":{"matchLabels":{"k8s-app":"kube-dns"}},"topologyKey":"kubernetes.io/hostname"}}] | unique)'
+  fltr=$fltr' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution = ([{"weight":100,"podAffinityTerm":{"labelSelector":{"matchLabels":{"k8s-app":"kube-dns"}},"topologyKey":"kubernetes.io/hostname"}}] | unique)'
 
   # Определяем имя deployment'а (в Azure он называется не kube-dns)
   kube_dns_deployment_name=$(kubectl -n kube-system get deployment -l k8s-app=kube-dns -o name)

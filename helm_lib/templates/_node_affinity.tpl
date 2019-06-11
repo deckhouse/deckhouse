@@ -1,5 +1,5 @@
 {{- define "helm_lib_internal_check_node_strategy" -}}
-  {{ if not (has . (list "frontend" "frontend-fallback" "monitoring" "system")) }}
+  {{ if not (has . (list "frontend" "monitoring" "system")) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -26,12 +26,13 @@
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
   {{- $module_args := include "helm_lib_module_args" $context | fromYaml }}
+  {{- $camel_chart_name := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
 
   {{- if eq $strategy "monitoring" }}
     {{- if $module_args.nodeSelector }}
 nodeSelector:
 {{ $module_args.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $context.Chart.Name | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $strategy | int) 0 }}
@@ -46,7 +47,7 @@ nodeSelector:
     {{- if $module_args.nodeSelector }}
 nodeSelector:
 {{ $module_args.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $context.Chart.Name | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $strategy | int) 0 }}
@@ -58,7 +59,7 @@ nodeSelector:
     {{- if $module_args.nodeSelector }}
 nodeSelector:
 {{ $module_args.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $context.Chart.Name | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $strategy | int) 0 }}

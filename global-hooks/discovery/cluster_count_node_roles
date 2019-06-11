@@ -9,8 +9,8 @@ function __config__() {
 }
 
 function __main__() {
-  node_counts=$(kubectl get node -o json | jq -r '[.items[].metadata.labels | keys[] | select(startswith("node-role.flant.com/")) |
-                                            split("/")[1]] | group_by(.) | map({(unique_by(.)[]): length}) | add')
+  node_counts=$(kubectl get node -o json | jq -r 'include "camel"; [.items[].metadata.labels | keys[] | select(startswith("node-role.flant.com/")) |
+                                            split("/")[1]] | group_by(.) | map({(unique_by(.)[] | camel): length}) | add')
   values::set global.discovery.nodeCountByRole "$node_counts"
 }
 
