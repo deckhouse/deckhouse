@@ -67,7 +67,7 @@
       summary: >
         node_exporter on Node {{$labels.node}} is stuck
 
-  - alert: LoadAvaregeHigh
+  - alert: LoadAverageHigh
     expr: >-
       (
         sum by (node) (avg_over_time(node_load1[30m]))
