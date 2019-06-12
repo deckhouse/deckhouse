@@ -54,7 +54,7 @@ spec:
   acme:
     config:
     - http01:
-        ingressClass: nginx
+        ingressClass: {{ .Values.global.ingressClass | quote }}
       domains:
       - openvpn-admin.{{ .Values.global.clusterHostname }}
   issuerRef:

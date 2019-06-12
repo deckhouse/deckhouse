@@ -57,7 +57,7 @@ spec:
   acme:
     config:
     - http01:
-        ingressClass: nginx
+        ingressClass: {{ .Values.global.ingressClass | quote }}
       domains:
       - prometheus.{{ .Values.global.clusterHostname }}
   issuerRef:

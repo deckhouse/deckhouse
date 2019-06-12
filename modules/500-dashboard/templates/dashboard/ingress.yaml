@@ -59,7 +59,7 @@ spec:
   acme:
     config:
     - http01:
-        ingressClass: nginx
+        ingressClass: {{ .Values.global.ingressClass | quote }}
       domains:
       - dashboard.{{ .Values.global.clusterHostname }}
   issuerRef:
