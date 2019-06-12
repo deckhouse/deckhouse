@@ -14,7 +14,7 @@ RUN apk add --no-cache git ruby ruby-dev libffi-dev build-base && \
     gem install sass --no-document && \
     npm install --global grunt-cli && \
     cd /plugin && \
-    git clone https://github.com/flant/grafana-statusmap.git . && \
+    git clone --branch v0.1.1 https://github.com/flant/grafana-statusmap.git . && \
     npm install && \
     grunt
 
