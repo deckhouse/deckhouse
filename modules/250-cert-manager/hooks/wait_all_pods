@@ -8,7 +8,7 @@ function __config__() {
 
 function __main__() {
   for i in $(seq 1 120); do
-    if kubectl -n kube-cert-manager get pod -l app=webhook -o json  | jq -e '.items[].status.conditions | all(.[] ; .status == "True")' ; then
+    if kubectl -n kube-cert-manager get pod -l app=webhook -o json  | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' ; then
       return 0
     fi
 
