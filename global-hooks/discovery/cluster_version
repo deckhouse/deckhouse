@@ -7,7 +7,29 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=100
+  echo '
+{
+  "onStartup": 100,
+  "onKubernetesEvent": [
+    {
+      "kind": "pod",
+      "event": [
+        "add",
+        "update"
+      ],
+      "selector": {
+        "matchLabels": {
+          "component": "kube-apiserver",
+          "tier": "control-plane"
+        }
+      },
+      "namespaceSelector": {
+        "matchNames": ["kube-system"]
+      },
+      "jqFilter": ".spec.containers[0].image"
+    }
+  ]
+}'
 }
 
 function __main__() {
