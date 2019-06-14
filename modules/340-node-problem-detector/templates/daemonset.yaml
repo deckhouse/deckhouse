@@ -16,6 +16,12 @@ spec:
     name: node-problem-detector
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: node-problem-detector
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.05Gi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -51,10 +57,6 @@ spec:
         - --logtostderr
         - --system-log-monitors=/config/kernel-monitor.json,/config/docker-monitor.json
         image: k8s.gcr.io/node-problem-detector:v0.6.3
-        resources:
-          requests:
-            cpu: 10m
-            memory: 80Mi
         imagePullPolicy: Always
         securityContext:
           privileged: true

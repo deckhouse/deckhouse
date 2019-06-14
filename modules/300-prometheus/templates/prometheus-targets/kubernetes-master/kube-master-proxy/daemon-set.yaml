@@ -17,6 +17,12 @@ spec:
     name: kube-prometheus-kube-master-proxy
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: "*"
+      maxAllowed:
+        cpu: 0.01
+        memory: 0.02Gi
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -58,10 +64,6 @@ spec:
         ports:
         - containerPort: 10360
           name: scheduler
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       - name: prometheus-auth-proxy-for-kube-controller-manager
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
@@ -75,10 +77,6 @@ spec:
         ports:
         - containerPort: 10361
           name: controller
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       - name: prometheus-auth-proxy-for-kube-etcd
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
@@ -100,10 +98,6 @@ spec:
         ports:
         - containerPort: 10362
           name: etcd
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
         volumeMounts:
         - mountPath: /etc/nginx/certs/apiserver-etcd-client.crt
@@ -125,10 +119,6 @@ spec:
         ports:
         - containerPort: 10362
           name: etcd
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       - name: prometheus-auth-proxy-for-kube-etcd-events
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
@@ -142,10 +132,6 @@ spec:
         ports:
         - containerPort: 10363
           name: etcd-events
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
   {{- end }}
   {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
       volumes:

@@ -16,6 +16,12 @@ spec:
     name: okmeter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: okagent
+      maxAllowed:
+        cpu: 0.2
+        memory: 1Gi
 {{- end }}
 ---
 apiVersion: apps/v1beta2
@@ -59,10 +65,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        resources:
-          requests:
-            memory: 100Mi
-            cpu: 10m
         volumeMounts:
         - name: dockersocket
           mountPath: /var/run/docker.sock

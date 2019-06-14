@@ -16,6 +16,16 @@ spec:
     name: oom-killer-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: oom-killer-exporter
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.1Gi
+    - name: prometheus-auth-proxy
+      maxAllowed:
+        cpu: 0.01
+        memory: 0.02Gi
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -52,10 +62,6 @@ spec:
         - -listen-address=127.0.0.1:9102
         securityContext:
           privileged: true
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 20m
         env:
         - name: DOCKER_HOST
           value: "unix:///var/run/docker.sock"
@@ -73,10 +79,6 @@ spec:
         ports:
         - containerPort: 9101
           name: https
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       volumes:
       - name: kmsg
         hostPath:

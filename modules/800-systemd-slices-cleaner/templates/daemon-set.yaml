@@ -14,6 +14,12 @@ spec:
     name: {{ $.Chart.Name }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: {{ $.Chart.Name }}
+      maxAllowed:
+        cpu: 0.05
+        memory: 0.02Gi
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -42,7 +48,6 @@ spec:
         image: {{ .Values.global.modulesImages.registry }}/systemd-slices-cleaner/systemd-slices-cleaner:{{ .Values.global.modulesImages.tags.systemdSlicesCleaner.systemdSlicesCleaner }}
         imagePullPolicy: Always
         name: {{ $.Chart.Name }}
-        resources: {}
         securityContext:
           privileged: true
         volumeMounts:
