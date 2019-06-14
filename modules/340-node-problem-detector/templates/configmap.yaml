@@ -42,7 +42,7 @@ data:
                 "pattern": "Kill process \\d+ (.+) score \\d+ or sacrifice child\\nKilled process \\d+ (.+) total-vm:\\d+kB, anon-rss:\\d+kB, file-rss:\\d+kB.*"
             },
             {
-                "type": "permanent",
+                "type": "temporary",
                 "condition": "KernelDeadlock",
                 "reason": "TaskHung",
                 "pattern": "task \\S+:\\w+ blocked for more than \\w+ seconds\\."

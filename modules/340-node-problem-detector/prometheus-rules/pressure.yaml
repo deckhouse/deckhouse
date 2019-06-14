@@ -8,10 +8,10 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |-
-        NodeCondition {{$labels.condition}} has come on {{$labels.node}}.
+        NodeCondition {{$labels.condition}} has transitioned to "true" {{$labels.node}}.
         Consider the following:
 
-        1. Run `kubectl describe node {{$labels.node}}` to see has come condition
+        1. Run `kubectl describe node {{$labels.node}}` to list conditions and their states.
 
       summary: >
-        NodeCondition {{$labels.condition}} has come on {{$labels.node}}.
+        NodeCondition {{$labels.condition}} has transitioned to "true" {{$labels.node}}.
