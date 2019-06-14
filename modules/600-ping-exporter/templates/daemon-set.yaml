@@ -16,6 +16,12 @@ spec:
     name: ping-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: ping-exporter
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.05Gi
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -45,10 +51,7 @@ spec:
       priorityClassName: cluster-low
       {{- end }}
       containers:
-      - resources:
-          requests:
-            cpu: 0.10
-        image: {{ .Values.global.modulesImages.registry }}/ping-exporter/ping-exporter:{{ .Values.global.modulesImages.tags.pingExporter.pingExporter }}
+      - image: {{ .Values.global.modulesImages.registry }}/ping-exporter/ping-exporter:{{ .Values.global.modulesImages.tags.pingExporter.pingExporter }}
         imagePullPolicy: Always
         name: ping-exporter
         env:

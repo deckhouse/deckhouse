@@ -16,6 +16,12 @@ spec:
     name: kubelet-eviction-thresholds-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: kubelet-eviction-thresholds-exporter
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.1Gi
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -52,10 +58,6 @@ spec:
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/prometheus/kubelet-eviction-thresholds-exporter:{{ $.Values.global.modulesImages.tags.prometheus.kubeletEvictionThresholdsExporter }}
         name: kubelet-eviction-thresholds-exporter
-        resources:
-          requests:
-            memory: 50Mi
-            cpu: 50m
         env:
         - name: MY_NODE_NAME
           valueFrom:

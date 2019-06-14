@@ -16,6 +16,16 @@ spec:
     name: node-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - name: node-exporter
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.1Gi
+    - name: prometheus-auth-proxy
+      maxAllowed:
+        cpu: 0.01
+        memory: 0.02Gi
 {{- end }}
 ---
 apiVersion: extensions/v1beta1
@@ -62,10 +72,6 @@ spec:
         - '--collector.textfile.directory'
         - '/host/textfile'
         name: node-exporter
-        resources:
-          requests:
-            memory: 100Mi
-            cpu: 200m
         volumeMounts:
         - name: root
           readOnly:  true
@@ -92,10 +98,6 @@ spec:
         ports:
         - containerPort: 9100
           name: https
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       tolerations:
       - operator: Exists
       volumes:
