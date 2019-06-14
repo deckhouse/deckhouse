@@ -46,6 +46,7 @@ spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-high
 {{- end }}
+{{- if le (.Values.global.discovery.clusterMasterCount | int) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -53,6 +54,7 @@ spec:
               matchLabels:
                 app: prometheus-metrics-adapter
             topologyKey: kubernetes.io/hostname
+{{- end }}
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
