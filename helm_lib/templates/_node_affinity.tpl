@@ -25,7 +25,12 @@
 {{- define "helm_lib_node_selector" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
-  {{- $module_args := include "helm_lib_module_args" $context | fromYaml }}
+  {{- $module_args := dict }}
+  {{- if lt (len .) 3 }}
+    {{- $module_args = include "helm_lib_module_args" $context | fromYaml }}
+  {{- else }}
+    {{- $module_args = index . 2 }}
+  {{- end }}
   {{- $camel_chart_name := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
 
   {{- if eq $strategy "monitoring" }}
@@ -73,7 +78,12 @@ nodeSelector:
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
-  {{- $module_args := include "helm_lib_module_args" $context | fromYaml }}
+  {{- $module_args := dict }}
+  {{- if lt (len .) 3 }}
+    {{- $module_args = include "helm_lib_module_args" $context | fromYaml }}
+  {{- else }}
+    {{- $module_args = index . 2 }}
+  {{- end }}
 
   {{- if eq $strategy "monitoring" }}
     {{- if $module_args.tolerations }}

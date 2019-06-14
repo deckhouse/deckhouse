@@ -1,5 +1,9 @@
 {{- range $config := prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress }}
-  {{- $context := merge ($config | toJson | fromJson) $ }}
+  {{- $context := $config | toJson | fromJson }}
+  {{- $_ := set $context "Values" $.Values }}
+  {{- $_ := set $context "Files" $.Files }}
+  {{- $_ := set $context "Chart" $.Chart }}
+  {{- $_ := set $context "Template" $.Template }}
   {{- $inlet := (include "helper.inlet" $context) }}
 
   {{- if eq $inlet "LoadBalancer" }}
