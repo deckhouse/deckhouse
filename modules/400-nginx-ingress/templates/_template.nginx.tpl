@@ -45,8 +45,8 @@ spec:
 #TODO: Docker before 1.12 does not support sysctls
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
-{{- include "helm_lib_node_selector" (tuple . "frontend") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "frontend") | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "frontend" .) | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "frontend" .) | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: {{ $hostNetwork }}
     {{- if eq $hostNetwork true }}

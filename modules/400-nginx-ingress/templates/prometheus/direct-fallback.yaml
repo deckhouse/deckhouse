@@ -1,6 +1,7 @@
 {{- if (.Values.global.enabledModules | has "prometheus") }}
   {{- range $config := prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress }}
-    {{- $context := merge ($config | toJson | fromJson) $ }}
+    {{- $context := $config | toJson | fromJson }}
+    {{- $_ := set $context "Values" $.Values }}
     {{- $inlet := (include "helper.inlet" $context) }}
     {{- if eq $inlet "Direct" }}
 ---
