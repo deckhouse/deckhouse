@@ -1,0 +1,54 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+   "afterHelm": 10,
+   "onKubernetesEvent": [
+      {
+         "kind": "Secret",
+         "namespaceSelector": {
+            "matchNames": [
+               "kube-prometheus"
+            ]
+         },
+         "selector": {
+            "matchLabels": {
+               "additional-configs-for-prometheus": "main"
+            }
+         }
+      }
+   ]
+}
+EOF
+}
+
+function __main__() {
+  kubectl -n kube-prometheus get secret -ladditional-configs-for-prometheus=main -o json | \
+  jq '[.items[].data]
+    | reduce .[] as $i
+      (
+        {"alert-managers.yaml": "", "alert-relabels.yaml": "", "scrapes.yaml": ""};
+          ."alert-managers.yaml" += "\n" + ($i."alert-managers.yaml" // "" | @base64d)
+        | ."alert-relabels.yaml" += "\n" + ($i."alert-relabels.yaml" // "" | @base64d)
+        | ."scrapes.yaml"        += "\n" + ($i."scrapes.yaml"        // "" | @base64d)
+      )
+    |
+      {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": {"name": "prometheus-main-additional-configs"},
+        "type": "Opaque",
+        "data":
+        {
+          "alert-managers.yaml": (."alert-managers.yaml" | @base64),
+          "alert-relabels.yaml": (."alert-relabels.yaml" | @base64),
+          "scrapes.yaml":        (."scrapes.yaml"        | @base64)
+        }
+      }' | \
+  kubectl -n kube-prometheus apply -f -
+}
+
+hook::run "$@"

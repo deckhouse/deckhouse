@@ -1,5 +1,5 @@
 dimg: ~
-from: alpine:3.7
+from: alpine:3.9
 git:
 - add: /
   to: /antiopa
@@ -85,7 +85,7 @@ ansible:
       dest: /antiopa/modules/images_tags.json
 ---
 artifact: antiopa
-from: golang:1.10-alpine3.7
+from: golang:1.10-alpine3.9
 git:
 - add: /antiopa
   to: /go/src/github.com/deckhouse/deckhouse/antiopa

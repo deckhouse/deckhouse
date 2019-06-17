@@ -76,3 +76,27 @@
 * Любые изменения (в том числе и добавление/удаление) этого PrometheusRule отрабатываются полностью автоматически, но требуется подождать около минуты (пока отработает Prometheus Operator и компания).
 
 [Читайте подробнее](PROMETHEUS_RULES_DEVELOPMENT.md) в документации по разработке правил Prometheus.
+
+### Как добавить кастомные конфиги scrape_configs, alert_relabel_configs, alertmanager_config?
+
+Создать в неймспейсе `kube-prometheus` новый `Secret`:
+* Рекомендуемое имя — prometheus-main-additional-configs-XXX.
+* Лейбл — `additional-configs-for-prometheus=main`.
+* Содержимое:
+```yaml
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  labels:
+    additional-configs-for-prometheus: main
+  name: prometheus-main-additional-configs-example
+data:
+  alert-managers.yaml: "<base64>"
+  alert-relabels.yaml: "<base64>"
+  scrapes.yaml: "<base64>"
+```
+
+Указывать в секрете все три конфига необязательно, можно указать только нужные в данной ситуации.
+
+Важно — при создании такого секрета, [хук](/modules/300-prometheus/hooks/additional_configs_render) соберёт все секреты с лейблом `additional-configs-for-prometheus=main` и смержит их в один главный секрет `prometheus-main-additional-configs`. Если в разных секретах попадутся одинаковые конфиги, он их конкатинирует.

@@ -10,7 +10,21 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=100 onKubernetesEvent="$(jo -a $(jo kind=endpoints namespaceSelector=$(jo -a default)) )"
+  cat << EOF
+{
+   "onStartup": 100,
+   "onKubernetesEvent": [
+      {
+         "kind": "Endpoints",
+         "namespaceSelector": {
+            "matchNames": [
+               "default"
+            ]
+         }
+      }
+   ]
+}
+EOF
 }
 
 function __main__() {
