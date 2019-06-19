@@ -60,6 +60,15 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
+  additionalScrapeConfigs:
+    name: prometheus-main-additional-configs
+    key: scrapes.yaml
+  additionalAlertRelabelConfigs:
+    name: prometheus-main-additional-configs
+    key: alert-relabels.yaml
+  additionalAlertManagerConfigs:
+    name: prometheus-main-additional-configs
+    key: alert-managers.yaml
 {{- if or (hasKey .Values.prometheus "madisonAuthKey") (hasKey .Values.prometheus "additionalAlertmanagers") }}
   alerting:
     alertmanagers:
