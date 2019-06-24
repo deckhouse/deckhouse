@@ -1,9 +1,0 @@
-#!/bin/bash -e
-
-if [[ "$1" == "--config" ]]; then
-    echo "
-{
-    \"beforeHelm\": 1
-}
-"
-fi

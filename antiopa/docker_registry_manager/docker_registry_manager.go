@@ -1,14 +1,21 @@
 package docker_registry_manager
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"time"
 
 	registryclient "github.com/flant/docker-registry-client/registry"
 	"github.com/romana/rlog"
 
-	"github.com/deckhouse/deckhouse/antiopa/kube"
+	"github.com/deckhouse/deckhouse/antiopa/kube_helper"
+
+	utils_file "github.com/flant/shell-operator/pkg/utils/file"
 )
+
+const DefaultRegistrySecretPath = "/etc/registrysecret"
 
 type DockerRegistryManager interface {
 	SetErrorCallback(errorCb func())
@@ -19,6 +26,11 @@ var (
 	// новый id образа с тем же именем
 	// (смена самого имени образа будет обрабатываться самим Deployment'ом автоматом)
 	ImageUpdated chan string
+
+	// Path to a mounted docker registry secret
+	RegistrySecretPath string
+
+	RegistryToUrlMapping map[string]string
 )
 
 type MainRegistryManager struct {
@@ -34,34 +46,53 @@ type MainRegistryManager struct {
 	ErrorCallback func()
 }
 
-// TODO данные для доступа к registry серверам нужно хранить в secret-ах.
-// TODO по imageInfo.Registry брать данные и подключаться к нужному registry.
-// Пока известно, что будет только registry.flant.com
-var DockerRegistryInfo = map[string]map[string]string{
-	"registry.flant.com": map[string]string{
-		"url":      "https://registry.flant.com",
-		"user":     "oauth2",
-		"password": "qweqwe",
-	},
-	// minikube specific
-	"localhost:5000": map[string]string{
-		"url": "http://kube-registry.kube-system.svc.cluster.local:5000",
-	},
-}
-
 // InitRegistryManager получает имя образа по имени пода и запрашивает id этого образа.
 // TODO вытащить token и host в секрет
 func Init(hostname string) (DockerRegistryManager, error) {
-	if kube.IsRunningOutOfKubeCluster() {
-		rlog.Infof("Antiopa is running out of cluster. No registry manager required.")
+	if os.Getenv("ANTIOPA_WATCH_REGISTRY") == "false" {
+		rlog.Infof("Antiopa: registry manager disabled with ANTIOPA_WATCH_REGISTRY=false.")
 		return nil, nil
 	}
 
 	rlog.Debug("Init registry manager")
 
-	// TODO Пока для доступа к registry.flant.com передаётся временный токен через переменную среды
-	GitlabToken := os.Getenv("GITLAB_TOKEN")
-	DockerRegistryInfo["registry.flant.com"]["password"] = GitlabToken
+	RegistrySecretPath = os.Getenv("ANTIOPA_REGISTRY_SECRET_PATH")
+	if RegistrySecretPath == "" {
+		RegistrySecretPath = DefaultRegistrySecretPath
+	}
+	rlog.Info("Load registry auths from %s dir", RegistrySecretPath)
+
+	// Load json from file /etc/registrysecret/.dockercfg
+	if exists, err := utils_file.DirExists(RegistrySecretPath); !exists {
+		rlog.Errorf("Error accessing registry secret directory: %s, watcher is disabled now", err)
+		return nil, nil
+	}
+
+	var readErr error
+	var secretBytes []byte
+	secretBytes, readErr = ioutil.ReadFile(path.Join(RegistrySecretPath, ".dockercfg"))
+	if readErr != nil {
+		secretBytes, readErr = ioutil.ReadFile(path.Join(RegistrySecretPath, ".dockerconfigjson"))
+		if readErr != nil {
+			return nil, fmt.Errorf("Cannot read registry secret from .docker[cfg,configjson]: %s", readErr)
+		}
+	}
+
+	err := LoadDockerRegistrySecret(secretBytes)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot load registry secret: %s", err)
+	}
+
+	registries := ""
+	for k := range DockerCfgAuths {
+		registries = registries + ", " + k
+	}
+	rlog.Infof("Load auths for: %s", registries)
+
+	// FIXME: hack for minikube testing
+	RegistryToUrlMapping = map[string]string{
+		"localhost:5000": "http://kube-registry.kube-system.svc.cluster.local:5000",
+	}
 
 	ImageUpdated = make(chan string)
 
@@ -75,7 +106,7 @@ func Init(hostname string) (DockerRegistryManager, error) {
 
 // Запускает проверку каждые 10 секунд, не изменился ли id образа.
 func (rm *MainRegistryManager) Run() {
-	if kube.IsRunningOutOfKubeCluster() {
+	if os.Getenv("ANTIOPA_WATCH_REGISTRY") == "false" {
 		return
 	}
 
@@ -106,7 +137,7 @@ func (rm *MainRegistryManager) CheckIsImageUpdated() {
 	// kube-api может быть недоступно, поэтому нужно периодически подключаться к нему.
 	if rm.AntiopaImageName == "" {
 		rlog.Debugf("Registry manager: retrieve image name and id from kube-api")
-		podImageName, podImageId := kube.KubeGetPodImageInfo(rm.PodHostname)
+		podImageName, podImageId := kube_helper.KubeGetPodImageInfo(rm.PodHostname)
 		if podImageName == "" {
 			rlog.Debugf("Registry manager: error retrieving image name and id from kube-api. Will try again")
 			return
@@ -134,10 +165,15 @@ func (rm *MainRegistryManager) CheckIsImageUpdated() {
 	if rm.DockerRegistry == nil {
 		rlog.Debugf("Registry manager: create docker registry client")
 		var url, user, password string
-		if info, hasInfo := DockerRegistryInfo[rm.AntiopaImageInfo.Registry]; hasInfo {
-			url = info["url"]
-			user = info["user"]
-			password = info["password"]
+		if info, hasInfo := DockerCfgAuths[rm.AntiopaImageInfo.Registry]; hasInfo {
+			// FIXME Should we always use https here?
+			if mappedUrl, hasKey := RegistryToUrlMapping[rm.AntiopaImageInfo.Registry]; hasKey {
+				url = mappedUrl
+			} else {
+				url = fmt.Sprintf("https://%s", rm.AntiopaImageInfo.Registry)
+			}
+			user = info.Username
+			password = info.Password
 		}
 		// Создать клиента для подключения к docker-registry
 		// в единственном экземляре

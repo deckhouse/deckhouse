@@ -28,7 +28,12 @@ function __main__() {
     tolerations='[{"key":"dedicated.flant.com","value":"system"},{"key":"node-role/system"}]'
   fi
 
-  res=$(kubectl -n antiopa get deploy/tiller-deploy -o json | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')
+  # filter new tolerations in Kubernetes >=1.13
+  filtered_tiller_deploy=$(kubectl -n antiopa get deploy/tiller-deploy -o json |
+                            jq '.spec.template.spec.tolerations |= [(.[] | select(.key != "node.kubernetes.io/not-ready" and .key != "node.kubernetes.io/unreachable" and .key != "node.kubernetes.io/memory-pressure"))]'
+                          )
+
+  res=$(echo "$filtered_tiller_deploy" | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')
   if [[ "$res" != "true" ]] ; then
     # Удаляем tiller, а antiopa уже инициализирует его с правильными значениями при следующем запуске
     echo "Tiller has wrong nodeSelector or toleration. Removing tiller and restarting self."
