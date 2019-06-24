@@ -83,6 +83,10 @@ ansible:
       content: |
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
       dest: /antiopa/modules/images_tags.json
+docker:
+  ENV:
+    MODULES_DIR: /antiopa/modules
+    GLOBAL_HOOKS_DIR: /antiopa/global-hooks
 ---
 artifact: antiopa
 from: golang:1.10-alpine3.9

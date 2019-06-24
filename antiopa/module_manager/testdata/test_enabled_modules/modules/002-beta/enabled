@@ -1,3 +1,0 @@
-#!/bin/bash
-
-echo false > $MODULE_ENABLED_RESULT
