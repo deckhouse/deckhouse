@@ -110,12 +110,25 @@ spec:
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10362"
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/etcd-client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/etcd-client.key"
+        - "--proxy-pass=https://127.0.0.1:4001/metrics"
+      {{- else }}
         - "--proxy-pass=http://127.0.0.1:4001/metrics"
+      {{- end }}
         env:
         - name: MY_POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        volumeMounts:
+        - mountPath: /etc/nginx/certs/etcd-client.crt
+          name: crt
+        - mountPath: /etc/nginx/certs/etcd-client.key
+          name: key
+      {{- end }}
         ports:
         - containerPort: 10362
           name: etcd
@@ -123,12 +136,25 @@ spec:
         image: flant/kube-prometheus-auth-proxy:v0.2.0
         args:
         - "--listen=$(MY_POD_IP):10363"
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/etcd-client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/etcd-client.key"
+        - "--proxy-pass=https://127.0.0.1:4001/metrics"
+      {{- else }}
         - "--proxy-pass=http://127.0.0.1:4002/metrics"
+      {{- end }}
         env:
         - name: MY_POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        volumeMounts:
+        - mountPath: /etc/nginx/certs/etcd-client.crt
+          name: crt
+        - mountPath: /etc/nginx/certs/etcd-client.key
+          name: key
+      {{- end }}
         ports:
         - containerPort: 10363
           name: etcd-events
@@ -141,6 +167,16 @@ spec:
         name: crt
       - hostPath:
           path: /etc/kubernetes/pki/apiserver-etcd-client.key
+          type: File
+        name: key
+  {{- else if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare ">=1.12" .Values.global.discovery.clusterVersion) }}
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/pki/kube-apiserver/etcd-client.crt
+          type: File
+        name: crt
+      - hostPath:
+          path: /etc/kubernetes/pki/kube-apiserver/etcd-client.key
           type: File
         name: key
   {{- end }}

@@ -8,7 +8,6 @@ function __config__() {
 
 function __main__() {
   system_node_count=$(cluster::count_nodes_by_role "system")
-  fltr='.'
 
   node_selector='null'
   if values::has antiopa.nodeSelector ; then
@@ -30,7 +29,7 @@ function __main__() {
 
   # filter new tolerations in Kubernetes >=1.13
   filtered_tiller_deploy=$(kubectl -n antiopa get deploy/tiller-deploy -o json |
-                            jq '.spec.template.spec.tolerations |= [(.[] | select(.key != "node.kubernetes.io/not-ready" and .key != "node.kubernetes.io/unreachable" and .key != "node.kubernetes.io/memory-pressure"))]'
+                            jq 'include "remove_empty"; .spec.template.spec.tolerations |= [. // [] | .[] | select(.key != "node.kubernetes.io/not-ready" and .key != "node.kubernetes.io/unreachable" and .key != "node.kubernetes.io/memory-pressure")] | remove_empty'
                           )
 
   res=$(echo "$filtered_tiller_deploy" | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')

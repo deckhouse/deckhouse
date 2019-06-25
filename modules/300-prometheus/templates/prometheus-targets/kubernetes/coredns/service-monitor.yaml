@@ -1,8 +1,8 @@
-{{- if and (not (eq .Values.global.discovery.clusterType "ACS")) (semverCompare "<1.13" .Values.global.discovery.clusterVersion) }}
+{{- if semverCompare ">=1.13" .Values.global.discovery.clusterVersion }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: kube-dns
+  name: coredns
   namespace: kube-prometheus
   labels:
     heritage: antiopa
@@ -11,23 +11,15 @@ metadata:
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: http-metrics-skydns
+  - port: metrics
     relabelings:
     - regex: endpoint|namespace|service
       action: labeldrop
-    - targetLabel: scrape_endpoint
-      replacement: skydns
-  - port: http-metrics-dnsmasq
-    relabelings:
-    - regex: endpoint|namespace|service
-      action: labeldrop
-    - targetLabel: scrape_endpoint
-      replacement: dnsmasq
   selector:
     matchLabels:
       heritage: antiopa
       module: {{ $.Chart.Name }}
-      prometheus-target: kube-dns
+      prometheus-target: coredns
   namespaceSelector:
     matchNames:
     - kube-system

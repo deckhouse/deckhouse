@@ -6,7 +6,7 @@ metadata:
   labels:
     heritage: antiopa
     module: {{ $.Chart.Name }}
-{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.clusterVersion) }}
     prometheus-target: kube-etcd2
 {{- else }}
     prometheus-target: kube-etcd3
