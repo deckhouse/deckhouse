@@ -38,6 +38,17 @@
 ### Конфигурация для Baremetal
 Настроить все kubelet'ы в кластере на использование нового DNS через опцию `--cluster-dns=169.254.20.10`.
 
+В кластерах версии выше 1.11 kubelet нужно настраивать с помощью конфига в самом kubernetes:
+```shell
+kubectl -n kube-system edit cm kubelet-config-1.VERSION
+```
+
+И отредактировать запись `clusterDNS` на значение `169.254.20.10`. После чего на каждой ноде скачать новый конфигурационный файл и перезагрузить kubelet:
+```shell
+kubeadm  alpha kubelet config download # kubeadm alpha phase kubelet config download
+systemctl restart kubelet
+```
+
 ### Конфигурация для kops
 1. Указать в спецификациях всех `InstanceGroups`:
     ```yaml

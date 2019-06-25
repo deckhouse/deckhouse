@@ -77,7 +77,7 @@ spec:
   - name: kubernetes.version
     rules:
     - alert: ControlPlaneAndKubeletVersionsDiffer
-      expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{gitVersion!="v{{ .Values.global.discovery.clusterVersion }}", job!="kube-dns"})
+      expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{gitVersion!="v{{ .Values.global.discovery.clusterVersion }}", job!~"kube-dns|coredns"})
       for: 20m
       labels:
         impact: negligible
@@ -90,3 +90,19 @@ spec:
           2. Correct {{`{{$labels.job}}`}} version or control plane version on kubernetes master static pod manifests
         summary: >
           Different version of {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} node and kubernetes apiserver version
+{{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.12" .Values.global.discovery.clusterVersion) }}
+  - name: kernel.version
+    rules:
+    - alert: UbuntuOldKernel
+      expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*"})
+      for: 20m
+      labels:
+        impact: negligible
+        likelihood: certain
+      annotations:
+        polk_flant_com_markup_format: markdown
+        description: |-
+          Old kernel version of ubuntu OS on {{`{{$labels.node}}`}}.
+          * For Ubuntu 16.04 launch: `apt install linux-image-unsigned-4.18.0-20-generic linux-modules-4.18.0-20-generic linux-modules-extra-4.18.0-20-generic linux-headers-4.18.0-20-generic linux-headers-4.18.0-20`
+          * For Ubuntu 18.04 launch: `apt install -y linux-generic-hwe-18.04 linux-headers-generic-hwe-18.04 linux-image-generic-hwe-18.04`
+{{- end }}

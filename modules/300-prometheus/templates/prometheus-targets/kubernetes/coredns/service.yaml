@@ -1,0 +1,21 @@
+{{- if semverCompare ">=1.13" .Values.global.discovery.clusterVersion }}
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: kube-prometheus-discovery-of-coredns
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus-target: coredns
+spec:
+  selector:
+    k8s-app: kube-dns
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 9153
+    targetPort: 9153
+    protocol: TCP
+{{- end }}

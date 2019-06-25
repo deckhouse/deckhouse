@@ -1,0 +1,32 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [ "$(semver compare $cluster_version 1.13.0)" -ne "-1" ] ; then
+    if kubectl -n kube-system get deploy coredns > /dev/null 2> /dev/null; then
+      cluster_type=$(values::get --required global.discovery.clusterType)
+      # Подам coredns необходимо задать максимальный priorityClass, так как без подов coredns
+      # работа всего кластера может быть нарушена
+
+      # В ACS (acs-engine) кластерах coredns создается из манифестов на kube-master
+      [[ "$cluster_type" == "ACS" ]] && return 0
+
+      fltr='.'
+
+      # Необходимо проставить наивысший priorityClassName coredns
+      fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+
+      # Применяем
+      kubectl::jq_patch kube-system deploy/coredns "$fltr"
+    fi
+  fi
+}
+
+hook::run $@
+
