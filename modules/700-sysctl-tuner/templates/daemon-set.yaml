@@ -37,6 +37,8 @@ spec:
         heritage: antiopa
         module: {{ $.Chart.Name }}
     spec:
+      imagePullSecrets:
+      - name: sysctl-tuner-antiopa-registry
       containers:
       - command:
         - sh
@@ -84,7 +86,7 @@ spec:
             echo 2 > /proc/sys/net/ipv4/conf/all/arp_announce ;
             sleep 600 ;
           done
-        image: busybox
+        image: {{ $.Values.global.modulesImages.registry }}/sysctl-tuner/busybox:{{ $.Values.global.modulesImages.tags.sysctlTuner.busybox }}
         imagePullPolicy: Always
         name: busybox
         resources: {}

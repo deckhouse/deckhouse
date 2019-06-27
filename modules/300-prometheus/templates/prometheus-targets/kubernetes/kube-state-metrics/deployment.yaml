@@ -55,7 +55,7 @@ spec:
       {{- end }}
       containers:
       - name: prometheus-auth-proxy-main
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=8443"
         - "--proxy-pass=http://127.0.0.1:8081/metrics"
@@ -67,7 +67,7 @@ spec:
             memory: 20Mi
             cpu: 10m
       - name: prometheus-auth-proxy-self
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=9443"
         - "--proxy-pass=http://127.0.0.1:8082/metrics"

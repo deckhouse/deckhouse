@@ -52,9 +52,11 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}
+      imagePullSecrets:
+      - name: antiopa-registry
       containers:
       - name: oom-killer-exporter
-        image: sapcc/kubernetes-oomkill-exporter:0.2.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kubernetes-oomkill-exporter:{{ $.Values.global.modulesImages.tags.prometheus.kubernetesOomkillExporter }}
         imagePullPolicy: IfNotPresent
         args:
         - -logtostderr
@@ -72,7 +74,7 @@ spec:
         - name: docker
           mountPath: /var/run/docker.sock
       - name: prometheus-auth-proxy
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=9101"
         - "--proxy-pass=http://127.0.0.1:9102/metrics"

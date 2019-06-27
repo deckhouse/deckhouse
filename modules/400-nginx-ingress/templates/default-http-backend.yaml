@@ -38,12 +38,14 @@ spec:
       labels:
         app: default-http-backend
     spec:
+      imagePullSecrets:
+      - name: registry
       containers:
       - name: default-http-backend
         # Any image is permissable as long as:
         # 1. It serves a 404 page at /
         # 2. It serves 200 on a /healthz endpoint
-        image: gcr.io/google_containers/defaultbackend:1.0
+        image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/defaultbackend:{{ $.Values.global.modulesImages.tags.nginxIngress.defaultbackend }}
         livenessProbe:
           httpGet:
             path: /healthz

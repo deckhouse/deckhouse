@@ -108,7 +108,7 @@ spec:
         - name: config-volume
           mountPath: /etc/coredns
       - name: prometheus-auth-proxy
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: {{ $.Values.global.modulesImages.registry }}/node-local-dns/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.nodeLocalDns.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):9255"
         - "--proxy-pass=http://169.254.20.10:9253/metrics"
