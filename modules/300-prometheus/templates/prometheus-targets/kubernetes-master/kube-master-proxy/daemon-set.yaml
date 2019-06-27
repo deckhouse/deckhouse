@@ -49,10 +49,12 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}
+      imagePullSecrets:
+      - name: antiopa-registry
       containers:
   {{- if eq .Values.global.discovery.clusterType "Manual" }}
       - name: prometheus-auth-proxy-for-kube-scheduler
-        image: flant/kube-prometheus-auth-proxy:v0.2.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):10360"
         - "--proxy-pass=http://127.0.0.1:10251/metrics"
@@ -65,7 +67,7 @@ spec:
         - containerPort: 10360
           name: scheduler
       - name: prometheus-auth-proxy-for-kube-controller-manager
-        image: flant/kube-prometheus-auth-proxy:v0.2.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):10361"
         - "--proxy-pass=http://127.0.0.1:10252/metrics"
@@ -78,7 +80,7 @@ spec:
         - containerPort: 10361
           name: controller
       - name: prometheus-auth-proxy-for-kube-etcd
-        image: flant/kube-prometheus-auth-proxy:v0.2.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):10362"
         {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
@@ -107,7 +109,7 @@ spec:
       {{- end }}
   {{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
       - name: prometheus-auth-proxy-for-kube-etcd
-        image: flant/kube-prometheus-auth-proxy:v0.2.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):10362"
       {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
@@ -133,7 +135,7 @@ spec:
         - containerPort: 10362
           name: etcd
       - name: prometheus-auth-proxy-for-kube-etcd-events
-        image: flant/kube-prometheus-auth-proxy:v0.2.0
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):10363"
       {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}

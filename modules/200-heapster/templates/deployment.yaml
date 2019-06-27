@@ -42,8 +42,10 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       serviceAccountName: heapster
+      imagePullSecrets:
+      - name: heapster-antiopa-registry
       containers:
-        - image: k8s.gcr.io/heapster-amd64:v1.5.2
+        - image: {{ $.Values.global.modulesImages.registry }}/heapster/heapster-amd64:{{ $.Values.global.modulesImages.tags.heapster.heapsterAmd64 }}
           name: heapster
           livenessProbe:
             httpGet:
@@ -59,7 +61,7 @@ spec:
             requests:
               cpu: 80m
               memory: 140Mi
-        - image: k8s.gcr.io/addon-resizer:1.8.1
+        - image: {{ $.Values.global.modulesImages.registry }}/heapster/addon-resizer:{{ $.Values.global.modulesImages.tags.heapster.addonResizer }}
           name: heapster-nanny
           resources:
             requests:

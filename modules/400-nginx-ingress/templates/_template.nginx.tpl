@@ -126,7 +126,7 @@ spec:
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
       - name: prometheus-auth-proxy
-        image: flant/kube-prometheus-auth-proxy:v0.1.0
+        image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/kube-prometheus-auth-proxy:{{ .Values.global.modulesImages.tags.nginxIngress.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):9103"
         - "--proxy-pass=http://127.0.0.1:9102/metrics"

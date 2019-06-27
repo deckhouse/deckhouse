@@ -50,13 +50,15 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
       {{- end }}
+      imagePullSecrets:
+      - name: node-problem-detector-antiopa-registry
       containers:
       - name: node-problem-detector
         command:
         - /node-problem-detector
         - --logtostderr
         - --system-log-monitors=/config/kernel-monitor.json,/config/docker-monitor.json
-        image: k8s.gcr.io/node-problem-detector:v0.6.3
+        image: {{ $.Values.global.modulesImages.registry }}/node-problem-detector/node-problem-detector:{{ $.Values.global.modulesImages.tags.nodeProblemDetector.nodeProblemDetector }}
         imagePullPolicy: Always
         securityContext:
           privileged: true

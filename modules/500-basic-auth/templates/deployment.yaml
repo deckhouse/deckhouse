@@ -42,9 +42,11 @@ spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
 {{- end }}
+      imagePullSecrets:
+      - name: basic-auth-antiopa-registry
       containers:
       - name: nginx
-        image: nginx:1.15-alpine
+        image: {{ $.Values.global.modulesImages.registry }}/basic-auth/nginx:{{ $.Values.global.modulesImages.tags.basicAuth.nginx }}
         lifecycle:
           preStop:
             exec:

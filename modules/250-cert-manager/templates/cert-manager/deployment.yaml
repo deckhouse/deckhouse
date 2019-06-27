@@ -42,9 +42,11 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
       {{- end }}
+      imagePullSecrets:
+      - name: cert-manager-antiopa-registry
       containers:
         - name: cert-manager
-          image: "quay.io/jetstack/cert-manager-controller:v0.7.1"
+          image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-controller:{{ $.Values.global.modulesImages.tags.certManager.certManagerController }}
           imagePullPolicy: IfNotPresent
           args:
           - --cluster-resource-namespace=kube-cert-manager

@@ -64,7 +64,7 @@ spec:
       - name: antiopa-registry
       initContainers:
       - name: prepare-config
-        image: busybox
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/busybox:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.busybox }}
         command:
         - sh
         - -c

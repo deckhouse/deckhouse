@@ -55,9 +55,11 @@ spec:
         node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
+      imagePullSecrets:
+      - name: cert-manager-antiopa-registry
       containers:
         - name: cainjector
-          image: "quay.io/jetstack/cert-manager-cainjector:v0.7.1"
+          image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-cainjector:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}
           imagePullPolicy: IfNotPresent
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)

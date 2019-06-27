@@ -1,0 +1,1 @@
+FROM okmeter/okagent:latest

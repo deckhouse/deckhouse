@@ -42,6 +42,8 @@ spec:
       labels:
         name: okmeter
     spec:
+      imagePullSecrets:
+      - name: okmeter-antiopa-registry
       serviceAccountName: okmeter
       hostNetwork: true
       tolerations:
@@ -51,7 +53,7 @@ spec:
       {{- end }}
       containers:
       - name: okagent
-        image: okmeter/okagent:latest
+        image: {{ $.Values.global.modulesImages.registry }}/okmeter/okagent:{{ $.Values.global.modulesImages.tags.okmeter.okagent }}
         securityContext:
           privileged: true
         env:

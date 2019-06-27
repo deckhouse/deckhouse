@@ -45,9 +45,11 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
       {{- end }}
+      imagePullSecrets:
+      - name: dashboard-antiopa-registry
       containers:
       - name: dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.10.1
+        image: {{ $.Values.global.modulesImages.registry }}/dashboard/kubernetes-dashboard-amd64:{{ $.Values.global.modulesImages.tags.dashboard.kubernetesDashboardAmd64 }}
         resources:
           requests:
             cpu: "100m"
