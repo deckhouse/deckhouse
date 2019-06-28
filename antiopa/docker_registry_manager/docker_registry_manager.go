@@ -60,7 +60,7 @@ func Init(hostname string) (DockerRegistryManager, error) {
 	if RegistrySecretPath == "" {
 		RegistrySecretPath = DefaultRegistrySecretPath
 	}
-	rlog.Info("Load registry auths from %s dir", RegistrySecretPath)
+	rlog.Infof("Load registry auths from %s dir", RegistrySecretPath)
 
 	// Load json from file /etc/registrysecret/.dockercfg
 	if exists, err := utils_file.DirExists(RegistrySecretPath); !exists {

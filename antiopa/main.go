@@ -5,16 +5,22 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	"github.com/deckhouse/deckhouse/antiopa/kube_helper"
-	"github.com/deckhouse/deckhouse/antiopa/registry_watcher"
+	"github.com/romana/rlog"
 
 	"github.com/flant/shell-operator/pkg/executor"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 
 	operator "github.com/flant/addon-operator/pkg/addon-operator"
+
+	"github.com/deckhouse/deckhouse/antiopa/kube_helper"
+	"github.com/deckhouse/deckhouse/antiopa/registry_watcher"
 )
 
 const DefaultMetricsPrefix = "antiopa_"
+
+var AntiopaVersion = "dev"
+var AddonOperatorVersion = "dev"
+var ShellOperatorVersion = "dev"
 
 // Get image digest from kube, start RegistryManager routine and imageChanged handler.
 // Run addon-operator as a child process.
@@ -29,6 +35,9 @@ func main() {
 	go executor.Reap()
 
 	operator.InitHttpServer()
+
+	rlog.Infof("antiopa %s", AntiopaVersion)
+	rlog.Infof("addon-operator %s, shell-operator %s", AddonOperatorVersion, ShellOperatorVersion)
 
 	operator.MetricsPrefix = DefaultMetricsPrefix
 	operator.ConfigMapName = "antiopa"
