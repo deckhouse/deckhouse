@@ -16,7 +16,7 @@ git:
   - modules/*/README.md
 import:
 - artifact: antiopa
-  add: /go/bin/antiopa
+  add: /antiopa/antiopa
   to: /antiopa/antiopa
   before: setup
 ansible:
@@ -89,16 +89,16 @@ docker:
     GLOBAL_HOOKS_DIR: /antiopa/global-hooks
 ---
 artifact: antiopa
-from: golang:1.10-alpine3.9
+from: golang:1.12-alpine3.9
 git:
 - add: /antiopa
-  to: /go/src/github.com/deckhouse/deckhouse/antiopa
+  to: /antiopa
   excludePaths:
   - development
   stageDependencies:
     install:
-    - go-get-run
-    - go-get.sh
+    - go.mod
+    - go.sum
     buildArtifact:
     - "**/*.go"
     - go-build.sh
@@ -108,7 +108,11 @@ ansible:
   - command: rm -rf /var/cache/apk/*
 
   install:
-  - command: /go/src/github.com/deckhouse/deckhouse/antiopa/go-get.sh
+  - command: go get -v -d -t ./...
+    args:
+      chdir: /antiopa
 
   buildArtifact:
-  - command: /go/src/github.com/deckhouse/deckhouse/antiopa/go-build.sh
+  - command: /antiopa/go-build.sh pipeline-{{ env "CI_PIPELINE_ID" }}
+    args:
+      chdir: /antiopa
