@@ -3,20 +3,32 @@
   - record: node_ntp_offset_seconds:abs
     expr: abs(node_ntp_offset_seconds)
 
-  - alert: NodeNtpInsane
+  - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
     expr: (min by (node) (node_ntp_sanity)) == 0
-    for: 1m
+    for: 2h
     labels:
-      impact: critical
+      impact: marginal
       likelihood: certain
     annotations:
       polk_flant_com_markup_format: markdown
       description: |
-        Please, check the following values:
-        1. Absolute offset: {{ printf "node_ntp_offset_seconds:abs{node=\"%s\"}" $labels.node | query | first | value }}. Should be less than 0.001 seconds.
-        2. Root distance: {{ printf "(node_ntp_rtt_seconds{node=\"%s\"} + node_ntp_root_delay_seconds{node=\"%s\"}) / 2 + node_ntp_root_dispersion_seconds{node=\"%s\"}" $labels.node $labels.node $labels.node | query | first | value }}. Should be less than 3.46608 seconds.
-        3. Stratum: {{ printf "node_ntp_stratum{node=\"%s\"}" $labels.node | query | first | value }}. Should be less than 16.
-      summary: Node {{$labels.node}} is not sane
+        1. Please, check the NTP daemon's status by executing the following commands on the node:
+           * for ntpd - 'ntpq -p' or 'ntpdc -c sysinfo' or 'ntpdc -c sysstats'
+           * for chronyd - 'chronyc sources -v' or 'chronyc tracking' or 'chronyc sourcestats -v' or 'chronyc ntpdata'
+           * for systemd-timesyncd - 'timedatectl status' or 'systemctl status systemd-timesyncd'
+        2. Correct the time synchronization problems:
+           * restart NTP daemon:
+             - for ntpd - 'service ntp restart' or 'service ntpd restart' or 'systemctl restart ntp' or 'systemctl restart ntpd'
+             - for chronyd - 'systemctl restart chronyd'
+             - for systemd-timesyncd - 'systemctl restart systemd-timesyncd'
+           * correct network problems:
+             - provide availability to upstream time synchronization servers defined in the NTP daemon configuration file
+             - eliminate large packet loss and excessive latency to upstream time synchronization servers
+           * correct errors in the NTP daemon configuration file:
+             - for ntpd - '/etc/ntp.conf'
+             - for chronyd - '/etc/chrony.conf'
+             - for systemd-timesyncd - '/etc/systemd/timesyncd.conf'
+      summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long
 
   - alert: NodeTimeOutOfSync
     expr: max by (node) (abs(node_time_seconds - timestamp(node_time_seconds)) > 10)
