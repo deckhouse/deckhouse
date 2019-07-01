@@ -60,6 +60,7 @@ rules:
   - deployments
   - deployments/scale
   - statefulsets
+  - statefulsets/scale
   - replicasets
   - daemonsets
   verbs:
@@ -160,5 +161,6 @@ rules:
   - deployments/scale
   - replicasets/scale
   - replicationcontrollers/scale
+  - statefulsets/scale
   verbs:
   - "*"
