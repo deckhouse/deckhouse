@@ -48,7 +48,7 @@ spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: system-cluster-critical
 {{- end }}
-{{- if le (.Values.global.discovery.clusterMasterCount | int) 1 }}
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
