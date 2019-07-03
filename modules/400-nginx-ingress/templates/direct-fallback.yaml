@@ -36,14 +36,14 @@ metadata:
     app: direct-fallback
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: direct-fallback
   updatePolicy:
     updateMode: "Off"
     {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: direct-fallback

@@ -11,7 +11,7 @@ metadata:
     app: kubelet-eviction-thresholds-exporter
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: kubelet-eviction-thresholds-exporter
   updatePolicy:
@@ -24,7 +24,7 @@ spec:
         memory: 0.1Gi
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kubelet-eviction-thresholds-exporter

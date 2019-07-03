@@ -24,7 +24,7 @@ spec:
         memory: {{ .Values.prometheus.vpa.ksmMaxMemory | quote }}
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kube-state-metrics

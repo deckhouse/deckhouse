@@ -12,7 +12,7 @@ metadata:
     app: kube-prometheus-kube-master-proxy
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: kube-prometheus-kube-master-proxy
   updatePolicy:
@@ -25,7 +25,7 @@ spec:
         memory: 0.02Gi
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-prometheus-kube-master-proxy

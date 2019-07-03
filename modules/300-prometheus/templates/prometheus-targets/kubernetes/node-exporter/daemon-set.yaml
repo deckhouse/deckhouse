@@ -11,7 +11,7 @@ metadata:
     app: node-exporter
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: node-exporter
   updatePolicy:
@@ -28,7 +28,7 @@ spec:
         memory: 0.02Gi
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-exporter

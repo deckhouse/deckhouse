@@ -19,7 +19,7 @@ spec:
 {{- end }}
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: extended-monitoring
   namespace: kube-prometheus

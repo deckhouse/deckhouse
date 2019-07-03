@@ -21,7 +21,7 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: madison-proxy-{{ . | sha256sum }}

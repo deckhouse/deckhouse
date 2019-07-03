@@ -11,7 +11,7 @@ metadata:
     app: {{ .Chart.Name }}
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: node-problem-detector
   updatePolicy:
