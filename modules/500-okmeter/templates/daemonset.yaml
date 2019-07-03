@@ -11,7 +11,7 @@ metadata:
     app: okmeter
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: okmeter
   updatePolicy:
@@ -24,7 +24,7 @@ spec:
         memory: 1Gi
 {{- end }}
 ---
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: okmeter

@@ -30,7 +30,7 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vpa-admission-controller
@@ -40,6 +40,9 @@ metadata:
     module: {{ $.Chart.Name }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
+  selector:
+    matchLabels:
+      app: vpa-admission-controller
   template:
     metadata:
       labels:

@@ -19,7 +19,7 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dashboard-oauth2-proxy

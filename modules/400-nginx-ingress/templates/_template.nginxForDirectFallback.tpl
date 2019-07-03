@@ -16,14 +16,14 @@ metadata:
     app: {{ $name }}
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: {{ $name }}
   updatePolicy:
     updateMode: "Off"
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ $name }}

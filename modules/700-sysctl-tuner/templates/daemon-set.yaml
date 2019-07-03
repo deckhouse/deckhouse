@@ -11,14 +11,14 @@ metadata:
     app: sysctl-tuner
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: sysctl-tuner
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:

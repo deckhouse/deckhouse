@@ -11,7 +11,7 @@ metadata:
     app: ping-exporter
 spec:
   targetRef:
-    apiVersion: "extensions/v1beta1"
+    apiVersion: "apps/v1"
     kind: DaemonSet
     name: ping-exporter
   updatePolicy:
@@ -24,7 +24,7 @@ spec:
         memory: 0.05Gi
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ping-exporter
@@ -38,6 +38,9 @@ metadata:
 spec:
   updateStrategy:
     type: RollingUpdate
+  selector:
+    matchLabels:
+      name: ping-exporter
   template:
     metadata:
       labels:

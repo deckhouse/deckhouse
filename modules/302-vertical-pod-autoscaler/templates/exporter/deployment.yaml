@@ -17,7 +17,7 @@ spec:
     updateMode: "Auto"
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: vpa-exporter
   namespace: kube-system

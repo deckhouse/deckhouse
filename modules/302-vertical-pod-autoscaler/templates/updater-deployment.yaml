@@ -30,7 +30,7 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vpa-updater
@@ -40,6 +40,9 @@ metadata:
     module: {{ $.Chart.Name }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-updater
   template:
     metadata:
       labels:
