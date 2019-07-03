@@ -218,6 +218,38 @@ spec:
       - "*.domain.com"
 ```
 
+### Как заказать selfsigned сертификат
+
+Все еще проще, чем с LE
+Просто меняем `letsencrypt` на `selfsigned`
+
+```yaml
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: example-com                          # имя сертификата, через него потом можно смотреть статус
+  namespace: default
+spec:
+  secretName: example-com-tls                # название секрета, в который положить приватный ключ и сертификат
+  issuerRef:
+    kind: ClusterIssuer                      # ссылка на "выдаватель" сертификатов, см. подробнее ниже
+    name: selfsigned
+  commonName: example.com                    # основной домен сертификата
+  dnsNames:                                  # дополнительыне домены сертификата, указывать не обязательно
+  - www.example.com
+  - admin.example.com
+  acme:
+    config:
+    - http01:
+        ingressClass: nginx                  # через какой ingress controller проходить chalenge
+      domains:
+      - example.com                          # список доменов, для которых проходить chalenge через этот
+      - www.example.com                      # ingress controller
+    - http01:
+        ingressClass: nginx-aws-http
+      domains:
+      - admin.example.com                    # проходит chalenge через дополнительный ingress controller
+```
 
 ### Как посмотреть состояние сертификата?
 
