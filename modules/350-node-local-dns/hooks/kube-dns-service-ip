@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+   "beforeHelm": 10,
+   "onKubernetesEvent": [
+      {
+         "kind": "Service",
+         "name": "kube-dns",
+         "event": ["add", "update"],
+         "namespaceSelector": {
+            "matchNames": [
+               "kube-system"
+            ]
+         },
+         "jqFilter": ".spec.clusterIP"
+      }
+   ]
+}
+EOF
+}
+
+function __main__() {
+    kube_dns_service_ip=$(kubectl get services -n kube-system kube-dns -o=jsonpath='{.spec.clusterIP}')
+    values::set nodeLocalDns.clusterDnsIP "$kube_dns_service_ip"
+}
+
+hook::run "$@"
