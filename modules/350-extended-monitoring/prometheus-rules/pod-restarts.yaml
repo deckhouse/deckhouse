@@ -1,0 +1,34 @@
+- name: kubernetes.extended-monitoring.pod-restarts
+  rules:
+  - alert: NumberOfPodRestartsIsTooHigh
+    expr: |
+      max by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total[1h]))
+      > on (namespace, pod)
+      max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-restarts-1h"})
+    for: 5m
+    labels:
+      impact: critical
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Данный алерт говорит о том, что контейнер {{$labels.namespace}}/{{$labels.pod}}/{{$labels.container}} перезапустился уже более 5 раз за последний час.
+        Что делать?
+        * Посмотреть причину частых рестартов: `kubectl -n {{$labels.namespace}} describe pod {{$labels.pod}}`
+      summary: Контейнер {{$labels.namespace}}/{{$labels.pod}}/{{$labels.container}} перезапустился уже более 5 раз за последний час.
+  - alert: NumberOfPodRestartsIsTooHigh
+    expr: |
+      max by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total[24h]))
+      > on (namespace, pod)
+      max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-restarts-24h"})
+    for: 10m
+    labels:
+      impact: critical
+      likelihood: possible
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Данный алерт говорит о том, что контейнер {{$labels.namespace}}/{{$labels.pod}}/{{$labels.container}} перезапустился уже более 5 раз за последние сутки.
+        Что делать?
+        * Посмотреть причину частых рестартов: `kubectl -n {{$labels.namespace}} describe pod {{$labels.pod}}`
+      summary: Контейнер {{$labels.namespace}}/{{$labels.pod}}/{{$labels.container}} перезапустился уже более 5 раз за сутки.
