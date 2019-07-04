@@ -28,6 +28,8 @@ class Annotated(ABC):
                             {name.replace(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, ""): value})
             else:
                 self.enabled = False
+        else:
+            self.thresholds = copy.deepcopy(self.default_thresholds)
 
     @classmethod
     def list_threshold_annotated_objects(cls, namespace):
@@ -81,7 +83,6 @@ class Annotated(ABC):
         pass
 
 
-# TODO: Stuck Apps in Controller
 class AnnotatedDeployment(Annotated):
     kind = "Deployment"
     api = kubernetes.client.AppsV1Api()
@@ -135,7 +136,9 @@ class AnnotatedPod(Annotated):
         "disk-inodes-warning": 85,
         "disk-inodes-critical": 90,
         "container-throttling-warning": 25,
-        "container-throttling-critical": 50
+        "container-throttling-critical": 50,
+        "container-restarts-1h": 5,
+        "container-restarts-24h": 5,
     }
 
 
@@ -189,7 +192,7 @@ class GetHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/ready":
-            api_response = apis.get_api_versions()
+            apis.get_api_versions()
             self.send_response(200)
             self.end_headers()
         elif self.path == "/healthz":

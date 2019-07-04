@@ -60,6 +60,8 @@
 | container-throttling-critical | int (percent) | 50             |
 | container-cores-throttling-warning  | int (cores) |              |
 | container-cores-throttling-critical | int (cores) |              |
+| container-restarts-1h         | int (count)   | 5              |
+| container-restarts-24h        | int (count)   | 5              |
 
 > ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
 
