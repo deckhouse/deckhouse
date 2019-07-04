@@ -30,7 +30,10 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: https-metrics
+  - name: coredns-metrics
+    port: 9254
+    protocol: TCP
+  - name: sidecar-metrics
     port: 9255
     protocol: TCP
   selector:
@@ -51,8 +54,8 @@ spec:
       k8s-app: node-local-dns
   template:
     metadata:
-       labels:
-          k8s-app: node-local-dns
+      labels:
+        k8s-app: node-local-dns
     spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: system-node-critical
@@ -62,26 +65,72 @@ spec:
       dnsPolicy: Default
       tolerations:
       - operator: Exists
+      initContainers:
+      - name: init
+        image: {{ .Values.global.modulesImages.registry }}/node-local-dns/sidecar:{{ .Values.global.modulesImages.tags.nodeLocalDns.sidecar }}
+        securityContext:
+          privileged: true
+        command: ["/init.sh"]
+        env:
+        - name: KUBE_CLUSTER_DOMAIN
+          value: {{ .Values.global.discovery.clusterDomain }}
+        - name: KUBE_DNS_SVC_IP
+          value: {{ .Values.nodeLocalDns.clusterDnsIP }}
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
       containers:
-      - name: node-cache
-        image: {{ .Values.global.modulesImages.registry }}/node-local-dns/node-local-dns:{{ .Values.global.modulesImages.tags.nodeLocalDns.nodeLocalDns }}
+      - name: sidecar
+        image: {{ .Values.global.modulesImages.registry }}/node-local-dns/sidecar:{{ .Values.global.modulesImages.tags.nodeLocalDns.sidecar }}
+        securityContext:
+          privileged: true
+        args:
+        - "start"
+        - "--listen-address=127.0.0.1:9255"
+        env:
+        - name: KUBE_CLUSTER_DOMAIN
+          value: {{ .Values.global.discovery.clusterDomain }}
+        - name: KUBE_DNS_SVC_IP
+          value: {{ .Values.nodeLocalDns.clusterDnsIP }}
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        readinessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /metrics
+            port: 9255
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /metrics
+            port: 9255
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+          readOnly: false
+        - name: config-volume
+          mountPath: /etc/coredns
+      - name: coredns
+        image: {{ .Values.global.modulesImages.registry }}/node-local-dns/coredns:{{ .Values.global.modulesImages.tags.nodeLocalDns.coredns }}
+        args:
+        - "-conf"
+        - "/etc/coredns/Corefile"
+        env:
+        - name: KUBE_DNS_SVC_IP
+          value: {{ .Values.nodeLocalDns.clusterDnsIP }}
         resources:
           requests:
             cpu: 25m
             memory: 30Mi
-        args:
-        - "--kube-proxy-mode"
-        - {{ .Values.nodeLocalDns.kubeProxyMode | quote }}
-        - "--conf"
-        - "/etc/coredns/Corefile"
-        - "--local-ip"
-        - "169.254.20.10"
-        - "--local-port"
-        - "53"
-        - "--cluster-dns-ip"
-        - {{ .Values.nodeLocalDns.clusterDnsIP | quote }}
-        - "--cluster-dns-port"
-        - "53"
         securityContext:
           privileged: true
         ports:
@@ -91,27 +140,44 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
-        - containerPort: 9253
-          name: metrics
+        - containerPort: 8080
+          name: health
           protocol: TCP
         livenessProbe:
-          httpGet:
-            host: "169.254.20.10"
-            path: /health
-            port: 8080
-          initialDelaySeconds: 60
-          timeoutSeconds: 5
+          exec:
+            command:
+            - /health.sh
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 7
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
         - name: config-volume
           mountPath: /etc/coredns
-      - name: prometheus-auth-proxy
+      - name: prometheus-auth-proxy-coredns
+        image: {{ $.Values.global.modulesImages.registry }}/node-local-dns/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.nodeLocalDns.kubePrometheusAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):9254"
+        - "--proxy-pass=http://127.0.0.1:9254/metrics"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 9254
+          name: coredns-proxy
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+      - name: prometheus-auth-proxy-sidecar
         image: {{ $.Values.global.modulesImages.registry }}/node-local-dns/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.nodeLocalDns.kubePrometheusAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):9255"
-        - "--proxy-pass=http://169.254.20.10:9253/metrics"
+        - "--proxy-pass=http://127.0.0.1:9255/metrics"
         env:
         - name: MY_POD_IP
           valueFrom:
@@ -119,7 +185,7 @@ spec:
               fieldPath: status.podIP
         ports:
         - containerPort: 9255
-          name: prom-proxy
+          name: sidecar-proxy
         resources:
           requests:
             memory: 20Mi
@@ -130,10 +196,6 @@ spec:
           path: /run/xtables.lock
           type: FileOrCreate
       - name: config-volume
-        configMap:
-          name: node-local-dns
-          items:
-          - key: Corefile
-            path: Corefile
+        emptyDir: {}
       imagePullSecrets:
       - name: node-local-dns-antiopa-registry

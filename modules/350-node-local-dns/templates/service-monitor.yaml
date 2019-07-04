@@ -16,13 +16,23 @@ spec:
     matchNames:
     - kube-system
   endpoints:
-  - port: https-metrics
+  - port: coredns-metrics
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
-    scrapeTimeout: 10s
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+  - port: sidecar-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop

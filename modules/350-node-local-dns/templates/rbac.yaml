@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-local-dns
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-local-dns:sidecar
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+rules:
+- apiGroups: [""]
+  resources: ["endpoints"]
+  resourceNames: ["kube-dns"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-local-dns:sidecar
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+subjects:
+- kind: ServiceAccount
+  name: node-local-dns
+  namespace: kube-system
+roleRef:
+  kind: Role
+  name: node-local-dns:sidecar
+  apiGroup: rbac.authorization.k8s.io

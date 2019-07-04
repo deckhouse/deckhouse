@@ -16,8 +16,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1554742990419,
+  "id": 41,
+  "iteration": 1562258221206,
   "links": [],
   "panels": [
     {
@@ -65,7 +65,7 @@
       "lines": false,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -82,7 +82,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -90,7 +90,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -170,7 +170,7 @@
       "lines": true,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -181,7 +181,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -249,15 +249,17 @@
         "y": 8
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 97,
       "legend": {
         "show": false
       },
       "links": [],
+      "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\"}[$__interval_rv])) by (le)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -320,7 +322,7 @@
       "lines": false,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -338,7 +340,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -347,7 +349,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -427,7 +429,7 @@
       "lines": true,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -438,7 +440,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -505,15 +507,17 @@
         "y": 20
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 98,
       "legend": {
         "show": false
       },
       "links": [],
+      "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\"}[$__interval_rv])) by (le)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -574,7 +578,7 @@
       "lines": true,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -585,7 +589,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\"}[$__interval_rv])) by (node)\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\"}[$__interval_rv])) by (node) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\"}[$__interval_rv])) by (node) \n)",
+          "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) \n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -664,7 +668,7 @@
       "lines": false,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -675,7 +679,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\"}[$__interval_rv])) by (node)",
+          "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -755,7 +759,7 @@
       "lines": false,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -781,7 +785,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -789,7 +793,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -868,14 +872,14 @@
       "lines": false,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1554742990419,
+      "repeatIteration": 1562258221206,
       "repeatPanelId": 36,
       "scopedVars": {
         "rcode": {
@@ -896,7 +900,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -904,7 +908,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -982,7 +986,7 @@
       "lines": false,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -993,7 +997,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "TCP",
@@ -1001,7 +1005,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "UDP",
@@ -1090,7 +1094,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1108,7 +1112,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\"}[$__interval_rv])) by (type)",
+              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -1188,7 +1192,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1206,7 +1210,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\"}[5m])) by (rcode)",
+              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[5m])) by (rcode)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{rcode}}",
@@ -1285,7 +1289,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1309,7 +1313,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\"}[$__interval_rv])) by (to)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1318,7 +1322,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1397,7 +1401,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1421,7 +1425,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1430,7 +1434,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1508,7 +1512,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1526,7 +1530,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP",
@@ -1534,7 +1538,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP",
@@ -1610,7 +1614,7 @@
           "lines": true,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1628,7 +1632,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\"}[$__interval_rv]))\n)",
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "",
@@ -1707,7 +1711,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1731,7 +1735,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\"}[$__interval_rv])) by (type)",
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -1739,7 +1743,7 @@
               "step": 40
             },
             {
-              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1815,7 +1819,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -1839,7 +1843,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\"}[$__interval_rv])) by (zone)",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (zone)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{zone}}",
@@ -1847,7 +1851,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1915,12 +1919,14 @@
             "y": 71
           },
           "heatmap": {},
+          "hideZeroBuckets": false,
           "highlightCards": true,
           "id": 18,
           "legend": {
             "show": false
           },
           "links": [],
+          "reverseYBuckets": false,
           "scopedVars": {
             "node": {
               "selected": false,
@@ -1930,7 +1936,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -1981,12 +1987,14 @@
             "y": 78
           },
           "heatmap": {},
+          "hideZeroBuckets": false,
           "highlightCards": true,
           "id": 20,
           "legend": {
             "show": false
           },
           "links": [],
+          "reverseYBuckets": false,
           "scopedVars": {
             "node": {
               "selected": false,
@@ -1996,7 +2004,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -2029,6 +2037,13 @@
         }
       ],
       "repeat": "node",
+      "scopedVars": {
+        "node": {
+          "selected": false,
+          "text": "kube-c-1",
+          "value": "kube-c-1"
+        }
+      },
       "title": "Node $node",
       "type": "row"
     },
@@ -2040,7 +2055,7 @@
         "x": 0,
         "y": 40
       },
-      "id": 100,
+      "id": 137,
       "panels": [
         {
           "aliasColors": {},
@@ -2056,9 +2071,440 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 87
+            "y": 40
           },
-          "id": 113,
+          "id": 138,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 12,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests (by qtype)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 40
+          },
+          "id": 139,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 5,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[5m])) by (rcode)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Responses (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 47
+          },
+          "id": 140,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 47,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (to)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{to}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by upstream)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 47
+          },
+          "id": 141,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 49,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 54
+          },
+          "id": 142,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2079,11 +2525,1950 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 135,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "TCP",
+              "refId": "C",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "UDP",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "TCP/UDP requests ratio",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "logBase": 1,
+              "max": "1",
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 57
+          },
+          "id": 143,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 80,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Cache hit rate",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 57
+          },
+          "id": 144,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 81,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Cache size",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 64
+          },
+          "id": 145,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 2,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (zone)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{zone}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests (by zone)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "datasource": "$ds_prometheus",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 71
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 146,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 18,
+          "repeatedByRow": true,
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Request duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": true
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 78
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 147,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 20,
+          "repeatedByRow": true,
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 38,
+      "scopedVars": {
+        "node": {
+          "selected": false,
+          "text": "kube-b-1",
+          "value": "kube-b-1"
+        }
+      },
+      "title": "Node $node",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 148,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 40
+          },
+          "id": 149,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 12,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests (by qtype)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 40
+          },
+          "id": 150,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 5,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[5m])) by (rcode)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Responses (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 47
+          },
+          "id": 151,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 47,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (to)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{to}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by upstream)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 47
+          },
+          "id": 152,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 49,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 54
+          },
+          "id": 153,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 135,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "TCP",
+              "refId": "C",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "UDP",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "TCP/UDP requests ratio",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "logBase": 1,
+              "max": "1",
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 57
+          },
+          "id": 154,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 80,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Cache hit rate",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 57
+          },
+          "id": 155,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 81,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Cache size",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 64
+          },
+          "id": 156,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 2,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (zone)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{zone}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests (by zone)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "datasource": "$ds_prometheus",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 71
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 157,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 18,
+          "repeatedByRow": true,
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Request duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": true
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 78
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 158,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 20,
+          "repeatedByRow": true,
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 38,
+      "scopedVars": {
+        "node": {
+          "selected": false,
+          "text": "kube-a-1",
+          "value": "kube-a-1"
+        }
+      },
+      "title": "Node $node",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 100,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 43
+          },
+          "id": 113,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "192.168.0.10:53",
-              "value": "192.168.0.10:53"
+              "text": "10.244.2.146:53",
+              "value": "10.244.2.146:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{node}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 43
+          },
+          "id": 114,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "10.244.2.146:53",
+              "value": "10.244.2.146:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 50
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 115,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "10.244.2.146:53",
+              "value": "10.244.2.146:53"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": "upstream",
+      "scopedVars": {
+        "upstream": {
+          "selected": false,
+          "text": "10.244.2.146:53",
+          "value": "10.244.2.146:53"
+        }
+      },
+      "title": "Upstream $upstream",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 159,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 87
+          },
+          "id": 160,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 113,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "10.244.2.148:53",
+              "value": "10.244.2.148:53"
             }
           },
           "seriesOverrides": [
@@ -2168,7 +4553,7 @@
             "x": 12,
             "y": 87
           },
-          "id": 114,
+          "id": 161,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2189,11 +4574,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 114,
+          "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "192.168.0.10:53",
-              "value": "192.168.0.10:53"
+              "text": "10.244.2.148:53",
+              "value": "10.244.2.148:53"
             }
           },
           "seriesOverrides": [
@@ -2284,16 +4672,19 @@
           },
           "heatmap": {},
           "highlightCards": true,
-          "id": 115,
+          "id": 162,
           "legend": {
             "show": false
           },
           "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 115,
+          "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "192.168.0.10:53",
-              "value": "192.168.0.10:53"
+              "text": "10.244.2.148:53",
+              "value": "10.244.2.148:53"
             }
           },
           "targets": [
@@ -2330,13 +4721,1302 @@
           "yBucketSize": null
         }
       ],
-      "repeat": "upstream",
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 100,
+      "scopedVars": {
+        "upstream": {
+          "selected": false,
+          "text": "10.244.2.148:53",
+          "value": "10.244.2.148:53"
+        }
+      },
+      "title": "Upstream $upstream",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 163,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 87
+          },
+          "id": 164,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 113,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.100.100:53",
+              "value": "213.133.100.100:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{node}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 87
+          },
+          "id": 165,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 114,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.100.100:53",
+              "value": "213.133.100.100:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 94
+          },
+          "heatmap": {},
+          "highlightCards": true,
+          "id": 166,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 115,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.100.100:53",
+              "value": "213.133.100.100:53"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 100,
+      "scopedVars": {
+        "upstream": {
+          "selected": false,
+          "text": "213.133.100.100:53",
+          "value": "213.133.100.100:53"
+        }
+      },
+      "title": "Upstream $upstream",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "id": 167,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 87
+          },
+          "id": 168,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 113,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.98.98:53",
+              "value": "213.133.98.98:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{node}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 87
+          },
+          "id": 169,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 114,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.98.98:53",
+              "value": "213.133.98.98:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 94
+          },
+          "heatmap": {},
+          "highlightCards": true,
+          "id": 170,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 115,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.98.98:53",
+              "value": "213.133.98.98:53"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 100,
+      "scopedVars": {
+        "upstream": {
+          "selected": false,
+          "text": "213.133.98.98:53",
+          "value": "213.133.98.98:53"
+        }
+      },
+      "title": "Upstream $upstream",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "id": 171,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 87
+          },
+          "id": 172,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 113,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.99.99:53",
+              "value": "213.133.99.99:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{node}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 87
+          },
+          "id": 173,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 114,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.99.99:53",
+              "value": "213.133.99.99:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 94
+          },
+          "heatmap": {},
+          "highlightCards": true,
+          "id": 174,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 115,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "213.133.99.99:53",
+              "value": "213.133.99.99:53"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 100,
+      "scopedVars": {
+        "upstream": {
+          "selected": false,
+          "text": "213.133.99.99:53",
+          "value": "213.133.99.99:53"
+        }
+      },
+      "title": "Upstream $upstream",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 175,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 87
+          },
+          "id": 176,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 113,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "8.8.8.8:53",
+              "value": "8.8.8.8:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{node}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 87
+          },
+          "id": 177,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 114,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "8.8.8.8:53",
+              "value": "8.8.8.8:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateSpectral",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 94
+          },
+          "heatmap": {},
+          "highlightCards": true,
+          "id": 178,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562258221206,
+          "repeatPanelId": 115,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "8.8.8.8:53",
+              "value": "8.8.8.8:53"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562258221206,
+      "repeatPanelId": 100,
+      "scopedVars": {
+        "upstream": {
+          "selected": false,
+          "text": "8.8.8.8:53",
+          "value": "8.8.8.8:53"
+        }
+      },
       "title": "Upstream $upstream",
       "type": "row"
     }
   ],
-  "refresh": false,
-  "schemaVersion": 16,
+  "refresh": "30s",
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2347,7 +6027,9 @@
           "value": "default"
         },
         "hide": 0,
+        "includeAll": false,
         "label": "Prometheus",
+        "multi": false,
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
@@ -2451,7 +6133,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
