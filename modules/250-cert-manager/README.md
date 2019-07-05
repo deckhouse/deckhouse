@@ -18,7 +18,7 @@
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"cert-manager"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-*  `cloudflareGlobalAPIKey` — Cloudflare Global API key для управления DNS записями (Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат, находятся под управлением cert-manager у DNS провайдера Cloudflare. Проверка происходит добавлением специальных TXT записей для домена [ACME DNS01 Challenge Provider](https://github.com/jetstack/cert-manager/blob/master/docs/reference/issuers/acme/dns01.rst))
+*  `cloudflareGlobalAPIKey` — Cloudflare Global API key для управления DNS записями (Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат, находятся под управлением `cert-manager` у DNS провайдера Cloudflare. Проверка происходит добавлением специальных TXT записей для домена [ACME DNS01 Challenge Provider](https://github.com/jetstack/cert-manager/blob/master/docs/reference/issuers/acme/dns01.rst))
 *  `cloudflareEmail` — Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare
 *  `route53AccessKeyID` — Access Key ID пользователя с необходимыми правами [Amazon Route53 IAM Policy](https://cert-manager.readthedocs.io/en/latest/reference/issuers/acme/dns01.html#amazon-route53) для управления доменными записями домена
 *  `route53SecretAccessKey` — Secret Access Key пользователя с необходимыми правами для управления доменными записями домена
@@ -71,157 +71,156 @@ spec:
 ```
 
 При этом:
-* создается отдельный ingress'ресурс на время прохождения chalenge'а (соответственно аутентификация и whitelist основного ingress'а не будут мешать),
-* можно заказать один сертификат на несколько ingress ресурсов (и он не отвалится при удалении того, в котором была аннотация `tls-acme`),
+* создается отдельный Ingress-ресурс на время прохождения chalenge'а (соответственно аутентификация и whitelist основного Ingress не будут мешать),
+* можно заказать один сертификат на несколько Ingress-ресурсов (и он не отвалится при удалении того, в котором была аннотация `tls-acme`),
 * можно заказать сертификат с дополнительными именами (как в примере),
-* можно валидировать разные домены, входящие в один сертификат, через разные ingress контроллеры.
+* можно валидировать разные домены, входящие в один сертификат, через разные Ingress-контроллеры.
 
 Подробнее можно прочитать [здесь](https://github.com/jetstack/cert-manager/blob/master/docs/user-guides/acme-http-validation.md).
 
-### Как заказать wildcard сертификат с DNS в cloudflare
+### Как заказать wildcard сертификат с DNS в Cloudflare?
 
-1. Получим Global API Key и Email Address:
-* Заходим на страницу: https://dash.cloudflare.com/profile
-* В самом верху страницы написана ваша почта под `Email Address`
-* В самом низу страницы жмем на кнопку "View" напротив `Global API Key`
+1. Получим `Global API Key` и `Email Address`:
+   * Заходим на страницу: https://dash.cloudflare.com/profile
+   * В самом верху страницы написана ваша почта под `Email Address`
+   * В самом низу страницы жмем на кнопку "View" напротив `Global API Key`
 
-В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
+   В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
 
-2. Редактируем конфигурационный configmap antiop'ы добавляя такую секцию:
-```
-kubectl -n antiopa edit cm antiopa
-```
+2. Редактируем конфигурационный ConfigMap Antiopa, добавляя такую секцию:
+   ```
+   kubectl -n antiopa edit cm antiopa
+   ```
 
-```yaml
-certManager: |
-  cloudflareGlobalAPIKey: APIkey
-  cloudflareEmail: some@mail.somedomain
-```
+   ```yaml
+   certManager: |
+     cloudflareGlobalAPIKey: APIkey
+     cloudflareEmail: some@mail.somedomain
+   ```
 
-После чего  antiopa автоматически создаст clusterissuer и secret для cloudflare в namespace kube-cert-manager.
+   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `kube-cert-manager`.
 
-3. Создаем Certificate с проверкой с помощью провайдера cloudflare. Данная возможность появится только при указании настройки cloudflareGlobalAPIKey и cloudflareEmail в antiop'е:
+3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Antiopa:
 
-```yaml
-apiVersion: certmanager.k8s.io/v1alpha1
-kind: Certificate
-metadata:
-  name: domain-wildcard
-  namespace: app-namespace
-spec:
-  secretName: tls-wildcard
-  issuerRef:
-    name: domain-wildcard
-    kind: ClusterIssuer
-  commonName: "*.domain.com"
-  dnsNames:
-  - "*.domain.com"
-  acme:
-    config:
-    - dns01:
-        provider: cloudflare
-      domains:
-      - "*.domain.com"
-```
+   ```yaml
+   apiVersion: certmanager.k8s.io/v1alpha1
+   kind: Certificate
+   metadata:
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     secretName: tls-wildcard
+     issuerRef:
+       name: domain-wildcard
+       kind: ClusterIssuer
+     commonName: "*.domain.com"
+     dnsNames:
+     - "*.domain.com"
+     acme:
+       config:
+       - dns01:
+           provider: cloudflare
+         domains:
+         - "*.domain.com"
+   ```
 
-4. Создаем ingress:
+4. Создаем Ingress:
 
-```yaml
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-  name: domain-wildcard
-  namespace: app-namespace
-spec:
-  rules:
-  - host: "*.domain.com"
-    http:
-      paths:
-      - backend:
-          serviceName: svc-web
-          servicePort: 80
-        path: /
-  tls:
-  - hosts:
-    - "*.domain.com"
-    secretName: tls-wildcard
-```
+   ```yaml
+   apiVersion: extensions/v1beta1
+   kind: Ingress
+   metadata:
+     annotations:
+       kubernetes.io/ingress.class: nginx
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     rules:
+     - host: "*.domain.com"
+       http:
+         paths:
+         - backend:
+             serviceName: svc-web
+             servicePort: 80
+           path: /
+     tls:
+     - hosts:
+       - "*.domain.com"
+       secretName: tls-wildcard
+   ```
 
-### Как заказать wildcard сертификат с DNS в Route53
+### Как заказать wildcard сертификат с DNS в Route53?
 
-1. Создаем пользователя с необходимыми правами
+1. Создаем пользователя с необходимыми правами.
 
-* Заходим на страницу управления политиками: https://console.aws.amazon.com/iam/home?region=us-east-2#/policies . Создаем политику с такими правами:
+   * Заходим на страницу управления политиками: https://console.aws.amazon.com/iam/home?region=us-east-2#/policies . Создаем политику с такими правами:
 
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "route53:GetChange",
-            "Resource": "arn:aws:route53:::change/*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": "route53:ChangeResourceRecordSets",
-            "Resource": "arn:aws:route53:::hostedzone/*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": "route53:ListHostedZonesByName",
-            "Resource": "*"
-        }
-    ]
-}
-```
+   ```json
+   {
+       "Version": "2012-10-17",
+       "Statement": [
+           {
+               "Effect": "Allow",
+               "Action": "route53:GetChange",
+               "Resource": "arn:aws:route53:::change/*"
+           },
+           {
+               "Effect": "Allow",
+               "Action": "route53:ChangeResourceRecordSets",
+               "Resource": "arn:aws:route53:::hostedzone/*"
+           },
+           {
+               "Effect": "Allow",
+               "Action": "route53:ListHostedZonesByName",
+               "Resource": "*"
+           }
+       ]
+   }
+   ```
 
-* Заходим на страницу управления пользоватяли: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользоватяли с созданной ранее политикой.
+   * Заходим на страницу управления пользоватяли: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользоватяли с созданной ранее политикой.
 
-2. Редактируем конфигурационный ConfigMap antiop'ы, добавляя такую секцию:
+2. Редактируем ConfigMap Antiopa, добавляя такую секцию:
 
-```
-kubectl -n antiopa edit cm antiopa
-```
+   ```
+   kubectl -n antiopa edit cm antiopa
+   ```
 
-```yaml
-certManager: |
-  route53AccessKeyID: AKIABROTAITAJMPASA4A
-  route53SecretAccessKey: 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
-```
+   ```yaml
+   certManager: |
+     route53AccessKeyID: AKIABROTAITAJMPASA4A
+     route53SecretAccessKey: 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
+   ```
 
-После чего antiopa автоматически создаст ClusterIssuer и Secret для route53 в Namespace kube-cert-manager.
+   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для route53 в namespace `kube-cert-manager`.
 
-3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек route53AccessKeyID и route53SecretAccessKey в antiop'е:
+3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в Antiopa:
 
-```yaml
-apiVersion: certmanager.k8s.io/v1alpha1
-kind: Certificate
-metadata:
-  name: domain-wildcard
-  namespace: app-namespace
-spec:
-  secretName: tls-wildcard
-  issuerRef:
-    name: route53
-    kind: ClusterIssuer
-  commonName: "*.domain.com"
-  dnsNames:
-  - "*.domain.com"
-  acme:
-    config:
-    - dns01:
-        provider: route53
-      domains:
-      - "*.domain.com"
-```
+   ```yaml
+   apiVersion: certmanager.k8s.io/v1alpha1
+   kind: Certificate
+   metadata:
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     secretName: tls-wildcard
+     issuerRef:
+       name: route53
+       kind: ClusterIssuer
+     commonName: "*.domain.com"
+     dnsNames:
+     - "*.domain.com"
+     acme:
+       config:
+       - dns01:
+           provider: route53
+         domains:
+         - "*.domain.com"
+   ```
 
-### Как заказать selfsigned сертификат
+### Как заказать selfsigned сертификат?
 
-Все еще проще, чем с LE
-Просто меняем `letsencrypt` на `selfsigned`
+Все еще проще, чем с LE. Просто меняем `letsencrypt` на `selfsigned`:
 
 ```yaml
 apiVersion: certmanager.k8s.io/v1alpha1
@@ -305,11 +304,11 @@ default            example-com                     13m
 
 ### Работает ли старая аннотация tls-acme?
 
-Да, работает! Специальный компонент (`cert-manager-ingress-shim`) видит эти аннотации и на их основании автоматически создает ресурсы Certificate (в тех же namespace, что и ingress ресурсы с аннотациями).
+Да, работает! Специальный компонент (`cert-manager-ingress-shim`) видит эти аннотации и на их основании автоматически создает ресурсы `Certificate` (в тех же namespace, что и Ingress-ресурсы с аннотациями).
 
-**Важно!** При использовании аннотации, Certificate создается "прилинкованным" к существующему ingress ресурсу, и для прохождения chalenge НЕ создается отдельный ingress, а вносятся дополнительные записи в существующий. Это означает, что если на основном ingress'е настроенна аутентификация или whitelist — ничего не выйдет. Лучше не использовать аннотацию и переходить на Certificate.
+**Важно!** При использовании аннотации, Certificate создается "прилинкованным" к существующему Ingress-ресурсу, и для прохождения chalenge НЕ создается отдельный Ingress, а вносятся дополнительные записи в существующий. Это означает, что если на основном Ingress'е настроена аутентификация или whitelist — ничего не выйдет. Лучше не использовать аннотацию и переходить на Certificate.
 
-**Важно!** Если перешли с аннотации на Certificate, то нужно удалить Certificate который был создан по аннотации, иначе, по обоим Certificate будет обновляться один secret (это может привести к попаданию на лимиты letsencrypt).
+**Важно!** Если перешли с аннотации на Certificate, то нужно удалить Certificate который был создан по аннотации, иначе, по обоим Certificate будет обновляться один Secret (это может привести к попаданию на лимиты Let’s Encrypt).
 
 ```yaml
 kind: Ingress
@@ -354,12 +353,12 @@ spec:
 
 #### CAA record does not match issuer
 
-Если cert-manager не может заказать сертификаты с ошибкой:
+Если `cert-manager` не может заказать сертификаты с ошибкой:
 
 ```
 CAA record does not match issuer
 ```
 
 То необходимо проверить `CAA (Certificate Authority Authorization)` DNS запись у домена, для которого заказывается сертификат.
-Если вы хотите использовать LetsEncrypt сертификаты, то у домена должна быть CAA запись: `issue "letsencrypt.org"`.
+Если вы хотите использовать Let’s Encrypt сертификаты, то у домена должна быть CAA запись: `issue "letsencrypt.org"`.
 Подробнее про CAA можно почитать [тут](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) и [тут](https://letsencrypt.org/docs/caa/).
