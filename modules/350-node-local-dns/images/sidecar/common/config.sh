@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -Eeuo pipefail
+
 kube_dns_endpoints=$(kubectl -n kube-system get ep kube-dns -o json | jq -re '[.subsets[].addresses[].ip] | join(" ")')
 
 cat << EOF
@@ -13,7 +15,7 @@ $KUBE_CLUSTER_DOMAIN:53 {
             force_tcp
     }
     prometheus 127.0.0.1:9254
-    health $KUBE_DNS_SVC_IP:8080
+    health 127.0.0.1:9225
 }
 in-addr.arpa:53 {
     errors

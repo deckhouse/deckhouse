@@ -21,5 +21,6 @@ if [[ $1 == "--config" ]] ; then
 }
 EOF
 else
-  /config.sh > /etc/coredns/Corefile
+  /config.sh > /etc/coredns/Corefile.tmp
+  mv /etc/coredns/Corefile.tmp /etc/coredns/Corefile
 fi
