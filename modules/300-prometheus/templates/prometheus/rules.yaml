@@ -36,9 +36,9 @@ spec:
     rules:
     - alert: UnsupportedDockerVersion
 {{- if and (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) (semverCompare "<1.14" .Values.global.discovery.clusterVersion) }}
-      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.1[0-3].+", container_runtime_version!~"docker://1\\.1[1-3]\\..*|docker://17.0?[369]\\..*|docker://18\\.0?[69]\\..*|docker://3\\.[0-9]+\\.[0-9]+"})
+      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.1[0-3].+", container_runtime_version!~"docker://1\\.1[1-3]\\..*|docker://17\\..*|docker://18\\..*|docker://3\\..*"})
 {{- else if semverCompare ">=1.14" .Values.global.discovery.clusterVersion }}
-      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.1[4-9].+", container_runtime_version!~"docker://1\\.13\\..*|docker://17.0?[369]\\..*|docker://18\\.0?[69]\\..*|docker://3\\.[0-9]+\\.[0-9]+"})
+      expr: sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (kube_node_info{kubelet_version=~"v1.1[4-9].+", container_runtime_version!~"docker://1\\.13\\..*|docker://17\\..*|docker://18\\..*|docker://3\\..*"})
 {{- end }}
       for: 20m
       labels:
@@ -53,18 +53,14 @@ spec:
           * 1.11.x
           * 1.12.x
           * 1.13.x
-          * 17.3.x
-          * 17.6.x
-          * 17.9.x
-          * 18.6.x
-          * 18.9.x
+          * 17.x
+          * 18.x
+          * 3.x (for moby project in Azure)
 {{- else if semverCompare ">=1.14" .Values.global.discovery.clusterVersion }}
           * 1.13.x
-          * 17.3.x
-          * 17.6.x
-          * 17.9.x
-          * 18.6.x
-          * 18.9.x
+          * 17.x
+          * 18.x
+          * 3.x (for moby project in Azure)
 {{- end }}
         summary: >
           Unsupported version of Docker {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}
