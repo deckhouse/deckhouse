@@ -60,8 +60,6 @@ spec:
       - image: {{ $.Values.global.modulesImages.registry }}/prometheus/node-exporter:{{ $.Values.global.modulesImages.tags.prometheus.nodeExporter }}
         args:
         - "--web.listen-address=127.0.0.1:9101"
-        - "--path.procfs=/host/proc"
-        - "--path.sysfs=/host/sys"
         - "--path.rootfs=/host/root"
         - "--collector.ntp"
         - "--collector.ntp.server-is-local"
@@ -76,12 +74,6 @@ spec:
         - name: root
           readOnly:  true
           mountPath: /host/root
-        - name: proc
-          readOnly:  true
-          mountPath: /host/proc
-        - name: sys
-          readOnly: true
-          mountPath: /host/sys
         - name: textfile
           readOnly: true
           mountPath: /host/textfile
@@ -108,11 +100,5 @@ spec:
       - name: root
         hostPath:
           path: /
-      - name: proc
-        hostPath:
-          path: /proc
-      - name: sys
-        hostPath:
-          path: /sys
       imagePullSecrets:
       - name: antiopa-registry
