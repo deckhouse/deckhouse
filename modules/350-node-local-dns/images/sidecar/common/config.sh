@@ -2,6 +2,13 @@
 
 set -Eeuo pipefail
 
+upstream_nameservers="resolv.conf"
+
+if upstreams_config=$(kubectl -n kube-system get cm kube-dns -o json | jq '.data.upstreamNameservers' -r | yq r -j - | jq -r '. | join(" ")'); then
+    upstream_nameservers="$upstreams_config"
+fi
+
+
 kube_dns_endpoints=$(kubectl -n kube-system get ep kube-dns -o json | jq -re '[.subsets[].addresses[].ip] | join(" ")')
 
 cat << EOF
@@ -45,7 +52,7 @@ ip6.arpa:53 {
     reload
     loop
     bind $KUBE_DNS_SVC_IP 169.254.20.10
-    forward . /etc/resolv.conf
+    forward . $upstream_nameservers
     prometheus 127.0.0.1:9254
 }
 EOF

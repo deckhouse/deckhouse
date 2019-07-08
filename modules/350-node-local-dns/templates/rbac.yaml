@@ -17,7 +17,7 @@ metadata:
     module: {{ .Chart.Name }}
 rules:
 - apiGroups: [""]
-  resources: ["endpoints"]
+  resources: ["endpoints", "configmaps"]
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
   resourceNames: ["kube-dns"]
 {{- end }}

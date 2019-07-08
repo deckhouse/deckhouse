@@ -16,6 +16,16 @@ if [[ $1 == "--config" ]] ; then
               "kube-system"
           ]
         }
+      },
+      {
+        "kind": "ConfigMap",
+        "event": ["add", "update", "delete"],
+        "objectName": "kube-dns",
+        "namespaceSelector": {
+          "matchNames": [
+              "kube-system"
+          ]
+        }
       }
    ]
 }
