@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-upstream_nameservers="resolv.conf"
+upstream_nameservers="/etc/resolv.conf"
 
 if upstreams_config=$(kubectl -n kube-system get cm kube-dns -o json | jq '.data.upstreamNameservers' -r | yq r -j - | jq -r '. | join(" ")'); then
     upstream_nameservers="$upstreams_config"
