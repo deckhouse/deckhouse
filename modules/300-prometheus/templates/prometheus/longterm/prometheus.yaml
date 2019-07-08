@@ -76,7 +76,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: {{ .Values.prometheus.longtermDiskSize }}G
+            storage: {{ .Values.prometheus.longtermDiskSize }}Gi
         storageClassName: {{ $storageClassName }}
   {{- end }}
 {{- end }}
