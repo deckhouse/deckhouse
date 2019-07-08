@@ -1,6 +1,6 @@
 - name: kubernetes.dns
   rules:
-  - alert: KubeDnsDown
+  - alert: KubernetesDnsDown
     expr: absent(up{job=~"kube-dns|coredns"} == 1)
     for: 5m
     labels:
@@ -15,3 +15,19 @@
         2. `kubectl -n kube-system describe pod -l k8s-app=kube-dns`
       summary: >
         Kube-dns или CoreDNS не работает.
+  - alert: KubernetesDnsError
+    expr: sum by (pod) (coredns_panic_count_total{job="coredns"}) > 0
+    labels:
+      impact: marginal
+      likelihood: possible
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Данный алерт говорит о том, что у CoreDNS в поде {{$labels.pod}} произошла как минимум одна критическая ошибка.
+        
+        В обычном состоянии таких проблем никогда не должно быть.
+        Что делать:
+        1. Посмотреть логи контейнера: `kubectl -n kube-system logs {{$labels.pod}}`
+        2. Если проблема не локальная и не понятно что с ней деалть – сообщить в команду RnD, в канал `tech-kubernetes`
+      summary: >
+        У CoreDNS происходят критические ошибки.
