@@ -109,6 +109,6 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: {{ .Values.prometheus.diskSize }}G
+            storage: {{ .Values.prometheus.diskSize }}Gi
         storageClassName: {{ $storageClassName }}
 {{- end }}
