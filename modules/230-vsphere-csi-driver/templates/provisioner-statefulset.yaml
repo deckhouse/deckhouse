@@ -1,0 +1,72 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: vsphere-csi-driver-provisioner
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: attacher
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: vsphere-csi-driver-provisioner
+  updatePolicy:
+    updateMode: "Auto"
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: vsphere-csi-driver-provisioner
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: provisioner
+spec:
+  serviceName: provisioner
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vsphere-csi-provisioner
+  template:
+    metadata:
+      labels:
+        app: vsphere-csi-provisioner
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+      - name: vsphere-csi-driver-antiopa-registry
+      priorityClassName: system-cluster-critical
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - vsphere-csi-controller
+            topologyKey: kubernetes.io/hostname
+      serviceAccountName: vsphere-csi-provisioner
+      containers:
+      - name: csi-provisioner
+        image: {{ .Values.global.modulesImages.registry }}/vsphere-csi-driver/provisioner:{{ .Values.global.modulesImages.tags.vsphereCsiDriver.provisioner }}
+        args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        - "--feature-gates=Topology=true"
+        env:
+        - name: ADDRESS
+          value: "/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      volumes:
+      - name: socket-dir
+        hostPath:
+          path: /var/lib/csi/sockets/pluginproxy/vsphere.csi.vmware.com
+          type: DirectoryOrCreate
