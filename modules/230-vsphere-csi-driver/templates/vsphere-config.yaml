@@ -1,0 +1,32 @@
+{{- define "vsphere_conf" }}
+[Global]
+user = {{ .Values.vsphereCsiDriver.virtualCenter.username | quote }}
+password = {{ .Values.vsphereCsiDriver.virtualCenter.password | quote }}
+
+service-account = "vsphere-csi-controller"
+
+port = {{ .Values.vsphereCsiDriver.virtualCenter.port | default "443" | quote }}
+{{- if .Values.vsphereCsiDriver.virtualCenter.insecure }}
+insecure-flag = "1"
+{{- else }}
+insecure-flag = "0"
+{{- end }}
+
+[VirtualCenter {{ .Values.vsphereCsiDriver.virtualCenter.name | quote }}]
+datacenters = {{ .Values.vsphereCsiDriver.virtualCenter.datacenter | quote }}
+
+{{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vsphere-csi-config
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+type: Opaque
+data:
+  vsphere.conf: |
+    {{ include "vsphere_conf" . | b64enc | indent 4 }}

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [ "$(semver compare $cluster_version 1.14.0)" -ne "-1" ] ; then
+    echo "true" > $MODULE_ENABLED_RESULT
+  else
+    echo "false" > $MODULE_ENABLED_RESULT
+  fi
+}
+
+hook::run $@
