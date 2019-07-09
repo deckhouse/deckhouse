@@ -15,3 +15,31 @@
     {{- if $context.Values.global.discovery.clusterControlPlaneIsHighlyAvailable -}} {{- $yes -}} {{- else -}} {{- $no -}} {{- end -}}
   {{- end -}}
 {{- end }}
+
+{{- /* Usage: {{- if eq (include "helm_lib_ha_enabled" .) "true" }} /* -}}
+{{- /* returns value "true" if cluster is highly available, else — returns "false" */ -}}
+{{- define "helm_lib_ha_enabled" }}
+  {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+
+  {{- $module_args := include "helm_lib_module_args" $context | fromYaml }}
+
+  {{- if hasKey $module_args "highAvailability" -}}
+    {{- if $module_args.highAvailability -}}
+      true
+    {{- else -}}
+      false
+    {{- end -}}
+  {{- else if hasKey $context.Values.global "highAvailability" -}}
+    {{- if $context.Values.global.highAvailability -}}
+      true
+    {{- else -}}
+      false
+    {{- end -}}
+  {{- else -}}
+    {{- if $context.Values.global.discovery.clusterControlPlaneIsHighlyAvailable -}}
+      true
+    {{- else -}}
+      false
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
