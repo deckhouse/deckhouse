@@ -44,9 +44,9 @@ function __main__() {
 
 # finding out is there nodes with our label in cluster
   if kubectl get nodes -l systemd-slices-cleaner.antiopa.flant.com/enabled=true -o json | jq -e '.items[0]' >/dev/null 2>&1; then
-    values::set --config systemdSlicesCleaner.enableSlicesCleanerDS true
+    values::set systemdSlicesCleaner.enableSlicesCleanerDS true
   else
-    values::set --config systemdSlicesCleaner.enableSlicesCleanerDS false
+    values::set systemdSlicesCleaner.enableSlicesCleanerDS false
   fi
 }
 
