@@ -50,7 +50,7 @@ spec:
       priorityClassName: cluster-medium
       {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: kube-master-proxy-antiopa-registry
       containers:
   {{- if eq .Values.global.discovery.clusterType "Manual" }}
       - name: prometheus-auth-proxy-for-kube-scheduler
