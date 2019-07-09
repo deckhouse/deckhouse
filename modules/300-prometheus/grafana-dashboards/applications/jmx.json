@@ -1612,14 +1612,14 @@
           "value": "production"
         },
         "datasource": "$ds_prometheus",
-        "definition": "label_values(jvm_info{job=\"custom-jmx-monitoring\"},namespace)",
+        "definition": "label_values(jvm_info,namespace)",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
         "multi": false,
         "name": "namespace",
         "options": [],
-        "query": "label_values(jvm_info{job=\"custom-jmx-monitoring\"},namespace)",
+        "query": "label_values(jvm_info,namespace)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1640,41 +1640,15 @@
           ]
         },
         "datasource": "$ds_prometheus",
-        "definition": "label_values(jvm_info{job=\"custom-jmx-monitoring\"},service)",
+        "definition": "label_values(jvm_info,service)",
         "hide": 0,
         "includeAll": true,
         "label": "Service",
         "multi": true,
         "name": "service",
-        "options": [
-          {
-            "selected": false,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": true,
-            "text": "scala-actualization-prometheus-exporter",
-            "value": "scala-actualization-prometheus-exporter"
-          },
-          {
-            "selected": false,
-            "text": "scala-public-api-prometheus-exporter",
-            "value": "scala-public-api-prometheus-exporter"
-          },
-          {
-            "selected": false,
-            "text": "scala-search-prometheus-exporter",
-            "value": "scala-search-prometheus-exporter"
-          },
-          {
-            "selected": false,
-            "text": "scala-prometheus-exporter",
-            "value": "scala-prometheus-exporter"
-          }
-        ],
-        "query": "label_values(jvm_info{job=\"custom-jmx-monitoring\"},service)",
-        "refresh": 0,
+        "options": [],
+        "query": "label_values(jvm_info,service)",
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -1691,14 +1665,14 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
-        "definition": "label_values(jvm_info{job=\"custom-jmx-monitoring\"},pod)",
+        "definition": "label_values(jvm_info,pod)",
         "hide": 0,
         "includeAll": true,
         "label": "Pod",
         "multi": false,
         "name": "pod",
         "options": [],
-        "query": "label_values(jvm_info{job=\"custom-jmx-monitoring\"},pod)",
+        "query": "label_values(jvm_info,pod)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
