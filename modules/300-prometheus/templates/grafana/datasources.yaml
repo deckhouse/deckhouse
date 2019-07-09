@@ -20,6 +20,22 @@ data:
        isDefault: true
        jsonData:
          timeInterval: 30s
+{{- if eq (include "helm_lib_ha_enabled" .) "true" }}
+     - name: main-0
+       type: prometheus
+       access: direct
+       url: /prometheus-main-0
+       version: 1
+       jsonData:
+         timeInterval: 30s
+     - name: main-1
+       type: prometheus
+       access: direct
+       url: /prometheus-main-1
+       version: 1
+       jsonData:
+         timeInterval: 30s
+{{- else }}
      - name: main
        type: prometheus
        access: direct
@@ -28,6 +44,7 @@ data:
        version: 1
        jsonData:
          timeInterval: 30s
+{{- end }}
      - name: trickster-longterm
        type: prometheus
        access: direct

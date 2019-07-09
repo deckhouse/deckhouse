@@ -33,4 +33,14 @@ spec:
         backend:
           serviceName: prometheus
           servicePort: web
+  {{- if eq (include "helm_lib_ha_enabled" .) "true" }}
+      - path: /prometheus-main-0
+        backend:
+          serviceName: prometheus-main-0
+          servicePort: web
+      - path: /prometheus-main-1
+        backend:
+          serviceName: prometheus-main-1
+          servicePort: web
+  {{- end }}
 {{- end }}
