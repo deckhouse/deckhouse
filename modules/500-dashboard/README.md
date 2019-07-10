@@ -19,12 +19,6 @@ Redirect URI(Callback url) устанавливаем вида https://dashboard
 * `oauth2ProxyClientSecret` — `Secret` в `Admin Area -> Applications gitlab`
 * `oauth2ProxyCookieSecret` —  генерируется автоматически если есть `gitlabBaseUrl`
 * `password` — пароль для http-авторизации, используется если не задан `gitlabBaseUrl` (генерируется автоматически)
-* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов:
-    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/dashboard":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано;
-    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
-* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов:
-    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"dashboard"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
-    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * `certificateForIngress` — выбираем, какой типа сертификата использовать для dashboard.
     * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для dashboard (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
@@ -32,6 +26,12 @@ Redirect URI(Callback url) устанавливаем вида https://dashboard
         * По-умолчанию `false`.
         * При указании этого параметра не забудьте выставить `certmanagerClusterIssuerName` в значение `false`.
     * Если вы хотите отключить https, то оба параметра необходимо выставить в `false`.
+* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига
 ```yaml

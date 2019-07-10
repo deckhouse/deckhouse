@@ -41,12 +41,6 @@
 * `config.setRealIPFrom` — список CIDR, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
     * Список строк - именно **YAML list**, а не строка со значениями через запятую!
     * **Важно!** Так как nginx ingress (как и сам nginx) не поддерживает получение адреса клиента из `X-Forwarded-For`, при одновременном использовании proxy protocol параметр `config.setRealIPFrom` запрещено использовать для inlet'ов `Direct` и `AWSClassicLoadBalancer`.
-* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/nginx-ingress":""}` или `{"node-role.flant.com/frontend":""}`.
-    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
-* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"nginx-ingress"},{"key":"dedicated.flant.com","operator":"Equal","value":"frontend"}]`.
-    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * (только для дополнительных контроллеров) `name` (обязательно) — название контроллера.
     * Используется в качестве суффикса к имени namespace `kube-nginx-ingress-{{ $name }}` и в качестве суффикса к названию класса nginx `nginx-{{ $name }}` (того самого класса, который потом указывается в аннотации `kubernetes.io/ingress.class` к ingress ресурсам).
 * `customErrorsServiceName` - имя сервиса, который будет использоваться, как custom default backend.
@@ -59,7 +53,12 @@
     * Список строк - именно **YAML list**, а не строка со значениями через запятую!
     * **Важно!** Данный параметр является обязательным, если указан любой из других `customErrors` параметров.
     * **Важно!** Добавление, удаление или изменение параметра приводит к рестарту nginx'ов.
-
+* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига
 

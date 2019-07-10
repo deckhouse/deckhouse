@@ -35,12 +35,6 @@
     * Если указать `false` — будет форсироваться использование emptyDir'а.
 * `adminPassword` — пароль пользователя `admin` (генерируется автоматически, но можно изменять).
 * `externalHost` — IP или домен по которому клиенты подключаются к OpenVPN серверу. Если не задано, то информация берётся из сервиса с именем `openvpn-external`.
-* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/openvpn":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
-    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
-* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"openvpn"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
-    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * `certificateForIngress` — выбираем, какой типа сертификата использовать для openvpn admin.
     * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для openvpn admin (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
@@ -48,6 +42,12 @@
         * По-умолчанию `false`.
         * При указании этого параметра не забудьте выставить `certmanagerClusterIssuerName` в значение `false`.
     * Если вы хотите отключить https, то оба параметра необходимо выставить в `false`.
+* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 
 ### Примеры конфигурации:
