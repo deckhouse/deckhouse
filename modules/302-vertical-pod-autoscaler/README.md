@@ -1,5 +1,5 @@
 Модуль vertical-pod-autoscaler
-==========================
+==============================
 
 ## Назначение
 
@@ -34,11 +34,11 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 
 У модуля есть только настройки `nodeSelector/tolerations`:
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-  * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/vertical-pod-autoscaler":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
-  * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-  * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"vertical-pod-autoscaler"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
-  * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
+    * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
+    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 Пример конфига:
 ```yaml
