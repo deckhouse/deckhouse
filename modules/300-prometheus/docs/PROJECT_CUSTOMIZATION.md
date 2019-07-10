@@ -50,7 +50,7 @@
 * Рекомендуется называть этот PrometheusRule `prometheus-rules-custom`. В названиях групп правил рекомендуется использовать или `custom.<имя файла>.<имя группы>` или просто `custom.<имя файла>`.
 
     ```yaml
-    apiVersion: v1
+    apiVersion: monitoring.coreos.com/v1
     kind: PrometheusRule
     metadata:
       name: prometheus-rules-custom
