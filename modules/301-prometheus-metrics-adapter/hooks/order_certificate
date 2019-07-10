@@ -5,12 +5,7 @@ source /antiopa/shell_lib.sh
 function __config__() {
   echo '
 {
-  "beforeHelm": 5,
-  "schedule": [
-    {
-      "crontab": "42 4 * * *"
-    }
-  ]
+  "beforeHelm": 5
 }'
 }
 
