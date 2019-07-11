@@ -1,0 +1,25 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: ingress-conversion
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: ingress-conversion-webhook
+webhooks:
+- name: ingress-conversion.flant.com
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  timeoutSeconds: 3
+  clientConfig:
+    service:
+      name: ingress-conversion-webhook
+      namespace: kube-system
+      path: "/mutate"
+      port: 443
+    caBundle: {{ .Values.nginxIngress.ingressConversionWebhookCa | b64enc }}
+  rules:
+    - operations: [ "CREATE", "UPDATE" ]
+      apiGroups: ["*"]
+      apiVersions: ["*"]
+      resources: ["ingresses"]
