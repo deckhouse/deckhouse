@@ -1,0 +1,94 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ingress-conversion-webhook
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: ingress-conversion-webhook
+spec:
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ .Chart.Name }}
+      app: ingress-conversion-webhook
+  template:
+    metadata:
+      labels:
+        heritage: antiopa
+        module: {{ .Chart.Name }}
+        app: ingress-conversion-webhook
+    spec:
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: system-cluster-critical
+{{- end }}
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                heritage: antiopa
+                module: {{ .Chart.Name }}
+                app: ingress-conversion-webhook
+            topologyKey: kubernetes.io/hostname
+{{- end }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      imagePullSecrets:
+      - name: nginx-ingress-antiopa-registry
+      containers:
+        - name: webhook
+          image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/ingress-conversion-webhook:{{ .Values.global.modulesImages.tags.nginxIngress.ingressConversionWebhook }}
+          args:
+          - -tls-cert-file=/etc/webhook/certs/tls.crt
+          - -tls-key-file=/etc/webhook/certs/tls.key
+          ports:
+          - containerPort: 8080
+          resources:
+            requests:
+              memory: 20Mi
+              cpu: 10m
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: ingress-conversion-webhook
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-conversion-webhook
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: ingress-conversion-webhook
+spec:
+  selector:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: ingress-conversion-webhook
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nginx-ingress-antiopa-registry
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+type: kubernetes.io/dockercfg
+data:
+  .dockercfg: {{ $.Values.global.modulesImages.registryDockercfg }}
