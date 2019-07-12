@@ -15,9 +15,9 @@
   "description": "",
   "editable": false,
   "gnetId": null,
-  "graphTooltip": 0,
-  "id": 41,
-  "iteration": 1562258221206,
+  "graphTooltip": 1,
+  "id": 43,
+  "iteration": 1562945728425,
   "links": [],
   "panels": [
     {
@@ -39,6 +39,112 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "grid": {},
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 172,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "rightSide": true,
+        "show": false,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 2,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "repeatDirection": "h",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(coredns_panic_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "step": 40
+        },
+        {
+          "expr": "sum(rate(coredns_panic_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "CoreDNS panic count",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "logBase": 1,
+          "max": null,
+          "min": 0,
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -47,7 +153,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 4
       },
       "id": 1,
       "legend": {
@@ -151,7 +257,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 1
+        "y": 4
       },
       "id": 46,
       "legend": {
@@ -181,7 +287,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) / sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -236,7 +342,7 @@
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
-        "colorScheme": "interpolateSpectral",
+        "colorScheme": "interpolateMagma",
         "exponent": 0.5,
         "mode": "spectrum"
       },
@@ -246,7 +352,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 11
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -304,7 +410,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 16
       },
       "id": 39,
       "legend": {
@@ -410,7 +516,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 13
+        "y": 16
       },
       "id": 35,
       "legend": {
@@ -440,7 +546,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) / sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -495,7 +601,7 @@
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
-        "colorScheme": "interpolateSpectral",
+        "colorScheme": "interpolateMagma",
         "exponent": 0.5,
         "mode": "spectrum"
       },
@@ -504,7 +610,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 23
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -550,6 +656,112 @@
     },
     {
       "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "grid": {},
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 174,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "max": true,
+        "min": true,
+        "rightSide": true,
+        "show": false,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 2,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "repeatDirection": "h",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (node)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "step": 40
+        },
+        {
+          "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "CoreDNS Forward Healthcheck Failure Count",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "logBase": 1,
+          "max": null,
+          "min": 0,
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -562,7 +774,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 31
       },
       "id": 16,
       "legend": {
@@ -650,7 +862,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 31
       },
       "id": 15,
       "legend": {
@@ -740,7 +952,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 38
       },
       "id": 36,
       "legend": {
@@ -853,9 +1065,9 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 38
       },
-      "id": 136,
+      "id": 178,
       "legend": {
         "alignAsTable": true,
         "avg": true,
@@ -879,7 +1091,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1562258221206,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 36,
       "scopedVars": {
         "rcode": {
@@ -968,7 +1180,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 42
       },
       "id": 14,
       "legend": {
@@ -1057,7 +1269,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 45
       },
       "id": 38,
       "panels": [
@@ -1075,7 +1287,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 46
           },
           "id": 12,
           "legend": {
@@ -1173,7 +1385,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 46
           },
           "id": 5,
           "legend": {
@@ -1271,7 +1483,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 53
           },
           "id": 47,
           "legend": {
@@ -1383,7 +1595,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 53
           },
           "id": 49,
           "legend": {
@@ -1486,6 +1698,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1494,7 +1707,119 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 54
+            "y": 60
+          },
+          "id": 175,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-c-1",
+              "value": "kube-c-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (upstream)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
           },
           "id": 135,
           "legend": {
@@ -1598,7 +1923,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 57
+            "y": 66
           },
           "id": 80,
           "legend": {
@@ -1635,7 +1960,7 @@
               "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "",
+              "legendFormat": "Hit",
               "refId": "A",
               "step": 40
             }
@@ -1693,7 +2018,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 57
+            "y": 66
           },
           "id": 81,
           "legend": {
@@ -1803,7 +2128,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 64
+            "y": 73
           },
           "id": 2,
           "legend": {
@@ -1906,7 +2231,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -1916,7 +2241,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 71
+            "y": 80
           },
           "heatmap": {},
           "hideZeroBuckets": false,
@@ -1975,7 +2300,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -1984,7 +2309,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 78
+            "y": 87
           },
           "heatmap": {},
           "hideZeroBuckets": false,
@@ -2053,9 +2378,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 46
       },
-      "id": 137,
+      "id": 179,
       "panels": [
         {
           "aliasColors": {},
@@ -2071,9 +2396,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 46
           },
-          "id": 138,
+          "id": 180,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2090,12 +2415,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 12,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2172,9 +2497,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 46
           },
-          "id": 139,
+          "id": 181,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2191,12 +2516,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 5,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2273,9 +2598,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 53
           },
-          "id": 140,
+          "id": 182,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2291,12 +2616,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 47,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2388,9 +2713,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 53
           },
-          "id": 141,
+          "id": 183,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2406,12 +2731,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 49,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2494,6 +2819,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -2502,9 +2828,124 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 54
+            "y": 60
           },
-          "id": 142,
+          "id": 184,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 175,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-b-1",
+              "value": "kube-b-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (upstream)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
+          },
+          "id": 185,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2520,12 +2961,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 135,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2609,9 +3050,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 57
+            "y": 66
           },
-          "id": 143,
+          "id": 186,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2625,12 +3066,12 @@
           "lines": true,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 80,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2649,7 +3090,7 @@
               "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "",
+              "legendFormat": "Hit",
               "refId": "A",
               "step": 40
             }
@@ -2707,9 +3148,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 57
+            "y": 66
           },
-          "id": 144,
+          "id": 187,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2725,12 +3166,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 81,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2820,9 +3261,9 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 64
+            "y": 73
           },
-          "id": 145,
+          "id": 188,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2836,12 +3277,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 2,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2926,7 +3367,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -2936,17 +3377,17 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 71
+            "y": 80
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 146,
+          "id": 189,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 18,
           "repeatedByRow": true,
           "reverseYBuckets": false,
@@ -2998,7 +3439,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -3007,17 +3448,17 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 78
+            "y": 87
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 147,
+          "id": 190,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 20,
           "repeatedByRow": true,
           "reverseYBuckets": false,
@@ -3063,7 +3504,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562258221206,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 38,
       "scopedVars": {
         "node": {
@@ -3081,9 +3522,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 47
       },
-      "id": 148,
+      "id": 191,
       "panels": [
         {
           "aliasColors": {},
@@ -3099,9 +3540,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 46
           },
-          "id": 149,
+          "id": 192,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3118,12 +3559,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 12,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3200,9 +3641,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 46
           },
-          "id": 150,
+          "id": 193,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3219,12 +3660,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 5,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3301,9 +3742,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 53
           },
-          "id": 151,
+          "id": 194,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3319,12 +3760,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 47,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3416,9 +3857,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 53
           },
-          "id": 152,
+          "id": 195,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3434,12 +3875,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 49,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3522,6 +3963,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -3530,9 +3972,124 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 54
+            "y": 60
           },
-          "id": 153,
+          "id": 196,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 175,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (upstream)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
+          },
+          "id": 197,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3548,12 +4105,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 135,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3637,9 +4194,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 57
+            "y": 66
           },
-          "id": 154,
+          "id": 198,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3653,12 +4210,12 @@
           "lines": true,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 80,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3677,7 +4234,7 @@
               "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "",
+              "legendFormat": "Hit",
               "refId": "A",
               "step": 40
             }
@@ -3735,9 +4292,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 57
+            "y": 66
           },
-          "id": 155,
+          "id": 199,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3753,12 +4310,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 81,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3848,9 +4405,9 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 64
+            "y": 73
           },
-          "id": 156,
+          "id": 200,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3864,12 +4421,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 2,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3954,7 +4511,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -3964,17 +4521,17 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 71
+            "y": 80
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 157,
+          "id": 201,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 18,
           "repeatedByRow": true,
           "reverseYBuckets": false,
@@ -4026,7 +4583,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -4035,17 +4592,17 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 78
+            "y": 87
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 158,
+          "id": 202,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 20,
           "repeatedByRow": true,
           "reverseYBuckets": false,
@@ -4091,7 +4648,7 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562258221206,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 38,
       "scopedVars": {
         "node": {
@@ -4109,7 +4666,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 48
       },
       "id": 100,
       "panels": [
@@ -4127,7 +4684,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 43
+            "y": 49
           },
           "id": 113,
           "legend": {
@@ -4237,7 +4794,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 43
+            "y": 49
           },
           "id": 114,
           "legend": {
@@ -4342,7 +4899,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -4351,7 +4908,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 50
+            "y": 56
           },
           "heatmap": {},
           "hideZeroBuckets": false,
@@ -4401,6 +4958,119 @@
           "yBucketBound": "auto",
           "yBucketNumber": null,
           "yBucketSize": null
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
+          },
+          "id": 177,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "10.244.2.146:53",
+              "value": "10.244.2.146:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": "upstream",
@@ -4420,9 +5090,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 49
       },
-      "id": 159,
+      "id": 203,
       "panels": [
         {
           "aliasColors": {},
@@ -4438,9 +5108,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 87
+            "y": 49
           },
-          "id": 160,
+          "id": 204,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4456,12 +5126,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 113,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4551,9 +5221,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 87
+            "y": 49
           },
-          "id": 161,
+          "id": 205,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4569,12 +5239,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 114,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4659,7 +5329,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -4668,18 +5338,20 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 94
+            "y": 56
           },
           "heatmap": {},
+          "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 162,
+          "id": 206,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 115,
           "repeatedByRow": true,
+          "reverseYBuckets": false,
           "scopedVars": {
             "upstream": {
               "selected": false,
@@ -4719,10 +5391,126 @@
           "yBucketBound": "auto",
           "yBucketNumber": null,
           "yBucketSize": null
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
+          },
+          "id": 207,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 177,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "10.244.2.148:53",
+              "value": "10.244.2.148:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562258221206,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
@@ -4740,9 +5528,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 50
       },
-      "id": 163,
+      "id": 208,
       "panels": [
         {
           "aliasColors": {},
@@ -4758,9 +5546,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 87
+            "y": 49
           },
-          "id": 164,
+          "id": 209,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4776,19 +5564,19 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 113,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "213.133.100.100:53",
-              "value": "213.133.100.100:53"
+              "text": "8.8.4.4:53",
+              "value": "8.8.4.4:53"
             }
           },
           "seriesOverrides": [
@@ -4871,9 +5659,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 87
+            "y": 49
           },
-          "id": 165,
+          "id": 210,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4889,19 +5677,19 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 114,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "213.133.100.100:53",
-              "value": "213.133.100.100:53"
+              "text": "8.8.4.4:53",
+              "value": "8.8.4.4:53"
             }
           },
           "seriesOverrides": [
@@ -4979,7 +5767,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -4988,23 +5776,25 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 94
+            "y": 56
           },
           "heatmap": {},
+          "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 166,
+          "id": 211,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 115,
           "repeatedByRow": true,
+          "reverseYBuckets": false,
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "213.133.100.100:53",
-              "value": "213.133.100.100:53"
+              "text": "8.8.4.4:53",
+              "value": "8.8.4.4:53"
             }
           },
           "targets": [
@@ -5039,54 +5829,32 @@
           "yBucketBound": "auto",
           "yBucketNumber": null,
           "yBucketSize": null
-        }
-      ],
-      "repeat": null,
-      "repeatIteration": 1562258221206,
-      "repeatPanelId": 100,
-      "scopedVars": {
-        "upstream": {
-          "selected": false,
-          "text": "213.133.100.100:53",
-          "value": "213.133.100.100:53"
-        }
-      },
-      "title": "Upstream $upstream",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 45
-      },
-      "id": 167,
-      "panels": [
+        },
         {
           "aliasColors": {},
           "bars": true,
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
           "editable": true,
           "error": false,
           "fill": 1,
           "grid": {},
           "gridPos": {
-            "h": 7,
-            "w": 12,
+            "h": 3,
+            "w": 24,
             "x": 0,
-            "y": 87
+            "y": 63
           },
-          "id": 168,
+          "id": 212,
           "legend": {
             "alignAsTable": true,
             "avg": true,
             "current": false,
             "max": true,
             "min": true,
+            "rightSide": true,
             "show": false,
             "sort": "avg",
             "sortDesc": true,
@@ -5096,19 +5864,20 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
-          "repeatPanelId": 113,
+          "repeatDirection": "h",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 177,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
               "selected": false,
-              "text": "213.133.98.98:53",
-              "value": "213.133.98.98:53"
+              "text": "8.8.4.4:53",
+              "value": "8.8.4.4:53"
             }
           },
           "seriesOverrides": [
@@ -5123,129 +5892,15 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B",
-              "step": 60
-            },
-            {
-              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{node}}",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Forwarded requests count",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "reqps",
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": true
-            },
-            {
-              "format": "pps",
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "editable": true,
-          "error": false,
-          "fill": 1,
-          "grid": {},
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 12,
-            "y": 87
-          },
-          "id": 169,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": true,
-            "min": true,
-            "show": true,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeatIteration": 1562258221206,
-          "repeatPanelId": 114,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "upstream": {
-              "selected": false,
-              "text": "213.133.98.98:53",
-              "value": "213.133.98.98:53"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
-              "format": "time_series",
-              "instant": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{rcode}}",
+              "legendFormat": "{{pod}}",
               "refId": "A",
-              "step": 60
+              "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5256,7 +5911,7 @@
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Forwarded requests count (by rcode)",
+          "title": "CoreDNS Forward Healthcheck Failure Count",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -5272,103 +5927,34 @@
           },
           "yaxes": [
             {
-              "format": "reqps",
+              "format": "short",
               "logBase": 1,
               "max": null,
               "min": 0,
               "show": true
             },
             {
-              "format": "pps",
+              "format": "short",
               "logBase": 1,
               "max": null,
-              "min": 0,
-              "show": false
+              "min": null,
+              "show": true
             }
           ],
           "yaxis": {
             "align": false,
             "alignLevel": null
           }
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 94
-          },
-          "heatmap": {},
-          "highlightCards": true,
-          "id": 170,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeatIteration": 1562258221206,
-          "repeatPanelId": 115,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "upstream": {
-              "selected": false,
-              "text": "213.133.98.98:53",
-              "value": "213.133.98.98:53"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{le}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Forward duration",
-          "tooltip": {
-            "show": true,
-            "showHistogram": false
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "s",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562258221206,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
           "selected": false,
-          "text": "213.133.98.98:53",
-          "value": "213.133.98.98:53"
+          "text": "8.8.4.4:53",
+          "value": "8.8.4.4:53"
         }
       },
       "title": "Upstream $upstream",
@@ -5380,9 +5966,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 51
       },
-      "id": 171,
+      "id": 213,
       "panels": [
         {
           "aliasColors": {},
@@ -5398,9 +5984,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 87
+            "y": 49
           },
-          "id": 172,
+          "id": 214,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -5416,332 +6002,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
-          "repeatPanelId": 113,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "upstream": {
-              "selected": false,
-              "text": "213.133.99.99:53",
-              "value": "213.133.99.99:53"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B",
-              "step": 60
-            },
-            {
-              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "{{node}}",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Forwarded requests count",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "reqps",
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": true
-            },
-            {
-              "format": "pps",
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "editable": true,
-          "error": false,
-          "fill": 1,
-          "grid": {},
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 12,
-            "y": 87
-          },
-          "id": 173,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": true,
-            "min": true,
-            "show": true,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeatIteration": 1562258221206,
-          "repeatPanelId": 114,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "upstream": {
-              "selected": false,
-              "text": "213.133.99.99:53",
-              "value": "213.133.99.99:53"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
-              "format": "time_series",
-              "instant": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{rcode}}",
-              "refId": "A",
-              "step": 60
-            },
-            {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Forwarded requests count (by rcode)",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "reqps",
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": true
-            },
-            {
-              "format": "pps",
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 94
-          },
-          "heatmap": {},
-          "highlightCards": true,
-          "id": 174,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeatIteration": 1562258221206,
-          "repeatPanelId": 115,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "upstream": {
-              "selected": false,
-              "text": "213.133.99.99:53",
-              "value": "213.133.99.99:53"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{le}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Forward duration",
-          "tooltip": {
-            "show": true,
-            "showHistogram": false
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "s",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        }
-      ],
-      "repeat": null,
-      "repeatIteration": 1562258221206,
-      "repeatPanelId": 100,
-      "scopedVars": {
-        "upstream": {
-          "selected": false,
-          "text": "213.133.99.99:53",
-          "value": "213.133.99.99:53"
-        }
-      },
-      "title": "Upstream $upstream",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 47
-      },
-      "id": 175,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "editable": true,
-          "error": false,
-          "fill": 1,
-          "grid": {},
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 0,
-            "y": 87
-          },
-          "id": 176,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": false,
-            "max": true,
-            "min": true,
-            "show": false,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 113,
           "repeatedByRow": true,
           "scopedVars": {
@@ -5831,9 +6097,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 87
+            "y": 49
           },
-          "id": 177,
+          "id": 215,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -5849,12 +6115,12 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 114,
           "repeatedByRow": true,
           "scopedVars": {
@@ -5939,7 +6205,7 @@
           "color": {
             "cardColor": "#b4ff00",
             "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
+            "colorScheme": "interpolateMagma",
             "exponent": 0.5,
             "mode": "spectrum"
           },
@@ -5948,18 +6214,20 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 94
+            "y": 56
           },
           "heatmap": {},
+          "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 178,
+          "id": 216,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562258221206,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 115,
           "repeatedByRow": true,
+          "reverseYBuckets": false,
           "scopedVars": {
             "upstream": {
               "selected": false,
@@ -5999,10 +6267,126 @@
           "yBucketBound": "auto",
           "yBucketNumber": null,
           "yBucketSize": null
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
+          },
+          "id": 217,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 177,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "upstream": {
+              "selected": false,
+              "text": "8.8.8.8:53",
+              "value": "8.8.8.8:53"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562258221206,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
@@ -6042,7 +6426,9 @@
         "allValue": null,
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(coredns_build_info, node)",
@@ -6165,5 +6551,5 @@
   "timezone": "",
   "title": "DNS (node local)",
   "uid": "HrJTjvuiz",
-  "version": 1
+  "version": 3
 }
