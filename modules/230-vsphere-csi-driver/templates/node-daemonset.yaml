@@ -46,7 +46,7 @@ spec:
         - name: registration-dir
           mountPath: /registration
       - name: vsphere-csi-node
-        image: {{ .Values.global.modulesImages.registry }}/vsphere-csi-driver/node:{{ .Values.global.modulesImages.tags.vsphereCsiDriver.node }}
+        image: {{ .Values.global.modulesImages.registry }}/vsphere-csi-driver/vsphere-csi:{{ .Values.global.modulesImages.tags.vsphereCsiDriver.vsphereCsi }}
         env:
         - name: CSI_ENDPOINT
           value: "unix:///csi/csi.sock"

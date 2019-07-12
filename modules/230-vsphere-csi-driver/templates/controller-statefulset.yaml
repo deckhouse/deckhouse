@@ -46,7 +46,7 @@ spec:
       serviceAccountName: vsphere-csi-controller
       containers:
       - name: controller
-        image: {{ .Values.global.modulesImages.registry }}/vsphere-csi-driver/controller:{{ .Values.global.modulesImages.tags.vsphereCsiDriver.controller }}
+        image: {{ .Values.global.modulesImages.registry }}/vsphere-csi-driver/vsphere-csi:{{ .Values.global.modulesImages.tags.vsphereCsiDriver.vsphereCsi }}
         env:
         - name: CSI_ENDPOINT
           value: "unix:///var/lib/csi/sockets/pluginproxy/csi.sock"
