@@ -33,7 +33,7 @@
 
     {{- include "template.nginx" (dict "context" $context "hostNetwork" true) }}
     {{- include "template.config" (dict "context" $context) }}
-    {{- include "template.nginxForDirectFallback" (dict "context" $context "suffix" "-for-direct-fallback") }}
+    {{- include "template.nginx" (dict "context" $context "suffix" "-for-direct-fallback") }}
     {{- include "template.config" (dict "context" $context "suffix" "-for-direct-fallback" "useProxyProtocol" "true" ) }}
   {{- end }}
 {{- end }}

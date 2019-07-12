@@ -94,7 +94,6 @@ spec:
         - --default-backend-service=$(POD_NAMESPACE)/default-http-backend
         {{- end }}
         - --configmap=$(POD_NAMESPACE)/{{ $name }}
-        - --annotations-prefix=ingress.kubernetes.io
     {{- if $publishService }}
         - --publish-service=$(POD_NAMESPACE)/{{ $name }}
     {{- end }}
