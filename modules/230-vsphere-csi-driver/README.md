@@ -10,6 +10,11 @@
 
 На данный момент мы не поддерживаем ни Multi-vCenter ни Multi-Datacenter инсталляции, хотя [драйвер и умеет](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v0.2.0/docs/deploying_ccm_and_csi_with_multi_dc_vc_aka_zones.md) – мы предполагаем, что кластер развернут в одном vCenter и у всех узлов есть доступ ко всем Datastore.
 
+Важная информация об увеличении размера PVC
+-----------------
+
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API, перед увеличением PVC нужно заскейлить Deployment или StatefulSet в 0, после этого увеличить PVC, убедившись в успешном увеличении через `kubectl get pvc -o yaml` (в Status размер должен быть равен Spec, и не должно быть никаких conditions).
+
 Конфигурация
 ------------
 

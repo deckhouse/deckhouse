@@ -16,4 +16,5 @@ provisioner: vsphere.csi.vmware.com
 parameters:
   parent_type: "Datastore"
   parent_name: {{ $storageClass.datastore | quote }}
+allowVolumeExpansion: true
 {{- end }}
