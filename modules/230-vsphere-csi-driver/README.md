@@ -13,6 +13,18 @@
 Важная информация об увеличении размера PVC
 -----------------
 
+Работает только в Kubernetes 1.15. Необходимо добавить Feature Gate для kubelet `kubectl -n kube-system edit cm kubelet-config-1.15`:
+
+```yaml
+apiVersion: v1
+data:
+  kubelet: |
+    featureGates:
+      ExpandCSIVolumes: true
+```
+
+Опция в kubelet не подгружается динамически, поэтому нужно на каждой ноде будет сделать `systemctl restart kubelet`.
+
 Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API, перед увеличением PVC нужно заскейлить Deployment или StatefulSet в 0, после этого увеличить PVC, убедившись в успешном увеличении через `kubectl get pvc -o yaml` (в Status размер должен быть равен Spec, и не должно быть никаких conditions).
 
 Конфигурация
