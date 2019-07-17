@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vsphere-csi-external-resizer
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: vsphere-csi-external-resizer
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: attacher
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: vsphere-csi-external-resizer
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: attacher
+subjects:
+  - kind: ServiceAccount
+    name: vsphere-csi-external-resizer
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: vsphere-csi-external-resizer
+  apiGroup: rbac.authorization.k8s.io

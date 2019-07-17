@@ -100,7 +100,7 @@ git:
     - go.mod
     - go.sum
     buildArtifact:
-    - "**/*.go"
+    - "antiopa/**/*.go"
     - go-build.sh
 ansible:
   beforeInstall:

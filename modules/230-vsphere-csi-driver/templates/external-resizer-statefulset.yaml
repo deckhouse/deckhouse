@@ -1,0 +1,71 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: vsphere-csi-driver-external-resizer
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: external-resizer
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: vsphere-csi-driver-external-resizer
+  updatePolicy:
+    updateMode: "Auto"
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: vsphere-csi-driver-external-resizer
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: external-resizer
+spec:
+  serviceName: external-resizer
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vsphere-csi-external-resizer
+  template:
+    metadata:
+      labels:
+        app: vsphere-csi-external-resizer
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+      - name: vsphere-csi-driver-antiopa-registry
+      priorityClassName: system-cluster-critical
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - vsphere-csi-controller
+            topologyKey: kubernetes.io/hostname
+      serviceAccountName: vsphere-csi-external-resizer
+      containers:
+      - name: external-resizer
+        image: {{ .Values.global.modulesImages.registry }}/vsphere-csi-driver/external-resizer:{{ .Values.global.modulesImages.tags.vsphereCsiDriver.externalResizer }}
+        args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        env:
+        - name: ADDRESS
+          value: "/csi/csi.sock"
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+      volumes:
+      - name: socket-dir
+        hostPath:
+          path: /var/lib/csi/sockets/pluginproxy/vsphere.csi.vmware.com
+          type: DirectoryOrCreate
