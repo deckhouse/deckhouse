@@ -3,7 +3,7 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
-  if values::has global.clusterHostname ; then
+  if values::has global.addonsPublicDomainTemplate ; then
     echo "true" > $MODULE_ENABLED_RESULT
   else
     echo "false" > $MODULE_ENABLED_RESULT
