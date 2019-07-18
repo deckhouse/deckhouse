@@ -33,14 +33,16 @@ const (
 
 func createOrUpdateIngress(ingress *extensionsv1beta1.Ingress) error {
 	_, err := kubeClient.ExtensionsV1beta1().Ingresses(ingress.ObjectMeta.Namespace).Create(ingress)
-	if errors.IsAlreadyExists(err) {
-		_, err := kubeClient.ExtensionsV1beta1().Ingresses(ingress.ObjectMeta.Namespace).Update(ingress)
-		logger.Warningf("Ingress already exists, updating existing %s", ingress.Name)
-		if err != nil {
-			return fmt.Errorf("failed to create -rwr Ingress object: %v", err)
+	if err != nil {
+		if errors.IsAlreadyExists(err) {
+			_, err := kubeClient.ExtensionsV1beta1().Ingresses(ingress.ObjectMeta.Namespace).Update(ingress)
+			logger.Warningf("Ingress already exists, updating existing %s", ingress.Name)
+			if err != nil {
+				return fmt.Errorf("failed to create -rwr Ingress object: %v", err)
+			}
+		} else {
+			return fmt.Errorf("failed to update -rwr Ingress object: %v", err)
 		}
-	} else {
-		return fmt.Errorf("failed to update -rwr Ingress object: %v", err)
 	}
 
 	return nil
