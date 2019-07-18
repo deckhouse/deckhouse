@@ -6,7 +6,7 @@
 {{- end }}
 
 
-{{- define "helm_lib_internal_frontend_direct_fallback_tolerations_hack" }}
+{{- define "helm_lib_internal_node_problems_tolerations" }}
 - key: node.kubernetes.io/not-ready
   operator: "Exists"
   effect: "NoExecute"
@@ -84,6 +84,10 @@ nodeSelector:
   {{- else }}
     {{- $module_args = index . 2 }}
   {{- end }}
+  {{ $tolerateNodeProblems := false }}
+  {{- if eq (len .) 4 }}
+    {{ $tolerateNodeProblems = index . 3 }}
+  {{- end }}
 
   {{- if eq $strategy "monitoring" }}
     {{- if $module_args.tolerations }}
@@ -100,6 +104,9 @@ tolerations:
 - key: dedicated.flant.com
   operator: Equal
   value: "system"
+{{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" . }}
+{{- end }}
 {{- /* # Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778 */}}
 - key: node-role/system
   operator: Exists
@@ -117,6 +124,9 @@ tolerations:
 - key: dedicated.flant.com
   operator: Equal
   value: "frontend"
+{{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" . }}
+{{- end }}
 {{- /* # Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778 */}}
 - key: node-role/frontend
   operator: Exists
@@ -134,6 +144,9 @@ tolerations:
 - key: dedicated.flant.com
   operator: Equal
   value: "system"
+{{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" . }}
+{{- end }}
 {{- /* # Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778 */}}
 - key: node-role/system
   operator: Exists

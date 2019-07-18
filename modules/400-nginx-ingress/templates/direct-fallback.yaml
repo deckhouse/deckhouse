@@ -1,5 +1,6 @@
 {{- range $config := prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress }}
   {{- $context := $config | toJson | fromJson }}
+  {{- $_ := set $context "Chart" $.Chart }}
   {{- $_ := set $context "Values" $.Values }}
   {{- $inlet := (include "helper.inlet" $context) }}
   {{- if eq $inlet "Direct" }}
@@ -66,8 +67,8 @@ spec:
 #      annotations:
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
     spec:
-{{ include "helper.nodeSelectorForDirectFallback" $context | indent 6 }}
-{{ include "helper.tolerationsForDirectFallback" $context | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple $context "frontend" .) | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple $context "frontend" . true) | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
