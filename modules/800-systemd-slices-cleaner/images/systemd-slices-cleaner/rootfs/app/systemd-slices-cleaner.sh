@@ -5,9 +5,9 @@ sleep $((RANDOM % 1800))
 
 stoppedCount=0
 # counting actual subpath units in systemd
-countBefore=$(systemctl list-units | grep -E "subpath|secret|token" | grep -c "run-")
+countBefore=$(systemctl list-units | grep -E "subpath|secret|token|empty-dir" | grep -c "run-")
 # let's go check each unit
-for unit in $(systemctl list-units | grep -E "subpath|secret|token" | grep "run-" | awk '{print $1}'); do
+for unit in $(systemctl list-units | grep -E "subpath|secret|token|empty-dir" | grep "run-" | awk '{print $1}'); do
   # finding description file for unit (to find out docker container, who born this unit)
   DropFile=$(systemctl status "${unit}" | grep Drop | awk -F': ' '{print $2}')
   # reading uuid for docker container from description file
