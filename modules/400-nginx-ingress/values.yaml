@@ -1,2 +1,3 @@
 nginxIngress:
   additionalControllers: []
+  rewriteTargetMigration: false
