@@ -32,6 +32,7 @@ ansible:
   - apk: name=makepasswd
   - apk: name=apache2-utils
   - apk: name=bc
+  - apk: name=grep
 
   # Зависимости хуков (из edge/testing)
   - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes

@@ -10,6 +10,17 @@ function __config__() {
 }
 
 function __main__() {
+  if values::is_false nginxIngress.rewriteTargetMigration; then
+    kill_list=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -P '^.*-rwr$' | sort -u)
+    IFS=$'\n'
+    for i in $kill_list; do
+      unset IFS
+      kubectl delete ing $i
+    done
+    unset IFS
+    exit 0
+  fi
+
   for i in $(seq 1 120); do
     if kubectl -n kube-system get pod -l app=ingress-conversion-webhook -o json | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' ; then
       break
@@ -23,15 +34,12 @@ function __main__() {
     return 1
   fi
 
-  all_ingresses=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] |
-                                                                      if .metadata.annotations == null then . |= (.metadata.annotations = {}) else . end |
-                                                                      select(
-                                                                        any(.metadata.annotations | to_entries[]; .key | startswith("ingress.kubernetes.io/"))
-                                                                        and all(.metadata.annotations | to_entries[]; .key | startswith("nginx.ingress.kubernetes.io/") | not)
-                                                                      )
-                                                                      | ["-n \(.metadata.namespace) \(.metadata.name)"] | join(" ")')
+  non_rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -Pv '^.*-rwr$' | sort -u)
+  rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -P '^.*-rwr$' | sed s/-rwr//g | sort -u)
+  trigger_list=$(comm -23 <(echo "$non_rwr") <(echo "$rwr"))
+
   IFS=$'\n'
-  for i in $all_ingresses; do
+  for i in $trigger_list; do
     unset IFS
     kubectl annotate ingress $i webhook.flant.com/trigger=
     kubectl annotate ingress $i webhook.flant.com/trigger-

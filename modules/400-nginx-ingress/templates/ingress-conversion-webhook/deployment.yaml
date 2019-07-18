@@ -35,6 +35,7 @@ spec:
                 app: ingress-conversion-webhook
             topologyKey: kubernetes.io/hostname
 {{- end }}
+      serviceAccountName: kube-nginx-ingress-ingress-conversion-webhook
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
@@ -47,6 +48,7 @@ spec:
           args:
           - -tls-cert-file=/etc/webhook/certs/tls.crt
           - -tls-key-file=/etc/webhook/certs/tls.key
+          - -enable-rwr={{ .Values.nginxIngress.rewriteTargetMigration }}
           ports:
           - containerPort: 8080
           resources:
