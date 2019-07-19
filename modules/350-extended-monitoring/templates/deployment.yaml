@@ -63,6 +63,7 @@ spec:
           httpGet:
             path: /ready
             port: 8080
+            timeoutSeconds: 5
         args:
         - "/app/extended-monitoring.py"
         env:
