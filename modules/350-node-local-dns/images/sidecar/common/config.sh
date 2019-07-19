@@ -18,9 +18,7 @@ $KUBE_CLUSTER_DOMAIN:53 {
     reload
     loop
     bind $KUBE_DNS_SVC_IP 169.254.20.10
-    forward . $kube_dns_endpoints {
-            force_tcp
-    }
+    forward . $kube_dns_endpoints
     prometheus 127.0.0.1:9254
     health 127.0.0.1:9225
 }
@@ -30,9 +28,7 @@ in-addr.arpa:53 {
     reload
     loop
     bind $KUBE_DNS_SVC_IP 169.254.20.10
-    forward . $kube_dns_endpoints {
-            force_tcp
-    }
+    forward . $kube_dns_endpoints
     prometheus 127.0.0.1:9254
 }
 ip6.arpa:53 {
@@ -41,9 +37,7 @@ ip6.arpa:53 {
     reload
     loop
     bind $KUBE_DNS_SVC_IP 169.254.20.10
-    forward . $kube_dns_endpoints {
-            force_tcp
-    }
+    forward . $kube_dns_endpoints
     prometheus 127.0.0.1:9254
 }
 .:53 {
