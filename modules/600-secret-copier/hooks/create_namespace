@@ -9,6 +9,10 @@ function __config__() {
 function __main__() {
   for namespace in $(hook::context_jq -r '.[] | select(.resourceName == "default" | not ) | .resourceName');
   do
+    if ! $(kubectl get namespace $namespace > /dev/null 2> /dev/null) ; then
+      continue
+    fi
+
     for secret in $(kubectl -n default get secret -l antiopa-secret-copier=yes -o name);
     do
       kubectl -n default get $secret -o json | \
