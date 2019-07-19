@@ -90,9 +90,9 @@ func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
 	}
 	rwrIngress.Status = extensionsv1beta1.IngressStatus{}
 
-	if ingress.Annotations == nil && cfg.enableRwr {
+	if ingress.Annotations == nil && cfg.enableRwr && rwrIngress.ObjectMeta.GenerateName == "" {
 		return false, createOrUpdateIngress(rwrIngress)
-	} else if ingress.Annotations == nil {
+	} else if ingress.Annotations == nil || rwrIngress.ObjectMeta.GenerateName != "" {
 		return false, nil
 	}
 
