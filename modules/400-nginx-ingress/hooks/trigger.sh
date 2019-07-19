@@ -34,14 +34,14 @@ function __main__() {
     return 1
   fi
 
-  non_rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -Pv '^.*-rwr$' || true | sort -u)
-  rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -P '^.*-rwr$' || true | sed s/-rwr//g | sort -u)
+  non_rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | (grep -Pv '^.*-rwr$' || true) | sort -u)
+  rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | (grep -P '^.*-rwr$' || true) | sed s/-rwr//g | sort -u)
   trigger_list=$(comm -23 <(echo "$non_rwr") <(echo "$rwr"))
 
   IFS=$'\n'
   for i in $trigger_list; do
     unset IFS
-    kubectl annotate ingress $i webhook.flant.com/trigger=
+    kubectl annotate ingress $i webhook.flant.com/trigger= --overwrite
     kubectl annotate ingress $i webhook.flant.com/trigger-
   done
   unset IFS
