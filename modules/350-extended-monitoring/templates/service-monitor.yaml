@@ -12,6 +12,7 @@ spec:
   endpoints:
   - port: http-metrics
     honorLabels: true
+    scrapeTimeout: 25s
     relabelings:
     - regex: endpoint|namespace|service
       action: labeldrop
