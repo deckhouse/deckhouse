@@ -131,10 +131,14 @@ func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
 		if _, ok := rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"]; ok {
 			for rulePos, ingressRule := range rwrIngress.Spec.Rules {
 				for pathPos, path := range ingressRule.HTTP.Paths {
-					rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = strings.TrimSuffix(path.Path, "/") + "/(.*)"
+					if rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path == "/" {
+						rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = strings.TrimSuffix(path.Path, "/") + "/()(.*)"
+					} else {
+						rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = strings.TrimSuffix(path.Path, "/") + "(/|$)(.*)"
+					}
 				}
 			}
-			rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = strings.TrimSuffix(rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"], "/") + "/$1"
+			rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = strings.TrimSuffix(rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"], "/") + "/$2"
 		}
 
 		err := createOrUpdateIngress(rwrIngress)
