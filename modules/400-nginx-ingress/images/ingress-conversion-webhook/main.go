@@ -80,6 +80,10 @@ func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
 		return false, nil
 	}
 
+	if ingress.ObjectMeta.GenerateName != "" {
+		return false, nil
+	}
+
 	rwrIngress := ingress.DeepCopy()
 	rwrIngress.ObjectMeta = metav1.ObjectMeta{
 		Name:            rwrIngress.ObjectMeta.Name + "-rwr",
@@ -90,9 +94,9 @@ func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
 	}
 	rwrIngress.Status = extensionsv1beta1.IngressStatus{}
 
-	if ingress.Annotations == nil && cfg.enableRwr && rwrIngress.ObjectMeta.GenerateName == "" {
+	if ingress.Annotations == nil && cfg.enableRwr {
 		return false, createOrUpdateIngress(rwrIngress)
-	} else if ingress.Annotations == nil || rwrIngress.ObjectMeta.GenerateName != "" {
+	} else if ingress.Annotations == nil {
 		return false, nil
 	}
 
