@@ -44,11 +44,13 @@ spec:
   version: v2.7.0
   scrapeInterval: 5m
   evaluationInterval: 5m
+{{- if .Values.global.addonsPublicDomainTemplate }}
   {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
   externalUrl: https://{{ include "helm_lib_addon_public_domain" (list . "prometheus") }}/prometheus/longterm/
   {{- else }}
   externalUrl: http://{{ include "helm_lib_addon_public_domain" (list . "prometheus") }}/prometheus/longterm/
   {{- end }}
+{{- end }}
   securityContext:
     fsGroup: 2000
     runAsNonRoot: true
