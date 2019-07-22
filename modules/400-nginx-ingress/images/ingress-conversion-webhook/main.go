@@ -48,19 +48,27 @@ func createOrUpdateIngress(ingress *extensionsv1beta1.Ingress) error {
 	return nil
 }
 
-func rewriteTargetMigrationRequired(rwrIngress *extensionsv1beta1.Ingress) bool {
-	if _, ok := rwrIngress.ObjectMeta.Annotations["ingress.flant.com/skip-rewrite-target-migration"]; ok {
+func rewriteTargetMigrationRequired(ingress *extensionsv1beta1.Ingress) bool {
+	if ingress.ObjectMeta.Annotations == nil {
 		return false
 	}
 
-	if strings.Contains(rwrIngress.ObjectMeta.Annotations["nginx.ingress.kubernetes.io/rewrite-target"], "$") {
+	if _, ok := ingress.ObjectMeta.Annotations["ingress.flant.com/skip-rewrite-target-migration"]; ok {
 		return false
 	}
 
-	for _, ingressRule := range rwrIngress.Spec.Rules {
+	if _, ok := ingress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"]; !ok {
+		return false
+	}
+
+	if strings.Contains(ingress.ObjectMeta.Annotations["nginx.ingress.kubernetes.io/rewrite-target"], "$") {
+		return false
+	}
+
+	for _, ingressRule := range ingress.Spec.Rules {
 		for _, path := range ingressRule.HTTP.Paths {
 			if strings.Contains(path.Path, "(") && strings.Contains(path.Path, ")") {
-				if _, ok := rwrIngress.ObjectMeta.Annotations["nginx.ingress.kubernetes.io/use-regex"]; !ok {
+				if _, ok := ingress.ObjectMeta.Annotations["nginx.ingress.kubernetes.io/use-regex"]; !ok {
 					return false
 				}
 			}
@@ -70,18 +78,43 @@ func rewriteTargetMigrationRequired(rwrIngress *extensionsv1beta1.Ingress) bool 
 	return true
 }
 
-func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
-	ingress, ok := obj.(*extensionsv1beta1.Ingress)
-	if !ok {
-		return false, fmt.Errorf("not an Ingress object")
+func migrateAnnotations(ingress *extensionsv1beta1.Ingress) {
+	// do not migrate annotations if there are none
+	if ingress.Annotations == nil {
+		return
 	}
 
-	if strings.HasSuffix(ingress.ObjectMeta.Name, "-rwr") {
-		return false, nil
+	var hasOldAnnotations bool
+	for k := range ingress.Annotations {
+		if strings.HasPrefix(k, oldIngressAnnotationPrefix) {
+			hasOldAnnotations = true
+			break
+		}
 	}
 
+	if hasOldAnnotations {
+		for k := range ingress.Annotations {
+			if strings.HasPrefix(k, newIngressAnnotationPrefix) {
+				delete(ingress.Annotations, k)
+			}
+		}
+
+		for k, v := range ingress.Annotations {
+			if strings.HasPrefix(k, oldIngressAnnotationPrefix) {
+				ingress.Annotations["nginx."+k] = v
+			}
+		}
+	}
+}
+
+func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
+	// skip everything with GenerateName fields, these are not user-created
 	if ingress.ObjectMeta.GenerateName != "" {
-		return false, nil
+		return nil
+	}
+
+	if !cfg.enableRwr {
+		return nil
 	}
 
 	rwrIngress := ingress.DeepCopy()
@@ -94,62 +127,52 @@ func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
 	}
 	rwrIngress.Status = extensionsv1beta1.IngressStatus{}
 
-	if ingress.Annotations == nil && cfg.enableRwr {
-		return false, createOrUpdateIngress(rwrIngress)
-	} else if ingress.Annotations == nil {
+	// remove cert-manager annotation and change ingress.class
+	delete(rwrIngress.Annotations, "kubernetes.io/tls-acme")
+	if _, ok := rwrIngress.Annotations["kubernetes.io/ingress.class"]; !ok {
+		rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
+	} else {
+		rwrIngress.Annotations["kubernetes.io/ingress.class"] = rwrIngress.Annotations["kubernetes.io/ingress.class"] + "-rwr"
+	}
+
+	if !rewriteTargetMigrationRequired(ingress) {
+		return createOrUpdateIngress(rwrIngress)
+	}
+
+	for rulePos, ingressRule := range rwrIngress.Spec.Rules {
+		for pathPos, path := range ingressRule.HTTP.Paths {
+			if rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path == "" || rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path == "/" {
+				rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = "/()(.*)"
+			} else {
+				rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = strings.TrimSuffix(path.Path, "/") + "(/|$)(.*)"
+			}
+		}
+	}
+	rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = strings.TrimSuffix(rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"], "/") + "/$2"
+
+	return createOrUpdateIngress(rwrIngress)
+}
+
+func ingressMutator(_ context.Context, obj metav1.Object) (bool, error) {
+	ingress, ok := obj.(*extensionsv1beta1.Ingress)
+	if !ok {
+		return false, fmt.Errorf("not an Ingress object")
+	}
+
+	// completely skip "-rwr" Ingresses that are created by us
+	if strings.HasSuffix(ingress.ObjectMeta.Name, "-rwr") {
 		return false, nil
 	}
 
-	// annotation prefix migration
-	var hasOldAnnotations bool
-	for k, _ := range ingress.Annotations {
-		if strings.HasPrefix(k, oldIngressAnnotationPrefix) {
-			hasOldAnnotations = true
-			break
-		}
+	// Mutation step #1: migrate annotation prefixes
+	migrateAnnotations(ingress)
+
+	// Mutation step #2: rewrite-target migration: https://github.com/deckhouse/deckhouse/issues/641
+	err := rewriteTargetMigration(ingress)
+	if err != nil {
+		return false, err
 	}
 
-	if hasOldAnnotations {
-		for k, _ := range ingress.Annotations {
-			if strings.HasPrefix(k, newIngressAnnotationPrefix) {
-				delete(ingress.Annotations, k)
-			}
-		}
-
-		for k, v := range ingress.Annotations {
-			if strings.HasPrefix(k, oldIngressAnnotationPrefix) {
-				ingress.Annotations["nginx."+k] = v
-			}
-		}
-	}
-
-	// rewrite-target migration: https://github.com/deckhouse/deckhouse/issues/641
-	if rewriteTargetMigrationRequired(rwrIngress) && cfg.enableRwr {
-		delete(rwrIngress.Annotations, "kubernetes.io/tls-acme")
-		if _, ok := rwrIngress.Annotations["kubernetes.io/ingress.class"]; !ok {
-			rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
-		} else {
-			rwrIngress.Annotations["kubernetes.io/ingress.class"] = rwrIngress.Annotations["kubernetes.io/ingress.class"] + "-rwr"
-		}
-
-		if _, ok := rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"]; ok {
-			for rulePos, ingressRule := range rwrIngress.Spec.Rules {
-				for pathPos, path := range ingressRule.HTTP.Paths {
-					if rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path == "/" {
-						rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = strings.TrimSuffix(path.Path, "/") + "/()(.*)"
-					} else {
-						rwrIngress.Spec.Rules[rulePos].HTTP.Paths[pathPos].Path = strings.TrimSuffix(path.Path, "/") + "(/|$)(.*)"
-					}
-				}
-			}
-			rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"] = strings.TrimSuffix(rwrIngress.Annotations["nginx.ingress.kubernetes.io/rewrite-target"], "/") + "/$2"
-		}
-
-		err := createOrUpdateIngress(rwrIngress)
-		if err != nil {
-			return false, err
-		}
-	}
 	return false, nil
 }
 
