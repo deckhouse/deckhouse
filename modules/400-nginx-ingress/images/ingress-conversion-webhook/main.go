@@ -115,7 +115,9 @@ func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
 	}
 
 	if ingress.ObjectMeta.GenerateName != "" {
-		ingress.Name = ingress.ObjectMeta.GenerateName + strings.ToLower(randstr.String(5))
+		if ingress.ObjectMeta.Name == "" {
+			ingress.Name = ingress.ObjectMeta.GenerateName + strings.ToLower(randstr.String(5))
+		}
 		ingress.ObjectMeta.GenerateName = ""
 	}
 
