@@ -4,10 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
 	"os"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +17,7 @@ import (
 	"github.com/slok/kubewebhook/pkg/log"
 	mutatingwh "github.com/slok/kubewebhook/pkg/webhook/mutating"
 
+	"github.com/thanhpk/randstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -108,13 +110,13 @@ func migrateAnnotations(ingress *extensionsv1beta1.Ingress) {
 }
 
 func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
-	// skip everything with GenerateName fields, these are not user-created
-	if ingress.ObjectMeta.GenerateName != "" {
+	if !cfg.enableRwr {
 		return nil
 	}
 
-	if !cfg.enableRwr {
-		return nil
+	if ingress.ObjectMeta.GenerateName != "" {
+		ingress.Name = ingress.ObjectMeta.GenerateName + strings.ToLower(randstr.String(5))
+		ingress.ObjectMeta.GenerateName = ""
 	}
 
 	rwrIngress := ingress.DeepCopy()
@@ -127,12 +129,14 @@ func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
 	}
 	rwrIngress.Status = extensionsv1beta1.IngressStatus{}
 
-	// remove cert-manager annotation and change ingress.class
-	delete(rwrIngress.Annotations, "kubernetes.io/tls-acme")
-	if _, ok := rwrIngress.Annotations["kubernetes.io/ingress.class"]; !ok {
-		rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
-	} else {
-		rwrIngress.Annotations["kubernetes.io/ingress.class"] = rwrIngress.Annotations["kubernetes.io/ingress.class"] + "-rwr"
+	if rwrIngress.Annotations != nil {
+		// remove cert-manager annotation and change ingress.class
+		delete(rwrIngress.Annotations, "kubernetes.io/tls-acme")
+		if _, ok := rwrIngress.Annotations["kubernetes.io/ingress.class"]; !ok {
+			rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
+		} else {
+			rwrIngress.Annotations["kubernetes.io/ingress.class"] = rwrIngress.Annotations["kubernetes.io/ingress.class"] + "-rwr"
+		}
 	}
 
 	if !rewriteTargetMigrationRequired(ingress) {

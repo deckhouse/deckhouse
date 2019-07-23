@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/slok/kubewebhook v0.3.0
+	github.com/thanhpk/randstr v1.0.4
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	k8s.io/api v0.0.0-20190703205437-39734b2a72fe
