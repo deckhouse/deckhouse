@@ -10,17 +10,6 @@ function __config__() {
 }
 
 function __main__() {
-  if values::is_false nginxIngress.rewriteTargetMigration; then
-    kill_list=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -P '^.*-rwr$' | sort -u)
-    IFS=$'\n'
-    for i in $kill_list; do
-      unset IFS
-      kubectl delete ing $i
-    done
-    unset IFS
-    exit 0
-  fi
-
   for i in $(seq 1 120); do
     if kubectl -n kube-system get pod -l app=ingress-conversion-webhook -o json | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' ; then
       break
@@ -33,6 +22,29 @@ function __main__() {
     >&2 echo "Timeout waiting for ingress conversion webhook pod in kube-system namespace"
     return 1
   fi
+
+
+  if values::is_false nginxIngress.rewriteTargetMigration; then
+    kill_list=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -P '^.*-rwr$' | sort -u)
+    IFS=$'\n'
+    for i in $kill_list; do
+      unset IFS
+      kubectl delete ing $i
+    done
+    unset IFS
+    exit 0
+  fi
+
+
+  # remove already created -rwr Ingresses with Labels and/or OwnerReferences
+  kill_list=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | select(.metadata.labels or .metadata.ownerReferences) | "-n \(.metadata.namespace) \(.metadata.name)"' | (grep -P '^.*-rwr$' || true)  | sort -u)
+  IFS=$'\n'
+  for i in $kill_list; do
+    unset IFS
+    kubectl delete ing $i
+  done
+  unset IFS
+
 
   non_rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | (grep -Pv '^.*-rwr$' || true) | sort -u)
   rwr=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | (grep -P '^.*-rwr$' || true) | sed s/-rwr//g | sort -u)
