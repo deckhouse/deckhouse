@@ -125,9 +125,7 @@ func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
 	rwrIngress.ObjectMeta = metav1.ObjectMeta{
 		Name:            rwrIngress.ObjectMeta.Name + "-rwr",
 		Namespace:       rwrIngress.ObjectMeta.Namespace,
-		Labels:          rwrIngress.ObjectMeta.Labels,
 		Annotations:     rwrIngress.ObjectMeta.Annotations,
-		OwnerReferences: rwrIngress.ObjectMeta.OwnerReferences,
 	}
 	rwrIngress.Status = extensionsv1beta1.IngressStatus{}
 
