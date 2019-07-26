@@ -76,9 +76,6 @@ nginxIngress: |
     inlet: Direct
     config:
       hsts: true
-      setRealIPFrom:
-      - 1.2.3.4/16
-      - 4.4.4.4/24
     customErrorsServiceName: "error-backend"
     customErrorsNamespace: "default"
     customErrorsCodes:

@@ -2,6 +2,7 @@
   {{- $name := (print "nginx" (.suffix | default "")) }}
   {{- $publishService := (.publishService | default false) }}
   {{- $hostNetwork := (.hostNetwork | default false) }}
+  {{- $updateOnDelete := (.updateOnDelete | default false) }}
   {{- with .context }}
     {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
@@ -32,9 +33,16 @@ metadata:
     heritage: antiopa
     module: {{ .Chart.Name }}
     app: {{ $name }}
+{{- if $updateOnDelete }}
+    nginx-ingress-safe-update: ""
+{{- end }}
 spec:
   updateStrategy:
+  {{ if $updateOnDelete }}
+    type: OnDelete
+  {{ else }}
     type: RollingUpdate
+  {{ end }}
   selector:
     matchLabels:
       app: {{ $name }}

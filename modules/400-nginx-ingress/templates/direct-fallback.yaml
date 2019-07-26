@@ -53,9 +53,10 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
     app: direct-fallback
+    nginx-ingress-safe-update: ""
 spec:
   updateStrategy:
-    type: RollingUpdate
+    type: OnDelete
   selector:
     matchLabels:
       app: direct-fallback
