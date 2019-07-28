@@ -47,6 +47,8 @@ spec:
         - --kubelet-service=kube-system/kubelet
         - --logtostderr=true
         - --config-reloader-cpu=0
+        - --config-reloader-image={{ $.Values.global.modulesImages.registry }}/prometheus-operator/configmap-reloader:{{ $.Values.global.modulesImages.tags.prometheusOperator.configmapReloader }}
+        - --prometheus-config-reloader={{ $.Values.global.modulesImages.registry }}/prometheus-operator/prometheus-config-reloader:{{ $.Values.global.modulesImages.tags.prometheusOperator.prometheusConfigReloader }}
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-operator/prometheus-operator:{{ $.Values.global.modulesImages.tags.prometheusOperator.prometheusOperator }}
         name: prometheus-operator
         ports:

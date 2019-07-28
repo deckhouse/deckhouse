@@ -40,7 +40,10 @@ spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.retentionGigabytes }}GB
+  image: {{ .Values.global.modulesImages.registry }}/prometheus/prometheus:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}
   version: v2.7.0
+  imagePullSecrets:
+  - name: antiopa-registry
   scrapeInterval: 30s
   evaluationInterval: 30s
   serviceAccountName: prometheus
