@@ -8,10 +8,10 @@ Build:
   stage: build
   script:
     - ./modules_images bp --write-tags=modules/images_tags.json
-    - source dapp_use latest
-    - dapp --version
-    - dapp dimg bp --tag-ci --verbose ${CI_REGISTRY_IMAGE}/dev
-    - if [[ -n ${CI_COMMIT_TAG} ]]; then dapp dimg push --tag-plain ${CI_COMMIT_TAG} --verbose ${CI_REGISTRY_IMAGE}; fi
+    - type multiwerf && source <(multiwerf use 1.0 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE}/dev
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE}; fi
   except:
     - schedules
   tags:
@@ -71,24 +71,9 @@ Cleanup registry:
   stage: cleanup_registry
   script:
     - set -x
-    - source dapp_use latest
-    - dapp dimg cleanup repo ${CI_REGISTRY_IMAGE}/dev
-  only:
-  - schedules
-  tags:
-    - deploy
-  retry: 2
-
-Cleanup builder:
-  stage: cleanup_builder
-  script:
-    - set -x
-    - source dapp_use latest
-    - dapp dimg stages cleanup local
-        --improper-cache-version
-        --improper-git-commit
-        --improper-repo-cache
-        ${CI_REGISTRY_IMAGE}/dev
+    - type multiwerf && source <(multiwerf use 1.0 alpha)
+    - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
+    - werf cleanup --stages-storage :local --images-repo ${CI_REGISTRY_IMAGE}/dev
   only:
   - schedules
   tags:

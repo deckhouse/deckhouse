@@ -1,4 +1,7 @@
-dimg: ~
+project: antiopa
+configVersion: 1
+---
+image: ~
 from: alpine:3.9
 git:
 - add: /
@@ -27,12 +30,18 @@ ansible:
   - apk: name=bash
 
   # Зависимости хуков
-  - apk: name=jq
-  - apk: name=curl
-  - apk: name=makepasswd
-  - apk: name=apache2-utils
-  - apk: name=bc
-  - apk: name=grep
+  - name: "Install dependencies"
+    apk:
+      name: "{{`{{ item }}`}}"
+    with_items:
+    - jq
+    - curl
+    - makepasswd
+    - apache2-utils
+    - bc
+    - grep
+    - tar
+    - unzip
 
   # Зависимости хуков (из edge/testing)
   - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
@@ -100,8 +109,8 @@ git:
     install:
     - go.mod
     - go.sum
-    buildArtifact:
-    - "antiopa/**/*.go"
+    setup:
+    - "**/*.go"
     - go-build.sh
 ansible:
   beforeInstall:
@@ -113,7 +122,7 @@ ansible:
     args:
       chdir: /antiopa
 
-  buildArtifact:
+  setup:
   - command: /antiopa/go-build.sh
     args:
       chdir: /antiopa
