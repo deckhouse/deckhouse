@@ -1,0 +1,13 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterauthorizationrules.authz.flant.com
+spec:
+  group: authz.flant.com
+  version: v1
+  scope: Cluster
+  names:
+    plural: clusterauthorizationrules
+    singular: clusterauthorizationrule
+    kind: ClusterAuthorizationRule
+
