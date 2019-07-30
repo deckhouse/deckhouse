@@ -1,0 +1,26 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  selector:
+    matchLabels:
+      prometheus-target: {{ .Chart.Name }}
+  namespaceSelector:
+    matchNames:
+    - kube-{{ .Chart.Name }}
+  endpoints:
+  - port: http-metrics
+    relabelings:
+    - regex: namespace|job|pod|service|endpoint
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_service_label_app]
+      targetLabel: pushgateway

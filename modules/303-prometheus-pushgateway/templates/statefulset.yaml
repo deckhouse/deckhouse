@@ -1,0 +1,76 @@
+{{- range $instance := .Values.prometheusPushgateway.instances }}
+{{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $instance }}
+  namespace: kube-{{ $.Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: {{ $instance }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: {{ $instance }}
+  updatePolicy:
+    updateMode: "Initial"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $instance }}
+  namespace: kube-{{ $.Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: {{ $instance }}
+spec:
+  # Prometheus Pushgateway хранит метрики в памяти и если мы сделаем большее количество реплик, то данные нельзя будет корректно удалить.
+  replicas: 1
+  serviceName: {{ $instance }}
+  selector:
+    matchLabels:
+      app: {{ $instance }}
+  template:
+    metadata:
+      labels:
+        app: {{ $instance }}
+    spec:
+{{- include "helm_lib_node_selector" (tuple $ "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
+{{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+{{- end }}
+      imagePullSecrets:
+      - name: antiopa-registry
+      containers:
+      - name: prometheus-pushgateway
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus-pushgateway/pushgateway:{{ $.Values.global.modulesImages.tags.prometheusPushgateway.pushgateway }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "0.1"
+            memory: "100Mi"
+        ports:
+        - name: http-metrics
+          containerPort: 9091
+          protocol: TCP
+        livenessProbe:
+            httpGet:
+              port: 9091
+              path: /metrics
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+        readinessProbe:
+            httpGet:
+              port: 9091
+              path: /metrics
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+{{- end }}
