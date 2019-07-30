@@ -114,6 +114,6 @@ ansible:
       chdir: /antiopa
 
   buildArtifact:
-  - command: /antiopa/go-build.sh pipeline-{{ env "CI_PIPELINE_ID" }}
+  - command: /antiopa/go-build.sh
     args:
       chdir: /antiopa

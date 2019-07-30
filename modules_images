@@ -76,6 +76,9 @@ EOF
   if [[ -n $REGISTRY_USER || -n $REGISTRY_PASSWORD ]] ; then
     echo $REGISTRY_PASSWORD | docker login --username="$REGISTRY_USER" --password-stdin $REGISTRY > /dev/null 2> >(while IFS='' read line ; do echo -e "\e[01;31m$line\e[0m" >&2; done)
   fi
+  
+  # Получаем список образов, которые уже собраны (присутствуют локально на сборщике)
+  existing_docker_images=$(docker image ls --format "{{.Repository}}:{{.Tag}}" | grep ^$REGISTRY)
 
   # Получаем тег для каждого образа каждого модуля
   modules_images_with_tags=$(git ls-tree @ -- modules/*/images/* | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-f]{40})\smodules\/([0-9]{3})-([^\/]+)\/images\/([^\/]+)$/\2:\3:\4:\1/' | sort)
@@ -106,7 +109,7 @@ EOF
     fi
 
     # Пропускаем, если образ уже собран (присутствует локально на сборщике)
-    if [[ -n "$(docker image ls -q $full_image_name 2> /dev/null)" ]] ; then
+    if echo "$existing_docker_images" | grep ^$full_image_name$ > /dev/null ; then
       continue
     fi
 
