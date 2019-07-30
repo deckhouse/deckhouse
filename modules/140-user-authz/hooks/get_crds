@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+# Костыль 2019-07-26: пока не разберемся как правильно создавать CRD
+kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
+
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "ClusterAuthorizationRule",
+      "jqFilter": ".spec"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  crds=$(kubectl get clusterauthorizationrules.authz.flant.com -o json  | jq '.items | to_entries[] | {"name": .value.metadata.name, "spec": .value.spec}' -rc | jq -sc '.')
+  values::set userAuthz.crds "$crds"
+}
+
+hook::run "$@"

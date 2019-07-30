@@ -1,0 +1,56 @@
+{{- range $crd := .Values.userAuthz.crds }}
+  {{- if $crd.spec.additionalRoles }}
+    {{- range $additional_role := $crd.spec.additionalRoles }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: user-authz:{{ $crd.name }}:{{ $additional_role.name }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+roleRef:
+{{ $additional_role | toYaml | indent 2 }}
+subjects:
+{{ $crd.spec.subjects | toYaml }}
+    {{- end }}
+  {{- end }}
+
+  {{- if not (list "User" "Master" "Deploy" "Admin" | has $crd.spec.accessLevel) }}
+    {{- cat "Unsopported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
+  {{- end }}
+
+  {{- if $crd.spec.accessLevel }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | lower }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:{{ $crd.spec.accessLevel | lower }}
+subjects:
+{{ $crd.spec.subjects | toYaml }}
+  {{- end }}
+
+  {{- if ($crd.spec.portForwarding | default false) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: user-authz:{{ $crd.name }}:port-forward
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:port-forward
+subjects:
+{{ $crd.spec.subjects | toYaml }}
+  {{- end }}
+{{- end }}
