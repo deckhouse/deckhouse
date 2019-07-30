@@ -1,0 +1,19 @@
+#!/bin/bash
+
+### Миграция 2019-07-14: https://github.com/deckhouse/deckhouse/merge_requests/960
+#
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции. Он удаляет ненужный параметр из configmap'а antiopa.
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if kubectl -n antiopa get configmap antiopa -o json | jq '.data.systemdSlicesCleaner' -e > /dev/null ; then
+    kubectl::jq_patch antiopa configmap/antiopa ". | del(.data.systemdSlicesCleaner)"
+  fi
+}
+
+hook::run $@
