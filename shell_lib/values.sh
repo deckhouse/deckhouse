@@ -130,7 +130,7 @@ function values::is_false() {
     shift
   fi
 
-  values::get $config $1 | jq '. == false' -e > /dev/null
+  values::get $config $1 | jq '. == false' -e > /dev/null 2> /dev/null
 }
 
 function values::generate_password() {
