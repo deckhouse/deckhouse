@@ -90,7 +90,7 @@ spec:
             echo 2 > /proc/sys/net/ipv4/conf/all/arp_announce ;
             sleep 600 ;
           done
-        image: {{ $.Values.global.modulesImages.registry }}/sysctl-tuner/busybox:{{ $.Values.global.modulesImages.tags.sysctlTuner.busybox }}
+        image: {{ $.Values.global.modulesImages.registry }}/sysctl-tuner/busybox:{{ $.Values.global.modulesImages.tags.common.busybox }}
         name: busybox
         resources: {}
         securityContext:
