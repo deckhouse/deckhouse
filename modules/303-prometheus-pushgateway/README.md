@@ -1,7 +1,7 @@
 Модуль Prometheus Pushgateway
 =======
 
-Данный модуль устанавливает в кластер [Pormehtues Pushgateway](https://github.com/prometheus/pushgateway). Он предназначен для приема метрик от приложения и отдачи их Prometheus.
+Данный модуль устанавливает в кластер [Prometheus Pushgateway](https://github.com/prometheus/pushgateway). Он предназначен для приема метрик от приложения и отдачи их Prometheus.
 
 ### Параметры
 
@@ -30,7 +30,7 @@ prometheusPushgateway: |
 
 #### Пример работы с PushGateway:
 
-адрес PushGateway: `http://first.kube-prometheus-pushgateway:9091`.
+Адрес PushGateway: `http://first.kube-prometheus-pushgateway:9091`.
 
 ##### Отправка метрики через curl:
 
@@ -44,12 +44,12 @@ prometheusPushgateway: |
 test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
 ```
 
-**Важно!** Значение job должно быть уникальным в prometheus, чтобы не поломать существующие графики и алерты. Получить список всех занятых job можно следующим запросом: `count({__name__=~".+"}) by (job)`.
+**Важно!** Значение job должно быть уникальным в Prometheus, чтобы не поломать существующие графики и алерты. Получить список всех занятых job можно следующим запросом: `count({__name__=~".+"}) by (job)`.
 
-##### Удаление всех метрик группы {instance="10.244.1.155:9091",job="app"} через curl:
+##### Удаление всех метрик группы `{instance="10.244.1.155:9091",job="app"}` через curl:
 
 ```shell
 # curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/app/instance/10.244.1.155:9091
 ```
 
-Т.к. PushGateway хранит полученные метрики в памяти, при рестарте pod-а все метрики будут утеряны.
+Т.к. PushGateway хранит полученные метрики в памяти, **при рестарте pod-а все метрики будут утеряны**.
