@@ -60,7 +60,7 @@ function values::set() {
     shift
   fi
 
-  values::json_patch $config add /$(echo $1 | sed 's/\./\//g') "$2"
+  values::json_patch $config add $(values::normalize_path_for_json_patch $1) "$2"
 }
 
 function values::has() {
@@ -88,7 +88,7 @@ function values::unset() {
   fi
 
   if values::has $config $1 ; then
-    values::json_patch $config remove /$(echo $1 | sed 's/\./\//g')
+    values::json_patch $config remove $(values::normalize_path_for_json_patch $1)
   fi
 }
 
@@ -134,7 +134,7 @@ function values::is_false() {
 }
 
 function values::generate_password() {
-  makepasswd -c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -l 20
+  pwgen -s 20 1
 }
 
 function values::get_first_defined() {
@@ -150,4 +150,8 @@ function values::get_first_defined() {
       values::get $config $var
     fi
   done
+}
+
+function values::normalize_path_for_json_patch() {
+  echo /$1 | sed -e s/\'/\"/g -e ':loop' -e 's/"\([^".]\+\)\.\([^"]\+\)"/"\1##DOT##\2"/g' -e 't loop' -e s/\"//g -e 's/\./\//g' -e s/##DOT##/./g
 }

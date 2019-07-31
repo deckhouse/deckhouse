@@ -5,10 +5,10 @@
   {{- $yes := index . 1 -}} {{- /* argv1 */ -}}
   {{- $no  := index . 2 -}} {{- /* argv2 */ -}}
 
-  {{- $module_args := include "helm_lib_module_args" $context | fromYaml }}
+  {{- $module_values := include "helm_lib_module_values" $context | fromYaml }}
 
-  {{- if hasKey $module_args "highAvailability" -}}
-    {{- if $module_args.highAvailability -}} {{- $yes -}} {{- else -}} {{- $no -}} {{- end -}}
+  {{- if hasKey $module_values "highAvailability" -}}
+    {{- if $module_values.highAvailability -}} {{- $yes -}} {{- else -}} {{- $no -}} {{- end -}}
   {{- else if hasKey $context.Values.global "highAvailability" -}}
     {{- if $context.Values.global.highAvailability -}} {{- $yes -}} {{- else -}} {{- $no -}} {{- end -}}
   {{- else -}}
@@ -21,10 +21,10 @@
 {{- define "helm_lib_ha_enabled" }}
   {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 
-  {{- $module_args := include "helm_lib_module_args" $context | fromYaml }}
+  {{- $module_values := include "helm_lib_module_values" $context | fromYaml }}
 
-  {{- if hasKey $module_args "highAvailability" -}}
-    {{- if $module_args.highAvailability -}}
+  {{- if hasKey $module_values "highAvailability" -}}
+    {{- if $module_values.highAvailability -}}
       true
     {{- else -}}
       false

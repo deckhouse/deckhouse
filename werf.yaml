@@ -36,7 +36,7 @@ ansible:
     with_items:
     - jq
     - curl
-    - makepasswd
+    - pwgen
     - apache2-utils
     - bc
     - grep

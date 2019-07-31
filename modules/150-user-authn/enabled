@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __main__() {
+  if values::get global.addonsPublicDomainTemplate ; then
+    if values::has global.certificateForIngress.customCertificateSecretName && \
+       values::is_false global.certificateForIngress.customCertificateSecretName && \
+       values::has global.certificateForIngress.certmanagerClusterIssuerName && \
+       values::is_false global.certificateForIngress.certmanagerClusterIssuerName ; then
+      echo "false" > $MODULE_ENABLED_RESULT
+    else
+      echo "true" > $MODULE_ENABLED_RESULT
+    fi
+  else
+    echo "false" > $MODULE_ENABLED_RESULT
+  fi
+}
+
+hook::run $@

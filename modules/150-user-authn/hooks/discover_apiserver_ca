@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=5
+}
+
+function __main__() {
+  kubernetes_ca_for_kubeconfig_generator=$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
+  values::set userAuthn.kubernetesCa "$kubernetes_ca_for_kubeconfig_generator"
+}
+
+hook::run $@

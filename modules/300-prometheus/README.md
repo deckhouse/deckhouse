@@ -48,8 +48,8 @@ prometheus: |
     * Если не указано — используется или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
 * `longtermStorageClassName` — имя storageClass'а, который использовать для Longterm Prometheus.
     * Если не указано — используется или `prometheus.storageClassName` от основного Prometheus, или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
-* `userPassword` — пароль пользователя `user` (генерируется автоматически, но можно изменять).
-* `adminPassword` — пароль пользователя `admin` (генерируется автоматически, но можно изменять).
+* `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+    * Используется если не включен модуль `user-authn`.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
   * По-умолчанию `1095`.
 * `madisonAuthKey` — ключ для отправки алертов в Madison ([подробнее об интеграции с Madison](docs/MADISON.md)).
@@ -101,8 +101,7 @@ prometheus: |
 
 ```yaml
 prometheus: |
-  userPassword: xxxxxx
-  adminPassword: yyyyyy
+  password: xxxxxx
   retentionDays: 7
   storageClassName: rbd
   nodeSelector:

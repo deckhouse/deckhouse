@@ -1,3 +1,4 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
@@ -19,12 +20,12 @@ rules:
   # Allow Dashboard to get, update and delete Dashboard exclusive secrets.
 - apiGroups: [""]
   resources: ["secrets"]
-  resourceNames: ["kube-dashboard-key-holder", "kube-dashboard-certs"]
-  verbs: ["get", "update", "delete"]
+  resourceNames: ["kubernetes-dashboard-key-holder", "kubernetes-dashboard-certs"]
+  verbs: ["get", "update", "delete", "list", "watch"]
   # Allow Dashboard to get and update 'kube-dashboard-settings' config map.
 - apiGroups: [""]
   resources: ["configmaps"]
-  resourceNames: ["kube-dashboard-settings"]
+  resourceNames: ["kubernetes-dashboard-settings"]
   verbs: ["get", "update"]
   # Allow Dashboard to get metrics from heapster.
 - apiGroups: [""]

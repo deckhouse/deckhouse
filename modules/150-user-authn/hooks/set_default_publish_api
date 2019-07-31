@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if ! values::has userAuthn.publishApi ; then
+    values::set userAuthn.publishApi "false"
+  fi
+}
+
+hook::run "$@"

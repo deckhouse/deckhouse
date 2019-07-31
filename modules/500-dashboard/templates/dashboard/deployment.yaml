@@ -50,18 +50,30 @@ spec:
       containers:
       - name: dashboard
         image: {{ $.Values.global.modulesImages.registry }}/dashboard/kubernetes-dashboard-amd64:{{ $.Values.global.modulesImages.tags.dashboard.kubernetesDashboardAmd64 }}
+    {{- if .Values.global.enabledModules | has "user-authn" }}
+        args:
+        - --auto-generate-certificates=true
+    {{- end }}
         resources:
           requests:
             cpu: "100m"
             memory: "128Mi"
         ports:
+    {{- if .Values.global.enabledModules | has "user-authn" }}
+        - containerPort: 8443
+    {{- else }}
         - containerPort: 9090
+    {{- end }}
           protocol: TCP
-        args:
         livenessProbe:
           httpGet:
             path: /
+    {{- if .Values.global.enabledModules | has "user-authn" }}
+            port: 8443
+            scheme: HTTPS
+    {{- else }}
             port: 9090
+    {{- end }}
           initialDelaySeconds: 30
           timeoutSeconds: 30
         volumeMounts:
