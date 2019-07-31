@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 8cd71fd..957748f 100644
+index 8cd71fd..f713bf2 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -2,10 +2,13 @@ module sigs.k8s.io/vsphere-csi-driver
  
  go 1.12
  
-+replace k8s.io/cloud-provider-vsphere v0.2.1-0.20190709235625-cfea6c7aaefb => github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190717111825-ca22bb2c47a1
++replace k8s.io/cloud-provider-vsphere v0.2.1-0.20190709235625-cfea6c7aaefb => github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190731133401-3811b4975293
 +
  require (
  	github.com/akutz/gofsutil v0.1.2
@@ -37,7 +37,7 @@ index 8cd71fd..957748f 100644
 +	k8s.io/utils v0.0.0-20190712204705-3dccf664f023
  )
 diff --git a/go.sum b/go.sum
-index 33a6fc8..1084a61 100644
+index 33a6fc8..df75ff8 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,9 +1,6 @@
@@ -172,7 +172,7 @@ index 33a6fc8..1084a61 100644
  github.com/spf13/pflag v1.0.2 h1:Fy0orTDgHdbnzHcsOgfCN4LtHf0ec3wwtiwJqwvf3Gc=
  github.com/spf13/pflag v1.0.2/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
  github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-@@ -175,34 +150,27 @@ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc
+@@ -175,34 +150,30 @@ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc
  github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
  github.com/ugorji/go v1.1.1 h1:gmervu+jDMvXTbcHQ0pd2wee85nEoE0BsVyEuzkfK8w=
  github.com/ugorji/go v1.1.1/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
@@ -183,8 +183,11 @@ index 33a6fc8..1084a61 100644
 +github.com/vmware/vmw-guestinfo v0.0.0-20170707015358-25eff159a728/go.mod h1:x9oS4Wk2s2u4tS29nEaDLdzvuHdB19CvSGJjPgkZJNk=
  github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
  github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
-+github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190717111825-ca22bb2c47a1 h1:OqXJrZ94cq1MuQXy3tvz2rLUHW0Qf/ShTXOG0wrOsnI=
-+github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190717111825-ca22bb2c47a1/go.mod h1:A/HuyGoMRRavmmCDzoBzFkGwFNPBlOwfzaUuqVnrxlg=
++github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190731113806-523544eb4314 h1:m/m/q2Oczd8NfSyfCB0NaG1566WAzJg00g59YNdJFRE=
++github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190731113806-523544eb4314/go.mod h1:A/HuyGoMRRavmmCDzoBzFkGwFNPBlOwfzaUuqVnrxlg=
++github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190731125320-52905179442d/go.mod h1:A/HuyGoMRRavmmCDzoBzFkGwFNPBlOwfzaUuqVnrxlg=
++github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190731131634-5123bbe768a7/go.mod h1:A/HuyGoMRRavmmCDzoBzFkGwFNPBlOwfzaUuqVnrxlg=
++github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20190731133401-3811b4975293/go.mod h1:A/HuyGoMRRavmmCDzoBzFkGwFNPBlOwfzaUuqVnrxlg=
  go.etcd.io/bbolt v1.3.2 h1:Z/90sZLPOeCy2PwprqkFa25PdkusRzaj9P8zm/KNyvk=
  go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
  golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
@@ -212,7 +215,7 @@ index 33a6fc8..1084a61 100644
  golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 h1:bjcUS9ztw9kFmmIxJInhon/0Is3p+EHBKNgquIzo1OI=
  golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
-@@ -211,26 +179,13 @@ golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5h
+@@ -211,26 +182,13 @@ golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5h
  golang.org/x/sys v0.0.0-20181107165924-66b7b1311ac8/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a h1:1BGLXjeY4akVXGgbC9HugT3Jv3hCI0z56oJR5vAMgBU=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
@@ -239,7 +242,7 @@ index 33a6fc8..1084a61 100644
  google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8 h1:Nw54tB0rB7hY/N0NQvRW8DG4Yk3Q6T9cu9RcFQDu1tc=
  google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
  google.golang.org/grpc v1.19.0 h1:cfg4PD8YEdSFnm7qLV4++93WcmhH2nIUhMjhdCvl3j8=
-@@ -242,8 +197,6 @@ gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
+@@ -242,8 +200,6 @@ gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
  gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
  gopkg.in/gcfg.v1 v1.2.3 h1:m8OOJ4ccYHnx2f4gQwpno8nAX5OGOh7RLaaz0pj3Ogs=
  gopkg.in/gcfg.v1 v1.2.3/go.mod h1:yesOnuUOFQAhST5vPY4nbZsb/huCgGGXlipJsBn0b3o=
@@ -248,7 +251,7 @@ index 33a6fc8..1084a61 100644
  gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
  gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
  gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
-@@ -260,46 +213,23 @@ gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+@@ -260,46 +216,23 @@ gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
  k8s.io/api v0.0.0-20180628040859-072894a440bd h1:HzgYeLDS1jLxw8DGr68KJh9cdQ5iZJizG0HZWstIhfQ=
  k8s.io/api v0.0.0-20180628040859-072894a440bd/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
