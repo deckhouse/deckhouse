@@ -51,7 +51,6 @@ spec:
       containers:
       - name: {{ .Chart.Name }}
         image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn:{{ $.Values.global.modulesImages.tags.openvpn.openvpn }}
-        imagePullPolicy: IfNotPresent
         command: [ '/etc/openvpn/setup/configure.sh' ]
         securityContext:
           capabilities:
@@ -72,7 +71,6 @@ spec:
             mountPath: /tmp
       - name: {{ .Chart.Name }}-admin
         image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn-web-ui:{{ $.Values.global.modulesImages.tags.openvpn.openvpnWebUi }}
-        imagePullPolicy: IfNotPresent
         command:
         - /bin/sh
         - -c

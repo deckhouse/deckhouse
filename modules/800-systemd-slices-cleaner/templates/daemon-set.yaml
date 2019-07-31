@@ -47,7 +47,6 @@ spec:
         - -json
         - /app/crontab
         image: {{ .Values.global.modulesImages.registry }}/systemd-slices-cleaner/systemd-slices-cleaner:{{ .Values.global.modulesImages.tags.systemdSlicesCleaner.systemdSlicesCleaner }}
-        imagePullPolicy: IfNotPresent
         name: {{ $.Chart.Name }}
         securityContext:
           privileged: true

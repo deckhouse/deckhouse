@@ -59,7 +59,6 @@ spec:
       containers:
       - name: webhook
         image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-webhook:{{ $.Values.global.modulesImages.tags.certManager.certManagerWebhook }}
-        imagePullPolicy: IfNotPresent
         args:
         - --v=4
         - --secure-port=6443
