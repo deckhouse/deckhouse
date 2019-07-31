@@ -59,7 +59,6 @@ spec:
       containers:
       - name: recommender
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/recommender:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.recommender }}
-        imagePullPolicy: IfNotPresent
         command:
         - /recommender
         - --address=:8942

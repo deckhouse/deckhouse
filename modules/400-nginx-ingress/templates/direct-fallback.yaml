@@ -80,7 +80,6 @@ spec:
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/direct-fallback:{{ $.Values.global.modulesImages.tags.nginxIngress.directFallback }}
         name: nginx
-        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
@@ -93,7 +92,6 @@ spec:
               command: ["/usr/sbin/nginx","-s","quit"]
       - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/direct-fallback-iptables:{{ $.Values.global.modulesImages.tags.nginxIngress.directFallbackIptables }}
         name: iptables-loop
-        imagePullPolicy: IfNotPresent
         securityContext:
           capabilities:
             add:

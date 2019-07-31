@@ -50,7 +50,6 @@ spec:
       containers:
         - name: cert-manager
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-controller:{{ $.Values.global.modulesImages.tags.certManager.certManagerController }}
-          imagePullPolicy: IfNotPresent
           args:
           - --cluster-resource-namespace=kube-cert-manager
           - --leader-election-namespace=kube-cert-manager

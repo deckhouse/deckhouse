@@ -50,7 +50,6 @@ spec:
       containers:
       - name: prometheus-pushgateway
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-pushgateway/pushgateway:{{ $.Values.global.modulesImages.tags.prometheusPushgateway.pushgateway }}
-        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: "0.1"

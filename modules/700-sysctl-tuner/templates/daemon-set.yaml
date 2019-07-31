@@ -91,7 +91,6 @@ spec:
             sleep 600 ;
           done
         image: {{ $.Values.global.modulesImages.registry }}/sysctl-tuner/busybox:{{ $.Values.global.modulesImages.tags.sysctlTuner.busybox }}
-        imagePullPolicy: IfNotPresent
         name: busybox
         resources: {}
         securityContext:

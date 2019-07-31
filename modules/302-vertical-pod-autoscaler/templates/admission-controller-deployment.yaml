@@ -70,7 +70,6 @@ spec:
       containers:
       - name: admission-controller
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/admission-controller:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.admissionController }}
-        imagePullPolicy: IfNotPresent
         command:
         - /admission-controller
         - --address=:8944

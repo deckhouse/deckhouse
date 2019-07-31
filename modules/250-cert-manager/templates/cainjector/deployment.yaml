@@ -60,7 +60,6 @@ spec:
       containers:
         - name: cainjector
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-cainjector:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}
-          imagePullPolicy: IfNotPresent
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)
           env:

@@ -59,7 +59,6 @@ spec:
       containers:
       - name: updater
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/updater:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.updater }}
-        imagePullPolicy: IfNotPresent
         command:
         - /updater
         - --address=:8943

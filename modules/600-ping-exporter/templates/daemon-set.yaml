@@ -55,7 +55,6 @@ spec:
       {{- end }}
       containers:
       - image: {{ .Values.global.modulesImages.registry }}/ping-exporter/ping-exporter:{{ .Values.global.modulesImages.tags.pingExporter.pingExporter }}
-        imagePullPolicy: IfNotPresent
         name: ping-exporter
         env:
           - name: MY_NODE_NAME
