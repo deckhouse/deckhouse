@@ -18,11 +18,14 @@ metadata:
     app: grafana
   annotations:
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+{{- if .Values.global.enabledModules | has "user-authn" }}
+    ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+    ingress.kubernetes.io/auth-url: http://dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}:4180/dex-authenticator/auth
+{{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
-    ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header X-WEBAUTH-USER $remote_user;
+{{- end }}
     ingress.kubernetes.io/affinity: cookie
 spec:
   {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}

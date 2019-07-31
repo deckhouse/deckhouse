@@ -10,7 +10,11 @@ metadata:
 spec:
   ports:
   - port: 80
+{{- if .Values.global.enabledModules | has "user-authn" }}
+    targetPort: 8443
+{{- else }}
     targetPort: 9090
+{{- end }}
   selector:
     module: {{ $.Chart.Name }}
     app: dashboard

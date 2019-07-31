@@ -1,0 +1,133 @@
+{{- define "dex_conf" }}
+  issuer: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/
+  storage:
+    type: kubernetes
+    config:
+      inCluster: true
+  web:
+    http: 0.0.0.0:5556
+  frontend:
+    theme: "coreos"
+    issuer: "Kubernetes Dex"
+    issuerUrl: "https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}"
+    logoUrl: "https://kubernetes.io/images/favicon.png"
+  expiry:
+    signingKeys: {{ .Values.userAuthn.accessTokenTTL | default "10m" | quote }}
+    idTokens: {{ .Values.userAuthn.refreshTokenTTL | default "4320h" | quote }}
+  logger:
+    level: debug
+    format: json
+  oauth2:
+    responseTypes: ["code", "token", "id_token"]
+    skipApprovalScreen: true
+  connectors:
+{{- range $provider := .Values.userAuthn.providers }}
+  {{- if eq $provider.type "Github" }}
+    - type: github
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        clientID: {{ $provider.github.clientID | quote }}
+        clientSecret: {{ $provider.github.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/callback
+    {{- range $org := $provider.github.orgs }}
+        orgs:
+        - name: {{ $org.name | quote }}
+        {{- if $org.teams }}
+          {{- range $team := $org.teams }}
+          teams:
+          - {{ $team | quote }}
+          {{- end }}
+        {{- end }}
+    {{- end }}
+      {{- if $provider.github.loadAllGroups }}
+        loadAllGroups: true
+      {{- end }}
+      {{- if $provider.github.teamNameField }}
+        teamNameField: {{ $provider.teamNameFiled }}
+      {{- end }}
+      {{- if $provider.github.useLoginAsId }}
+        useLoginAsId: true
+      {{- end }}
+  {{- end }}
+
+  {{- if eq $provider.type "Gitlab" }}
+    - type: gitlab
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        baseURL: {{ $provider.gitlab.baseURL | quote }}
+        clientID: {{ $provider.gitlab.clientID | quote }}
+        clientSecret: {{ $provider.gitlab.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/callback
+    {{- if $provider.gitlab.groups }}
+      {{- range $group := $provider.gitlab.groups }}
+        groups:
+        - {{ $group | quote }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- if eq $provider.type "SAML" }}
+    - type: saml
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        ssoURL: {{ $provider.saml.ssoURL }}
+        caData: {{ $provider.saml.ca | b64enc }}
+        redirectURI: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/callback
+        usernameAttr: {{ $provider.saml.usernameAttr | default "name" | quote }}
+        emailAttr: {{ $provider.saml.emailAttr | default "email" | quote }}
+        groupsAttr: {{ $provider.saml.groupsAttr | default "groups" | quote }}
+      {{- if $provider.saml.insecureSkipSignatureValidation }}
+        insecureSkipSignatureValidation: true
+      {{- end }}
+      {{- if $provider.saml.entityIssuer }}
+        entityIssuer: {{ $provider.saml.entityIssuer }}
+      {{- end }}
+      {{- if $provider.saml.ssoIssuer }}
+        ssoIssuer: {{ $provider.saml.ssoIssuer }}
+      {{- end }}
+      {{- if $provider.saml.groupsDelim }}
+        groupsDelim: {{ $provider.saml.groupsDelim }}
+      {{- end }}
+      {{- if $provider.saml.nameIDPolicyFormat }}
+        nameIDPolicyFormat: {{ $provider.saml.nameIDPolicyFormat }}
+      {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.userAuthn.users }}
+  enablePasswordDB: true
+  staticPasswords:
+  {{- range $user := .Values.userAuthn.users }}
+  - email: {{ $user.key | quote }}
+    hash: {{ $user.value | quote }}
+    username: {{ $user.key | quote }}
+  {{- end }}
+{{- end }}
+
+  {{- if .Values.userAuthn.kubernetesDexClientAppRedirectURIs }}
+  staticClients:
+  - id: kubernetes
+    name: kubernetes
+    secret: {{ .Values.userAuthn.kubernetesDexClientAppSecret | quote }}
+    redirectURIs:
+  {{- range $redirectURI := splitList "\n" (.Values.userAuthn.kubernetesDexClientAppRedirectURIs) }}
+      - {{ $redirectURI }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: dex
+data:
+  config.yaml: |-
+    {{ include "dex_conf" . | b64enc | indent 4 }}

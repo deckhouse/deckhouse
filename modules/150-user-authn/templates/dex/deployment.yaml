@@ -1,0 +1,118 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: dex
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: dex
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: dex
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: dex
+spec:
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/dex/config.yaml") . | sha256sum }}
+{{- if .Values.userAuthn.dexClientAppsConfigsSHA256 }}
+        checksum/dex-client-apps-configs-sha256: {{ .Values.userAuthn.dexClientAppsConfigsSHA256 }}
+{{- end }}
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+      - name: antiopa-registry
+      serviceAccountName: dex
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+{{- end }}
+      volumes:
+      - name: original-config
+        secret:
+          secretName: dex
+          items:
+          - key: config.yaml
+            path: config.yaml
+      - name: config
+        emptyDir: {}
+{{- if .Values.userAuthn.dexClientAppsNames }}
+  {{- range $dex_client := splitList "\n" (.Values.userAuthn.dexClientAppsNames) }}
+      - name: {{ $dex_client }}
+        secret:
+          secretName: {{ $dex_client }}
+  {{- end }}
+{{- end }}
+      initContainers:
+      - name: prepare-config
+        image: {{ .Values.global.modulesImages.registry }}/common/busybox:{{ .Values.global.modulesImages.tags.common.busybox }}
+        command:
+        - sh
+        - -c
+        - |
+          cat /opt/dex/config.yaml > /etc/dex/config.yaml
+          cat /opt/dex-client-app-config/* >> /etc/dex/config.yaml
+          true
+        volumeMounts:
+        - mountPath: /opt/dex/
+          name: original-config
+        - mountPath: /etc/dex
+          name: config
+{{- if .Values.userAuthn.dexClientAppsNames }}
+  {{- range $dex_client := splitList "\n" (.Values.userAuthn.dexClientAppsNames) }}
+        - mountPath: /opt/dex-client-app-config/{{ $dex_client }}.yaml
+          name: {{ $dex_client }}
+          subPath: config.yaml
+  {{- end }}
+{{- end }}
+      containers:
+      - name: dex
+        image: {{ .Values.global.modulesImages.registry }}/user-authn/dex:{{ .Values.global.modulesImages.tags.userAuthn.dex }}
+        command: ["/usr/local/bin/dex", "serve", "/etc/dex/config.yaml"]
+        ports:
+        - name: http
+          containerPort: 5556
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 5556
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 5556
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+        volumeMounts:
+        - name: config
+          mountPath: /etc/dex
+        resources:
+          requests:
+            memory: 128Mi
+            cpu: 50m

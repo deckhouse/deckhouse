@@ -1,0 +1,25 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: dex
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: dex
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+spec:
+  tls:
+  - hosts:
+    - {{ include "helm_lib_addon_public_domain" (list . "dex") }}
+    secretName: ingress-tls
+  rules:
+  - host: {{ include "helm_lib_addon_public_domain" (list . "dex") }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: dex
+          servicePort: 5556

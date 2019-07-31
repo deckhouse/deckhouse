@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: dex
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 5556
+    targetPort: http
+    name: http
+  selector:
+    app: dex

@@ -12,9 +12,11 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
-{{- if .Values.dashboard.gitlabBaseUrl }}
-    ingress.kubernetes.io/auth-signin: https://$host/oauth2/sign_in
-    ingress.kubernetes.io/auth-url: http://dashboard-oauth2-proxy.kube-system.svc.{{ .Values.global.discovery.clusterDomain }}:4180/oauth2/auth
+{{- if .Values.global.enabledModules | has "user-authn" }}
+    ingress.kubernetes.io/backend-protocol: HTTPS
+    ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+    ingress.kubernetes.io/auth-url: http://dex-authenticator.kube-dashboard.svc.{{ .Values.global.discovery.clusterDomain }}:4180/dex-authenticator/auth
+    ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, authorization"
 {{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth

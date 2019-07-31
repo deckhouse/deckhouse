@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-kubernetes-dex-client-app-redirect-uris
+  namespace: kube-user-authn
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: kubernetes-configurator
+data:
+{{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
+  {{ $cluster.id }}-{{ $index }}: https://{{ include "helm_lib_addon_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}
+{{- end }}
+{{- if .Values.userAuthn.publishApi }}
+  {{ printf "%s-%s" .Values.global.project .Values.global.clusterName }}: https://{{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}/callback/
+{{- end }}

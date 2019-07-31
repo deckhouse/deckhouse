@@ -25,18 +25,18 @@
 {{- define "helm_lib_node_selector" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
-  {{- $module_args := dict }}
+  {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
-    {{- $module_args = include "helm_lib_module_args" $context | fromYaml }}
+    {{- $module_values = include "helm_lib_module_values" $context | fromYaml }}
   {{- else }}
-    {{- $module_args = index . 2 }}
+    {{- $module_values = index . 2 }}
   {{- end }}
   {{- $camel_chart_name := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
 
   {{- if eq $strategy "monitoring" }}
-    {{- if $module_args.nodeSelector }}
+    {{- if $module_values.nodeSelector }}
 nodeSelector:
-{{ $module_args.nodeSelector | toYaml | indent 2 }}
+{{ $module_values.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
@@ -49,9 +49,9 @@ nodeSelector:
     {{- end }}
 
   {{- else if eq $strategy "frontend" }}
-    {{- if $module_args.nodeSelector }}
+    {{- if $module_values.nodeSelector }}
 nodeSelector:
-{{ $module_args.nodeSelector | toYaml | indent 2 }}
+{{ $module_values.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
@@ -61,9 +61,9 @@ nodeSelector:
     {{- end }}
 
   {{- else if eq $strategy "system" }}
-    {{- if $module_args.nodeSelector }}
+    {{- if $module_values.nodeSelector }}
 nodeSelector:
-{{ $module_args.nodeSelector | toYaml | indent 2 }}
+{{ $module_values.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
@@ -78,11 +78,11 @@ nodeSelector:
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
-  {{- $module_args := dict }}
+  {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
-    {{- $module_args = include "helm_lib_module_args" $context | fromYaml }}
+    {{- $module_values = include "helm_lib_module_values" $context | fromYaml }}
   {{- else }}
-    {{- $module_args = index . 2 }}
+    {{- $module_values = index . 2 }}
   {{- end }}
   {{ $tolerateNodeProblems := false }}
   {{- if eq (len .) 4 }}
@@ -90,9 +90,9 @@ nodeSelector:
   {{- end }}
 
   {{- if eq $strategy "monitoring" }}
-    {{- if $module_args.tolerations }}
+    {{- if $module_values.tolerations }}
 tolerations:
-{{ $module_args.tolerations | toYaml }}
+{{ $module_values.tolerations | toYaml }}
     {{- else }}
 tolerations:
 - key: dedicated.flant.com
@@ -113,9 +113,9 @@ tolerations:
     {{- end }}
 
   {{- else if eq $strategy "frontend" }}
-    {{- if $module_args.tolerations }}
+    {{- if $module_values.tolerations }}
 tolerations:
-{{ $module_args.tolerations | toYaml }}
+{{ $module_values.tolerations | toYaml }}
     {{- else }}
 tolerations:
 - key: dedicated.flant.com
@@ -133,9 +133,9 @@ tolerations:
     {{- end }}
 
   {{- else if eq $strategy "system" }}
-    {{- if $module_args.tolerations }}
+    {{- if $module_values.tolerations }}
 tolerations:
-{{ $module_args.tolerations | toYaml }}
+{{ $module_values.tolerations | toYaml }}
     {{- else }}
 tolerations:
 - key: dedicated.flant.com

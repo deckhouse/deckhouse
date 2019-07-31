@@ -54,9 +54,13 @@ spec:
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
         env:
         - name: GF_AUTH_BASIC_ENABLED
-          value: "true"
+          value: "false"
         - name: GF_AUTH_PROXY_ENABLED
+          value: "false"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Editor"
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_USERS_DEFAULT_THEME

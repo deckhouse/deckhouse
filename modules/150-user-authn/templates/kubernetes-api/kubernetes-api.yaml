@@ -1,0 +1,27 @@
+{{- if .Values.userAuthn.publishApi }}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/backend-protocol: HTTPS
+    certmanager.k8s.io/issuer: kubernetes-api
+  name: kubernetes-api
+  namespace: default
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+spec:
+  tls:
+  - hosts:
+    - {{ include "helm_lib_addon_public_domain" (list . "api") }}
+    secretName: kubernetes-tls
+  rules:
+  - host: {{ include "helm_lib_addon_public_domain" (list . "api") }}
+    http:
+      paths:
+      - backend:
+          serviceName: kubernetes
+          servicePort: 443
+{{- end }}

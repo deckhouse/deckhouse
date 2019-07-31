@@ -1,0 +1,27 @@
+{{- if or (.Values.userAuthn.publishApi) (.Values.userAuthn.kubeconfigGenerator) }}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kubeconfig-generator
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: kubeconfig-generator
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+spec:
+  tls:
+  - hosts:
+    - {{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}
+    secretName: ingress-tls
+  rules:
+  - host: {{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kubeconfig-generator
+          servicePort: 5555
+{{- end }}

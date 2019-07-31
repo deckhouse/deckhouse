@@ -13,9 +13,14 @@ metadata:
     app: prometheus
   annotations:
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+{{- if .Values.global.enabledModules | has "user-authn" }}
+    ingress.kubernetes.io/auth-signing: https://$host/dex-authenticator/sign_in
+    ingress.kubernetes.io/auth-url: http://dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}:4180/dex-authenticator/auth
+{{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
+{{- end }}
     ingress.kubernetes.io/affinity: cookie
     ingress.kubernetes.io/rewrite-target: "/"
 spec:

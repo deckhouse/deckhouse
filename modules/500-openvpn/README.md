@@ -33,7 +33,8 @@
 * `storageClassName` — имя storageClass'а, который использовать.
     * Если не указано — используется или `global.storageClassName` или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
     * Если указать `false` — будет форсироваться использование emptyDir'а.
-* `adminPassword` — пароль пользователя `admin` (генерируется автоматически, но можно изменять).
+* `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+    * Используется если не включен модуль `user-authn`.
 * `externalHost` — IP или домен по которому клиенты подключаются к OpenVPN серверу. Если не задано, то информация берётся из сервиса с именем `openvpn-external`.
 * `certificateForIngress` — выбираем, какой типа сертификата использовать для openvpn admin.
     * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для openvpn admin (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
