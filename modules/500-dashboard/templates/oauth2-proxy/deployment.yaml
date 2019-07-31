@@ -64,7 +64,7 @@ spec:
         - name: OAUTH2_PROXY_COOKIE_SECRET
           value: {{ .Values.dashboard.oauth2ProxyCookieSecret }}
         image: {{ $.Values.global.modulesImages.registry }}/dashboard/oauth2-proxy:{{ $.Values.global.modulesImages.tags.dashboard.oauth2Proxy }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: oauth2-proxy
         readinessProbe:
           tcpSocket:

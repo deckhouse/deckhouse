@@ -27,6 +27,10 @@ metadata:
   name: sysctl-tuner
   namespace: kube-system
 spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   selector:
     matchLabels:
       heritage: antiopa
@@ -87,7 +91,7 @@ spec:
             sleep 600 ;
           done
         image: {{ $.Values.global.modulesImages.registry }}/sysctl-tuner/busybox:{{ $.Values.global.modulesImages.tags.sysctlTuner.busybox }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: busybox
         resources: {}
         securityContext:
