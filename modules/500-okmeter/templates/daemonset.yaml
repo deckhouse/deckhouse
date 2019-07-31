@@ -58,7 +58,10 @@ spec:
           privileged: true
         env:
         - name: OKMETER_API_TOKEN
-          value: {{ .Values.okmeter.apiKey }}
+          valueFrom:
+            secretKeyRef:
+              name: okmeter
+              key: api-token
         - name: OKMETER_STATSD_HOST
           valueFrom:
             fieldRef:
