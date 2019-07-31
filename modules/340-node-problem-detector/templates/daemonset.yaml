@@ -59,7 +59,7 @@ spec:
         - --logtostderr
         - --system-log-monitors=/config/kernel-monitor.json,/config/docker-monitor.json
         image: {{ $.Values.global.modulesImages.registry }}/node-problem-detector/node-problem-detector:{{ $.Values.global.modulesImages.tags.nodeProblemDetector.nodeProblemDetector }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
         env:
