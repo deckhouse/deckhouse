@@ -3,11 +3,9 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
-  if values::get global.addonsPublicDomainTemplate ; then
-    if values::has global.certificateForIngress.customCertificateSecretName && \
-       values::is_false global.certificateForIngress.customCertificateSecretName && \
-       values::has global.certificateForIngress.certmanagerClusterIssuerName && \
-       values::is_false global.certificateForIngress.certmanagerClusterIssuerName ; then
+  if values::get global.modules.publicDomainTemplate ; then
+    https_mode=$(values::get_first_defined userAuthn.https.mode global.modules.https.mode)
+    if [ "$https_mode" == "Disabled" ] ; then
       echo "false" > $MODULE_ENABLED_RESULT
     else
       echo "true" > $MODULE_ENABLED_RESULT

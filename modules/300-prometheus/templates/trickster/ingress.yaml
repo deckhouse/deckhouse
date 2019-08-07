@@ -1,7 +1,5 @@
-{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
-{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
-
-{{- if .Values.global.addonsPublicDomainTemplate }}
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -12,21 +10,21 @@ metadata:
     module: {{ $.Chart.Name }}
     app: trickster
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
     ingress.kubernetes.io/affinity: cookie
     ingress.kubernetes.io/rewrite-target: "/"
 spec:
-  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
-    - {{ include "helm_lib_addon_public_domain" (list . "prometheus") }}
+    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     secretName: ingress-tls
   {{- end }}
   rules:
-  - host: {{ include "helm_lib_addon_public_domain" (list . "prometheus") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     http:
       paths:
       - path: /trickster/

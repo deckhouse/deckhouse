@@ -1,0 +1,33 @@
+#!/bin/bash
+
+### Миграция 2019-08-02: https://github.com/deckhouse/deckhouse/merge_requests/978
+#
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции.
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=1
+}
+
+function __main__() {
+  if values::has --config userAuthn.certificateForIngress ; then
+    values::set --config userAutn.https "{}"
+
+    if values::has --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && values::has --config userAuthn.certificateForIngress.customCertificateSecretName && values::is_false --config userAuthn.certificateForIngress.customCertificateSecretName ; then
+      values::set --config userAuthn.https.mode "Disabled"
+    elif values::has --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && ! values::is_false --config userAuthn.certificateForIngress.certmanagerClusterIssuerName ; then
+      values::set --config userAuthn.https.certManager "{}"
+      values::set --config userAuthn.https.certManager.clusterIssuerName "$(values::get --config userAuthn.certificateForIngress.certmanagerClusterIssuerName)"
+      values::set --config userAuthn.https.mode "CertManager"
+    elif values::has --config userAuthn.certificateForIngress.customCertificateSecretName && ! values::is_false --config userAuthn.certificateForIngress.customCertificateSecretName ; then
+      values::set --config userAuthn.https.customCertificate "{}"
+      values::set --config userAuthn.https.customCertificate.secretName "$(values::get --config userAuthn.certificateForIngress.customCertificateSecretName)"
+      values::set --config userAuthn.https.mode "CustomCertificate"
+    fi
+
+    values::unset --config userAuthn.certificateForIngress
+  fi
+}
+
+hook::run $@

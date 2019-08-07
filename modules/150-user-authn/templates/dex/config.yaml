@@ -1,5 +1,6 @@
 {{- define "dex_conf" }}
-  issuer: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/
+  {{- $context := . }}
+  issuer: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
   storage:
     type: kubernetes
     config:
@@ -9,11 +10,11 @@
   frontend:
     theme: "coreos"
     issuer: "Kubernetes Dex"
-    issuerUrl: "https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}"
+    issuerUrl: "https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}"
     logoUrl: "https://kubernetes.io/images/favicon.png"
   expiry:
-    signingKeys: {{ .Values.userAuthn.accessTokenTTL | default "10m" | quote }}
-    idTokens: {{ .Values.userAuthn.refreshTokenTTL | default "4320h" | quote }}
+    signingKeys: {{ $context.Values.userAuthn.accessTokenTTL | default "10m" | quote }}
+    idTokens: {{ $context.Values.userAuthn.refreshTokenTTL | default "4320h" | quote }}
   logger:
     level: debug
     format: json
@@ -21,7 +22,7 @@
     responseTypes: ["code", "token", "id_token"]
     skipApprovalScreen: true
   connectors:
-{{- range $provider := .Values.userAuthn.providers }}
+{{- range $provider := $context.Values.userAuthn.providers }}
   {{- if eq $provider.type "Github" }}
     - type: github
       id: {{ $provider.id | quote }}
@@ -29,7 +30,7 @@
       config:
         clientID: {{ $provider.github.clientID | quote }}
         clientSecret: {{ $provider.github.clientSecret | quote }}
-        redirectURI: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/callback
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
     {{- range $org := $provider.github.orgs }}
         orgs:
         - name: {{ $org.name | quote }}
@@ -59,7 +60,7 @@
         baseURL: {{ $provider.gitlab.baseURL | quote }}
         clientID: {{ $provider.gitlab.clientID | quote }}
         clientSecret: {{ $provider.gitlab.clientSecret | quote }}
-        redirectURI: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/callback
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
     {{- if $provider.gitlab.groups }}
       {{- range $group := $provider.gitlab.groups }}
         groups:
@@ -75,7 +76,7 @@
       config:
         ssoURL: {{ $provider.saml.ssoURL }}
         caData: {{ $provider.saml.ca | b64enc }}
-        redirectURI: https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/callback
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
         usernameAttr: {{ $provider.saml.usernameAttr | default "name" | quote }}
         emailAttr: {{ $provider.saml.emailAttr | default "email" | quote }}
         groupsAttr: {{ $provider.saml.groupsAttr | default "groups" | quote }}
@@ -97,23 +98,23 @@
   {{- end }}
 {{- end }}
 
-{{- if .Values.userAuthn.users }}
+{{- if $context.Values.userAuthn.users }}
   enablePasswordDB: true
   staticPasswords:
-  {{- range $user := .Values.userAuthn.users }}
+  {{- range $user := $context.Values.userAuthn.users }}
   - email: {{ $user.key | quote }}
     hash: {{ $user.value | quote }}
     username: {{ $user.key | quote }}
   {{- end }}
 {{- end }}
 
-  {{- if .Values.userAuthn.kubernetesDexClientAppRedirectURIs }}
+  {{- if $context.Values.userAuthn.kubernetesDexClientAppRedirectURIs }}
   staticClients:
   - id: kubernetes
     name: kubernetes
-    secret: {{ .Values.userAuthn.kubernetesDexClientAppSecret | quote }}
+    secret: {{ $context.Values.userAuthn.kubernetesDexClientAppSecret | quote }}
     redirectURIs:
-  {{- range $redirectURI := splitList "\n" (.Values.userAuthn.kubernetesDexClientAppRedirectURIs) }}
+  {{- range $redirectURI := splitList "\n" ($context.Values.userAuthn.kubernetesDexClientAppRedirectURIs) }}
       - {{ $redirectURI }}
   {{- end }}
   {{- end }}

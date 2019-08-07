@@ -15,10 +15,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - {{ include "helm_lib_addon_public_domain" (list . "api") }}
+    - {{ include "helm_lib_module_public_domain" (list . "api") }}
     secretName: kubernetes-tls
   rules:
-  - host: {{ include "helm_lib_addon_public_domain" (list . "api") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
     http:
       paths:
       - backend:

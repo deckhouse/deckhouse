@@ -16,8 +16,8 @@
   {{- end -}}
 {{- end }}
 
-{{- /* Usage: {{- if eq (include "helm_lib_ha_enabled" .) "true" }} /* -}}
-{{- /* returns value "true" if cluster is highly available, else — returns "false" */ -}}
+{{- /* Usage: {{- if (include "helm_lib_ha_enabled" .) }} /* -}}
+{{- /* returns empty value, which is treated by go template as false */ -}}
 {{- define "helm_lib_ha_enabled" }}
   {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 
@@ -25,21 +25,15 @@
 
   {{- if hasKey $module_values "highAvailability" -}}
     {{- if $module_values.highAvailability -}}
-      true
-    {{- else -}}
-      false
+      "not empty string"
     {{- end -}}
   {{- else if hasKey $context.Values.global "highAvailability" -}}
     {{- if $context.Values.global.highAvailability -}}
-      true
-    {{- else -}}
-      false
+      "not empty string"
     {{- end -}}
   {{- else -}}
     {{- if $context.Values.global.discovery.clusterControlPlaneIsHighlyAvailable -}}
-      true
-    {{- else -}}
-      false
+      "not empty string"
     {{- end -}}
   {{- end -}}
 {{- end -}}

@@ -7,7 +7,7 @@
     name: {{ $chart_name }}-dex-authenticator
     secret: {{ $config.dexSecret }}
     redirectURIs:
-      - https://{{ $domain }}/dex-authenticator/callback
+      - {{ include "helm_lib_module_uri_scheme" $context }}://{{ $domain }}/dex-authenticator/callback
 {{- end }}
 
 
@@ -19,12 +19,7 @@
   {{- $use_kubernetes_dex_client_app := index . 4 }}
   {{- $set_authorization_header := index . 5 }}
 
-  {{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" $context }}
-  {{- $custom_certificate_secret_name := include "custom_certificate_secret_name" $context }}
-
-  {{- if or (and ($certmanager_cluster_issuer_name) ($context.Values.global.enabledModules | has "cert-manager")) ($custom_certificate_secret_name) }}
-
-    {{- if $use_kubernetes_dex_client_app }}
+  {{- if $use_kubernetes_dex_client_app }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -36,9 +31,9 @@ metadata:
     module: {{ $chart_name }}
     app: dex-authenticator
 data:
-  {{ $chart_name }}: https://{{ $domain }}/dex-authenticator/callback
+  {{ $chart_name }}: {{ include "helm_lib_module_uri_scheme" $context }}://{{ $domain }}/dex-authenticator/callback
 
-    {{- else }}
+  {{- else }}
 ---
 apiVersion: v1
 kind: Secret
@@ -52,7 +47,7 @@ metadata:
 data:
   config.yaml: |
     {{ include "dex-authenticator-config" (list $context $config $chart_name $domain) | b64enc }}
-    {{- end }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: Secret
@@ -60,10 +55,30 @@ metadata:
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
   app: dex-authenticator
+  labels:
+    heritage: antiopa
+    module: {{ $chart_name }}
+    app: dex-authenticator
 data:
   client-secret: {{ $config.dexSecret | b64enc }}
   cookie-secret: {{ $config.cookieSecret | b64enc }}
-    {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-authenticator-tls
+  namespace: kube-{{ $chart_name }}
+  labels:
+    heritage: antiopa
+    module: {{ $chart_name }}
+    app: dex-authenticator
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $config.pem | b64enc }}
+  tls.key: {{ $config.key | b64enc }}
+  ca.crt: {{ $config.ca | b64enc }}
+
+  {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -81,7 +96,7 @@ spec:
     name: dex-authenticator
   updatePolicy:
     updateMode: "Auto"
-    {{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -106,9 +121,13 @@ spec:
   {{- include "helm_lib_tolerations" (tuple $context "system") | indent 6 }}
       imagePullSecrets:
       - name: antiopa-registry
-      {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
+    {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
-      {{- end }}
+    {{- end }}
+      volumes:
+      - name: tls
+        secret:
+          secretName: dex-authenticator-tls
       containers:
       - args:
         - --provider=oidc
@@ -117,8 +136,11 @@ spec:
     {{- else }}
         - --client-id={{ $chart_name }}-dex-authenticator
     {{- end }}
-        - --redirect-url=https://{{ $domain }}
-        - --oidc-issuer-url=https://{{ include "helm_lib_addon_public_domain" (list $context "dex") }}/
+    {{- if ne (include "helm_lib_module_uri_scheme" $context) "https" }}
+        - --cookie-secure=false
+    {{- end }}
+        - --redirect-url={{ include "helm_lib_module_uri_scheme" $context }}://{{ $domain }}
+        - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
     {{- if $set_authorization_header }}
         - --set-authorization-header=true
     {{- end }}
@@ -126,7 +148,8 @@ spec:
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
         - --upstream=file:///dev/null
-        - --http-address=0.0.0.0:4180
+        - --tls-cert=/opt/dex-authenticator/tls/tls.crt
+        - --tls-key=/opt/dex-authenticator/tls/tls.key
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
@@ -138,16 +161,22 @@ spec:
             secretKeyRef:
               name: dex-authenticator
               key: cookie-secret
+        volumeMounts:
+        - name: tls
+          mountPath: "/opt/dex-authenticator/tls"
+          readOnly: true
         image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticator }}
         name: dex-authenticator
         readinessProbe:
           tcpSocket:
-            port: 4180
+            port: 443
+            scheme: HTTPS
           initialDelaySeconds: 1
           periodSeconds: 5
         livenessProbe:
           tcpSocket:
-            port: 4180
+            port: 443
+            scheme: HTTPS
           initialDelaySeconds: 15
           periodSeconds: 10
         resources:
@@ -155,14 +184,15 @@ spec:
             cpu: "100m"
             memory: "128Mi"
         ports:
-        - containerPort: 4180
+        - containerPort: 443
           protocol: TCP
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: {{ $context.Values.global.ingressClass | quote }}
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" $context | quote }}
+    ingress.kubernetes.io/backend-protocol: HTTPS
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
   labels:
@@ -176,12 +206,14 @@ spec:
       paths:
       - backend:
           serviceName: dex-authenticator
-          servicePort: 4180
+          servicePort: 443
         path: /dex-authenticator
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context) }}
   tls:
   - hosts:
     - {{ $domain }}
     secretName: ingress-tls
+  {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -195,8 +227,7 @@ metadata:
 spec:
   ports:
   - name: http
-    port: 4180
+    port: 443
   selector:
     app: dex-authenticator
-  {{- end }}
 {{- end }}

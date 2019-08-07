@@ -18,23 +18,23 @@ data:
   {{- if and .Values.userAuthn.publishApi .Values.userAuthn.publishedApiCa }}
     - client_id: "kubernetes"
       client_secret: {{ .Values.userAuthn.kubernetesDexClientAppSecret | quote }}
-      issuer: "https://{{ include "helm_lib_addon_public_domain" (list . "dex") }}/"
+      issuer: "https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/"
       k8s_ca_pem: |
 {{ .Values.userAuthn.publishedApiCa | default .Values.userAuthn.kubernetesCa | indent 8 }}
-      k8s_master_uri: "https://{{ include "helm_lib_addon_public_domain" (list . "api") }}"
+      k8s_master_uri: "https://{{ include "helm_lib_module_public_domain" (list . "api") }}"
       name: {{ printf "%s.%s" .Values.global.project .Values.global.clusterName | quote }}
-      redirect_uri: "https://{{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}/callback/"
-      short_description: "https://{{ include "helm_lib_addon_public_domain" (list . "api") }}"
+      redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}/callback/"
+      short_description: "https://{{ include "helm_lib_module_public_domain" (list . "api") }}"
   {{- end }}
   {{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
     - client_id: "kubernetes"
       client_secret: {{ $.Values.userAuthn.kubernetesDexClientAppSecret | quote }}
-      issuer: "https://{{ include "helm_lib_addon_public_domain" (list $ "dex") }}/"
+      issuer: "https://{{ include "helm_lib_module_public_domain" (list $ "dex") }}/"
       k8s_ca_pem: |
 {{ $cluster.masterCA | default $.Values.userAuthn.kubernetesCa | indent 8 }}
       k8s_master_uri: "{{ $cluster.masterUri }}"
       name: {{ printf "%s.%s.%s" $.Values.global.project $.Values.global.clusterName $cluster.id | quote }}
-      redirect_uri: "https://{{ include "helm_lib_addon_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}"
+      redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}"
       short_description: "{{ $cluster.description }}"
   {{- end }}
 {{- end }}

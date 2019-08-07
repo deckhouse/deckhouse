@@ -1,0 +1,22 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=0
+}
+
+function __main__() {
+  ### Миграция 2019-08-06: https://github.com/deckhouse/deckhouse/merge_requests/978
+  # Этот хук можно удалить, после выката релиза с данным коммитом
+
+  if values::has --config global.addonsPublicDomainTemplate; then
+    if ! values::has --config global.modules ; then
+      values::set --config global.modules "{}"
+    fi
+    values::set --config global.modules.publicDomainTemplate "$(values::get --config global.addonsPublicDomainTemplate)"
+    values::unset --config global.addonsPublicDomainTemplate
+  fi
+}
+
+hook::run $@

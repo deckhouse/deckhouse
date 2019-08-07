@@ -1,11 +1,4 @@
-{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
-{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
-
-{{- if and ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name) }}
-  {{- fail "Error!!! Use only certmanagerClusterIssuerName or customCertificateSecretName" }}
-{{- end }}
-
-{{- if .Values.global.addonsPublicDomainTemplate }}
+{{- if .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -17,31 +10,31 @@ metadata:
     module: {{ .Chart.Name }}
     app: {{ .Chart.Name }}
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
-    ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-    ingress.kubernetes.io/auth-url: http://dex-authenticator.kube-openvpn.svc.{{ .Values.global.discovery.clusterDomain }}:4180/dex-authenticator/auth
+    ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
+    ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-openvpn.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
 {{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-realm: "Authentication Required"
     ingress.kubernetes.io/auth-secret: basic-auth
 {{- end }}
 spec:
-  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
-    - {{ include "helm_lib_addon_public_domain" (list . "openvpn-admin") }}
+    - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
     secretName: ingress-tls
   {{- end }}
   rules:
-  - host: {{ include "helm_lib_addon_public_domain" (list . "openvpn-admin") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
     http:
       paths:
       - path: /
         backend:
           serviceName: {{ .Chart.Name }}
           servicePort: 8000
-  {{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
@@ -55,15 +48,15 @@ metadata:
 spec:
   secretName: ingress-tls
   dnsNames:
-  - {{ include "helm_lib_addon_public_domain" (list . "openvpn-admin") }}
+  - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
   acme:
     config:
     - http01:
-        ingressClass: {{ .Values.global.ingressClass | quote }}
+        ingressClass: {{ include "helm_lib_module_ingress_class" . | quote }}
       domains:
-      - {{ include "helm_lib_addon_public_domain" (list . "openvpn-admin") }}
+      - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
   issuerRef:
-    name: {{ $certmanager_cluster_issuer_name }}
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
   {{- end }}
 {{- end }}

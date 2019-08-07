@@ -77,13 +77,20 @@ prometheus: |
             ports:
               - port: 8080
         ```
-* `certificateForIngress` — выбираем, какой типа сертификата использовать для pormetheus/grafana.
-    * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для prometheus/grafana (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
+* `ingressClass` — класс ingress контроллера, который используется для grafana/prometheus.
+    * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
+* `https` — выбираем, какой типа сертификата использовать для grafana/prometheus.
+    * `mode` — режим работы HTTPS:
+        * `Disabled` — в данном режиме grafana/prometheus будут работать только по http;
+        * `CertManager` — grafana/prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
+        * `CustomCertificate` — grafana/prometheus будут работать по https используя сертификат из namespace `antiopa`;
+        * `UriOnly` — grafana/prometheus будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+    * `certManager`
+      * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для grafana/prometheus (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
-    * `customCertificateSecretName` — указываем имя secret'а в namespace `antiopa`, который будет использоваться для prometheus/grafana (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+    * `customCertificate`
+      * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для grafana/prometheus (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
-        * При указании этого параметра не забудьте выставить `certmanagerClusterIssuerName` в значение `false`.
-    * Если вы хотите отключить https, то оба параметра необходимо выставить в `false`.
 * `vpa`
     * `maxCPU` — максимальная граница CPU requests/limits, выставляемая VPA контроллером. Если не прописано в конфиге, подбирается автоматически, исходя из максимально возможного количества подов на нодах.
     * `maxMemory` — максимальная граница Memory requests/limits, выставляемая VPA контроллером. Если не прописано в конфиге, подбирается автоматически, исходя из максимально возможного количества подов на нодах.

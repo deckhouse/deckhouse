@@ -37,16 +37,17 @@ function __main__() {
     )"
   )
 
-  if values::has global.addonsPublicDomainTemplate ; then
-    if values::get_first_defined prometheus.certificateForIngress.certmanagerClusterIssuerName prometheus.certificateForIngress.customCertificateSecretName global.certificateForIngress.certmanagerClusterIssuerName global.certificateForIngress.customCertificateSecretName ; then
+  if values::has global.modules.publicDomainTemplate ; then
+    https=$(values::get_first_defined prometheus.https.mode global.modules.https.mode)
+    if [ "$https" != "Disabled" ] ; then
       scheme=https
     else
       scheme=http
     fi
 
     request_data=$(jq -s '.[0] * .[1]' <(echo "$request_data") <(jo \
-      grafana_url="$scheme://$(common::addon_public_domain prometheus)/" \
-      prometheus_url="$scheme://$(common::addon_public_domain prometheus)/prometheus/"
+      grafana_url="$scheme://$(common::module_public_domain prometheus)/" \
+      prometheus_url="$scheme://$(common::module_public_domain prometheus)/prometheus/"
     ))
   fi
 

@@ -2,7 +2,7 @@
 
   {{- $context := . }}
   {{- $config := .Values.dashboard.dexAuthenticator }}
-  {{- $domain := (include "helm_lib_addon_public_domain" (list . "dashboard")) }}
+  {{- $domain := (include "helm_lib_module_public_domain" (list . "dashboard")) }}
   {{- $chart_name := .Chart.Name }}
   {{- $use_kubernetes_dex_client_app := true }}
   {{- $set_authorization_header := true }}

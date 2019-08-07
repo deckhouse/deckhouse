@@ -3,23 +3,12 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
-  if values::has global.addonsPublicDomainTemplate ; then
-    if values::has dashboard.certificateForIngress.customCertificateSecretName && \
-       values::is_false dashboard.certificateForIngress.customCertificateSecretName && \
-       values::has dashboard.certificateForIngress.certmanagerClusterIssuerName && \
-       values::is_false dashboard.certificateForIngress.certmanagerClusterIssuerName; then
-      echo "false" > $MODULE_ENABLED_RESULT
-    elif values::has global.certificateForIngress.customCertificateSecretName && \
-       values::is_false global.certificateForIngress.customCertificateSecretName && \
-       values::has global.certificateForIngress.certmanagerClusterIssuerName && \
-       values::is_false global.certificateForIngress.certmanagerClusterIssuerName ; then
-      echo "false" > $MODULE_ENABLED_RESULT
-    else
-      echo "true" > $MODULE_ENABLED_RESULT
-    fi
+  if values::has global.modules.publicDomainTemplate ; then
+    echo "true" > $MODULE_ENABLED_RESULT
   else
     echo "false" > $MODULE_ENABLED_RESULT
   fi
 }
 
 hook::run $@
+

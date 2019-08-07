@@ -1,4 +1,13 @@
 global:
-  ingressClass: nginx
-  certificateForIngress:
-    certmanagerClusterIssuerName: letsencrypt
+  modules:
+    ingressClass: nginx
+    https:
+      mode: CertManager
+      certManager:
+        clusterIssuerName: letsencrypt
+  # Временный хак, который мы используем, пока не отделим enabled хук от дефолтных values.yaml в каждом модуле
+  hack:
+    namespaces:
+      prometheus: kube-prometheus
+      dashboard: kube-dashboard
+      openvpn: kube-openvpn

@@ -1,21 +1,14 @@
-{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
-{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
-
-{{- if and ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name) }}
-  {{- fail "Error!!! Use only certmanagerClusterIssuerName or customCertificateSecretName" }}
-{{- end }}
-
-{{- if .Values.global.addonsPublicDomainTemplate }}
+{{- if .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
     ingress.kubernetes.io/backend-protocol: HTTPS
-    ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-    ingress.kubernetes.io/auth-url: http://dex-authenticator.kube-dashboard.svc.{{ .Values.global.discovery.clusterDomain }}:4180/dex-authenticator/auth
+    ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
+    ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-dashboard.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
     ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, authorization"
 {{- else }}
     ingress.kubernetes.io/auth-type: basic
@@ -30,20 +23,20 @@ metadata:
     app: dashboard
 spec:
   rules:
-  - host: {{ include "helm_lib_addon_public_domain" (list . "dashboard") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
     http:
       paths:
       - backend:
           serviceName: dashboard
           servicePort: 80
         path: /
-  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
-      - {{ include "helm_lib_addon_public_domain" (list . "dashboard") }}
+      - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
     secretName: ingress-tls
   {{- end }}
-  {{- if and ($certmanager_cluster_issuer_name) (.Values.global.enabledModules | has "cert-manager") }}
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
@@ -57,15 +50,15 @@ metadata:
 spec:
   secretName: ingress-tls
   dnsNames:
-  - {{ include "helm_lib_addon_public_domain" (list . "dashboard") }}
+  - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
   acme:
     config:
     - http01:
-        ingressClass: {{ .Values.global.ingressClass | quote }}
+        ingressClass: {{ include "helm_lib_module_ingress_class" . | quote }}
       domains:
-      - {{ include "helm_lib_addon_public_domain" (list . "dashboard") }}
+      - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
   issuerRef:
-    name: {{ $certmanager_cluster_issuer_name }}
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
   {{- end }}
 {{- end }}
