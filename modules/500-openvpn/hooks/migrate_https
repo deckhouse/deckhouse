@@ -16,6 +16,8 @@ function __main__() {
 
     if values::has --config openvpn.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config openvpn.certificateForIngress.certmanagerClusterIssuerName && values::has --config openvpn.certificateForIngress.customCertificateSecretName && values::is_false --config openvpn.certificateForIngress.customCertificateSecretName ; then
       values::set --config openvpn.https.mode "Disabled"
+    elif values::has --config openvpn.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config openvpn.certificateForIngress.certmanagerClusterIssuerName && ! values::has --config openvpn.certificateForIngress.customCertificateSecretName ; then
+      values::set --config openvpn.https.mode "Disabled"
     elif values::has --config openvpn.certificateForIngress.certmanagerClusterIssuerName && ! values::is_false --config openvpn.certificateForIngress.certmanagerClusterIssuerName ; then
       values::set --config openvpn.https.certManager "{}"
       values::set --config openvpn.https.certManager.clusterIssuerName "$(values::get --config openvpn.certificateForIngress.certmanagerClusterIssuerName)"

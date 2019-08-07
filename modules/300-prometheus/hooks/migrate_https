@@ -16,6 +16,8 @@ function __main__() {
 
     if values::has --config prometheus.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config prometheus.certificateForIngress.certmanagerClusterIssuerName && values::has --config prometheus.certificateForIngress.customCertificateSecretName && values::is_false --config prometheus.certificateForIngress.customCertificateSecretName ; then
       values::set --config prometheus.https.mode "Disabled"
+    elif values::has --config prometheus.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config prometheus.certificateForIngress.certmanagerClusterIssuerName && ! values::has --config prometheus.certificateForIngress.customCertificateSecretName ; then
+      values::set --config prometheus.https.mode "Disabled"
     elif values::has --config prometheus.certificateForIngress.certmanagerClusterIssuerName && ! values::is_false --config prometheus.certificateForIngress.certmanagerClusterIssuerName ; then
       values::set --config prometheus.https.certManager "{}"
       values::set --config prometheus.https.certManager.clusterIssuerName "$(values::get --config prometheus.certificateForIngress.certmanagerClusterIssuerName)"
