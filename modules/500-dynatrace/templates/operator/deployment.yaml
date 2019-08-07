@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operator
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: operator
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: operator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: operator
+    spec:
+      priorityClassName: cluster-low
+{{- include "helm_lib_node_selector" (tuple $ "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
+      imagePullSecrets:
+      - name: antiopa-registry
+      containers:
+        - name: operator
+          image: {{ .Values.global.modulesImages.registry }}/dynatrace/operator:{{ .Values.global.modulesImages.tags.dynatrace.operator }}
+          command:
+          - dynatrace-oneagent-operator
+          env:
+          - name: WATCH_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      serviceAccountName: operator

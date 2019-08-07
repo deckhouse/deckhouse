@@ -1,0 +1,72 @@
+{{- if and (hasKey .Values.dynatrace "hostGroups") (gt (len .Values.dynatrace.hostGroups) 1) }}
+  {{- range $hostGroup := .Values.dynatrace.hostGroups }}
+    {{- if not (hasKey $hostGroup "nodeSelector") }}
+      {{ cat "В конфигурации модуля указано несколько hostGroup, но у " $hostGroup.name " не указан nodeSelector" | fail }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.dynatrace.hostGroups }}
+  {{- range $hostGroup := .Values.dynatrace.hostGroups }}
+---
+apiVersion: dynatrace.com/v1alpha1
+kind: OneAgent
+metadata:
+  name: oneagent-{{ $hostGroup.name | lower }}
+  namespace: kube-{{ $.Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oneagent
+spec:
+  apiUrl: {{ $.Values.dynatrace.apiUrl }}
+  skipCertCheck: {{ $.Values.dynatrace.skipCertCheck | default "false" }}
+  tokens: oneagent
+{{- if $hostGroup.nodeSelector }}
+  nodeSelector: {{ printf "{%v}" (toYaml $hostGroup.nodeSelector) }}
+{{- end }}
+{{- if hasKey $hostGroup "tolerations" }}
+  {{- if $hostGroup.tolerations }}
+  tolerations:
+{{ toYaml $hostGroup.tolerations | indent 2 }}
+  {{- end }}
+{{- else }}
+  tolerations:
+  - operator: Exists
+{{- end }}
+  # Так как довольно часто клиентам нужно обновлять свои агенты dynatrace, то предлагаю оставить default, который является: docker.io/dynatrace/oneagent:latest
+  # image: ""
+  args:
+  - APP_LOG_CONTENT_ACCESS=1 # Данный параметр включает анализ логов хостовой системы
+  - HOST_GROUP={{ $hostGroup.name }} # Данный параметр отвечает за то, в какую группу хостов будут добавлены ноды
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  priorityClassName: cluster-low
+  {{- end }}
+{{- else }}
+---
+apiVersion: dynatrace.com/v1alpha1
+kind: OneAgent
+metadata:
+  name: oneagent
+  namespace: kube-{{ $.Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: oneagent
+spec:
+  apiUrl: {{ $.Values.dynatrace.apiUrl }}
+  skipCertCheck: {{ $.Values.dynatrace.skipCertCheck | default "false" }}
+  tokens: oneagent
+  tolerations:
+  - operator: Exists
+  args:
+  - APP_LOG_CONTENT_ACCESS=1 # Данный параметр включает анализ логов хостовой системы
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  priorityClassName: cluster-low
+{{- end }}
