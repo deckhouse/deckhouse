@@ -16,6 +16,8 @@ function __main__() {
 
     if values::has --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && values::has --config userAuthn.certificateForIngress.customCertificateSecretName && values::is_false --config userAuthn.certificateForIngress.customCertificateSecretName ; then
       values::set --config userAuthn.https.mode "Disabled"
+    elif values::has --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && values::is_false --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && ! values::has --config userAuthn.certificateForIngress.customCertificateSecretName ; then
+      values::set --config userAuthn.https.mode "Disabled"
     elif values::has --config userAuthn.certificateForIngress.certmanagerClusterIssuerName && ! values::is_false --config userAuthn.certificateForIngress.certmanagerClusterIssuerName ; then
       values::set --config userAuthn.https.certManager "{}"
       values::set --config userAuthn.https.certManager.clusterIssuerName "$(values::get --config userAuthn.certificateForIngress.certmanagerClusterIssuerName)"
