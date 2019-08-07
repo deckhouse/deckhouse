@@ -28,7 +28,7 @@ metadata:
     module: {{ .Chart.Name }}
     app: dex
 spec:
-  replicas: {{ .Values.global.discovery.clusterMasterCount }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   strategy:
     rollingUpdate:
       maxUnavailable: 0

@@ -98,6 +98,24 @@ spec:
     updateMode: "Auto"
   {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: dex-authenticator
+  namespace: kube-{{ $chart_name }}
+  labels:
+    heritage: antiopa
+    module: {{ $chart_name }}
+    app: dex-authenticator
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0 ) }}
+  selector:
+    matchLabels:
+      app: dex-authenticator
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -108,7 +126,7 @@ metadata:
     module: {{ $chart_name }}
     app: dex-authenticator
 spec:
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
   selector:
     matchLabels:
       app: dex-authenticator

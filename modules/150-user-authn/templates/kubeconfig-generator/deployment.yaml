@@ -29,7 +29,7 @@ metadata:
     module: {{ .Chart.Name }}
     app: kubeconfig-generator
 spec:
-  replicas: {{ .Values.global.discovery.clusterMasterCount }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   selector:
     matchLabels:
       app: kubeconfig-generator
