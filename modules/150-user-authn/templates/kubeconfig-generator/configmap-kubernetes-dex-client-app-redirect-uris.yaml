@@ -1,3 +1,4 @@
+{{- if or (.Values.userAuthn.kubeconfigGenerator) (.Values.userAuthn.publishApi) }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -10,8 +11,9 @@ metadata:
     app: kubernetes-configurator
 data:
 {{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
-  {{ $cluster.id }}-{{ $index }}: https://{{ include "helm_lib_addon_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}
+  {{ $cluster.id }}-{{ $index }}: https://{{ include "helm_lib_module_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}
 {{- end }}
 {{- if .Values.userAuthn.publishApi }}
-  {{ printf "%s-%s" .Values.global.project .Values.global.clusterName }}: https://{{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}/callback/
+  {{ printf "%s-%s" .Values.global.project .Values.global.clusterName }}: https://{{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}/callback/
+{{- end }}
 {{- end }}

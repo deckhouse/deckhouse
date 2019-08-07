@@ -20,7 +20,7 @@ data:
        isDefault: true
        jsonData:
          timeInterval: 30s
-{{- if eq (include "helm_lib_ha_enabled" .) "true" }}
+{{- if (include "helm_lib_ha_enabled" .) }}
      - name: main-0
        type: prometheus
        access: direct

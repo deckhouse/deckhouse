@@ -1,0 +1,46 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=25
+}
+
+function __main__() {
+  module_name=$(module::name)
+  namespace=$(values::get global.hack.namespaces.${module_name})
+  if values::array_has global.enabledModules "user-authn" ; then
+    if ! kubectl -n ${namespace} get secret dex-authenticator-tls > /dev/null 2> /dev/null ; then
+      ca=$(jo CN=dex-authenticator key="$(jo algo=ecdsa size=256)" ca="$(jo expirty=87600h)" | cfssl gencert -initca -)
+      ca_cert=$(echo $ca | jq .cert -r)
+
+      # Создадим конфиг для cfssl gencert
+      config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
+
+      cert=$(jo CN=dex-authenticator hosts="$(jo -a dex-authenticator.${namespace} dex-authenticator.${namespace}.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
+      cert_pem=$(echo $cert | jq .cert -r)
+      cert_key=$(echo $cert | jq .key -r)
+    else
+      cert=$(kubectl -n ${namespace} get secret dex-authenticator-tls -o json)
+      ca_cert=$(echo $cert | jq -r '.data."ca.crt"' | base64 -d)
+      cert_pem=$(echo $cert | jq -r '.data."tls.crt"' | base64 -d)
+      cert_key=$(echo $cert | jq -r '.data."tls.key"' | base64 -d)
+    fi
+
+    values::set ${module_name}.dexAuthenticator.ca "$ca_cert"
+    values::set ${module_name}.dexAuthenticator.pem "$cert_pem"
+    values::set ${module_name}.dexAuthenticator.key "$cert_key"
+  else
+    if values::has ${module_name}.dexAthenticator.ca ; then
+      values::unset ${module_name}.dexAuthenticator.ca
+    fi
+    if values::has ${module_name}.dexAuthenticator.pem ; then
+      values::unset ${module_name}.dexAuthenticator.pem
+    fi
+    if values::has ${module_name}.dexAuthenticator.key ; then
+      values::unset ${module_name}.dexAuthenticator.key
+    fi
+  fi
+}
+
+hook::run "$@"

@@ -8,10 +8,10 @@
 - kubeconfig-generator (на самом деле [dex-k8s-authenticator](https://github.com/mintel/dex-k8s-authenticator)) — веб-приложение, которое после авторизации в dex генерирует команды для настройки локального kubectl;
 - dex-authenticator (на самом деле [oauth2-proxy](https://github.com/pusher/oauth2_proxy)) — приложение, которое принимает запросы от nginx ingress (auth_request) и производит их аутентификацию в dex.
 
-**Важно!** Так как OpenID Connect небезопасно использовать без https, данный модуль нельзя установить в кластерах, где в глобальном конфиге обе опции `certificateForIngress.customCertificateSecretName` и `certificateForIngress.certmanagerClusterIssuerName` выставлены в `false`.
+**Важно!** Так как использование OpenID Connect по протоколу HTTP является слишком значительной угрозой безопасности (что подтверждается, например, тем что kubernetes api-сервер не поддерживает работу с OIDC по HTTP), данный модуль можно установить только при включеном HTTPS (`https.mode` выставить в отличное от `Disabled` значение или на уровне кластера, или в самом модуле).
 
 **Важно!** После включения данного модуля аутентификация во всех веб-интерфейсах перестанет использовать HTTP Basic Auth и переключится на dex (который, в свою очередь, будет использовать настроенные вами внешние провайдеры). 
-Для настройки kubectl необходимо перейти по адресу: `https://kubeconfig.<addonsPublicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell команды к себе в консоль.
+Для настройки kubectl необходимо перейти по адресу: `https://kubeconfig.<modules.publicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell команды к себе в консоль.
 
 **Важно!** Для работы аутентификации в dashboard и kubectl необходимо [сконфигурировать API-сервер](#настройка-kube-apiserver).
 
@@ -101,8 +101,20 @@
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет настроено значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"vsphere-csi-driver"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
+* `ingressClass` — класс ingress контроллера, который используется для dex и kubeconfig-generator.
+  * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
+* `https` — выбираем, какой типа сертификата использовать для dex и kubeconfig-generator.
+  * `mode` - режим работы HTTPS:
+    * `Disabled` — при данном значении модуль автоматически отключается.
+    * `CertManager` — dex и kubeconfig-generator будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
+    * `CustomCertificate` — dex и kubeconfig-generator будут работать по https используя сертификат из namespace `antiopa`;
+    * `UriOnly` — dex и kubeconfig-generator. будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+  * `certManager`
+    * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
+  * `customCertificate`
+    * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
 
-### Пример конфигурации
+### Примеt конфигурации
 
 ```yaml
   userAuthn: |
@@ -117,7 +129,6 @@
         - name: asidorovj-test
           teams:
           - bro
-      
     - id: gitlab-fox
       name: Flant Gitlab
       type: Gitlab
@@ -125,8 +136,7 @@
         baseURL: https://fox.flant.com
         clientID: 480dc4611c987b4997s605821ea3e79957be2a15cdz1664149643014a7c619c6379
         clientSecret: 22d134403a3a446fsee57a4a4d6262ba33fb1511375665fa76028d3039c307c9aca
-    - 
-      id: okta
+    - id: okta
       name: Okta
       type: SAML
       saml:
@@ -150,7 +160,7 @@
 ```yaml
     - --oidc-client-id=kubernetes
     - --oidc-groups-claim=groups
-    - --oidc-issuer-url=https://dex.<addonsPublicDomainTemplate>/
+    - --oidc-issuer-url=https://dex.<modules.publicDomainTemplate>/
     - --oidc-username-claim=email
 ```
 
@@ -171,7 +181,7 @@ kops edit cluster --name=kubernetes-cluster
   kubeAPIServer:
     oidcClientID: kubernetes
     oidcGroupsClaim: groups
-    oidcIssuerURL: https://dex.<addonsPublicDomainTemplate>/
+    oidcIssuerURL: https://dex.<modules.publicDomainTemplate>/
     oidcUsernameClaim: email
 ```
 
@@ -191,7 +201,7 @@ kops rolling-update cluster --name=kubernetes-cluster --yes
           ...
           "--oidc-client-id": "kubernetes",
           "--oidc-groups-claim": "groups",
-          "--oidc-issuer-url": "https://dex.<addonsPublicDomainTemplate>/",
+          "--oidc-issuer-url": "https://dex.<modules.publicDomainTemplate>/",
           "--oidc-username-claim": "email"
         }
 ```

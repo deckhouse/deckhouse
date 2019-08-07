@@ -1,6 +1,3 @@
-{{- $certmanager_cluster_issuer_name := include "certmanager_cluster_issuer_name" . }}
-{{- $custom_certificate_secret_name := include "custom_certificate_secret_name" . }}
-
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -90,12 +87,8 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if .Values.global.addonsPublicDomainTemplate }}
-  {{- if and (or ($certmanager_cluster_issuer_name) ($custom_certificate_secret_name)) (.Values.global.enabledModules | has "cert-manager") }}
-  externalUrl: https://{{ include "helm_lib_addon_public_domain" (list . "prometheus") }}/prometheus/
-  {{- else }}
-  externalUrl: http://{{ include "helm_lib_addon_public_domain" (list . "prometheus") }}/prometheus/
-  {{- end }}
+{{- if .Values.global.modules.publicDomainTemplate }}
+  externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "prometheus") }}/prometheus/
 {{- end }}
   securityContext:
     fsGroup: 2000

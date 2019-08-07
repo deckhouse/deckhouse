@@ -10,14 +10,16 @@ metadata:
     module: {{ .Chart.Name }}
     app: kubeconfig-generator
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.global.ingressClass | quote }}
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 spec:
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
-    - {{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}
+    - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
     secretName: ingress-tls
+  {{- end }}
   rules:
-  - host: {{ include "helm_lib_addon_public_domain" (list . "kubeconfig") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
     http:
       paths:
       - path: /

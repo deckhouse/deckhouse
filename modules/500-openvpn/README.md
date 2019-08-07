@@ -36,13 +36,20 @@
 * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
     * Используется если не включен модуль `user-authn`.
 * `externalHost` — IP или домен по которому клиенты подключаются к OpenVPN серверу. Если не задано, то информация берётся из сервиса с именем `openvpn-external`.
-* `certificateForIngress` — выбираем, какой типа сертификата использовать для openvpn admin.
-    * `certmanagerClusterIssuerName` — указываем, какой ClusterIssuer использовать для openvpn admin (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
+* `ingressClass` — класс ingress контроллера, который используется для админки openvpn.
+    * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
+* `https` — выбираем, какой типа сертификата использовать для админки openvpn.
+    * `mode` — режим работы HTTPS:
+        * `Disabled` — в данном режиме админка openvpn будет работать только по http;
+        * `CertManager` — админка openvpn будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
+        * `CustomCertificate` — админка openvpn будет работать по https используя сертификат из namespace `antiopa`;
+        * `UriOnly` — админка openvpn будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+    * `certManager`
+      * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для админки openvpn (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
-    * `customCertificateSecretName` — указываем имя secret'а в namespace `antiopa`, который будет использоваться для openvpn admin (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+    * `customCertificate`
+      * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для админки openvpn (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
-        * При указании этого параметра не забудьте выставить `certmanagerClusterIssuerName` в значение `false`.
-    * Если вы хотите отключить https, то оба параметра необходимо выставить в `false`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.

@@ -51,12 +51,14 @@ spec:
       - name: config
         configMap:
           name: kubeconfig-generator
-      - name: idp-tls
+{{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+      - name: ca-certificates
         secret:
           secretName: ingress-tls
           items:
           - key: tls.crt
-            path: tls.crt
+            path: idp-ca.crt
+{{- end }}
       containers:
       - name: kubeconfig-generator
         image: {{ .Values.global.modulesImages.registry }}/user-authn/kubeconfig-generator:{{ .Values.global.modulesImages.tags.userAuthn.kubeconfigGenerator }}
@@ -80,9 +82,11 @@ spec:
         - name: config
           subPath: config.yaml
           mountPath: /app/config.yaml
-        - name: idp-tls
+{{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+        - name: ca-certificates
           mountPath: "/usr/local/share/ca-certificates/"
           readOnly: true
+{{- end }}
         resources:
           requests:
             cpu: 50m
