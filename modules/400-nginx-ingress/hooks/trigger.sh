@@ -25,7 +25,7 @@ function __main__() {
 
 
   if values::is_false nginxIngress.rewriteTargetMigration; then
-    kill_list=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | grep -P '^.*-rwr$' | sort -u)
+    kill_list=$(kubectl get ing --all-namespaces -o json | jq -r '.items[] | "-n \(.metadata.namespace) \(.metadata.name)"' | (grep -P '^.*-rwr$' || true) | sort -u)
     IFS=$'\n'
     for i in $kill_list; do
       unset IFS

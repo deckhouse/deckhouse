@@ -75,6 +75,9 @@ data:
   proxy-real-ip-cidr: "0.0.0.0/0"
     {{- else }}
   proxy-real-ip-cidr: {{ $config.setRealIPFrom | default (list "0.0.0.0/32") | join "," | quote }}
+  # https://github.com/kubernetes/ingress-nginx/pull/3333
+  # https://github.com/kubernetes/ingress-nginx/issues/4392
+  use-forwarded-headers: "true"
     {{- end }}
   server-tokens: "false"
     {{- if $config.underscoresInHeaders }}

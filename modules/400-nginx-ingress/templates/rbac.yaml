@@ -34,6 +34,7 @@ rules:
       - watch
   - apiGroups:
       - "extensions"
+      - "networking.k8s.io"
     resources:
       - ingresses
     verbs:
@@ -49,6 +50,7 @@ rules:
         - patch
   - apiGroups:
       - "extensions"
+      - "networking.k8s.io"
     resources:
       - ingresses/status
     verbs:
@@ -117,9 +119,9 @@ rules:
       - configmaps
     resourceNames:
   {{- if and (not .name) (hasKey . "additionalControllers") }}
-      - "ingress-controller-leader-nginx"
+      - "ingress-controller-leader-nginx{{ if $.Values.nginxIngress.rewriteTargetMigration }}-rwr{{ end }}"
   {{- else }}
-      - "ingress-controller-leader-nginx-{{ .name }}"
+      - "ingress-controller-leader-nginx-{{ .name }}{{ if $.Values.nginxIngress.rewriteTargetMigration }}-rwr{{ end }}"
   {{- end }}
     verbs:
       - get
