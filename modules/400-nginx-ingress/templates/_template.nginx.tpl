@@ -98,19 +98,16 @@ spec:
         - /nginx-ingress-controller
         {{- if and (hasKey . "customErrorsNamespace") (hasKey . "customErrorsServiceName") (.customErrorsNamespace) (.customErrorsServiceName) }}
         - --default-backend-service={{ .customErrorsNamespace }}/{{ .customErrorsServiceName }}
-        {{- else }}
-        - --default-backend-service=$(POD_NAMESPACE)/default-http-backend
         {{- end }}
         - --configmap=$(POD_NAMESPACE)/{{ $name }}
     {{- if $publishService }}
         - --publish-service=$(POD_NAMESPACE)/{{ $name }}
     {{- end }}
-        - --sort-backends
         - --v=2
     {{- if not .name }}
-        - --ingress-class=nginx
+        - --ingress-class=nginx{{ if .Values.nginxIngress.rewriteTargetMigration }}-rwr{{ end }}
     {{- else }}
-        - --ingress-class=nginx-{{ .name }}
+        - --ingress-class=nginx-{{ .name }}{{ if .Values.nginxIngress.rewriteTargetMigration }}-rwr{{ end }}
     {{- end }}
         securityContext:
           capabilities:

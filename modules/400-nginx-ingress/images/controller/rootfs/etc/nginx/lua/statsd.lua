@@ -45,6 +45,12 @@ function _M.call()
   buffer["len"] = 0
 
   local var_server_name = ngx.var.server_name:gsub("^*", "")
+
+  -- Миграция 2019-07-19: https://github.com/deckhouse/deckhouse/merge_requests/929
+  --
+  -- Эту переменную и ссылки на неё можно будет удалить после миграции на новый формат rewrite-target.
+  local var_ingress_name = ngx.var.ingress_name:gsub("%-rwr", "")
+
   if var_server_name == "_" then
     _incr(buffer, "l#")
   else
@@ -80,7 +86,7 @@ function _M.call()
       if ngx.var.upstream_http_set_cookie then
         cacheable = false
       end
-  
+
       if cacheable then
         content_kind = 'cacheable'
       else
@@ -93,8 +99,8 @@ function _M.call()
 
     local var_namespace = ngx.var.namespace
     local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
-    local detail_key = content_kind .. "#" .. var_namespace .. "#" .. ngx.var.ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
-    local backend_key = var_namespace .. "#" .. ngx.var.ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
+    local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
+    local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
 
     -- requests
     local var_scheme = ngx.var.scheme
