@@ -84,10 +84,6 @@ spec:
             echo never | tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null ;
             echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null ;
             echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null ;
-            # фикс kube-proxy и IPVS режиме, нет в 1.11
-            # https://github.com/kubernetes/kubernetes/pull/70530
-            echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore ;
-            echo 2 > /proc/sys/net/ipv4/conf/all/arp_announce ;
             sleep 600 ;
           done
         image: {{ $.Values.global.modulesImages.registry }}/common/busybox:{{ $.Values.global.modulesImages.tags.common.busybox }}
