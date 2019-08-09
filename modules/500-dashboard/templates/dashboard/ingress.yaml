@@ -5,15 +5,22 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
-{{- if .Values.global.enabledModules | has "user-authn" }}
     ingress.kubernetes.io/backend-protocol: HTTPS
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
     ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
     ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-dashboard.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
-    ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, authorization"
+    ingress.kubernetes.io/auth-response-headers: "authorization"
 {{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
+    ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_trusted_certificate /var/run/secrets/kubernetes.io/serviceaccount/ca.crt;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_verify off;
+      proxy_ssl_session_reuse on;
 {{- end }}
   name: dashboard
   namespace: kube-system
@@ -28,7 +35,7 @@ spec:
       paths:
       - backend:
           serviceName: dashboard
-          servicePort: 80
+          servicePort: https
         path: /
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:

@@ -22,7 +22,7 @@ spec:
       maxAllowed:
         cpu: 0.1
         memory: 0.1Gi
-    - name: prometheus-auth-proxy
+    - name: ca-auth-proxy
       maxAllowed:
         cpu: 0.01
         memory: 0.02Gi
@@ -72,11 +72,12 @@ spec:
           readOnly: true
         - name: docker
           mountPath: /var/run/docker.sock
-      - name: prometheus-auth-proxy
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
+      - name: ca-auth-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=9101"
         - "--proxy-pass=http://127.0.0.1:9102/metrics"
+        - "--user=kube-prometheus:scraper"
         ports:
         - containerPort: 9101
           name: https

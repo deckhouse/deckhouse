@@ -3,7 +3,9 @@
 
 Модуль устанавливает [dashboard](https://github.com/kubernetes/dashboard).
 
-Модуль работает только если включен https.
+В случае работы модуля по http, он работает с минимальными правами с ролью `User` из модуля: [user-authz](../140-user-authz/README.md).
+
+Если модуль `user-authz` отключен, то dashboard не выкатывается.
 
 Конфигурация
 ------------

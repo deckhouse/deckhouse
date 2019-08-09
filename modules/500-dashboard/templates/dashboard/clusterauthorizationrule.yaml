@@ -1,0 +1,14 @@
+{{- if or (not (.Values.global.enabledModules | has "user-authn")) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+---
+apiVersion: authz.flant.com/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: kube-system-dashboard
+spec:
+  subjects:
+  - kind: ServiceAccount
+    name: dashboard
+    namespace: kube-system
+  accessLevel: User
+  portForwarding: false
+{{- end }}

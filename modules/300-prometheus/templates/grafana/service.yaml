@@ -11,8 +11,8 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - port: 3000
+  - port: 443
     protocol: TCP
-    targetPort: web
+    targetPort: https
   selector:
     app: grafana

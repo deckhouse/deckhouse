@@ -3,90 +3,11 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 5,
-  "schedule": [
-    {
-      "crontab": "42 4 * * *"
-    }
-  ]
-}'
+  common_hooks::certificates::order_certificate::config
 }
 
 function __main__() {
-  if kubectl -n kube-prometheus get secret/prometheus-scraper-cert > /dev/null 2> /dev/null ; then
-    # Проверяем срок действия
-    cert=$(kubectl -n kube-prometheus get secret/prometheus-scraper-cert -o jsonpath='{.data.tls\.crt}' | base64 -d)
-    not_after=$(echo "$cert" | cfssl-certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
-    valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
-
-    # За десять дней до окончания
-    if [[ $valid_for -lt 864000 ]] ; then
-      # Удаляем секрет, будет перезаказан ниже
-      kubectl -n kube-prometheus delete secret/prometheus-scraper-cert
-    else
-      return 0
-    fi
-  fi
-
-  # Удаляем CSR, если существовал раньше
-  if kubectl get csr/kube-prometheus:scraper > /dev/null 2> /dev/null ; then
-    kubectl delete csr/kube-prometheus:scraper
-  fi
-
-  # Генерируем CSR
-  cfssl_result=$(jo CN=kube-prometheus:scraper key="$(jo algo=ecdsa size=256)" | cfssl genkey -)
-  cfssl_result_csr=$(echo "$cfssl_result" | jq .csr -r | base64 | tr -d '\n')
-  csr=$(cat <<EOF
-apiVersion: certificates.k8s.io/v1beta1
-kind: CertificateSigningRequest
-metadata:
-  name: kube-prometheus:scraper
-spec:
-  request: ${cfssl_result_csr}
-  usages:
-  - digital signature
-  - key encipherment
-  - client auth
-EOF
-)
-
-  # Создаем CSR и сразу его подтверждаем
-  echo "$csr" | kubectl create -f -
-  echo "$csr" | kubectl certificate approve -f -
-
-  # Дожидаемся подписанного сертификата, скачеваем его и удаляем CSR
-  for i in $(seq 1 120); do
-    if [[ "$(kubectl get csr/kube-prometheus:scraper -o json | jq '.status | has("certificate")')" == "true" ]] ; then
-      break
-    fi
-
-    echo "Wait for csr/kube-prometheus:scraper approval"
-    sleep 1
-  done
-  if [[ $i -gt 120 ]] ; then
-    >&2 echo "Timeout waiting for csr/kube-prometheus:scraper approval"
-    return 1
-  fi
-  cert=$(kubectl get csr/kube-prometheus:scraper -o jsonpath='{.status.certificate}')
-  kubectl delete csr/kube-prometheus:scraper
-
-  # Создаем секрет
-  key=$(echo "$cfssl_result" | jq .key -r | base64 | tr -d '\n')
-  kubectl create -f - <<EOF
-apiVersion: v1
-metadata:
-  name: prometheus-scraper-cert
-  namespace: kube-prometheus
-type: kubernetes.io/tls
-data:
-  tls.crt: $cert
-  tls.key: $key
-kind: Secret
-EOF
-  # Перезапустим поды prometheus, что бы подхватились новые сертификаты
-  kubectl -n kube-prometheus delete pod prometheus-main-0 prometheus-longterm-0 > /dev/null 2>&1
+  common_hooks::certificates::order_certificate::main "kube-prometheus" "prometheus-scraper-cert" "kube-prometheus:scraper"
 }
 
-hook::run $@
+hook::run "$@"
