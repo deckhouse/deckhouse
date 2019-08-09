@@ -11,8 +11,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - name: http
-    port: 8000
+  - name: https
+    port: 443
     protocol: TCP
   selector:
     app: {{ .Chart.Name }}

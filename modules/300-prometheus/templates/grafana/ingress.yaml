@@ -19,6 +19,14 @@ metadata:
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
 {{- end }}
+    ingress.kubernetes.io/backend-protocol: HTTPS
+    ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_trusted_certificate /var/run/secrets/kubernetes.io/serviceaccount/ca.crt;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_verify off;
+      proxy_ssl_session_reuse on;
     ingress.kubernetes.io/affinity: cookie
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
@@ -34,7 +42,7 @@ spec:
       - path: /
         backend:
           serviceName: grafana
-          servicePort: web
+          servicePort: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1

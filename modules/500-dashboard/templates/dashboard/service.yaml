@@ -9,12 +9,8 @@ metadata:
   namespace: kube-system
 spec:
   ports:
-  - port: 80
-{{- if .Values.global.enabledModules | has "user-authn" }}
-    targetPort: 8443
-{{- else }}
-    targetPort: 9090
-{{- end }}
+  - name: https
+    port: 443
   selector:
     module: {{ $.Chart.Name }}
     app: dashboard

@@ -156,11 +156,12 @@ spec:
           readOnly: false
         - name: config-volume
           mountPath: /etc/coredns
-      - name: prometheus-auth-proxy-coredns
-        image: {{ $.Values.global.modulesImages.registry }}/node-local-dns/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.nodeLocalDns.kubePrometheusAuthProxy }}
+      - name: ca-auth-proxy-coredns
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):9254"
         - "--proxy-pass=http://127.0.0.1:9254/metrics"
+        - "--user=kube-prometheus:scraper"
         env:
         - name: MY_POD_IP
           valueFrom:
@@ -173,11 +174,12 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-      - name: prometheus-auth-proxy-sidecar
-        image: {{ $.Values.global.modulesImages.registry }}/node-local-dns/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.nodeLocalDns.kubePrometheusAuthProxy }}
+      - name: ca-auth-proxy-sidecar
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):9255"
         - "--proxy-pass=http://127.0.0.1:9255/metrics"
+        - "--user=kube-prometheus:scraper"
         env:
         - name: MY_POD_IP
           valueFrom:

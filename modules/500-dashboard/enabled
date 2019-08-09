@@ -4,7 +4,11 @@ source /antiopa/shell_lib.sh
 
 function __main__() {
   if values::has global.modules.publicDomainTemplate ; then
-    echo "true" > $MODULE_ENABLED_RESULT
+    if ! values::array_has global.enabledModules "user-authz" ; then
+      echo "false" > $MODULE_ENABLED_RESULT
+    else
+      echo "true" > $MODULE_ENABLED_RESULT
+    fi
   else
     echo "false" > $MODULE_ENABLED_RESULT
   fi

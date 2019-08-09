@@ -1,0 +1,22 @@
+diff --git a/src/app/backend/dashboard.go b/src/app/backend/dashboard.go
+index c1c79ce25..7edb44d66 100644
+--- a/src/app/backend/dashboard.go
++++ b/src/app/backend/dashboard.go
+@@ -24,6 +24,7 @@ import (
+ 	"net/http"
+ 	"os"
+ 	"time"
++	"html"
+ 
+ 	"github.com/kubernetes/dashboard/src/app/backend/args"
+ 	"github.com/kubernetes/dashboard/src/app/backend/auth"
+@@ -152,6 +153,9 @@ func main() {
+ 	http.Handle("/api/appConfig.json", handler.AppHandler(handler.ConfigHandler))
+ 	http.Handle("/api/sockjs/", handler.CreateAttachHandler("/api/sockjs"))
+ 	http.Handle("/metrics", prometheus.Handler())
++	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
++		fmt.Fprintf(w, "OK %q", html.EscapeString(r.URL.Path))
++	})
+ 
+ 	// Listen for http or https
+ 	if servingCerts != nil {

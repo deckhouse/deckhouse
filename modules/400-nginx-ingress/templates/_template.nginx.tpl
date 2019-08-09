@@ -127,13 +127,22 @@ spec:
           name: scgi-temp-path
         - mountPath: /var/lib/nginx/uwsgi
           name: uwsgi-temp-path
+        - mountPath: /etc/nginx/ssl/client.crt
+          name: secret-nginx-auth-cert-crt
+          subPath: client.crt
+          readOnly: true
+        - mountPath: /etc/nginx/ssl/client.key
+          name: secret-nginx-auth-cert-key
+          subPath: client.key
+          readOnly: true
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
-      - name: prometheus-auth-proxy
-        image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/kube-prometheus-auth-proxy:{{ .Values.global.modulesImages.tags.nginxIngress.kubePrometheusAuthProxy }}
+      - name: ca-auth-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ .Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=$(MY_POD_IP):9103"
         - "--proxy-pass=http://127.0.0.1:9102/metrics"
+        - "--user=kube-prometheus:scraper"
         env:
         - name: MY_POD_IP
           valueFrom:
@@ -156,5 +165,17 @@ spec:
         emptyDir: {}
       - name: uwsgi-temp-path
         emptyDir: {}
+      - name: secret-nginx-auth-cert-crt
+        secret:
+          secretName: nginx-auth-cert
+          items:
+          - key: tls.crt
+            path: client.crt
+      - name: secret-nginx-auth-cert-key
+        secret:
+          secretName: nginx-auth-cert
+          items:
+          - key: tls.key
+            path: client.key
   {{- end }}
 {{- end }}

@@ -54,11 +54,12 @@ spec:
       priorityClassName: cluster-medium
       {{- end }}
       containers:
-      - name: prometheus-auth-proxy-main
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
+      - name: ca-auth-proxy-main
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=8443"
         - "--proxy-pass=http://127.0.0.1:8081/metrics"
+        - "--user=kube-prometheus:scraper"
         ports:
         - containerPort: 8443
           name: https-main
@@ -66,11 +67,12 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-      - name: prometheus-auth-proxy-self
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus/kube-prometheus-auth-proxy:{{ $.Values.global.modulesImages.tags.prometheus.kubePrometheusAuthProxy }}
+      - name: ca-auth-proxy-self
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=9443"
         - "--proxy-pass=http://127.0.0.1:8082/metrics"
+        - "--user=kube-prometheus:scraper"
         ports:
         - containerPort: 9443
           name: https-self

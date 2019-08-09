@@ -1,4 +1,4 @@
-{{- if .Values.global.enabledModules | has "user-authn" }}
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
 
   {{- $context := . }}
   {{- $config := .Values.dashboard.dexAuthenticator }}

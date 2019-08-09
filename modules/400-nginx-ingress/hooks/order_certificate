@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  common_hooks::certificates::order_certificate::config
+}
+
+function __main__() {
+  common_hooks::certificates::order_certificate::main "kube-nginx-ingress" "nginx-auth-cert" "nginx-ingress:main"
+  if values::has nginxIngress.additionalControllers ; then
+    for additional_controller in $(values::get nginxIngress.additionalControllers | jq '.[].name' -r) ; do
+      common_hooks::certificates::order_certificate::main "kube-nginx-ingress-${additional_controller}" "nginx-auth-cert" "nginx-ingress:${additional_controller}"
+    done
+  fi
+}
+
+hook::run "$@"

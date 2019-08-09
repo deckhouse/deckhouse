@@ -327,3 +327,74 @@ nginxIngress: |
 * В AWS все интересней:
     * До версии Kubernetes 1.9 единственным типом LB, который можно было создать в AWS из Kubernetes, был Classic. При этом, по-умолчанию создается `AWS Classic LoadBalancer`, который проксирует TCP трафик (так же на `spec.ports[*].nodePort`). Трафик при этом приходит не с адреса клиента, а с адресов LoadBalancer'а. И единственный способ узнать адрес клиента — включить proxy protocol (это можно сделать через [аннотацию сервиса в Kubernetes](https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/aws/aws.go).
     * Начиная с версии Kubernetes 1.9 [можно заводить Network LoadBalancer'ы](https://kubernetes.io/docs/concepts/services-networking/service/#network-load-balancer-support-on-aws-alpha). Такой LoadBalancer работает аналогично Azure и GCE — отправляет трафик с сохранением source адреса клиента.
+
+### Как разрешить доступ к приложению внутри кластера ТОЛЬКО от ingress'ов
+
+В случае, если вы хотите ограничить доступ к вашему приложению внутри кластера ТОЛЬКО от подов ingress'а, вам необходимо в под с приложением добавить такой контейнер:
+
+```yaml
+      - name: ca-auth-proxy
+        image: flant/kube-ca-auth-proxy:v0.4.0
+        args:
+        - "--listen=443" # Порт на котором будет принимать запросы от ingress'а
+        - "--location=/" # Какой локейшен надо проксировать
+        - "--proxy-pass=http://127.0.0.1:80/" # Куда проксировать запросы, контейнер с приложением должен слушать на 127.0.0.1 ip-адресе
+        - "--user=nginx-ingress:.*" # Это CN сертификата выписанного для ingress'ов (его оставить с таким значениемм)
+        readinessProbe:
+          tcpSocket:
+            port: 443
+        livenessProbe:
+          tcpSocket:
+            port: 443
+        ports:
+        - containerPort: 443
+          name: https
+```
+
+И для ingress'а ресурса необходимо добавить такие параметры:
+```yaml
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_trusted_certificate /var/run/secrets/kubernetes.io/serviceaccount/ca.crt;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_verify off;
+      proxy_ssl_session_reuse on;
+```
+
+И в качестве `servicePort` указать порт `https`.
+
+Контейнер `ca-auth-proxy` будет пропускать запросы к приложению только если:
+1. клиент обратился с сертификатом и
+1. сертификат подписан kubernetes CA и
+1. CommonName сертификата попадает под регулярку `nginx-ingress:.*`. 
+
+Есть 2 варианта работы с Liveness/Readiness пробами:
+- Если у приложения есть безопасный endpoint для запросов проверки всостояния, то вы можете воспользоваться дополнительными опциями:
+```yaml
+      - name: ca-auth-proxy
+        image: flant/kube-ca-auth-proxy:v0.4.0
+        args:
+        - "--listen=443" # Порт на котором будет принимать запросы от ingress'а
+        - "--location=/" # Какой локейшен надо проксировать
+        - "--proxy-pass=http://127.0.0.1:80/" # Куда проксировать запросы, контейнер с приложением должен слушать на 127.0.0.1 ip-адресе
+        - "--user=nginx-ingress:.*" # Это CN сертификата выписанного для ingress'ов (его оставить с таким значениемм)
+        - "--probe-proxy-pass=http://127.0.0.1:80/api/health" # Адрес, куда будут проксировать запросы к probe
+        - "--probe-listen=3500" # Порт на котором будет слушать nginx в `ca-auth-proxy` и по http проксировать запросы к приложению
+        ports:
+        - containerPort: 443
+          name: https
+```
+
+А у контейнера с приложегнием использовать такую liveness/readiness probe:
+```yaml
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3500
+```
+
+В таком случае пробы у контейнера с приложением будут отправляться в контейнер `ca-auth-proxy`, который на 3500 порту слушает обычный http и проксирует запросы к приложению.
+
+- В случае, если у приложения нет безопасного endpoint, который можно не защищать https, то необходимо использовать exec пробы с curl.
