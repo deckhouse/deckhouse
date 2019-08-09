@@ -15,7 +15,7 @@ metadata:
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
     ingress.kubernetes.io/affinity: cookie
-    ingress.kubernetes.io/rewrite-target: "/$1"
+    ingress.kubernetes.io/rewrite-target: "/$2"
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
@@ -27,7 +27,7 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     http:
       paths:
-      - path: /trickster/(.*)
+      - path: /trickster(/|$)(.*)
         backend:
           serviceName: trickster
           servicePort: web
