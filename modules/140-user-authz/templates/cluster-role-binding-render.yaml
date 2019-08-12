@@ -16,11 +16,13 @@ subjects:
     {{- end }}
   {{- end }}
 
+  {{- if hasKey $crd.spec "accessLevel" }}
+
   {{- if not (list "User" "Master" "Deploy" "Admin" | has $crd.spec.accessLevel) }}
     {{- cat "Unsopported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
   {{- end }}
 
-  {{- if $crd.spec.accessLevel }}
+    {{- if $crd.spec.accessLevel }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -35,9 +37,11 @@ roleRef:
   name: user-authz:{{ $crd.spec.accessLevel | lower }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
+    {{- end }}
   {{- end }}
 
-  {{- if ($crd.spec.portForwarding | default false) }}
+  {{- if hasKey $crd.spec "portForwarding" }}
+    {{- if ($crd.spec.portForwarding | default false) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -52,5 +56,25 @@ roleRef:
   name: user-authz:port-forward
 subjects:
 {{ $crd.spec.subjects | toYaml }}
+    {{- end }}
+  {{- end }}
+
+  {{- if hasKey $crd.spec "allowScale" }}
+    {{- if ($crd.spec.allowScale | default "false") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: user-authz:{{ $crd.name }}:scale
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:scale
+subjects:
+{{ $crd.spec.subjects | toYaml }}
+    {{- end }}
   {{- end }}
 {{- end }}

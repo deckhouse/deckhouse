@@ -1,4 +1,7 @@
 {{- if or (not (.Values.global.enabledModules | has "user-authn")) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+  {{- if and (eq (include "helm_lib_module_https_mode" .) "Disabled") (ne .Values.dashboard.accessLevel "User") }}
+    {{- cat "On https.mode Disabled the only allowed accessLevel is User" | fail }}
+  {{- end }}
 ---
 apiVersion: authz.flant.com/v1
 kind: ClusterAuthorizationRule
@@ -9,6 +12,9 @@ spec:
   - kind: ServiceAccount
     name: dashboard
     namespace: kube-system
-  accessLevel: User
+  accessLevel: {{ .Values.dashboard.accessLevel }}
   portForwarding: false
+  {{- if .Values.dashboard.allowScale }}
+  allowScale: true
+  {{- end }}
 {{- end }}

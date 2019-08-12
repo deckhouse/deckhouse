@@ -1,0 +1,27 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:scale
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments/scale
+  - statefulsets/scale
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  resources:
+  - deployments/scale
+  - statefulsets/scale
+  verbs:
+  - get
+  - patch
+  - update
