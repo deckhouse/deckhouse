@@ -18,6 +18,9 @@
     * Используется если не включен модуль `user-authn`.
 * `ingressClass` — класс ingress контроллера, который используется для dashboard.
     * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
+* `accessLevel` — уровень доступа в dashboard при отсутсвии `user-authn`. Возможные значения описаны в [user-authz](../140-user-authz/README.md).
+  * По-умолчанию: `User`.
+* `allowScale` — если указать данный параметр в `true`, то в Kubernetes Dashboard появится возможность скейлить deployment и statefulset.
 * `https` — выбираем, какой типа сертификата использовать для dashboard.
     * `mode` — режим работы HTTPS:
         * `Disabled` — в данном режиме dashboard будет работать только по http;

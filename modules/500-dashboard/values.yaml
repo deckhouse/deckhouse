@@ -1,1 +1,2 @@
-dashboard: {}
+dashboard:
+  accessLevel: User
