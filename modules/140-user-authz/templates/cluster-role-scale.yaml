@@ -9,14 +9,6 @@ metadata:
 rules:
 - apiGroups:
   - apps
-  resources:
-  - deployments/scale
-  - statefulsets/scale
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - extensions
   resources:
   - deployments/scale

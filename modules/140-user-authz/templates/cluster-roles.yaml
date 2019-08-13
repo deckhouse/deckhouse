@@ -1,0 +1,276 @@
+{{- define "user_authz_verbs" }}
+  {{- $mode := . }}
+  {{- if eq $mode "r" }}
+  - get
+  - list
+  - watch
+  {{- else if eq $mode "rw" }}
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+  {{- end }}
+{{- end -}}
+
+{{- define "user_authz_rules_for_not_recommended_objects" }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - daemonsets
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  - extensions
+  resources:
+  - replicationcontrollers
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- end -}}
+
+{{- define "user_authz_common_rules" }}
+  {{- $role := . -}}
+  {{- $mode := "" }}
+  {{- if or (eq $role "User") (eq $role "Master") }}
+    {{- $mode = "r" }}
+  {{- else if or (eq $role "Admin") (eq $role "Deploy") }}
+    {{- $mode = "rw" }}
+  {{- end }}
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/log
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - configmaps
+  - endpoints
+  - limitranges
+  - persistentvolumeclaims
+  - resourcequota
+  - services
+  - serviceaccounts
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - replicasets
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - extensions
+  - networking.k8s.io
+  resources:
+  - ingresses
+  - networkpolicies
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - certificates
+  - issuers
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - clusterissuers
+  - challenges
+  - orders
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+  
+  {{- include "user_authz_rules_for_not_recommended_objects" . }}
+{{- end -}}
+
+{{- define "user_authz_user_rules" }}
+{{- end -}}
+
+{{- define "user_authz_master_rules" }}
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods/attach
+  - pods/exec
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- end -}}
+
+{{- define "user_authz_deploy_rules" }}
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+{{- end -}}
+
+{{- define "user_authz_admin_rules" }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - replicasets
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - challenges
+  - orders
+  verbs:
+  - delete
+  - deletecollection
+{{- end -}}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:user
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+rules:
+{{- include "user_authz_common_rules" "User" }}
+{{- include "user_authz_user_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:master
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+rules:
+{{- include "user_authz_common_rules" "Master" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_master_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:deploy
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+rules:
+{{- include "user_authz_common_rules" "Deploy" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_master_rules" . }}
+{{- include "user_authz_deploy_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:admin
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+rules:
+{{- include "user_authz_common_rules" "Admin" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_master_rules" . }}
+{{- include "user_authz_deploy_rules" . }}
+{{- include "user_authz_admin_rules" . }}

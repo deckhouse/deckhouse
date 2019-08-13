@@ -162,6 +162,7 @@ spec:
     {{- if $set_authorization_header }}
         - --set-authorization-header=true
     {{- end }}
+        - --scope=groups email openid
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
