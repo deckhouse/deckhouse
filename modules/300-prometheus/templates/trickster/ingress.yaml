@@ -11,9 +11,14 @@ metadata:
     app: trickster
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+{{- if .Values.global.enabledModules | has "user-authn" }}
+    ingress.kubernetes.io/auth-signing: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
+    ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
+{{- else }}
     ingress.kubernetes.io/auth-type: basic
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
+{{- end }}
     ingress.kubernetes.io/affinity: cookie
     ingress.kubernetes.io/rewrite-target: "/$2"
 spec:

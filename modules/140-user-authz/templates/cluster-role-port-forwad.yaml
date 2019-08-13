@@ -7,6 +7,10 @@ metadata:
     heritage: antiopa
     module: {{ .Chart.Name }}
 rules:
-- apiGroups: [""]
-  resources: ["pods", "pods/portforward"]
-  verbs: ["get", "list", "create"]
+- apiGroups:
+  - ""
+  resources:
+  - pods/portforward
+  verbs:
+  - get
+  - create
