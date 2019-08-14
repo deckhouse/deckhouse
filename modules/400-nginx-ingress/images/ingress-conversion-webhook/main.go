@@ -137,7 +137,10 @@ func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
 		} else {
 			rwrIngress.Annotations["kubernetes.io/ingress.class"] = rwrIngress.Annotations["kubernetes.io/ingress.class"] + "-rwr"
 		}
-	}
+	} else {
+			rwrIngress.Annotations = make(map[string]string)
+			rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
+    }
 
 	if !rewriteTargetMigrationRequired(ingress) {
 		return createOrUpdateIngress(rwrIngress)
