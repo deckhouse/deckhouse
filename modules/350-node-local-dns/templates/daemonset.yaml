@@ -147,6 +147,7 @@ spec:
           exec:
             command:
             - /health.sh
+            - {{ .Values.global.discovery.clusterDomain | quote }}
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 7
