@@ -155,22 +155,27 @@
 
 ### Настройка kube-apiserver
 
-#### Настройка kube-apiserver у bare-metal кластеров
+#### Настройка kube-apiserver у kubeadm-кластеров
 
-Для этого необходимо отредактировать манифест `/etc/kubernetes/manifests/kube-apiserver.yaml` и добавить аргументы на всех master нодах:
-```yaml
-    - --oidc-client-id=kubernetes
-    - --oidc-groups-claim=groups
-    - --oidc-issuer-url=https://dex.<modules.publicDomainTemplate>/
-    - --oidc-username-claim=email
-```
-
-И перезапустить kubelet:
+* Сдампить текущий конфиг кластера:
 ```shell
-systemctl restart kubelet
+kubeadm config view > mycluster-config.yaml
+```
+* Отредактировать, добавив четыре параметра:
+```yaml
+apiServer:
+  extraArgs:
+    oidc-client-id: kubernetes
+    oidc-groups-claim: groups
+    oidc-issuer-url: "https://dex.<addonsPublicDomainTemplate>/"
+    oidc-username-claim: email
+```
+* Применить новые настройки:
+```shell
+kubeadm upgrade apply --config mycluster-config.yaml
 ```
 
-#### Настройка kube-apiserver у kops кластеров
+#### Настройка kube-apiserver у kops-кластеров
 
 Для этого необходимо отредактировать специфицкацию кластера:
 ```shell

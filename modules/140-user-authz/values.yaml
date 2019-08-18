@@ -1,1 +1,4 @@
-userAuthz: {}
+userAuthzEnable: true
+userAuthz:
+  enableMultiTenancy: false
+  disableWebhookConfigurator: false

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 5
+}'
+}
+
+function __main__() {
+  if values::is_true userAuthz.enableMultiTenancy && ! values::has userAuthz.webhookCa; then
+    if ! kubectl -n kube-system get secret user-authz-webhook > /dev/null 2> /dev/null ; then
+      ca=$(jo CN=user-authz-webhook key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
+      ca_crt=$(echo "$ca" | jq .cert -r)
+
+      # Создадим конфиг для cfssl gencert
+      config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
+
+      cert=$(jo CN=user-authz-webhook hosts="[\"127.0.0.1\"]" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
+      webhook_server_crt=$(echo "$cert" | jq .cert -r)
+      webhook_server_key=$(echo "$cert" | jq .key -r)
+    else
+      cert=$(kubectl -n kube-system get secret user-authz-webhook -o json)
+      ca_crt=$(echo "$cert" | jq -r '.data."ca.crt"' | base64 -d)
+      webhook_server_crt=$(echo "$cert" | jq -r '.data."webhook-server.crt"' | base64 -d)
+      webhook_server_key=$(echo "$cert" | jq -r '.data."webhook-server.key"' | base64 -d)
+    fi
+
+    values::set userAuthz.webhookCa "$ca_crt"
+    values::set userAuthz.webhookServerCrt "$webhook_server_crt"
+    values::set userAuthz.webhookServerKey "$webhook_server_key"
+  fi
+}
+
+hook::run "$@"

@@ -1,0 +1,76 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+  {{- if hasKey .Values.userAuthz "webhookCa" }}
+    {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: user-authz-webhook
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: user-authz-webhook
+  updatePolicy:
+    updateMode: "Auto"
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: user-authz-webhook
+  name: user-authz-webhook
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: user-authz-webhook
+  template:
+    metadata:
+      annotations:
+      labels:
+        app: user-authz-webhook
+    spec:
+    {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+      priorityClassName: system-cluster-critical
+    {{- end }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      imagePullSecrets:
+      - name: {{ $.Chart.Name }}-antiopa-registry
+      hostNetwork: true
+      containers:
+      - name: frontend
+        image: {{ $.Values.global.modulesImages.registry }}/user-authz/nginx:{{ $.Values.global.modulesImages.tags.userAuthz.nginx }}
+        volumeMounts:
+        - mountPath: /etc/ssl/user-authz-webhook
+          name: user-authz-webhook-secret
+        - mountPath: /etc/ssl/extension-apiserver-authentication
+          name: extension-apiserver-authentication
+      - name: backend
+        image: {{ $.Values.global.modulesImages.registry }}/user-authz/webhook:{{ $.Values.global.modulesImages.tags.userAuthz.webhook }}
+        volumeMounts:
+        - mountPath: /etc/user-authz-webhook/
+          name: user-authz-webhook-config
+          readOnly: true
+      volumes:
+      - name: user-authz-webhook-secret
+        secret:
+          secretName: user-authz-webhook
+      - name: extension-apiserver-authentication
+        configMap:
+          name: extension-apiserver-authentication
+      - name: user-authz-webhook-config
+        configMap:
+          name: user-authz-webhook
+  {{- end }}
+{{- end }}
