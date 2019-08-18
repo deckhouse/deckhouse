@@ -23,6 +23,9 @@ github.com/evanphx/json-patch v4.5.0+incompatible h1:ouOWdg56aJriqS0huScTkVXPC5I
 github.com/evanphx/json-patch v4.5.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flant/addon-operator v1.0.0-beta.3 h1:Ipw3ueIlEXWCAdFOIsOpPZTzbStjh2/OM6AvJHGqjmA=
 github.com/flant/addon-operator v1.0.0-beta.3/go.mod h1:NtpA/UMeKi7VECb6eE0kOLVF6QzGOePmR4Cze3P+kp0=
+github.com/flant/addon-operator v1.0.0-beta.3.0.20190722123044-8ee91d6c87e5/go.mod h1:NtpA/UMeKi7VECb6eE0kOLVF6QzGOePmR4Cze3P+kp0=
+github.com/flant/addon-operator v1.0.0-beta.3.0.20190723113716-e3d667fcd3e1 h1:Vhm90bLTPeVi+G/rB3hPqgqou00ew7ZwDMiqp1siLVE=
+github.com/flant/addon-operator v1.0.0-beta.3.0.20190723113716-e3d667fcd3e1/go.mod h1:NtpA/UMeKi7VECb6eE0kOLVF6QzGOePmR4Cze3P+kp0=
 github.com/flant/docker-registry-client v0.0.0-20180507135036-a0772de8dd84 h1:02a9TjZYrNFI0/QoGIOYEhuN8yQ0tDkRlZ9zUXwSqTI=
 github.com/flant/docker-registry-client v0.0.0-20180507135036-a0772de8dd84/go.mod h1:+85m0m+eGhtDUk+pAXlp4qWbZUMhl6sWCNEGuzK9P6Q=
 github.com/flant/shell-operator v1.0.0-beta.2/go.mod h1:pZIR8TgEy75AcMMCpgR99r+3qcbL/R41MiiDMvtqgsc=

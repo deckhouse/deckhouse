@@ -1,3 +1,4 @@
+nginxIngressEnabled: true
 nginxIngress:
   additionalControllers: []
   rewriteTargetMigration: false
