@@ -48,7 +48,7 @@ function values::get() {
     >&2 echo "Error: Value $1 required, but empty"
     return 1
   else
-    echo $value
+    echo "$value"
     return 0
   fi
 }

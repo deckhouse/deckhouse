@@ -1,13 +1,99 @@
+
+
+
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: clusterauthorizationrules.authz.flant.com
+  name: clusterauthorizationrules.deckhouse.io
 spec:
-  group: authz.flant.com
-  version: v1
+  group: deckhouse.io
   scope: Cluster
   names:
     plural: clusterauthorizationrules
     singular: clusterauthorizationrule
     kind: ClusterAuthorizationRule
-
+  version: v1alfa1
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'ClusterAuthorizationRule is handy interface for configuring RBAC and optional multi-tenancy with namespace-based authorization.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - subjects
+          properties:
+            accessLevel:
+              type: string
+              description: |
+                Pre-configured access level to Kubernetes API (optional). "User": [exec, port-forward, get secret, delete objects, create/edit namespace, create objects] not allowed, [list objects, logs] allowed. "Master": [port-forward, delete system objects (ReplicaSets, certmanager.k8s.io/orders, ...), create/edit namespace, create objects] not allowed, [list objects, logs, exec, get secret, delete pod] allowed. "Deploy": [port-forward, delete system objects (ReplicaSets, certmanager.k8s.io/orders, ...)] not allowed, [list objects, logs, exec, get secret, delete pod, create/edit namespace, create objects (except Pods)] allowed. "Admin": [port-forward] not allowed, [list objects, logs, exec, get secret, delete pod, create/edit namespace, create objects (except Pods), delete objects] allowed.
+              enum: [User,Master,Deploy,Admin]
+              example: 'Master'
+            portForwarding:
+              type: boolean
+              description: 'Allow port-forward. Default: false.'
+            allowScale:
+              type: boolean
+              description: 'Allow scaling. Default: false.'
+            allowAccessToSystemNamespaces:
+              type: boolean
+              description: 'Allow access to System namespaces (antiopa, kube-*, loghouse, default). Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: false.'
+            limitNamespaces:
+              type: array
+              description: 'List of namespace regex-patterns to allow for user. Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: empty, no namespaces allowed.'
+              items:
+                type: string
+                minLength: 1
+                example: 'production-.*'
+            subjects:
+              type: array
+              description: 'List of user subjects like User, Group or ServiceAccount.'
+              items:
+                type: object
+                required:
+                - kind
+                - name
+                properties:
+                  kind:
+                    type: string
+                    enum: [User,Group,ServiceAccount]
+                    description: 'Type of user identification resource. One of User, Group or ServiceAccount.'
+                    example: 'Group'
+                  name:
+                    type: string
+                    minLength: 1
+                    description: 'Name of user identification resource.'
+                    example: 'some-group-name'
+                  namespace:
+                    type: string
+                    minLength: 1
+                    description: 'Namespace for ServiceAccount.'
+            additionalRoles:
+              type: array
+              description: 'Additional roles to bind for subjects. Not recomended option.'
+              items:
+                type: object
+                required:
+                - apiGroup
+                - kind
+                - name
+                properties:
+                  apiGroup:
+                    type: string
+                    description: 'apiGroup for users.'
+                    example: 'rbac.authorization.k8s.io'
+                    minLength: 1
+                  kind:
+                    type: string
+                    description: 'kind: ClusterRole or Role'
+                    enum: [ClusterRole, Role]
+                    example: 'ClusterRole'
+                    minLength: 1
+                  name:
+                    type: string
+                    description: 'name of ClusterRole or Role'
+                    minLength: 1
+                    example: 'cluster-admin'

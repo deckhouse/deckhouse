@@ -1,0 +1,23 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-authz-webhook
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: user-authz-webhook
+data:
+  config.json: |
+    { "crds": {{ .Values.userAuthz.crds | toJson}} } 
+{{- else }}
+  {{- range $crd := .Values.userAuthz.crds }}
+    {{- if hasKey $crd.spec "allowAccessToSystemNamespaces" }}
+      {{- fail "You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources." }}
+    {{- end }}
+    {{- if hasKey $crd.spec "limitNamespaces" }}
+      {{- fail "You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources." }}
+    {{- end }}
+  {{- end }}
+{{- end }}

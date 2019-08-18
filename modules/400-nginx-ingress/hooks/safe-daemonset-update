@@ -1,0 +1,29 @@
+#!/bin/bash -e
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "onKubernetesEvent": [
+    {
+      "kind": "daemonset",
+      "event": ["update"],
+      "selector": {
+        "matchLabels": {
+          "nginx-ingress-safe-update": ""
+        }
+      },
+      "jqFilter": ".status",
+      "allowFailure": false
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  common_hooks::daemonset_pair_safe_update::main nginx direct-fallback
+}
+
+hook::run "$@"

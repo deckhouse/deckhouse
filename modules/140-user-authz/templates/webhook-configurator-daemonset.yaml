@@ -1,0 +1,72 @@
+{{- if not .Values.userAuthz.disableWebhookConfigurator }}
+  {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: user-authz-webhook-configurator
+  namespace: kube-system
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: user-authz-webhook-configurator
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    app: user-authz-webhook
+  name: user-authz-webhook-configurator
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: user-authz-webhook-configurator
+  template:
+    metadata:
+      annotations:
+      labels:
+        app: user-authz-webhook-configurator
+    spec:
+    {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+      priorityClassName: system-cluster-critical
+    {{- end }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      imagePullSecrets:
+      - name: {{ $.Chart.Name }}-antiopa-registry
+      containers:
+      - name: configurator
+        image: {{ $.Values.global.modulesImages.registry }}/user-authz/webhook-configurator:{{ $.Values.global.modulesImages.tags.userAuthz.webhookConfigurator }}
+        env:
+        - name: ACTION
+          value: {{ if $.Values.userAuthz.enableMultiTenancy }}configure{{ else }}deconfigure{{ end }}
+        volumeMounts:
+        - mountPath: /etc/kubernetes
+          name: etc-kubernetes
+        {{- if .Values.userAuthz.enableMultiTenancy }}
+        - mountPath: /etc/ssl/user-authz-webhook
+          name: user-authz-webhook-secret
+        {{- end }}
+      volumes:
+      {{- if .Values.userAuthz.enableMultiTenancy }}
+      - name: user-authz-webhook-secret
+        secret:
+          secretName: user-authz-webhook
+      {{- end }}
+      - name: etc-kubernetes
+        hostPath:
+          path: /etc/kubernetes
+          type: Directory
+{{- end }}
