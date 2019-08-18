@@ -1,1 +1,2 @@
+systemdSlicesCleanerEnabled: true
 systemdSlicesCleaner: {}

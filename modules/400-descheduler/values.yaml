@@ -1,3 +1,4 @@
+deschedulerEnabled: true
 descheduler:
   removePodsViolatingNodeAffinity: true
   removePodsViolatingInterPodAntiAffinity: true

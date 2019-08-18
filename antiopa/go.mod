@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
-	github.com/flant/addon-operator v1.0.0-beta.3
+	github.com/flant/addon-operator v1.0.0-beta.4
 	github.com/flant/docker-registry-client v0.0.0-20180507135036-a0772de8dd84
 	github.com/flant/shell-operator v1.0.0-beta.3
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
