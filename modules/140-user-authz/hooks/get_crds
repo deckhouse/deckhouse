@@ -20,7 +20,7 @@ EOF
 }
 
 function __main__() {
-  crds=$(kubectl get clusterauthorizationrules.authz.flant.com -o json  | jq '.items | to_entries[] | {"name": .value.metadata.name, "spec": .value.spec}' -rc | jq -sc '.')
+  crds=$(kubectl get clusterauthorizationrules.deckhouse.io -o json  | jq '.items | to_entries[] | {"name": .value.metadata.name, "spec": .value.spec}' -rc | jq -sc '.')
   values::set userAuthz.crds "$crds"
 }
 

@@ -3,7 +3,7 @@
     {{- cat "On https.mode Disabled the only allowed accessLevel is User" | fail }}
   {{- end }}
 ---
-apiVersion: authz.flant.com/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterAuthorizationRule
 metadata:
   name: kube-system-dashboard
