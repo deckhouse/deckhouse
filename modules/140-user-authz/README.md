@@ -27,7 +27,7 @@
 
 Формат CRD выглядит так:
 ```yaml
-apiVersion: authz.flant.com/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterAuthorizationRule
 metadata:
   name: test
@@ -124,7 +124,7 @@ EOF
 
 Создадим `ClusterAuthorizationRule`:
 ```yaml
-apiVersion: authz.flant.com/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterAuthorizationRule
 metadata:
   name: myuser
