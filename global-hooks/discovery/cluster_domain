@@ -19,7 +19,7 @@ function __main__() {
 	  cluster_domain="cluster.local"
   fi
 
-  cluster_domain=$(echo "$cluster_domain" | sed s/\.$//g)
+  cluster_domain=$(echo "$cluster_domain" | sed s/\\.$//g)
 
   values::set global.discovery.clusterDomain $cluster_domain
 }
