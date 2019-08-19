@@ -12,11 +12,15 @@ function __main__() {
   if kubectl -n kube-system get cm coredns > /dev/null 2> /dev/null; then
     cluster_domain=$(kubectl -n kube-system  get cm coredns -o json | jq '.data.Corefile' -r | grep -E '\s+kubernetes\s+[a-zA-Z0-9\.]+\s+in-addr.arpa\s+ip6.arpa\s+\{$' | awk '{print $2}')
   else
-    cluster_domain=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o=jsonpath='{.items[0].spec.containers[0].command}  {.items[0].spec.containers[0].args}' 2>/dev/null | grep -Eo -- '--domain=[^\ ]+' | sed -e s/--domain=//g -e s/.$//g)
+    cluster_domain=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o=jsonpath='{.items[0].spec.containers[0].command}  {.items[0].spec.containers[0].args}' 2>/dev/null | grep -Eo -- '--domain=[^\ ]+' | sed -e s/--domain=//g)
   fi
+
   if [[ $cluster_domain == "" ]]; then
 	  cluster_domain="cluster.local"
   fi
+
+  cluster_domain=$(echo "$cluster_domain" | sed s/.$//g)
+
   values::set global.discovery.clusterDomain $cluster_domain
 }
 
