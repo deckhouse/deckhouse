@@ -54,6 +54,7 @@ spec:
         - --port=443
         - --insecure-port=80
         - --insecure-bind-address=127.0.0.1
+        - --logtostderr=true
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
         - --auto-generate-certificates=true
         - --bind-address=0.0.0.0
