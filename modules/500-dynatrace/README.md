@@ -5,6 +5,15 @@
 
 **Важно!** Оператор использует внешний образ `docker.io/dynatrace/oneagent:latest`.
 
+### Включение модуля
+
+Модуль по-умолчанию **выключен**. Для включения добавьте в CM `antiopa`:
+
+```yaml
+data:
+  dynatraceEnabled: "true"
+```
+
 ### Параметры
 
 * `apiUrl` — адрес инсталяции Dynatrace;
@@ -35,6 +44,7 @@
 
 #### Минимальная конфигурация
 ```yaml
+dynatraceEnabled: "true"
 dynatrace: |
   apiToken: crM2eyYjvRaqbmz5uC0SRn5
   paasToken: uuaBV1LsSTCOXqgszgDst0n
@@ -44,6 +54,7 @@ dynatrace: |
 #### Указана группа хостов для Dynatrace
 
 ```yaml
+dynatraceEnabled: "true"
 dynatrace: |
   apiToken: crM2eyYjvRaqbmz5uC0SRn5
   paasToken: uuaBV1LsSTCOXqgszgDst0n
@@ -54,6 +65,7 @@ dynatrace: |
 
 #### Разные группы хостов
 ```yaml
+dynatraceEnabled: "true"
 dynatrace: |
   apiToken: crM2eyYjvRaqbmz5uC0SRn5
   paasToken: uuaBV1LsSTCOXqgszgDst0n

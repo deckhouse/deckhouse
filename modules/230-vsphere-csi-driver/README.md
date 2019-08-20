@@ -32,7 +32,17 @@ data:
 
 **Важно!** Перед тем, как приступить к настройке модуля, убедитесь, что у вас [включен `disk.EnableUUID` для всех машин](docs/disk_uuid.md).
 
-Для включения данного модуля кластер Kubernetes должен быть не ниже 1.14 и необходимо задать параметр `virtualCenter` с настройками подключения к vSphere.
+### Включение модуля
+
+Модуль по-умолчанию **выключен**. Для включения:
+* кластер Kubernetes должен быть не ниже 1.14,
+* задать параметр `virtualCenter` с настройками подключения к vSphere,
+* добавить в CM `antiopa`:
+
+```yaml
+data:
+  vsphereCsiDriverEnabled: "true"
+```
 
 ### Параметры
 
@@ -60,6 +70,7 @@ data:
 ### Пример конфигурации
 
 ```yaml
+vsphereCsiDriverEnabled: "true"
 vsphereCsiDriver: |
   virtualCenter:
     address: p-vc.corp.example.com
