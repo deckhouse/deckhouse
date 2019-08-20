@@ -1,7 +1,9 @@
-{{- if and (hasKey .Values.dynatrace "hostGroups") (gt (len .Values.dynatrace.hostGroups) 1) }}
-  {{- range $hostGroup := .Values.dynatrace.hostGroups }}
-    {{- if not (hasKey $hostGroup "nodeSelector") }}
-      {{ cat "В конфигурации модуля указано несколько hostGroup, но у " $hostGroup.name " не указан nodeSelector" | fail }}
+{{- if hasKey .Values.dynatrace "hostGroups" }}
+  {{- if gt (len .Values.dynatrace.hostGroups) 1 }}
+    {{- range $hostGroup := .Values.dynatrace.hostGroups }}
+      {{- if not (hasKey $hostGroup "nodeSelector") }}
+        {{ cat "В конфигурации модуля указано несколько hostGroup, но у " $hostGroup.name " не указан nodeSelector" | fail }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
