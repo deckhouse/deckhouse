@@ -3,6 +3,15 @@
 
 Данный модуль устанавливает в кластер [Prometheus Pushgateway](https://github.com/prometheus/pushgateway). Он предназначен для приема метрик от приложения и отдачи их Prometheus.
 
+### Включение модуля
+
+Модуль по-умолчанию **выключен**. Для включения добавьте в CM `antiopa`:
+
+```yaml
+data:
+  prometheusPushgatewayEnabled: "true"
+```
+
 ### Параметры
 
 * `instances` — данный параметр содержит список PushGateway-ев для каждого из которых будет создан отдельный PushGateway.
@@ -16,6 +25,7 @@
 ### Пример конфигурации
 
 ```yaml
+prometheusPushgatewayEnabled: "true"
 prometheusPushgateway: |
   instances:
   - first

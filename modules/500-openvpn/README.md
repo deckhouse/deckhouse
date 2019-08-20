@@ -19,6 +19,15 @@
 
 Маршрут по умолчанию у клиентов не переопределяется.
 
+### Включение модуля
+
+Модуль по-умолчанию **выключен**. Для включения добавьте в CM `antiopa`:
+
+```yaml
+data:
+  openvpnEnabled: "true"
+```
+
 ### Параметры:
 * `inlet` — способы подключения из внешнего мира.
     * Поддерживаются следующие inlet'ы
@@ -63,6 +72,7 @@
 Минимальный конфиг bare metal
 
 ```
+openvpnEnabled: "true"
 openvpn: |
   inlet: ExternalIp
   externalIp: 5.4.54.4
@@ -71,6 +81,7 @@ openvpn: |
 Минимальный конфиг aws и gcloud
 
 ```
+openvpnEnabled: "true"
 openvpn: |
   inlet: LoadBalancer
 ```

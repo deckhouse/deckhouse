@@ -22,8 +22,8 @@
 
 Вместо этого заведите пользователя `admin@flant.ru` следующим образом:
 
-```
-
+```yaml
+  userAuthnEnabled: "true"
   userAuthn: |
     users:
       admin@flant.com: # <- тут достаточно пустой строки, пароль будет сгенерирован автоматически
@@ -33,6 +33,14 @@
 Конфигурация
 ------------
 
+### Включение модуля
+
+Модуль по-умолчанию **выключен**. Для включения добавьте в CM `antiopa`:
+
+```yaml
+data:
+  userAuthnEnabled: "true"
+```
 
 ### Параметры
 
@@ -115,9 +123,10 @@
   * `customCertificate`
     * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
 
-### Примеt конфигурации
+### Пример конфигурации
 
 ```yaml
+  userAuthnEnabled: "true"
   userAuthn: |
     providers:
     - id: github

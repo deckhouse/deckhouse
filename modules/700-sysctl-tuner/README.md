@@ -24,7 +24,7 @@
 
 Добавить в ConfigMap Antiopa:
 ```yaml
-sysctlTuner: "false"
+sysctlTunerEnabled: "false"
 ```
 
 ## Как работает
