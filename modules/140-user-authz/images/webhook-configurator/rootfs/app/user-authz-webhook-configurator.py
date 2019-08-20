@@ -135,7 +135,7 @@ class manifest:
     global WEBHOOK_CONFIG_PATH
     for position_type in ['command', 'args']:
       for i, container in enumerate(self.data['spec']['containers']):
-        if 'args' in container:
+        if position_type in container:
           for j, arg in enumerate(container[position_type]):
             if re.match('--authorization-mode=\S+', arg):
               # arg in args[] and all args are items
