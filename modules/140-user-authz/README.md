@@ -156,3 +156,7 @@ spec:
     path: /etc/kubernetes/authorization-webhook-config.yaml
     type: FileOrCreate
 ```
+
+## Настройка дополнительных ClusterRole для разных accessLevel
+
+См. [DEVELOPMENT.md](/modules/140-user-authz/DEVELOPMENT.md#настройка-дополнительных-clusterrole-для-разных-accesslevel).
