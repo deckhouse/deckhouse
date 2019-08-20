@@ -4,6 +4,9 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
   name: kube-{{ .Chart.Name }}:user-authz:user
 rules:
 - apiGroups:
@@ -24,6 +27,9 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Master
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
   name: kube-{{ .Chart.Name }}:user-authz:master
 rules:
 - apiGroups:
@@ -43,6 +49,9 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Admin
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
   name: kube-{{ .Chart.Name }}:user-authz:admin
 rules:
 - apiGroups:
