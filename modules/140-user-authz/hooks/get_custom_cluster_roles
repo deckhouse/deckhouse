@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "ClusterRole",
+      "jqFilter": "[.metadata.name, .metadata.annotations]"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  customClusterRoles=$(
+    kubectl get clusterrole -o json | jq '
+      [
+        .items[] | select(.metadata.annotations."user-authz.deckhouse.io/access-level" == ("User", "Master", "Deploy", "Admin")) |
+        {level: (.metadata.annotations."user-authz.deckhouse.io/access-level" | ascii_downcase), name: .metadata.name}
+      ] | reduce .[] as $i ({"user": [], "master":[], "deploy": [], "admin": []}; .[$i.level] += [$i.name] ) |
+      {
+        user:   (.user | unique),
+        master: (.user + .master | unique),
+        deploy: (.user + .master + .deploy | unique),
+        admin:  (.user + .master + .deploy + .admin | unique)
+      }')
+  values::set userAuthz.customClusterRoles "$customClusterRoles"
+}
+
+hook::run "$@"

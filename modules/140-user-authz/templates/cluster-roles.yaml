@@ -135,21 +135,6 @@
   verbs:
   {{- include "user_authz_verbs" $mode }}
 - apiGroups:
-  - certmanager.k8s.io
-  resources:
-  - certificates
-  - issuers
-  verbs:
-  {{- include "user_authz_verbs" $mode }}
-- apiGroups:
-  - certmanager.k8s.io
-  resources:
-  - clusterissuers
-  - challenges
-  - orders
-  verbs:
-  {{- include "user_authz_verbs" "r" }}
-- apiGroups:
   - storage.k8s.io
   resources:
   - storageclasses
@@ -211,14 +196,6 @@
   - extensions
   resources:
   - replicasets
-  verbs:
-  - delete
-  - deletecollection
-- apiGroups:
-  - certmanager.k8s.io
-  resources:
-  - challenges
-  - orders
   verbs:
   - delete
   - deletecollection
