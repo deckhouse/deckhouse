@@ -36,6 +36,7 @@ class manifest:
   def __init__(self, path):
     self.path = path
     self.yaml = ruamel.yaml.YAML()
+    self.yaml.preserve_quotes = True
     self.data = self.yaml.load(open(self.path, 'r'))
     self.dataRefreshHash = 0
 
@@ -84,69 +85,39 @@ class manifest:
 
   def configureWebhook(self):
     global WEBHOOK_CONFIG_PATH
-    for i, container in enumerate(self.data['spec']['containers']):
-      if 'command' in container:
-        for j, cmd in enumerate(container['command']):
-          if re.match('--authorization-mode=\S+', cmd):
-            # arg in command[] and all args are items
-            if "Webhook" not in cmd:
-              self.data['spec']['containers'][i]['command'][j] = cmd.replace('RBAC', 'Webhook,RBAC')
 
-            is_webhook_config_file_found = False
-            for k, cmd_k in enumerate(container['command']):
-              if re.match('--authorization-webhook-config-file=\S+', cmd_k):
-                self.data['spec']['containers'][i]['command'][k] = '--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH
-                is_webhook_config_file_found = True
+    for position_type in ['command', 'args']:
+      for i, container in enumerate(self.data['spec']['containers']):
+        if position_type in container:
+          for j, arg in enumerate(container[position_type]):
+            if re.match('--authorization-mode=\S+', arg):
+              # all args are items
+              if "Webhook" not in arg:
+                self.data['spec']['containers'][i][position_type][j] = arg.replace('RBAC', 'Webhook,RBAC')
 
-            if not is_webhook_config_file_found:
-              self.data['spec']['containers'][i]['command'].append('--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH)
+              is_webhook_config_file_found = False
+              for k, arg_k in enumerate(container[position_type]):
+                if re.match('--authorization-webhook-config-file=\S+', arg_k):
+                  self.data['spec']['containers'][i][position_type][k] = '--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH
+                  is_webhook_config_file_found = True
 
-            target_container_index = i
+              if not is_webhook_config_file_found:
+                self.data['spec']['containers'][i][position_type].append('--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH)
 
-          elif re.match('.*--authorization-mode=.*', cmd):
-            # arg in command[] and all args are in single item
-            tmp = cmd
-            if not re.match('.*--authorization-mode=\S*Webhook.*', cmd):
-              tmp = re.sub('--authorization-mode=(\S*)(RBAC)', r'--authorization-mode=\1Webhook,\2', tmp)
-            if '--authorization-webhook-config-file=' in cmd:
-              tmp = re.sub('--authorization-webhook-config-file=\S+', r'--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH, tmp)
-            else:
-              tmp = re.sub('(--authorization-mode=\S+)', r'\1 --authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH, tmp)
-            self.data['spec']['containers'][i]['command'][j] = tmp
+              target_container_index = i
 
-            target_container_index = i
+            elif re.match('.*--authorization-mode=.*', arg):
+              # arg in args[] and all args are in single item
+              tmp = arg
+              if not re.match('.*--authorization-mode=\S*Webhook.*', arg):
+                tmp = re.sub('--authorization-mode=(\S*)(RBAC)', r'--authorization-mode=\1Webhook,\2', tmp)
+              if '--authorization-webhook-config-file=' in arg:
+                tmp = re.sub('--authorization-webhook-config-file=\S+', r'--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH, tmp)
+              else:
+                tmp = re.sub('(--authorization-mode=\S+)', r'\1 --authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH, tmp)
+              self.data['spec']['containers'][i][position_type][j] = tmp
 
-      # TODO this block seems to fully repeats the previous one, refactoring required!
-      if 'args' in container:
-        for j, arg in enumerate(container['args']):
-          if re.match('--authorization-mode=\S+', arg):
-            # arg in args[] and all args are items
-            if "Webhook" not in arg:
-              self.data['spec']['containers'][i]['args'][j] = arg.replace('RBAC', 'Webhook,RBAC')
-
-            is_webhook_config_file_found = False
-            for k, arg_k in enumerate(container['args']):
-              if re.match('--authorization-webhook-config-file=\S+', arg_k):
-                self.data['spec']['containers'][i]['args'][k] = '--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH
-                is_webhook_config_file_found = True
-
-            if not is_webhook_config_file_found:
-              self.data['spec']['containers'][i]['args'].append('--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH)
-
-            target_container_index = i
-
-          elif re.match('.*--authorization-mode=.*', arg):
-            # arg in args[] and all args are in single item
-            tmp = arg
-            if not re.match('.*--authorization-mode=\S*Webhook.*', arg):
-              tmp = re.sub('--authorization-mode=(\S*)(RBAC)', r'--authorization-mode=\1Webhook,\2', tmp)
-            if '--authorization-webhook-config-file=' in arg:
-              tmp = re.sub('--authorization-webhook-config-file=\S+', r'--authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH, tmp)
-            else:
-              tmp = re.sub('(--authorization-mode=\S+)', r'\1 --authorization-webhook-config-file=' + WEBHOOK_CONFIG_PATH, tmp)
-            self.data['spec']['containers'][i]['args'][j] = tmp
-
-            target_container_index = i
+              target_container_index = i
 
     if "volumes" not in self.data['spec']:
       self.data['spec']['volumes'] = []
@@ -162,47 +133,27 @@ class manifest:
 
   def deconfigureWebhook(self):
     global WEBHOOK_CONFIG_PATH
-    for i, container in enumerate(self.data['spec']['containers']):
-      if 'command' in container:
-        for j, cmd in enumerate(container['command']):
-          if re.match('--authorization-mode=\S+', cmd):
-            # arg in command[] and all args are items
-            self.data['spec']['containers'][i]['command'][j] = cmd.replace('Webhook,RBAC', 'RBAC')
+    for position_type in ['command', 'args']:
+      for i, container in enumerate(self.data['spec']['containers']):
+        if 'args' in container:
+          for j, arg in enumerate(container[position_type]):
+            if re.match('--authorization-mode=\S+', arg):
+              # arg in args[] and all args are items
+              self.data['spec']['containers'][i][position_type][j] = arg.replace('Webhook,RBAC', 'RBAC')
 
-            for k, cmd_k in enumerate(container['command']):
-              if re.match('--authorization-webhook-config-file=\S+', cmd_k):
-                del self.data['spec']['containers'][i]['command'][k]
+              for k, arg_k in enumerate(container[position_type]):
+                if re.match('--authorization-webhook-config-file=\S+', arg_k):
+                  del self.data['spec']['containers'][i][position_type][k]
 
-            target_container_index = i
+              target_container_index = i
 
-          elif re.match('.*--authorization-mode=.*', cmd):
-            # arg in command[] and all args are in single item
-            tmp = cmd.replace('Webhook,RBAC', 'RBAC')
-            tmp = re.sub('--authorization-webhook-config-file=\S+', '', tmp)
-            self.data['spec']['containers'][i]['command'][j] = tmp
+            elif re.match('.*--authorization-mode=.*', arg):
+              # arg in args[] and all args are in single item
+              tmp = arg.replace('Webhook,RBAC', 'RBAC')
+              tmp = re.sub('--authorization-webhook-config-file=\S+', '', tmp)
+              self.data['spec']['containers'][i][position_type][j] = tmp
 
-            target_container_index = i
-
-      # TODO this block seems to fully repeats the previous one, refactoring required!
-      if 'args' in container:
-        for j, arg in enumerate(container['args']):
-          if re.match('--authorization-mode=\S+', arg):
-            # arg in args[] and all args are items
-            self.data['spec']['containers'][i]['args'][j] = arg.replace('Webhook,RBAC', 'RBAC')
-
-            for k, arg_k in enumerate(container['args']):
-              if re.match('--authorization-webhook-config-file=\S+', arg_k):
-                del self.data['spec']['containers'][i]['args'][k]
-
-            target_container_index = i
-
-          elif re.match('.*--authorization-mode=.*', arg):
-            # arg in args[] and all args are in single item
-            tmp = arg.replace('Webhook,RBAC', 'RBAC')
-            tmp = re.sub('--authorization-webhook-config-file=\S+', '', tmp)
-            self.data['spec']['containers'][i]['args'][j] = tmp
-
-            target_container_index = i
+              target_container_index = i
 
     if "volumes" in self.data['spec']:
       for i, volume in enumerate(self.data['spec']['volumes']):
@@ -225,15 +176,26 @@ class manifest:
       return False
 
   def backup(self):
-    now         = datetime.datetime.now()
-    backup_path = "/etc/kubernetes/kube-apiserver-manifest-backup-" + now.strftime("%Y-%m-%d-%H-%M-%S-%f")
-    cmd         = "cp " + self.path + " " + backup_path
-    os.system(cmd)
-    return backup_path
+    new_hash = hash(str(self.data))
+    if self.dataRefreshHash != new_hash:
+      now         = datetime.datetime.now()
+      backup_path = "/etc/kubernetes/kube-apiserver-manifest-backup-" + now.strftime("%Y-%m-%d-%H-%M-%S-%f")
+      cmd         = "cp " + self.path + " " + backup_path
+      os.system(cmd)
+      return backup_path
+    else:
+      return False
 
   def save(self):
-    self.dataRefreshHash = hash(str(self.data))
-    self.yaml.dump(self.data, open(self.path, 'w'))
+    new_hash = hash(str(self.data))
+    if self.dataRefreshHash != new_hash:
+      tmp_path = os.path.dirname(self.path) + "/." + os.path.basename(self.path)
+      self.yaml.dump(self.data, open(tmp_path, 'w'))
+      os.rename(tmp_path, self.path)
+      self.dataRefreshHash = new_hash
+      return True
+    else:
+      return False
 
 def main():
   global WEBHOOK_CONFIG_PATH
@@ -257,16 +219,22 @@ def main():
           print(WEBHOOK_CONFIG_PATH + " rendered and saved.", flush=True)
           apiServerManifest.configureWebhook()
           backup_path = apiServerManifest.backup()
-          print("Manifest backed up to " + backup_path)
-          apiServerManifest.save()
-          print(apiServerManifest.path + " rendered and saved.", flush=True)
+          if backup_path:
+            print("Manifest backed up to " + backup_path)
+            apiServerManifest.save()
+            print(apiServerManifest.path + " rendered and saved.", flush=True)
+          else:
+            print(apiServerManifest.path + " is already configured.")
         elif ACTION == "deconfigure":
           print("Deconfiguring.", flush=True)
           apiServerManifest.deconfigureWebhook()
           backup_path = apiServerManifest.backup()
-          print("Manifest backed up to " + backup_path)
-          apiServerManifest.save()
-          print(apiServerManifest.path + " rendered and saved.", flush=True)
+          if backup_path:
+            print("Manifest backed up to " + backup_path)
+            apiServerManifest.save()
+            print(apiServerManifest.path + " rendered and saved.", flush=True)
+          else:
+            print(apiServerManifest.path + " is already deconfigured.")
           apiServerManifest.deleteWebhookConfig()
           print(WEBHOOK_CONFIG_PATH + " wiped.", flush=True)
         else:
