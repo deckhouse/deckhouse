@@ -34,29 +34,37 @@ Build:
   tags:
     - build
 
-check on master:
+alpha (pre-release):
   <<: *base_deploy
   variables:
     SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:master
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:master
+    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:alpha
   environment:
-    name: master
+    name: alpha
   only:
     - master
+    - /^release-.*$/
   except:
     - schedules
 
-master:
+alpha:
   <<: *base_deploy
   environment:
-    name: master
+    name: alpha
   only:
     - tags
 
-ea:
+beta:
   <<: *base_deploy
   environment:
-    name: ea
+    name: beta
+  only:
+    - tags
+
+rc:
+  <<: *base_deploy
+  environment:
+    name: rc
   only:
     - tags
 
@@ -64,6 +72,13 @@ stable:
   <<: *base_deploy
   environment:
     name: stable
+  only:
+    - tags
+
+rock-solid:
+  <<: *base_deploy
+  environment:
+    name: rock-solid
   only:
     - tags
 
