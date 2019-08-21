@@ -10,11 +10,11 @@ metadata:
     prometheus-target: trickster
 spec:
   type: ClusterIP
-  clusterIP: None
+  sessionAffinity: ClientIP
   ports:
-  - port: 8000
-    name: web
-  - port: 8001
-    name: http-metrics
+  - port: 443
+    name: https
+  - port: 8443
+    name: https-metrics
   selector:
     app: trickster

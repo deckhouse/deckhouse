@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=75
+}
+
+function __main__() {
+  extension_api_server_authentication="$(kubectl -n kube-system get cm extension-apiserver-authentication -o json | jq -r '.data' | sha256sum | awk '{print $1}')"
+  values::set global.discovery.extensionAPIServerAuthenticationChecksum "${extension_api_server_authentication}"
+}
+
+hook::run "$@"

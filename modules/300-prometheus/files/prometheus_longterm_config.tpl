@@ -59,15 +59,17 @@ scrape_configs:
 - job_name: 'federate'
   honor_labels: true
   metrics_path: '/federate'
+  scheme: https
+  tls_config:
+    cert_file: /etc/prometheus/secrets/prometheus-api-client-cert/tls.crt
+    key_file: /etc/prometheus/secrets/prometheus-api-client-cert/tls.key
+    insecure_skip_verify: true
   params:
     'match[]':
     - '{job=~".+"}'
-  kubernetes_sd_configs:
-  - role: endpoints
-    namespaces:
-      names:
-      - kube-prometheus
-  relabel_configs:
-  - action: keep
-    source_labels: [__meta_kubernetes_service_label_heritage, __meta_kubernetes_service_label_app, __meta_kubernetes_service_label_prometheus]
-    regex: antiopa;prometheus;main
+  static_configs:
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  - targets: ['prometheus-affinitive.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}.:9090']
+  {{- else }}
+  - targets: ['prometheus.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}.:9090']
+  {{- end }}

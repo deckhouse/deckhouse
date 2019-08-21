@@ -1,1 +1,1 @@
-FROM tricksterio/trickster:0.1.6
+FROM tricksterio/trickster:0.1.10

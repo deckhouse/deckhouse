@@ -34,7 +34,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ .Values.prometheusMetricsAdapter.apiserverProxyClientCa | sha256sum }}
+        checksum/config: {{ include (print .Template.BasePath "/config-map.yaml") . | sha256sum }}
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
         checksum/cert: {{ .Values.prometheusMetricsAdapter.adapterPem | sha256sum }}
 {{- if .Values.prometheusMetricsAdapter.customConfigSHA }}
         checksum/custom-config: {{ .Values.prometheusMetricsAdapter.customConfigSHA | sha256sum }}
@@ -73,8 +74,9 @@ spec:
           cat /opt/custom-adapter/* >> /etc/adapter/config.yaml
           true
         volumeMounts:
-        - mountPath: /opt/adapter
+        - mountPath: /opt/adapter/config.yaml
           name: prometheus-metrics-adapter-config
+          subPath: config.yaml
         - mountPath: /opt/custom-adapter
           name: prometheus-metrics-adapter-custom
         - mountPath: /etc/adapter
@@ -87,7 +89,7 @@ spec:
         - --tls-cert-file=/var/run/adapter-cert/tls.crt
         - --tls-private-key-file=/var/run/adapter-cert/tls.key
         - --logtostderr=true
-        - --prometheus-url=http://trickster:8000/main/
+        - --prometheus-url=http://127.0.0.1:8000/main/
         - --metrics-relist-interval=30s
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
@@ -104,6 +106,15 @@ spec:
           name: tmp
         - mountPath: /var/run/apiserver-proxy-client/
           name: apiserver-proxy-client-ca
+      - name: outgoing-nginx
+        image: {{ $.Values.global.modulesImages.registry }}/common/nginx:{{ $.Values.global.modulesImages.tags.common.nginx }}
+        volumeMounts:
+        - mountPath: /etc/nginx/nginx.conf
+          name: prometheus-metrics-adapter-config
+          subPath: outgoing-nginx.conf
+        - mountPath: /etc/nginx/ssl/
+          name: prometheus-metrics-adapter-prometheus-api-client-cert
+          readOnly: true
       volumes:
       - name: adapter-cert
         secret:
@@ -122,3 +133,6 @@ spec:
           optional: true
       - name: config
         emptyDir: {}
+      - name: prometheus-metrics-adapter-prometheus-api-client-cert
+        secret:
+          secretName: prometheus-metrics-adapter-prometheus-api-client-cert

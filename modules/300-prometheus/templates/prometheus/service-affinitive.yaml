@@ -1,0 +1,22 @@
+{{- if (include "helm_lib_ha_enabled" .) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-affinitive
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: prometheus
+spec:
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  ports:
+  - name: https
+    port: 9090
+    targetPort: https
+  selector:
+    app: prometheus
+    prometheus: main
+{{- end }}

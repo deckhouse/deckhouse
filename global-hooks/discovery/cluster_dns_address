@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Автоопределятор внутреннего адреса DNS.
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=50
+}
+
+function __main__() {
+  cluster_dns_address=$(kubectl --namespace kube-system get service kube-dns -o json | jq -r '.spec.clusterIP')
+  values::set global.discovery.clusterDNSAddress "${cluster_dns_address}"
+}
+
+hook::run "$@"

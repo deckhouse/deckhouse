@@ -19,6 +19,12 @@ metadata:
     ingress.kubernetes.io/auth-secret: basic-auth
     ingress.kubernetes.io/auth-realm: "Authentication Required"
 {{- end }}
+    ingress.kubernetes.io/backend-protocol: HTTPS
+    ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
     ingress.kubernetes.io/affinity: cookie
     ingress.kubernetes.io/rewrite-target: "/$2"
 spec:
@@ -35,15 +41,15 @@ spec:
       - path: /prometheus(/|$)(.*)
         backend:
           serviceName: prometheus
-          servicePort: web
+          servicePort: https
   {{- if (include "helm_lib_ha_enabled" .) }}
       - path: /prometheus-main-0(/|$)(.*)
         backend:
           serviceName: prometheus-main-0
-          servicePort: web
+          servicePort: https
       - path: /prometheus-main-1(/|$)(.*)
         backend:
           serviceName: prometheus-main-1
-          servicePort: web
+          servicePort: https
   {{- end }}
 {{- end }}

@@ -16,6 +16,8 @@ spec:
       app: ingress-conversion-webhook
   template:
     metadata:
+      annotations:
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
       labels:
         heritage: antiopa
         module: {{ .Chart.Name }}

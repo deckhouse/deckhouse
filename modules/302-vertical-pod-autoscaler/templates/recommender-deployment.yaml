@@ -69,7 +69,7 @@ spec:
         - --min-checkpoints=10
         - --pod-recommendation-min-cpu-millicores=5
         - --pod-recommendation-min-memory-mb=25
-        - --prometheus-address=http://trickster.kube-prometheus:8000/main/
+        - --prometheus-address=http://127.0.0.1:8000/main/
         - --recommendation-margin-fraction=0.15
         - --recommender-interval=1m0s
         - --stderrthreshold=0
@@ -81,3 +81,19 @@ spec:
             memory: 200Mi
         ports:
         - containerPort: 8080
+      - name: outgoing-nginx
+        image: {{ $.Values.global.modulesImages.registry }}/common/nginx:{{ $.Values.global.modulesImages.tags.common.nginx }}
+        volumeMounts:
+        - mountPath: /etc/nginx/nginx.conf
+          name: vpa-outgoing-nginx-config
+          subPath: outgoing-nginx.conf
+        - mountPath: /etc/nginx/ssl/
+          name: vpa-prometheus-api-client-cert
+          readOnly: true
+      volumes:
+      - name: vpa-outgoing-nginx-config
+        configMap:
+          name: vpa-outgoing-nginx-config
+      - name: vpa-prometheus-api-client-cert
+        secret:
+          secretName: vpa-prometheus-api-client-cert
