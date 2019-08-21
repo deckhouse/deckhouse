@@ -212,6 +212,7 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" $context | quote }}
     ingress.kubernetes.io/backend-protocol: HTTPS
+    ingress.kubernetes.io/proxy-buffer-size: "128k"
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
   labels:
