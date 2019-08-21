@@ -96,6 +96,17 @@
         nameIDPolicyFormat: {{ $provider.saml.nameIDPolicyFormat }}
       {{- end }}
   {{- end }}
+
+  {{- if eq $provider.type "Crowd" }}
+    - type: atlassian-crowd
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        baseURL: {{ $provider.crowd.baseURL | quote }}
+        clientID: {{ $provider.crowd.clientID | quote }}
+        clientSecret: {{ $provider.crowd.clientSecret | quote }}
+        usernamePrompt: "Crowd username"
+  {{- end }}
 {{- end }}
 
 {{- if $context.Values.userAuthn.users }}
