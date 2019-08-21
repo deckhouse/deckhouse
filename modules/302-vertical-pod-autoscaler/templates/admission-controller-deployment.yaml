@@ -45,6 +45,8 @@ spec:
       app: vpa-admission-controller
   template:
     metadata:
+      annotations:
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
       labels:
         app: vpa-admission-controller
     spec:

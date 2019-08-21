@@ -17,9 +17,7 @@ metadata:
     ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
-      proxy_ssl_trusted_certificate /var/run/secrets/kubernetes.io/serviceaccount/ca.crt;
       proxy_ssl_protocols TLSv1.2;
-      proxy_ssl_verify off;
       proxy_ssl_session_reuse on;
 {{- end }}
   name: dashboard

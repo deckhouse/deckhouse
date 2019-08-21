@@ -13,14 +13,14 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: web
+  - name: https
     port: 9090
     protocol: TCP
-    targetPort: web
-  - name: http-metrics
-    port: 9091
+    targetPort: https
+  - name: https-metrics
+    port: 9090
     protocol: TCP
-    targetPort: web
+    targetPort: https
   selector:
     app: prometheus
     prometheus: main
@@ -39,9 +39,9 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: web
+  - name: https
     port: 9090
-    targetPort: web
+    targetPort: https
   selector:
     app: prometheus
     prometheus: main
@@ -60,9 +60,9 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: web
+  - name: https
     port: 9090
-    targetPort: web
+    targetPort: https
   selector:
     app: prometheus
     prometheus: main

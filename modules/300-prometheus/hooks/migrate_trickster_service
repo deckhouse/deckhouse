@@ -1,0 +1,21 @@
+#!/bin/bash
+
+### Миграция 2019-08-20: https://github.com/deckhouse/deckhouse/merge_requests/1028/diffs
+# В данном хуке происходит удаление сервиса trickster с clusterIP: None
+# После выката релиза с данной миграцией, ее можно удалить
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=20
+}
+
+function __main__() {
+  if kubectl -n kube-prometheus get svc trickster >/dev/null 2>/dev/null ; then
+    if [ "$(kubectl -n kube-prometheus get svc trickster -o json | jq '.spec.clusterIP' -r)" == "None" ] ; then
+      kubectl -n kube-prometheus delete svc trickster >/dev/null 2>/dev/null
+    fi
+  fi
+}
+
+hook::run "$@"

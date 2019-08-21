@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  common_hooks::certificates::order_certificate::config
+}
+
+function __main__() {
+  common_hooks::certificates::order_certificate::main "kube-prometheus" "prometheus-api-client-cert" "kube-prometheus:prometheus-api-client"
+}
+
+hook::run "$@"

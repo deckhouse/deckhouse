@@ -11,4 +11,4 @@ function __main__() {
   values::set prometheusMetricsAdapter.apiserverProxyClientCa "$apiserver_proxy_client_ca"
 }
 
-hook::run $@
+hook::run "$@"
