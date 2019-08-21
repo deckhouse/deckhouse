@@ -62,6 +62,11 @@ spec:
         - mountPath: /etc/user-authz-webhook/
           name: user-authz-webhook-config
           readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4080
+            host: 127.0.0.1
       volumes:
       - name: user-authz-webhook-secret
         secret:
