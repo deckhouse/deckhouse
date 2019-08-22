@@ -5,4 +5,4 @@
 
 Для этого необходимо перейти в `Applications` -> `Add application`.
 
-Полученные `Application Name` и `Password` необходимы для настройки коннктора в модуле `user-authn`.
+Полученные `Application Name` и `Password` необходимы для настройки коннектора в модуле `user-authn`.
