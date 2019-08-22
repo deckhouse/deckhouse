@@ -1,0 +1,91 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+# Костыль 2019-07-19: пока не разберёмся как правильно создавать CRD
+kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
+
+  cat << EOF
+{
+  "onKubernetesEvent": [
+    {
+      "kind": "PodMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "DeploymentMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "StatefulSetMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "DaemonSetMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "IngressMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ServiceMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "NamespaceMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ClusterPodMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ClusterDeploymentMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ClusterStatefulSetMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ClusterDaemonSetMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ClusterIngressMetric",
+      "event": ["add", "update"]
+    },
+    {
+      "kind": "ClusterServiceMetric",
+      "event": ["add", "update"]
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  RESOURCE_KIND=`hook::context_jq -r '.[0].resourceKind'`
+  RESOURCE_NAME=`hook::context_jq -r '.[0].resourceName'`
+  RESOURCE=$(echo $RESOURCE_KIND | sed -r -e 's/^(Cluster)?(.*)Metric$/\2/')
+  RESOURCE=${RESOURCE,,} # lowercase
+
+  WHOLE_METRIC_PATH=prometheusMetricsAdapter.customMetrics.${RESOURCE}.\"${RESOURCE_NAME}\"
+
+  if ! values::has $WHOLE_METRIC_PATH; then
+    values::set $WHOLE_METRIC_PATH '{"namespaced": {}}'
+  fi
+
+  if [[ "$RESOURCE_KIND" =~ ^Cluster ]]; then
+    QUERY=$(kubectl get $RESOURCE_KIND $RESOURCE_NAME -o json | jq -r '.spec.query')
+    values::set ${WHOLE_METRIC_PATH}.cluster "${QUERY}"
+  else
+    RESOURCE_NAMESPACE=`hook::context_jq -r '.[0].resourceNamespace'`
+    QUERY=$(kubectl -n $RESOURCE_NAMESPACE get $RESOURCE_KIND $RESOURCE_NAME -o json | jq -r '.spec.query')
+    values::set ${WHOLE_METRIC_PATH}.namespaced.\"${RESOURCE_NAMESPACE}\" "${QUERY}"
+  fi
+}
+
+hook::run $@

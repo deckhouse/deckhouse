@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "onStartup": 20
+}
+EOF
+}
+
+function __main__() {
+  RESOURCES="pod deployment statefulset daemonset ingress service namespace"
+  CUSTOM_METRICS=$(echo $RESOURCES | jq -R '[. | split(" ") | .[] | {(.): {}}] | add') # {pod: {}, ingress: {}, ...}
+
+  for r in $RESOURCES; do
+    NAMESPACED_METRICS=$(
+      kubectl get ${r}Metrics --all-namespaces -o json | jq -c --arg r "${r}" '
+        [
+          {($r): (.items[] | {(.metadata.name): {namespaced: {(.metadata.namespace): .spec.query}}})}
+        ] | reduce .[] as $item ({}; . * $item)
+      '
+    )
+    if [[ $r != "namespace" ]]; then
+      CLUSTER_METRICS=$(
+        kubectl get Cluster${r}Metrics -o json | jq -c --arg r "${r}" '
+          [
+            {($r): (.items[] | {(.metadata.name): {cluster: .spec.query}})}
+          ] | reduce .[] as $item ({}; . * $item)
+        '
+      )
+    else
+      CLUSTER_METRICS="{}"
+    fi
+
+
+    CUSTOM_METRICS=$(jq -n --argjson a "$CUSTOM_METRICS" --argjson b "$NAMESPACED_METRICS" --argjson c "$CLUSTER_METRICS" '$a * $b * $c')
+  done
+
+  values::set prometheusMetricsAdapter.customMetrics "$CUSTOM_METRICS"
+}
+
+hook::run $@

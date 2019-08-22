@@ -70,8 +70,10 @@ function values::has() {
     shift
   fi
 
-  local path=.$(echo $1 | rev | cut -d. -f2- | rev)
-  local key=$(echo $1 | rev | cut -d. -f1 | rev)
+  local splittable_path=$(echo "$1" | sed -e s/\'/\"/g -e ':loop' -e 's/"\([^".]\+\)\.\([^"]\+\)"/"\1##DOT##\2"/g' -e 't loop')
+
+  local path=.$(echo "${splittable_path}" | rev | cut -d. -f2- | rev | sed -e 's/##DOT##/./g')
+  local key=$(echo "${splittable_path}" | rev | cut -d. -f1 | rev | sed -e 's/##DOT##/./g' -e "s/[\"\']//g")
 
   if [[ "$(values::get $config | jq $path' | has("'$key'")' -r)" == "true" ]] ; then
     return 0
@@ -153,5 +155,5 @@ function values::get_first_defined() {
 }
 
 function values::normalize_path_for_json_patch() {
-  echo /$1 | sed -e s/\'/\"/g -e ':loop' -e 's/"\([^".]\+\)\.\([^"]\+\)"/"\1##DOT##\2"/g' -e 't loop' -e s/\"//g -e 's/\./\//g' -e s/##DOT##/./g
+  echo /$1 | sed -e s/\'/\"/g -e ':loop' -e 's/"\([^".]\+\)\.\([^"]\+\)"/"\1##DOT##\2"/g' -e 't loop' -e s/\"//g -e 's/\./\//g' -e 's/##DOT##/./g'
 }

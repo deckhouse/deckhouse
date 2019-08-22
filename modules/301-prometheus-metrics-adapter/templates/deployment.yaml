@@ -34,11 +34,11 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print .Template.BasePath "/config-map.yaml") . | sha256sum }}
+        checksum/config: {{ index (include (print $.Template.BasePath "/config-map.yaml") . | fromYaml) "data" "prometheus-metrics-adapter.yaml" | sha256sum}}
+        checksum/cert: {{ include (print $.Template.BasePath "/prometheus-metrics-adapter-cert.yaml") . | sha256sum}}
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
-        checksum/cert: {{ .Values.prometheusMetricsAdapter.adapterPem | sha256sum }}
 {{- if .Values.prometheusMetricsAdapter.customConfigSHA }}
-        checksum/custom-config: {{ .Values.prometheusMetricsAdapter.customConfigSHA | sha256sum }}
+        checksum/custom-config: {{ .Values.prometheusMetricsAdapter.customConfigSHA }}
 {{- end }}
       labels:
         app: prometheus-metrics-adapter
@@ -63,6 +63,7 @@ spec:
       serviceAccountName: prometheus-metrics-adapter
       imagePullSecrets:
       - name: antiopa-registry
+# TODO: удалить init-контейнер когда все перейдут на CRD из https://github.com/deckhouse/deckhouse/merge_requests/806
       initContainers:
       - name: prepare-config
         image: {{ .Values.global.modulesImages.registry }}/common/busybox:{{ .Values.global.modulesImages.tags.common.busybox }}
@@ -70,13 +71,12 @@ spec:
         - sh
         - -c
         - |
-          cat /opt/adapter/* >> /etc/adapter/config.yaml
+          cat /opt/adapter/prometheus-metrics-adapter.yaml >> /etc/adapter/config.yaml
           cat /opt/custom-adapter/* >> /etc/adapter/config.yaml
           true
         volumeMounts:
-        - mountPath: /opt/adapter/config.yaml
+        - mountPath: /opt/adapter
           name: prometheus-metrics-adapter-config
-          subPath: config.yaml
         - mountPath: /opt/custom-adapter
           name: prometheus-metrics-adapter-custom
         - mountPath: /etc/adapter
@@ -106,13 +106,20 @@ spec:
           name: tmp
         - mountPath: /var/run/apiserver-proxy-client/
           name: apiserver-proxy-client-ca
-      - name: outgoing-nginx
-        image: {{ $.Values.global.modulesImages.registry }}/common/nginx:{{ $.Values.global.modulesImages.tags.common.nginx }}
+      - name: prometheus-reverse-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/prometheus-reverse-proxy:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.prometheusReverseProxy }}
+        env:
+        - name: PROMETHEUS_URL
+          value: "https://trickster.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}"
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
         volumeMounts:
-        - mountPath: /etc/nginx/nginx.conf
+        - mountPath: /etc/prometheus-reverse-proxy/
           name: prometheus-metrics-adapter-config
-          subPath: outgoing-nginx.conf
-        - mountPath: /etc/nginx/ssl/
+          readOnly: true
+        - mountPath: /etc/ssl/prometheus-api-client-cert/
           name: prometheus-metrics-adapter-prometheus-api-client-cert
           readOnly: true
       volumes:

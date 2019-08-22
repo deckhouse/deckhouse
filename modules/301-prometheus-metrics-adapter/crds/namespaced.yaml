@@ -1,0 +1,224 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: podmetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: podmetrics
+    singular: podmetric
+    kind: PodMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'PodMetric is handy interface for configuring custom Pod-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: deploymentmetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: deploymentmetrics
+    singular: deploymentmetric
+    kind: DeploymentMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'DeploymentMetric is handy interface for configuring custom Deployment-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: statefulsetmetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: statefulsetmetrics
+    singular: statefulsetmetric
+    kind: StatefulSetMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'StatefulSetMetric is handy interface for configuring custom StatefulSet-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: daemonsetmetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: daemonsetmetrics
+    singular: daemonsetmetric
+    kind: DaemonSetMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'DaemonSetMetric is handy interface for configuring custom DaemonSet-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressmetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: ingressmetrics
+    singular: ingressmetric
+    kind: IngressMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'IngressMetric is handy interface for configuring custom Ingress-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: servicemetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: servicemetrics
+    singular: servicemetric
+    kind: ServiceMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'ServiceMetric is handy interface for configuring custom Service-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: namespacemetrics.deckhouse.io
+  labels:
+    heritage: antiopa
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: namespacemetrics
+    singular: namespacemetric
+    kind: NamespaceMetric
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'NamespaceMetric is handy interface for configuring custom Namespace-related metrics in prometheus-metrics-adapter.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - query
+          properties:
+            query:
+              type: string
+              description: |
+                PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)

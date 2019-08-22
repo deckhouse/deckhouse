@@ -8,7 +8,13 @@ metadata:
     heritage: antiopa
     module: {{ $.Chart.Name }}
 data:
-  config.yaml: |
+  prometheus-metrics-adapter.yaml: |
+    externalRules:
+    - seriesQuery: '{__name__=~"kube_adapter_metric_.+"}'
+      name:
+        matches: "^kube_adapter_metric_(.+)$"
+        as: "${1}"
+      metricsQuery: 'label_replace(<<.Series>>{<<.LabelMatchers>>}, "__name__", "$1", "__name__", "^kube_adapter_metric_(.*)$")'
     resourceRules:
       cpu:
         containerQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, container!="POD"}[1m])) by (<<.GroupBy>>)
@@ -36,7 +42,7 @@ data:
         containerLabel: container
       window: 30s
     rules:
-{{ range list "1m" "5m" "15m" }}
+{{- range list "1m" "5m" "15m" }}
     - seriesQuery: 'ingress_nginx_detail_requests_total{namespace!="",ingress!=""}'
       resources:
         overrides:
@@ -64,31 +70,25 @@ data:
         matches: ".*"
         as: "memory_{{ . }}"
       metricsQuery: 'sum(avg_over_time(<<.Series>>{<<.LabelMatchers>>, container!="POD"}[{{ . }}])) by (<<.GroupBy>>)'
-{{ end }}
-  outgoing-nginx.conf: |
-    user nginx;
-    worker_processes 1;
-    error_log /dev/stderr;
-
-    events {
-      worker_connections 100;
-    }
-
-    http {
-      access_log off;
-      resolver {{ .Values.global.discovery.clusterDNSAddress }};
-
-      server {
-        server_name 127.0.0.1;
-        listen 127.0.0.1:8000;
-
-        location / {
-          set                           $backend "https://trickster.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}";
-          proxy_pass                    $backend;
-          proxy_ssl_certificate         /etc/nginx/ssl/tls.crt;
-          proxy_ssl_certificate_key     /etc/nginx/ssl/tls.key;
-          proxy_ssl_protocols           TLSv1.2;
-          proxy_ssl_session_reuse       on;
-        }
-      }
-    }
+{{- end }}
+{{- range (list "pod" "deployment" "daemonset" "statefulset" "ingress" "service" "namespace") }}
+  {{- $resource := . }}
+  {{- if hasKey $.Values.prometheusMetricsAdapter.customMetrics $resource }}
+    {{- range  (pluck $resource $.Values.prometheusMetricsAdapter.customMetrics | first | keys | sortAlpha) }}
+    {{- $metric_name := . }}
+    - seriesQuery: 'kube_{{ $resource }}_created'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+{{- if not (eq $resource "namespace") }}
+          {{ $resource }}: {resource: {{ $resource }}}
+{{- end }}
+      name:
+        matches: ".*"
+        as: "{{ $metric_name }}"
+      metricsQuery: 'custom_metric::{{ $resource }}::{{ $metric_name }}::<<.LabelMatchers>>::<<.GroupBy>>'
+    {{- end }}
+  {{- end }}
+{{- end }}
+  reverse-proxy.json: |
+{{ .Values.prometheusMetricsAdapter.customMetrics | toJson | indent 4}}

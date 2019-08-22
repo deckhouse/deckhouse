@@ -9,7 +9,12 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  - extensions
   resources:
+  - ingresses
+  - deployments
+  - daemonsets
+  - statefulsets
   - namespaces
   - pods
   - services

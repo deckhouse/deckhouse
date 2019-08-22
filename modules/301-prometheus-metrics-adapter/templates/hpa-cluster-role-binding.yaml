@@ -1,0 +1,16 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: system:controller:horizontal-pod-autoscaler:external-metrics
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:controller:horizontal-pod-autoscaler:external-metrics
+subjects:
+- kind: ServiceAccount
+  name: horizontal-pod-autoscaler
+  namespace: kube-system
