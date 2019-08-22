@@ -1,0 +1,45 @@
+- job_name: istio-envoy
+  scrape_interval: 30s
+  scrape_timeout: 10s 
+  metrics_path: /stats/prometheus
+  scheme: http
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_pod_container_port_name]
+    regex: .*-envoy-prom
+    action: keep
+  - source_labels: [__meta_kubernetes_namespace]
+    target_label: namespace
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [cluster_name]
+    regex: (outbound|inbound|prometheus_stats).*
+    action: drop
+  - source_labels: [tcp_prefix]
+    regex: (outbound|inbound|prometheus_stats).*
+    action: drop
+  - source_labels: [listener_address]
+    regex: (.+)
+    action: drop
+  - source_labels: [http_conn_manager_listener_prefix]
+    regex: (.+)
+    action: drop
+  - source_labels: [http_conn_manager_prefix]
+    regex: (.+)
+    action: drop
+  - source_labels: [__name__]
+    regex: envoy_tls.*
+    action: drop
+  - source_labels: [__name__]
+    regex: envoy_tcp_downstream.*
+    action: drop
+  - source_labels: [__name__]
+    regex: envoy_http_(stats|admin).*
+    action: drop
+  - source_labels: [__name__]
+    regex: envoy_cluster_(lb|retry|bind|internal|max|original).*
+    action: drop

@@ -1,0 +1,44 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: kube-{{ .Chart.Name }}:user-authz:networking:user
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - virtualservices
+  - serviceentries
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Deploy
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: kube-{{ .Chart.Name }}:user-authz:networking:deploy
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - virtualservices
+  - serviceentries
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

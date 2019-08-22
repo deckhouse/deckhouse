@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-sidecar-injector
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: sidecar-injector-webhook
+spec:
+  ports:
+  - port: 443
+  selector:
+    app: sidecar-injector-webhook

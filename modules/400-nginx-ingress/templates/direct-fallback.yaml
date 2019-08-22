@@ -67,6 +67,10 @@ spec:
 #TODO: Docker before 1.12 does not support sysctls
 #      annotations:
 #        security.alpha.kubernetes.io/sysctls: "net.ipv4.ip_local_port_range=1024 65000"
+{{- if .enableIstioSidecar }}
+      annotations:
+        sidecar.istio.io/inject: "false"
+{{- end }}
     spec:
 {{- include "helm_lib_node_selector" (tuple $context "frontend" .) | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $context "frontend" . true) | indent 6 }}

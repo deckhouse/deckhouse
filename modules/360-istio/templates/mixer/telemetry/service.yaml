@@ -1,0 +1,27 @@
+{{- if not .Values.istio.disableMixerTelemetry }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-telemetry
+  namespace: kube-{{ .Chart.Name }}
+  annotations:
+   networking.istio.io/exportTo: "*"
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: mixer-telemetry
+    prometheus-target: istio-mixer
+    prometheus-target-telemetry: istio-mixer-telemetry
+spec:
+  ports:
+  - name: grpc-mixer
+    port: 9091
+  - name: grpc-mixer-mtls
+    port: 15004
+  - name: http-metrics
+    port: 15014
+  - name: http-telemetry-metrics
+    port: 42422
+  selector:
+    app: mixer-telemetry
+{{- end }} {{- /* if not .Values.istio.disableMixerTelemetry */ -}}

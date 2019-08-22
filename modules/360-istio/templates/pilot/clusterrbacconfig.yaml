@@ -1,0 +1,12 @@
+apiVersion: "rbac.istio.io/v1alpha1"
+kind: ClusterRbacConfig
+metadata:
+  name: default
+spec:
+{{- if .Values.istio.enableAuthorizationGlobally }}
+  mode: 'ON'
+{{- else }}
+  mode: 'OFF'
+{{- end }}
+  inclusion:
+    namespaces: ["default"]

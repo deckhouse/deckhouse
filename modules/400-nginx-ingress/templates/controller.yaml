@@ -30,6 +30,9 @@
         {{- fail "Error!!! Direct inlet doesn't support config.setRealIPFrom! Please use another inlet if you need config.setRealIPFrom!" }}
       {{- end }}
     {{- end }}
+    {{- if hasKey $context "enableIstioSidecar" }}
+      {{- fail "Error!!! Direct inlet doesn't support enableIstioSidecar! Please use another inlet if you need enableIstioSidecar!" }}
+    {{- end }}
 
     {{- include "template.nginx" (dict "context" $context "hostNetwork" true "updateOnDelete" true) }}
     {{- include "template.config" (dict "context" $context) }}

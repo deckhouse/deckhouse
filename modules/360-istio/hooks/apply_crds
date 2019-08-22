@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  kubectl apply -f $(module::path)/crds/
+}
+
+hook::run $@

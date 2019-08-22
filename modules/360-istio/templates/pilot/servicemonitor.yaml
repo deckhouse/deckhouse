@@ -1,0 +1,24 @@
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istio-pilot
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  selector:
+    matchLabels:
+      prometheus-target: istio-pilot
+  namespaceSelector:
+    matchNames:
+    - kube-{{ $.Chart.Name }}
+  endpoints:
+  - port: http-metrics
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
+{{- end }}

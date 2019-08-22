@@ -14,4 +14,7 @@ metadata:
   {{- else }}
     controller: {{ .name }}
   {{- end }}
+  {{- if .enableIstioSidecar }}
+    istio-injection: enabled
+  {{- end }}
 {{- end }}

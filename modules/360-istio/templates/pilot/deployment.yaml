@@ -1,0 +1,157 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-pilot
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: pilot
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: istio-pilot
+  updatePolicy:
+    updateMode: "Initial"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-pilot
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: pilot
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ .Chart.Name }}
+      app: pilot
+  template:
+    metadata:
+      labels:
+        heritage: antiopa
+        module: {{ .Chart.Name }}
+        app: pilot
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: istio-pilot-service-account
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
+{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+        - name: antiopa-registry
+      containers:
+        - name: discovery
+          image: {{ .Values.global.modulesImages.registry }}/istio/pilot:{{ $.Values.global.modulesImages.tags.istio.pilot }}
+          imagePullPolicy: IfNotPresent
+          args:
+          - "discovery"
+          - --monitoringAddr=:15014
+          - --log_output_level=default:info
+          - --domain
+          - {{ .Values.global.discovery.clusterDomain }}
+          - --keepaliveMaxServerConnectionAge
+          - "30m"
+          ports:
+          - containerPort: 8080
+          - containerPort: 15010
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 5
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: GODEBUG
+            value: "gctrace=1"
+          - name: PILOT_PUSH_THROTTLE
+            value: "100"
+          - name: PILOT_TRACE_SAMPLING
+            value: "1"
+          - name: PILOT_DISABLE_XDS_MARSHALING_TO_ANY
+            value: "1"
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/istio/config
+          - name: istio-certs
+            mountPath: /etc/certs
+            readOnly: true
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2048Mi
+        - name: istio-proxy
+          image: {{ .Values.global.modulesImages.registry }}/istio/proxyv2:{{ $.Values.global.modulesImages.tags.istio.proxyv2 }}
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 15003
+          - containerPort: 15005
+          - containerPort: 15007
+          - containerPort: 15011
+          args:
+          - proxy
+          - --domain
+          - $(POD_NAMESPACE).svc.{{ .Values.global.discovery.clusterDomain }}
+          - --serviceCluster
+          - istio-pilot
+          - --templateFile
+          - /etc/istio/proxy/envoy_pilot.yaml.tmpl
+          - --controlPlaneAuthPolicy
+          - MUTUAL_TLS
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: INSTANCE_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          volumeMounts:
+          - name: istio-certs
+            mountPath: /etc/certs
+            readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+      - name: config-volume
+        configMap:
+          name: istio
+      - name: istio-certs
+        secret:
+          secretName: istio.istio-pilot-service-account
+          optional: true
