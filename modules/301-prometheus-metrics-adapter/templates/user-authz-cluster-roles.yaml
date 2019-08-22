@@ -1,0 +1,57 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: kube-prometheus:user-authz:pma:user
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterdaemonsetmetrics
+  - clusterdeploymentmetrics
+  - clusteringressmetrics
+  - clusterpodmetrics
+  - clusterservicemetrics
+  - clusterstatefulsetmetrics
+  - daemonsetmetrics
+  - deploymentmetrics
+  - ingressmetrics
+  - podmetrics
+  - servicemetrics
+  - statefulsetmetrics
+  - namespacemetrics
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Deploy
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+  name: kube-prometheus:user-authz:pma:deploy
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - deploymentmetrics
+  - ingressmetrics
+  - podmetrics
+  - servicemetrics
+  - statefulsetmetrics
+  - namespacemetrics
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

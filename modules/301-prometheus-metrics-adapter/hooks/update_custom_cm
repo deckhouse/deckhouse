@@ -9,7 +9,7 @@ function __config__() {
   "onKubernetesEvent": [
     {
       "kind": "configmap",
-      "name": "prometheus-metrics-adapter-custom",
+      "objectName": "prometheus-metrics-adapter-custom",
       "event": [
         "add",
         "update",
