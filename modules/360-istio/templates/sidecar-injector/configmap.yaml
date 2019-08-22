@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-sidecar-injector
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: sidecar-injector
+data:
+  values: |
+    global:
+      rewriteAppHTTPProbe: "true"
+      clusterDomain: "{{ .Values.global.discovery.clusterDomain }}"
+      proxy:
+        includeIPRanges:      "{{ .Values.istio.sidecar.includeOutboundIPRanges | default ( list .Values.global.discovery.clusterCIDR .Values.global.discovery.serviceClusterIPRange .Values.global.discovery.nodeInternalIPs ) | join "," }}"
+        excludeIPRanges:      "{{ .Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," }}"
+        excludeOutboundPorts: "{{ .Values.istio.sidecar.excludeOutboundPorts    | default list | join "," }}"
+        excludeInboundPorts:  "{{ .Values.istio.sidecar.excludeInboundPorts     | default list | join "," }}"
+        statusPort: 15020
+      sds:
+        enabled: false
+        customTokenDirectory: false
+        useTrustworthyJwt: false
+
+  config: |-
+    policy: {{ .Values.istio.sidecarInjectorPolicy }}
+    alwaysInjectSelector:
+      []
+    neverInjectSelector:
+      []
+    template: |-
+{{ .Files.Get "files/sidecar-injector-template.yaml" | indent 6 }}

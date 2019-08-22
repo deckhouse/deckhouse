@@ -1,0 +1,14 @@
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: kube-prometheus
+  name: prometheus-main-additional-configs-istio
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    additional-configs-for-prometheus: main
+type: Opaque
+data:
+  scrapes.yaml: {{ .Files.Get "files/prometheus-additional-configs-scrapes.yaml" | b64enc }}
+{{- end }}

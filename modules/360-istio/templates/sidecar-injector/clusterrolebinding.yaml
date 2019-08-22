@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-{{ .Chart.Name }}:sidecar-injector
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: sidecar-injector-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-{{ .Chart.Name }}:sidecar-injector
+subjects:
+  - kind: ServiceAccount
+    name: istio-sidecar-injector-service-account
+    namespace: kube-{{ .Chart.Name }}

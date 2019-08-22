@@ -1,0 +1,26 @@
+{{- if not .Values.istio.disableMixerTelemetry }}
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istio-mixer
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ $.Chart.Name }}
+    prometheus: main
+spec:
+  jobLabel: prometheus-target
+  selector:
+    matchLabels:
+      prometheus-target: istio-mixer
+  namespaceSelector:
+    matchNames:
+    - kube-{{ $.Chart.Name }}
+  endpoints:
+  - port: http-metrics
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
+{{- end }}
+{{- end }} {{- /* if not .Values.istio.disableMixerTelemetry */ -}}

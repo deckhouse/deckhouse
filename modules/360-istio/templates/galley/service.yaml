@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-galley
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: galley
+    prometheus-target: istio-galley
+spec:
+  ports:
+  - port: 443
+    name: https-validation
+  - port: 15014
+    name: http-metrics
+  - port: 9901
+    name: grpc-mcp
+  selector:
+    app: galley

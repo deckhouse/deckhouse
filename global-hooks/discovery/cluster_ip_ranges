@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Автоопределятор cluster-cidr (адреса подов), service-cluster-ip-range (адреса сервисов) и node-internal-ips (внутренние адреса нод).
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "onStartup": 100,
+  "onKubernetesEvent": [
+    {
+      "kind": "node",
+      "jqFilter": ".status.addresses[] | select (.type == \"InternalIP\")"
+    },
+    {
+      "kind": "pod",
+      "namespaceSelector": {
+        "matchNames": ["kube-system"]
+      },
+      "selector": {
+        "matchLabels": {
+          "component": "kube-apiserver",
+          "tier": "control-plane"
+        }
+      },
+      "jqFilter": ".spec.containers[].command"
+    },
+    {
+      "kind": "pod",
+      "namespaceSelector": {
+        "matchNames": ["kube-system"]
+      },
+      "selector": {
+        "matchLabels": {
+          "k8s-app": "kube-apiserver"
+        }
+      },
+      "jqFilter": ".spec.containers[].command"
+    },
+    {
+      "kind": "pod",
+      "namespaceSelector": {
+        "matchNames": ["kube-system"]
+      },
+      "selector": {
+        "matchLabels": {
+          "component": "kube-controller-manager",
+          "tier": "control-plane"
+        }
+      },
+      "jqFilter": ".spec.containers[].command"
+    },
+    {
+      "kind": "pod",
+      "namespaceSelector": {
+        "matchNames": ["kube-system"]
+      },
+      "selector": {
+        "matchLabels": {
+          "k8s-app": "kube-controller-manager"
+        }
+      },
+      "jqFilter": ".spec.containers[].command"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  cluster_cidr=`kubectl -n kube-system get pods -o json |\
+    jq -r '.items[] |
+      select(
+        (.metadata.labels.component == "kube-controller-manager" and .metadata.labels.tier == "control-plane") or
+         .metadata.labels."k8s-app" == "kube-controller-manager"
+      ) |
+      .spec.containers[] |
+      select(.name == "kube-controller-manager") |
+      (.command + .args)[]' |\
+    xargs | sed -r 's/.*--cluster-cidr=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+).*/\1/'`
+
+  service_cluster_ip_range=`kubectl -n kube-system get pods -o json |\
+    jq -r '.items[] |
+      select(
+        (.metadata.labels.component == "kube-apiserver" and .metadata.labels.tier == "control-plane") or
+         .metadata.labels."k8s-app" == "kube-apiserver"
+      ) |
+      .spec.containers[] |
+      select(.name == "kube-apiserver") |
+      (.command + .args)[]' |\
+    xargs | sed -r 's/.*--service-cluster-ip-range=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+).*/\1/'`
+
+  node_internal_ips=`kubectl get nodes -o json | jq -r '.items[].status.addresses[] | select (.type == "InternalIP") | .address' | paste -sd "," -`
+
+  values::set global.discovery.clusterCIDR           "$cluster_cidr"
+  values::set global.discovery.serviceClusterIPRange "$service_cluster_ip_range"
+  values::set global.discovery.nodeInternalIPs       "$node_internal_ips"
+}
+
+hook::run $@

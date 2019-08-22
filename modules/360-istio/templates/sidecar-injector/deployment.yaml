@@ -1,0 +1,114 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-sidecar-injector
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: sidecar-injector-webhook
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: istio-sidecar-injector
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-sidecar-injector
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: sidecar-injector-webhook
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ .Chart.Name }}
+      app: sidecar-injector-webhook
+  template:
+    metadata:
+      labels:
+        heritage: antiopa
+        module: {{ .Chart.Name }}
+        app: sidecar-injector-webhook
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: istio-sidecar-injector-service-account
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+        - name: antiopa-registry
+      containers:
+        - name: sidecar-injector-webhook
+          image: {{ .Values.global.modulesImages.registry }}/istio/sidecar_injector:{{ $.Values.global.modulesImages.tags.istio.sidecar_injector }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --caCertFile=/etc/istio/certs/root-cert.pem
+            - --tlsCertFile=/etc/istio/certs/cert-chain.pem
+            - --tlsKeyFile=/etc/istio/certs/key.pem
+            - --injectConfig=/etc/istio/inject/config
+            - --meshConfig=/etc/istio/config/mesh
+            - --healthCheckInterval=2s
+            - --healthCheckFile=/health
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/istio/config
+            readOnly: true
+          - name: certs
+            mountPath: /etc/istio/certs
+            readOnly: true
+          - name: inject-config
+            mountPath: /etc/istio/inject
+            readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /usr/local/bin/sidecar-injector
+                - probe
+                - --probe-path=/health
+                - --interval=4s
+            initialDelaySeconds: 4
+            periodSeconds: 4
+          readinessProbe:
+            exec:
+              command:
+                - /usr/local/bin/sidecar-injector
+                - probe
+                - --probe-path=/health
+                - --interval=4s
+            initialDelaySeconds: 4
+            periodSeconds: 4
+          resources:
+            requests:
+              cpu: 10m
+      volumes:
+      - name: config-volume
+        configMap:
+          name: istio
+      - name: certs
+        secret:
+          secretName: istio.istio-sidecar-injector-service-account
+      - name: inject-config
+        configMap:
+          name: istio-sidecar-injector
+          items:
+          - key: config
+            path: config
+          - key: values
+            path: values

@@ -1,0 +1,71 @@
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-citadel
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: citadel
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: istio-citadel
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-citadel
+  namespace: kube-{{ .Chart.Name }}
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: citadel
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      heritage: antiopa
+      module: {{ .Chart.Name }}
+      app: citadel
+  template:
+    metadata:
+      labels:
+        heritage: antiopa
+        module: {{ .Chart.Name }}
+        app: citadel
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: istio-citadel-service-account
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+        - name: antiopa-registry
+      containers:
+        - name: citadel
+          image: {{ .Values.global.modulesImages.registry }}/istio/citadel:{{ $.Values.global.modulesImages.tags.istio.citadel }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --append-dns-names=true
+            - --grpc-port=8060
+            - --citadel-storage-namespace=kube-{{ .Chart.Name }}
+            - --custom-dns-names=istio-pilot-service-account.kube-{{ .Chart.Name }}:istio-pilot.kube-{{ .Chart.Name }}
+            - --monitoring-port=15014
+            - --self-signed-ca=true
+            - --workload-cert-ttl=2160h
+          resources:
+            requests:
+              cpu: 10m
