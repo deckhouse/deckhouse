@@ -63,13 +63,13 @@ class myHandler(BaseHTTPRequestHandler):
     try:
       metric_handler = metricHandler(custom_metric_args)
     except metricHandlerNothingToDo as e:
-      print("Warning: " + str(e))
+      print("Warning: " + str(e), flush=True)
       self.send_response(200)
       self.send_header('Content-type', 'application/json')
       self.wfile.write(b'{"status":"success","data":{"resultType":"vector","result":[]}}')
       return
     except Exception as e:
-      print("Error: " + str(e))
+      print("Error: " + str(e), flush=True)
       self.send_response(500)
       self.end_headers()
       self.wfile.write(("Error: " + str(e)).encode("utf-8"))
@@ -108,7 +108,7 @@ class myHandler(BaseHTTPRequestHandler):
 
 try:
   server = HTTPServer(('', PORT_NUMBER), myHandler)
-  print('Started httpserver on port ', PORT_NUMBER)
+  print('Started httpserver on port ' + str(PORT_NUMBER), flush=True)
 
   #Wait forever for incoming http requests
   server.serve_forever()
