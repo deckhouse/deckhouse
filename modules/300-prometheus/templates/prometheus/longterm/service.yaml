@@ -17,10 +17,6 @@ spec:
     port: 9090
     protocol: TCP
     targetPort: https
-  - name: https-metrics
-    port: 9090
-    protocol: TCP
-    targetPort: https
   selector:
     app: prometheus
     prometheus: longterm
