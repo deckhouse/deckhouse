@@ -14,6 +14,8 @@
     action: labeldrop
   - target_label: scrape_endpoint
     replacement: main
+  - target_label: job
+    replacement: kube-state-metrics
 
 - job_name: kube-state-metrics/self
   honor_labels: true
@@ -30,6 +32,8 @@
     action: labeldrop
   - target_label: scrape_endpoint
     replacement: self
+  - target_label: job
+    replacement: kube-state-metrics
 {{- end }}
 ---
 apiVersion: v1
