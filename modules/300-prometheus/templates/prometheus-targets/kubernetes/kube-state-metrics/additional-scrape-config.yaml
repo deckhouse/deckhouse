@@ -1,0 +1,47 @@
+{{- define "additional-scrape-config" }}
+- job_name: kube-state-metrics/main
+  honor_labels: true
+  metrics_path: '/metrics'
+  scheme: https
+  tls_config:
+    cert_file: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+    key_file: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+    insecure_skip_verify: true
+  static_configs:
+  - targets: ['kube-state-metrics.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}.:8443']
+  relabel_configs:
+  - regex: endpoint|namespace|pod|service
+    action: labeldrop
+  - target_label: scrape_endpoint
+    replacement: main
+
+- job_name: kube-state-metrics/self
+  honor_labels: true
+  metrics_path: '/metrics'
+  scheme: https
+  tls_config:
+    cert_file: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
+    key_file: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+    insecure_skip_verify: true
+  static_configs:
+  - targets: ['kube-state-metrics.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}.:9443']
+  relabel_configs:
+  - regex: endpoint|namespace|pod|service
+    action: labeldrop
+  - target_label: scrape_endpoint
+    replacement: self
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-main-additional-configs-kube-state-metrics
+  namespace: kube-prometheus
+  labels:
+    heritage: antiopa
+    module: {{ .Chart.Name }}
+    app: kube-state-metrics
+    additional-configs-for-prometheus: main
+data:
+  scrapes.yaml: |
+    {{ include "additional-scrape-config" . | b64enc }}
