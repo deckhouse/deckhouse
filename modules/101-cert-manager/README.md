@@ -111,7 +111,7 @@ spec:
    spec:
      secretName: tls-wildcard
      issuerRef:
-       name: domain-wildcard
+       name: cloudflare
        kind: ClusterIssuer
      commonName: "*.domain.com"
      dnsNames:
