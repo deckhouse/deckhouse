@@ -54,4 +54,4 @@ basicAuth: |
 ### Использование
 Просто добавляем подобную аннотацию к ингрессу:
 
-`ingress.kubernetes.io/auth-url: "http://basic-auth.kube-basic-auth.svc.cluster.local/"`
+`nginx.ingress.kubernetes.io/auth-url: "http://basic-auth.kube-basic-auth.svc.cluster.local/"`

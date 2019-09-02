@@ -12,21 +12,21 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
-    ingress.kubernetes.io/auth-signing: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
-    ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-signing: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
+    nginx.ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
 {{- else }}
-    ingress.kubernetes.io/auth-type: basic
-    ingress.kubernetes.io/auth-secret: basic-auth
-    ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
 {{- end }}
-    ingress.kubernetes.io/backend-protocol: HTTPS
-    ingress.kubernetes.io/configuration-snippet: |
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
-    ingress.kubernetes.io/affinity: cookie
-    ingress.kubernetes.io/rewrite-target: "/$2"
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
