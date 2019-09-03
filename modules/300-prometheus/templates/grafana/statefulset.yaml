@@ -12,14 +12,14 @@ metadata:
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: Deployment
+    kind: StatefulSet
     name: grafana
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: grafana
   namespace: kube-prometheus
@@ -49,6 +49,8 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}
+      imagePullSecrets:
+      - name: antiopa-registry
       containers:
       - name: grafana
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
@@ -60,7 +62,7 @@ spec:
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
         - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-          value: "Editor"
+          value: "Admin"
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_USERS_DEFAULT_THEME
@@ -71,6 +73,12 @@ spec:
           value: /var/lib/grafana-storage
         - name: GF_SERVER_HTTP_ADDR
           value: "127.0.0.1"
+        {{- if hasKey .Values.prometheus "grafana" }}
+          {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
+        - name: GF_CUSTOM_PLUGINS
+          value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
+          {{- end }}
+        {{- end }}
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/lib/grafana-storage
@@ -114,8 +122,6 @@ spec:
           tcpSocket:
             port: 443
       volumes:
-      - name: grafana-storage
-        emptyDir: {}
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
@@ -133,5 +139,20 @@ spec:
         configMap:
           name: grafana-dashboard-definitions-custom
           optional: true
-      imagePullSecrets:
-      - name: antiopa-registry
+{{- $grafanaStorageClassName := false }}{{- if hasKey .Values.prometheus "grafana" }}{{- $grafanaStorageClassName = .Values.prometheus.grafana.storageClassName }}{{- end }}
+{{- $storageClassName := $grafanaStorageClassName | default .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
+{{- if not $storageClassName }}
+      - name: grafana-storage
+        emptyDir: {}
+{{- else }}
+  volumeClaimTemplates:
+  - metadata:
+      name: grafana-storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: {{ $storageClassName }}
+{{- end }}
