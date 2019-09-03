@@ -3,6 +3,7 @@ apiVersion: scheduling.k8s.io/v1beta1
 kind: PriorityClass
 metadata:
   name: develop
+{{ include "helm_lib_deckhouse_labels" (list .) | indent 2 }}
 value: 1000
 globalDefault: true
 description: >
