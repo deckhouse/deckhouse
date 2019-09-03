@@ -41,7 +41,7 @@ class manifest:
     self.dataRefreshHash = 0
 
   def isApiServer(self):
-    if "labels" in self.data["metadata"]:
+    if self.data and "metadata" in self.data and "labels" in self.data["metadata"]:
       labels = self.data["metadata"]["labels"]
     else:
       return False
@@ -200,6 +200,10 @@ class manifest:
 def main():
   global WEBHOOK_CONFIG_PATH
   for filename in os.listdir(MANIFESTS_DIR):
+    # Иногда etcd-манифест представлен симлинком, игнорируем
+    if os.path.islink(MANIFESTS_DIR + filename):
+      print("Ignoring symlink: " + MANIFESTS_DIR + filename, flush=True)
+      continue
     m = manifest(MANIFESTS_DIR + filename)
     if m.isApiServer():
       print("Found kube-apiserver manifest: " + MANIFESTS_DIR + filename, flush=True)
@@ -210,7 +214,7 @@ def main():
     while True:
       if apiServerManifest.refreshData():
         if ACTION == "configure":
-          print("Cnfiguring...", flush=True)
+          print("Configuring...", flush=True)
           apiServerManifest.discoverProxyClientCert()
           print("Discovered cert files: " + apiServerManifest.webhookProxyClientCertFile + " " + apiServerManifest.webhookProxyClientKeyFile, flush=True)
           apiServerManifest.loadWebhookCertificateAuthorityData()
