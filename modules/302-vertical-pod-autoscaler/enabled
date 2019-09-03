@@ -3,8 +3,13 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
-  if values::array_has global.enabledModules "prometheus" && values::array_has global.enabledModules "prometheus-metrics-adapter" && values::array_has global.enabledModules "vertical-pod-autoscaler-crd" ; then
-    echo "true" > $MODULE_ENABLED_RESULT
+  if values::array_has global.enabledModules "prometheus" && values::array_has global.enabledModules "prometheus-metrics-adapter"; then
+    if values::array_has global.enabledModules "vertical-pod-autoscaler-crd" ; then
+      echo "true" > $MODULE_ENABLED_RESULT
+    else
+      echo "You must enable the vertical-pod-autoscaler-crd module for the module to work."
+      exit 1
+    fi
   else
     echo "false" > $MODULE_ENABLED_RESULT
   fi

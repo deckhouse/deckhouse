@@ -7,6 +7,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ClusterAuthorizationRule
 metadata:
   name: kube-system-dashboard
+{{ include "helm_lib_deckhouse_labels" (list .) | indent 2 }}
 spec:
   subjects:
   - kind: ServiceAccount
