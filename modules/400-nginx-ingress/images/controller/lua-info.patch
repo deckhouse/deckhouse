@@ -1,5 +1,47 @@
+diff --git a/go.mod b/go.mod
+index 7d0cf1755..c0057e24c 100644
+--- a/go.mod
++++ b/go.mod
+@@ -13,6 +13,7 @@ require (
+ 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa // indirect
+ 	github.com/go-logr/zapr v0.1.1 // indirect
+ 	github.com/go-openapi/swag v0.19.0 // indirect
++	github.com/gofortune/gofortune v0.0.1-snapshot // indirect
+ 	github.com/google/uuid v1.1.1
+ 	github.com/imdario/mergo v0.3.7
+ 	github.com/json-iterator/go v1.1.6
+@@ -39,6 +40,7 @@ require (
+ 	github.com/spf13/pflag v1.0.3
+ 	github.com/tallclair/mdtoc v0.0.0-20190627191617-4dc3d6f90813
+ 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
++	github.com/vromero/gofortune v0.0.1-snapshot
+ 	github.com/zakjan/cert-chain-resolver v0.0.0-20180703112424-6076e1ded272
+ 	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
+ 	google.golang.org/grpc v1.19.1
+diff --git a/go.sum b/go.sum
+index e17218509..0341568d8 100644
+--- a/go.sum
++++ b/go.sum
+@@ -144,6 +144,8 @@ github.com/go-openapi/validate v0.18.0/go.mod h1:Uh4HdOzKt19xGIGm1qHf/ofbX1YQ4Y+
+ github.com/go-ozzo/ozzo-validation v3.5.0+incompatible/go.mod h1:gsEKFIVnabGBt6mXmxK0MoFy+cZoTJY6mu5Ll3LVLBU=
+ github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+ github.com/godbus/dbus v0.0.0-20151105175453-c7fdd8b5cd55/go.mod h1:/YcGZj5zSblfDWMMoOzV4fas9FZnQYTkDnsGvmh2Grw=
++github.com/gofortune/gofortune v0.0.1-snapshot h1:0unUpPzS0PAdMrOvLAhmeaGtFlUPYv5aXUD/9XN5X9U=
++github.com/gofortune/gofortune v0.0.1-snapshot/go.mod h1:gzHWMyrWq6g1heq6667VSJTUxWXv+9mTry2HjUnEVB4=
+ github.com/gogo/protobuf v0.0.0-20171007142547-342cbe0a0415/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
+ github.com/gogo/protobuf v1.0.0/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
+ github.com/gogo/protobuf v1.1.1 h1:72R+M5VuhED/KujmZVcIquuo8mBgX4oVda//DQb3PXo=
+@@ -386,6 +388,8 @@ github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e/go.mod h1:+SR5
+ github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936/go.mod h1:ZjcWmFBXmLKZu9Nxj3WKYEafiSqer2rnvPr0en9UNpI=
+ github.com/vmware/govmomi v0.20.1/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
+ github.com/vmware/photon-controller-go-sdk v0.0.0-20170310013346-4a435daef6cc/go.mod h1:e6humHha1ekIwTCm+A5Qed5mG8V4JL+ChHcUOJ+L/8U=
++github.com/vromero/gofortune v0.0.1-snapshot h1:+IDjezRGmRO1Mdm1Oh+DguaSkxjRpoevWlpdTSlwPkw=
++github.com/vromero/gofortune v0.0.1-snapshot/go.mod h1:t8EOM3RyBWLevtrXkmQtfAMmH5CU3/YcnpG5RZ/GQXQ=
+ github.com/xanzy/go-cloudstack v0.0.0-20160728180336-1e2cbf647e57/go.mod h1:s3eL3z5pNXF5FVybcT+LIVdId8pYn709yv6v5mrkrQE=
+ github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+ github.com/xlab/handysort v0.0.0-20150421192137-fb3537ed64a1/go.mod h1:QcJo0QPSfTONNIgpN5RA8prR7fF8nkF6cTWTcNerRO8=
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index d9f4b7d6a..fd6f20403 100644
+index 786cc5cab..1a2dd1641 100644
 --- a/internal/ingress/controller/controller.go
 +++ b/internal/ingress/controller/controller.go
 @@ -487,7 +487,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
@@ -57,7 +99,7 @@ index d9f4b7d6a..fd6f20403 100644
  	}
  
  	return upstreams
-@@ -976,7 +979,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
+@@ -977,7 +980,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
  		}
  
  		if ing.Spec.Backend != nil {
@@ -66,7 +108,7 @@ index d9f4b7d6a..fd6f20403 100644
  
  			if backendUpstream, ok := upstreams[defUpstream]; ok {
  				// use backend specified in Ingress as the default backend for all its rules
-@@ -1212,7 +1215,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+@@ -1215,7 +1218,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
  
  	// merge catch-all alternative backends
  	if ing.Spec.Backend != nil {
@@ -75,7 +117,7 @@ index d9f4b7d6a..fd6f20403 100644
  
  		altUps := upstreams[upsName]
  
-@@ -1242,7 +1245,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+@@ -1245,7 +1248,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
  
  	for _, rule := range ing.Spec.Rules {
  		for _, path := range rule.HTTP.Paths {
@@ -85,10 +127,10 @@ index d9f4b7d6a..fd6f20403 100644
  			altUps := upstreams[upsName]
  
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 149c9264e..8086f5434 100644
+index 6aacb4b4d..eff0335df 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -35,9 +35,12 @@ import (
+@@ -34,9 +34,12 @@ import (
  	"text/template"
  	"time"
  
@@ -101,7 +143,7 @@ index 149c9264e..8086f5434 100644
  	"k8s.io/apimachinery/pkg/util/intstr"
  	"k8s.io/apimachinery/pkg/util/sets"
  	"k8s.io/client-go/kubernetes/scheme"
-@@ -864,8 +867,12 @@ func configureDynamically(pcfg *ingress.Configuration) error {
+@@ -868,8 +871,12 @@ func configureDynamically(pcfg *ingress.Configuration) error {
  
  	for i, backend := range pcfg.Backends {
  		var service *apiv1.Service
@@ -115,7 +157,7 @@ index 149c9264e..8086f5434 100644
  		}
  		luaBackend := &ingress.Backend{
  			Name:                 backend.Name,
-@@ -875,6 +882,7 @@ func configureDynamically(pcfg *ingress.Configuration) error {
+@@ -879,6 +886,7 @@ func configureDynamically(pcfg *ingress.Configuration) error {
  			UpstreamHashBy:       backend.UpstreamHashBy,
  			LoadBalancing:        backend.LoadBalancing,
  			Service:              service,
@@ -123,7 +165,7 @@ index 149c9264e..8086f5434 100644
  			NoServer:             backend.NoServer,
  			TrafficShapingPolicy: backend.TrafficShapingPolicy,
  			AlternativeBackends:  backend.AlternativeBackends,
-@@ -891,7 +899,6 @@ func configureDynamically(pcfg *ingress.Configuration) error {
+@@ -895,7 +903,6 @@ func configureDynamically(pcfg *ingress.Configuration) error {
  		luaBackend.Endpoints = endpoints
  		backends[i] = luaBackend
  	}
@@ -147,19 +189,10 @@ index b19145c4b..5fb8ff7ff 100644
  
  // sysctlSomaxconn returns the maximum number of connections that can be queued
 diff --git a/internal/ingress/types.go b/internal/ingress/types.go
-index accc89c59..6531ee6bf 100644
+index 36bf45a37..3b9a5c920 100644
 --- a/internal/ingress/types.go
 +++ b/internal/ingress/types.go
-@@ -18,7 +18,7 @@ package ingress
- 
- import (
- 	apiv1 "k8s.io/api/core/v1"
--	networking "k8s.io/api/networking/v1beta1"
-+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
- 	"k8s.io/apimachinery/pkg/util/intstr"
- 
- 	"k8s.io/ingress-nginx/internal/ingress/annotations"
-@@ -80,9 +80,10 @@ type Configuration struct {
+@@ -82,9 +82,10 @@ type Configuration struct {
  // +k8s:deepcopy-gen=true
  type Backend struct {
  	// Name represents an unique apiv1.Service name formatted as <namespace>-<name>-<port>
@@ -168,20 +201,11 @@ index accc89c59..6531ee6bf 100644
 -	Port    intstr.IntOrString `json:"port"`
 +	Name    string                     `json:"name"`
 +	Service *apiv1.Service             `json:"service,omitempty"`
-+	Ingress *networkingv1beta1.Ingress `json:"ingress,omitempty"`
++	Ingress *networking.Ingress `json:"ingress,omitempty"`
 +	Port    intstr.IntOrString         `json:"port"`
  	// SecureCACert has the filename and SHA1 of the certificate authorities used to validate
  	// a secured connection to the backend
  	SecureCACert resolver.AuthSSLCert `json:"secureCACert"`
-@@ -361,7 +362,7 @@ type ProxyProtocol struct {
- 
- // Ingress holds the definition of an Ingress plus its annotations
- type Ingress struct {
--	networking.Ingress
-+	networkingv1beta1.Ingress
- 	ParsedAnnotations *annotations.Ingress
- }
- 
 diff --git a/internal/ingress/zz_generated.deepcopy.go b/internal/ingress/zz_generated.deepcopy.go
 index c6f95123c..8afa007ad 100644
 --- a/internal/ingress/zz_generated.deepcopy.go
