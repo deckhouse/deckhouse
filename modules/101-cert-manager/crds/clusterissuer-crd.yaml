@@ -5,7 +5,7 @@ metadata:
   labels:
     app: cert-manager
     heritage: antiopa
-    module: {{ $.Chart.Name }}
+    module: cert-manager
 spec:
   group: certmanager.k8s.io
   names:

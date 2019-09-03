@@ -22,10 +22,7 @@ metadata:
 {{- end }}
   name: dashboard
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: dashboard
+{{ include "helm_lib_deckhouse_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
@@ -48,10 +45,7 @@ kind: Certificate
 metadata:
   name: dashboard
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: dashboard
+{{ include "helm_lib_deckhouse_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
   secretName: ingress-tls
   dnsNames:

@@ -4,7 +4,7 @@ metadata:
   name: issuers.certmanager.k8s.io
   labels:
     heritage: antiopa
-    module: {{ $.Chart.Name }}
+    module: cert-manager
     app: cert-manager
 spec:
   group: certmanager.k8s.io
