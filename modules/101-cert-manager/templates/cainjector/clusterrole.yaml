@@ -1,11 +1,9 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
   name: kube-cert-manager:cainjector
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: cainjector
+{{ include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | indent 2 }}
 rules:
   - apiGroups: ["certmanager.k8s.io"]
     resources: ["certificates"]
@@ -21,4 +19,4 @@ rules:
     verbs: ["*"]
   - apiGroups: ["apiregistration.k8s.io"]
     resources: ["apiservices"]
-    verbs: ["*"] 
+    verbs: ["*"]

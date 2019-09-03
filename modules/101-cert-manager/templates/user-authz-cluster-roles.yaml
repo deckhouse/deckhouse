@@ -4,10 +4,8 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
   name: kube-{{ .Chart.Name }}:user-authz:user
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
   - certmanager.k8s.io
@@ -27,10 +25,8 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Deploy
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
   name: kube-{{ .Chart.Name }}:user-authz:deploy
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
   - certmanager.k8s.io
@@ -49,10 +45,8 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Admin
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
   name: kube-{{ .Chart.Name }}:user-authz:admin
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
   - certmanager.k8s.io

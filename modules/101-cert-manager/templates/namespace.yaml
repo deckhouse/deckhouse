@@ -5,7 +5,4 @@ metadata:
   name: kube-cert-manager
   annotations:
     extended-monitoring.flant.com/enabled: ""
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    certmanager.k8s.io/disable-validation: "true"
+{{ include "helm_lib_module_labels" (list . (dict "certmanager.k8s.io/disable-validation" "true")) | indent 2 }}

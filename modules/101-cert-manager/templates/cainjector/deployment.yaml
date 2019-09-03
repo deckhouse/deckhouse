@@ -1,14 +1,11 @@
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: cainjector
   namespace: kube-cert-manager
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: cainjector
+{{ include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,11 +19,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cainjector
-  namespace: "kube-cert-manager"
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: cainjector
+  namespace: kube-cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | indent 2 }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
   selector:
@@ -56,7 +50,7 @@ spec:
       tolerations:
       - operator: Exists
       imagePullSecrets:
-      - name: cert-manager-antiopa-registry
+      - name: antiopa-registry
       containers:
         - name: cainjector
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-cainjector:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}
