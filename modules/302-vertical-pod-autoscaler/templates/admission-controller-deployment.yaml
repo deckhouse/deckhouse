@@ -51,7 +51,7 @@ spec:
         app: vpa-admission-controller
     spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: system-cluster-critical
+      priorityClassName: cluster-critical
 {{- end }}
 {{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
       affinity:

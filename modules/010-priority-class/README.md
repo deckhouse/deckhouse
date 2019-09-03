@@ -16,11 +16,12 @@
 
 ##  Как работает
 
-Модуль устанавливает 9 priority class'ов (написаны в порядке приоритета от большего к меньшему) и использует один системный (system-cluster-critical):
+Модуль устанавливает 10 priority class'ов (написаны в порядке приоритета от большего к меньшему) и использует один системный (system-cluster-critical):
 
 | Priority Class          | Описание                                                                                                                                                            | Значение   |
 |-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
 | system-cluster-critical | Компоненты кластера, без которых его корректная работа полностью невозможна.<br>`kube-dns`, `coredns`, `kube-proxy`, `flannel`, `kube-api-server`, `kube-controller-manager`, `kube-scheduler`, `cluster-autoscaler`, `dns-controller`.                             | 2000000000 |
+| cluster-critical        | Тоже самое, что и `system-cluster-critical`, но для компонентов которые устанавливаются в отличные от `kube-system` namespace'ы | 1999999999 |
 | production-high         | Stateful приложения, в production окружении отсутствие которых приводит к полной недоступности сервиса или потере данных (postgresql, memcached, redis, mongo, ...). | 9000       |
 | cluster-high            | Ключевые компоненты кластера, выход из строя которых влияет на работу всего кластера и приложений.<br>`nginx-ingress`.                                              | 8000       |
 | cluster-medium          | Компоненты кластера, влияющие на мониторинг (алерты, диагностика) кластера и автоскейлинг. Без мониторинга мы не можем оценить масштабы происшествия, без автоскейлинга мы не сможем дать приложениям необходимые ресурсы.<br>`antiopa`, `antiopa/tiller-deploy`, `prometheus`, `kube-state-metrics`, `madison-proxy`, `node-exporter`, `pormetheus-proxy`, `trickster`, `prometheus-metrics-adapter`, `extended-monitoring`, `grafana`                       | 7000       |
