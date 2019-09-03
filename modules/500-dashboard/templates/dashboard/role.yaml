@@ -4,7 +4,7 @@ kind: Role
 metadata:
   name: dashboard
   namespace: kube-system
-{{ include "helm_lib_deckhouse_labels" (list . (dict "app" "dashboard")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 rules:
   # Allow Dashboard to create 'kube-dashboard-key-holder' secret.
 - apiGroups: [""]

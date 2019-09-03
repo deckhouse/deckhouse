@@ -1,11 +1,9 @@
+---
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
   name: v1beta1.admission.certmanager.k8s.io
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: webhook
+{{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
   annotations:
     certmanager.k8s.io/inject-ca-from: "kube-cert-manager/cert-manager-webhook-tls"
 spec:

@@ -1,11 +1,9 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
   name: kube-cert-manager:cert-manager
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
 rules:
 - apiGroups: ["certmanager.k8s.io"]
   resources: ["certificates", "certificates/finalizers", "issuers", "clusterissuers", "orders", "orders/finalizers", "challenges"]

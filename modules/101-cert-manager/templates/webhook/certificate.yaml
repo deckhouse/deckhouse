@@ -1,13 +1,11 @@
 # Generate a CA certificate used to sign certificates for the webhook
+---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
   name: cert-manager-webhook-ca
   namespace: kube-cert-manager
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: webhook
+{{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
 spec:
   secretName: cert-manager-webhook-ca
   duration: 43800h #5y

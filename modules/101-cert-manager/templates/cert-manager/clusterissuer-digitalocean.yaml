@@ -1,13 +1,11 @@
 {{- if (hasKey .Values.certManager "digitalOceanCredentials") }}
+---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: ClusterIssuer
 metadata:
   name: digitalocean
   namespace: kube-cert-manager
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
