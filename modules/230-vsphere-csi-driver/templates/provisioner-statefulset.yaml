@@ -40,7 +40,7 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       imagePullSecrets:
       - name: vsphere-csi-driver-antiopa-registry
-      priorityClassName: system-cluster-critical
+      priorityClassName: cluster-critical
       affinity:
         podAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -19,7 +19,7 @@ spec:
       imagePullSecrets:
       - name: vsphere-csi-driver-antiopa-registry
       hostNetwork: true
-      priorityClassName: system-cluster-critical
+      priorityClassName: cluster-critical
       tolerations:
       - operator: Exists
       containers:
