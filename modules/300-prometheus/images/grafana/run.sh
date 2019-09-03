@@ -31,6 +31,11 @@ if [ ! -z ${GF_AWS_PROFILES+x} ]; then
     chmod 600 ~grafana/.aws/credentials
 fi
 
+IFS=","
+for plugin in ${GF_CUSTOM_PLUGINS}; do
+  gosu grafana grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin};
+done
+
 exec gosu grafana /usr/sbin/grafana-server              \
   --homepath=/usr/share/grafana                         \
   --config="$GF_PATHS_CONFIG"                           \

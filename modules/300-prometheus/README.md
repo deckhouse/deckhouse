@@ -77,6 +77,17 @@ prometheus: |
             ports:
               - port: 8080
         ```
+* `grafana` - настройки для инсталяции Grafana.
+    * `storageClassName` — имя storageClass'а, который использовать для Grafana.
+       * Если не указано — используется или `prometheus.storageClassName` от основного Prometheus, или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
+    * `customPlugins` - список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana. Необходимо указать в качестве значения список имен плагинов из официального репозитория. 
+       * Пример добавления plug-in'ов для возможности указания в качестве datasource clickhouse и панели flow-chart:
+           ```yaml
+           grafana:
+             customPlugins:
+             - agenty-flowcharting-panel
+             - vertamedia-clickhouse-datasource
+           ```
 * `ingressClass` — класс ingress контроллера, который используется для grafana/prometheus.
     * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
 * `https` — выбираем, какой типа сертификата использовать для grafana/prometheus.
