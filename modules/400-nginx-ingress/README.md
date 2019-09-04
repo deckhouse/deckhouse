@@ -336,7 +336,7 @@ nginxIngress: |
 
 ```yaml
       - name: ca-auth-proxy
-        image: flant/kube-ca-auth-proxy:v0.4.0
+        image: flant/kube-ca-auth-proxy:v0.5.2
         args:
         - "--listen=443" # Порт на котором будет принимать запросы от ingress'а
         - "--location=/" # Какой локейшен надо проксировать
@@ -374,7 +374,7 @@ nginxIngress: |
 - Если у приложения есть безопасный endpoint для запросов проверки всостояния, то вы можете воспользоваться дополнительными опциями:
 ```yaml
       - name: ca-auth-proxy
-        image: flant/kube-ca-auth-proxy:v0.4.0
+        image: flant/kube-ca-auth-proxy:v0.5.2
         args:
         - "--listen=443" # Порт на котором будет принимать запросы от ingress'а
         - "--location=/" # Какой локейшен надо проксировать

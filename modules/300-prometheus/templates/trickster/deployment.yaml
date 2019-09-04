@@ -81,7 +81,7 @@ spec:
         - "--listen=443"
         - "--location=/"
         - "--proxy-pass=http://127.0.0.1:8000"
-        - "--user=kube-prometheus:prometheus-metrics-adapter:prometheus-api-client|kube-system:vpa:prometheus-api-client|nginx-ingress:.*"
+        - "--user=nginx-ingress:.*|.*:prometheus-api-client"
         - "--probe-proxy-pass=http://127.0.0.1:8000/ping"
         - "--probe-listen=3500"
         ports:
