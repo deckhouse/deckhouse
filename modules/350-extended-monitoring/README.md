@@ -39,6 +39,8 @@
 | disk-bytes-critical           | int (percent) | 80             |
 | disk-inodes-warning           | int (percent) | 85             |
 | disk-inodes-critical          | int (percent) | 90             |
+| load-average-warning          | int  | 3            |
+| load-average-critical         | int  | 10             |
 
 > ВНИМАНИЕ! Эти аннотации НЕ действуют для тех разделов, в которых расположены imagefs (по-умолчанию, /var/lib/docker) и nodefs (по-умолчанию, /var/lib/kubelet).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).

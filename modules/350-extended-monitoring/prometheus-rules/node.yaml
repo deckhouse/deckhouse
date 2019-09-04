@@ -79,3 +79,43 @@
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
+
+  - alert: LoadAverageHigh
+    expr: >-
+      (
+        sum by (node) (avg_over_time(node_load1[30m]))
+        /
+        count by (node) (node_cpu_seconds_total{mode="idle"})
+      ) > on (node) group_left() (
+        max by (node) (extended_monitoring_node_threshold{threshold="load-average-warning"})
+      )
+    for: 30m
+    labels:
+      impact: critical
+      likelihood: possible
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Последние 30 минут load average на ноде {{ $labels.node }} не опускался ниже {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-warning\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
+      summary: >
+        Load average на {{ $labels.node }} слишком велик.
+
+  - alert: LoadAverageHigh
+    expr: >-
+      (
+        sum by (node) (avg_over_time(node_load1[5m]))
+        /
+        count by (node) (node_cpu_seconds_total{mode="idle"})
+      ) > on (node) group_left() (
+        max by (node) (extended_monitoring_node_threshold{threshold="load-average-critical"})
+      )
+    for: 5m
+    labels:
+      impact: critical
+      likelihood: likely
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Последние 5 минут Load average на ноде {{ $labels.node }} выше {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-critical\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
+      summary: >
+        Load average на {{ $labels.node }} слишком велик.
