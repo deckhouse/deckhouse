@@ -1,3 +1,4 @@
+---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
@@ -6,10 +7,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: heapster
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: heapster
+{{ include "helm_lib_module_labels" (list . (dict "app" "heapster")) | indent 2 }}
 spec:
   minAvailable: 0
   selector:
