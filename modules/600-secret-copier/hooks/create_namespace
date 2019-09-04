@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  for namespace in $(hook::context_jq -r '.[] | select(.resourceName == "default" | not ) | .resourceName');
+  for namespace in $(hook::context_jq -r '.[] | select((.resourceName == "default" | not ) and .status.phase == "Active") | .resourceName');
   do
     if ! $(kubectl get namespace $namespace > /dev/null 2> /dev/null) ; then
       continue
