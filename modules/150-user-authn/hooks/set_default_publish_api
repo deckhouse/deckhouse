@@ -7,8 +7,8 @@ function __config__() {
 }
 
 function __main__() {
-  if ! values::has userAuthn.publishApi ; then
-    values::set userAuthn.publishApi "false"
+  if ! values::has userAuthn.publishAPI ; then
+    values::set userAuthn.publishAPI "false"
   fi
 }
 

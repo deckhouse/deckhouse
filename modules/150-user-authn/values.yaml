@@ -1,1 +1,2 @@
-userAuthn: {}
+userAuthn:
+  internal: {}

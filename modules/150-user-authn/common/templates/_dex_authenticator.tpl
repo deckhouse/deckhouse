@@ -26,10 +26,7 @@ kind: ConfigMap
 metadata:
   name: {{ $chart_name}}-kubernetes-dex-client-app-redirect-uris
   namespace: kube-user-authn
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 data:
   {{ $chart_name }}: {{ include "helm_lib_module_uri_scheme" $context }}://{{ $domain }}/dex-authenticator/callback
 
@@ -40,10 +37,7 @@ kind: Secret
 metadata:
   name: {{ $chart_name }}-dex-client-app
   namespace: kube-user-authn
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 data:
   config.yaml: |
     {{ include "dex-authenticator-config" (list $context $config $chart_name $domain) | b64enc }}
@@ -54,11 +48,7 @@ kind: Secret
 metadata:
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
-  app: dex-authenticator
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 data:
   client-secret: {{ $config.dexSecret | b64enc }}
   cookie-secret: {{ $config.cookieSecret | b64enc }}
@@ -68,27 +58,21 @@ kind: Secret
 metadata:
   name: dex-authenticator-tls
   namespace: kube-{{ $chart_name }}
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 type: kubernetes.io/tls
 data:
   tls.crt: {{ $config.pem | b64enc }}
   tls.key: {{ $config.key | b64enc }}
   ca.crt: {{ $config.ca | b64enc }}
 
-  {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
+  {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -106,10 +90,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0 ) }}
   selector:
@@ -121,10 +102,7 @@ kind: Deployment
 metadata:
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
   selector:
@@ -215,10 +193,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   rules:
   - host: {{ $domain }}
@@ -238,12 +213,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    heritage: antiopa
-    module: {{ $chart_name }}
-    app: dex-authenticator
   name: dex-authenticator
   namespace: kube-{{ $chart_name }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   ports:
   - name: http

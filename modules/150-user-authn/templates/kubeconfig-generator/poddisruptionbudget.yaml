@@ -7,10 +7,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: kubeconfig-generator
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: kubeconfig-generator
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:

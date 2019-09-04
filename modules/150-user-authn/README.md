@@ -86,11 +86,11 @@ data:
     * `groupsDelim` — если SAML провайдер возвращает список групп юзеров одной строкой, то в данном параметре необходимо указать символ, который будет разделять список групп пользователя;
       * К примеру: `","`.
     * `nameIDPolicyFormat` — данный параметр отвечает за формат идентификатора, который будет отдавать провайдерв. Возможные значения: `EmailAddress, Unspecified, x509SubjectName, Persistent, Transistent`.
-* `publishApi` — если выставить данный параметр в `true`, то в кластере будет создан ingress в default namespace, который выставляет Kubernetes API наружу, через ingress (в `kubeconfigGenerator` добавлять ничего не нужно, все будет настроено автоматически).
+* `publishAPI` — если выставить данный параметр в `true`, то в кластере будет создан ingress в default namespace, который выставляет Kubernetes API наружу, через ingress (в `kubeconfigGenerator` добавлять ничего не нужно, все будет настроено автоматически).
 * `users` — данный параметр позволяет завести постоянных пользователей для логина (массив таких пользователей). В качестве ключа указывается email-адрес пользователя, а в качестве значения данного ключа - пароль. Если значеинем пароля будет пустая строка `""`, то пароль будет сгенерирован автоматически;
 * `kubeconfigGenerator` — массив, в котором указываются дополнительные возможные способы доступа к API. Это может быть полезно, в случае если вы не хотите предоставить доступ к API-кластера через ingress, а хотите предоставить доступ другими способами (например, с бастион-хоста или через OpenVPN).
   * `id` — имя способа доступа к API-серверу (без пробелов, маленькими буквами);
-  * `masterUri` — адрес API-сервера;
+  * `masterURI` — адрес API-сервера;
     * Если вы планируете использовать TCP прокси, то для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера. Например, в случае, если у вас API-сервера'а слушают на трех разных адресах (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а ходить к API-серверу клиент будет, через TCP-балансер (пусть будет `192.168.0.15`), то вам необходимо перегенерировать сертификаты для API-серверов:
       * отредактировать `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config` добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
       * сохранить получившийся конфиг: `kubeadm config view > kubeadmconf.yaml`;
@@ -134,15 +134,15 @@ data:
   userAuthn: |
     providers:
     - id: github
-      name: Github Asidorov
+      name: Github Company
       type: Github
       github:
         clientID: 7d70961e35f46d220784b8
         clientSecret: db22a757102403199cza4d568404f67548b6f20a3
         orgs:
-        - name: asidorovj-test
+        - name: devops-company
           teams:
-          - bro
+          - devops
     - id: gitlab-fox
       name: Flant Gitlab
       type: Gitlab
@@ -161,9 +161,9 @@ data:
         ssoURL: https://flant.okta.com/app/flant_dextest_1/ex1kmljf1v09zEq6gxsHU0x7/sso/saml
     kubeconfigGenerator:
       - id: direct
-        masterUri: https://159.89.5.247:6443
+        masterURI: https://159.89.5.247:6443
         description: "Direct access to kubernetes API"
-    publishApi: true
+    publishAPI: true
 ```
 
 ### Настройка kube-apiserver
