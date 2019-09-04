@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  log_level=$(values::get --required antiopa.logLevel)
+  log_level=$(values::get --required deckhouse.logLevel)
 
   if [[ "$log_level" != "Debug" && "$log_level" != "Info" && "$log_level" != "Error" ]] ; then
     >&2 echo "Bad antiopa.logLevel value \"$log_level\", should be Debug, Info or Error."

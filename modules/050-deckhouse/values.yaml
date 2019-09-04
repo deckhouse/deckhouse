@@ -1,0 +1,3 @@
+deckhouseEnabled: true
+deckhouse:
+  logLevel: Info
