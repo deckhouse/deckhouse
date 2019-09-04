@@ -1,14 +1,11 @@
-{{- if and (or (.Values.userAuthn.publishApi) (.Values.userAuthn.kubeconfigGenerator)) (.Values.global.enabledModules | has "cert-manager") }}
+{{- if and (or (.Values.userAuthn.publishAPI) (.Values.userAuthn.kubeconfigGenerator)) (.Values.global.enabledModules | has "cert-manager") }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Issuer
 metadata:
   name: kubernetes-api
   namespace: default
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: kubeconfig-generator
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
 spec:
   selfSigned: {}
 {{- end }}

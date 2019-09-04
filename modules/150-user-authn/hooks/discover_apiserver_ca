@@ -8,7 +8,7 @@ function __config__() {
 
 function __main__() {
   kubernetes_ca_for_kubeconfig_generator=$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
-  values::set userAuthn.kubernetesCa "$kubernetes_ca_for_kubeconfig_generator"
+  values::set userAuthn.internal.kubernetesCA "$kubernetes_ca_for_kubeconfig_generator"
 }
 
 hook::run $@

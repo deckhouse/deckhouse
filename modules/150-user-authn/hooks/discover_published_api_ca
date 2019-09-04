@@ -25,10 +25,10 @@ function __config__() {
 }
 
 function __main__() {
-  if values::is_true userAuthn.publishApi ; then
+  if values::is_true userAuthn.publishAPI ; then
     if kubectl -n default get secret kubernetes-tls > /dev/null 2> /dev/null ; then
       published_api_ca=$(kubectl -n default get secret kubernetes-tls -o json | jq '.data."ca.crt"' -r | base64 -d)
-      values::set userAuthn.publishedApiCa "$published_api_ca"
+      values::set userAuthn.internal.publishedAPICA "$published_api_ca"
     fi
   fi
 }

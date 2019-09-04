@@ -1,4 +1,4 @@
-{{- if .Values.userAuthn.publishApi }}
+{{- if .Values.userAuthn.publishAPI }}
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -9,9 +9,7 @@ metadata:
     certmanager.k8s.io/issuer: kubernetes-api
   name: kubernetes-api
   namespace: default
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
 spec:
   tls:
   - hosts:
