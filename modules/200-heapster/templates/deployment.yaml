@@ -1,14 +1,11 @@
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: heapster
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: heapster
+{{ include "helm_lib_module_labels" (list . (dict "app" "heapster")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -23,9 +20,7 @@ kind: Deployment
 metadata:
   name: heapster
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   replicas: 1
   selector:
@@ -43,7 +38,7 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       serviceAccountName: heapster
       imagePullSecrets:
-      - name: heapster-antiopa-registry
+      - name: antiopa-registry
       containers:
         - image: {{ $.Values.global.modulesImages.registry }}/heapster/heapster-amd64:{{ $.Values.global.modulesImages.tags.heapster.heapsterAmd64 }}
           name: heapster
