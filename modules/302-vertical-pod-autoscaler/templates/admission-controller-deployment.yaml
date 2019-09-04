@@ -40,6 +40,13 @@ metadata:
     module: {{ $.Chart.Name }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: {{ div (.Values.global.discovery.clusterMasterCount | int) 2 | default 1 }}
+{{- end }}
   selector:
     matchLabels:
       app: vpa-admission-controller
