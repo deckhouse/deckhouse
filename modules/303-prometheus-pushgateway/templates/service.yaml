@@ -5,11 +5,7 @@ kind: Service
 metadata:
   name: {{ $instance }}
   namespace: kube-{{ $.Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: {{ $instance }}
-    prometheus-target: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" $instance "prometheus-target" "prometheus-pushgateway")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None
