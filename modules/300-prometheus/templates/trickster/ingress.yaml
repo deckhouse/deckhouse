@@ -31,11 +31,11 @@ spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
-    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     secretName: ingress-tls
   {{- end }}
   rules:
-  - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     http:
       paths:
       - path: /trickster(/|$)(.*)

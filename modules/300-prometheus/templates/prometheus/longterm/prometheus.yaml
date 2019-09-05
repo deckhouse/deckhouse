@@ -88,7 +88,7 @@ spec:
   scrapeInterval: 5m
   evaluationInterval: 5m
 {{- if .Values.global.modules.publicDomainTemplate }}
-  externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "prometheus") }}/prometheus/longterm/
+  externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/longterm/
 {{- end }}
   securityContext:
     fsGroup: 2000

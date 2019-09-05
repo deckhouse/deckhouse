@@ -2,7 +2,7 @@
 
   {{- $context := . }}
   {{- $config := .Values.prometheus.dexAuthenticator }}
-  {{- $domain := (include "helm_lib_module_public_domain" (list . "prometheus")) }}
+  {{- $domain := (include "helm_lib_module_public_domain" (list . "grafana")) }}
   {{- $chart_name := .Chart.Name }}
   {{- $use_kubernetes_dex_client_app := false }}
   {{- $set_authorization_header := false }}
