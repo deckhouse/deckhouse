@@ -1,8 +1,10 @@
+---
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: descheduler
-  namespace: kube-descheduler
+  namespace: d8-descheduler
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   schedule: "*/15 * * * *"
   concurrencyPolicy: Forbid
@@ -17,7 +19,7 @@ spec:
           restartPolicy: Never
           serviceAccountName: descheduler
           imagePullSecrets:
-          - name: antiopa-registry
+          - name: deckhouse-registry
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 10 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 10 }}
           {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}

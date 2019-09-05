@@ -2,11 +2,9 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kube-descheduler:descheduler
-  namespace: kube-descheduler
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+  name: d8-descheduler:descheduler
+  namespace: d8-descheduler
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["nodes"]
@@ -22,24 +20,20 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: descheduler
-  namespace: kube-descheduler
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+  namespace: d8-descheduler
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kube-descheduler:descheduler
-  namespace: kube-descheduler
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+  name: d8-descheduler:descheduler
+  namespace: d8-descheduler
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kube-descheduler:descheduler
+  name: d8-descheduler:descheduler
 subjects:
   - name: descheduler
     kind: ServiceAccount
-    namespace: kube-descheduler
+    namespace: d8-descheduler
