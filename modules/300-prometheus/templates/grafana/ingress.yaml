@@ -21,6 +21,9 @@ metadata:
 {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($host = '{{ include "helm_lib_module_public_domain" (list . "prometheus") }}' ) {
+        rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}$request_uri permanent;
+      }
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
@@ -30,17 +33,25 @@ spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     secretName: ingress-tls
   {{- end }}
   rules:
-  - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     http:
       paths:
       - path: /
         backend:
           serviceName: grafana
           servicePort: https
+  - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+    http:
+      paths:
+        - path: /
+          backend:
+            serviceName: grafana
+            servicePort: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
@@ -55,12 +66,14 @@ metadata:
 spec:
   secretName: ingress-tls
   dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
   - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
   acme:
     config:
     - http01:
         ingressClass: {{ include "helm_lib_module_ingress_class" . | quote }}
       domains:
+      - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
       - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}

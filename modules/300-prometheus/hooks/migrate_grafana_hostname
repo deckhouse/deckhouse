@@ -1,0 +1,26 @@
+#!/bin/bash
+
+### Миграция 2019-09-03: https://github.com/deckhouse/deckhouse/merge_requests/1063
+#
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции.
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  # Проверяем, для нужного ли домена выписан сертификат
+  CHECK_INGRESS_TLS=$(kubectl -n kube-prometheus get secrets ingress-tls -ojson | jq -r '.metadata.annotations."certmanager.k8s.io/alt-names"')
+  if [[ $CHECK_INGRESS_TLS == "null" ]]; then
+     # У сертификата нет аннотации CertManager, ничего с ним не делаем
+     exit 0
+  fi
+  if [[ -z $(echo $CHECK_INGRESS_TLS | grep grafana) ]]; then
+    # Удаляем сертификат, чтобы снова его перевыпустить
+    kubectl -n kube-prometheus delete secrets ingress-tls
+  fi
+}
+
+hook::run $@
