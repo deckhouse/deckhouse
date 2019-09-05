@@ -40,7 +40,7 @@ spec:
       priorityClassName: cluster-low
       {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: dashboard
         image: {{ $.Values.global.modulesImages.registry }}/dashboard/kubernetes-dashboard-amd64:{{ $.Values.global.modulesImages.tags.dashboard.kubernetesDashboardAmd64 }}

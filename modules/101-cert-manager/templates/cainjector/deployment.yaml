@@ -57,7 +57,7 @@ spec:
       tolerations:
       - operator: Exists
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
         - name: cainjector
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-cainjector:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}

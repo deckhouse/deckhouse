@@ -40,7 +40,7 @@ spec:
       priorityClassName: cluster-low
       {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
         - name: cert-manager
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-controller:{{ $.Values.global.modulesImages.tags.certManager.certManagerController }}

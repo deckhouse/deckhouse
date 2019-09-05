@@ -116,7 +116,7 @@ spec:
   {{- include "helm_lib_node_selector" (tuple $context "system") | indent 6 }}
   {{- include "helm_lib_tolerations" (tuple $context "system") | indent 6 }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
     {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
     {{- end }}
