@@ -24,7 +24,9 @@ function __main__() {
         if [[ $resource_name == *-rwr ]]; then
           continue
         fi
-        kubectl -n "$resource_namespace" delete ingress "${resource_name}-rwr" 2>/dev/null 1>&2 || true
+        if ! kubectl -n "$resource_namespace" get ingress "${resource_name}" 2>/dev/null 1>&2; then
+          kubectl -n "$resource_namespace" delete ingress "${resource_name}-rwr" 2>/dev/null 1>&2 || true
+        fi
       done
     done
   fi
