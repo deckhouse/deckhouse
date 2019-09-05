@@ -206,9 +206,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: user-authz:user
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 {{- include "user_authz_common_rules" "User" }}
 {{- include "user_authz_user_rules" . }}
@@ -217,9 +215,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: user-authz:master
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 {{- include "user_authz_common_rules" "Master" }}
 {{- include "user_authz_user_rules" . }}
@@ -229,9 +225,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: user-authz:deploy
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 {{- include "user_authz_common_rules" "Deploy" }}
 {{- include "user_authz_user_rules" . }}
@@ -242,9 +236,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: user-authz:admin
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 {{- include "user_authz_common_rules" "Admin" }}
 {{- include "user_authz_user_rules" . }}

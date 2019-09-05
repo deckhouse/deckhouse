@@ -1,16 +1,14 @@
 {{- if .Values.userAuthz.enableMultiTenancy }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: user-authz-webhook
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: user-authz-webhook
+{{ include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | indent 2 }}
 data:
   config.json: |
-    { "crds": {{ .Values.userAuthz.crds | toJson}} } 
+    { "crds": {{ .Values.userAuthz.crds | toJson}} }
 {{- else }}
   {{- range $crd := .Values.userAuthz.crds }}
     {{- if hasKey $crd.spec "allowAccessToSystemNamespaces" }}

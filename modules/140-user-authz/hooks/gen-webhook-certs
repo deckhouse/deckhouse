@@ -10,7 +10,7 @@ function __config__() {
 }
 
 function __main__() {
-  if values::is_true userAuthz.enableMultiTenancy && ! values::has userAuthz.webhookCa; then
+  if values::is_true userAuthz.enableMultiTenancy && ! values::has userAuthz.internal.webhookCA; then
     if ! kubectl -n kube-system get secret user-authz-webhook > /dev/null 2> /dev/null ; then
       ca=$(jo CN=user-authz-webhook key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
       ca_crt=$(echo "$ca" | jq .cert -r)
@@ -28,9 +28,9 @@ function __main__() {
       webhook_server_key=$(echo "$cert" | jq -r '.data."webhook-server.key"' | base64 -d)
     fi
 
-    values::set userAuthz.webhookCa "$ca_crt"
-    values::set userAuthz.webhookServerCrt "$webhook_server_crt"
-    values::set userAuthz.webhookServerKey "$webhook_server_key"
+    values::set userAuthz.internal.webhookCA "$ca_crt"
+    values::set userAuthz.internal.webhookServerCrt "$webhook_server_crt"
+    values::set userAuthz.internal.webhookServerKey "$webhook_server_key"
   fi
 }
 

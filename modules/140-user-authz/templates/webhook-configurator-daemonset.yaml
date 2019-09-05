@@ -1,14 +1,12 @@
 {{- if not .Values.userAuthz.disableWebhookConfigurator }}
-  {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: user-authz-webhook-configurator
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook-configurator")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,12 +19,9 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: user-authz-webhook
   name: user-authz-webhook-configurator
   namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook-configurator")) | indent 2 }}
 spec:
   selector:
     matchLabels:
@@ -45,7 +40,7 @@ spec:
       tolerations:
       - operator: Exists
       imagePullSecrets:
-      - name: {{ $.Chart.Name }}-antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: configurator
         image: {{ $.Values.global.modulesImages.registry }}/user-authz/webhook-configurator:{{ $.Values.global.modulesImages.tags.userAuthz.webhookConfigurator }}
