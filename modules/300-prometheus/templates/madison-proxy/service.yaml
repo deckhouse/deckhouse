@@ -1,13 +1,11 @@
 {{- if hasKey .Values.prometheus "madisonAuthKey" }}
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: madison-proxy
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: madison-proxy
+{{ include "helm_lib_module_labels" (list . (dict "app" "madison-proxy")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None

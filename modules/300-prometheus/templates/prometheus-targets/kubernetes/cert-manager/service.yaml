@@ -1,13 +1,11 @@
 {{- if (.Values.global.enabledModules | has "cert-manager") }}
+---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: kube-cert-manager
   name: kube-prometheus-discovery-of-cert-manager
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "prometheus-target" "cert-manager")) | indent 2 }}
 spec:
   selector:
     app: cert-manager

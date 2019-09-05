@@ -1,13 +1,11 @@
 {{- if and (not (eq .Values.global.discovery.clusterType "ACS")) (semverCompare "<1.13" .Values.global.discovery.clusterVersion) }}
+---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: kube-system
   name: kube-prometheus-discovery-of-kube-dns
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: kube-dns
+{{ include "helm_lib_module_labels" (list . (dict "prometheus-target" "kube-dns")) | indent 2 }}
 spec:
   selector:
     k8s-app: kube-dns

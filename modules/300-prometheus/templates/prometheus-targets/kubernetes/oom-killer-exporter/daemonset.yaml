@@ -1,14 +1,11 @@
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: oom-killer-exporter
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: oom-killer-exporter
+{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -33,10 +30,7 @@ kind: DaemonSet
 metadata:
   name: oom-killer-exporter
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: oom-killer-exporter
+{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter")) | indent 2 }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -53,7 +47,7 @@ spec:
       priorityClassName: cluster-medium
       {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: oom-killer-exporter
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/kubernetes-oomkill-exporter:{{ $.Values.global.modulesImages.tags.prometheus.kubernetesOomkillExporter }}

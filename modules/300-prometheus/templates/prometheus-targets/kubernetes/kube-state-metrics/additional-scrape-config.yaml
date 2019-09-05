@@ -41,11 +41,7 @@ kind: Secret
 metadata:
   name: prometheus-main-additional-configs-kube-state-metrics
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: kube-state-metrics
-    additional-configs-for-prometheus: main
+{{ include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "additional-configs-for-prometheus" "main")) | indent 2 }}
 data:
   scrapes.yaml: |
     {{ include "additional-scrape-config" . | b64enc }}

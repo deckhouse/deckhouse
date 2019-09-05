@@ -1,13 +1,11 @@
 {{- if and (not (eq .Values.global.discovery.clusterType "ACS")) (semverCompare "<1.13" .Values.global.discovery.clusterVersion) }}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: kube-dns
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus: main
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   endpoints:

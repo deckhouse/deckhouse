@@ -1,9 +1,8 @@
+---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: kube-prometheus
   annotations:
     extended-monitoring.flant.com/enabled: ""
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}

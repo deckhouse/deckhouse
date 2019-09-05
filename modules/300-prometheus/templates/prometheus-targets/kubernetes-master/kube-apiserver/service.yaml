@@ -1,12 +1,10 @@
+---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: kube-system
   name: kube-prometheus-discovery-of-kube-apiserver
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: kube-apiserver
+{{ include "helm_lib_module_labels" (list . (dict "prometheus-target" "kube-apiserver")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None

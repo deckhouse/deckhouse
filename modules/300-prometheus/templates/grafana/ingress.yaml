@@ -5,10 +5,7 @@ kind: Ingress
 metadata:
   name: grafana
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: grafana
+{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
@@ -59,10 +56,7 @@ kind: Certificate
 metadata:
   name: grafana
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: grafana
+{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
 spec:
   secretName: ingress-tls
   dnsNames:

@@ -1,14 +1,11 @@
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: grafana
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: grafana
+{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -23,10 +20,7 @@ kind: StatefulSet
 metadata:
   name: grafana
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: grafana
+{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
 spec:
   # SQLite!!!
   replicas: 1
@@ -51,7 +45,7 @@ spec:
       priorityClassName: cluster-medium
       {{- end }}
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: grafana
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}

@@ -7,10 +7,7 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $context.Chart.Name }}
-    app: grafana
+{{ include "helm_lib_module_labels" (list $context (dict "app" "grafana")) | indent 2 }}
 data:
 {{ ($context.Files.Glob (print "grafana-dashboards/" $folder "/*.json")).AsConfig | indent 2 }}
 {{- end }}

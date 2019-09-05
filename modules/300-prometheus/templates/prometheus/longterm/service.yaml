@@ -1,14 +1,10 @@
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: prometheus-longterm
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: prometheus
-    prometheus: longterm
-    prometheus-target: prometheus
+{{ include "helm_lib_module_labels" (list . (dict "app" "prometheus" "prometheus" "longterm" "prometheus-target" "prometheus")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None

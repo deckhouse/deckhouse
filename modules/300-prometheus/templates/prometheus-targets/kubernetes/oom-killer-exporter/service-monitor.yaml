@@ -1,13 +1,10 @@
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: oom-killer-exporter
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: oom-killer-exporter
-    prometheus: main
+{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter" "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   selector:
