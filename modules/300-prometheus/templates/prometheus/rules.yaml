@@ -5,12 +5,7 @@ kind: PrometheusRule
 metadata:
   name: {{ . }}
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: prometheus
-    prometheus: main
-    component: rules
+{{ include "helm_lib_module_labels" (list $ (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | indent 2 }}
 spec:
   groups:
   {{- $root := $ }}
@@ -24,12 +19,7 @@ kind: PrometheusRule
 metadata:
   name: docker-version
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: prometheus
-    prometheus: main
-    component: rules
+{{ include "helm_lib_module_labels" (list . (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | indent 2 }}
 spec:
   groups:
   - name: docker.version

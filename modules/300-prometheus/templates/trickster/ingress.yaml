@@ -5,10 +5,7 @@ kind: Ingress
 metadata:
   name: trickster
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: trickster
+{{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}

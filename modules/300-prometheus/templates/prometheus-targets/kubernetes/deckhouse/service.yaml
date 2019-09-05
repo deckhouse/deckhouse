@@ -1,12 +1,10 @@
+---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: antiopa
-  name: kube-prometheus-discovery-of-antiopa
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: antiopa
+  name: kube-prometheus-discovery-of-deckhouse
+{{ include "helm_lib_module_labels" (list . (dict "prometheus-target" "deckhouse")) | indent 2 }}
 spec:
   selector:
     service: antiopa

@@ -1,13 +1,10 @@
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: oom-killer-exporter
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: oom-killer-exporter
-    prometheus-target: oom-killer-exporter
+{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter" "prometheus-target" "oom-killer-exporter")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None
