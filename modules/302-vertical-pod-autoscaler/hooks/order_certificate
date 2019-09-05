@@ -37,10 +37,10 @@ function __main__() {
     serverKey=$(echo $cert | jq '.data."serverKey.pem"' -r | base64 -d)
   fi
 
-  values::set verticalPodAutoscaler.caCert "$caCert"
-  values::set verticalPodAutoscaler.caKey "$caKey"
-  values::set verticalPodAutoscaler.serverCert "$serverCert"
-  values::set verticalPodAutoscaler.serverKey "$serverKey"
+  values::set verticalPodAutoscaler.internal.CACert "$caCert"
+  values::set verticalPodAutoscaler.internal.CAKey "$caKey"
+  values::set verticalPodAutoscaler.internal.serverCert "$serverCert"
+  values::set verticalPodAutoscaler.internal.serverKey "$serverKey"
 }
 
 hook::run $@

@@ -1,12 +1,10 @@
+---
 kind: Service
 apiVersion: v1
 metadata:
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: vpa-exporter
   name: vpa-exporter
   namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter" "prometheus-target" "vpa-exporter")) | indent 2 }}
 spec:
   ports:
   - name: http-metrics

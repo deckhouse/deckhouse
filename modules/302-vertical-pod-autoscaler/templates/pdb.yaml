@@ -6,10 +6,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: vpa-admission-controller
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: vpa-admission-controller
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
 spec:
   minAvailable: 0
   selector:
@@ -24,10 +21,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: vpa-recommender
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: vpa-recommender
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-recommender")) | indent 2 }}
 spec:
   minAvailable: 0
   selector:
@@ -42,10 +36,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: vpa-updater
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: vpa-updater
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | indent 2 }}
 spec:
   minAvailable: 0
   selector:

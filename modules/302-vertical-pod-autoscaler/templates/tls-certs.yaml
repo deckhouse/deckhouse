@@ -5,11 +5,9 @@ type: Opaque
 metadata:
   name: vpa-tls-certs
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 data:
-  caCert.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.caCert | b64enc }}
-  caKey.pem:  {{ printf "%s\n" .Values.verticalPodAutoscaler.caKey | b64enc }}
-  serverCert.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.serverCert | b64enc }}
-  serverKey.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.serverKey | b64enc }}
+  caCert.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.internal.CACert | b64enc }}
+  caKey.pem:  {{ printf "%s\n" .Values.verticalPodAutoscaler.internal.CAKey | b64enc }}
+  serverCert.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.internal.serverCert | b64enc }}
+  serverKey.pem: {{ printf "%s\n" .Values.verticalPodAutoscaler.internal.serverKey | b64enc }}

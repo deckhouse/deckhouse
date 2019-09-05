@@ -3,9 +3,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: vertical-pod-autoscaler:exporter
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter")) | indent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -51,17 +49,13 @@ kind: ServiceAccount
 metadata:
   name: vpa-exporter
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter")) | indent 2 }}
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: vertical-pod-autoscaler:exporter
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter")) | indent 2 }}
 subjects:
 - kind: ServiceAccount
   name: vpa-exporter

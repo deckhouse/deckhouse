@@ -4,9 +4,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: vpa-recommender
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-recommender")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -26,18 +24,14 @@ kind: ServiceAccount
 metadata:
   name: vpa-recommender
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-recommender")) | indent 2 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vpa-recommender
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-recommender")) | indent 2 }}
 spec:
   replicas: 1
   selector:
@@ -55,7 +49,7 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       serviceAccountName: vpa-recommender
       imagePullSecrets:
-      - name: vertical-pod-autoscaler-antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: recommender
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/recommender:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.recommender }}
