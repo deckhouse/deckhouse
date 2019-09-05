@@ -8,10 +8,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: default-http-backend
   namespace: {{ include "helper.namespace" . }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: default-http-backend
+{{ include "helm_lib_module_labels" (list $ (dict "app" "default-http-backend")) | indent 2 }}
 spec:
   minAvailable: 0
   selector:

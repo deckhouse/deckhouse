@@ -14,10 +14,7 @@ metadata:
   name: nginx-ingress-direct-fallback-{{ $context.name }}
       {{- end }}
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus: main
+{{ include "helm_lib_module_labels" (list $ (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   endpoints:
@@ -50,10 +47,7 @@ kind: Service
 metadata:
   name: kube-prometheus-discovery-of-direct-fallback
   namespace: {{ include "helper.namespace" $context }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: nginx-ingress-direct-fallback
+{{ include "helm_lib_module_labels" (list $ (dict "prometheus-target" "nginx-ingress-direct-fallback")) | indent 2 }}
 spec:
   selector:
     app: direct-fallback

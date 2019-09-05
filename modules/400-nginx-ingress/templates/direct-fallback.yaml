@@ -10,10 +10,7 @@ kind: Service
 metadata:
   name: nginx-for-direct-fallback
   namespace: {{ include "helper.namespace" $context }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: direct-fallback
+{{ include "helm_lib_module_labels" (list $ (dict "app" "direct-fallback")) | indent 2 }}
 spec:
   ports:
   - name: http-proxy
@@ -24,17 +21,14 @@ spec:
     protocol: TCP
   selector:
     app: nginx-for-direct-fallback
-    {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
+    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: direct-fallback
   namespace: {{ include "helper.namespace" $context }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: direct-fallback
+{{ include "helm_lib_module_labels" (list $ (dict "app" "direct-fallback")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -49,11 +43,7 @@ kind: DaemonSet
 metadata:
   name: direct-fallback
   namespace: {{ include "helper.namespace" $context }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    app: direct-fallback
-    nginx-ingress-safe-update: ""
+{{ include "helm_lib_module_labels" (list $ (dict "app" "direct-fallback" "nginx-ingress-safe-update" "")) | indent 2 }}
 spec:
   updateStrategy:
     type: OnDelete
@@ -127,6 +117,6 @@ spec:
             memory: 20Mi
             cpu: 10m
       imagePullSecrets:
-      - name: registry
+      - name: deckhouse-registry
   {{- end }}
 {{- end }}

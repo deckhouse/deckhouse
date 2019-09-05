@@ -13,10 +13,7 @@ metadata:
   name: nginx-ingress-controller-{{ $context.name }}
     {{- end }}
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus: main
+{{ include "helm_lib_module_labels" (list $ (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   endpoints:
@@ -75,10 +72,7 @@ kind: Service
 metadata:
   name: kube-prometheus-discovery-of-nginx
   namespace: {{ include "helper.namespace" $context }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: nginx-ingress-controller
+{{ include "helm_lib_module_labels" (list $ (dict "prometheus-target" "nginx-ingress-controller")) | indent 2 }}
 spec:
   selector:
     app: nginx
@@ -100,10 +94,7 @@ kind: Service
 metadata:
   name: kube-prometheus-discovery-of-nginx-for-direct-fallback
   namespace: {{ include "helper.namespace" $context }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-    prometheus-target: nginx-ingress-controller
+{{ include "helm_lib_module_labels" (list $ (dict "prometheus-target" "nginx-ingress-controller")) | indent 2 }}
 spec:
   selector:
     app: nginx-for-direct-fallback

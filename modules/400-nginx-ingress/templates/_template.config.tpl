@@ -9,10 +9,7 @@ kind: ConfigMap
 metadata:
   name: {{ $name }}
   namespace: {{ include "helper.namespace" . }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ $name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 data:
   proxy-connect-timeout: "2"
   proxy-read-timeout: "3600"
