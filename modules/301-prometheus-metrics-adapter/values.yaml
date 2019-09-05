@@ -1,2 +1,3 @@
 prometheusMetricsAdapterEnabled: true
-prometheusMetricsAdapter: {}
+prometheusMetricsAdapter:
+  internal: {}

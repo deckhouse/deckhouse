@@ -28,9 +28,9 @@ function __config__() {
 function __main__() {
   if kubectl -n kube-prometheus get configmap prometheus-metrics-adapter-custom > /dev/null 2>&1 ; then
     sha=$(kubectl -n kube-prometheus get configmap prometheus-metrics-adapter-custom -o json | jq -r '.data' | sha256sum | awk '{print $1}')
-    values::set prometheusMetricsAdapter.customConfigSHA "${sha}"
+    values::set prometheusMetricsAdapter.internal.customConfigSHA "${sha}"
   else
-    values::unset prometheusMetricsAdapter.customConfigSHA
+    values::unset prometheusMetricsAdapter.internal.customConfigSHA
   fi
 }
 

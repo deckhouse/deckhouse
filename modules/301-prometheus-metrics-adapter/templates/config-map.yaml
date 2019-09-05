@@ -4,9 +4,7 @@ kind: ConfigMap
 metadata:
   name: prometheus-metrics-adapter-config
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 data:
   prometheus-metrics-adapter.yaml: |
     externalRules:
@@ -73,8 +71,8 @@ data:
 {{- end }}
 {{- range (list "pod" "deployment" "daemonset" "statefulset" "ingress" "service" "namespace") }}
   {{- $resource := . }}
-  {{- if hasKey $.Values.prometheusMetricsAdapter.customMetrics $resource }}
-    {{- range  (pluck $resource $.Values.prometheusMetricsAdapter.customMetrics | first | keys | sortAlpha) }}
+  {{- if hasKey $.Values.prometheusMetricsAdapter.internal.customMetrics $resource }}
+    {{- range  (pluck $resource $.Values.prometheusMetricsAdapter.internal.customMetrics | first | keys | sortAlpha) }}
     {{- $metric_name := . }}
     - seriesQuery: 'kube_{{ $resource }}_created'
       resources:
@@ -91,4 +89,4 @@ data:
   {{- end }}
 {{- end }}
   reverse-proxy.json: |
-{{ .Values.prometheusMetricsAdapter.customMetrics | toJson | indent 4}}
+{{ .Values.prometheusMetricsAdapter.internal.customMetrics | toJson | indent 4}}

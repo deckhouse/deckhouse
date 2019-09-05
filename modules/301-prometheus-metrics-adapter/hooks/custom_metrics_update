@@ -72,7 +72,7 @@ function __main__() {
   RESOURCE=$(echo $RESOURCE_KIND | sed -r -e 's/^(Cluster)?(.*)Metric$/\2/')
   RESOURCE=${RESOURCE,,} # lowercase
 
-  WHOLE_METRIC_PATH=prometheusMetricsAdapter.customMetrics.${RESOURCE}.\"${RESOURCE_NAME}\"
+  WHOLE_METRIC_PATH=prometheusMetricsAdapter.internal.customMetrics.${RESOURCE}.\"${RESOURCE_NAME}\"
 
   if ! values::has $WHOLE_METRIC_PATH; then
     values::set $WHOLE_METRIC_PATH '{"namespaced": {}}'
