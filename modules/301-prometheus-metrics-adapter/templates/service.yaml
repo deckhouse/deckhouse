@@ -4,9 +4,7 @@ kind: Service
 metadata:
   name: prometheus-metrics-adapter
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   ports:
   - port: 443

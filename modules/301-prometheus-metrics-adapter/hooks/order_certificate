@@ -27,9 +27,9 @@ function __main__() {
     cert_key=$(echo $cert | jq -r '.data."tls.key"' | base64 -d)
   fi
 
-  values::set prometheusMetricsAdapter.adapterCa "$ca_cert"
-  values::set prometheusMetricsAdapter.adapterPem "$cert_pem"
-  values::set prometheusMetricsAdapter.adapterKey "$cert_key"
+  values::set prometheusMetricsAdapter.internal.adapterCA "$ca_cert"
+  values::set prometheusMetricsAdapter.internal.adapterPem "$cert_pem"
+  values::set prometheusMetricsAdapter.internal.adapterKey "$cert_key"
 }
 
 hook::run $@

@@ -4,11 +4,9 @@ kind: Secret
 metadata:
   name: prometheus-metrics-adapter-cert
   namespace: kube-prometheus
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: kubernetes.io/tls
 data:
-  tls.crt: {{ .Values.prometheusMetricsAdapter.adapterPem | b64enc }}
-  tls.key: {{ .Values.prometheusMetricsAdapter.adapterKey | b64enc }}
-  adapter-ca.crt: {{ .Values.prometheusMetricsAdapter.adapterCa | b64enc }}
+  tls.crt: {{ .Values.prometheusMetricsAdapter.internal.adapterPem | b64enc }}
+  tls.key: {{ .Values.prometheusMetricsAdapter.internal.adapterKey | b64enc }}
+  adapter-ca.crt: {{ .Values.prometheusMetricsAdapter.internal.adapterCA | b64enc }}

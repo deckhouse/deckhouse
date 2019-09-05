@@ -38,7 +38,7 @@ function __main__() {
     CUSTOM_METRICS=$(jq -n --argjson a "$CUSTOM_METRICS" --argjson b "$NAMESPACED_METRICS" --argjson c "$CLUSTER_METRICS" '$a * $b * $c')
   done
 
-  values::set prometheusMetricsAdapter.customMetrics "$CUSTOM_METRICS"
+  values::set prometheusMetricsAdapter.internal.customMetrics "$CUSTOM_METRICS"
 }
 
 hook::run $@
