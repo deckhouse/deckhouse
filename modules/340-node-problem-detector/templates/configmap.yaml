@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 data:
   kernel-monitor.json: |
@@ -108,7 +109,4 @@ kind: ConfigMap
 metadata:
   name: node-problem-detector-config
   namespace: kube-node-problem-detector
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-problem-detector")) | indent 2 }}
