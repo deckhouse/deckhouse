@@ -83,7 +83,7 @@ spec:
 {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.12" .Values.global.discovery.clusterVersion) }}
   - name: kernel.version
     rules:
-    - alert: UbuntuOldKernel
+    - alert: UbuntuUnsupportedKernel
       expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*"})
       for: 20m
       labels:
@@ -92,7 +92,7 @@ spec:
       annotations:
         polk_flant_com_markup_format: markdown
         description: |-
-          Old kernel version of ubuntu OS on {{`{{$labels.node}}`}}.
-          * For Ubuntu 16.04 launch: `apt install linux-image-unsigned-4.18.0-20-generic linux-modules-4.18.0-20-generic linux-modules-extra-4.18.0-20-generic linux-headers-4.18.0-20-generic linux-headers-4.18.0-20`
-          * For Ubuntu 18.04 launch: `apt install -y linux-generic-hwe-18.04 linux-headers-generic-hwe-18.04 linux-image-generic-hwe-18.04`
+          Unsupported kernel version of ubuntu OS on {{`{{$labels.node}}`}}.
+          * For actual supported Ubuntu 16.04 kernel launch: `apt install linux-image-unsigned-4.18.0-20-generic linux-modules-4.18.0-20-generic linux-modules-extra-4.18.0-20-generic linux-headers-4.18.0-20-generic linux-headers-4.18.0-20`
+          * For actual supported Ubuntu 18.04 kernel launch: `apt install -y linux-generic-hwe-18.04 linux-headers-generic-hwe-18.04 linux-image-generic-hwe-18.04`
 {{- end }}
