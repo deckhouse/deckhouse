@@ -9,9 +9,7 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
   {{- end }}
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+  {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 provisioner: vsphere.csi.vmware.com
 parameters:
   parent_type: "Datastore"
