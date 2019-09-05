@@ -27,9 +27,9 @@ function __main__() {
     cert_key=$(echo "$cert" | jq -r '.data."tls.key"' | base64 -d)
   fi
 
-  values::set nginxIngress.ingressConversionWebhookCa "$ca_cert"
-  values::set nginxIngress.ingressConversionWebhookPem "$cert_pem"
-  values::set nginxIngress.ingressConversionWebhookKey "$cert_key"
+  values::set nginxIngress.internal.ingressConversionWebhookCA "$ca_cert"
+  values::set nginxIngress.internal.ingressConversionWebhookPem "$cert_pem"
+  values::set nginxIngress.internal.ingressConversionWebhookKey "$cert_key"
 }
 
 hook::run "$@"

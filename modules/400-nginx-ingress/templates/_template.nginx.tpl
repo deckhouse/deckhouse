@@ -4,17 +4,14 @@
   {{- $hostNetwork := (.hostNetwork | default false) }}
   {{- $updateOnDelete := (.updateOnDelete | default false) }}
   {{- with .context }}
-    {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $name }}
   namespace: {{ include "helper.namespace" . }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ $name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" $name)) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -29,10 +26,7 @@ kind: DaemonSet
 metadata:
   name: {{ $name }}
   namespace: {{ include "helper.namespace" . }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ $name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" $name)) | indent 2 }}
 {{- if $updateOnDelete }}
     nginx-ingress-safe-update: ""
 {{- end }}
@@ -69,7 +63,7 @@ spec:
     {{- end }}
       terminationGracePeriodSeconds: 300
       imagePullSecrets:
-      - name: registry
+      - name: deckhouse-registry
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-high
       {{- end }}

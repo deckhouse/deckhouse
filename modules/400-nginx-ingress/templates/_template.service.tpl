@@ -8,10 +8,7 @@ kind: Service
 metadata:
   name: nginx
   namespace: {{ include "helper.namespace" . }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: nginx
+{{ include "helm_lib_module_labels" (list . (dict "app" "nginx")) | indent 2 }}
 {{- if gt (len $annotations) 0 }}
   annotations:
 {{ $annotations | toYaml | indent 4 }}
