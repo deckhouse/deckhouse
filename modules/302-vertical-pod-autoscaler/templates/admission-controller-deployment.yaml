@@ -4,9 +4,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: vpa-admission-controller
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -26,18 +24,14 @@ kind: ServiceAccount
 metadata:
   name: vpa-admission-controller
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vpa-admission-controller
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
 {{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
@@ -75,7 +69,7 @@ spec:
       - operator: Exists
       serviceAccountName: vpa-admission-controller
       imagePullSecrets:
-      - name: vertical-pod-autoscaler-antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: admission-controller
         image: {{ $.Values.global.modulesImages.registry }}/vertical-pod-autoscaler/admission-controller:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.admissionController }}
@@ -114,9 +108,7 @@ kind: Service
 metadata:
   name: vpa-webhook
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
 spec:
   ports:
     - port: 443
