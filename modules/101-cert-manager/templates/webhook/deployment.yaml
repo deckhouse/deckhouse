@@ -56,7 +56,7 @@ spec:
       tolerations:
       - operator: Exists
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
       - name: webhook
         image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-webhook:{{ $.Values.global.modulesImages.tags.certManager.certManagerWebhook }}
