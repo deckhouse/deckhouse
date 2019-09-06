@@ -38,7 +38,7 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       serviceAccountName: heapster
       imagePullSecrets:
-      - name: antiopa-registry
+      - name: deckhouse-registry
       containers:
         - image: {{ $.Values.global.modulesImages.registry }}/heapster/heapster-amd64:{{ $.Values.global.modulesImages.tags.heapster.heapsterAmd64 }}
           name: heapster
