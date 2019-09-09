@@ -1,16 +1,14 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: kube-okmeter
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: okmeter
+  name: d8-okmeter
+{{ include "helm_lib_module_labels" (list . (dict "app" "okmeter")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: okmeter
+  name: d8-okmeter
 subjects:
 - kind: ServiceAccount
   name: okmeter
-  namespace: kube-okmeter
+  namespace: d8-okmeter

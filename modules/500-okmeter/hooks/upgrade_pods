@@ -10,13 +10,13 @@ function __config__() {
 }
 
 function __main__() {
-  clusterRoleBindingCreationTimestamp=$(kubectl get clusterrolebinding kube-okmeter -o json | jq '.metadata.creationTimestamp' -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
+  clusterRoleBindingCreationTimestamp=$(kubectl get clusterrolebinding d8-okmeter -o json | jq '.metadata.creationTimestamp' -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
   clusterRoleBindingDate=$(date --date="$clusterRoleBindingCreationTimestamp" +%s)
-  for pod in $(kubectl -n kube-okmeter get pod --no-headers | awk '{print $1}'); do
-    podCreationTimestamp=$(kubectl -n kube-okmeter  get pod $pod -o json | jq -r '.metadata.creationTimestamp' | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
+  for pod in $(kubectl -n d8-okmeter get pod --no-headers | awk '{print $1}'); do
+    podCreationTimestamp=$(kubectl -n d8-okmeter  get pod $pod -o json | jq -r '.metadata.creationTimestamp' | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
     podDate=$(date --date="$podCreationTimestamp" +%s)
     if [ $clusterRoleBindingDate -gt $podDate ] ; then
-      kubectl -n kube-okmeter delete pod $pod > /dev/null 
+      kubectl -n d8-okmeter delete pod $pod > /dev/null 
     fi
   done
 }
