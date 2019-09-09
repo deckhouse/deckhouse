@@ -10,9 +10,9 @@ function __main__() {
   system_node_count=$(cluster::count_nodes_by_role "system")
   fltr='.'
 
-  if values::has antiopa.nodeSelector ; then
-    if ! values::is_false antiopa.nodeSelector ; then
-      fltr=$fltr" | .spec.template.spec.nodeSelector = $(values::get --required antiopa.nodeSelector | jq -c .)"
+  if values::has deckhouse.nodeSelector ; then
+    if ! values::is_false deckhouse.nodeSelector ; then
+      fltr=$fltr" | .spec.template.spec.nodeSelector = $(values::get --required deckhouse.nodeSelector | jq -c .)"
     else
       fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
     fi
@@ -22,9 +22,9 @@ function __main__() {
     fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
   fi
 
-  if values::has antiopa.tolerations ; then
-    if ! values::is_false antiopa.tolerations ; then
-      fltr=$fltr" | .spec.template.spec.tolerations = $(values::get --required antiopa.tolerations | jq -c .)"
+  if values::has deckhouse.tolerations ; then
+    if ! values::is_false deckhouse.tolerations ; then
+      fltr=$fltr" | .spec.template.spec.tolerations = $(values::get --required deckhouse.tolerations | jq -c .)"
     else
       fltr=$fltr' | del(.spec.template.spec.tolerations)'
     fi

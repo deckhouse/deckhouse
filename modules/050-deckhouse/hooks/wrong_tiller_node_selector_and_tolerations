@@ -10,18 +10,18 @@ function __main__() {
   system_node_count=$(cluster::count_nodes_by_role "system")
 
   node_selector='null'
-  if values::has antiopa.nodeSelector ; then
-    if ! values::is_false antiopa.nodeSelector ; then
-      node_selector="$(values::get --required antiopa.nodeSelector | jq -c .)"
+  if values::has deckhouse.nodeSelector ; then
+    if ! values::is_false deckhouse.nodeSelector ; then
+      node_selector="$(values::get --required deckhouse.nodeSelector | jq -c .)"
     fi
   elif (( "$system_node_count" > 0 )) ; then
     node_selector='{"node-role.flant.com/system":""}'
   fi
 
   tolerations='null'
-  if values::has antiopa.tolerations ; then
-    if ! values::is_false antiopa.tolerations ; then
-      tolerations="$(values::get --required antiopa.tolerations | jq -c .)"
+  if values::has deckhouse.tolerations ; then
+    if ! values::is_false deckhouse.tolerations ; then
+      tolerations="$(values::get --required deckhouse.tolerations | jq -c .)"
     fi
   elif (( "$system_node_count" > 0 )) ; then
     tolerations='[{"key":"dedicated.flant.com","value":"system"},{"key":"node-role/system"}]'
@@ -34,7 +34,7 @@ function __main__() {
 
   res=$(echo "$filtered_tiller_deploy" | jq --argjson a "$node_selector" --argjson b "$tolerations" '.spec.template.spec.nodeSelector == $a and .spec.template.spec.tolerations == $b')
   if [[ "$res" != "true" ]] ; then
-    # Удаляем tiller, а antiopa уже инициализирует его с правильными значениями при следующем запуске
+    # Удаляем tiller, а deckhouse уже инициализирует его с правильными значениями при следующем запуске
     echo "Tiller has wrong nodeSelector or toleration. Removing tiller and restarting self."
     kubectl -n antiopa delete deploy/tiller-deploy
     kill 1
