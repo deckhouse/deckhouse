@@ -1,12 +1,10 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: istio-galley-configuration
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: galley
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "galley")) | indent 2 }}
 data:
   validatingwebhookconfiguration.yaml: |-    
     apiVersion: admissionregistration.k8s.io/v1beta1
@@ -20,7 +18,7 @@ data:
         clientConfig:
           service:
             name: istio-galley
-            namespace: kube-{{ .Chart.Name }}
+            namespace: d8-{{ .Chart.Name }}
             path: "/admitpilot"
           caBundle: ""
         rules:
@@ -74,7 +72,7 @@ data:
         clientConfig:
           service:
             name: istio-galley
-            namespace: kube-{{ .Chart.Name }}
+            namespace: d8-{{ .Chart.Name }}
             path: "/admitmixer"
           caBundle: ""
         rules:

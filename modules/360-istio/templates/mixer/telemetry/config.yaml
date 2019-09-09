@@ -1,13 +1,11 @@
 {{- if not .Values.istio.disableMixerTelemetry }}
+---
 apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: requestcount
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -40,11 +38,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: requestduration
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -76,11 +71,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: requestsize
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -112,11 +104,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: responsesize
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -148,11 +137,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: tcpbytesent
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -180,11 +166,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: tcpbytereceived
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -212,11 +195,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: tcpconnectionsopened
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -244,11 +224,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
   name: tcpconnectionsclosed
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledTemplate: metric
   params:
@@ -276,11 +253,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: handler
 metadata:
   name: prometheus
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   compiledAdapter: prometheus
   params:
@@ -288,7 +262,7 @@ spec:
       metricsExpiryDuration: "10m"
     metrics:
     - name: requests_total
-      instance_name: requestcount.instance.kube-{{ .Chart.Name }}
+      instance_name: requestcount.instance.d8-{{ .Chart.Name }}
       kind: COUNTER
       label_names:
       - reporter
@@ -312,7 +286,7 @@ spec:
       - permissive_response_policyid
       - connection_security_policy
     - name: request_duration_seconds
-      instance_name: requestduration.instance.kube-{{ .Chart.Name }}
+      instance_name: requestduration.instance.d8-{{ .Chart.Name }}
       kind: DISTRIBUTION
       label_names:
       - reporter
@@ -339,7 +313,7 @@ spec:
         explicit_buckets:
           bounds: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
     - name: request_bytes
-      instance_name: requestsize.instance.kube-{{ .Chart.Name }}
+      instance_name: requestsize.instance.d8-{{ .Chart.Name }}
       kind: DISTRIBUTION
       label_names:
       - reporter
@@ -368,7 +342,7 @@ spec:
           scale: 1
           growthFactor: 10
     - name: response_bytes
-      instance_name: responsesize.instance.kube-{{ .Chart.Name }}
+      instance_name: responsesize.instance.d8-{{ .Chart.Name }}
       kind: DISTRIBUTION
       label_names:
       - reporter
@@ -397,7 +371,7 @@ spec:
           scale: 1
           growthFactor: 10
     - name: tcp_sent_bytes_total
-      instance_name: tcpbytesent.instance.kube-{{ .Chart.Name }}
+      instance_name: tcpbytesent.instance.d8-{{ .Chart.Name }}
       kind: COUNTER
       label_names:
       - reporter
@@ -417,7 +391,7 @@ spec:
       - connection_security_policy
       - response_flags
     - name: tcp_received_bytes_total
-      instance_name: tcpbytereceived.instance.kube-{{ .Chart.Name }}
+      instance_name: tcpbytereceived.instance.d8-{{ .Chart.Name }}
       kind: COUNTER
       label_names:
       - reporter
@@ -437,7 +411,7 @@ spec:
       - connection_security_policy
       - response_flags
     - name: tcp_connections_opened_total
-      instance_name: tcpconnectionsopened.instance.kube-{{ .Chart.Name }}
+      instance_name: tcpconnectionsopened.instance.d8-{{ .Chart.Name }}
       kind: COUNTER
       label_names:
       - reporter
@@ -457,7 +431,7 @@ spec:
       - connection_security_policy
       - response_flags
     - name: tcp_connections_closed_total
-      instance_name: tcpconnectionsclosed.instance.kube-{{ .Chart.Name }}
+      instance_name: tcpconnectionsclosed.instance.d8-{{ .Chart.Name }}
       kind: COUNTER
       label_names:
       - reporter
@@ -481,11 +455,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
   name: promhttp
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   match: (context.protocol == "http" || context.protocol == "grpc") && (match((request.useragent | "-"), "kube-probe*") == false) && (match((request.useragent | "-"), "Prometheus*") == false)
   actions:
@@ -500,11 +471,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
   name: promtcp
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   match: context.protocol == "tcp"
   actions:
@@ -517,11 +485,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
   name: promtcpconnectionopen
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   match: context.protocol == "tcp" && ((connection.event | "na") == "open")
   actions:
@@ -533,11 +498,8 @@ apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
   name: promtcpconnectionclosed
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
   match: context.protocol == "tcp" && ((connection.event | "na") == "close")
   actions:
@@ -549,13 +511,10 @@ apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: istio-telemetry
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry")) | indent 2 }}
 spec:
-  host: istio-telemetry.kube-{{ .Chart.Name }}.svc.{{ .Values.global.discovery.clusterDomain }}
+  host: istio-telemetry.d8-{{ .Chart.Name }}.svc.{{ .Values.global.discovery.clusterDomain }}
   trafficPolicy:
     portLevelSettings:
     - port:

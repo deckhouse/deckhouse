@@ -1,12 +1,10 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: istio
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 data:
   mesh: |-
     # Set the following variable to true to disable policy checks by the Mixer.
@@ -33,7 +31,7 @@ data:
     # Set accessLogEncoding to JSON or TEXT to configure sidecar access log
     accessLogEncoding: 'JSON'
 {{- if not .Values.istio.disableMixerTelemetry }}
-    mixerReportServer: istio-telemetry.kube-{{ .Chart.Name }}.svc.{{ .Values.global.discovery.clusterDomain }}:15004
+    mixerReportServer: istio-telemetry.d8-{{ .Chart.Name }}.svc.{{ .Values.global.discovery.clusterDomain }}:15004
 {{- end }}
 
 
@@ -79,9 +77,9 @@ data:
 
     # The namespace to treat as the administrative root namespace for istio
     # configuration.    
-    rootNamespace: kube-{{ .Chart.Name }}
+    rootNamespace: d8-{{ .Chart.Name }}
     configSources:
-    - address: istio-galley.kube-{{ .Chart.Name }}.svc:9901
+    - address: istio-galley.d8-{{ .Chart.Name }}.svc:9901
       tlsSettings:
         mode: ISTIO_MUTUAL
 
@@ -138,7 +136,7 @@ data:
       controlPlaneAuthPolicy: MUTUAL_TLS
       #
       # Address where istio Pilot service is running
-      discoveryAddress: istio-pilot.kube-{{ .Chart.Name }}:15011
+      discoveryAddress: istio-pilot.d8-{{ .Chart.Name }}:15011
   
   # Configuration file for the mesh networks to be used by the Split Horizon EDS.
   meshNetworks: |-

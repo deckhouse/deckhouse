@@ -1,13 +1,11 @@
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: istio-pilot
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: pilot
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pilot")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,11 +19,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: istio-pilot
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: pilot
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pilot")) | indent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -53,7 +48,7 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       imagePullSecrets:
-        - name: antiopa-registry
+        - name: deckhouse-registry
       containers:
         - name: discovery
           image: {{ .Values.global.modulesImages.registry }}/istio/pilot:{{ $.Values.global.modulesImages.tags.istio.pilot }}

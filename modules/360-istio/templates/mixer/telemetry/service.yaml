@@ -1,17 +1,13 @@
 {{- if not .Values.istio.disableMixerTelemetry }}
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: istio-telemetry
-  namespace: kube-{{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
   annotations:
-   networking.istio.io/exportTo: "*"
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: mixer-telemetry
-    prometheus-target: istio-mixer
-    prometheus-target-telemetry: istio-mixer-telemetry
+    networking.istio.io/exportTo: "*"
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry" "prometheus-target" "istio-mixer" "prometheus-target-telemetry" "istio-mixer-telemetry")) | indent 2 }}
 spec:
   ports:
   - name: grpc-mixer

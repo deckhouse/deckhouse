@@ -1,11 +1,9 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kube-{{ .Chart.Name }}:sidecar-injector
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: sidecar-injector-webhook
+  name: d8-{{ .Chart.Name }}:sidecar-injector
+{{ include "helm_lib_module_labels" (list . (dict "app" "sidecar-injector-webhook")) | indent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]

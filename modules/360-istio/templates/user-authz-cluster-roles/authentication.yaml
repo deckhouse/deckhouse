@@ -4,10 +4,8 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-  name: kube-{{ .Chart.Name }}:user-authz:authentication:user
+  name: d8-{{ .Chart.Name }}:user-authz:authentication:user
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
   - authentication.istio.io
@@ -23,10 +21,8 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Deploy
-  labels:
-    heritage: antiopa
-    module: {{ $.Chart.Name }}
-  name: kube-{{ .Chart.Name }}:user-authz:authentication:deploy
+  name: d8-{{ .Chart.Name }}:user-authz:authentication:deploy
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
   - authentication.istio.io
