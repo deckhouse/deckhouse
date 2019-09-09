@@ -16,7 +16,7 @@ data:
 
 ### Параметры
 
-* `apiUrl` — адрес инсталяции Dynatrace;
+* `apiURL` — адрес инсталяции Dynatrace;
     * Пример параметра для PaaS инсталяции: `https://leb77264.live.dynatrace.com/api`.
 * `skipCertCheck` — если у вас используются самоподписанные сертификаты для api;
     * По-умолчанию `false`.
@@ -48,7 +48,7 @@ dynatraceEnabled: "true"
 dynatrace: |
   apiToken: crM2eyYjvRaqbmz5uC0SRn5
   paasToken: uuaBV1LsSTCOXqgszgDst0n
-  apiUrl: https://leb77264.live.dynatrace.com/api
+  apiURL: https://leb77264.live.dynatrace.com/api
 ```
 
 #### Указана группа хостов для Dynatrace
@@ -58,7 +58,7 @@ dynatraceEnabled: "true"
 dynatrace: |
   apiToken: crM2eyYjvRaqbmz5uC0SRn5
   paasToken: uuaBV1LsSTCOXqgszgDst0n
-  apiUrl: https://leb77264.live.dynatrace.com/api
+  apiURL: https://leb77264.live.dynatrace.com/api
   hostGroups:
   - name: south-eash-hosts
 ```
@@ -69,7 +69,7 @@ dynatraceEnabled: "true"
 dynatrace: |
   apiToken: crM2eyYjvRaqbmz5uC0SRn5
   paasToken: uuaBV1LsSTCOXqgszgDst0n
-  apiUrl: https://leb77264.live.dynatrace.com/api
+  apiURL: https://leb77264.live.dynatrace.com/api
   hostGroups:
   - name: system
     nodeSelector:
