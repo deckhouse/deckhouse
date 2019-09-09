@@ -20,5 +20,5 @@ spec:
       prometheus-target: cert-manager
   namespaceSelector:
     matchNames:
-    - kube-cert-manager
+    - d8-cert-manager
 {{- end }}
