@@ -4,20 +4,14 @@ kind: ServiceAccount
 metadata:
   name: kube-{{ .Chart.Name }}
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
   name: kube-{{ .Chart.Name }}:openvpn
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -32,10 +26,7 @@ kind: RoleBinding
 metadata:
   name: kube-{{ .Chart.Name }}:openvpn
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

@@ -7,10 +7,7 @@ kind: Service
 metadata:
   name: {{ .Chart.Name }}-external
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
   externalTrafficPolicy: Local
   type: LoadBalancer
@@ -21,21 +18,18 @@ spec:
       targetPort: ovpn-tcp
   selector:
     app: {{ .Chart.Name }}
-  {{- else if eq .Values.openvpn.inlet "ExternalIp" }}
+  {{- else if eq .Values.openvpn.inlet "ExternalIP" }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Chart.Name }}-external
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
   type: ClusterIP
   externalIPs:
-  - {{ .Values.openvpn.externalIp }}
+  - {{ .Values.openvpn.externalIP }}
   ports:
   - name: ovpn-tcp
     port: {{ .Values.openvpn.externalPort | default 5416 }}

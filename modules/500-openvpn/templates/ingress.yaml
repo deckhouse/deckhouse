@@ -5,10 +5,7 @@ kind: Ingress
 metadata:
   name: admin
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
@@ -47,10 +44,7 @@ kind: Certificate
 metadata:
   name: admin
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
   secretName: ingress-tls
   dnsNames:
