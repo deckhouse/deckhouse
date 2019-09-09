@@ -8,7 +8,7 @@ import os
 LISTEN_PORT = 4080
 LISTEN_ADDRESS = '127.0.0.1'
 CONFIG_PATH = "/etc/user-authz-webhook/config.json"
-SYSTEM_NAMESPACES = ["antiopa", "kube-.*", "loghouse", "default"]
+SYSTEM_NAMESPACES = ["antiopa", "kube-.*", "d8-.*", "loghouse", "default"]
 
 applied_config_mtime = 0
 dictionary = {}
