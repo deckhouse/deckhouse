@@ -46,7 +46,7 @@ Prometheus
     ```yaml
     scrape_configs:
       # Общие настройки
-    - job_name: kube-prometheus/custom/0    # просто название scrape job'а, показывается в разделе Service Discovery
+    - job_name: d8-prometheus/custom/0    # просто название scrape job'а, показывается в разделе Service Discovery
       scrape_interval: 30s                  # как часто собирать данные
       scrape_timeout: 10s                   # таймаут на запрос
       metrics_path: /metrics                # path, который запрашивать
