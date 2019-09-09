@@ -1,0 +1,92 @@
+{{- range $instance_name, $instance := .Values.keepalived.instances }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: keepalived-{{ $instance_name }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: keepalived-{{ $instance_name }}
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keepalived-{{ $instance_name }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: keepalived-{{ $instance_name }}
+  serviceName: keepalived-{{ $instance_name }}
+  replicas: {{ $instance.replicas }}
+  template:
+    metadata:
+      annotations:
+        checksum/instance-config: {{ $instance | toYaml | sha256sum }}
+      labels:
+        app: keepalived-{{ $instance_name }}
+    spec:
+      hostNetwork: true
+    {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
+    {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: keepalived-{{ $instance_name }}
+            topologyKey: kubernetes.io/hostname
+      nodeSelector:
+{{ $instance.nodeSelector | toYaml | indent 8 }}
+    {{- if $instance.tolerations }}
+      tolerations:
+{{ $instance.tolerations | toYaml | indent 8 }}
+    {{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: init
+        command: ['/prepare-config.py']
+        image: {{ $.Values.global.modulesImages.registry }}/keepalived/keepalived:{{ $.Values.global.modulesImages.tags.keepalived.keepalived }}
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: config
+          mountPath: /etc/keepalived
+        - name: template
+          mountPath: /etc/keepalived-instance-config
+        - name: auth-pass
+          mountPath: /etc/keepalived-instance-secret
+      containers:
+      - name: keepalived
+        command: ['/usr/sbin/keepalived', '-n', '-l']
+        image: {{ $.Values.global.modulesImages.registry }}/keepalived/keepalived:{{ $.Values.global.modulesImages.tags.keepalived.keepalived }}
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        volumeMounts:
+        - name: config
+          mountPath: /etc/keepalived
+      volumes:
+      - name: config
+        emptyDir: {}
+      - name: template
+        configMap:
+          name: keepalived-instance-config-{{ $instance_name }}
+      - name: auth-pass
+        secret:
+          secretName: keepalived-instance-secret-{{ $instance_name }}
+{{- end }}

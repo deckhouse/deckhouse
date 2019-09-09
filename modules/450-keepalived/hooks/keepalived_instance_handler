@@ -1,0 +1,61 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+# Костыль 2019-08-29: пока не разберемся как правильно создавать CRD
+kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
+
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "KeepalivedInstance",
+      "jqFilter": ".spec"
+    },
+    {
+      "kind": "Node",
+      "jqFilter": ".metadata.labels"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  instances=$(kubectl get keepalivedinstance.deckhouse.io -o json | jq -c '[.items[] | {(.metadata.name): .spec}] | reduce .[] as $i ({}; . * $i)')
+  values::set keepalived.instances "$instances"
+
+  isVRRPInstancesUnique=$(jq -n -r --argjson a "${instances}" '
+    $a |
+    ([to_entries[] | .value.vrrpInstances[].id] | length)
+    ==
+    ([to_entries[] | .value.vrrpInstances[].id] | unique | length)
+  ')
+
+  if [[ $isVRRPInstancesUnique != "true" ]]; then
+    echo "KeepalivedInstances handler ERROR: All vrrpInstances[].id in all KeepalivedInstances must be unique cluster-wide."
+    exit 1
+  fi
+
+  nodeSelectors=$(
+    jq -n -r --argjson a "${instances}" '$a | to_entries[] | .key +";"+ ([.value.nodeSelector | to_entries[] | .key+"="+.value] | join(","))'
+  )
+  for i in $nodeSelectors; do
+    IFS=";" read instanceName nodeSelector <<< "$i"
+    replicas=$(kubectl get nodes -l "${nodeSelector}" -o json | jq -r '.items | length')
+    values::set keepalived.instances."${instanceName}".replicas $replicas
+  done
+
+  instancesList=$(jq -n -r --argjson a "${instances}" '$a | to_entries[] | .key')
+  for i in $instancesList; do
+    if authPass=$(kubectl -n d8-keepalived get secret "keepalived-instance-secret-${i}" -o jsonpath='{.data.authPass}' | base64 -d); then
+      values::set keepalived.instances."${i}".authPass "${authPass}"
+    else
+      values::set keepalived.instances."${i}".authPass $(values::generate_password | cut -c -8)
+    fi
+  done
+}
+
+hook::run "$@"
