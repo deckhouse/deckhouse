@@ -1,2 +1,3 @@
 nodeLocalDnsEnabled: true
-nodeLocalDns: {}
+nodeLocalDns:
+  internal: {}
