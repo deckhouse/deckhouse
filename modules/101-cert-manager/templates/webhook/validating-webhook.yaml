@@ -15,7 +15,7 @@ webhooks:
       - key: "name"
         operator: "NotIn"
         values:
-        - kube-cert-manager
+        - d8-cert-manager
     rules:
       - apiGroups:
           - "certmanager.k8s.io"
@@ -42,7 +42,7 @@ webhooks:
       - key: "name"
         operator: "NotIn"
         values:
-        - kube-cert-manager
+        - d8-cert-manager
     rules:
       - apiGroups:
           - "certmanager.k8s.io"
@@ -69,7 +69,7 @@ webhooks:
       - key: "name"
         operator: "NotIn"
         values:
-        - kube-cert-manager
+        - d8-cert-manager
     rules:
       - apiGroups:
           - "certmanager.k8s.io"

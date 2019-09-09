@@ -2,13 +2,13 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: kube-cert-manager:cainjector
+  name: d8-cert-manager:cainjector
 {{ include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kube-cert-manager:cainjector
+  name: d8-cert-manager:cainjector
 subjects:
   - name: cert-manager-cainjector
-    namespace: "kube-cert-manager"
+    namespace: d8-cert-manager
     kind: ServiceAccount

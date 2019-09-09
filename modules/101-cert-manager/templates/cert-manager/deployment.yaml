@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: cert-manager
-  namespace: kube-cert-manager
+  namespace: d8-cert-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
 spec:
   targetRef:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cert-manager
-  namespace: kube-cert-manager
+  namespace: d8-cert-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
 spec:
   replicas: 1
@@ -45,8 +45,8 @@ spec:
         - name: cert-manager
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-controller:{{ $.Values.global.modulesImages.tags.certManager.certManagerController }}
           args:
-          - --cluster-resource-namespace=kube-cert-manager
-          - --leader-election-namespace=kube-cert-manager
+          - --cluster-resource-namespace=d8-cert-manager
+          - --leader-election-namespace=d8-cert-manager
           - --default-issuer-name=letsencrypt
           - --default-issuer-kind=ClusterIssuer
           - --acme-http01-solver-resource-limits-cpu=0

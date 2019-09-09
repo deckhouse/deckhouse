@@ -4,7 +4,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
-  name: kube-{{ .Chart.Name }}:user-authz:user
+  name: d8-{{ .Chart.Name }}:user-authz:user
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
@@ -25,7 +25,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Deploy
-  name: kube-{{ .Chart.Name }}:user-authz:deploy
+  name: d8-{{ .Chart.Name }}:user-authz:deploy
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
@@ -45,7 +45,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Admin
-  name: kube-{{ .Chart.Name }}:user-authz:admin
+  name: d8-{{ .Chart.Name }}:user-authz:admin
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:

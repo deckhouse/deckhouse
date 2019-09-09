@@ -4,12 +4,12 @@ apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
   name: cert-manager-webhook-ca
-  namespace: kube-cert-manager
+  namespace: d8-cert-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
 spec:
   secretName: cert-manager-webhook-ca
   duration: 43800h #5y
   issuerRef:
     name: cert-manager-webhook-selfsign
-  commonName: "ca.webhook.kube-cert-manager"
+  commonName: "ca.webhook.d8-cert-manager"
   isCA: true
