@@ -3,13 +3,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: node-problem-detector
-  namespace: kube-node-problem-detector
+  namespace: d8-node-problem-detector
 {{ include "helm_lib_module_labels" (list . (dict "app" "node-problem-detector")) | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kube-node-problem-detector
+  name: d8-node-problem-detector
 {{ include "helm_lib_module_labels" (list . (dict "app" "node-problem-detector")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -18,4 +18,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: node-problem-detector
-  namespace: kube-node-problem-detector
+  namespace: d8-node-problem-detector

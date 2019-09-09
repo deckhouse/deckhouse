@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: deckhouse-registry
-  namespace: kube-node-problem-detector
+  namespace: d8-node-problem-detector
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: kubernetes.io/dockercfg
 data:
