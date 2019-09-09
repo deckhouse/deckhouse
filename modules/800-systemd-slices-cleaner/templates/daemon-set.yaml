@@ -1,13 +1,12 @@
 {{- if .Values.systemdSlicesCleaner.enableSlicesCleanerDS }}
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $.Chart.Name }}
   namespace: kube-system
-  labels:
-    app: {{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "systemd-slices-cleaner")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -26,10 +25,9 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  labels:
-    app: {{ $.Chart.Name }}
   name: {{ $.Chart.Name }}
   namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "systemd-slices-cleaner")) | indent 2 }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -62,7 +60,7 @@ spec:
       nodeSelector:
         systemd-slices-cleaner.antiopa.flant.com/enabled: "true"
       imagePullSecrets:
-      - name: systemd-slices-cleaner-antiopa-registry
+      - name: deckhouse-registry
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
 {{- end }}
