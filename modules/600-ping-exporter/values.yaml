@@ -1,2 +1,2 @@
-ping-exporterEnabled: true
-ping-exporter: {}
+pingExporterEnabled: true
+pingExporter: {}
