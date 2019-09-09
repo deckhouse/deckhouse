@@ -1,13 +1,11 @@
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -22,10 +20,7 @@ kind: Service
 metadata:
   name: node-local-dns
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    prometheus-target: node-local-dns
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None
@@ -44,10 +39,7 @@ kind: DaemonSet
 metadata:
   name: node-local-dns
   namespace: kube-system
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    k8s-app: node-local-dns
+{{ include "helm_lib_module_labels" (list . (dict "k8s-app" "node-local-dns")) | indent 2 }}
 spec:
   selector:
     matchLabels:
@@ -75,7 +67,7 @@ spec:
         - name: KUBE_CLUSTER_DOMAIN
           value: {{ .Values.global.discovery.clusterDomain }}
         - name: KUBE_DNS_SVC_IP
-          value: {{ .Values.nodeLocalDns.clusterDnsIP }}
+          value: {{ .Values.global.discovery.clusterDNSAddress }}
         - name: MY_POD_IP
           valueFrom:
             fieldRef:
@@ -95,7 +87,7 @@ spec:
         - name: KUBE_CLUSTER_DOMAIN
           value: {{ .Values.global.discovery.clusterDomain }}
         - name: KUBE_DNS_SVC_IP
-          value: {{ .Values.nodeLocalDns.clusterDnsIP }}
+          value: {{ .Values.global.discovery.clusterDNSAddress }}
         - name: MY_POD_IP
           valueFrom:
             fieldRef:
@@ -126,7 +118,7 @@ spec:
         - "/etc/coredns/Corefile"
         env:
         - name: KUBE_DNS_SVC_IP
-          value: {{ .Values.nodeLocalDns.clusterDnsIP }}
+          value: {{ .Values.global.discovery.clusterDNSAddress }}
         resources:
           requests:
             cpu: 25m
@@ -201,4 +193,4 @@ spec:
       - name: config-volume
         emptyDir: {}
       imagePullSecrets:
-      - name: node-local-dns-antiopa-registry
+      - name: deckhouse-registry
