@@ -47,7 +47,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: dex-authenticator
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 data:
   client-secret: {{ $config.dexSecret | b64enc }}
@@ -57,7 +57,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: dex-authenticator-tls
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 type: kubernetes.io/tls
 data:
@@ -71,7 +71,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: dex-authenticator
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   targetRef:
@@ -89,7 +89,7 @@ metadata:
     helm.sh/hook: post-upgrade, post-install
     helm.sh/hook-delete-policy: before-hook-creation
   name: dex-authenticator
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0 ) }}
@@ -101,7 +101,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dex-authenticator
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
@@ -192,7 +192,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
   name: dex-authenticator
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   rules:
@@ -214,7 +214,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: dex-authenticator
-  namespace: kube-{{ $chart_name }}
+  namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   ports:

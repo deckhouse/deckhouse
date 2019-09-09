@@ -9,5 +9,5 @@ global:
   hack:
     namespaces:
       prometheus: kube-prometheus
-      dashboard: kube-dashboard
+      dashboard: d8-dashboard
       openvpn: kube-openvpn
