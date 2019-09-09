@@ -16,7 +16,7 @@ function __config__() {
       ],
       "namespaceSelector": {
         "matchNames": [
-          "kube-user-authn"
+          "d8-user-authn"
         ]
       },
       "jqFilter": ".metadata.name | test(\".-dex-client-app\")"
@@ -27,9 +27,9 @@ EOF
 }
 
 function __main__() {
-  if kubectl -n kube-user-authn get secret -o json | jq '.items[] | select(.metadata.name|test(".-dex-client-app")) | .metadata.name' -e > /dev/null 2>&1 ; then
-    dex_client_apps_names="$(kubectl -n kube-user-authn get secret -o json | jq '.items[] | select(.metadata.name|test(".-dex-client-app")) | .metadata.name' -r)"
-    dex_client_apps_configs_sha256="$(kubectl -n kube-user-authn get secret -o json | jq '.items[] | select(.metadata.name|test(".-dex-client-app")) | .data' | sha256sum | awk '{print $1}')"
+  if kubectl -n d8-user-authn get secret -o json | jq '.items[] | select(.metadata.name|test(".-dex-client-app")) | .metadata.name' -e > /dev/null 2>&1 ; then
+    dex_client_apps_names="$(kubectl -n d8-user-authn get secret -o json | jq '.items[] | select(.metadata.name|test(".-dex-client-app")) | .metadata.name' -r)"
+    dex_client_apps_configs_sha256="$(kubectl -n d8-user-authn get secret -o json | jq '.items[] | select(.metadata.name|test(".-dex-client-app")) | .data' | sha256sum | awk '{print $1}')"
     values::set userAuthn.internal.dexClientAppsNames "$dex_client_apps_names"
     values::set userAuthn.internal.dexClientAppsConfigsSHA256 "$dex_client_apps_configs_sha256"
   else

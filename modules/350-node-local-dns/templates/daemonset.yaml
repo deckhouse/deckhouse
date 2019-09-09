@@ -20,7 +20,7 @@ kind: Service
 metadata:
   name: node-local-dns
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "prometheus-target" "node-local-dns")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None

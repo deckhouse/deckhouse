@@ -4,7 +4,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: kubeconfig-generator
-  namespace: kube-{{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}

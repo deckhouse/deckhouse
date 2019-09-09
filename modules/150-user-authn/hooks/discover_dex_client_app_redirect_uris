@@ -16,7 +16,7 @@ function __config__() {
       ],
       "namespaceSelector": {
         "matchNames": [
-          "kube-user-authn"
+          "d8-user-authn"
         ]
       },
       "jqFilter": ".metadata.name | test(\".-kubernetes-dex-client-app-redirect-uris\")"
@@ -27,8 +27,8 @@ EOF
 }
 
 function __main__() {
-  if kubectl -n kube-user-authn get configmap -o json | jq '.items[] | select(.metadata.name|test(".-kubernetes-dex-client-app-redirect-uris")) | .metadata.name' -e > /dev/null 2>&1 ; then
-    kubernetes_dex_client_app_redirect_uris="$(kubectl -n kube-user-authn get configmap -o json | jq '.items[] | select(.metadata.name|test(".-kubernetes-dex-client-app-redirect-uris")) | .data' | jq '.[]' -r)"
+  if kubectl -n d8-user-authn get configmap -o json | jq '.items[] | select(.metadata.name|test(".-kubernetes-dex-client-app-redirect-uris")) | .metadata.name' -e > /dev/null 2>&1 ; then
+    kubernetes_dex_client_app_redirect_uris="$(kubectl -n d8-user-authn get configmap -o json | jq '.items[] | select(.metadata.name|test(".-kubernetes-dex-client-app-redirect-uris")) | .data' | jq '.[]' -r)"
     values::set userAuthn.internal.kubernetesDexClientAppRedirectURIs "$kubernetes_dex_client_app_redirect_uris"
   else
     values::unset userAuthn.internal.kubernetesDexClientAppRedirectURIs

@@ -25,7 +25,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ $chart_name}}-kubernetes-dex-client-app-redirect-uris
-  namespace: kube-user-authn
+  namespace: d8-user-authn
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 data:
   {{ $chart_name }}: {{ include "helm_lib_module_uri_scheme" $context }}://{{ $domain }}/dex-authenticator/callback
@@ -36,7 +36,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: {{ $chart_name }}-dex-client-app
-  namespace: kube-user-authn
+  namespace: d8-user-authn
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 data:
   config.yaml: |
