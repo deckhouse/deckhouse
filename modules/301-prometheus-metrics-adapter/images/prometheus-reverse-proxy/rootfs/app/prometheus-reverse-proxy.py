@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from http.server import BaseHTTPRequestHandler,HTTPServer
+from socketserver import ThreadingMixIn
 import urllib.request, urllib.parse, ssl
 import json
 import base64
@@ -106,8 +107,11 @@ class myHandler(BaseHTTPRequestHandler):
       self._proxy_pass()
     return
 
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Handle requests in a separate thread."""
+
 try:
-  server = HTTPServer(('', PORT_NUMBER), myHandler)
+  server = ThreadedHTTPServer(('', PORT_NUMBER), myHandler)
   print('Started httpserver on port ' + str(PORT_NUMBER), flush=True)
 
   #Wait forever for incoming http requests
