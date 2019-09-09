@@ -1,17 +1,15 @@
+---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
   name: istio-sidecar-injector
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: sidecar-injector-webhook
+{{ include "helm_lib_module_labels" (list . (dict "app" "sidecar-injector-webhook")) | indent 2 }}
 webhooks:
   - name: sidecar-injector.istio.io
     clientConfig:
       service:
         name: istio-sidecar-injector
-        namespace: kube-{{ .Chart.Name }}
+        namespace: d8-{{ .Chart.Name }}
         path: "/inject"
       caBundle: ""
     rules:

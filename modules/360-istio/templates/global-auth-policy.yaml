@@ -1,11 +1,9 @@
+---
 apiVersion: "authentication.istio.io/v1alpha1"
 kind: "MeshPolicy"
 metadata:
   name: "default"
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: citadel
+{{ include "helm_lib_module_labels" (list . (dict "app" "citadel")) | indent 2 }}
 spec:
   peers:
 {{- if eq .Values.istio.tlsMode "Mutual" }}
@@ -24,11 +22,8 @@ apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: "default"
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: citadel
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "citadel")) | indent 2 }}
 spec:
   host: "*.{{ .Values.global.discovery.clusterDomain }}"
   trafficPolicy:
@@ -41,11 +36,8 @@ apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: "api-server"
-  namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: citadel
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "citadel")) | indent 2 }}
 spec:
   host: "kubernetes.default.svc.{{ .Values.global.discovery.clusterDomain }}"
   trafficPolicy:
