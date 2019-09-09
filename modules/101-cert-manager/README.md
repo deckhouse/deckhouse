@@ -98,7 +98,7 @@ spec:
      cloudflareEmail: some@mail.somedomain
    ```
 
-   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `kube-cert-manager`.
+   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
 
 3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Antiopa:
 
@@ -192,7 +192,7 @@ spec:
      route53SecretAccessKey: RCUasBv4xW8Gt53MX/XuiSfrBROYaDjeFsP4rM3/
    ```
 
-   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для route53 в namespace `kube-cert-manager`.
+   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для route53 в namespace `d8-cert-manager`.
 
 3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в Antiopa:
 

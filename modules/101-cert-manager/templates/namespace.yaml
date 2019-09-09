@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kube-cert-manager
+  name: d8-cert-manager
   annotations:
     extended-monitoring.flant.com/enabled: ""
 {{ include "helm_lib_module_labels" (list . (dict "certmanager.k8s.io/disable-validation" "true")) | indent 2 }}

@@ -5,13 +5,13 @@ metadata:
   name: v1beta1.admission.certmanager.k8s.io
 {{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
   annotations:
-    certmanager.k8s.io/inject-ca-from: "kube-cert-manager/cert-manager-webhook-tls"
+    certmanager.k8s.io/inject-ca-from: "d8-cert-manager/cert-manager-webhook-tls"
 spec:
   group: admission.certmanager.k8s.io
   groupPriorityMinimum: 1000
   versionPriority: 15
   service:
     name: cert-manager-webhook
-    namespace: kube-cert-manager
+    namespace: d8-cert-manager
   version: v1beta1
 
