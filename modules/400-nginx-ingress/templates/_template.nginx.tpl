@@ -49,7 +49,7 @@ spec:
 {{- if .enableIstioSidecar }}
       annotations:
         sidecar.istio.io/inject: "true"
-        traffic.sidecar.istio.io/includeOutboundIPRanges: "{{ .Values.global.discovery.serviceClusterIPRange }}"
+        traffic.sidecar.istio.io/includeOutboundIPRanges: "{{ .Values.global.discovery.serviceSubnet }}"
 {{- end }}
     spec:
 {{- include "helm_lib_node_selector" (tuple . "frontend" .) | indent 6 }}
