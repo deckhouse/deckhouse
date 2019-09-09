@@ -6,7 +6,7 @@ metadata:
     helm.sh/hook: post-upgrade, post-install
     helm.sh/hook-delete-policy: before-hook-creation
   name: prometheus-operator
-  namespace: kube-prometheus-operator
+  namespace: d8-prometheus-operator
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus-operator")) | indent 2 }}
 spec:
   minAvailable: 0
