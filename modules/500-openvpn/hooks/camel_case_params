@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=1
+}
+
+function __main__() {
+  ### Миграция 2019-09-05: https://github.com/deckhouse/deckhouse/merge_requests/
+  # Этот хук можно удалить, после выката релиза с данным коммитом
+
+  if values::has --config openvpn.pushToClientDns ; then
+    values::set --config openvpn.pushToClientDNS $(values::get --config openvpn.pushToClientDns)
+    values::unset --config openvpn.pushToClientDns
+  fi
+
+  if values::has --config openvpn.externalIp ; then
+    values::set --config openvpn.externalIP $(values::get --config openvpn.externalIp)
+    values::unset --config openvpn.externalIp
+  fi
+
+  if [[ $(values::get --config openvpn.inlet) == "ExternalIp" ]] ; then
+    values::set --config openvpn.inlet "ExternalIP"
+  fi
+}
+
+hook::run "$@"

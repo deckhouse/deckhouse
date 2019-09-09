@@ -1,15 +1,13 @@
 {{ $defaultTunnelNetwork := "172.25.175.0/255.255.255.0" }}
 {{ $tunnelNetworkAddress := index (splitList "/" (.Values.tunnelNetwork | default $defaultTunnelNetwork)) 0 }}
 {{ $tunnelNetworkNetmask := index (splitList "/" (.Values.tunnelNetwork | default $defaultTunnelNetwork)) 1 }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Chart.Name }}
   namespace: kube-{{ .Chart.Name }}
-  labels:
-    heritage: antiopa
-    module: {{ .Chart.Name }}
-    app: {{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 data:
   openvpn.conf: |-
     server {{ $tunnelNetworkAddress }} {{ $tunnelNetworkNetmask }}
@@ -42,9 +40,7 @@ data:
     {{- end }}
     {{- else }}
     {{- end }}
-    {{- if hasKey .Values.openvpn "pushToClientDns" }}
-    push "dhcp-option DNS {{ .Values.openvpn.pushToClientDns }}"
-    {{- end }}
+    push "dhcp-option DNS {{ .Values.openvpn.pushToClientDNS | default .Values.global.discovery.clusterDNSAddress }}"
 
   configure.sh: |-
     #!/bin/sh
