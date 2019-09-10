@@ -15,7 +15,7 @@ spec:
       action: labeldrop
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: vertical-pod-autoscaler
       prometheus-target: vpa-exporter
   namespaceSelector:

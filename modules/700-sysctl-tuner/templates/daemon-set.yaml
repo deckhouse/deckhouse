@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: sysctl-tuner
-  namespace: kube-system
+  namespace: d8-system
 {{ include "helm_lib_module_labels" (list . (dict "app" "sysctl-tuner")) | indent 2 }}
 spec:
   targetRef:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: sysctl-tuner
-  namespace: kube-system
+  namespace: d8-system
 {{ include "helm_lib_module_labels" (list . (dict "app" "sysctl-tuner")) | indent 2 }}
 spec:
   updateStrategy:
@@ -28,12 +28,12 @@ spec:
       maxUnavailable: 1
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ $.Chart.Name }}
   template:
     metadata:
       labels:
-        heritage: antiopa
+        heritage: deckhouse
         module: {{ $.Chart.Name }}
     spec:
       imagePullSecrets:
@@ -90,7 +90,7 @@ spec:
       hostPID: true
       hostIPC: true
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: system-node-critical
+      priorityClassName: cluster-critical
 {{- end }}
       tolerations:
       - operator: Exists

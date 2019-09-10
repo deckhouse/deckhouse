@@ -25,7 +25,7 @@ spec:
       targetLabel: node
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ $.Chart.Name }}
       prometheus-target: kube-controller-manager
   namespaceSelector:

@@ -9,7 +9,7 @@ spec:
   jobLabel: prometheus-target
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ $.Chart.Name }}
       prometheus-target: kube-apiserver
   namespaceSelector:

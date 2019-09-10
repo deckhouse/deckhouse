@@ -15,7 +15,7 @@ spec:
       action: labeldrop
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ $.Chart.Name }}
       prometheus-target: cert-manager
   namespaceSelector:

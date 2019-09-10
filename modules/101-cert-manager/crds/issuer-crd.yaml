@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: issuers.certmanager.k8s.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: cert-manager
     app: cert-manager
 spec:

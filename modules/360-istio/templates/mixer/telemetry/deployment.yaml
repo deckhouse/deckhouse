@@ -29,14 +29,14 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ .Chart.Name }}
       app: mixer-telemetry
       istio-mixer-type: telemetry
   template:
     metadata:
       labels:
-        heritage: antiopa
+        heritage: deckhouse
         module: {{ .Chart.Name }}
         app: mixer-telemetry
         istio-mixer-type: telemetry

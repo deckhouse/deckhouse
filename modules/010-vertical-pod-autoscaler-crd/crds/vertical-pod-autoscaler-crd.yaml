@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   name: verticalpodautoscalers.autoscaling.k8s.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: vertical-pod-autoscaler-crd
 spec:
   group: autoscaling.k8s.io
@@ -46,7 +46,7 @@ kind: CustomResourceDefinition
 metadata:
   name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: vertical-pod-autoscaler-crd
 spec:
   group: autoscaling.k8s.io

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+### Миграция 2019-09-09: https://github.com/deckhouse/deckhouse/merge_requests/1114
+# Данный хук можно удалить после выката релиза с данным хуком
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 5
+}'
+}
+
+function __main__() {
+  if kubectl -n kube-system get vpa sysctl-tuner 2>/dev/null >/dev/null ; then
+    kubectl -n kube-system delete vpa sysctl-tuner
+  fi
+
+  if kubectl -n kube-system get ds sysctl-tuner 2>/dev/null >/dev/null ; then
+    kubectl -n kube-system delete ds sysctl-tuner
+  fi
+}
+
+hook::run "$@"

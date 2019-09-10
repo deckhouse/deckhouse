@@ -12,7 +12,7 @@ spec:
       prometheus-target: node-local-dns
   namespaceSelector:
     matchNames:
-    - kube-system
+    - d8-system
   endpoints:
   - port: coredns-metrics
     scheme: https

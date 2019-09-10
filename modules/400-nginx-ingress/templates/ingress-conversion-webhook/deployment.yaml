@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ingress-conversion-webhook
-  namespace: kube-system
+  namespace: d8-system
 {{ include "helm_lib_module_labels" (list . (dict "app" "ingress-conversion-webhook")) | indent 2 }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
@@ -16,7 +16,7 @@ spec:
 {{- end }}
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ .Chart.Name }}
       app: ingress-conversion-webhook
   template:
@@ -24,7 +24,7 @@ spec:
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
       labels:
-        heritage: antiopa
+        heritage: deckhouse
         module: {{ .Chart.Name }}
         app: ingress-conversion-webhook
     spec:
@@ -37,7 +37,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                heritage: antiopa
+                heritage: deckhouse
                 module: {{ .Chart.Name }}
                 app: ingress-conversion-webhook
             topologyKey: kubernetes.io/hostname
@@ -75,11 +75,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ingress-conversion-webhook
-  namespace: kube-system
+  namespace: d8-system
 {{ include "helm_lib_module_labels" (list . (dict "app" "ingress-conversion-webhook")) | indent 2 }}
 spec:
   selector:
-    heritage: antiopa
+    heritage: deckhouse
     module: {{ .Chart.Name }}
     app: ingress-conversion-webhook
   ports:
