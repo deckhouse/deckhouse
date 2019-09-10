@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   name: podmetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io
@@ -36,7 +36,7 @@ kind: CustomResourceDefinition
 metadata:
   name: deploymentmetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io
@@ -68,7 +68,7 @@ kind: CustomResourceDefinition
 metadata:
   name: statefulsetmetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io
@@ -100,7 +100,7 @@ kind: CustomResourceDefinition
 metadata:
   name: daemonsetmetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io
@@ -132,7 +132,7 @@ kind: CustomResourceDefinition
 metadata:
   name: ingressmetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io
@@ -164,7 +164,7 @@ kind: CustomResourceDefinition
 metadata:
   name: servicemetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io
@@ -196,7 +196,7 @@ kind: CustomResourceDefinition
 metadata:
   name: namespacemetrics.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: prometheus-metrics-adapter
 spec:
   group: deckhouse.io

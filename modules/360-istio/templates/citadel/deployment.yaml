@@ -29,13 +29,13 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ .Chart.Name }}
       app: citadel
   template:
     metadata:
       labels:
-        heritage: antiopa
+        heritage: deckhouse
         module: {{ .Chart.Name }}
         app: citadel
       annotations:

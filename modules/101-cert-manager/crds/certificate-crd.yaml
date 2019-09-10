@@ -4,7 +4,7 @@ metadata:
   name: certificates.certmanager.k8s.io
   labels:
     app: cert-manager
-    heritage: antiopa
+    heritage: deckhouse
     module: cert-manager
 spec:
 spec:

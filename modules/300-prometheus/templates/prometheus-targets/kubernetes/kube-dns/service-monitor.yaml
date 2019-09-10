@@ -23,7 +23,7 @@ spec:
       replacement: dnsmasq
   selector:
     matchLabels:
-      heritage: antiopa
+      heritage: deckhouse
       module: {{ $.Chart.Name }}
       prometheus-target: kube-dns
   namespaceSelector:

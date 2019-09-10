@@ -12,7 +12,7 @@ webhooks:
   clientConfig:
     service:
       name: ingress-conversion-webhook
-      namespace: kube-system
+      namespace: d8-system
       path: "/mutate"
       port: 443
     caBundle: {{ .Values.nginxIngress.internal.ingressConversionWebhookCA | b64enc }}

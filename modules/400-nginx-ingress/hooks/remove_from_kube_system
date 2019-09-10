@@ -1,0 +1,33 @@
+#!/bin/bash
+
+### Миграция 2019-09-09: https://github.com/deckhouse/deckhouse/merge_requests/1114
+# Данный хук можно удалить после выката релиза с данным хуком
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 5
+}'
+}
+
+function __main__() {
+  if kubectl -n kube-system get deploy ingress-conversion-webhook 2>/dev/null >/dev/null ; then
+    kubectl -n kube-system delete deploy ingress-conversion-webhook
+  fi
+
+  if kubectl -n kube-system get svc ingress-conversion-webhook 2>/dev/null >/dev/null ; then
+    kubectl -n kube-system delete svc ingress-conversion-webhook
+  fi
+
+  if kubectl -n kube-system get sa kube-nginx-ingress-ingress-conversion-webhook 2>/dev/null >/dev/null ; then
+    kubectl -n kube-system delete sa kube-nginx-ingress-ingress-conversion-webhook
+  fi
+
+  if kubectl -n kube-system get secret ingress-conversion-webhook 2>/dev/null >/dev/null ; then
+    kubectl -n kube-system delete secret  ingress-conversion-webhook
+  fi
+}
+
+hook::run "$@"
