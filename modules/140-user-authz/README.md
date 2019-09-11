@@ -141,22 +141,25 @@ spec:
 
 После *включения* параметра `enableMultiTenancy` и успешного выката модуля, произойдёт автоматическая настройка манифеста с kube-apiserver на мастере. Соответственно, произойдёт перезагрузка kube-apiserver. Бекап оригинального манифеста появится в каталоге /etc/kubernetes.
 
-Изменения в манифесте:
-* Добавить поправить аргумент `--authorization-mode`, добавив перед методом RBAC метод Webhook (например, --authorization-mode=Node,Webhook,RBAC).
-* Добавить аргумент `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`.
-* Добавить в `volumeMounts`:
+<details>
+  <summary>Изменения манифеста, которые произойдут</summary>
+
+* Будет поправлен аргумент `--authorization-mode`, добавится перед методом RBAC метод Webhook (например, --authorization-mode=Node,Webhook,RBAC).
+* Добавится `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`.
+* Добавится `volumeMounts`:
 ```yaml
 - name: authorization-webhook-config
   mountPath: /etc/kubernetes/authorization-webhook-config.yaml
   readOnly: true
 ```
-* Добавить в `volumes`:
+* Добавится `volumes`:
 ```yaml
 - name:authorization-webhook-config
   hostPath:
     path: /etc/kubernetes/authorization-webhook-config.yaml
     type: FileOrCreate
 ```
+</details>
 
 ## Настройка дополнительных ClusterRole для разных accessLevel
 
