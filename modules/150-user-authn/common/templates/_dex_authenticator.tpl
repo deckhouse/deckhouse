@@ -190,7 +190,7 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" $context | quote }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "512k"
   name: dex-authenticator
   namespace: {{ pluck $chart_name $context.Values.global.hack.namespaces | first }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}

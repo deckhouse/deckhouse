@@ -11,6 +11,7 @@ metadata:
 {{- if .Values.global.enabledModules | has "user-authn" }}
     nginx.ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
     nginx.ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-openvpn.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 512k
 {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
