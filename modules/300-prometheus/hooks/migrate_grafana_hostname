@@ -11,6 +11,10 @@ function __config__() {
 }
 
 function __main__() {
+  # Если сертификата нет, то мигрировать нечего
+  if ! kubectl -n kube-prometheus get secrets ingress-tls > /dev/null 2> /dev/null ; then
+    exit 0
+  fi
   # Проверяем, для нужного ли домена выписан сертификат
   CHECK_INGRESS_TLS=$(kubectl -n kube-prometheus get secrets ingress-tls -ojson | jq -r '.metadata.annotations."certmanager.k8s.io/alt-names"')
   if [[ $CHECK_INGRESS_TLS == "null" ]]; then
