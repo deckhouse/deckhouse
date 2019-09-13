@@ -1,0 +1,19 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=0
+}
+
+function __main__() {
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_NAMESPACE") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_NAMESPACE", "value": "antiopa"}])'
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_POD") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_POD", "valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}])'
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_CONFIG_MAP") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_CONFIG_MAP", "value": "antiopa"}])'
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX", "value": "antiopa_"}])'
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_PROMETHEUS_LISTEN_ADDRESS") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_PROMETHEUS_LISTEN_ADDRESS", "valueFrom":{"fieldRef":{"fieldPath":"status.podIP"}}}])'
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_PROMETHEUS_LISTEN_PORT") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_PROMETHEUS_LISTEN_PORT", "value": "9650"}])'
+  kubectl::jq_patch antiopa deploy/antiopa 'select(.spec.template.spec.containers[0].env[].name == "ADDON_OPERATOR_TILLER_LISTEN_ADDRESS") // (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_TILLER_LISTEN_ADDRESS", "value": "44434"}])'
+}
+
+hook::run "$@"

@@ -7,34 +7,12 @@ function __config__() {
 }
 
 function __main__() {
-  system_node_count=$(cluster::count_nodes_by_role "system")
   fltr='.'
 
-  if values::has deckhouse.nodeSelector ; then
-    if ! values::is_false deckhouse.nodeSelector ; then
-      fltr=$fltr" | .spec.template.spec.nodeSelector = $(values::get --required deckhouse.nodeSelector | jq -c .)"
-    else
-      fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
-    fi
-  elif (( "$system_node_count" > 0 )); then
-    fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role.flant.com/system":""}'
-  else
-    fltr=$fltr' | del(.spec.template.spec.nodeSelector)'
-  fi
-
-  if values::has deckhouse.tolerations ; then
-    if ! values::is_false deckhouse.tolerations ; then
-      fltr=$fltr" | .spec.template.spec.tolerations = $(values::get --required deckhouse.tolerations | jq -c .)"
-    else
-      fltr=$fltr' | del(.spec.template.spec.tolerations)'
-    fi
-  elif (( "$system_node_count" > 0 )) ; then
-    fltr=$fltr' | .spec.template.spec.tolerations = [{"key":"dedicated.flant.com","value":"system"},{"key":"node-role/system"}]'
-  else
-    fltr=$fltr' | del(.spec.template.spec.tolerations)'
-  fi
+  fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role.kubernetes.io/master":""}'
+  fltr=$fltr' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
 
   kubectl::jq_patch antiopa deploy/antiopa "$fltr"
 }
 
-hook::run $@
+hook::run "$@"
