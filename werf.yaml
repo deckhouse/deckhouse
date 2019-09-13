@@ -83,6 +83,15 @@ ansible:
       remote_src: yes
       dest: /usr/local/bin
   - raw: helm init --client-only
+  # Ставим tiller
+  - name: Install tiller
+    unarchive:
+      extra_opts:
+      - linux-amd64/tiller
+      - --strip-components=1
+      src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
+      remote_src: yes
+      dest: /usr/local/bin
 
   # Чистим кеш
   - raw: rm -rf /var/cache/apk/*
