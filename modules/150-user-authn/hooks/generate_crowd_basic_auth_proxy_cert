@@ -1,0 +1,113 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+
+function __config__() {
+  echo '
+  {
+    "beforeHelm": 10,
+    "schedule": [
+      {
+        "crontab": "42 4 * * *"
+      }
+    ]
+  }'
+}
+
+function __main__() {
+  # Проверяем условия, при которых должен быть выложен прокси
+  if [[ $(values::get userAuthn.publishAPI) != "true" ]]; then
+    exit 0
+  fi
+  crowd_configs=$(values::get userAuthn.providers | jq -r ' .[] | select (.type == "Crowd")')
+  if [[ $(echo $crowd_configs | jq ' . | length' | wc -l) -ne 1 ]]; then
+    exit 0
+  fi
+  if [[ $(echo $crowd_configs | jq -r ' .crowd.enableBasicAuth') != "true" ]]; then
+    exit 0
+  fi
+
+  # Проверяем, нужно ли нам продлить или выпустить сертификат
+  if kubectl -n d8-user-authn get secret/crowd-basic-auth-cert > /dev/null 2> /dev/null ; then
+    cert=$(kubectl -n d8-user-authn get secret/crowd-basic-auth-cert -o jsonpath="{.data['client\.crt']}" | base64 -d)
+    not_after=$(echo "$cert" | cfssl-certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
+    valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
+
+    # Если до окончания сертификата осталось более двух дней, пропускаем перевыпуск
+    if [[ $valid_for -gt 172800 ]]; then
+      values::set userAuthn.internal.crowdProxyCert $(kubectl -n d8-user-authn get secret/crowd-basic-auth-cert -o jsonpath="{.data['client\.crt']}")
+      values::set userAuthn.internal.crowdProxyKey $(kubectl -n d8-user-authn get secret/crowd-basic-auth-cert -o jsonpath="{.data['client\.key']}")
+      exit 0
+    fi
+  fi
+
+  # Создаем CSR
+  config='{"CN":"front-proxy-client","key":{"algo":"rsa","size": 2048},"signing":{"default":{"expiry":"72h","usages":["signing","key encipherment","requestheader-client"]}}}'
+  csr_response=$(echo $config | cfssl genkey - )
+
+  private_key=$(echo $csr_response | jq -r .key | base64 | tr -d '\n')
+  csr=$(echo $csr_response | jq .csr -r | base64 | tr -d '\n')
+
+  # Если предыдущий запуск хука завершился с ошибкой, нам необходимо удалить предыдущую job'у, чтобы заново её запустить
+  kubectl -n d8-system delete job crowd-proxy-cert-generate-job > /dev/null 2> /dev/null || true
+  script=$(cat <<'EOF'
+          set -e
+          regex="--requestheader-client-ca-file[=| ][^ ]*"
+          ca_path="/host/root$([[ $(ps aux| grep kube-apiserver) =~ $regex ]] && echo ${BASH_REMATCH[0]} | awk -F '=| ' '{ print $2 }')"
+          key_path="$([[ $ca_path =~ ^(.+?)\.[^\.]+$ ]] && echo ${BASH_REMATCH[1]}).key"
+
+          csr_config='{"CN":"front-proxy-client","hosts":[""],"key":{"algo": "rsa","size": 2048},"signing":{"default":{"expiry":"72h","usages":["signing","key encipherment","requestheader-client"]}}}'
+          signed_cert=$(echo $CSR | base64 -d | cfssl sign -ca=$ca_path -ca-key=$key_path -config=<(echo $csr_config) - )
+          echo "Certificate: $(echo $signed_cert | jq .cert -r | base64 | tr -d '\n')"
+EOF
+)
+  cat <<EOF | kubectl -n d8-system create -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: crowd-proxy-cert-generate-job
+  labels:
+    name: crowd-proxy-cert-generate-job
+    heritage: deckhouse
+    module: user-authn
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: generator
+        image: $(values::get global.modulesImages.registry )/user-authn/cfssl:$(values::get global.modulesImages.tags.userAuthn.cfssl)
+        command: ["bash", "-c"]
+        args:
+        - |
+$script
+        env:
+        - name: CSR
+          value: $csr
+        volumeMounts:
+        - name: root
+          readOnly:  true
+          mountPath: /host/root
+      restartPolicy: Never
+      volumes:
+      - name: root
+        hostPath:
+          path: /
+      hostPID: true
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+EOF
+  kubectl -n d8-system wait --for=condition=complete job crowd-proxy-cert-generate-job --timeout=30s
+  logs=$(kubectl -n d8-system logs -l job-name=crowd-proxy-cert-generate-job | grep "^Certificate:")
+  kubectl -n d8-system delete job crowd-proxy-cert-generate-job > /dev/null 2> /dev/null
+  if [[ $logs == " " ]]; then
+    exit 1
+  fi
+  values::set userAuthn.internal.crowdProxyCert $(echo $logs | awk -F ": " '{ print $2 }')
+  values::set userAuthn.internal.crowdProxyKey $private_key
+}
+
+hook::run "$@"

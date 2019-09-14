@@ -68,6 +68,7 @@ data:
     * `baseURL` – адрес Crowd'а (например: `https://crowd.example.com/crowd`);
     * `clientID` – ID приложения созданного в Crowd;
     * `clientSecret` – пароль приложения созданного в Crowd;
+    * `enableBasicAuth` - включает возможность basic авторизации для kubernetes api server, в качестве credentials для basic авторизации указываются логин и пароль пользователя из приложения, созданного в Crowd (возможно включить при указании только одного провайдера с типом Crowd), работает ТОЛЬКО при включенном `publishAPI`, полученные от Crowd данные авторизации и груп сохраняются в кэш на 10 секунд; 
   * `saml` – параметры провайдера SAML (можно указывать, только если `type: SAML`):
     * `ca` — сертификат выданный SAML провайдером для проверки подлинности ответов от SAML провайдера;
     * `ssoURL` — адрес SAML аутентификации с ID и Secret'ом в URL (пример: `https://flant.okta.com/app/flant_test_dex_app_1/SECRET_TOKEN/sso/saml`);

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "Endpoints",
+      "objectName": "kubernetes",
+      "event": [
+        "add",
+        "update"
+      ],
+      "namespaceSelector": {
+        "matchNames": [
+          "default"
+        ]
+      },
+      "jqFilter": ".subsets[].addresses[]"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  if [[ $(values::get userAuthn.publishAPI) != "true" ]]; then
+    exit 0
+  fi
+  kubernetes_apiserver_addresses=$(kubectl -n default get endpoints kubernetes -o json | jq '.subsets[].addresses[]')
+  values::set userAuthn.internal.kubernetesApiserverAddresses "$kubernetes_apiserver_addresses"
+}
+
+hook::run $@
