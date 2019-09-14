@@ -1,0 +1,9 @@
+FROM golang:1.12-alpine3.10
+WORKDIR /src/
+COPY /app/ /src/
+RUN apk add --no-cache git && \
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/crowd-basic-auth-proxy
+
+FROM alpine:3.10.2
+COPY --from=0 /src/crowd-basic-auth-proxy /crowd-basic-auth-proxy
+ENTRYPOINT [ "/crowd-basic-auth-proxy" ]

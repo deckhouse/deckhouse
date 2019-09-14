@@ -1,0 +1,116 @@
+{{- if include "is_basic_auth_enabled_in_any_crowd" . }}
+  {{- $crowd_config := false }}
+  {{- range $provider := .Values.userAuthn.providers }}
+  {{- if eq $provider.type "Crowd" }}
+    {{- if $provider.crowd.enableBasicAuth }}
+      {{- if $crowd_config }}
+        {{- required "enableBasicAuth option must be enabled ONLY in one Atlassian Crowd provider" .error }}
+      {{- end }}
+      {{- $crowd_config = $provider.crowd }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: crowd-basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: crowd-basic-auth-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crowd-basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | indent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  selector:
+    matchLabels:
+      app: crowd-basic-auth-proxy
+  template:
+    metadata:
+      labels:
+        app: crowd-basic-auth-proxy
+      annotations:
+        checksum/certs: {{ include (print $.Template.BasePath "/crowd-basic-auth-proxy/secret.yaml") . | sha256sum }}
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+  {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-medium
+  {{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: proxy
+        image: {{ .Values.global.modulesImages.registry }}/user-authn/crowd-basic-auth-proxy:{{ .Values.global.modulesImages.tags.userAuthn.crowdBasicAuthProxy }}
+        args:
+        - --listen=$(POD_IP):7332
+        - --cert-path=/etc/certs
+        - --crowd-application-login={{ $crowd_config.clientID }}
+        - --crowd-application-password={{ $crowd_config.clientSecret }}
+        - --crowd-base-url={{ $crowd_config.baseURL }}
+        - --api-server-url=https://kubernetes.default
+        ports:
+        - containerPort: 7332
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 7332
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 7332
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: client-certs
+          mountPath: /etc/certs
+          readOnly: true
+      volumes:
+      - name: client-certs
+        secret:
+          secretName: crowd-basic-auth-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crowd-basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | indent 2 }}
+spec:
+  selector:
+    app: crowd-basic-auth-proxy
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 7332
+    targetPort: 7332
+{{- end }}
