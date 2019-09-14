@@ -15,8 +15,7 @@ function kubectl::jq_patch() {
 
   if ! kubectl -n $namespace get $resource -o json > $tmp ||
      ! jq "$cleanup_filter" $tmp > $a ||
-     ! jq "$filter" $a > $b ||
-     ! kubectl replace -f $b ;
+     ! jq "$filter" $a > $b ;
   then
     echo FILTER: "$filter"
 
@@ -29,7 +28,7 @@ function kubectl::jq_patch() {
     return 1
   fi
 
-  diff -u $a $b || true
+  diff -u $a $b || kubectl replace -f $b
   rm $a $b $tmp
   return 0
 }
