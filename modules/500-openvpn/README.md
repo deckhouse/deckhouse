@@ -52,7 +52,7 @@ data:
         * `Disabled` — в данном режиме админка openvpn будет работать только по http;
         * `CertManager` — админка openvpn будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
         * `CustomCertificate` — админка openvpn будет работать по https используя сертификат из namespace `antiopa`;
-        * `UriOnly` — админка openvpn будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+        * `OnlyInURI` — админка openvpn будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для админки openvpn (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
