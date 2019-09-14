@@ -26,7 +26,7 @@
         * `Disabled` — в данном режиме dashboard будет работать только по http;
         * `CertManager` — dashboard будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
         * `CustomCertificate` — dashboard будут работать по https используя сертификат из namespace `antiopa`;
-        * `UriOnly` — dashboard будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+        * `OnlyInURI` — dashboard будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dashboard (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.

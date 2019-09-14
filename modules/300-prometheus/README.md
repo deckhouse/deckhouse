@@ -95,7 +95,7 @@ prometheus: |
         * `Disabled` — в данном режиме grafana/prometheus будут работать только по http;
         * `CertManager` — grafana/prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
         * `CustomCertificate` — grafana/prometheus будут работать по https используя сертификат из namespace `antiopa`;
-        * `UriOnly` — grafana/prometheus будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+        * `OnlyInURI` — grafana/prometheus будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для grafana/prometheus (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.

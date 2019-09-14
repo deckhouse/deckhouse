@@ -122,7 +122,7 @@ data:
     * `Disabled` — при данном значении модуль автоматически отключается.
     * `CertManager` — dex и kubeconfig-generator будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
     * `CustomCertificate` — dex и kubeconfig-generator будут работать по https используя сертификат из namespace `antiopa`;
-    * `UriOnly` — dex и kubeconfig-generator. будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
+    * `OnlyInURI` — dex и kubeconfig-generator. будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
   * `certManager`
     * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
   * `customCertificate`
