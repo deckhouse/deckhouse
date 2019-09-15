@@ -7,6 +7,8 @@ function __config__() {
 }
 
 function __main__() {
+  # Миграция 2019-09-15: https://github.com/deckhouse/deckhouse/merge_requests/1133
+
   fltr='.'
 
   fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role.kubernetes.io/master":""}'
