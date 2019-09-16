@@ -2,23 +2,21 @@ FROM golang:1.12-alpine3.10
 WORKDIR /go/src/github.com/pusher/oauth2_proxy
 
 # Download tools
-RUN wget -O $GOPATH/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
-RUN chmod +x $GOPATH/bin/dep
+RUN wget -O - https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.17.1
 
 RUN apk --update add make git build-base curl bash ca-certificates wget \
- && update-ca-certificates \
- && curl -sSO https://raw.githubusercontent.com/pote/gpm/v1.4.0/bin/gpm \
- && chmod +x gpm \
- && mv gpm /usr/local/bin
+ && update-ca-certificates
 RUN git clone https://github.com/pusher/oauth2_proxy.git . \
- && git checkout v3.2.0
+ && git checkout v4.0.0
 ADD rd.patch .
 RUN patch -p1 < rd.patch \
- && ./dist.sh
+ && GO111MODULE=on go mod download \
+ && ./configure \
+ && make build
 
 FROM alpine:3.10
 RUN apk --update add curl bash  ca-certificates && update-ca-certificates
-COPY --from=0 /go/src/github.com/pusher/oauth2_proxy/dist/ /bin/
+COPY --from=0 /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 
 EXPOSE 8080 4180
 ENTRYPOINT [ "/bin/oauth2_proxy" ]
