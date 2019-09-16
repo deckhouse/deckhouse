@@ -1,4 +1,4 @@
-{{- if .Values.userAuthn.publishAPI }}
+{{- if .Values.userAuthn.publishAPI.enable }}
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -6,6 +6,7 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+{{- if and (.Values.userAuthn.publishAPI.enable) (eq .Values.userAuthn.publishAPI.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
     certmanager.k8s.io/issuer: kubernetes-api
   {{- if include "is_basic_auth_enabled_in_any_crowd" . }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -13,6 +14,9 @@ metadata:
         rewrite ^(.*)$ /basic-auth$1;
       }
   {{- end }}
+{{- else if and (.Values.userAuthn.publishAPI.enable) (eq .Values.userAuthn.publishAPI.https.mode "Global") }}
+    certmanager.k8s.io/cluster-issuer: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+{{- end }}
   name: kubernetes-api
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
@@ -20,7 +24,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "api") }}
-    secretName: kubernetes-tls
+    secretName: ingress-tls
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
     http:

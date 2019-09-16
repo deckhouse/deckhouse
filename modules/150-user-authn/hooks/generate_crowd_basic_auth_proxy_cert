@@ -17,7 +17,7 @@ function __config__() {
 
 function __main__() {
   # Проверяем условия, при которых должен быть выложен прокси
-  if [[ $(values::get userAuthn.publishAPI) != "true" ]]; then
+  if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
     exit 0
   fi
   crowd_configs=$(values::get userAuthn.providers | jq -r ' .[] | select (.type == "Crowd")')

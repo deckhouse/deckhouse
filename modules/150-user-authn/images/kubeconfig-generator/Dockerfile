@@ -1,1 +1,1 @@
-FROM mintel/dex-k8s-authenticator:1.1.0
+FROM mintel/dex-k8s-authenticator:1.2.0
