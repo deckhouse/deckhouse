@@ -1,0 +1,19 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  common_hooks::https::copy_custom_certificate::config
+}
+
+function __main__() {
+  if values::is_true userAuthn.publishAPI.enable ; then
+    if [[ "$(values::get userAuthn.publishAPI.https.mode)" == "Global" ]]; then
+      if [[ "$(values::get_first_defined userAuthn.https.mode global.modules.https.mode)" == "CustomCertificate" ]] ; then
+        common_hooks::https::copy_custom_certificate::main "d8-user-authn"
+      fi
+    fi
+  fi
+}
+
+hook::run "$@"

@@ -27,7 +27,7 @@ EOF
 }
 
 function __main__() {
-  if [[ $(values::get userAuthn.publishAPI) != "true" ]]; then
+  if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
     exit 0
   fi
   kubernetes_apiserver_addresses=$(kubectl -n default get endpoints kubernetes -o json | jq '.subsets[].addresses[]')

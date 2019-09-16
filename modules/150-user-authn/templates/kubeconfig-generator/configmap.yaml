@@ -12,12 +12,21 @@ data:
     web_path_prefix: /
     debug: false
     clusters:
-  {{- if and .Values.userAuthn.publishAPI .Values.userAuthn.internal.publishedAPICA }}
+  {{- if and .Values.userAuthn.publishAPI.enable }}
     - client_id: "kubernetes"
       client_secret: {{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
       issuer: "https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/"
+  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+    {{- if hasKey .Values.userAuthn.publishAPI.https "global" }}
+      {{- if hasKey .Values.userAuthn.publishAPI.https.global "kubeconfigGeneratorMasterCA" }}
       k8s_ca_pem: |
-{{ .Values.userAuthn.publishedAPICA | default .Values.userAuthn.internal.kubernetesCA | indent 8 }}
+{{ .Values.userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA | indent 8 }}
+      {{- end }}
+    {{- end }}
+  {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
+      k8s_ca_pem: |
+{{ .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA | default .Values.userAuthn.internal.kubernetesCA | indent 8 }}
+  {{- end }}
       k8s_master_uri: "https://{{ include "helm_lib_module_public_domain" (list . "api") }}"
       name: {{ printf "%s.%s" .Values.global.project .Values.global.clusterName | quote }}
       redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}/callback/"

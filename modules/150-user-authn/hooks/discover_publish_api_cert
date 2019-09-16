@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "afterHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "secret",
+      "name": "ingress-tls",
+      "event": [
+        "add",
+        "update"
+      ],
+      "namespaceSelector": {
+        "matchNames": [
+          "default"
+        ]
+      },
+      "jqFilter": ".data.\"ca.crt\""
+    }
+  ]
+}'
+}
+
+function __main__() {
+  if values::is_true userAuthn.publishAPI.enable ; then
+    if [[ "$(values::get userAuthn.publishAPI.https.mode)" == "SelfSigned" ]] ; then
+      if kubectl -n default get secret ingress-tls > /dev/null 2>/dev/null ; then
+        selfsigned_publish_api_ca=$(kubectl -n default get secret ingress-tls -o json | jq '.data."ca.crt"' -r | base64 -d)
+        values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$selfsigned_publish_api_ca"
+      fi
+    fi
+  fi
+}
+
+hook::run "$@"

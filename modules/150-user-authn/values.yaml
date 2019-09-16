@@ -1,2 +1,6 @@
 userAuthn:
   internal: {}
+  publishAPI:
+    enable: false
+    https:
+      mode: SelfSigned
