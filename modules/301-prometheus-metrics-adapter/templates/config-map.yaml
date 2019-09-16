@@ -6,7 +6,7 @@ metadata:
   namespace: kube-prometheus
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 data:
-  prometheus-metrics-adapter.yaml: |
+  config.yaml: |
     externalRules:
     - seriesQuery: '{__name__=~"kube_adapter_metric_.+"}'
       name:
