@@ -1,0 +1,65 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: snat
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "snat")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: snat
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: snat
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "snat")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: snat
+  template:
+    metadata:
+      labels:
+        app: snat
+    spec:
+      hostNetwork: true
+    {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
+    {{- end }}
+      nodeSelector:
+{{ .Values.networkGateway.nodeSelector | toYaml | indent 8 }}
+{{- if (.Values.networkGateway.tolerations) }}
+      tolerations:
+{{ .Values.networkGateway.tolerations | toYaml | indent 8 }}
+{{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: snat
+        image: {{ .Values.global.modulesImages.registry }}/network-gateway/snat:{{ .Values.global.modulesImages.tags.networkGateway.snat }}
+        command: ["/iptables-loop.py"]
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        env:
+        - name: POD_SUBNET
+          value: {{ .Values.global.discovery.podSubnet }}
+        - name: SERVICE_SUBNET
+          value: {{ .Values.global.discovery.serviceSubnet }}
+        - name: CONFIG_HASH
+          value: {{ cat .Values.networkGateway.subnet .Values.networkGateway.publicAddress .Values.global.discovery.podSubnet .Values.global.discovery.serviceSubnet | sha256sum }}
+        volumeMounts:
+        - name: network-gateway-config
+          mountPath: /etc/network-gateway-config
+      volumes:
+      - name: network-gateway-config
+        configMap:
+          name: network-gateway

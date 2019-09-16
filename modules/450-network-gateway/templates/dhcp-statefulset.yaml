@@ -1,0 +1,91 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: dhcp
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: dhcp
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dhcp
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: dhcp
+  serviceName: dhcp
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ .Values.networkGateway | toYaml | sha256sum }}
+      labels:
+        app: dhcp
+    spec:
+      hostNetwork: true
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-high
+{{- end }}
+      nodeSelector:
+{{ .Values.networkGateway.nodeSelector | toYaml | indent 8 }}
+{{- if (.Values.networkGateway.tolerations) }}
+      tolerations:
+{{ .Values.networkGateway.tolerations | toYaml | indent 8 }}
+{{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: init
+        command: ['/prepare-config.py']
+        image: {{ .Values.global.modulesImages.registry }}/network-gateway/dnsmasq:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
+        volumeMounts:
+        - name: dhcp-config
+          mountPath: /etc/dnsmasq.d
+        - name: network-gateway-config
+          mountPath: /etc/network-gateway-config
+      containers:
+      - name: dhcp
+        image: {{ .Values.global.modulesImages.registry }}/network-gateway/dnsmasq:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
+        command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        volumeMounts:
+        - name: dhcp-config
+          mountPath: /etc/dnsmasq.d
+        - name: dhcp-data
+          mountPath: /var/lib/dnsmasq/
+      volumes:
+      - name: dhcp-config
+        emptyDir: {}
+      - name: network-gateway-config
+        configMap:
+          name: network-gateway
+{{- $storageClassName := .Values.networkGateway.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
+{{- if not $storageClassName }}
+      - name: dhcp-data
+        emptyDir: {}
+{{- else }}
+  volumeClaimTemplates:
+  - metadata:
+      name: dhcp-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 32Mi
+      storageClassName: {{ $storageClassName }}
+{{- end }}
