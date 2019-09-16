@@ -36,12 +36,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ index (include (print $.Template.BasePath "/config-map.yaml") . | fromYaml) "data" "prometheus-metrics-adapter.yaml" | sha256sum}}
+        checksum/config: {{ index (include (print $.Template.BasePath "/config-map.yaml") . | fromYaml) "data" "config.yaml" | sha256sum}}
         checksum/cert: {{ include (print $.Template.BasePath "/prometheus-metrics-adapter-cert.yaml") . | sha256sum}}
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
-{{- if .Values.prometheusMetricsAdapter.internal.customConfigSHA }}
-        checksum/custom-config: {{ .Values.prometheusMetricsAdapter.internal.customConfigSHA }}
-{{- end }}
       labels:
         app: prometheus-metrics-adapter
       name: prometheus-metrics-adapter
@@ -65,24 +62,6 @@ spec:
       serviceAccountName: prometheus-metrics-adapter
       imagePullSecrets:
       - name: deckhouse-registry
-# TODO: удалить init-контейнер когда все перейдут на CRD из https://github.com/deckhouse/deckhouse/merge_requests/806
-      initContainers:
-      - name: prepare-config
-        image: {{ .Values.global.modulesImages.registry }}/common/busybox:{{ .Values.global.modulesImages.tags.common.busybox }}
-        command:
-        - sh
-        - -c
-        - |
-          cat /opt/adapter/prometheus-metrics-adapter.yaml >> /etc/adapter/config.yaml
-          cat /opt/custom-adapter/* >> /etc/adapter/config.yaml
-          true
-        volumeMounts:
-        - mountPath: /opt/adapter
-          name: prometheus-metrics-adapter-config
-        - mountPath: /opt/custom-adapter
-          name: prometheus-metrics-adapter-custom
-        - mountPath: /etc/adapter
-          name: config
       containers:
       - name: prometheus-metrics-adapter
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/k8s-prometheus-adapter:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}
@@ -98,14 +77,11 @@ spec:
         ports:
         - containerPort: 6443
         volumeMounts:
+        - mountPath: /etc/adapter
+          name: prometheus-metrics-adapter-config
         - mountPath: /var/run/adapter-cert
           name: adapter-cert
           readOnly: true
-        - mountPath: /etc/adapter
-          name: config
-          readOnly: true
-        - mountPath: /tmp
-          name: tmp
         - mountPath: /var/run/apiserver-proxy-client/
           name: apiserver-proxy-client-ca
       - name: prometheus-reverse-proxy
@@ -133,17 +109,9 @@ spec:
       - name: prometheus-metrics-adapter-config
         configMap:
           name: prometheus-metrics-adapter-config
-      - name: tmp
-        emptyDir: {}
       - name: apiserver-proxy-client-ca
         configMap:
           name: prometheus-metrics-adapter-apiserver-proxy-client-ca
-      - name: prometheus-metrics-adapter-custom
-        configMap:
-          name: prometheus-metrics-adapter-custom
-          optional: true
-      - name: config
-        emptyDir: {}
       - name: prometheus-metrics-adapter-prometheus-api-client-cert
         secret:
           secretName: prometheus-metrics-adapter-prometheus-api-client-cert
