@@ -140,13 +140,15 @@ spec:
     {{- if $set_authorization_header }}
         - --set-authorization-header=true
     {{- end }}
+        - --pass-access-token=true
+        - --pass-authorization-header=true
         - --scope=groups email openid
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
         - --upstream=file:///dev/null
-        - --tls-cert=/opt/dex-authenticator/tls/tls.crt
-        - --tls-key=/opt/dex-authenticator/tls/tls.key
+        - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
+        - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
