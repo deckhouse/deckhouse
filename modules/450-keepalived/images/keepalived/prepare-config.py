@@ -59,7 +59,7 @@ def getSystemInterfaces():
 def getInterfaceByNetwork( network, systemInterfaces ):
   for ifname, systemNetworks in systemInterfaces.items():
     for systemNetwork in systemNetworks:
-      if isNetworkInNetwork(network, systemNetwork):
+      if isNetworkInNetwork(systemNetwork, network):
         return ifname
   return None
 
