@@ -13,8 +13,8 @@ function __config__() {
 }
 
 function __main__() {
-  if values::is_true --config userAuthn.publishAapi ; then
-    values::unset --config userAuthn.publishAapi
+  if values::is_true --config userAuthn.publishApi ; then
+    values::unset --config userAuthn.publishApi
     values::set --config userAuthn.publishAPI "{}"
     values::set --config userAuthn.publishAPI.enable "true"
   fi
