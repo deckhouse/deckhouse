@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Миграция 2019-09-17
+# Удаляет не актуальные параметры dexAuthenticator из конфигураций модулей
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+
+function __main__() {
+  if values::has --config dashboard.dexAuthenticator ; then
+    values::unset --config dashboard.dexAuthenticator
+  fi
+}
+
+hook::run "$@"

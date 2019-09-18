@@ -119,15 +119,17 @@
   {{- end }}
 {{- end }}
 
-  {{- if $context.Values.userAuthn.internal.kubernetesDexClientAppRedirectURIs }}
+  {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
   staticClients:
   - id: kubernetes
     name: kubernetes
     secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
     redirectURIs:
-  {{- range $redirectURI := splitList "\n" ($context.Values.userAuthn.internal.kubernetesDexClientAppRedirectURIs) }}
-      - {{ $redirectURI }}
-  {{- end }}
+    {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+      {{- if $crd.useKubernetesAppKey }}
+    - https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
+      {{- end }}
+    {{- end }}
   {{- end }}
 {{- end }}
 ---

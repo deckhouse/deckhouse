@@ -10,7 +10,7 @@ metadata:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
     nginx.ingress.kubernetes.io/auth-signing: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
-    nginx.ingress.kubernetes.io/auth-url: https://dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-url: https://grafana-dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
     nginx.ingress.kubernetes.io/proxy-buffer-size: 512k
 {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
