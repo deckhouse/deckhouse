@@ -2,8 +2,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prometheus-metrics-adapter-apiserver-proxy-client-ca
-  namespace: kube-prometheus
+  name: apiserver-authentication-requestheader-client-ca
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 data:
   ca.crt: |

@@ -6,7 +6,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: user-authz-webhook
-  namespace: kube-system
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   targetRef:
@@ -21,7 +21,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: user-authz-webhook
-  namespace: kube-system
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | indent 2 }}
 spec:
   selector:
@@ -44,31 +44,33 @@ spec:
       - name: deckhouse-registry
       hostNetwork: true
       containers:
-      - name: frontend
-        image: {{ $.Values.global.modulesImages.registry }}/user-authz/nginx:{{ $.Values.global.modulesImages.tags.userAuthz.nginx }}
-        volumeMounts:
-        - mountPath: /etc/ssl/user-authz-webhook
-          name: user-authz-webhook-secret
-        - mountPath: /etc/ssl/extension-apiserver-authentication
-          name: extension-apiserver-authentication
-      - name: backend
+      - name: webhook
         image: {{ $.Values.global.modulesImages.registry }}/user-authz/webhook:{{ $.Values.global.modulesImages.tags.userAuthz.webhook }}
         volumeMounts:
         - mountPath: /etc/user-authz-webhook/
           name: user-authz-webhook-config
           readOnly: true
+        - mountPath: /etc/ssl/user-authz-webhook
+          name: user-authz-webhook-secret
+        - mountPath: /etc/ssl/apiserver-authentication-requestheader-client-ca
+          name: apiserver-authentication-requestheader-client-ca
         livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 4080
-            host: 127.0.0.1
+          exec:
+            command:
+            - curl
+            - -ksS
+            - --cert
+            - /etc/ssl/user-authz-webhook/webhook-server.crt
+            - --key
+            - /etc/ssl/user-authz-webhook/webhook-server.key
+            - https://127.0.0.1:40443/healthz
       volumes:
       - name: user-authz-webhook-secret
         secret:
           secretName: user-authz-webhook
-      - name: extension-apiserver-authentication
+      - name: apiserver-authentication-requestheader-client-ca
         configMap:
-          name: extension-apiserver-authentication
+          name: apiserver-authentication-requestheader-client-ca
       - name: user-authz-webhook-config
         configMap:
           name: user-authz-webhook
