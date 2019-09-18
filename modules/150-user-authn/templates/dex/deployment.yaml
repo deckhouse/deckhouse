@@ -35,8 +35,8 @@ spec:
         app: dex
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/dex/config.yaml") . | sha256sum }}
-{{- if .Values.userAuthn.dexClientAppsConfigsSHA256 }}
-        checksum/dex-client-apps-configs-sha256: {{ .Values.userAuthn.internal.dexClientsAppsConfigsSHA256 }}
+{{- if .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+        checksum/dex-client-apps-configs-sha256: {{ .Values.userAuthn.internal.dexAuthenticatorCRDs | toJson | sha256sum }}
 {{- end }}
     spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
@@ -56,11 +56,11 @@ spec:
             path: config.yaml
       - name: config
         emptyDir: {}
-{{- if .Values.userAuthn.internal.dexClientAppsNames }}
-  {{- range $dex_client := splitList "\n" (.Values.userAuthn.internal.dexClientAppsNames) }}
-      - name: {{ $dex_client }}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not $crd.useKubernetesAppKey }}
+      - name: {{ $crd.name }}-{{ $crd.namespace }}-dex-client-app
         secret:
-          secretName: {{ $dex_client }}
+          secretName: {{ $crd.name }}-{{ $crd.namespace }}-dex-client-app
   {{- end }}
 {{- end }}
       initContainers:
@@ -78,10 +78,10 @@ spec:
           name: original-config
         - mountPath: /etc/dex
           name: config
-{{- if .Values.userAuthn.internal.dexClientAppsNames }}
-  {{- range $dex_client := splitList "\n" (.Values.userAuthn.internal.dexClientAppsNames) }}
-        - mountPath: /opt/dex-client-app-config/{{ $dex_client }}.yaml
-          name: {{ $dex_client }}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not $crd.useKubernetesAppKey }}
+        - mountPath: /opt/dex-client-app-config/{{ $crd.name }}-{{ $crd.namespace }}-dex-client-app.yaml
+          name: {{ $crd.name }}-{{ $crd.namespace }}-dex-client-app
           subPath: config.yaml
   {{- end }}
 {{- end }}

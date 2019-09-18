@@ -1,0 +1,145 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd" }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $crd.name }}-dex-authenticator
+  namespace: {{ $crd.namespace }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ $crd.name }}-dex-authenticator
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: {{ $crd.name }}-dex-authenticator
+  namespace: {{ $crd.namespace }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0 ) }}
+  selector:
+    matchLabels:
+      app: dex-authenticator
+      name: {{ $crd.name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $crd.name }}-dex-authenticator
+  namespace: {{ $crd.namespace }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
+  selector:
+    matchLabels:
+      app: dex-authenticator
+      name: {{ $crd.name }}
+  template:
+    metadata:
+      labels:
+        app: dex-authenticator
+        name: {{ $crd.name }}
+    spec:
+{{- include "helm_lib_node_selector" (tuple $context "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple $context "system") | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+    {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-low
+    {{- end }}
+      volumes:
+      - name: tls
+        emptyDir: {}
+      initContainers:
+      - command: ["bash", "-c"]
+        args:
+        - |
+          ca=$(jo CN=dex-authenticator key="$(jo algo=ecdsa size=256)" ca="$(jo expirty=87600h)" | cfssl gencert -initca -)
+          ca_cert=$(echo $ca | jq .cert -r)
+
+          # Создадим конфиг для cfssl gencert
+          config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
+
+          cert=$(jo CN=dex-authenticator hosts="$(jo -a {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }} {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
+
+          echo $cert | jq .key -r > /certs/tls.key
+          echo $cert | jq .cert -r > /certs/tls.crt
+          echo $ca_cert > /certs/ca.crt
+        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/cfssl:{{ $context.Values.global.modulesImages.tags.userAuthn.cfssl }}
+        name: cfssl
+        volumeMounts:
+        - name: tls
+          mountPath: "/certs"
+      containers:
+      - args:
+        - --provider=oidc
+    {{- if $crd.useKubernetesAppKey }}
+        - --client-id=kubernetes
+    {{- else }}
+        - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+    {{- end }}
+    {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
+        - --cookie-secure=false
+    {{- end }}
+        - --redirect-url=https://{{ $crd.spec.applicationDomain }}
+        - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
+    {{- if $crd.spec.sendAuthorizationHeader }}
+        - --set-authorization-header=true
+    {{- end }}
+        - --pass-access-token=true
+        - --pass-authorization-header=true
+        - --scope=groups email openid
+        - --ssl-insecure-skip-verify=true
+        - --proxy-prefix=/dex-authenticator
+        - --email-domain=*
+        - --upstream=file:///dev/null
+        - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
+        - --tls-key-file=/opt/dex-authenticator/tls/tls.key
+        env:
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: dex-authenticator-{{ $crd.name }}
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: dex-authenticator-{{ $crd.name }}
+              key: cookie-secret
+        volumeMounts:
+        - name: tls
+          mountPath: "/opt/dex-authenticator/tls"
+          readOnly: true
+        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticator }}
+        name: dex-authenticator
+        readinessProbe:
+          tcpSocket:
+            port: 443
+            scheme: HTTPS
+          initialDelaySeconds: 1
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 443
+            scheme: HTTPS
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        ports:
+        - containerPort: 443
+          protocol: TCP
+{{- end }}

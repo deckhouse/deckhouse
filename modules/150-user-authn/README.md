@@ -173,6 +173,41 @@ data:
         description: "Direct access to kubernetes API"
     publishAPI: true
 ```
+### Настройка DEX-аутентикатора
+Для автоматического деплоя [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения, и подключения его к dex, реализован CRD `DexAuthenticator`. 
+
+#### Параметры:
+* `applicationDomain` — внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
+    * Формат — строка с адресом (пример: `my-app.kube.my-domain.com`, обязательно НЕ указывать HTTP схему.
+* `sendAuthorizationHeader` — флаг, который отвечает за отправку конечному приложению header'а `Authorization: Bearer`.
+     Включать только если ваше приложение умеет этот header обрабатывать.
+
+
+#### Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+  name: my-cool-app # поды аутентификатора будут иметь префикс my-cool-app
+  namespace: my-cool-namespace # неймспейс, в котором будет развернут dex-authenticator
+spec:
+  applicationDomain: "my-app.kube.my-domain.com" # домен, на котором висит ваше приложение
+  sendAuthorizationHeader: false # отправлять ли `Authorization: Bearer` header приложению, полезно в связке с auth_request в nginx
+```
+
+После появления `DexAuthenticator` в кластере, в указанном namespace'е появятся необходимые deployment, service, ingress, secret.
+Чтобы подключить своё приложение к dex, достаточно будет добавить в ingress вашего приложения следующие аннотации:
+
+
+##### Пример указания аннотаций для подключения `DexAuthenticator`, который мы описали выше:
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+  nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
+  nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
+  nginx.ingress.kubernetes.io/proxy-buffer-size: 512k
+```
+
 
 ### Настройка kube-apiserver
 
@@ -244,4 +279,3 @@ aks-engine upgrade
   --client-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
   --client-secret xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
-

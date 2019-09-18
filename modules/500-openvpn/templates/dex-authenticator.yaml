@@ -1,0 +1,11 @@
+{{- if ( .Values.global.enabledModules | has "user-authn" ) }}
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+  name: openvpn
+  namespace: kube-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
+  sendAuthorizationHeader: false
+{{- end }}
