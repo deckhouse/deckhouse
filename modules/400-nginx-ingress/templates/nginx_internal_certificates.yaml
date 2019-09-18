@@ -1,0 +1,18 @@
+{{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nginx-auth-tls
+  namespace: {{ include "helper.namespace" . }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: kubernetes.io/tls
+data:
+  {{- if not .name }}
+  tls.crt: {{ $.Values.nginxIngress.internal.nginxAuthTLS.certificate | b64enc }}
+  tls.key: {{ $.Values.nginxIngress.internal.nginxAuthTLS.key | b64enc }}
+  {{- else }}
+  tls.crt: {{ index $.Values.nginxIngress.internal (printf "nginxAuthTLS%s" .name) | pluck "certificate" | first | b64enc }}
+  tls.key: {{ index $.Values.nginxIngress.internal (printf "nginxAuthTLS%s" .name) | pluck "key" | first | b64enc }}
+  {{- end }}
+{{- end }}

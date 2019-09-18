@@ -12,7 +12,7 @@ PORT_NUMBER = 8000
 PROMETHEUS_URL = os.environ['PROMETHEUS_URL']
 
 context = ssl.create_default_context()
-context.load_cert_chain('/etc/ssl/prometheus-api-client-cert/tls.crt', '/etc/ssl/prometheus-api-client-cert/tls.key')
+context.load_cert_chain('/etc/ssl/prometheus-api-client-tls/tls.crt', '/etc/ssl/prometheus-api-client-tls/tls.key')
 context.check_hostname = False
 context.verify_mode = ssl.CERT_NONE
 

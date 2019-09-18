@@ -42,8 +42,8 @@ spec:
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop

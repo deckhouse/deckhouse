@@ -82,12 +82,12 @@ spec:
           name: vpa-outgoing-nginx-config
           subPath: outgoing-nginx.conf
         - mountPath: /etc/nginx/ssl/
-          name: vpa-prometheus-api-client-cert
+          name: vpa-prometheus-api-client-tls
           readOnly: true
       volumes:
       - name: vpa-outgoing-nginx-config
         configMap:
           name: vpa-outgoing-nginx-config
-      - name: vpa-prometheus-api-client-cert
+      - name: vpa-prometheus-api-client-tls
         secret:
-          secretName: vpa-prometheus-api-client-cert
+          secretName: vpa-prometheus-api-client-tls

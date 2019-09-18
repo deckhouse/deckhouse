@@ -112,14 +112,14 @@ spec:
           name: trickster-config
           subPath: outgoing-nginx.conf
         - mountPath: /etc/nginx/ssl/
-          name: prometheus-api-client-cert
+          name: prometheus-api-client-tls
           readOnly: true
       volumes:
       - name: trickster-config
         configMap:
           name: trickster-config
-      - name: prometheus-api-client-cert
+      - name: prometheus-api-client-tls
         secret:
-          secretName: prometheus-api-client-cert
+          secretName: prometheus-api-client-tls
       imagePullSecrets:
       - name: deckhouse-registry

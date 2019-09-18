@@ -18,8 +18,8 @@ spec:
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
     relabelings:
     - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
       replacement: custom-$1

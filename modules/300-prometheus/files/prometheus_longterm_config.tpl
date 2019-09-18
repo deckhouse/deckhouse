@@ -61,8 +61,8 @@ scrape_configs:
   metrics_path: '/federate'
   scheme: https
   tls_config:
-    cert_file: /etc/prometheus/secrets/prometheus-api-client-cert/tls.crt
-    key_file: /etc/prometheus/secrets/prometheus-api-client-cert/tls.key
+    cert_file: /etc/prometheus/secrets/prometheus-api-client-tls/tls.crt
+    key_file: /etc/prometheus/secrets/prometheus-api-client-tls/tls.key
     insecure_skip_verify: true
   params:
     'match[]':

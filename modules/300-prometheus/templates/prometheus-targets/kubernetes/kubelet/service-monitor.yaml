@@ -12,8 +12,8 @@ spec:
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
     honorLabels: true
     relabelings:
     - regex: endpoint|namespace|pod|service
@@ -26,8 +26,8 @@ spec:
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-cert/tls.key
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
     path: /metrics/cadvisor
     honorLabels: true
     relabelings:

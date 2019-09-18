@@ -3,7 +3,7 @@
 function common_hooks::certificates::order_certificate::config() {
   echo '
 {
-  "afterHelm": 5,
+  "beforeHelm": 5,
   "schedule": [
     {
       "crontab": "42 4 * * *"
@@ -15,10 +15,14 @@ function common_hooks::certificates::order_certificate::config() {
 # $1 - имя namespace, для которого надо сгенерировать сертификат
 # $2 - название секрета, куда сложить сгенерированный сертификат
 # $3 - common_name генерируемого сертификата
+# $4 - путь в values, куда необходимо записать сертификат и ключ
 function common_hooks::certificates::order_certificate::main() {
   namespace=$1
   secret_name=$2
   common_name=$3
+  value_name=$4
+
+  module_name=$(module::name)
 
   if kubectl -n ${namespace} get secret/${secret_name} > /dev/null 2> /dev/null ; then
     # Проверяем срок действия
@@ -31,6 +35,9 @@ function common_hooks::certificates::order_certificate::main() {
       # Удаляем секрет, будет перезаказан ниже
       kubectl -n ${namespace} delete secret/${secret_name}
     else
+      values::set ${module_name}.$value_name "{}"
+      values::set ${module_name}.$value_name.certificate "$(echo "$cert")"
+      values::set ${module_name}.$value_name.key "$(kubectl -n ${namespace} get secret/${secret_name} -o jsonpath='{.data.tls\.key}' | base64 -d)"
       return 0
     fi
   fi
@@ -77,19 +84,7 @@ EOF
   cert=$(kubectl get csr/${common_name} -o jsonpath='{.status.certificate}')
   kubectl delete csr/${common_name}
 
-  # Создаем секрет
-  key=$(echo "$cfssl_result" | jq .key -r | base64 | tr -d '\n')
-  kubectl create -f - <<EOF
-apiVersion: v1
-metadata:
-  name: ${secret_name}
-  namespace: ${namespace}
-type: kubernetes.io/tls
-data:
-  tls.crt: $cert
-  tls.key: $key
-kind: Secret
-EOF
+  values::set ${module_name}.$value_name "{}"
+  values::set ${module_name}.$value_name.certificate "$(echo "$cert" | base64 -d)"
+  values::set ${module_name}.$value_name.key "$(echo "$cfssl_result" | jq .key -r)"
 }
-
-

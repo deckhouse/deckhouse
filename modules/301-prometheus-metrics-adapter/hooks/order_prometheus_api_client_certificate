@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  common_hooks::certificates::order_certificate::main "kube-prometheus" "prometheus-metrics-adapter-prometheus-api-client-cert" "kube-prometheus:prometheus-metrics-adapter:prometheus-api-client"
+  common_hooks::certificates::order_certificate::main "kube-prometheus" "prometheus-metrics-adapter-prometheus-api-client-tls" "kube-prometheus:prometheus-metrics-adapter:prometheus-api-client" "internal.prometheusAPIClientTLS"
 }
 
 hook::run "$@"

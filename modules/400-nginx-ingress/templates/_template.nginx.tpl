@@ -127,11 +127,11 @@ spec:
         - mountPath: /var/lib/nginx/uwsgi
           name: uwsgi-temp-path
         - mountPath: /etc/nginx/ssl/client.crt
-          name: secret-nginx-auth-cert-crt
+          name: secret-nginx-auth-tls-crt
           subPath: client.crt
           readOnly: true
         - mountPath: /etc/nginx/ssl/client.key
-          name: secret-nginx-auth-cert-key
+          name: secret-nginx-auth-tls-key
           subPath: client.key
           readOnly: true
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
@@ -164,15 +164,15 @@ spec:
         emptyDir: {}
       - name: uwsgi-temp-path
         emptyDir: {}
-      - name: secret-nginx-auth-cert-crt
+      - name: secret-nginx-auth-tls-crt
         secret:
-          secretName: nginx-auth-cert
+          secretName: nginx-auth-tls
           items:
           - key: tls.crt
             path: client.crt
-      - name: secret-nginx-auth-cert-key
+      - name: secret-nginx-auth-tls-key
         secret:
-          secretName: nginx-auth-cert
+          secretName: nginx-auth-tls
           items:
           - key: tls.key
             path: client.key

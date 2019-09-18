@@ -99,8 +99,8 @@ spec:
         - mountPath: /etc/prometheus-reverse-proxy/
           name: prometheus-metrics-adapter-config
           readOnly: true
-        - mountPath: /etc/ssl/prometheus-api-client-cert/
-          name: prometheus-metrics-adapter-prometheus-api-client-cert
+        - mountPath: /etc/ssl/prometheus-api-client-tls/
+          name: prometheus-metrics-adapter-prometheus-api-client-tls
           readOnly: true
       volumes:
       - name: adapter-cert
@@ -112,6 +112,6 @@ spec:
       - name: apiserver-proxy-client-ca
         configMap:
           name: prometheus-metrics-adapter-apiserver-proxy-client-ca
-      - name: prometheus-metrics-adapter-prometheus-api-client-cert
+      - name: prometheus-metrics-adapter-prometheus-api-client-tls
         secret:
-          secretName: prometheus-metrics-adapter-prometheus-api-client-cert
+          secretName: prometheus-metrics-adapter-prometheus-api-client-tls
