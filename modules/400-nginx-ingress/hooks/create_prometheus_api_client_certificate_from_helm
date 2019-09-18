@@ -1,0 +1,27 @@
+#!/bin/bash
+
+### Миграция 2019-09-16: https://github.com/deckhouse/deckhouse/merge_requests/1100/
+# Данный хук можно удалить, после выката на все инсталяции
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=1
+}
+
+function __main__() {
+  if kubectl -n kube-nginx-ingress get secret nginx-auth-cert 2>/dev/null >/dev/null ; then
+    kubectl -n kube-nginx-ingress delete secret nginx-auth-cert 2>/dev/null >/dev/null
+  fi
+
+  if values::has nginxIngress.additionalControllers ; then
+    for additional_controller in $(values::get nginxIngress.additionalControllers | jq '.[].name' -r) ; do
+      if kubectl -n kube-nginx-ingress-${additional_controller} get secret nginx-auth-cert 2>/dev/null >/dev/null ; then
+        kubectl -n kube-nginx-ingress-${additional_controller} delete secret nginx-auth-cert 2>/dev/null >/dev/null
+      fi
+    done
+  fi
+}
+
+hook::run "$@"
+

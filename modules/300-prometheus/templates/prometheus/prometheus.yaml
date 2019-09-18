@@ -99,7 +99,7 @@ spec:
     matchLabels:
       prometheus: main
   secrets:
-  - prometheus-scraper-cert
+  - prometheus-scraper-tls
   rules:
     alert:
       resendDelay: 29s
