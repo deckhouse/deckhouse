@@ -3,12 +3,31 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=75
+  cat << EOF
+{
+   "onStartup": 75,
+   "onKubernetesEvent": [
+      {
+         "kind": "ConfigMap",
+         "namespaceSelector": {
+            "matchNames": [
+               "kube-system"
+            ]
+         },
+         "jqFilter": ".data"
+      }
+   ]
+}
+EOF
 }
 
 function __main__() {
-  extension_api_server_authentication="$(kubectl -n kube-system get cm extension-apiserver-authentication -o json | jq -r '.data' | sha256sum | awk '{print $1}')"
-  values::set global.discovery.extensionAPIServerAuthenticationChecksum "${extension_api_server_authentication}"
+  extension_api_server_authentication_data="$(kubectl -n kube-system get cm extension-apiserver-authentication -o json | jq '.data')"
+  extension_api_server_authentication_checksum="$(echo "${extension_api_server_authentication_data}" | sha256sum | awk '{print $1}')"
+  requestheader_client_ca="$(jq -nr --argjson in "${extension_api_server_authentication_data}" '$in | ."requestheader-client-ca-file"')"
+
+  values::set global.discovery.extensionAPIServerAuthenticationChecksum "${extension_api_server_authentication_checksum}"
+  values::set global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA "${requestheader_client_ca}"
 }
 
 hook::run "$@"

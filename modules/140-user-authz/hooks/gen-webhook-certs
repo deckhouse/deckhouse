@@ -10,8 +10,26 @@ function __config__() {
 }
 
 function __main__() {
+### Миграция 2019-09-17 переезд из kube-system в d8-user-authz
   if values::is_true userAuthz.enableMultiTenancy && ! values::has userAuthz.internal.webhookCA; then
-    if ! kubectl -n kube-system get secret user-authz-webhook > /dev/null 2> /dev/null ; then
+    if kubectl -n kube-system get secret user-authz-webhook > /dev/null 2> /dev/null ; then
+      cert=$(kubectl -n kube-system get secret user-authz-webhook -o json)
+      ca_crt=$(echo "$cert" | jq -r '.data."ca.crt"' | base64 -d)
+      webhook_server_crt=$(echo "$cert" | jq -r '.data."webhook-server.crt"' | base64 -d)
+      webhook_server_key=$(echo "$cert" | jq -r '.data."webhook-server.key"' | base64 -d)
+
+      values::set userAuthz.internal.webhookCA "$ca_crt"
+      values::set userAuthz.internal.webhookServerCrt "$webhook_server_crt"
+      values::set userAuthz.internal.webhookServerKey "$webhook_server_key"
+
+      # По идее helm удалит секрет из kube-system и создаст в d8-user-authz
+      exit 0
+    fi
+  fi
+### Конец миграции
+
+  if values::is_true userAuthz.enableMultiTenancy && ! values::has userAuthz.internal.webhookCA; then
+    if ! kubectl -n d8-user-authz get secret user-authz-webhook > /dev/null 2> /dev/null ; then
       ca=$(jo CN=user-authz-webhook key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
       ca_crt=$(echo "$ca" | jq .cert -r)
 
@@ -22,7 +40,7 @@ function __main__() {
       webhook_server_crt=$(echo "$cert" | jq .cert -r)
       webhook_server_key=$(echo "$cert" | jq .key -r)
     else
-      cert=$(kubectl -n kube-system get secret user-authz-webhook -o json)
+      cert=$(kubectl -n d8-user-authz get secret user-authz-webhook -o json)
       ca_crt=$(echo "$cert" | jq -r '.data."ca.crt"' | base64 -d)
       webhook_server_crt=$(echo "$cert" | jq -r '.data."webhook-server.crt"' | base64 -d)
       webhook_server_key=$(echo "$cert" | jq -r '.data."webhook-server.key"' | base64 -d)
