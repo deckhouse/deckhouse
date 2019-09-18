@@ -24,7 +24,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "api") }}
-    secretName: ingress-tls
+    secretName: kubernetes-tls
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
     http:
