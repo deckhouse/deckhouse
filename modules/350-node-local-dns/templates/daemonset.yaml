@@ -12,7 +12,13 @@ spec:
     kind: DaemonSet
     name: node-local-dns
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "coredns"
+      maxAllowed:
+        cpu: 2
+        memory: 256Mi
 {{- end }}
 ---
 apiVersion: v1
@@ -57,24 +63,6 @@ spec:
       dnsPolicy: Default
       tolerations:
       - operator: Exists
-      initContainers:
-      - name: init
-        image: {{ .Values.global.modulesImages.registry }}/node-local-dns/sidecar:{{ .Values.global.modulesImages.tags.nodeLocalDns.sidecar }}
-        securityContext:
-          privileged: true
-        command: ["/init.sh"]
-        env:
-        - name: KUBE_CLUSTER_DOMAIN
-          value: {{ .Values.global.discovery.clusterDomain }}
-        - name: KUBE_DNS_SVC_IP
-          value: {{ .Values.global.discovery.clusterDNSAddress }}
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        volumeMounts:
-        - name: config-volume
-          mountPath: /etc/coredns
       containers:
       - name: sidecar
         image: {{ .Values.global.modulesImages.registry }}/node-local-dns/sidecar:{{ .Values.global.modulesImages.tags.nodeLocalDns.sidecar }}
@@ -93,29 +81,28 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         readinessProbe:
-          httpGet:
-            host: 127.0.0.1
-            path: /metrics
-            port: 9255
-          timeoutSeconds: 5
+          exec:
+            command:
+            - rm
+            - /ready
+          periodSeconds: 10
         livenessProbe:
-          httpGet:
-            host: 127.0.0.1
-            path: /metrics
-            port: 9255
-          initialDelaySeconds: 60
-          timeoutSeconds: 5
+          exec:
+            command:
+            - rm
+            - /alive
+          periodSeconds: 20
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
         - name: config-volume
           mountPath: /etc/coredns
+        - name: shared
+          mountPath: /shared
       - name: coredns
         image: {{ .Values.global.modulesImages.registry }}/node-local-dns/coredns:{{ .Values.global.modulesImages.tags.nodeLocalDns.coredns }}
-        args:
-        - "-conf"
-        - "/etc/coredns/Corefile"
+        command: ["/bin/bash", "-l", "-c", "/start.sh"]
         env:
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress }}
@@ -138,17 +125,23 @@ spec:
         livenessProbe:
           exec:
             command:
-            - /health.sh
-            - {{ .Values.global.discovery.clusterDomain | quote }}
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 7
+            - rm
+            - /shared/dns_alive
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - rm
+            - /shared/dns_ready
+          periodSeconds: 10
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
         - name: config-volume
           mountPath: /etc/coredns
+        - name: shared
+          mountPath: /shared
       - name: ca-auth-proxy-coredns
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
@@ -191,6 +184,8 @@ spec:
           path: /run/xtables.lock
           type: FileOrCreate
       - name: config-volume
+        emptyDir: {}
+      - name: shared
         emptyDir: {}
       imagePullSecrets:
       - name: deckhouse-registry
