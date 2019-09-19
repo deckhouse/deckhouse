@@ -6,8 +6,3 @@ tenantName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.ten
 {{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "caCert" }}
 caCert: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.caCert | b64enc }}
 {{- end }}
-
-Поддерживаются две версии
-
-18.04-1.0 тут только Kubernetes version
-precooked
