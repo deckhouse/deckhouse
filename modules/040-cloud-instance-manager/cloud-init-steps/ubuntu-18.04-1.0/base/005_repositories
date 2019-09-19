@@ -1,0 +1,13 @@
+#!/bin/bash -e
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt dist-upgrade -y
+apt install -qy apt-transport-https
+
+curl -fsSL "https://packages.cloud.google.com/apt/doc/apt-key.gpg" | apt-key add -
+curl -fsSL "https://download.docker.com/linux/ubuntu/gpg" | sudo apt-key add -
+echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+echo "deb https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+
+apt update

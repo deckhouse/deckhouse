@@ -9,7 +9,7 @@ function __config__() {
 }
 
 function __main__() {
-  targets=$(kubectl get no -o json | jq -c '{cluster_targets: (.items | map ({name: (.status.addresses | map (select(.type=="Hostname").address) | first), ipAddress: (.status.addresses | map (select(.type=="InternalIP").address) | first) }) | sort)}')
+  targets=$(kubectl get no -o json | jq -c '{cluster_targets:[.items[] | select(.status.addresses) | { name: ((.status.addresses | map (select(.type=="Hostname").address) | first) // .metadata.name), ipAddress: (.status.addresses | map (select(.type=="InternalIP").address) | first) }] | sort}')
 
   external_targets=$(values::get --config pingExporter.externalTargets | jq '{external_targets: .}')
   if [ -n "$external_targets" ]; then

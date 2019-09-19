@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  cluster_ca=$(kubectl -n kube-system get cm extension-apiserver-authentication -o json | jq '.data."client-ca-file"' -r)
+  values::set cloudInstanceManager.internal.clusterCA "${cluster_ca}"
+}
+
+hook::run "$@"

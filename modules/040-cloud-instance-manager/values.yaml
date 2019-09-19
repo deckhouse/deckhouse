@@ -1,0 +1,6 @@
+cloudInstanceManagerEnabled: true
+cloudInstanceManager:
+  internal:
+    cloudInitSteps:
+      version: "ubuntu-18.04-1.0"
+      options: {}

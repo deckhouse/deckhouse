@@ -1,0 +1,50 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "afterHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "MachineDeployment",
+      "namespaceSelector": {
+        "matchNames": [
+          "d8-cloud-instance-manager"
+        ]
+      },
+      "jqFilter": "[.metadata.name, .metadata.labels.\"instance-group\", .spec.replicas]"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  for info in $(kubectl -n d8-cloud-instance-manager get machinedeployments -o json | jq -r '.items[] | "\(.metadata.name):\(.metadata.labels."instance-group"):\(.spec.replicas)"'); do
+    name=$(echo $info | cut -d: -f1)
+    ig_name=$(echo $info | cut -d: -f2)
+    replicas=$(echo $info | cut -d: -f3)
+
+    ig=$(values::get --required cloudInstanceManager.internal.instanceGroups | jq '.[] | select(.name == "'$ig_name'")')
+    ig_min_instances=$(echo "$ig" | jq .minInstancesPerZone)
+    ig_max_instances=$(echo "$ig" | jq .maxInstancesPerZone)
+
+    replicas_should_be=""
+    if [[ $ig_min_instances -ge $ig_max_instances ]] ; then
+      replicas_should_be=$ig_max_instances
+    elif [[ "$replicas" == "null" || $replicas -eq 0 ]] ; then
+      replicas_should_be=$ig_min_instances
+    elif [[ $replicas -lt $ig_min_instances ]] ; then
+      replicas_should_be=$ig_min_instances
+    elif [[ $replicas -gt $ig_max_instances ]] ; then
+      replicas_should_be=$ig_max_instances
+    fi
+
+    if [[ -n $replicas_should_be ]] && kubectl -n d8-cloud-instance-manager get machinedeployment $name > /dev/null 2> /dev/null ; then
+      kubectl::jq_patch d8-cloud-instance-manager machinedeployments/$name ".spec.replicas = $replicas_should_be"
+    fi
+  done
+}
+
+hook::run "$@"

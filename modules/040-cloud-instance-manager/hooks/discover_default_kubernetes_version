@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  apiserver_version=$(kubectl version -o json | jq -r '.serverVersion.gitVersion' | sed s/^v//)
+  values::set cloudInstanceManager.internal.cloudInitSteps.options.kubernetesVersion "$apiserver_version"
+}
+
+hook::run "$@"

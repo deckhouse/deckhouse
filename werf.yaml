@@ -42,6 +42,7 @@ ansible:
     - grep
     - tar
     - unzip
+    - coreutils
 
   # Зависимости хуков (из edge/testing)
   - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
@@ -91,7 +92,7 @@ ansible:
       - --strip-components=1
       src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
       remote_src: yes
-      dest: /usr/local/bin
+      dest: /
 
   # Чистим кеш
   - raw: rm -rf /var/cache/apk/*

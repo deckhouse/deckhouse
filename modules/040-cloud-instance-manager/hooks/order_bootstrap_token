@@ -1,0 +1,68 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 5,
+  "schedule": [
+    {
+      "crontab": "23 * * * *"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  # Remove all expired tokens
+  for token_secret in $(kubectl -n kube-system get secret --field-selector type=bootstrap.kubernetes.io/token -l heritage=deckhouse,module=cloud-instance-manager -o name) ; do
+    not_after=$(kubectl -n kube-system get $token_secret -o json | jq '.data.expiration' -r | base64 -d)
+    valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
+
+    if [[ $valid_for -lt 0 ]] ; then
+      kubectl -n kube-system delete $token_secret
+    fi
+  done
+
+  # Find the latest token
+  token_data=$(kubectl -n kube-system get secret --field-selector type=bootstrap.kubernetes.io/token -l heritage=deckhouse,module=cloud-instance-manager --sort-by=metadata.creationTimestamp -o json | jq '.items[-1].data')
+  if [[ $token_data != "null" ]] ; then
+    not_after=$(echo "$token_data" | jq .expiration -r | base64 -d)
+    valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
+
+    # If it will be valid for at least 3 hours
+    if [[ $valid_for -gt 10800 ]] ; then
+      token_id=$(echo "$token_data" | jq '."token-id"' -r | base64 -d)
+      token_secret=$(echo "$token_data" | jq '."token-secret"' -r | base64 -d)
+      values::set cloudInstanceManager.internal.bootstrapToken "$token_id.$token_secret"
+      exit 0
+    fi
+  fi
+
+  token_id=$(pwgen -sA 6 1 | tr -d '\n')
+  token_secret=$(pwgen -sA 16 1 | tr -d '\n')
+
+  kubectl create -f - > /dev/null <<END
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bootstrap-token-$token_id
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    module: cloud-instance-manager
+type: bootstrap.kubernetes.io/token
+data:
+  expiration: $(date +"%Y-%m-%dT%H:%M:%SZ" -d @$(expr "$(date +'%s')" + 14400) | tr -d '\n' | base64 -w0)
+  token-id: $(echo -n $token_id | base64 -w0)
+  token-secret: $(echo -n $token_secret | base64 -w0)
+  auth-extra-groups: $(echo -n system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:cloud-instance-manager:machine-bootstrap | base64 -w0)
+  usage-bootstrap-authentication: $(echo -n true | base64 -w0)
+  usage-bootstrap-signing: $(echo -n true | base64 -w0)
+END
+
+  values::set cloudInstanceManager.internal.bootstrapToken "$token_id.$token_secret"
+}
+
+hook::run "$@"

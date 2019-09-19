@@ -1,0 +1,13 @@
+authURL: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.authURL | b64enc }}
+username: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.username | b64enc }}
+password: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.password | b64enc }}
+domainName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.domainName | b64enc }}
+tenantName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.tenantName | b64enc }}
+{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "caCert" }}
+caCert: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.caCert | b64enc }}
+{{- end }}
+
+Поддерживаются две версии
+
+18.04-1.0 тут только Kubernetes version
+precooked

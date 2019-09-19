@@ -8,7 +8,7 @@ function cluster::specific_nodes() {
   kubectl get nodes -o json | jq '.items[]
     | select(.spec.taints)
     | select(
-      .spec.taints[] | select(.key == "dedicated.flant.com" or (.key | startswith("node-role.kubernetes.io/")))
+      .spec.taints[] | select(.key == "dedicated.flant.com" or .key == "node-role.kubernetes.io/master")
       )
     | .metadata.name' -r
 }
@@ -16,7 +16,7 @@ function cluster::specific_nodes() {
 function cluster::nonspecific_nodes() {
   kubectl get nodes -o json | jq '.items[]
     | select(
-      .spec.taints == null or (.spec.taints[] | select(.key != "dedicated" and (.key | startswith("node-role.kubernetes.io/") | not)))
+      .spec.taints == null or (.spec.taints[] | select(.key != "dedicated.flant.com" and .key != "node-role.kubernetes.io/master"))
       )
     | .metadata.name' -r
 }

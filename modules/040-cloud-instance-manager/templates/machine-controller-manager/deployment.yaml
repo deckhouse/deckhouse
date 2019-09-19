@@ -1,0 +1,90 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: machine-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: machine-controller-manager
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: {{ div (.Values.global.discovery.clusterMasterCount | int) 2 | default 1 }}
+{{- end }}
+  template:
+    metadata:
+      labels:
+        app: machine-controller-manager
+    spec:
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-critical
+{{- end }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: prometheus-metrics-adapter
+            topologyKey: kubernetes.io/hostname
+{{- end }}
+      serviceAccountName: machine-controller-manager
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+        - image: {{ .Values.global.modulesImages.registry }}/cloud-instance-manager/machine-controller-manager:{{ .Values.global.modulesImages.tags.cloudInstanceManager.machineControllerManager }}
+          name: controller
+          args:
+          - --namespace=d8-cloud-instance-manager
+          - --cloud-provider={{ .Values.cloudInstanceManager.internal.cloudProvider.type | quote }}
+          - --machine-max-evict-retries=120
+          - --machine-safety-orphan-vms-period=5m
+          - -v=2
+          resources:
+            requests:
+              cpu: 50m
+              memory: 90Mi
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10258
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          env:
+          - name: LEADER_ELECTION_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          command:
+          - /machine-controller-manager
+          - -v=2

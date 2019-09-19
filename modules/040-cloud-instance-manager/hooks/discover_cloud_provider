@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+   "beforeHelm": 5,
+   "onKubernetesEvent": [
+      {
+         "kind": "Secret",
+         "objectName": "d8-cloud-instance-manager-cloud-provider",
+         "namespaceSelector": {
+            "matchNames": [
+              "kube-system"
+            ]
+         }
+      }
+   ]
+}
+EOF
+}
+
+function __main__() {
+  cloud_provider_values=$(kubectl -n kube-system get secret d8-cloud-instance-manager-cloud-provider -o json |
+                         jq -r '
+                              (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+                              +
+                              (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
+                          ')
+  values::set cloudInstanceManager.internal.cloudProvider "$cloud_provider_values"
+}
+
+hook::run "$@"

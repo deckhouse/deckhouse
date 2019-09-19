@@ -1,0 +1,43 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: OpenStackMachineClass
+metadata:
+  name: {{ .instanceGroup.name }}-{{ .zoneName }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+spec:
+  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.region | quote }}
+  availabilityZone: {{ .zoneName }}
+  flavorName: {{ .instanceGroup.instanceClass.flavorName }}
+  imageName: {{ .instanceGroup.instanceClass.imageName }}
+  networks:
+  - name: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.networkName }}
+{{- if not (hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "internalNetworkName") }}
+  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
+    podNetwork: true
+  {{- end }}
+{{- end }}
+{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "internalNetworkName" }}
+  - name: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.internalNetworkName }}
+  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
+    podNetwork: true
+  {{- end }}
+{{- end }}
+{{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
+  podNetworkCidr: {{ .Values.global.discovery.podSubnet }}
+{{- end }}
+{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "sshKeyPairName" }}
+  keyName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.sshKeyPairName }}
+{{- end }}
+{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "securityGroups" }}
+  securityGroups:
+  {{- range .Values.cloudInstanceManager.internal.cloudProvider.openstack.securityGroups }}
+  - {{ . }}
+  {{- end }}
+{{- end }}
+  tags:
+    # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
+    kubernetes.io-cluster-deckhouse-{{ .Values.global.project }}-{{ .Values.global.clusterName }}: "1"
+    kubernetes.io-role-deckhouse-{{ .instanceGroup.name }}-{{ .zoneName }}: "1"
+  secretRef:
+    namespace: d8-{{ .Chart.Name }}
+    name: machine-class-{{ .instanceGroup.name }}-{{ .zoneName }}

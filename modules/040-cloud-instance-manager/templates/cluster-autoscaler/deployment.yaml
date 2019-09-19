@@ -1,0 +1,76 @@
+{{- define "cluster_autoscaler_nodes" }}
+  {{- range $ig := .Values.cloudInstanceManager.internal.instanceGroups }}
+    {{- if lt (int $ig.minInstancesPerZone) (int $ig.maxInstancesPerZone) }}
+      {{- range $zone_name := $ig.zones }}
+        {{- if $.Values.cloudInstanceManager.instancePrefix }}
+- --nodes={{ $ig.minInstancesPerZone }}:{{ $ig.maxInstancesPerZone }}:d8-cloud-instance-manager.{{ $.Values.cloudInstanceManager.instancePrefix }}-{{ $ig.name }}-{{ $zone_name }}
+        {{- else }}
+- --nodes={{ $ig.minInstancesPerZone }}:{{ $ig.maxInstancesPerZone }}:d8-cloud-instance-manager.{{ $ig.name }}-{{ $zone_name }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if include "cluster_autoscaler_nodes" . }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  revisionHistoryLimit: 0
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cluster-autoscaler
+    spec:
+  {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-critical
+  {{- end }}
+      serviceAccountName: cluster-autoscaler
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: cluster-autoscaler
+        image: {{ .Values.global.modulesImages.registry }}/cloud-instance-manager/cluster-autoscaler:{{ .Values.global.modulesImages.tags.cloudInstanceManager.clusterAutoscaler }}
+        args:
+        - --namespace=d8-cloud-instance-manager
+        - --cloud-provider=mcm
+        - --write-status-configmap=false
+{{ include "cluster_autoscaler_nodes" . | indent 8 }}
+        - --stderrthreshold=info
+        - --skip-nodes-with-system-pods=false
+        - --skip-nodes-with-local-storage=false
+        - --min-replica-count=1
+        - --expander=least-waste
+        - --expendable-pods-priority-cutoff=-10
+        - --scale-down-unneeded-time=2m
+        - --scale-down-unready-time=4m
+        - --scale-down-delay-after-failure=1m
+        - --scale-down-utilization-threshold=0.6
+        - --unremovable-node-recheck-timeout=30s
+        - --scale-down-delay-after-add=2m
+        - --v=2
+        ports:
+        - name: metrics
+          containerPort: 12345
+          protocol: TCP
+        env:
+        - name: CONTROL_NAMESPACE
+          value: d8-cloud-instance-manager
+        resources:
+          limits:
+            cpu: 150m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 300Mi
+{{- end }}

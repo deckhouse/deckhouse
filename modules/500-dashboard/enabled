@@ -3,6 +3,8 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
+  module::disable_if_cluster_is_not_bootstraped
+
   if values::has global.modules.publicDomainTemplate ; then
     if ! values::array_has global.enabledModules "user-authz" ; then
       echo "false" > $MODULE_ENABLED_RESULT

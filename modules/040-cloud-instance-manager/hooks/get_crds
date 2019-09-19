@@ -1,0 +1,71 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "CloudInstanceGroup"
+    },
+    {
+      "kind": "'$(cat /tmp/cloud-instance-manager-instance-class-kind)'"
+    }
+  ]
+}'
+
+  # Костыль 2019-07-19: пока не разберёмся как правильно создавать CRD
+  kubectl apply -f "$(module::path)/crds/" >/dev/null 2>&1
+}
+
+function __main__() {
+  # Get instance classes
+  instance_class_kind=$(values::get cloudInstanceManager.internal.cloudProvider.instanceClassKind)
+  instance_classes="$(kubectl get $instance_class_kind -o json |
+    jq -r 'reduce .items[] as $i ({}; . + {"\($i.metadata.name)": ($i.spec | .cloudInitSteps = (.cloudInitSteps // {}) | .cloudInitSteps.options = (.cloudInitSteps.options // {}))})')"
+
+  # Process instance groups
+  errors=no
+  instance_groups=""
+  instance_group_names=$(kubectl get CloudInstanceGroups -o json | jq -r '.items[].metadata.name')
+  for ig_name in $instance_group_names ; do
+    # Get instance group
+    ig=$(kubectl get CloudInstanceGroups $ig_name -o json | jq '.spec.name = .metadata.name | .spec')
+
+    # Fill instanceClass
+    ig_instance_class_kind=$(echo "$ig" | jq '.instanceClassReference.kind' -r)
+    if [[ "x$ig_instance_class_kind" != "x$instance_class_kind" ]] ; then
+      >&2 echo "Bad instanceClassReference in CloudInstanceGroup $ig_name: kind $ig_instance_class_kind is not allowed, the only allowed kind is $instance_class_kind"
+      errors=yes
+      continue
+    fi
+    ig_instance_class_name=$(echo "$ig" | jq '.instanceClassReference.name' -r)
+    if ! echo "$instance_classes" | jq '. | has("'$ig_instance_class_name'")' -e >/dev/null 2>&1; then
+      >&2 echo "Bad instanceClassReference in CloudInstanceGroup $ig_name: there is no $ig_instance_class_name of type $ig_instance_class_kind"
+      errors=yes
+      continue
+    fi
+    ig=$(echo "$ig" | jq --argjson instance_class "$(echo "$instance_classes" | jq '."'$ig_instance_class_name'"')" '.instanceClass = $instance_class')
+
+    # Fill zones
+    if echo "$ig" | jq -e '. | has("zones") | not' >/dev/null 2>&1; then
+      ig=$(echo "$ig" | jq --argjson zones "$(values::get --required cloudInstanceManager.internal.cloudProvider.zones)" '.zones = $zones')
+    fi
+
+    if [[ -n $instance_groups ]] ; then
+      instance_groups="$instance_groups,$ig"
+    else
+      instance_groups="$ig"
+    fi
+  done
+
+  if [[ "x$errors" != "xno" ]] ; then
+    exit 1
+  else
+    values::set cloudInstanceManager.internal.instanceGroups "[$instance_groups]"
+  fi
+}
+
+hook::run "$@"

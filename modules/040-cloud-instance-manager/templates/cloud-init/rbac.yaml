@@ -1,0 +1,39 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: machine-bootstrap
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resourceNames:
+{{- $cloud_init_steps_versions := list }}
+{{- range $f, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}cloud-init-steps/*/{base,instance-group}/*" | join "") }}
+  {{- $cloud_init_steps_versions = append $cloud_init_steps_versions ($f | dir | dir | base) | uniq }}
+{{- end }}
+{{- range $cloud_init_steps_version := $cloud_init_steps_versions }}
+  - cloud-init-steps-{{ $cloud_init_steps_version }}
+  {{- range $.Values.cloudInstanceManager.internal.instanceGroups }}
+  - cloud-init-steps-{{ $cloud_init_steps_version }}-{{ .name }}
+  {{- end}}
+{{- end }}
+  resources:
+  - secrets
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: machine-bootstrap
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: machine-bootstrap
+subjects:
+- kind: Group
+  name: system:bootstrappers:{{ $.Chart.Name }}:machine-bootstrap
+  apiGroup: rbac.authorization.k8s.io

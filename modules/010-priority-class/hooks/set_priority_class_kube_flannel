@@ -7,24 +7,25 @@ function __config__() {
 }
 
 function __main__() {
-  cluster_version=$(values::get global.discovery.clusterVersion)
-  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
-    # Подам kube-flannel необходимо задать максимальный priorityClass, так как без подов kube-flannel
-    # работа всего кластера может быть нарушена
+  if kubectl -n kube-system get ds kube-flannel-ds >/dev/null 2>&1; then
+    cluster_version=$(values::get global.discovery.clusterVersion)
+    if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
+      cluster_type=$(values::get --required global.discovery.clusterType)
+      # Подам kube-flannel необходимо задать максимальный priorityClass, так как без подов kube-flannel
+      # работа всего кластера может быть нарушена
 
-    # flannel есть только в Manual кластерах
-    [[ "$cluster_type" != "Manual" ]] && return 0
+      # flannel есть только в Manual кластерах
+      [[ "$cluster_type" != "Manual" ]] && return 0
 
-    fltr='.'
+      fltr='.'
 
-    # Необходимо проставить наивысший priorityClassName kube-flannel
-    fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+      # Необходимо проставить наивысший priorityClassName kube-flannel
+      fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
 
-    # Применяем
-    kubectl::jq_patch kube-system ds/kube-flannel-ds "$fltr"
+      # Применяем
+      kubectl::jq_patch kube-system ds/kube-flannel-ds "$fltr"
+    fi
   fi
 }
 
 hook::run $@
-
