@@ -11,7 +11,7 @@ function __config__() {
 
 function __main__() {
   for i in $(seq 1 120); do
-    if kubectl -n d8-system get pod -l app=ingress-conversion-webhook -o json | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' ; then
+    if kubectl -n d8-system get pod -l app=ingress-conversion-webhook -o json | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' > /dev/null ; then
       break
     fi
 

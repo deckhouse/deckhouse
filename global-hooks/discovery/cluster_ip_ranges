@@ -11,7 +11,7 @@ function __config__() {
   "onKubernetesEvent": [
     {
       "kind": "node",
-      "jqFilter": ".status.addresses[] | select (.type == \"InternalIP\")"
+      "jqFilter": ".status.addresses[]? | select (.type == \"InternalIP\")"
     },
     {
       "kind": "pod",

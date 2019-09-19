@@ -1,0 +1,10 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __main__() {
+  module::disable_if_cluster_is_not_bootstraped
+  echo "true" > $MODULE_ENABLED_RESULT
+}
+
+hook::run $@

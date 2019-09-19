@@ -1,0 +1,94 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: pd-csi-controller
+  namespace: d8-cloud-provider-gcp
+{{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
+spec:
+  selector:
+    app: pd-csi-controller
+  ports:
+  - name: dummy
+    port: 12345
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: pd-csi-controller
+  namespace: d8-cloud-provider-gcp
+{{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
+spec:
+  serviceName: "csi-gce-pd"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pd-csi-controller
+  template:
+    metadata:
+      labels:
+        app: pd-csi-controller
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-critical
+{{- end }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      tolerations:
+      - operator: Exists
+      serviceAccountName: pd-csi-controller
+      containers:
+      - name: csi-provisioner
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderGcp.csiProvisioner }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        - "--feature-gates=Topology=true"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: csi-attacher
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderGcp.csiAttacher }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: csi-resizer
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderGcp.csiResizer }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: csi-snapshotter
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/csi-snapshotter:{{ .Values.global.modulesImages.tags.cloudProviderGcp.csiSnapshotter }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: pd-csi-controller
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/pd-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderGcp.pdCsiPlugin }}
+        args:
+        - "--v=5"
+        - "--endpoint=unix:/csi/csi.sock"
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/etc/csi-cloud-credentials/credentials.json"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+        - name: csi-cloud-credentials
+          readOnly: true
+          mountPath: "/etc/csi-cloud-credentials"
+      volumes:
+        - name: socket-dir
+          emptyDir: {}
+        - name: csi-cloud-credentials
+          secret:
+            secretName: csi-cloud-credentials

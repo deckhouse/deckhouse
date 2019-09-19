@@ -12,8 +12,8 @@ function __config__() {
 
 function __main__() {
   fltr='.spec.template.spec.containers[].env |= map(select(.name != "GITLAB_TOKEN")) |
-        .spec.template.spec.containers[0].volumeMounts = [{"name":"registrysecret","mountPath":"/etc/registrysecret","readOnly":true}] |
-        .spec.template.spec.volumes = [{"name": "registrysecret","secret":{"secretName":"antiopa-registry"}}]'
+        .spec.template.spec.containers[0].volumeMounts = [{"mountPath":"/etc/registrysecret","name":"registrysecret","readOnly":true}] |
+        .spec.template.spec.volumes = [{"name":"registrysecret","secret":{"defaultMode":420,"secretName":"antiopa-registry"}}]'
 
   kubectl -n antiopa delete secret antiopa-secret >/dev/null 2>&1 || true
   kubectl::jq_patch antiopa deployment/antiopa "$fltr"

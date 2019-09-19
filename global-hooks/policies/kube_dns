@@ -53,7 +53,7 @@ function __main__() {
       fltr=$fltr' | .spec.replicas = 2'
     else
       count_nonspecific_nodes=$(cluster::nonspecific_nodes | wc -l)
-      fltr=$fltr' | .spec.replicas |= ([[2,.] | max, '$count_nonspecific_nodes'] | min)'
+      fltr=$fltr' | .spec.replicas |= ([([2,.] | max), ([2, '$count_nonspecific_nodes'] | max)] | min)'
     fi
   fi
 

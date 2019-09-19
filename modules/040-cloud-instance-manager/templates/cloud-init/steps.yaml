@@ -1,0 +1,49 @@
+{{- $cloud_init_steps_versions := list }}
+{{- range $f, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}cloud-init-steps/*/{base,instance-group}/*" | join "") }}
+  {{- $cloud_init_steps_versions = append $cloud_init_steps_versions ($f | dir | dir | base) | uniq }}
+{{- end }}
+
+{{- range $cloud_init_steps_version := $cloud_init_steps_versions }}
+  {{- range $ig := $.Values.cloudInstanceManager.internal.instanceGroups }}
+    {{- $tpl_context := dict }}
+    {{- $_ := set $tpl_context "Release" $.Release }}
+    {{- $_ := set $tpl_context "Chart" $.Chart }}
+    {{- $_ := set $tpl_context "Files" $.Files }}
+    {{- $_ := set $tpl_context "Capabilities" $.Capabilities }}
+    {{- $_ := set $tpl_context "Template" $.Template }}
+    {{- $_ := set $tpl_context "Values" $.Values }}
+    {{- $_ := set $tpl_context "instanceGroup" $ig }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-init-steps-{{ $cloud_init_steps_version }}-{{ $ig.name }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: Opaque
+data:
+    {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}cloud-init-steps/" $cloud_init_steps_version "/instance-group/*" | join "") }}
+{{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
+    {{- end }}
+  {{- end }}
+
+  {{- $tpl_context := dict }}
+  {{- $_ := set $tpl_context "Release" $.Release }}
+  {{- $_ := set $tpl_context "Chart" $.Chart }}
+  {{- $_ := set $tpl_context "Files" $.Files }}
+  {{- $_ := set $tpl_context "Capabilities" $.Capabilities }}
+  {{- $_ := set $tpl_context "Template" $.Template }}
+  {{- $_ := set $tpl_context "Values" $.Values }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-init-steps-{{ $cloud_init_steps_version }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: Opaque
+data:
+  {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}cloud-init-steps/" $cloud_init_steps_version "/base/*" | join "") }}
+{{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
+  {{- end }}
+{{- end }}

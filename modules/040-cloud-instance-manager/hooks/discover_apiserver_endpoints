@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+   "beforeHelm": 10,
+   "onKubernetesEvent": [
+      {
+         "kind": "Endpoints",
+         "objectName": "kubernetes",
+         "namespaceSelector": {
+            "matchNames": [
+               "default"
+            ]
+         }
+      }
+   ]
+}
+EOF
+}
+
+function __main__() {
+  apiserver_endpoints=$(kubectl -n default get ep kubernetes -o json | jq -r '[.subsets[].addresses[].ip]')
+  values::set cloudInstanceManager.internal.clusterMasterAddresses "$apiserver_endpoints"
+}
+
+hook::run "$@"

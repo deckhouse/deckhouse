@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=10 onKubernetesEvent="$(jo -a \
+    "$(jo kind=node jqFilter="[.metadata.labels, .spec.taints, (.status.conditions[] | [.type, .status])]" disableDebug=true)" \
+  )"
+}
+
+function __main__() {
+  if kubectl -n kube-system get cm/d8-cluster-is-bootstraped > /dev/null 2> /dev/null ; then
+    values::set global.clusterIsBootstraped true
+  else
+    if kubectl get nodes -o json | jq -e '[
+        .items[]
+        | select(.spec.taints == null or ([.spec.taints[] | select(.key == "node-role.kubernetes.io/master")] | any | not))
+        | .status.conditions | [.[] | select(.type == "Ready")] | all(.[] ; .status == "True")
+      ] | any' > /dev/null ; then
+      values::set global.clusterIsBootstraped true
+      kubectl -n kube-system create configmap d8-cluster-is-bootstraped
+    else
+      values::set global.clusterIsBootstraped false
+    fi
+  fi
+}
+
+hook::run $@

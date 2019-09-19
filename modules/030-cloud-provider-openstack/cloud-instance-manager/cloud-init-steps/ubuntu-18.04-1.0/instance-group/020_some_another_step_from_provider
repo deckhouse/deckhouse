@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "Some another step from provider: {{ .instanceGroup.name }}!"

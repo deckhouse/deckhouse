@@ -3,6 +3,8 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
+  module::disable_if_cluster_is_not_bootstraped
+
   cluster_version=$(values::get global.discovery.clusterVersion)
   if [ "$(semver compare $cluster_version 1.9.0)" -ne "-1" ] ; then
     if values::array_has global.enabledModules "prometheus" ; then

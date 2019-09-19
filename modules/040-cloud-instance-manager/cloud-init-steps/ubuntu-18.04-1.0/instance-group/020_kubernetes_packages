@@ -1,0 +1,5 @@
+#!/bin/bash
+
+{{- $kubernetes_version := .instanceGroup.instanceClass.cloudInitSteps.options.kubernetesVersion | default .Values.cloudInstanceManager.internal.cloudInitSteps.options.kubernetesVersion }}
+
+apt install -qy "kubelet={{ $kubernetes_version }}*" "kubeadm={{ $kubernetes_version }}*" "kubectl={{ $kubernetes_version }}*"

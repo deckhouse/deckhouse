@@ -8,14 +8,14 @@ function __config__() {
 
 function __main__() {
   for i in $(seq 1 120); do
-    if kubectl -n d8-cert-manager get pod -l app=webhook -o json  | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' ; then
+    if kubectl -n d8-cert-manager get pod -l app=webhook -o json  | jq -e '.items[].status.conditions | select(.) | all(.[] ; .status == "True")' > /dev/nul ; then
       return 0
     fi
 
     echo "Waiting for webhook pod in d8-cert-manager namespace"
     sleep 1
   done
-  if [[ $i -gt 120 ]] ; then
+  if [[ $i -ge 120 ]] ; then
     >&2 echo "Timeout waiting for webhook pod in d8-cert-manager namespace"
     return 1
   fi

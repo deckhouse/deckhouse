@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt install -qy linux-generic-hwe-18.04 linux-headers-generic-hwe-18.04 linux-image-generic-hwe-18.04

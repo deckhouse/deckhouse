@@ -1,0 +1,19 @@
+{{- if .Values.cloudProviderOpenstack.networkName }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-instance-manager-cloud-provider
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "openstack" | quote }}
+  zones: {{ .Values.cloudProviderOpenstack.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "OpenStackInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}
+
+  # openstack
+  openstack: {{ .Values.cloudProviderOpenstack | toJson | b64enc | quote }}
+{{- end }}

@@ -1,0 +1,19 @@
+{{- if .Values.cloudProviderGcp.networkName }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-instance-manager-cloud-provider
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "gcp" | quote }}
+  zones: {{ .Values.cloudProviderGcp.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "GCPInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "GCPMachineClass" | quote }}
+
+  # GCP
+  gcp: {{ .Values.cloudProviderGcp | toJson | b64enc | quote }}
+{{- end }}

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+apt install -qy "kubernetes-cni=0.7.5-*"

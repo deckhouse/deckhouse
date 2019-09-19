@@ -3,6 +3,8 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
+  module::disable_if_cluster_is_not_bootstraped
+
   if values::array_has global.enabledModules "prometheus" ; then
     echo "true" > $MODULE_ENABLED_RESULT
   else

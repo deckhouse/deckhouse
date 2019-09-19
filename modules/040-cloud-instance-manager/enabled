@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __main__() {
+  if values::get global.enabledModules | jq '.[]' -r | grep -E '^cloud-provider-[a-z-]+$' > /dev/null && kubectl -n kube-system get secret d8-cloud-instance-manager-cloud-provider >/dev/null 2>&1; then
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "false" > "$MODULE_ENABLED_RESULT"
+  fi
+}
+
+hook::run "$@"
