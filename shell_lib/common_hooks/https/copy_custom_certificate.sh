@@ -23,14 +23,13 @@ function common_hooks::https::copy_custom_certificate::config() {
 
 # $1 — имя namespace, куда надо скопировать секрет
 function common_hooks::https::copy_custom_certificate::main() {
-
   module_name=$(module::name)
   secret_name=$(values::get_first_defined ${module_name}.https.customCertificate.secretName global.modules.https.customCertificate.secretName)
 
   if [ "${secret_name}" != "false" ] && [ ! -z "${secret_name}" ] ; then
     if kubectl -n antiopa get secret ${secret_name} > /dev/null 2>&1 ; then
       kubectl -n antiopa get secret ${secret_name} -o json | \
-        jq -r ".metadata.namespace=\"$1\" | .metadata.name=\"ingress-tls\" |
+        jq -r ".metadata.namespace=\"$1\" | .metadata.name=\"$2\" |
           .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
         | kubectl::replace_or_create
     else
