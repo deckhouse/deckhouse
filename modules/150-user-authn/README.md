@@ -88,7 +88,7 @@ data:
       * К примеру: `","`.
     * `nameIDPolicyFormat` — данный параметр отвечает за формат идентификатора, который будет отдавать провайдерв. Возможные значения: `EmailAddress, Unspecified, x509SubjectName, Persistent, Transistent`.
 * `publishAPI` — настройки публикации API-сервера, чреез ingress:
-  * `enable` — если выставить данный параметр в `true`, то в кластере будет создан ingress в default namespace, который выставляет Kubernetes API наружу.
+  * `enable` — если выставить данный параметр в `true`, то в кластере будет создан ingress в namespace d8-user-authn, который выставляет Kubernetes API наружу.
     * По-умолчанию: `false`.
   * `https` — режим работы https для ingress'а API-сервера:
     * `mode` — режим выдачи сертификатов для данного ingress ресурса. Возможные значения `SelfSigned` и `Global`. В случае использования режима `SelfSigned` для ingress ресурса будет выпущен самоподписанный сертификат. В случае использования `Global` будут применены политики из глобальной настроки `global.modules.https.mode`. Т.е. если в глобальной настройке стоит режим `CertManager` с clusterissuer `letsnecrypt`, то для ingress ресурса будет заказан сертификат Lets Encrypt.

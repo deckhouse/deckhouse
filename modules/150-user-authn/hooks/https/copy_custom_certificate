@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  common_hooks::https::copy_custom_certificate::main "d8-user-authn"
+  common_hooks::https::copy_custom_certificate::main "d8-user-authn" "ingress-tls"
 }
 
 hook::run "$@"

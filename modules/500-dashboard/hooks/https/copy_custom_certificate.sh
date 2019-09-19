@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  common_hooks::https::copy_custom_certificate::main "kube-system"
+  common_hooks::https::copy_custom_certificate::main "kube-system" "ingress-tls"
 }
 
 hook::run "$@"
