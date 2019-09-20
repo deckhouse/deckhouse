@@ -87,7 +87,7 @@
         /
         count by (node) (node_cpu_seconds_total{mode="idle"})
       ) > on (node) group_left() (
-        max by (node) (extended_monitoring_node_threshold{threshold="load-average-warning"})
+        max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-warning"})
       )
     for: 30m
     labels:
@@ -96,7 +96,7 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |-
-        Последние 30 минут load average на ноде {{ $labels.node }} не опускался ниже {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-warning\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
+        Последние 30 минут load average на ноде {{ $labels.node }} не опускался ниже {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
       summary: >
         Load average на {{ $labels.node }} слишком велик.
 
@@ -107,7 +107,7 @@
         /
         count by (node) (node_cpu_seconds_total{mode="idle"})
       ) > on (node) group_left() (
-        max by (node) (extended_monitoring_node_threshold{threshold="load-average-critical"})
+        max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-critical"})
       )
     for: 5m
     labels:
@@ -116,6 +116,6 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |-
-        Последние 5 минут Load average на ноде {{ $labels.node }} выше {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-critical\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
+        Последние 5 минут Load average на ноде {{ $labels.node }} выше {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
       summary: >
         Load average на {{ $labels.node }} слишком велик.
