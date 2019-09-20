@@ -24,6 +24,6 @@ spec:
   tls:
   - hosts:
     - {{ $crd.spec.applicationDomain }}
-    secretName: ingress-tls
+    secretName: {{ $crd.spec.applicationIngressCertificateSecretName }}
   {{- end }}
 {{- end }}

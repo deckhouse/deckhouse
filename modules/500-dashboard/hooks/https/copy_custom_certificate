@@ -8,6 +8,7 @@ function __config__() {
 
 function __main__() {
   common_hooks::https::copy_custom_certificate::main "kube-system" "ingress-tls"
+  common_hooks::https::copy_custom_certificate::main "d8-dashboard" "ingress-tls"
 }
 
 hook::run "$@"
