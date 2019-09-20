@@ -20,6 +20,7 @@ vrrp_instance %(name)s {
   interface %(interface)s
   virtual_router_id %(virtual_router_id)s
   priority %(priority)s
+  %(preempt)s
   authentication {
     auth_type PASS
     auth_pass %(auth_pass)s
@@ -83,7 +84,8 @@ def main():
     vrrpInstanceArgs['name'] = "instance_" + str(vrrpInstance['id'])
     vrrpInstanceArgs['virtual_router_id'] = vrrpInstance['id']
     vrrpInstanceArgs['priority'] = (vrrpInstanceIndex + POD_NUMBER) % config['replicas'] + 1
-    vrrpInstanceArgs['state'] = 'MASTER' if vrrpInstanceArgs['priority'] == 1 else 'BACKUP'
+    vrrpInstanceArgs['state'] = 'BACKUP'
+    vrrpInstanceArgs['preempt'] = "nopreempt" if 'preempt' in vrrpInstanceArgs and not vrrpInstanceArgs['preempt'] else "preempt"
     vrrpInstanceArgs['auth_pass'] = authPass
 
     if vrrpInstance['interface']['detectionStrategy'] == "Name":

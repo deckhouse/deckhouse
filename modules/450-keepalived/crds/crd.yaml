@@ -72,6 +72,9 @@ spec:
                         detectionStrategy:
                           enum: [DefaultRoute]
                       required: [detectionStrategy]
+                  preempt:
+                    type: boolean
+                    description: 'What to do when higher-priority node comes up. Keep serve IP on lower-priority (preempt: false) or transfer to higher-priority (preempt: true).'
                   virtualIPAddresses:
                     type: array
                     description: 'List of IP addresses which must work together on single node.'
