@@ -169,8 +169,8 @@ class AnnotatedNode(Annotated):
         "disk-bytes-critical": 80,
         "disk-inodes-warning": 85,
         "disk-inodes-critical": 90,
-        "load-average-warning": 3,
-        "load-average-critical": 10,
+        "load-average-per-core-warning": 3,
+        "load-average-per-core-critical": 10,
     }
 
 
