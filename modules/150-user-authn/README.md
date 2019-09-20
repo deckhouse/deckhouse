@@ -176,12 +176,19 @@ data:
 ### Настройка DEX-аутентикатора
 Для автоматического деплоя [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения, и подключения его к dex, реализован CRD `DexAuthenticator`. 
 
+При появлении объекта DexAuthenticator в неймспейсе будут созданы:
+* Deployment с oauth2-proxy
+* Service, ведущий на Deployment с oauth2-proxy
+* Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса
+* Secret'ы, необходимые для доступа к Dex
+
+
 #### Параметры:
 * `applicationDomain` — внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
     * Формат — строка с адресом (пример: `my-app.kube.my-domain.com`, обязательно НЕ указывать HTTP схему.
 * `sendAuthorizationHeader` — флаг, который отвечает за отправку конечному приложению header'а `Authorization: Bearer`.
      Включать только если ваше приложение умеет этот header обрабатывать.
-
+* `applicationIngressCertificateSecretName` - имя secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress объекте вашего приложения. Secret должен обязательно находится в том же неймспейсе, что и DexAuthenticator.
 
 #### Пример:
 ```yaml
@@ -193,6 +200,7 @@ metadata:
 spec:
   applicationDomain: "my-app.kube.my-domain.com" # домен, на котором висит ваше приложение
   sendAuthorizationHeader: false # отправлять ли `Authorization: Bearer` header приложению, полезно в связке с auth_request в nginx
+  applicationIngressCertificateSecretName: "ingress-tls" # имя секрета с tls сертификатом
 ```
 
 После появления `DexAuthenticator` в кластере, в указанном namespace'е появятся необходимые deployment, service, ingress, secret.

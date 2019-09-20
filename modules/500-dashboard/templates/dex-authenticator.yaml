@@ -10,4 +10,5 @@ metadata:
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
   sendAuthorizationHeader: true
+  applicationIngressCertificateSecretName: "ingress-tls"
 {{- end }}

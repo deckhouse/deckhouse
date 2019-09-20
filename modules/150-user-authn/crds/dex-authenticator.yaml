@@ -26,6 +26,7 @@ spec:
           required:
           - applicationDomain
           - sendAuthorizationHeader
+          - applicationIngressCertificateSecretName
           properties:
             applicationDomain:
               type: string
@@ -34,3 +35,7 @@ spec:
             sendAuthorizationHeader:
               type: boolean
               description: 'Request to application will be sent with "Autorization: Bearer" header when the option is switched to true.'
+            applicationIngressCertificateSecretName:
+              type: string
+              description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
+              example: 'ingress-tls'

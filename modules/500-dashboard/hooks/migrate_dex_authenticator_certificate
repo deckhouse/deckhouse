@@ -1,0 +1,36 @@
+#!/bin/bash
+
+### Миграция 2019-09-20
+# Удалить хук после переезда dashboard в неймспейс d8-dashboard
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "afterHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "secret",
+      "name": "ingress-tls",
+      "event": [
+        "add",
+        "update"
+      ],
+      "namespaceSelector": {
+        "matchNames": [
+          "kube-system"
+        ]
+      }
+    }
+  ]
+}'
+}
+
+function __main__() {
+  if kubectl -n kube-system get secret ingress-tls > /dev/null 2>&1 ; then
+    kubectl -n kube-system get secret ingress-tls -o json | jq ' .metadata.namespace = "d8-dashboard"' | kubectl::replace_or_create
+  fi
+}
+
+hook::run $@
