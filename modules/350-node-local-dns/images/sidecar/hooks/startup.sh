@@ -9,7 +9,7 @@ if [[ $1 == "--config" ]] ; then
 }
 EOF
 else
-  while ! nc -z 169.254.20.10 53 ; do
+  while ! nc -z 169.254.20.10 53 -w 1; do
 
     # Setup interface
     dev_name="nodelocaldns"
