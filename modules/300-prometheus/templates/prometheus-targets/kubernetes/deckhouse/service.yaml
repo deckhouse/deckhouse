@@ -12,6 +12,6 @@ spec:
   clusterIP: None
   ports:
   - name: http-metrics
-    port: 9115
-    targetPort: 9115
+    port: 9650
+    targetPort: 9650
     protocol: TCP
