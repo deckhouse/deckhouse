@@ -14,9 +14,9 @@ spec:
     boot: true
     sizeGb: {{ .instanceGroup.instanceClass.diskSizeGb | default 50 }}
     type: {{ .instanceGroup.instanceClass.diskType | default "pd-standard" | quote }}
-    image: {{ .instanceGroup.instanceClass.imageName | quote }}
-  serviceAccounts: # TODO: Something proper and useful
-  - email: {{ index (.Values.cloudInstanceManager.internal.cloudProvider.gcp.serviceAccountJSON | fromJson) "client_email" | quote }}
+    image: {{ .instanceGroup.instanceClass.image | quote }}
+  serviceAccounts:
+  - email: {{ index (.Values.cloudInstanceManager.internal.cloudProvider.gcp.serviceAccountKey | fromJson) "client_email" | quote }}
     scopes:
     - "https://www.googleapis.com/auth/cloud-platform"
   networkInterfaces:
