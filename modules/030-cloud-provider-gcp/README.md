@@ -32,8 +32,8 @@
     * Опциональный параметр.
 * `sshKey` — публичный SSH ключ.
     * Формат — строка, как из `~/.ssh/id_rsa.pub`.
-* `serviceAccountJSON` — ключ к Service Account'у с правами Project Admin.
-    * Формат — JSON.
+* `serviceAccountKey` — ключ к Service Account'у с правами Project Admin.
+    * Формат — строка c JSON.
     * [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys).
 * `provisionExternalIP` — bool. Прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `false`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
     * Опциональный параметр.
@@ -55,7 +55,7 @@ cloudProviderGcp: |
   - kube
   provisionExternalIP: true
   sshKey: "ssh-rsa testetestest"
-  serviceAccountJSON: |
+  serviceAccountKey: |
     {
       "type": "service_account",
       "project_id": "test",
@@ -77,7 +77,7 @@ cloudProviderGcp: |
 Все опции идут в `.spec`.
 
 * `machineType` — тип заказываемых instances. **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
-* `imageName` — образ, который поставится во заказанные instance'ы.
+* `image` — образ, который поставится во заказанные instance'ы.
     * Формат — строка, полный путь до образа, пример: `projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911`.
     * **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04.
 * `preemptible` — Заказывать ли preemptible instance.
@@ -111,7 +111,7 @@ metadata:
   name: test
 spec:
   machineType: n1-standard-1
-  imageName: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
+  image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
 ```
 
 ### Storage
