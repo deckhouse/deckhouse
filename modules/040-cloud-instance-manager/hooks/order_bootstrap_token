@@ -18,9 +18,8 @@ function __main__() {
   # Remove all expired tokens
   for token_secret in $(kubectl -n kube-system get secret --field-selector type=bootstrap.kubernetes.io/token -l heritage=deckhouse,module=cloud-instance-manager -o name) ; do
     not_after=$(kubectl -n kube-system get $token_secret -o json | jq '.data.expiration' -r | base64 -d)
-    valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
 
-    if [[ $valid_for -lt 0 ]] ; then
+    if ! valid_for=$(expr $(date --date="$not_after" +%s 2> /dev/null) - $(date +%s) 2> /dev/null) || [[ $valid_for -lt 0 ]] ; then
       kubectl -n kube-system delete $token_secret
     fi
   done
