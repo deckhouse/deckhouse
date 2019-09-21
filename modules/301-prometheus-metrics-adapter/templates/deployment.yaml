@@ -89,8 +89,6 @@ spec:
         env:
         - name: PROMETHEUS_URL
           value: "https://trickster.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}"
-        - name: PYTHONUNBUFFERED
-          value: "Never gonna give you up"
         readinessProbe:
           httpGet:
             path: /healthz
