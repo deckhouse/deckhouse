@@ -41,9 +41,24 @@ function __main__() {
       replicas_should_be=$ig_max_instances
     fi
 
-    if [[ -n $replicas_should_be ]] && kubectl -n d8-cloud-instance-manager get machinedeployment $name > /dev/null 2> /dev/null ; then
-      kubectl::jq_patch d8-cloud-instance-manager machinedeployments/$name ".spec.replicas = $replicas_should_be"
-    fi
+    # Making 5 attempts, because machinedeployments change frequently
+    for i in $(seq 1 5) ; do
+      if [[ -n $replicas_should_be ]] && kubectl -n d8-cloud-instance-manager get machinedeployment $name > /dev/null 2> /dev/null ; then
+        if kubectl::jq_patch d8-cloud-instance-manager machinedeployments/$name ".spec.replicas = $replicas_should_be" 2> /dev/null ; then
+          continue 2
+        else
+          # Sleeping for 1 second before retry
+          sleep 1
+        fi
+      else
+        # Continue outer loop
+        continue 2
+      fi
+    done
+
+    # Falling with error. Normally we shouldn't be here because of `continue 2` above
+    >&2 echo "Failed to change replicas from $replicas to $replicas_should_be for machinedeployments/$name"
+    exit 1
   done
 }
 
