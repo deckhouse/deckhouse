@@ -11,14 +11,16 @@ function __main__() {
 
   fltr='.'
   # Простановка nodeSelector и tolerations
-  fltr=$fltr' | .spec.template.spec.affinity = {}'
+  fltr=$fltr' | del(.spec.template.spec.affinity)'
   fltr=$fltr' | .spec.template.spec.nodeSelector = {"node-role.kubernetes.io/master":""}'
   fltr=$fltr' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
 
   # Переводим на hostNetwork
   fltr=$fltr' | .spec.template.spec.dnsPolicy = "ClusterFirstWithHostNet"'
   fltr=$fltr' | .spec.template.spec.hostNetwork = true'
-  fltr=$fltr' | .spec.strategy = {"rollingUpdate":{"maxSurge":0,"maxUnavailable":1}, "type":"RollingUpdate"}'
+
+  # Меняем strategy на Recreate
+  fltr=$fltr' | if (.spec.strategy.type == "RollingUpdate") then del (.spec.strategy.rollingUpdate) else . end | .spec.strategy.type = "Recreate"'
 
   # Проставляем переменные окружения необходимые для нового addon-operator
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_NAMESPACE") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_NAMESPACE", "valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}]) else . end'
