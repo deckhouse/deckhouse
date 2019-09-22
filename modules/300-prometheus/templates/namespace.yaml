@@ -6,3 +6,11 @@ metadata:
   annotations:
     extended-monitoring.flant.com/enabled: ""
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-prometheus
+  annotations:
+    extended-monitoring.flant.com/enabled: ""
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
