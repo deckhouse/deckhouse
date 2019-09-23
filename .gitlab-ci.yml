@@ -37,7 +37,7 @@ Build:
 alpha (pre-release):
   <<: *base_deploy
   variables:
-    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:master
+    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_NAME}
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:alpha
   environment:
     name: alpha
