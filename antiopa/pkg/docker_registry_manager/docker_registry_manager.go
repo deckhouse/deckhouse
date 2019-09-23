@@ -51,16 +51,10 @@ func NewDockerRegistryManager() DockerRegistryManager {
 	}
 }
 
+// Init loads authes from registry secret
 func (rm *MainRegistryManager) Init() error {
-	rlog.Debug("Init registry manager")
-
-	//RegistrySecretPath = os.Getenv("ANTIOPA_REGISTRY_SECRET_PATH")
-	//if RegistrySecretPath == "" {
-	//	RegistrySecretPath = DefaultRegistrySecretPath
-	//}
 	rlog.Infof("Load registry auths from %s dir", rm.RegistrySecretPath)
 
-	// Load json from file /etc/registrysecret/.dockercfg
 	if exists, err := utils_file.DirExists(rm.RegistrySecretPath); !exists {
 		rlog.Errorf("Error accessing registry secret directory: %s, watcher is disabled now", err)
 		return nil
@@ -72,7 +66,7 @@ func (rm *MainRegistryManager) Init() error {
 	if readErr != nil {
 		secretBytes, readErr = ioutil.ReadFile(path.Join(rm.RegistrySecretPath, ".dockerconfigjson"))
 		if readErr != nil {
-			return fmt.Errorf("Cannot read registry secret from .docker[cfg,configjson]: %s", readErr)
+			return fmt.Errorf("Cannot read registry secret from .dockercfg or .dockerconfigjson]: %s", readErr)
 		}
 	}
 
@@ -92,7 +86,6 @@ func (rm *MainRegistryManager) Init() error {
 		"localhost:5000": "http://kube-registry.kube-system.svc.cluster.local:5000",
 	}
 
-	rlog.Debugf("Registry manager initialized")
 	return nil
 }
 
@@ -137,13 +130,19 @@ func (rm *MainRegistryManager) WithRegistrySecretPath(secretPath string) {
 // обращается в registry и по имени образа смотрит, изменился ли digest. Если да,
 // то отправляет новый digest в канал.
 func (rm *MainRegistryManager) CheckIsImageUpdated() {
-	// Первый шаг - получить имя и id образа из куба.
-	// kube-api может быть недоступно, поэтому нужно периодически подключаться к нему.
-	if rm.AntiopaImageName == "" {
+	// First phase:
+	// Get image name and imageID from pod's status.
+	// Api-server may be unavailable, status.imageID is updated with delay, so
+	// this block is repeated until api-server returns object with non-empty imageID.
+	if rm.AntiopaImageDigest == "" {
 		rlog.Debugf("Registry manager: retrieve image name and id from kube-api")
 		podImageName, podImageId := rm.ImageInfoCallback()
 		if podImageName == "" {
-			rlog.Debugf("Registry manager: error retrieving image name and id from kube-api. Will try again")
+			rlog.Infof("Registry manager: cannot get image name for pod. Will request kubernetes api-server again.")
+			return
+		}
+		if podImageId == "" {
+			rlog.Infof("Registry manager: image ID for pod is empty. Will request kubernetes api-server again.")
 			return
 		}
 
@@ -156,16 +155,22 @@ func (rm *MainRegistryManager) CheckIsImageUpdated() {
 		}
 
 		rm.AntiopaImageName = podImageName
+
 		rm.AntiopaImageDigest, err = FindImageDigest(podImageId)
 		if err != nil {
 			rlog.Errorf("RegistryManager: %s", err)
 			rm.ImageUpdatedCallback("NO_DIGEST_FOUND")
 			return
 		}
+		// docker 1.11 case
+		if rm.AntiopaImageDigest == "" {
+			return
+		}
 	}
 
-	// Второй шаг — после получения id начать мониторить его изменение в registry.
-	// registry тоже может быть недоступен
+	// Second phase:
+	// This phase is run only if docker image digest is available.
+	// Create client to access docker registry.
 	if rm.DockerRegistry == nil {
 		rlog.Debugf("Registry manager: create docker registry client")
 		var url, user, password string
@@ -184,6 +189,9 @@ func (rm *MainRegistryManager) CheckIsImageUpdated() {
 		rm.DockerRegistry = NewDockerRegistry(url, user, password)
 	}
 
+	// Third phase:
+	// If image name, image digest and registry client are available,
+	// try to get new digest from registry.
 	rlog.Debugf("Registry manager: checking registry for updates")
 	digest, err := DockerRegistryGetImageDigest(rm.AntiopaImageInfo, rm.DockerRegistry)
 	rm.SetOrCheckAntiopaImageDigest(digest, err)
@@ -207,9 +215,9 @@ func (rm *MainRegistryManager) SetOrCheckAntiopaImageDigest(digest string, err e
 		return
 	}
 	// Request to the registry was successful, call SuccessCallback
+	rm.ErrorCounter = 0
 	rm.SuccessCallback()
 	if digest != rm.AntiopaImageDigest {
 		rm.ImageUpdatedCallback(digest)
 	}
-	rm.ErrorCounter = 0
 }
