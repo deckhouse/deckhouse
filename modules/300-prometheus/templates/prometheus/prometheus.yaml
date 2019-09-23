@@ -91,11 +91,20 @@ spec:
   scrapeInterval: 30s
   evaluationInterval: 30s
   serviceAccountName: prometheus
+  podMonitorNamespaceSelector:
+    matchLabels:
+      heritage: deckhouse
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      heritage: deckhouse
   podMetadata:
     annotations:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
       threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
   serviceMonitorSelector:
+    matchLabels:
+      prometheus: main
+  podMonitorSelector:
     matchLabels:
       prometheus: main
   secrets:

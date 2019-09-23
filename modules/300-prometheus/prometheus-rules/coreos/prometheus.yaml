@@ -128,8 +128,8 @@
         Данная проблема никак не повлияет на работу алертов или мониторинга в переспективах небольшого промежутка времени (нескольких дней).
 
         Куда смотреть:
-        1. Посмотреть информацию о деплойменте: `kubectl -n kube-prometheus-operator describe deploy prometheus-operator`
-        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n kube-prometheus-operator describe pod -l app=prometheus-operator`
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`
       summary: >
         Prometheus operator is down
   - alert: PrometheusLongtermDown

@@ -1,7 +1,7 @@
 Модуль prometheus
 =======
 
-Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [prometheus-operator](../200-prometheus-operator/)) и полностью его настраивает!
+Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [operator-prometheus](../200-operator-prometheus/)) и полностью его настраивает!
 
 Модуль устанавливает два экземпляра Prometheus:
 * **main** — основной Prometheus, который выполняет scrape каждые 30 секунд. Именно он обрабатывает все правила, шлет алерты и является основным источником данных.

@@ -86,7 +86,7 @@ Statusmap (второй блок сверху на всех досках, кро
 | 050-antiopa                     | Нет возможности |
 | 100-cert-manager-crd            | Не требуется |
 | 200-heapster                    | Не требуется |
-| 200-prometheus-operator         | [Пока нет](https://github.com/deckhouse/deckhouse/issues/519) |
+| 200-operator-prometheus         | [Пока нет](https://github.com/deckhouse/deckhouse/issues/519) |
 | 250-cert-manager                | [Пока нет](https://github.com/deckhouse/deckhouse/issues/515) |
 | 300-prometheus                  | Да |
 | 301-prometheus-metrics-adapter  | Да |

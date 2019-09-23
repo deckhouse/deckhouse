@@ -115,6 +115,9 @@ spec:
             add:
             - NET_BIND_SERVICE
           runAsUser: 33
+        ports:
+        - name: controller
+          containerPort: 10254
         volumeMounts:
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
@@ -149,6 +152,7 @@ spec:
               fieldPath: status.podIP
         ports:
         - containerPort: 9103
+          name: statsd
         resources:
           requests:
             memory: 20Mi

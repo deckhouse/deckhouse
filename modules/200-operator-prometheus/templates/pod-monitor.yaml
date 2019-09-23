@@ -1,0 +1,25 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: prometheus-operator
+  namespace: d8-operator-prometheus
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  jobLabel: prometheus-target
+  podMetricsEndpoints:
+  - port: http
+    scheme: http
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
+  namespaceSelector:
+    matchNames:
+    - d8-operator-prometheus
+  selector:
+    matchLabels:
+      app: prometheus-operator
