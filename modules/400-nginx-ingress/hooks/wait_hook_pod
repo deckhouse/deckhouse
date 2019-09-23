@@ -3,7 +3,7 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jp -p afterHelm=1
+  jo -p afterHelm=1
 }
 
 function __main__() {
