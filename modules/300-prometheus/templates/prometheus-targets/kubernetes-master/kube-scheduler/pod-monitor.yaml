@@ -1,0 +1,45 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-scheduler
+  namespace: kube-prometheus
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  jobLabel: prometheus-target
+  podMetricsEndpoints:
+  - scheme: https
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
+    targetPort: scheduler
+{{- end }}
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+{{- end }}
+    relabelings:
+{{- if not (eq .Values.global.discovery.clusterType "Manual") }}
+    - replacement: ${1}:10251
+      sourceLabels: [ __address__]
+      targetLabel: __address__
+{{- end }}
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+  selector:
+    matchLabels:
+{{- if eq .Values.global.discovery.clusterType "ACS" }}
+      component: kube-scheduler
+      tier: control-plane
+{{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+      k8s-app: kube-scheduler
+{{- else if eq .Values.global.discovery.clusterType "Manual" }}
+      app: kube-prometheus-kube-master-proxy
+{{- else }}
+      {{- fail "Unsupported cluster type" .Values.global.discovery.clusterType }}
+{{- end }}
+  namespaceSelector:
+    matchNames:
+    - kube-system

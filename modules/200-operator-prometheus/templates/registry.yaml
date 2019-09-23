@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-operator-prometheus
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+type: kubernetes.io/dockercfg
+data:
+  .dockercfg: {{ $.Values.global.modulesImages.registryDockercfg }}

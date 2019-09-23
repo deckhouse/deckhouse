@@ -57,6 +57,7 @@ spec:
               memory: 32Mi
           ports:
           - containerPort: 9402
+            name: http-metrics
           env:
           - name: POD_NAMESPACE
             valueFrom:

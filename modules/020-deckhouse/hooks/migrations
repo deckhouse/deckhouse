@@ -22,6 +22,9 @@ function __main__() {
   # Меняем strategy на Recreate
   fltr=$fltr' | if (.spec.strategy.type == "RollingUpdate") then del (.spec.strategy.rollingUpdate) else . end | .spec.strategy.type = "Recreate"'
 
+  # Добавляем порт для экспорта метрик
+  fltr=$fltr' | .spec.template.spec.containers[0].ports[0].containerPort = 9650'
+
   # Проставляем переменные окружения необходимые для нового addon-operator
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_NAMESPACE") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_NAMESPACE", "valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}]) else . end'
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX", "value": "antiopa_"}]) else . end'

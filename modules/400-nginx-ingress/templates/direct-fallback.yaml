@@ -112,6 +112,7 @@ spec:
               fieldPath: status.podIP
         ports:
         - containerPort: 10355
+          name: https-metrics
         resources:
           requests:
             memory: 20Mi
