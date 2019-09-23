@@ -22,9 +22,11 @@ type DockerImageInfo struct {
 	FullName   string // полное имя образа для лога
 }
 
-// regex для определения валидного docker image digest (image id)
-var DockerImageDigestRe = regexp.MustCompile("(sha256:?)?[a-fA-F0-9]{64}")
+// KubeDigestRe regexp detects if imageID field contains docker image digest and not docker image id
 var KubeDigestRe = regexp.MustCompile("docker-pullable://.*@sha256:[a-fA-F0-9]{64}")
+
+// DockerImageDigestRe regexp extracts docker image digest from string
+var DockerImageDigestRe = regexp.MustCompile("(sha256:?)?[a-fA-F0-9]{64}")
 
 //var KubeImageIdRe = regexp.MustCompile("docker://sha256:[a-fA-F0-9]{64}")
 
@@ -92,9 +94,10 @@ func DockerParseImageName(imageName string) (imageInfo DockerImageInfo, err erro
 func FindImageDigest(imageId string) (image string, err error) {
 	if !KubeDigestRe.MatchString(imageId) {
 		err = fmt.Errorf("Pod status contains image_id and not digest. Antiopa update process not working in clusters with Docker 1.11 or earlier.")
+		return "", err
 	}
 	image = DockerImageDigestRe.FindString(imageId)
-	return
+	return image, nil
 }
 
 // Проверка, что строка это docker digest
