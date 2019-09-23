@@ -58,6 +58,13 @@ spec:
           - -enable-rwr={{ .Values.nginxIngress.rewriteTargetMigration }}
           ports:
           - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8080
           resources:
             requests:
               memory: 20Mi
