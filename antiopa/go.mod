@@ -5,9 +5,9 @@ go 1.12
 require (
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20190917174107-a9d643a6fc9a // branch: tiller_sidecar
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20190923141242-4955bcf490b1 // merged branch: tiller_sidecar
 	github.com/flant/docker-registry-client v0.0.0-20180507135036-a0772de8dd84
-	github.com/flant/shell-operator v1.0.0-beta.5.0.20190917065053-86a4b2a7a3ae // branch: fix-excutor
+	github.com/flant/shell-operator v1.0.0-beta.5.0.20190923140739-5f7d9cca9885 // branch: release-1.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/btree v1.0.0 // indirect
 	github.com/gorilla/mux v1.7.2 // indirect
