@@ -4,7 +4,7 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: longterm
+  name: prometheus-longterm
   namespace: kube-prometheus
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | indent 2 }}
 spec:
@@ -18,8 +18,8 @@ spec:
     containerPolicies:
     - containerName: "prometheus"
       maxAllowed:
-        cpu: {{ .Values.prometheus.vpa.maxCPU | quote }}
-        memory: {{ .Values.prometheus.vpa.maxMemory | quote }}
+        cpu: {{ .Values.prometheus.vpa.longtermMaxCPU | default .Values.prometheus.internal.vpa.longtermMaxCPU | quote }}
+        memory: {{ .Values.prometheus.vpa.longtermMaxMemory | default .Values.prometheus.internal.vpa.longtermMaxMemory | quote }}
 {{- end }}
 ---
 apiVersion: monitoring.coreos.com/v1
