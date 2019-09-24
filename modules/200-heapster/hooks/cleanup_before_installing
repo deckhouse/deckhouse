@@ -9,7 +9,7 @@ function __config__() {
 function __main__() {
   # Чистим кластер от лишних объектов, созданных автоматически
   for resource in deployment/heapster service/heapster serviceaccount/heapster; do
-    if heritage=$(kubectl -n kube-system get $resource -o jsonpath='{.metadata.labels.heritage}' 2> /dev/null) && [[ "$heritage" != "antiopa" ]] ; then
+    if heritage=$(kubectl -n kube-system get $resource -o jsonpath='{.metadata.labels.heritage}' 2> /dev/null) && [[ "$heritage" != "deckhouse" ]] ; then
       kubectl -n kube-system delete $resource
     fi
   done
