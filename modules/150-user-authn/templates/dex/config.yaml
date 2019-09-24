@@ -62,8 +62,8 @@
         clientSecret: {{ $provider.gitlab.clientSecret | quote }}
         redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
     {{- if $provider.gitlab.groups }}
-      {{- range $group := $provider.gitlab.groups }}
         groups:
+      {{- range $group := $provider.gitlab.groups }}
         - {{ $group | quote }}
       {{- end }}
     {{- end }}
