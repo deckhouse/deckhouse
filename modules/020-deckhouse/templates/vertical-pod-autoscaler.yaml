@@ -13,6 +13,11 @@ spec:
     name: antiopa
   updatePolicy:
     updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - name: antiopa
+      maxAllowed:
+        cpu: 0.2
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
