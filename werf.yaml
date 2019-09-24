@@ -92,7 +92,7 @@ ansible:
       - --strip-components=1
       src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
       remote_src: yes
-      dest: /
+      dest: /bin
 
   # Чистим кеш
   - raw: rm -rf /var/cache/apk/*
