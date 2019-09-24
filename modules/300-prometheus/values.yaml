@@ -7,4 +7,5 @@ prometheus:
   longtermRetentionGigabytes: 30
   vpa:
     updateMode: Initial
-  internal: {}
+  internal:
+    vpa: {}

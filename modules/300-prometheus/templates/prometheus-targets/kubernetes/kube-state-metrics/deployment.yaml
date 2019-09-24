@@ -17,8 +17,8 @@ spec:
     containerPolicies:
     - containerName: "kube-state-metrics"
       maxAllowed:
-        cpu: {{ .Values.prometheus.vpa.ksmMaxCPU | quote }}
-        memory: {{ .Values.prometheus.vpa.ksmMaxMemory | quote }}
+        cpu: {{ .Values.prometheus.vpa.kubeStateMetricsMaxCPU | quote }}
+        memory: {{ .Values.prometheus.vpa.kubeStateMetricsMaxMemory | quote }}
 {{- end }}
 ---
 apiVersion: apps/v1
