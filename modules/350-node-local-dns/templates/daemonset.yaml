@@ -38,14 +38,14 @@ spec:
     port: 9255
     protocol: TCP
   selector:
-    k8s-app: node-local-dns
+    app: node-local-dns
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-local-dns
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "k8s-app" "node-local-dns")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | indent 2 }}
 spec:
   selector:
     matchLabels:
@@ -54,6 +54,7 @@ spec:
     metadata:
       labels:
         k8s-app: node-local-dns
+        app: node-local-dns
     spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-critical
