@@ -41,6 +41,13 @@ metadata:
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
   selector:
     matchLabels:
       app: dex-authenticator
@@ -57,6 +64,16 @@ spec:
       - name: deckhouse-registry
     {{- if semverCompare ">=1.11" $context.Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
+    {{- end }}
+    {{- if (include "helm_lib_ha_enabled" .) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: dex-authenticator
+                name: {{ $crd.name }}
+            topologyKey: kubernetes.io/hostname
     {{- end }}
       volumes:
       - name: tls

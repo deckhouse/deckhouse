@@ -29,8 +29,13 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
   selector:
     matchLabels:
       app: kube-state-metrics
@@ -47,6 +52,15 @@ spec:
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
       {{- end }}
+      {{- if (include "helm_lib_ha_enabled" .) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: kube-state-metrics
+            topologyKey: kubernetes.io/hostname
+    {{- end }}
       containers:
       - name: ca-auth-proxy-main
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}

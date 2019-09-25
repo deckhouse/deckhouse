@@ -75,28 +75,43 @@ Statusmap (второй блок сверху на всех досках, кро
 * Автоматически — есть autodiscovery-параметр `global.discovery.clusterControlPlaneIsHighlyAvailable`, который отражает наличие реплик у apiserver. Если они есть, значит инженеры посчитали кластер важным и позаботились о репликах для control plane, а значит — и дополнения должны работать в отказоустойчивом режиме.
 
 > Внимание! Следующие компоненты, от которых зависит работа apiserver, отправляются на master сервера с количеством реплик, соответствующим количеству мастеров в кластере:
-> 1. cainjector и webhook из 250-cert-manager
+> 1. cainjector и webhook из 101-cert-manager
 > 2. prometheus-metrics-adapter из 301-prometheus-metrics-adapter
 > 3. vpa-admission-controller из 302-vertical-pod-autoscaler
+> 4. cloud-controller-manager из модулей 030-cloud-provider-*
+> 5. machine-controller-manager из 040-cloud-instance-manager
+> 6. ingress-conversion-webhook из 400-nginx-ingress
 
 | Модуль   |      Статус   |
 |----------|---------------|
 | 010-priority-class              | Не требуется |
+| 010-operator-prometheus-crd     | Не требуется |
 | 010-vertical-pod-autoscaler-crd | Не требуется |
-| 050-antiopa                     | Нет возможности |
-| 100-cert-manager-crd            | Не требуется |
+| 020-deckhouse                   | Нет возможности |
+| 030-cloud-provider-gcp          | Да |
+| 030-cloud-provider-openstack    | Да |
+| 030-cloud-instance-manager      | Да |
+| 101-cert-manager                | Да |
+| 140-user-authz                  | DaemonSet |
+| 150-user-authn                  | Да |
 | 200-heapster                    | Не требуется |
-| 200-operator-prometheus         | [Пока нет](https://github.com/deckhouse/deckhouse/issues/519) |
-| 250-cert-manager                | [Пока нет](https://github.com/deckhouse/deckhouse/issues/515) |
+| 200-operator-prometheus         | [Не требуется](https://github.com/coreos/prometheus-operator/issues/2491) |
+| 230-vsphere-csi-driver          | Не требуется |
 | 300-prometheus                  | Да |
 | 301-prometheus-metrics-adapter  | Да |
-| 302-vertical-pod-autoscaler     | [Пока нет](https://github.com/deckhouse/deckhouse/issues/520) |
+| 302-vertical-pod-autoscaler     | Не требуется |
+| 303-prometheus-pushgateway      | Нет возможности |
 | 340-node-problem-detector       | DaemonSet |
 | 350-extended-monitoring         | [Пока нет](https://github.com/deckhouse/deckhouse/issues/510) |
 | 350-node-local-dns              | DaemonSet |
+| 360-istio                       | *Нет* |
+| 400-descheduler                 | Не требуется |
 | 400-nginx-ingress               | DaemonSet |
-| 500-basic-auth                  | [Пока нет](https://github.com/deckhouse/deckhouse/issues/516) |
-| 500-dashboard                   | [Пока нет](https://github.com/deckhouse/deckhouse/issues/517) |
+| 450-keepalived                  | Да |
+| 450-network-gateway             | Да |
+| 500-basic-auth                  | Да |
+| 500-dashboard                   | Да |
+| 500-dynatrace                   | DaemonSet |
 | 500-okmeter                     | DaemonSet |
 | 500-openvpn                     | [Пока нет](https://github.com/deckhouse/deckhouse/issues/518) |
 | 600-ping-exporter               | DaemonSet |
