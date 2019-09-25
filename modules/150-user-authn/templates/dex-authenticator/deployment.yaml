@@ -114,8 +114,6 @@ spec:
     {{- if $crd.spec.sendAuthorizationHeader }}
         - --set-authorization-header=true
     {{- end }}
-        - --pass-access-token=true
-        - --pass-authorization-header=true
         - --scope=groups email openid
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
@@ -123,6 +121,9 @@ spec:
         - --upstream=file:///dev/null
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
+        - --skip-provider-button
+        - --session-store-type=redis
+        - --redis-connection-url=redis://127.0.0.1/
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
@@ -141,15 +142,17 @@ spec:
         image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticator }}
         name: dex-authenticator
         readinessProbe:
-          tcpSocket:
+          httpGet:
             port: 443
             scheme: HTTPS
+            path: /ping
           initialDelaySeconds: 1
           periodSeconds: 5
         livenessProbe:
-          tcpSocket:
+          httpGet:
             port: 443
             scheme: HTTPS
+            path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
         resources:
@@ -159,4 +162,17 @@ spec:
         ports:
         - containerPort: 443
           protocol: TCP
+      - name: redis
+        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator-redis:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticatorRedis }}
+        args:
+        - "--save"
+        - ""
+        - "--appendonly"
+        - "no"
+        - "--bind"
+        - "127.0.0.1"
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
 {{- end }}

@@ -17,19 +17,5 @@ spec:
     containerPolicies:
     - containerName: antiopa
       maxAllowed:
-        cpu: 0.2
----
-apiVersion: autoscaling.k8s.io/v1beta2
-kind: VerticalPodAutoscaler
-metadata:
-  name: tiller-deploy
-  namespace: antiopa
-{{ include "helm_lib_module_labels" (list . (dict "app" "helm")) | indent 2 }}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: Deployment
-    name: tiller-deploy
-  updatePolicy:
-    updateMode: "Initial"
+        cpu: 200m
 {{- end }}
