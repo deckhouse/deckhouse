@@ -29,7 +29,7 @@ function __config__() {
 
 function __main__() {
   if kubectl -n kube-system get secret ingress-tls > /dev/null 2>&1 ; then
-    kubectl -n kube-system get secret ingress-tls -o json | jq ' .metadata.namespace = "d8-dashboard"' | kubectl::replace_or_create
+    kubectl -n kube-system get secret ingress-tls -o json | jq 'include "remove_empty"; .metadata.namespace = "d8-dashboard" | remove_empty' | kubectl::replace_or_create
   fi
 }
 
