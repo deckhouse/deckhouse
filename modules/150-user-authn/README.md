@@ -177,11 +177,12 @@ data:
 Для автоматического деплоя [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения, и подключения его к dex, реализован CRD `DexAuthenticator`. 
 
 При появлении объекта DexAuthenticator в неймспейсе будут созданы:
-* Deployment с oauth2-proxy
+* Deployment с oauth2-proxy и redis (в котором хранятся сессии)
 * Service, ведущий на Deployment с oauth2-proxy
 * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса
 * Secret'ы, необходимые для доступа к Dex
 
+**Важно!** При перезапуске oauth2-proxy всем пользователям потребуется перелогиниться, так-как сессии хранятся в локальном redis без persistence.
 
 #### Параметры:
 * `applicationDomain` — внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
@@ -213,7 +214,6 @@ annotations:
   nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
-  nginx.ingress.kubernetes.io/proxy-buffer-size: 512k
 ```
 
 
