@@ -3,12 +3,8 @@
 source /antiopa/shell_lib.sh
 
 function __main__() {
-  cluster_version=$(values::get global.discovery.clusterVersion)
-  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
-    echo "true" > $MODULE_ENABLED_RESULT
-  else
-    echo "false" > $MODULE_ENABLED_RESULT
-  fi
+  module::disable_in_kubernetes_versions_less_than 1.11.0
+  echo "true" > $MODULE_ENABLED_RESULT
 }
 
 hook::run $@

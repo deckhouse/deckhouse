@@ -4,6 +4,7 @@ source /antiopa/shell_lib.sh
 
 function __main__() {
   module::disable_if_cluster_is_not_bootstraped
+  module::disable_in_kubernetes_versions_less_than 1.15.0
   echo "true" > $MODULE_ENABLED_RESULT
 }
 
