@@ -16,7 +16,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - name: {{ $.Chart.Name }}
+    - containerName: {{ $.Chart.Name }}
       maxAllowed:
         cpu: 0.05
         memory: 0.02Gi

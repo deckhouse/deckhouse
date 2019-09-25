@@ -15,11 +15,11 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - name: oom-killer-exporter
+    - containerName: oom-killer-exporter
       maxAllowed:
         cpu: 0.1
         memory: 0.1Gi
-    - name: ca-auth-proxy
+    - containerName: ca-auth-proxy
       maxAllowed:
         cpu: 0.01
         memory: 0.02Gi
