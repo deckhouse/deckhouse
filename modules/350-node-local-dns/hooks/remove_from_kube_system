@@ -36,6 +36,20 @@ function __main__() {
   if kubectl -n kube-system get rolebinding node-local-dns:sidecar 2>/dev/null >/dev/null ; then
     kubectl -n kube-system delete rolebinding node-local-dns:sidecar
   fi
+
+  for i in $(seq 1 120); do
+    if [[ $(kubectl -n kube-system get pod -l k8s-app=node-local-dns -o name | wc -l) -eq 0 ]] ; then
+      break
+    fi
+
+    echo "Waiting for all node-local-dns pods to be removed from kube-system"
+    sleep 1
+  done
+
+  if [[ $i -ge 120 ]] ; then
+    >&2 echo "Timeout waiting for all node-local-dns pods to be removed from kube-system"
+    return 1
+  fi
 }
 
 hook::run "$@"
