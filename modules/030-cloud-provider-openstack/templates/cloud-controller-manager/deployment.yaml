@@ -27,8 +27,8 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 0
-{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
-      maxUnavailable: {{ div (.Values.global.discovery.clusterMasterCount | int) 2 }}
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 2 }}
+      maxUnavailable: 2
 {{- else }}
       maxUnavailable: 1
 {{- end }}

@@ -36,6 +36,13 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
   selector:
     matchLabels:
       app: crowd-basic-auth-proxy
@@ -50,6 +57,15 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
   {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-medium
+  {{- end }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: crowd-basic-auth-proxy
+            topologyKey: kubernetes.io/hostname
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry

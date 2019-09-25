@@ -22,7 +22,14 @@ metadata:
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -38,6 +45,16 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
       priorityClassName: cluster-low
+      {{- end }}
+      {{- if (include "helm_lib_ha_enabled" .) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                module: {{ $.Chart.Name }}
+                app: dashboard
+            topologyKey: kubernetes.io/hostname
       {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry

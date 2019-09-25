@@ -23,9 +23,13 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
   strategy:
+    type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
   selector:
     matchLabels:
       app: trickster

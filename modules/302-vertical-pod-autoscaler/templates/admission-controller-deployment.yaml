@@ -39,7 +39,11 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 0
-      maxUnavailable: {{ div (.Values.global.discovery.clusterMasterCount | int) 2 | default 1 }}
+  {{- if gt (.Values.global.discovery.clusterMasterCount | int) 2 }}
+      maxUnavailable: 2
+  {{- else }}
+      maxUnavailable: 1
+  {{- end }}
 {{- end }}
   selector:
     matchLabels:
