@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "beforeHelm": 10
+}
+EOF
+}
+
+function __main__() {
+  ### Миграция 2019-08-02: https://github.com/deckhouse/deckhouse/merge_reques/1192
+
+  if kubectl get crd clusterauthorizationrules.authz.flant.com > /dev/null 2> /dev/null ; then
+    kubectl delete clusterauthorizationrules.authz.flant.com --all
+    kubectl delete crd clusterauthorizationrules.authz.flant.com
+    kill 1
+  fi
+}
+
+
+hook::run "$@"
