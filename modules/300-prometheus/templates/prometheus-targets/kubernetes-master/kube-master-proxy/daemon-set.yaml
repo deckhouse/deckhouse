@@ -16,7 +16,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - name: "*"
+    - containerName: "*"
       maxAllowed:
         cpu: 0.01
         memory: 0.02Gi

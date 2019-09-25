@@ -15,7 +15,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - name: okagent
+    - containerName: okagent
       maxAllowed:
         cpu: 0.2
         memory: 1Gi

@@ -15,7 +15,7 @@ spec:
     updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
-    - name: antiopa
+    - containerName: antiopa
       maxAllowed:
         cpu: 0.2
 ---
