@@ -4,6 +4,7 @@ source /antiopa/shell_lib.sh
 
 function __main__() {
   module::disable_if_cluster_is_not_bootstraped
+  module::disable_in_kubernetes_versions_less_than 1.11.0
 
   if values::array_has global.enabledModules "prometheus" && values::array_has global.enabledModules "prometheus-metrics-adapter"; then
     if values::array_has global.enabledModules "vertical-pod-autoscaler-crd" ; then
