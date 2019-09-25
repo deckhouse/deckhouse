@@ -1,0 +1,56 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "onKubernetesEvent": [
+    {
+      "kind": "MachineDeployment",
+      "event": ["add", "update"],
+      "namespaceSelector": {
+        "matchNames": [
+          "d8-cloud-instance-manager"
+        ]
+      },
+      "jqFilter": ".status"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  name=$(hook::context_jq -r '.[0].resourceName')
+  ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -o json | jq -r '.metadata.labels."instance-group"')
+
+  if [[ "$ig" == "null" ]]; then
+    echo "MachineDeployment doesn't relate to any CloudInstanceGroup object"
+    exit 1
+  fi
+
+  desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
+    | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
+
+  machines=$(kubectl -n d8-cloud-instance-manager get machine -o json \
+    | jq " .items[] | select(.metadata.labels.\"instance-group\" |test(\"$ig.+\") )" | jq -s '.')
+  current=$(echo "$machines" | jq 'length')
+
+  nodes=$(echo "$machines" | jq '.[] | .status.node | select(. != null)' | jq -sc '.')
+  available=$(echo "$nodes" | jq '. | length')
+
+  node_names=$(echo "$nodes" | jq -r 'join ("\", \"")')
+  ready=$(kubectl get node -o json \
+    | jq -r "def IN(s): first(select(s == .)) // false; .items[] | select(.metadata.name | IN(\"$(echo $node_names)\")) | select(.status.conditions[-1].type == \"Ready\")" | jq -s "length")
+
+  curl -XPATCH \
+    -H "Content-Type: application/json-patch+json" \
+    -H "Accept: application/json" \
+    -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+    "https://kubernetes.default.svc/apis/deckhouse.io/v1alpha1/cloudinstancegroups/$ig/status" \
+    --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+    --data "[{\"op\":\"add\",\"path\":\"/status\",\"value\":{\"desired\":$desired,\"current\":$current,\"available\":$available,\"ready\":$ready}}]" \
+  > /dev/null 2>&1
+}
+
+hook::run "$@"
