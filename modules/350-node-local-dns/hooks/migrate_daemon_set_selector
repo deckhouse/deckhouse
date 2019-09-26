@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if kubectl -n d8-system get ds/node-local-dns > /dev/null 2> /dev/null ; then
+    if kubectl -n d8-system get ds/node-local-dns -o json | jq -r -e '.spec.selector.matchLabels | has("k8s-app")' > /dev/null; then
+      kubectl -n d8-system delete ds/node-local-dns --cascade=false
+    fi
+  fi
+}
+
+hook::run "$@"
