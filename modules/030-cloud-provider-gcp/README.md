@@ -37,7 +37,7 @@
     * [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys).
 * `provisionExternalIP` — bool. Прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `false`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
     * Опциональный параметр.
-    * По-умолчанию `true`.
+    * По-умолчанию `false`.
 
 #### Пример конфигурации:
 

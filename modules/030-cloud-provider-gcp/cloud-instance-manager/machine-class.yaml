@@ -22,7 +22,7 @@ spec:
   networkInterfaces:
   - network: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.networkName }}
     subnetwork: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.subnetName }}
-    provisionExternalIP: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.provisionExternalIP | default true }}
+    provisionExternalIP: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.provisionExternalIP }}
   scheduling:
     automaticRestart: true
     onHostMaintenance: MIGRATE

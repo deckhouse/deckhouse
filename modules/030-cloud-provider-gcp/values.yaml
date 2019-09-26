@@ -1,1 +1,2 @@
-cloudProviderGcp: {}
+cloudProviderGcp:
+  provisionExternalIP: false
