@@ -10,16 +10,11 @@ function __config__() {
     {
       "kind": "Endpoints",
       "objectName": "kubernetes",
-      "event": [
-        "add",
-        "update"
-      ],
       "namespaceSelector": {
         "matchNames": [
           "default"
         ]
-      },
-      "jqFilter": ".subsets[].addresses[]"
+      }
     }
   ]
 }
@@ -30,7 +25,7 @@ function __main__() {
   if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
     exit 0
   fi
-  kubernetes_apiserver_addresses=$(kubectl -n default get endpoints kubernetes -o json | jq '.subsets[].addresses[]')
+  kubernetes_apiserver_addresses=$(kubectl -n default get ep kubernetes -o json | jq -r '[.subsets[].addresses[].ip]')
   values::set userAuthn.internal.kubernetesApiserverAddresses "$kubernetes_apiserver_addresses"
 }
 
