@@ -21,7 +21,7 @@ spec:
     - "https://www.googleapis.com/auth/cloud-platform"
   networkInterfaces:
   - network: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.networkName }}
-    subnetwork: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.subnetName }}
+    subnetwork: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.subnetworkName }}
     provisionExternalIP: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.provisionExternalIP }}
   scheduling:
     automaticRestart: true

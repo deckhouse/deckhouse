@@ -23,7 +23,7 @@
 ### Параметры
 
 * `networkName` — имя VPC network в GCP, где будут заказываться instances.
-* `subnetName` — имя subnet в VPC netwok `networkName`, где будут заказываться instances.
+* `subnetworkName` — имя subnet в VPC netwok `networkName`, где будут заказываться instances.
 * `region` — имя GCP региона, в котором будут заказываться instances.
 * `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [CloudInstanceGroup](modules/040-cloud-instance-manager/README.md#CloudInstanceGroup-custom-resource) объекте.
     * Формат — массив строк.
@@ -45,7 +45,7 @@
 cloudProviderGcpEnabled: "true"
 cloudProviderGcp: |
   networkName: default
-  subnetName: kube
+  subnetworkName: kube
   region: europe-north1
   zones:
   - europe-north1-a
