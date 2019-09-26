@@ -43,6 +43,7 @@ spec:
         metadata:
           labels:
             node-role.kubernetes.io/{{ $ig.name }}: ""
+            cloud-instance-manager.deckhouse.io/cloud-instance-group: {{ $ig.name }}
   {{- if hasKey $ig "nodeTemplate" }}
     {{- if hasKey $ig.nodeTemplate "labels" }}
 {{ $ig.nodeTemplate.labels | toYaml | indent 12 }}

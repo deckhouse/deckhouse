@@ -25,18 +25,26 @@ spec:
     type: integer
     description: "Number of ready Kubernetes nodes in the group."
     JSONPath: .status.ready
+  - name: Nodes
+    type: integer
+    description: "Number of Kubernetes nodes (in any state) in the group."
+    JSONPath: .status.nodes
+  - name: Machines
+    type: integer
+    description: "Number of machines (in any state) in the group."
+    JSONPath: .status.machines
   - name: Desired
     type: integer
     description: "Number of desired machines in the group."
     JSONPath: .status.desired
-  - name: Current
+  - name: Min
     type: integer
-    description: "Number of machines (in any state) in the group."
-    JSONPath: .status.current
-  - name: Available
+    description: "Minimal amount of instances in InstanceGroup."
+    JSONPath: .status.min
+  - name: Max
     type: integer
-    description: "Number of Kubernetes nodes (in any state) in the group."
-    JSONPath: .status.available
+    description: "Maximum amount of instances in InstanceGroup."
+    JSONPath: .status.max
   validation:
     openAPIV3Schema:
       type: object
@@ -48,18 +56,24 @@ spec:
           type: object
           required: []
           properties:
-            desired:
-              type: integer
-              description: "Number of desired machines in the group."
-            current:
-              type: integer
-              description: "Number of machines (in any state) in the group."
-            available:
-              type: integer
-              description: "Number of Kubernetes nodes (in any state) in the group."
             ready:
               type: integer
               description: "Number of ready Kubernetes nodes in the group."
+            nodes:
+              type: integer
+              description: "Number of machines (in any state) in the group."
+            machines:
+              type: integer
+              description: "Number of Kubernetes nodes (in any state) in the group."
+            desired:
+              type: integer
+              description: "Number of desired machines in the group."
+            min:
+              type: integer
+              description: "Minimal amount of instances in InstanceGroup."
+            max:
+              type: integer
+              description: "Maximum amount of instances in InstanceGroup."
         spec:
           type: object
           required:
