@@ -49,11 +49,10 @@ metadata:
 spec:
   selector:
     matchLabels:
-      k8s-app: node-local-dns
+      app: node-local-dns
   template:
     metadata:
       labels:
-        k8s-app: node-local-dns
         app: node-local-dns
     spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
