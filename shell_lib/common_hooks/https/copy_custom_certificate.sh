@@ -31,6 +31,7 @@ function common_hooks::https::copy_custom_certificate::main() {
       kubectl -n antiopa get secret ${secret_name} -o json | \
         jq -r ".metadata.namespace=\"$1\" | .metadata.name=\"$2\" |
           .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
+        | jq 'del(.metadata.labels."antiopa-secret-copier")' \
         | kubectl::replace_or_create
     else
       >&2 echo "You use the customCertificate.secretName, but there is no ${secret_name} secret in antiopa namespace"
