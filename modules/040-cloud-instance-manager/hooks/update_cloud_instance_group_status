@@ -14,7 +14,7 @@ function __config__() {
           "d8-cloud-instance-manager"
         ]
       },
-      "jqFilter": ".status"
+      "jqFilter": ".status | del(.conditions) | del(.observedGeneration)"
     }
   ]
 }'
@@ -22,26 +22,30 @@ function __config__() {
 
 function __main__() {
   name=$(hook::context_jq -r '.[0].resourceName')
-  ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -o json | jq -r '.metadata.labels."instance-group"')
-
-  if [[ "$ig" == "null" ]]; then
-    echo "MachineDeployment doesn't relate to any CloudInstanceGroup object"
-    exit 1
+  if ! ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -ojsonpath="{.metadata.labels.instance-group}" 2>/dev/null); then
+    # MachineDeployment object was deleted or has no associated instance-group
+    exit 0
+  fi
+  if ! ig_specs=$(kubectl get cig "$ig" -o json 2>/dev/null | jq -cr '.spec') ; then
+    # CloudInstanceGroup object was deleted
+    exit 0
   fi
 
   desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
     | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
 
-  machines=$(kubectl -n d8-cloud-instance-manager get machine -o json \
-    | jq " .items[] | select(.metadata.labels.\"instance-group\" |test(\"$ig.+\") )" | jq -s '.')
-  current=$(echo "$machines" | jq 'length')
+  machines_in_ig=$(kubectl -n d8-cloud-instance-manager get machine -o json \
+    | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]")
+  machines=$(echo "$machines_in_ig" | jq 'length')
 
-  nodes=$(echo "$machines" | jq '.[] | .status.node | select(. != null)' | jq -sc '.')
-  available=$(echo "$nodes" | jq '. | length')
+  nodes=$(echo "$machines_in_ig" | jq '[.[] | .status.node | select(. != null) ] | length')
+  ready=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json \
+    | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
 
-  node_names=$(echo "$nodes" | jq -r 'join ("\", \"")')
-  ready=$(kubectl get node -o json \
-    | jq -r "def IN(s): first(select(s == .)) // false; .items[] | select(.metadata.name | IN(\"$(echo $node_names)\")) | select(.status.conditions[-1].type == \"Ready\")" | jq -s "length")
+  zones=$(values::get --required cloudInstanceManager.internal.cloudProvider.zones | jq 'length')
+
+  max=$(( $(echo "$ig_specs" | jq -r '.maxInstancesPerZone') * zones ))
+  min=$(( $(echo "$ig_specs" | jq -r '.minInstancesPerZone') * zones ))
 
   curl -XPATCH \
     -H "Content-Type: application/json-patch+json" \
@@ -49,8 +53,8 @@ function __main__() {
     -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
     "https://kubernetes.default.svc/apis/deckhouse.io/v1alpha1/cloudinstancegroups/$ig/status" \
     --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-    --data "[{\"op\":\"add\",\"path\":\"/status\",\"value\":{\"desired\":$desired,\"current\":$current,\"available\":$available,\"ready\":$ready}}]" \
-  > /dev/null 2>&1
+    --data "[{\"op\":\"add\",\"path\":\"/status\",\"value\":{\"desired\":$desired,\"machines\":$machines,\"nodes\":$nodes,\"ready\":$ready,\"max\":$max,\"min\":$min}}]" \
+  >/dev/null 2>/dev/null
 }
 
 hook::run "$@"
