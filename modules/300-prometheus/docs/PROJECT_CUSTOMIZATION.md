@@ -19,28 +19,7 @@
 
 ### Как добавлять кастомные dashboard'ы в конкретном проекте?
 
-А очень просто! Любой dashboard, добавленный в `cm/grafana-dashboard-definitions-custom`, автоматически попадет в Grafana (в folder с названием Custom).
-* Для custom dashboard'ов поддерживается только один cm (и пока это не является ограничением).
-* Этот cm не создается автоматически (и не управляется antiop'ой), так что если его нет — его нужно просто создать: `kubectl -n kube-prometheus create cm grafana-dashboard-definitions-custom`.
-* Любые изменения (в том числе и создание/удаление `cm/grafana-dashboard-definitions-custom`) подхватываются полностью автоматически, но требуется подождать около минуты (пока kubernetes зальет данные из cm в pod).
-* Пример того, что нужно складывать в этот cm:
-
-    ```yaml
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: grafana-dashboard-definitions-custom
-      namespace: kube-prometheus
-    data:
-      dashboard-name.json: |
-        [
-          "very long json",
-          "with grafana dashboard definition"
-        ]
-
-    ```
-
-* Сам dashboard создавать и править в Grafana, после чего [экспортировать в JSON](img/grafana_export.jpg) и сохранять в cm.
+А очень просто! Дашборды в графане теперь хранятся персистивно и не удаляются при перекатах. Непосредственно на диске за это отвечает файлик /var/lib/grafana/grafana.db, который нужно бэкапить.
 
 [Читайте подробнее](GRAFANA_DASHBOARD_DEVELOPMENT.md) в документации по разработке графиков Grafana.
 
