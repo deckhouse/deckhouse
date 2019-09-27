@@ -5,7 +5,13 @@ source /antiopa/shell_lib.sh
 function __config__() {
   echo '
 {
+  "afterHelm": 10,
   "onKubernetesEvent": [
+    {
+      "kind": "CloudInstanceGroup",
+      "event": ["add", "update"],
+      "jqFilter": ".spec"
+    },
     {
       "kind": "MachineDeployment",
       "event": ["add", "update"],
@@ -21,40 +27,65 @@ function __config__() {
 }
 
 function __main__() {
+
+  function update_status() {
+    curl -XPATCH \
+      -H "Content-Type: application/merge-patch+json" \
+      -H "Accept: application/json" \
+      -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+      "https://kubernetes.default.svc/apis/deckhouse.io/v1alpha1/cloudinstancegroups/$1/status" \
+      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+      --data "$(jo status=$2)" \
+    >/dev/null 2>/dev/null
+  }
+
+  function update_instance_group() {
+    if ! ig_specs=$(kubectl get cig "$1" -o json 2>/dev/null | jq -cr '.spec') ; then
+      # CloudInstanceGroup object was deleted
+      return 1
+    fi
+    zones=$(values::get --required cloudInstanceManager.internal.cloudProvider.zones | jq 'length')
+    max=$(( $(echo "$ig_specs" | jq -r '.maxInstancesPerZone') * zones ))
+    min=$(( $(echo "$ig_specs" | jq -r '.minInstancesPerZone') * zones ))
+
+    update_status "$1" "$(jo max=$max min=$min)"
+  }
+
+  binding=$(hook::context_jq -r '.[0].binding')
+  if [[ $binding == "afterHelm" ]]; then
+    for cig in $(kubectl get cig -o json | jq -r '.items[].metadata.name') ; do
+      update_instance_group "$cig" || true
+    done
+    exit 0
+  fi
+
   name=$(hook::context_jq -r '.[0].resourceName')
-  if ! ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -ojsonpath="{.metadata.labels.instance-group}" 2>/dev/null); then
-    # MachineDeployment object was deleted or has no associated instance-group
-    exit 0
+  kind=$(hook::context_jq -r '.[0].resourceKind')
+
+  if [[ "$kind" == "CloudInstanceGroup" ]]; then
+    update_instance_group "$name"
+  else
+    if ! ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -ojsonpath="{.metadata.labels.instance-group}" 2>/dev/null); then
+      # MachineDeployment object was deleted or has no associated instance-group
+      exit 0
+    fi
+    if ! kubectl get cig "$ig" -o json >/dev/null 2>/dev/null ; then
+      # CloudInstanceGroup object was deleted
+      exit 0
+    fi
+    desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
+      | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
+
+    machines_in_ig=$(kubectl -n d8-cloud-instance-manager get machine -o json \
+      | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]")
+    machines=$(echo "$machines_in_ig" | jq 'length')
+
+    nodes=$(echo "$machines_in_ig" | jq '[.[] | .status.node | select(. != null) ] | length')
+    ready=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json \
+      | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
+
+    update_status "$ig" "$(jo desired=$desired machines=$machines nodes=$nodes ready=$ready)"
   fi
-  if ! ig_specs=$(kubectl get cig "$ig" -o json 2>/dev/null | jq -cr '.spec') ; then
-    # CloudInstanceGroup object was deleted
-    exit 0
-  fi
-
-  desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
-    | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
-
-  machines_in_ig=$(kubectl -n d8-cloud-instance-manager get machine -o json \
-    | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]")
-  machines=$(echo "$machines_in_ig" | jq 'length')
-
-  nodes=$(echo "$machines_in_ig" | jq '[.[] | .status.node | select(. != null) ] | length')
-  ready=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json \
-    | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
-
-  zones=$(values::get --required cloudInstanceManager.internal.cloudProvider.zones | jq 'length')
-
-  max=$(( $(echo "$ig_specs" | jq -r '.maxInstancesPerZone') * zones ))
-  min=$(( $(echo "$ig_specs" | jq -r '.minInstancesPerZone') * zones ))
-
-  curl -XPATCH \
-    -H "Content-Type: application/json-patch+json" \
-    -H "Accept: application/json" \
-    -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-    "https://kubernetes.default.svc/apis/deckhouse.io/v1alpha1/cloudinstancegroups/$ig/status" \
-    --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-    --data "[{\"op\":\"add\",\"path\":\"/status\",\"value\":{\"desired\":$desired,\"machines\":$machines,\"nodes\":$nodes,\"ready\":$ready,\"max\":$max,\"min\":$min}}]" \
-  >/dev/null 2>/dev/null
 }
 
 hook::run "$@"
