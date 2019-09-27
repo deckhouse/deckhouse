@@ -30,6 +30,7 @@ Build:
   after_script:
     - docker image rmi $SOURCE_IMAGE
     - docker image rmi $DESTINATION_IMAGE
+    - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_REF} && git push --force
   when: manual
   tags:
     - build
