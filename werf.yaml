@@ -22,6 +22,10 @@ import:
   add: /antiopa/antiopa
   to: /antiopa/antiopa
   before: setup
+- artifact: unit-converter
+  add: /unit-converter/unit-converter
+  to: /usr/local/bin/unit-converter
+  before: setup
 ansible:
   beforeInstall:
   - apk: update_cache=yes
@@ -53,12 +57,6 @@ ansible:
     get_url:
       url: https://storage.googleapis.com/kubernetes-release/release/v1.11.9/bin/linux/amd64/kubectl
       dest: /usr/local/bin/kubectl
-      mode: +x
-
-  - name: Install kube-resource-converter
-    get_url:
-      url: https://github.com/zuzzas/kube-resource-converter/releases/download/0.1/kube-resource-unit-converter
-      dest: /usr/local/bin/kube-resource-unit-converter
       mode: +x
 
   # Ставим semver
@@ -107,6 +105,32 @@ docker:
   ENV:
     MODULES_DIR: /antiopa/modules
     GLOBAL_HOOKS_DIR: /antiopa/global-hooks
+---
+artifact: unit-converter
+from: golang:1.12-alpine3.9
+git:
+- add: /unit-converter
+  to: /unit-converter
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sumg
+    setup:
+    - main.go
+ansible:
+  beforeInstall:
+  - apk: name=git update_cache=yes
+  - command: rm -rf /var/cache/apk/*
+
+  install:
+  - command: go get -v -d -t ./...
+    args:
+      chdir: /unit-converter
+
+  setup:
+  - command: go build -o unit-converter main.go
+    args:
+      chdir: /unit-converter
 ---
 artifact: antiopa
 from: golang:1.12-alpine3.9
