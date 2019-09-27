@@ -1,0 +1,56 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "schedule": [
+    {
+      "crontab": "* * * * *"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  if ! values::has cloudInstanceManager.internal.instanceGroups ; then
+    exit 0
+  fi
+
+  instance_group_names=$(values::get cloudInstanceManager.internal.instanceGroups | jq '.[].name' -r)
+  for ig_name in $instance_group_names ; do
+    ig_spec=$(values::get cloudInstanceManager.internal.instanceGroups | jq '.[] | select(.name == "'$ig_name'")')
+    # Get chaos mode
+    ig_chaos_mode=$(echo "$ig_spec" | jq -r '.chaos.mode // "DrainAndDelete"')
+    # Get chaos period
+    ig_chaos_period_seconds=$(echo "$ig_spec" | jq -r '.chaos.period // "1h"' | unit-converter --mode duration)
+    ig_chaos_period=$(( $ig_chaos_period_seconds / 60 ))
+    random=$(shuf -i 1-${ig_chaos_period} -n 1)
+    run=$(( $random % ${ig_chaos_period} ))
+    if [[ $run -eq 0 ]] ; then
+      # Если в IG есть уже нода, которая удаляется, то не трогаем больше ноды в данной IG
+      if [[ "$(kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -l cloud-instance-manager.deckhouse.io/chaos-monkey-victim= --no-headers 2>/dev/null | wc -l)" -gt "0" ]] ; then
+        continue
+      fi
+      # Рандомно выберем жертву для chaos в IG
+      victim_node=$(kubectl get nodes -l node-role.kubernetes.io/${ig_name}= --no-headers -o custom-columns=":metadata.name" | shuf -n 1)
+      victim_machine=$(kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -l node=${victim_node} --no-headers -o custom-columns=":metadata.name")
+      if [[ $run -eq 0 ]] ; then
+        if [[ "$ig_chaos_mode" == "DrainAndDelete" ]] ; then
+          kubectl -n d8-cloud-instance-manager label machines.machine.sapcloud.io $victim_machine cloud-instance-manager.deckhouse.io/chaos-monkey-victim=
+          kubectl -n d8-cloud-instance-manager delete machines.machine.sapcloud.io $victim_machine
+        elif [[ "$ig_chaos_mode" == "KillPodsAndDelete" ]] ; then
+          kubectl cordon ${victim_machine}
+          kubectl -n d8-cloud-instance-manager label machines.machine.sapcloud.io $victim_machine cloud-instance-manager.deckhouse.io/chaos-monkey-victim=
+          kubectl get pod --all-namespaces -o wide --no-headers | grep ${victim_machine} | awk '{print $1" "$2}' | while read pod; do
+            kubectl delete pod -n $pod --grace-period=1
+          done
+          kubectl -n d8-cloud-instance-manager delete machines.machine.sapcloud.io  $victim_machine
+        fi
+      fi
+    fi
+  done
+}
+
+hook::run "$@"

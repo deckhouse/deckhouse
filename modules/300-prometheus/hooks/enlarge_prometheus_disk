@@ -32,7 +32,7 @@ function __main__() {
               if [ "$prometheus_size" -gt "90" ] ; then
                 # Проверим, что диск уже не отресайзили, проверив статус и если диск не ждет ресайза (удаления пода), то произведем увеличение диска
                 if ! kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.conditions[] | select (.type=="FileSystemResizePending" and .status=="True") | .message' >/dev/null 2>&1 ; then
-                  size=$(kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.capacity.storage' -r | kube-resource-unit-converter)
+                  size=$(kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.capacity.storage' -r | unit-converter --mode=kube-resource-unit)
                   # Накидываем 5 ГиБ
                   new_size=$((size + 5368709120))
                   fltr='. | .spec.resources.requests.storage = '"\"${new_size}\""
