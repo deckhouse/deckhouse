@@ -76,13 +76,12 @@ function __main__() {
     desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
       | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
 
-    machines_in_ig=$(kubectl -n d8-cloud-instance-manager get machine -o json \
-      | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]")
-    machines=$(echo "$machines_in_ig" | jq 'length')
+    machines=$(kubectl -n d8-cloud-instance-manager get machine -o json \
+      | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]" | jq 'length')
 
-    nodes=$(echo "$machines_in_ig" | jq '[.[] | .status.node | select(. != null) ] | length')
-    ready=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json \
-      | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
+    nodes_in_ig=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json)
+    nodes=$(echo "$nodes_in_ig" | jq -r '.items | length')
+    ready=$(echo "$nodes_in_ig" | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
 
     update_status "$ig" "$(jo desired=$desired machines=$machines nodes=$nodes ready=$ready)"
   fi
