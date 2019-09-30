@@ -7,6 +7,7 @@ provisioner: pd.csi.storage.gke.io
 parameters:
   type: pd-standard
   replication-type: none
+allowVolumeExpansion: true
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
@@ -16,6 +17,7 @@ provisioner: pd.csi.storage.gke.io
 parameters:
   type: pd-standard
   replication-type: regional-pd
+allowVolumeExpansion: true
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
@@ -25,6 +27,7 @@ provisioner: pd.csi.storage.gke.io
 parameters:
   type: pd-ssd
   replication-type: none
+allowVolumeExpansion: true
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
@@ -34,3 +37,4 @@ provisioner: pd.csi.storage.gke.io
 parameters:
   type: pd-ssd
   replication-type: regional-pd
+allowVolumeExpansion: true
