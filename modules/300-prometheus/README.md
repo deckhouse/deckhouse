@@ -48,10 +48,10 @@ prometheus: |
 * `retentionGigabytes` — сколько гигабайт хранить.
     * По-умолчанию `30` гигабайт.
     * Работает совместно с параметром `retentionDays`.
-* `storageClassName` — имя storageClass'а, который использовать.
-    * Если не указано — используется или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
-* `longtermStorageClassName` — имя storageClass'а, который использовать для Longterm Prometheus.
-    * Если не указано — используется или `prometheus.storageClassName` от основного Prometheus, или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
+* `storageClass` — имя storageClass'а, который использовать.
+    * Если не указано — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
+* `longtermStorageClass` — имя storageClass'а, который использовать для Longterm Prometheus.
+    * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
 * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
     * Используется если не включен модуль `user-authn`.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
@@ -86,8 +86,8 @@ prometheus: |
               - port: 8080
         ```
 * `grafana` - настройки для инсталяции Grafana.
-    * `storageClassName` — имя storageClass'а, который использовать для Grafana.
-       * Если не указано — используется или `prometheus.storageClassName` от основного Prometheus, или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir.
+    * `storageClass` — имя storageClass'а, который использовать для Grafana.
+       * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
     * `customPlugins` - список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana. Необходимо указать в качестве значения список имен плагинов из официального репозитория.
        * Пример добавления plug-in'ов для возможности указания в качестве datasource clickhouse и панели flow-chart:
            ```yaml
@@ -135,7 +135,7 @@ prometheus: |
 prometheus: |
   password: xxxxxx
   retentionDays: 7
-  storageClassName: rbd
+  storageClass: rbd
   nodeSelector:
     node-role/example: ""
   tolerations:

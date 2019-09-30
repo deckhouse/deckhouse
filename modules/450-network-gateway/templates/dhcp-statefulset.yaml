@@ -73,8 +73,8 @@ spec:
       - name: network-gateway-config
         configMap:
           name: network-gateway
-{{- $storageClassName := .Values.networkGateway.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
-{{- if not $storageClassName }}
+{{- $storageClass := .Values.networkGateway.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+{{- if not $storageClass }}
       - name: dhcp-data
         emptyDir: {}
 {{- else }}
@@ -87,5 +87,5 @@ spec:
       resources:
         requests:
           storage: 32Mi
-      storageClassName: {{ $storageClassName }}
+      storageClassName: {{ $storageClass }}
 {{- end }}

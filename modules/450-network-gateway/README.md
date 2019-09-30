@@ -37,5 +37,5 @@ data:
         * Пример — ['4.2.2.2', '8.8.8.8'].
     * `search` — массив search-доменов.
         * Пример — ['office.example.com', 'srv.example.com']
-* `storageClassName` — имя storageClass'а, который использовать для хранения DHCP lease.
-    * Если не указано — используется или `global.storageClassName`, или `global.discovery.defaultStorageClassName`, а если и они не указаны — данные сохраняются в emptyDir. Dnsmasq, на котором основан наш DHCP-сервер имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease-ами, но лучше её не терять.
+* `storageClass` — имя storageClass'а, который использовать для хранения DHCP lease.
+    * Если не указано — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir. Dnsmasq, на котором основан наш DHCP-сервер имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease-ами, но лучше её не терять.

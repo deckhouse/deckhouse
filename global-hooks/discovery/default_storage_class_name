@@ -9,10 +9,10 @@ function __config__() {
 }
 
 function __main__() {
-  if default_storage_class_name=$(kubectl get storageclass -o json | jq '.items[] | select ((.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")) | .metadata.name' -r | head -n 1) && [[ -n "$default_storage_class_name" ]] ; then
-    values::set global.discovery.defaultStorageClassName $default_storage_class_name
+  if default_storage_class=$(kubectl get storageclass -o json | jq '.items[] | select ((.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")) | .metadata.name' -r | head -n 1) && [[ -n "$default_storage_class" ]] ; then
+    values::set global.discovery.defaultStorageClass $default_storage_class
   else
-    values::unset global.discovery.defaultStorageClassName
+    values::unset global.discovery.defaultStorageClass
   fi
 }
 

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=1
+}
+
+function __main__() {
+  ### Миграция 2019-09-20: https://github.com/deckhouse/deckhouse/issues/524
+  # Этот хук можно удалить, после выката релиза с данным коммитом
+
+  if values::has --config global.storageClassName; then
+    values::set --config global.storageClass "$(values::get --config global.storageClassName)"
+    values::unset --config global.storageClassName
+  fi
+}
+
+hook::run "$@"

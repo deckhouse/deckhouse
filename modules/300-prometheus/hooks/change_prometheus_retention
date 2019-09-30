@@ -17,12 +17,12 @@ function __main__() {
 
   for pvc in $pvc_list; do
     if [[ $pvc =~ ^prometheus-main-db-prometheus-main ]]; then
-      storage_class_name="storageClassName"
+      storage_class="storageClass"
       disk_size="diskSize"
       retention_gigabytes="retentionGigabytes"
       sts="prometheus-main"
     elif [[ $pvc =~ ^prometheus-longterm-db-prometheus-longterm ]]; then
-      storage_class_name="longtermStorageClassName"
+      storage_class="longtermStorageClass"
       disk_size="longtermDiskSize"
       retention_gigabytes="longtermRetentionGigabytes"
       sts="prometheus-longterm"
@@ -39,28 +39,28 @@ function __main__() {
         if [ "$(semver compare "$cluster_version" 1.11.0)" -ne "-1" ] ; then
           # Если это версия kubernetes выше 1.11, то проверяем, есть ли у storageclass, который будет использоваться в prometheus
           # параметр, который позволяет производить расширение диска. Если такой параметр есть у storage class, то создаем диск с размером в 10гб
-          if values::has prometheus."$storage_class_name" || values::has global.storageClassName || values::has global.discovery.defaultStorageClassName ; then
+          if values::has prometheus."$storage_class" || values::has global.storageClass || values::has global.discovery.defaultStorageClass ; then
             values::set prometheus."$disk_size" "30"
             values::set prometheus."$retention_gigabytes" "25"
           fi
 
-          if values::has global.discovery.defaultStorageClassName ; then
-            if [ "$(kubectl get sc $(values::get global.discovery.defaultStorageClassName) -o json 2>/dev/null | jq '.allowVolumeExpansion')" = "true" ] ; then
+          if values::has global.discovery.defaultStorageClass ; then
+            if [ "$(kubectl get sc $(values::get global.discovery.defaultStorageClass) -o json 2>/dev/null | jq '.allowVolumeExpansion')" = "true" ] ; then
               # Посчитав на примерах, вывели, что из исходных GiB Prometheus у нас "теряется" 30% дискового пространства.
               values::set prometheus."$disk_size" "15"
               values::set prometheus."$retention_gigabytes" "10"
             fi
           fi
 
-          if values::has global.storageClassName ; then
-            if [ "$(kubectl get sc $(values::get global.$storage_class_name) -o json 2>/dev/null | jq '.allowVolumeExpansion')" = "true" ] ; then
+          if values::has global.storageClass ; then
+            if [ "$(kubectl get sc $(values::get global.$storage_class) -o json 2>/dev/null | jq '.allowVolumeExpansion')" = "true" ] ; then
               values::set prometheus."$disk_size" "15"
               values::set prometheus."$retention_gigabytes" "10"
             fi
           fi
 
-          if values::has prometheus."$storage_class_name" ; then
-            if [ "$(kubectl get sc $(values::get prometheus.$storage_class_name) -o json 2>/dev/null | jq '.allowVolumeExpansion')" = "true" ] ; then
+          if values::has prometheus."$storage_class" ; then
+            if [ "$(kubectl get sc $(values::get prometheus.$storage_class) -o json 2>/dev/null | jq '.allowVolumeExpansion')" = "true" ] ; then
               values::set prometheus."$disk_size" "15"
               values::set prometheus."$retention_gigabytes" "10"
             fi
@@ -68,7 +68,7 @@ function __main__() {
 
         else
           # Если это kubernetes ниже 1.11 версии, создаем диск с размером в 30 гб
-          if values::has prometheus."$storage_class_name" || values::has global.storageClassName || values::has global.discovery.defaultStorageClassName ; then
+          if values::has prometheus."$storage_class" || values::has global.storageClass || values::has global.discovery.defaultStorageClass ; then
             values::set prometheus."$disk_size" "30"
             values::set prometheus."$retention_gigabytes" "25"
           fi

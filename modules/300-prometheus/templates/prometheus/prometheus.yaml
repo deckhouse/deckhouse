@@ -154,8 +154,8 @@ spec:
 {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
   priorityClassName: cluster-medium
 {{- end }}
-{{- $storageClassName := .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
-{{- if $storageClassName }}
+{{- $storageClass := .Values.prometheus.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+{{- if $storageClass }}
   storage:
     volumeClaimTemplate:
       spec:
@@ -164,5 +164,5 @@ spec:
         resources:
           requests:
             storage: {{ .Values.prometheus.diskSize }}Gi
-        storageClassName: {{ $storageClassName }}
+        storageClassName: {{ $storageClass }}
 {{- end }}
