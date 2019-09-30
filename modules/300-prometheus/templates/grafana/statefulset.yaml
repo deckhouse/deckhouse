@@ -134,9 +134,9 @@ spec:
         configMap:
           name: grafana-dashboard-definitions-custom
           optional: true
-{{- $grafanaStorageClassName := false }}{{- if hasKey .Values.prometheus "grafana" }}{{- $grafanaStorageClassName = .Values.prometheus.grafana.storageClassName }}{{- end }}
-{{- $storageClassName := $grafanaStorageClassName | default .Values.prometheus.storageClassName | default .Values.global.storageClassName | default .Values.global.discovery.defaultStorageClassName }}
-{{- if not $storageClassName }}
+{{- $grafanaStorageClass := false }}{{- if hasKey .Values.prometheus "grafana" }}{{- $grafanaStorageClass = .Values.prometheus.grafana.storageClass }}{{- end }}
+{{- $storageClass := $grafanaStorageClass | default .Values.prometheus.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+{{- if not $storageClass }}
       - name: grafana-storage
         emptyDir: {}
 {{- else }}
@@ -149,5 +149,5 @@ spec:
       resources:
         requests:
           storage: 2Gi
-      storageClassName: {{ $storageClassName }}
+      storageClassName: {{ $storageClass }}
 {{- end }}
