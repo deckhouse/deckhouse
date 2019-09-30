@@ -42,6 +42,11 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
+      # todo: убрать после рефакторинга алертов
+    - sourceLabels: ["job"]
+      regex: '.*/(.*)'
+      replacement: '$1'
+      targetLabel: job
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - targetLabel: component

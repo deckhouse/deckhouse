@@ -14,6 +14,11 @@ spec:
     relabelings:
     - regex: endpoint|namespace|container|pod
       action: labeldrop
+      # todo: убрать после рефакторинга алертов
+    - sourceLabels: ["job"]
+      regex: '.*/(.*)'
+      replacement: '$1'
+      targetLabel: job
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}

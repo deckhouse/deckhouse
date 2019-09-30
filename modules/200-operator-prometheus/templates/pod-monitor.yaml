@@ -17,6 +17,10 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
+    - sourceLabels: ["job"]
+      regex: '.*/(.*)'
+      replacement: '$1'
+      targetLabel: job
   namespaceSelector:
     matchNames:
     - d8-operator-prometheus
