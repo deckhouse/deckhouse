@@ -1,0 +1,78 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "schedule": [
+    {
+      "crontab": "*/10 * * * *"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  declare -A release_channels_order; release_channels_order=( ["Alpha"]=0 ["Beta"]=1 ["RC"]=2 ["Stable"]=3 ["RockSolid"]=4 )
+  declare -A release_channels_tags; release_channels_tags=( ["alpha"]="Alpha" ["beta"]="Beta" ["rc"]="RC" ["stable"]="Stable" ["rock-solid"]="RockSolid" )
+  declare -A orders_to_tags; orders_to_tags=( [0]="alpha" [1]="beta" [2]="rc" [3]="stable" [4]="rock-solid" )
+
+  # Get desired release channel
+  desired_release_channel=$(values::get deckhouse.releaseChannel)
+  if [[ "$desired_release_channel" == "null" ]] || [[ ! ${release_channels_order[$desired_release_channel]+_} ]]; then
+    exit 0
+  fi
+
+  # Get current release channel
+  current_release_channel_tag=$(kubectl -n antiopa get deploy/antiopa -o json | jq -r '.spec.template.spec.containers[0].image' | awk -F ":" '{ print $2 }')
+  if [[ ! ${release_channels_tags[$current_release_channel_tag]+_} ]]; then
+    exit 0
+  fi
+  current_release_channel=${release_channels_tags[$current_release_channel_tag]}
+
+  desired_order=${release_channels_order[$desired_release_channel]}
+  current_order=${release_channels_order[$current_release_channel]}
+
+  # Nothing to do, if we already on desired channel
+  if [[ "$desired_order" -eq "$current_order" ]]; then
+    exit 0
+  fi
+
+  registry=$(values::get global.modulesImages.registry)
+
+  credentials=$(cat /etc/registrysecret/.dockercfg | jq -r 'to_entries[] | .value | "--username=" + .username + " --password=" + .password')
+  current_digest=$(reg digest $credentials "${registry}:${current_release_channel_tag}")
+
+  result_tag=$current_release_channel_tag
+  index=${release_channels_order[${release_channels_tags[$current_release_channel_tag]}]}
+
+  if [[ "$desired_order" -lt "$current_order" ]]; then
+     # Searching for first upgrade (new digest) docker image tag
+     while [[ "$index" -ne 0 ]]; do
+      candidate_tag=${orders_to_tags[$index]}
+      candidate_digest=$(reg digest $credentials "${registry}:${candidate_tag}")
+      if [[ "$current_digest" != "$candidate_digest" ]] || [[ "$index" == "$desired_order" ]]; then
+        result_tag=$candidate_tag
+        break
+      fi
+      index=$(("$index" - 1))
+    done
+  else
+    # If current release channel docker image digest equals to next order release channel docker image digest, we can switch to it
+    while [[ "$index" -ne 4 ]]; do
+      candidate_tag=${orders_to_tags[$index]}
+      candidate_digest=$(reg digest $credentials "${registry}:${candidate_tag}")
+      if [[ "$current_digest" != "$candidate_digest" ]]; then
+        break
+      fi
+      result_tag=$candidate_tag
+      index=$(("$index" + 1))
+    done
+  fi
+  if [[ "$result_tag" != "$current_release_channel_tag" ]]; then
+    kubectl::jq_patch antiopa deploy/antiopa ".spec.template.spec.containers[0].image = \"${registry}:${result_tag}\""
+  fi
+}
+
+hook::run "$@"

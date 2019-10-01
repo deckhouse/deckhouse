@@ -40,17 +40,16 @@ ansible:
   # Зависимости хуков
   - name: "Install dependencies"
     apk:
-      name: "{{`{{ item }}`}}"
-    with_items:
-    - jq
-    - curl
-    - pwgen
-    - apache2-utils
-    - bc
-    - grep
-    - tar
-    - unzip
-    - coreutils
+      name:
+      - jq
+      - curl
+      - pwgen
+      - apache2-utils
+      - bc
+      - grep
+      - tar
+      - unzip
+      - coreutils
 
   # Зависимости хуков (из edge/testing)
   - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
@@ -96,7 +95,14 @@ ansible:
       remote_src: yes
       dest: /bin
 
-  # Чистим кеш
+  - name: Install registry client
+    get_url:
+      url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
+      dest: /usr/local/bin/reg
+      mode: +x
+      checksum: sha256:0470b6707ac68fa89d0cd92c83df5932c9822df7176fcf02d131d75f74a36a19
+
+    # Чистим кеш
   - raw: rm -rf /var/cache/apk/*
 
   setup:
