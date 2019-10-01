@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  if values::has dashboard.internal.deployDexAuthenticator ; then
+    cat <<EOF | kubectl apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+ name: dashboard
+ namespace: d8-dashboard
+ labels:
+   heritage: deckhouse
+   module: dashboard
+   app: dex-authenticator
+ annotations:
+   dex-authenticator.deckhouse.io/use-kubernetes-app-key: "true"
+spec:
+ applicationDomain: "$(common::module_public_domain dashboard)"
+ sendAuthorizationHeader: true
+ applicationIngressCertificateSecretName: "ingress-tls"
+EOF
+  else
+     kubectl -n d8-dashboard delete dex-authenticator dashboard >/dev/null 2>&1 || true
+  fi
+}
+
+hook::run $@

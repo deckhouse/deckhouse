@@ -1,3 +1,4 @@
 dashboardEnabled: true
 dashboard:
   accessLevel: User
+  internal: {}

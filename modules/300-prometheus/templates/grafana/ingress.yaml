@@ -8,10 +8,10 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
-{{- if .Values.global.enabledModules | has "user-authn" }}
-    nginx.ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
-    nginx.ingress.kubernetes.io/auth-url: https://grafana-dex-authenticator.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
-{{- else }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.prometheus.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.externalAuthentication.authURL | quote }}
+  {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"

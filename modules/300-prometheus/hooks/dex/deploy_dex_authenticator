@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p afterHelm=10
+}
+
+function __main__() {
+  if values::has prometheus.internal.deployDexAuthenticator ; then
+    cat <<EOF | kubectl apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+  name: grafana
+  namespace: kube-prometheus
+  labels:
+    heritage: deckhouse
+    module: grafana
+    app: dex-authenticator
+spec:
+  applicationDomain: "$(common::module_public_domain grafana)"
+  applicationIngressCertificateSecretName: "ingress-tls"
+EOF
+  else
+     kubectl -n kube-prometheus delete dex-authenticator grafana >/dev/null 2>&1 || true
+  fi
+}
+
+hook::run $@
