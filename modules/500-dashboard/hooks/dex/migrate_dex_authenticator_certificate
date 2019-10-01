@@ -28,6 +28,9 @@ function __config__() {
 }
 
 function __main__() {
+  if ! values::array_has global.enabledModules "user-authn"; then
+    exit 0
+  fi
   if kubectl -n kube-system get secret ingress-tls > /dev/null 2>&1 ; then
     kubectl -n kube-system get secret ingress-tls -o json | jq 'include "remove_empty"; .metadata.namespace = "d8-dashboard" | remove_empty' | kubectl::replace_or_create
   fi

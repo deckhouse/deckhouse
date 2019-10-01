@@ -15,10 +15,10 @@
 
 ### Параметры
 * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
-    * Используется если не включен модуль `user-authn`.
+    * Используется если не включена внешняя аутентификация `externalAuthentication`.
 * `ingressClass` — класс ingress контроллера, который используется для dashboard.
     * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
-* `accessLevel` — уровень доступа в dashboard при отсутсвии `user-authn`. Возможные значения описаны в [user-authz](../140-user-authz/README.md).
+* `accessLevel` — уровень доступа в dashboard при отсутсвии внешней аутентификации `externalAuthentication`. Возможные значения описаны в [user-authz](../140-user-authz/README.md).
   * По-умолчанию: `User`.
 * `allowScale` — если указать данный параметр в `true`, то в Kubernetes Dashboard появится возможность скейлить deployment и statefulset.
 * `https` — выбираем, какой типа сертификата использовать для dashboard.
@@ -39,7 +39,12 @@
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-
+* `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+     * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+     * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+     * `useBearerTokens` – dashboard должен работать с Kubernetes API от имени пользователя (сервис аутентификации при этом должен обязательно возвращать в своих ответах HTTP-заголовок Authorization, в котором должен быть bearer-token – именно под этим токеном dashboard будет производить запросы к API-серверу Kubernetes).
+         * Значение по-умолчанию: `false`.
+         * Важно! Из соображений безопасности этот режим работает только если https.mode (глобальный, или в модуле) не установлен в значение Disabled.
 ### Пример конфига
 ```yaml
 dashboard: |
@@ -49,4 +54,8 @@ dashboard: |
   - key: dedicated
     operator: Equal
     value: example
+  externalAuthentication:
+    authURL: "https://<applicationDomain>/auth"
+    authSignInURL: "https://<applicationDomain>/sign-in"
+    authResponseHeaders: "Authorization"
 ```

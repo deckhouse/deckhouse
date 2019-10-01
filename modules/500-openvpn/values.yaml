@@ -1,1 +1,2 @@
-openvpn: {}
+openvpn:
+  internal: {}

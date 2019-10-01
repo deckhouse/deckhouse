@@ -6,10 +6,12 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
-    nginx.ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
-    nginx.ingress.kubernetes.io/auth-url: https://dashboard-dex-authenticator.d8-dashboard.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.dashboard.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.dashboard.externalAuthentication.authURL | quote }}
+ {{- if .Values.dashboard.externalAuthentication.useBearerTokens }}
     nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
+ {{- end }}
     nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
 {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic

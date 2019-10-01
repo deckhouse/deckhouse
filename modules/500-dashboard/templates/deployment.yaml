@@ -66,7 +66,7 @@ spec:
         - --insecure-port=80
         - --insecure-bind-address=127.0.0.1
         - --logtostderr=true
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication  }}
         - --auto-generate-certificates=true
         - --bind-address=0.0.0.0
     {{- else }}
@@ -75,7 +75,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication }}
             port: 443
             scheme: HTTPS
     {{- else }}
@@ -86,10 +86,10 @@ spec:
             cpu: "100m"
             memory: "128Mi"
         ports:
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") (.Values.global.enabledModules | has "user-authn") }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication }}
         - containerPort: 443
     {{- end }}
-    {{- if or (.Values.global.enabledModules | has "user-authn" | not) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+    {{- if or (not .Values.dashboard.externalAuthentication ) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: ca-auth-proxy
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:

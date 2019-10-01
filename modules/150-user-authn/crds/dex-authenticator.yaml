@@ -25,7 +25,6 @@ spec:
           type: object
           required:
           - applicationDomain
-          - sendAuthorizationHeader
           - applicationIngressCertificateSecretName
           properties:
             applicationDomain:

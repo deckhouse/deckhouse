@@ -1,4 +1,4 @@
-{{- if or (not (.Values.global.enabledModules | has "user-authn")) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+{{- if or (not .Values.dashboard.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
   {{- if and (eq (include "helm_lib_module_https_mode" .) "Disabled") (ne .Values.dashboard.accessLevel "User") }}
     {{- cat "On https.mode Disabled the only allowed accessLevel is User" | fail }}
   {{- end }}

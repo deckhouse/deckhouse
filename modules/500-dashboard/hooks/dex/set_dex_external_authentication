@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined dashboard.https.mode global.modules.https.mode) != "Disabled" ]]; then
+    if ! values::has --config dashboard.externalAuthentication ; then
+      values::set dashboard.externalAuthentication '{}'
+      values::set dashboard.externalAuthentication.authURL "https://dashboard-dex-authenticator.d8-dashboard.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
+      values::set dashboard.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
+      values::set dashboard.externalAuthentication.useBearerTokens "true"
+      values::set dashboard.internal.deployDexAuthenticator "true"
+    else
+      values::unset dashboard.internal.deployDexAuthenticator
+      values::set dashboard.externalAuthentication "$(values::get --config dashboard.externalAuthentication)"
+    fi
+  else
+    if ! values::has --config dashboard.externalAuthentication ; then
+      values::unset dashboard.externalAuthentication
+    else
+      values::set dashboard.externalAuthentication "$(values::get --config dashboard.externalAuthentication)"
+    fi
+    values::unset dashboard.internal.deployDexAuthenticator
+  fi
+}
+
+hook::run $@
