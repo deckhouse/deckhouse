@@ -31,7 +31,11 @@ ansible:
   - apk: update_cache=yes
 
   # Нам нужен bash, на нем все хуки
-  - apk: name=bash
+  - apk:
+      name: "{{`{{ item }}`}}"
+    with_items:
+    - bash
+    - bash-completion
 
   # Зависимости хуков
   - name: "Install dependencies"
@@ -101,6 +105,24 @@ ansible:
       content: |
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
       dest: /antiopa/modules/images_tags.json
+  - name: "Shell comfort: inputrc"
+    copy:
+      content: |
+{{ .Files.Get "antiopa/files/inputrc" | indent 8 }}
+      dest: /etc/inputrc
+  - name: "Shell comfort: bashrc"
+    copy:
+      content: |
+{{ .Files.Get "antiopa/files/bashrc" | indent 8 }}
+      dest: /root/.bashrc
+  - name: "Shell comfort: vimrc"
+    copy:
+      content: |
+{{ .Files.Get "antiopa/files/vimrc" | indent 8 }}
+      dest: /root/.vimrc
+  - name: "Shell comfort: kubectl completion"
+    shell: kubectl completion bash > /root/.kubectl_completion.sh
+
 docker:
   ENV:
     MODULES_DIR: /antiopa/modules
