@@ -119,15 +119,25 @@
   {{- end }}
 {{- end }}
 
-  {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if or (or $context.Values.userAuthn.internal.dexAuthenticatorCRDs $context.Values.userAuthn.publishAPI.enable) $context.Values.userAuthn.kubeconfigGenerator }}
   staticClients:
   - id: kubernetes
     name: kubernetes
     secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
     redirectURIs:
-    {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-      {{- if $crd.useKubernetesAppKey }}
+    {{- if $context.Values.userAuthn.kubeconfigGenerator}}
+      {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
+    - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}
+      {{- end }}
+    {{- end }}
+    {{- if $context.Values.userAuthn.publishAPI.enable }}
+    - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
+    {{- end }}
+    {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+      {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+        {{- if $crd.useKubernetesAppKey }}
     - https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
+        {{- end }}
       {{- end }}
     {{- end }}
   {{- end }}
