@@ -1,0 +1,30 @@
+#!/bin/bash
+### Миграция 2019-09-30 были проблемы с перегенерацией LE-ключа
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10 afterHelm=5
+}
+
+function __main__() {
+  if hook::context_jq -re 'any(.[]; .binding=="beforeHelm")' 2>/dev/null 1>&2; then
+    if old_key_data=$(
+      kubectl -n kube-cert-manager get secret cert-manager-letsencrypt-private-key -o json 2>/dev/null | \
+      jq '. | .metadata = {"name": "cert-manager-letsencrypt-private-key", "namespace": "d8-cert-manager"}'
+    ) && ! kubectl -n d8-cert-manager get secret cert-manager-letsencrypt-private-key >/dev/null 2>&1
+    then
+      values::set certManager.internal.oldLEKey "$old_key_data"
+    else
+      values::unset certManager.internal.oldLEKey
+    fi
+  else # afterHelm
+    if ! kubectl -n d8-cert-manager get secret cert-manager-letsencrypt-private-key >/dev/null 2>&1 && values::has certManager.internal.oldLEKey; then
+      kubectl -n d8-cert-manager apply -f - <<< $(values::get certManager.internal.oldLEKey)
+      values::unset certManager.internal.oldLEKey
+      exit 1 # чтобы заставить антиопу переустановить модуль
+    fi
+  fi
+}
+
+hook::run "$@"

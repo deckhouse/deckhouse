@@ -1,3 +1,4 @@
+{{- if not .Values.certManager.internal.oldLEKey }} ### Миграция 2019-09-30 были проблемы с перегенерацией LE-ключа
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -72,3 +73,4 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+{{- end }}

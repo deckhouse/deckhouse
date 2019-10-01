@@ -1,2 +1,3 @@
 certManagerEnabled: true
-certManager: {}
+certManager:
+  internal: {}
