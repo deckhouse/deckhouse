@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-router
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | indent 2 }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: d8-system:kube-router
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | indent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - nodes
+  - endpoints
+  verbs:
+  - list
+  - get
+  - watch
+- apiGroups:
+  - "networking.k8s.io"
+  resources:
+  - networkpolicies
+  verbs:
+  - list
+  - get
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+    - networkpolicies
+  verbs:
+    - get
+    - list
+    - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: d8-system:kube-router
+{{ include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-system:kube-router
+subjects:
+- kind: ServiceAccount
+  name: kube-router
+  namespace: d8-system
