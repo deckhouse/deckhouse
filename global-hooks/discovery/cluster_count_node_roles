@@ -3,9 +3,20 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
-    "$(jo kind=node jqFilter=".metadata.labels" disableDebug=true)" \
-  )"
+# TODO
+#  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
+#    "$(jo kind=node jqFilter=".metadata.labels" disableDebug=true)" \
+#  )"
+
+  echo '
+{
+  "onStartup": 150,
+  "schedule": [
+    {
+      "crontab": "* * * * *"
+    }
+  ]
+}'
 }
 
 function __main__() {

@@ -3,18 +3,27 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
+# TODO
+#{
+#   "beforeHelm": 20,
+#   "onKubernetesEvent": [
+#      {
+#         "kind": "node",
+#         "event": [
+#            "add",
+#            "update"
+#         ],
+#         "jqFilter": "[.metadata.name, .status.nodeInfo.osImage, .metadata.labels]"
+#      }
+#   ]
+#}'
   echo '
 {
    "beforeHelm": 20,
-   "onKubernetesEvent": [
-      {
-         "kind": "node",
-         "event": [
-            "add",
-            "update"
-         ],
-         "jqFilter": "[.metadata.name, .status.nodeInfo.osImage, .metadata.labels]"
-      }
+   "schedule": [
+     {
+       "crontab": "0 0 * * *"
+     }
    ]
 }'
 }
