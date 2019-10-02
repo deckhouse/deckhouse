@@ -85,7 +85,7 @@ cloudInstanceManager:
       * `mode` — режим работы chaos monkey, возможные значения: `DrainAndDelete` - при срабатывании drain'ит и удаляет ноду, `KillPodsAndDelete` - удаляет все поды на ноде и удаляет ее, `Disabled` - не трогает данную IG.
         * По-умолчанию `DrainAndDelete`.
       * `period` — в какой интервал времени сработает chaos monkey (указывать можно в [golang формате](https://golang.org/pkg/time/#ParseDuration));
-        * По-умолчанию `1h`.
+        * По-умолчанию `24h`.
 
 #### Пример CloudInstanceGroup
 
