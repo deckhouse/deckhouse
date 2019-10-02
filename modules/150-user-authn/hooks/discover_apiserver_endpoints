@@ -26,7 +26,10 @@ function __main__() {
     exit 0
   fi
   kubernetes_apiserver_addresses=$(kubectl -n default get ep kubernetes -o json | jq -r '[.subsets[].addresses[].ip]')
+  kubernetes_apiserver_target_port=$(kubectl -n default get svc kubernetes -o json | jq -r '.spec.ports[0].targetPort')
+
   values::set userAuthn.internal.kubernetesApiserverAddresses "$kubernetes_apiserver_addresses"
+  values::set userAuthn.internal.kubernetesApiserverTargetPort "$kubernetes_apiserver_target_port"
 }
 
 hook::run $@
