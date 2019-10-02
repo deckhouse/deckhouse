@@ -29,9 +29,9 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
-  {{- if (include "helm_lib_ha_enabled" .) }}
   strategy:
     type: RollingUpdate
+  {{- if (include "helm_lib_ha_enabled" . ) }}
     rollingUpdate:
       maxSurge: 0
       maxUnavailable: 1
