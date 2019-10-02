@@ -9,14 +9,14 @@ function __config__() {
   "onKubernetesEvent": [
     {
       "kind": "secret",
-      "name": "ingress-tls",
+      "name": "kubernetes-tls",
       "event": [
         "add",
         "update"
       ],
       "namespaceSelector": {
         "matchNames": [
-          "default"
+          "d8-user-authn"
         ]
       },
       "jqFilter": ".data.\"ca.crt\""
@@ -28,8 +28,8 @@ function __config__() {
 function __main__() {
   if values::is_true userAuthn.publishAPI.enable ; then
     if [[ "$(values::get userAuthn.publishAPI.https.mode)" == "SelfSigned" ]] ; then
-      if kubectl -n default get secret ingress-tls > /dev/null 2>/dev/null ; then
-        selfsigned_publish_api_ca=$(kubectl -n default get secret ingress-tls -o json | jq '.data."ca.crt"' -r | base64 -d)
+      if kubectl -n d8-user-authn get secret kubernetes-tls > /dev/null 2>/dev/null ; then
+        selfsigned_publish_api_ca=$(kubectl -n d8-user-authn get secret kubernetes-tls -o json | jq '.data."ca.crt"' -r | base64 -d)
         values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$selfsigned_publish_api_ca"
       fi
     fi

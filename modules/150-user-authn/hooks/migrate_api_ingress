@@ -1,0 +1,19 @@
+#!/bin/bash
+
+### Миграция 2019-10-02: https://github.com/deckhouse/deckhouse/merge_requests/1230
+# Этот хук можно удалить, после выката данного MR'а на все инсталяции.
+
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if kubectl -n default get ingress kubernetes-api 2>/dev/null 1>&2 ; then
+    kubectl -n default delete ingress kubernetes-api 2>/dev/null 1>&2
+  fi
+}
+
+hook::run "$@"

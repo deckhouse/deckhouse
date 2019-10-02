@@ -45,7 +45,7 @@ spec:
   - name: https
     port: 443
     protocol: TCP
-    targetPort: 6443
+    targetPort: {{ .Values.userAuthn.internal.kubernetesApiserverTargetPort }}
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -62,6 +62,6 @@ subsets:
   {{- end }}
   ports:
   - name: https
-    port: 6443
+    port: {{ .Values.userAuthn.internal.kubernetesApiserverTargetPort }}
     protocol: TCP
 {{- end }}
