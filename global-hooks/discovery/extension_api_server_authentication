@@ -3,20 +3,25 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
+# TODO
+#{
+#   "onStartup": 75,
+#   "onKubernetesEvent": [
+#      {
+#         "kind": "ConfigMap",
+#         "namespaceSelector": {
+#            "matchNames": [
+#               "kube-system"
+#            ]
+#         },
+#         "jqFilter": ".data"
+#      }
+#   ]
+#}
+
   cat << EOF
 {
-   "onStartup": 75,
-   "onKubernetesEvent": [
-      {
-         "kind": "ConfigMap",
-         "namespaceSelector": {
-            "matchNames": [
-               "kube-system"
-            ]
-         },
-         "jqFilter": ".data"
-      }
-   ]
+   "onStartup": 75
 }
 EOF
 }
