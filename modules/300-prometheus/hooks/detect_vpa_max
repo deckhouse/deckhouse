@@ -3,20 +3,30 @@
 source /antiopa/shell_lib.sh
 
 function __config__() {
+# TODO
+#{
+#  "beforeHelm": 20,
+#   "onKubernetesEvent": [
+#      {
+#         "kind": "node",
+#         "event": [
+#            "add",
+#            "update",
+#            "delete"
+#         ],
+#         "jqFilter": ".status.capacity.pods"
+#      }
+#   ]
+#}'
+
   echo '
 {
    "beforeHelm": 20,
-   "onKubernetesEvent": [
+   "schedule": [
       {
-         "kind": "node",
-         "event": [
-            "add",
-            "update",
-            "delete"
-         ],
-         "jqFilter": ".status.capacity.pods"
+        "crontab": "*/10 * * * *"
       }
-   ]
+  ]
 }'
 }
 
