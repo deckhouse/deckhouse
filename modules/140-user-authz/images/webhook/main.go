@@ -15,12 +15,20 @@ var sslListenCert = "/etc/ssl/user-authz-webhook/webhook-server.crt"
 var sslListenKey = "/etc/ssl/user-authz-webhook/webhook-server.key"
 var sslClientCA = "/etc/ssl/apiserver-authentication-requestheader-client-ca/ca.crt"
 
-var directory map[string]map[string][]*regexp.Regexp
+type DirectoryEntry struct {
+	AllowAccessToSystemNamespaces bool
+	LimitNamespacesAbsent         bool
+	LimitNamespaces               []*regexp.Regexp
+}
+
+//             [user type] [user name]
+var directory map[string]map[string]DirectoryEntry
 var appliedConfigMtime int64 = 0
 
 const configPath = "/etc/user-authz-webhook/config.json"
 
 var systemNamespaces = []string{"antiopa", "kube-.*", "d8-.*", "loghouse", "default"}
+var systemNamespacesRegex []*regexp.Regexp
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
 
@@ -66,6 +74,13 @@ type UserAuthzConfig struct {
 	} `json:"crds"`
 }
 
+func initVars() {
+	for _, systemNamespace := range systemNamespaces {
+		r, _ := regexp.Compile("^" + systemNamespace + "$")
+		systemNamespacesRegex = append(systemNamespacesRegex, r)
+	}
+}
+
 func http_handler_healthz(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Ok.")
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
@@ -88,7 +103,11 @@ func http_handler_main(w http.ResponseWriter, r *http.Request) {
 
 		json.Unmarshal(configRawData, &config)
 
-		directory = map[string]map[string][]*regexp.Regexp{"User": {}, "Group": {}, "ServiceAccount": {}}
+		directory = map[string]map[string]DirectoryEntry{
+			"User":           map[string]DirectoryEntry{},
+			"Group":          map[string]DirectoryEntry{},
+			"ServiceAccount": map[string]DirectoryEntry{},
+		}
 
 		for _, crd := range config.Crds {
 			for _, subject := range crd.Spec.Subjects {
@@ -98,20 +117,22 @@ func http_handler_main(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if _, ok := directory[subject.Kind][subjectName]; !ok {
-					directory[subject.Kind][subjectName] = []*regexp.Regexp{}
+					directory[subject.Kind][subjectName] = DirectoryEntry{}
 				}
 
-				for _, ln := range crd.Spec.LimitNamespaces {
-					r, _ := regexp.Compile("^" + ln + "$")
-					directory[subject.Kind][subjectName] = append(directory[subject.Kind][subjectName], r)
-				}
+				dirEntry := directory[subject.Kind][subjectName]
 
-				if crd.Spec.AllowAccessToSystemNamespaces {
-					for _, systemNamespace := range systemNamespaces {
-						r, _ := regexp.Compile("^" + systemNamespace + "$")
-						directory[subject.Kind][subjectName] = append(directory[subject.Kind][subjectName], r)
+				if len(crd.Spec.LimitNamespaces) > 0 {
+					for _, ln := range crd.Spec.LimitNamespaces {
+						r, _ := regexp.Compile("^" + ln + "$")
+						dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
 					}
+				} else {
+					dirEntry.LimitNamespacesAbsent = true
 				}
+
+				dirEntry.AllowAccessToSystemNamespaces = dirEntry.AllowAccessToSystemNamespaces || crd.Spec.AllowAccessToSystemNamespaces
+				directory[subject.Kind][subjectName] = dirEntry
 			}
 		}
 	}
@@ -119,34 +140,56 @@ func http_handler_main(w http.ResponseWriter, r *http.Request) {
 	var request WebhookRequest
 	json.NewDecoder(r.Body).Decode(&request)
 
-	var isOurGuy = false
-	var allowedNamespaces = []*regexp.Regexp{}
+	var dirEntriesAffected = []DirectoryEntry{}
+	var summaryLimitNamespaces = []*regexp.Regexp{}
+	var summaryLimitNamespacesAbsent = false
+	var summaryAllowAccessToSystemNamespaces = false
 
-	if _, ok := directory["User"][request.Spec.User]; ok {
-		isOurGuy = true
-		allowedNamespaces = append(allowedNamespaces, directory["User"][request.Spec.User]...)
+	if dirEntry, ok := directory["User"][request.Spec.User]; ok {
+		dirEntriesAffected = append(dirEntriesAffected, dirEntry)
 	}
 
-	if _, ok := directory["ServiceAccount"][request.Spec.User]; ok {
-		isOurGuy = true
-		allowedNamespaces = append(allowedNamespaces, directory["ServiceAccount"][request.Spec.User]...)
+	if dirEntry, ok := directory["ServiceAccount"][request.Spec.User]; ok {
+		dirEntriesAffected = append(dirEntriesAffected, dirEntry)
 	}
 
 	for _, group := range request.Spec.Group {
-		if _, ok := directory["Group"][group]; ok {
-			isOurGuy = true
-			allowedNamespaces = append(allowedNamespaces, directory["Group"][group]...)
+		if dirEntry, ok := directory["Group"][group]; ok {
+			dirEntriesAffected = append(dirEntriesAffected, dirEntry)
 		}
 	}
 
-	if isOurGuy {
-		if len(request.Spec.ResourceAttributes.Namespace) > 0 {
-			request.Status.Denied = true
+	if len(dirEntriesAffected) > 0 {
+		// Our Guy
+		for _, dirEntry := range dirEntriesAffected {
+			summaryAllowAccessToSystemNamespaces = summaryAllowAccessToSystemNamespaces || dirEntry.AllowAccessToSystemNamespaces
+			summaryLimitNamespacesAbsent = summaryLimitNamespacesAbsent || dirEntry.LimitNamespacesAbsent
+			summaryLimitNamespaces = append(summaryLimitNamespaces, dirEntry.LimitNamespaces...)
+		}
 
-			for _, pattern := range allowedNamespaces {
-				if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
-					request.Status.Denied = false
-					break
+		if len(request.Spec.ResourceAttributes.Namespace) > 0 {
+			if summaryLimitNamespacesAbsent {
+				request.Status.Denied = false
+				if !summaryAllowAccessToSystemNamespaces {
+					for _, pattern := range systemNamespacesRegex {
+						if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
+							request.Status.Denied = true
+							break
+						}
+					}
+
+				}
+			} else {
+				request.Status.Denied = true
+				if summaryAllowAccessToSystemNamespaces {
+					summaryLimitNamespaces = append(summaryLimitNamespaces, systemNamespacesRegex...)
+				}
+
+				for _, pattern := range summaryLimitNamespaces {
+					if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
+						request.Status.Denied = false
+						break
+					}
 				}
 			}
 		}
@@ -159,6 +202,8 @@ func http_handler_main(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	initVars()
+
 	listenAddr := "127.0.0.1:40443"
 
 	logger.Println("Server is starting to listen on ", listenAddr, "...")
