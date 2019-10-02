@@ -125,6 +125,22 @@ spec:
                 Maximum amount of instances to rollout simultaneously in InstanceGroup in each zone.
               type: integer
               minimum: 0
+            chaos:
+              description: Chaos monkey settings
+              example: |
+                mode: DrainAndDelete
+                period: 24h
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum:
+                  - DrainAndDelete
+                  - KillPodsAndDelete
+                  - Disabled
+                period:
+                  type: string
+                  pattern: '^[0-9]+[mh]{1}$'
             nodeTemplate:
               description: Specification of some of the fields that will be applied to a Kubernetes node object once it joins the cluster.
               example: |

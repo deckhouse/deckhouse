@@ -24,7 +24,7 @@ function __main__() {
     # Get chaos mode
     ig_chaos_mode=$(echo "$ig_spec" | jq -r '.chaos.mode // "DrainAndDelete"')
     # Get chaos period
-    ig_chaos_period_seconds=$(echo "$ig_spec" | jq -r '.chaos.period // "1h"' | unit-converter --mode duration)
+    ig_chaos_period_seconds=$(echo "$ig_spec" | jq -r '.chaos.period // "24h"' | unit-converter --mode duration)
     ig_chaos_period=$(( $ig_chaos_period_seconds / 60 ))
     random=$(shuf -i 1-${ig_chaos_period} -n 1)
     run=$(( $random % ${ig_chaos_period} ))
