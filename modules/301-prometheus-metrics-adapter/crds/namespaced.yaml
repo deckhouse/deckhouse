@@ -9,6 +9,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: podmetrics
@@ -41,6 +42,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: deploymentmetrics
@@ -73,6 +75,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: statefulsetmetrics
@@ -105,6 +108,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: daemonsetmetrics
@@ -137,6 +141,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: ingressmetrics
@@ -169,6 +174,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: servicemetrics
@@ -201,6 +207,7 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
+  preserveUnknownFields: false
   scope: Namespaced
   names:
     plural: namespacemetrics

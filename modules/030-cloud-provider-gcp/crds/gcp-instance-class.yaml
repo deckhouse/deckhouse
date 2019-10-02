@@ -11,6 +11,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: gcpinstanceclasses
