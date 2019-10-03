@@ -7,11 +7,16 @@ function __config__() {
 }
 
 function __main__() {
-  for namespace in $(hook::context_jq -r '.[] | select((.resourceName == "default" | not ) and .status.phase == "Active") | .resourceName');
+  for namespace in $(hook::context_jq -r '.[] | select(.resourceName == "default" | not) | .resourceName');
   do
-    if ! $(kubectl get namespace $namespace > /dev/null 2> /dev/null) ; then
-      continue
+    if ! $(kubectl get namespace $namespace 2>/dev/null >/dev/null) ; then
+      return 0
     fi
+
+    if $(kubectl get namespace $namespace -o json | jq 'select(.status.phase != "Active")' -e >/dev/null 2>/dev/null); then
+      return 0
+    fi
+
 
     for secret in $(kubectl -n default get secret -l antiopa-secret-copier=yes -o name);
     do
