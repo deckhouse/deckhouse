@@ -26,7 +26,8 @@ function __main__() {
   fltr=$fltr' | .spec.template.spec.containers[0].ports[0].containerPort = 9650'
 
   # Проставляем переменные окружения необходимые для нового addon-operator
-  fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_NAMESPACE") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_NAMESPACE", "valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}]) else . end'
+  fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_NAMESPACE") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_NAMESPACE", "valueFrom":{"fieldRef":{"fieldPath":"metadata.namespace"}}}]) else . end'
+  fltr=$fltr' | if any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_NAMESPACE" and (.valueFrom.fieldRef.fieldPath == "metadata.namespace" | not)) then .spec.template.spec.containers[0].env |= (map(select(.name != "ADDON_OPERATOR_NAMESPACE")) | . + [{"name": "ADDON_OPERATOR_NAMESPACE", "valueFrom":{"fieldRef":{"fieldPath":"metadata.namespace"}}}]) else . end'
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX", "value": "antiopa_"}]) else . end'
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_CONFIG_MAP") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_CONFIG_MAP", "value": "antiopa"}]) else . end'
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_LISTEN_ADDRESS") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_LISTEN_ADDRESS", "valueFrom":{"fieldRef":{"fieldPath":"status.podIP"}}}]) else . end'
