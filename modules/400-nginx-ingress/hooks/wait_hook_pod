@@ -7,7 +7,15 @@ function __config__() {
 }
 
 function __main__() {
-  if ! kubectl -n d8-system wait --for=condition=Ready pod -l app=ingress-conversion-webhook --timeout=120s ; then
+  for i in $(seq 1 120); do
+    if kubectl -n d8-system get pod -l app=ingress-conversion-webhook -o json | jq -e '.items[].status.conditions | select(.) | all (.[] ; .status == "True")' ; then
+      return 0
+    fi
+
+    echo "Waiting for webhook pod in d8-system namespace"
+    sleep 1
+  done
+  if [[ $i -ge 120 ]] ; then
     >&2 echo "Timeout waiting for webhook pod in d8-system namesapce"
     return 1
   fi
