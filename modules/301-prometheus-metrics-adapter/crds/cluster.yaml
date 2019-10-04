@@ -9,7 +9,6 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
-  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: clusterpodmetrics
@@ -42,7 +41,6 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
-  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: clusterdeploymentmetrics
@@ -75,7 +73,6 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
-  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: clusterstatefulsetmetrics
@@ -108,7 +105,6 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
-  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: clusterdaemonsetmetrics
@@ -141,7 +137,6 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
-  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: clusteringressmetrics
@@ -174,7 +169,6 @@ metadata:
 spec:
   group: deckhouse.io
   version: v1alpha1
-  preserveUnknownFields: false
   scope: Cluster
   names:
     plural: clusterservicemetrics

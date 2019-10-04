@@ -15,7 +15,6 @@ spec:
     shortNames:
     - dex-auth
   version: v1alpha1
-  preserveUnknownFields: false
   validation:
     openAPIV3Schema:
       type: object
