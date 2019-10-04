@@ -13,7 +13,7 @@ spec:
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
-      # todo: убрать после рефакторинга алертов
+    # todo: убрать после рефакторинга алертов
     - sourceLabels: ["job"]
       regex: '.*/(.*)'
       replacement: '$1'

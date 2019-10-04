@@ -39,7 +39,7 @@ spec:
 {{- end }}
     - regex: endpoint|namespace|pod|container
       action: labeldrop
-      # todo: убрать после рефакторинга алертов
+    # todo: убрать после рефакторинга алертов
     - sourceLabels: ["job"]
       regex: '.*/(.*)'
       replacement: '$1'

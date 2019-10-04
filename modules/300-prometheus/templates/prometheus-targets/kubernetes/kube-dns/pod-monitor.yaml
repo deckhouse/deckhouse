@@ -13,13 +13,18 @@ spec:
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
+    # todo: убрать после рефакторинга алертов
+    - sourceLabels: ["job"]
+      regex: '.*/(.*)'
+      replacement: '$1'
+      targetLabel: job
     - targetLabel: scrape_endpoint
       replacement: skydns
   - targetPort: 10054
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
-      # todo: убрать после рефакторинга алертов
+    # todo: убрать после рефакторинга алертов
     - sourceLabels: ["job"]
       regex: '.*/(.*)'
       replacement: '$1'
