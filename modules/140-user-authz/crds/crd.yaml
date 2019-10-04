@@ -13,7 +13,6 @@ spec:
     singular: clusterauthorizationrule
     kind: ClusterAuthorizationRule
   version: v1alpha1
-  preserveUnknownFields: false
   validation:
     openAPIV3Schema:
       type: object
