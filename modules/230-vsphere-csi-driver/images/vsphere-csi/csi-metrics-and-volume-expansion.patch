@@ -527,7 +527,7 @@ index 53d6b9f..111d01c 100644
  		return nil, status.Errorf(codes.Internal,
  			"Unable to retrieve Node ID, err: %s", err)
 diff --git a/pkg/csi/service/service.go b/pkg/csi/service/service.go
-index cbfb10c..d2c696b 100644
+index cbfb10c..8a54858 100644
 --- a/pkg/csi/service/service.go
 +++ b/pkg/csi/service/service.go
 @@ -71,9 +71,12 @@ type service struct {
@@ -540,7 +540,7 @@ index cbfb10c..d2c696b 100644
 -		os.Remove(sockPath)
 +		err := os.Remove(sockPath)
 +		if err != nil {
-+			klog.Exitf("can't remove old socket: %s", err)
++			klog.Warningf("can't remove old socket: %s", err)
 +		}
  	}
  }
