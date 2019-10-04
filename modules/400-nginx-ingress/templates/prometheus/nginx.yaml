@@ -21,7 +21,7 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
-      # todo: убрать после рефакторинга алертов
+    # todo: убрать после рефакторинга алертов
     - sourceLabels: ["job"]
       regex: '.*/(.*)'
       replacement: '$1'
@@ -49,6 +49,11 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod
       action: labeldrop
+    # todo: убрать после рефакторинга алертов
+    - sourceLabels: ["job"]
+      regex: '.*/(.*)'
+      replacement: '$1'
+      targetLabel: job
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - sourceLabels: [__meta_kubernetes_pod_controller_name]
