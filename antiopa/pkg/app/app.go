@@ -13,6 +13,8 @@ var PodName = ""
 var ContainerName = "antiopa"
 
 var FeatureWatchRegistry = "yes"
+var InsecureRegistry = "no"
+var SkipTlsVerifyRegistry = "no"
 var RegistrySecretPath = "/etc/registrysecret"
 var RegistryErrorsMaxTimeBeforeRestart = time.Hour
 
@@ -26,4 +28,12 @@ func SetupGlobalSettings(kpApp *kingpin.Application) {
 		Envar("ANTIOPA_WATCH_REGISTRY").
 		Default(FeatureWatchRegistry).
 		StringVar(&FeatureWatchRegistry)
+	kpApp.Flag("insecure-registry", "Use http to access registry (yes|no).").
+		Envar("ANTIOPA_INSECURE_REGISTRY").
+		Default(InsecureRegistry).
+		StringVar(&InsecureRegistry)
+	kpApp.Flag("skip-tls-verify-registry", "Trust self signed certificate of registry (yes|no).").
+		Envar("ANTIOPA_SKIP_TLS_VERIFY_REGISTRY").
+		Default(SkipTlsVerifyRegistry).
+		StringVar(&SkipTlsVerifyRegistry)
 }

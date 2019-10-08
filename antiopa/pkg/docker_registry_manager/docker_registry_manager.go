@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"runtime/debug"
+	"strings"
 	"time"
 
-	registryclient "github.com/flant/docker-registry-client/registry"
+	"github.com/deckhouse/deckhouse/antiopa/pkg/app"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/romana/rlog"
 
 	utils_file "github.com/flant/shell-operator/pkg/utils/file"
@@ -15,29 +18,26 @@ import (
 type DockerRegistryManager interface {
 	WithRegistrySecretPath(string)
 	WithErrorCallback(errorCb func())
-	WithSuccessCallback(errorCb func())
+	WithFatalCallback(fatalCb func())
+	WithSuccessCallback(successCb func())
 	WithImageInfoCallback(imageInfoCb func() (string, string))
 	WithImageUpdatedCallback(imageUpdatedCb func(string))
 	Init() error
 	Run()
 }
 
-var (
-	RegistryToUrlMapping map[string]string
-)
-
 type MainRegistryManager struct {
 	AntiopaImageDigest string
 	AntiopaImageName   string
-	AntiopaImageInfo   DockerImageInfo
-	// клиент для обращений к
-	DockerRegistry *registryclient.Registry
+	AntiopaImageInfo   name.Reference
 	// path to a file with dockercfg
 	RegistrySecretPath string
 	// счётчик ошибок обращений к registry
 	ErrorCounter int
 	// callback вызывается в случае ошибки
 	ErrorCallback func()
+	// callback for fatal errors — program should exit
+	FatalCallback func()
 	// calls when get info from registry
 	SuccessCallback      func()
 	ImageInfoCallback    func() (string, string)
@@ -60,13 +60,32 @@ func (rm *MainRegistryManager) Init() error {
 		return nil
 	}
 
+	// Secret type: kubernetes.io/dockerconfigjson
+	configJsonExists, err1 := utils_file.FileExists(path.Join(rm.RegistrySecretPath, ".dockerconfigjson"))
+	// Secret type: kubernetes.io/dockercfg
+	cfgExists, err2 := utils_file.FileExists(path.Join(rm.RegistrySecretPath, ".dockercfg"))
+
+	if !configJsonExists && !cfgExists {
+		return fmt.Errorf("No .dockerconfigjson or .dockercfg in a secret directory: watcher is disabled now, %v, %v", err1, err2)
+	}
+
 	var readErr error
 	var secretBytes []byte
-	secretBytes, readErr = ioutil.ReadFile(path.Join(rm.RegistrySecretPath, ".dockercfg"))
-	if readErr != nil {
+	if configJsonExists {
 		secretBytes, readErr = ioutil.ReadFile(path.Join(rm.RegistrySecretPath, ".dockerconfigjson"))
 		if readErr != nil {
-			return fmt.Errorf("Cannot read registry secret from .dockercfg or .dockerconfigjson]: %s", readErr)
+			return fmt.Errorf("Cannot read registry secret from .dockerconfigjson: %s", readErr)
+		}
+		if len(secretBytes) == 0 {
+			return fmt.Errorf("Registry secret in .dockerconfigjson is empty")
+		}
+	} else {
+		secretBytes, readErr = ioutil.ReadFile(path.Join(rm.RegistrySecretPath, ".dockercfg"))
+		if readErr != nil {
+			return fmt.Errorf("Cannot read registry secret from .dockercfg: %s", readErr)
+		}
+		if len(secretBytes) == 0 {
+			return fmt.Errorf("Registry secret in .dockercfg is empty")
 		}
 	}
 
@@ -75,16 +94,11 @@ func (rm *MainRegistryManager) Init() error {
 		return fmt.Errorf("Cannot load registry secret: %s", err)
 	}
 
-	registries := ""
+	registries := []string{}
 	for k := range DockerCfgAuths {
-		registries = registries + ", " + k
+		registries = append(registries, "'"+k+"'")
 	}
-	rlog.Infof("Load auths for: %s", registries)
-
-	// FIXME: hack for minikube testing
-	RegistryToUrlMapping = map[string]string{
-		"localhost:5000": "http://kube-registry.kube-system.svc.cluster.local:5000",
-	}
+	rlog.Infof("Load auths for this registries: %s", strings.Join(registries, ", "))
 
 	return nil
 }
@@ -93,12 +107,24 @@ func (rm *MainRegistryManager) Init() error {
 func (rm *MainRegistryManager) Run() {
 	rlog.Infof("Registry manager: start")
 
-	ticker := time.NewTicker(time.Duration(10) * time.Second)
+	getImageTicker := time.NewTicker(time.Duration(1) * time.Second)
+	rm.GetAntiopaImageInfo()
+	for {
+		if rm.AntiopaImageDigest != "" {
+			break
+		}
+		select {
+		case <-getImageTicker.C:
+			rm.GetAntiopaImageInfo()
+		}
+	}
+	getImageTicker.Stop()
 
+	checkImageTicker := time.NewTicker(time.Duration(10) * time.Second)
 	rm.CheckIsImageUpdated()
 	for {
 		select {
-		case <-ticker.C:
+		case <-checkImageTicker.C:
 			rm.CheckIsImageUpdated()
 		}
 	}
@@ -106,6 +132,10 @@ func (rm *MainRegistryManager) Run() {
 
 func (rm *MainRegistryManager) WithErrorCallback(errorCb func()) {
 	rm.ErrorCallback = errorCb
+}
+
+func (rm *MainRegistryManager) WithFatalCallback(fatalCb func()) {
+	rm.FatalCallback = fatalCb
 }
 
 func (rm *MainRegistryManager) WithSuccessCallback(successCb func()) {
@@ -124,92 +154,82 @@ func (rm *MainRegistryManager) WithRegistrySecretPath(secretPath string) {
 	rm.RegistrySecretPath = secretPath
 }
 
-// Основной метод проверки обновления образа.
-// Метод запускается периодически. Вначале пытается достучаться до kube-api
-// и по имени Pod-а получить имя и digest его образа. Когда digest получен, то
-// обращается в registry и по имени образа смотрит, изменился ли digest. Если да,
-// то отправляет новый digest в канал.
-func (rm *MainRegistryManager) CheckIsImageUpdated() {
-	// First phase:
-	// Get image name and imageID from pod's status.
-	// Api-server may be unavailable, status.imageID is updated with delay, so
-	// this block is repeated until api-server returns object with non-empty imageID.
+// GetAntiopaImageInfo is a first phase: get image name and imageID from pod's status.
+//
+// Api-server may be unavailable sometimes, status.imageID is updated with delay, so
+// this method is repeated until api-server returns object with non-empty imageID.
+func (rm *MainRegistryManager) GetAntiopaImageInfo() {
+	rlog.Debugf("Registry manager: retrieve image name and id from kube-api")
+	podImageName, podImageId := rm.ImageInfoCallback()
+	if podImageName == "" {
+		rlog.Infof("Registry manager: cannot get image name for pod. Will request kubernetes api-server again.")
+		return
+	}
+	if podImageId == "" {
+		rlog.Infof("Registry manager: image ID for pod is empty. Will request kubernetes api-server again.")
+		return
+	}
+
+	var err error
+	rm.AntiopaImageInfo, err = name.ParseReference(podImageName, ParseReferenceOptions()...)
+	if err != nil {
+		// This should not really happen: Pod is started, podImageName is non empty but cannot be parsed.
+		rlog.Errorf("Possibly a bug: REGISTRY MANAGER got pod image name '%s' that is invalid. Will try again. Error was: %v", podImageName, err)
+		return
+	}
+
+	rm.AntiopaImageName = podImageName
+
+	rm.AntiopaImageDigest, err = FindImageDigest(podImageId)
+	if err != nil {
+		rlog.Errorf("RegistryManager: %s", err)
+		rm.ImageUpdatedCallback("NO_DIGEST_FOUND")
+		return
+	}
+	// docker 1.11 case
 	if rm.AntiopaImageDigest == "" {
-		rlog.Debugf("Registry manager: retrieve image name and id from kube-api")
-		podImageName, podImageId := rm.ImageInfoCallback()
-		if podImageName == "" {
-			rlog.Infof("Registry manager: cannot get image name for pod. Will request kubernetes api-server again.")
-			return
-		}
-		if podImageId == "" {
-			rlog.Infof("Registry manager: image ID for pod is empty. Will request kubernetes api-server again.")
-			return
-		}
-
-		var err error
-		rm.AntiopaImageInfo, err = DockerParseImageName(podImageName)
-		if err != nil {
-			// Очень маловероятная ситуация, потому что Pod запустился, а имя образа из его спеки не парсится.
-			rlog.Errorf("Registry manager: pod image name '%s' is invalid. Will try again. Error was: %v", podImageName, err)
-			return
-		}
-
-		rm.AntiopaImageName = podImageName
-
-		rm.AntiopaImageDigest, err = FindImageDigest(podImageId)
-		if err != nil {
-			rlog.Errorf("RegistryManager: %s", err)
-			rm.ImageUpdatedCallback("NO_DIGEST_FOUND")
-			return
-		}
-		// docker 1.11 case
-		if rm.AntiopaImageDigest == "" {
-			return
-		}
+		return
 	}
 
-	// Second phase:
-	// This phase is run only if docker image digest is available.
-	// Create client to access docker registry.
-	if rm.DockerRegistry == nil {
-		rlog.Debugf("Registry manager: create docker registry client")
-		var url, user, password string
-		if info, hasInfo := DockerCfgAuths[rm.AntiopaImageInfo.Registry]; hasInfo {
-			// FIXME Should we always use https here?
-			if mappedUrl, hasKey := RegistryToUrlMapping[rm.AntiopaImageInfo.Registry]; hasKey {
-				url = mappedUrl
-			} else {
-				url = fmt.Sprintf("https://%s", rm.AntiopaImageInfo.Registry)
-			}
-			user = info.Username
-			password = info.Password
-		}
-		// Создать клиента для подключения к docker-registry
-		// в единственном экземляре
-		rm.DockerRegistry = NewDockerRegistry(url, user, password)
+	// It is a fatal error if registry in image name has no authConfig
+	_, err = NewKeychain().Resolve(rm.AntiopaImageInfo.Context())
+	if err != nil && app.InsecureRegistry == "no" {
+		rlog.Errorf("No auth found for registry %s. Exiting.", rm.AntiopaImageInfo.Context().RegistryStr())
+		rm.FatalCallback()
 	}
-
-	// Third phase:
-	// If image name, image digest and registry client are available,
-	// try to get new digest from registry.
-	rlog.Debugf("Registry manager: checking registry for updates")
-	digest, err := DockerRegistryGetImageDigest(rm.AntiopaImageInfo, rm.DockerRegistry)
-	rm.SetOrCheckAntiopaImageDigest(digest, err)
 }
 
-// Сравнить запомненный digest образа с полученным из registry.
-// Если отличаются — отправить полученный digest в канал.
-// Если digest не был запомнен, то запомнить.
-// Если была ошибка при опросе registry, то увеличить счётчик ошибок.
-// Когда накопится 3 ошибки подряд, вывести ошибку и сбросить счётчик
-func (rm *MainRegistryManager) SetOrCheckAntiopaImageDigest(digest string, err error) {
-	// Если пришёл не валидный id или была ошибка — увеличить счётчик ошибок.
-	// Сообщить в лог, когда накопится 3 ошибки подряд
+// CheckIsImageUpdated is a second phase: image name and image digest are available, so try to get digest from registry.
+// Основной метод проверки обновления образа.
+// Метод запускается периодически, когда получены имя и digest образа Pod'd.
+// Метод обращается в registry и по имени образа смотрит, изменился ли digest.
+// Если digest изменился, то вызывает SuccessCallback
+// Если при запросе к registry была ошибки, то вызывается ErrorCallback, а раз в три ошибки записывается в лог.
+func (rm *MainRegistryManager) CheckIsImageUpdated() {
+	// Catch panic in case of registry request error, print stack to log, increase metric.
+	defer func() {
+		if r := recover(); r != nil {
+			rlog.Debugf("REGISTRY: manifest digest request panic: %s", r)
+			rlog.Debugf("%s", debug.Stack())
+			rm.ErrorCallback()
+		}
+	}()
+
+	rlog.Debugf("REGISTRY: checking registry for updates...")
+	digest, err := ImageDigest(rm.AntiopaImageInfo)
+	rlog.Debugf("REGISTRY: digest=%s saved=%s err=%v", digest, rm.AntiopaImageDigest, err)
+
 	if err != nil || !IsValidImageDigest(digest) {
 		rm.ErrorCallback()
 		rm.ErrorCounter++
 		if rm.ErrorCounter >= 3 {
-			rlog.Errorf("Registry manager: registry request error: %s", err)
+			msg := ""
+			if err != nil {
+				msg = err.Error()
+			} else {
+				msg = fmt.Sprintf("digest '%s' is invalid", digest)
+			}
+			rlog.Errorf("Registry manager: registry request error: %s", msg)
 			rm.ErrorCounter = 0
 		}
 		return
@@ -218,6 +238,7 @@ func (rm *MainRegistryManager) SetOrCheckAntiopaImageDigest(digest string, err e
 	rm.ErrorCounter = 0
 	rm.SuccessCallback()
 	if digest != rm.AntiopaImageDigest {
+		rlog.Infof("New image detected in registry: %s@sha256:%s", rm.AntiopaImageName, digest)
 		rm.ImageUpdatedCallback(digest)
 	}
 }

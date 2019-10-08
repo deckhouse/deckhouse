@@ -1,0 +1,25 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poke
+spec:
+  selector:
+    matchLabels:
+      app: poke
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: poke
+    spec:
+      containers:
+      - name: poke
+        image: alpine:3.9
+        command: ["/bin/sh"]
+        args:
+        - "-c"
+        - "while true; do echo poke poke poke...; sleep 1; done"

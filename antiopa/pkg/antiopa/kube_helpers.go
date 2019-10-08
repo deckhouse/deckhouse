@@ -1,4 +1,4 @@
-package app
+package antiopa
 
 import (
 	"fmt"
@@ -11,11 +11,13 @@ import (
 
 	client "github.com/flant/shell-operator/pkg/kube"
 
-	"github.com/flant/addon-operator/pkg/app"
+	addon_operator_app "github.com/flant/addon-operator/pkg/app"
+
+	"github.com/deckhouse/deckhouse/antiopa/pkg/app"
 )
 
 func GetCurrentPod() (pod *v1.Pod, err error) {
-	pod, err = client.Kubernetes.CoreV1().Pods(app.Namespace).Get(PodName, metav1.GetOptions{})
+	pod, err = client.Kubernetes.CoreV1().Pods(addon_operator_app.Namespace).Get(app.PodName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +38,7 @@ func GetDeploymentOfCurrentPod() (deployment *v1beta1.Deployment, err error) {
 
 	for _, ownerRef := range pod.OwnerReferences {
 		if ownerRef.Kind == "ReplicaSet" {
-			rs, err = client.Kubernetes.AppsV1().ReplicaSets(app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
+			rs, err = client.Kubernetes.AppsV1().ReplicaSets(addon_operator_app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("get ReplicaSet of current pod: %v", err)
 			}
@@ -54,7 +56,7 @@ func GetDeploymentOfCurrentPod() (deployment *v1beta1.Deployment, err error) {
 
 	for _, ownerRef := range rs.OwnerReferences {
 		if ownerRef.Kind == "Deployment" {
-			deployment, err = client.Kubernetes.AppsV1beta1().Deployments(app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
+			deployment, err = client.Kubernetes.AppsV1beta1().Deployments(addon_operator_app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("get Deployment of current pod: %v", err)
 			}
@@ -70,7 +72,7 @@ func GetDeploymentOfCurrentPod() (deployment *v1beta1.Deployment, err error) {
 }
 
 func UpdateDeployment(deployment *v1beta1.Deployment) error {
-	_, err := client.Kubernetes.AppsV1beta1().Deployments(app.Namespace).Update(deployment)
+	_, err := client.Kubernetes.AppsV1beta1().Deployments(addon_operator_app.Namespace).Update(deployment)
 	switch {
 	case errors.IsConflict(err):
 		// Deployment is modified in the meanwhile, query the latest version
