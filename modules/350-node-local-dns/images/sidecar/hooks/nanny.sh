@@ -19,15 +19,15 @@ function dns_ready() {
   # `dig` returns non-zero exit code only when there is a server failure (SERVFAIL),
   # it won't return non-zero exit code on NXDOMAIN.
   # Here we generate a random, certain-to-not-be-in-cache DNS request.
-  dig "$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10).default.svc.${KUBE_CLUSTER_DOMAIN}." @169.254.20.10 +short +timeout=2 +tries=2
+  dig "$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10).default.svc.${KUBE_CLUSTER_DOMAIN}." @169.254.20.10 +short +timeout=2 +tries=2 >/dev/null
 
   # Check internal cluster DNS name
-  dig kubernetes.default.svc.${KUBE_CLUSTER_DOMAIN}. @169.254.20.10 +short +timeout=2 +tries=2 | grep -v -e '^$'
+  dig kubernetes.default.svc.${KUBE_CLUSTER_DOMAIN}. @169.254.20.10 +short +timeout=2 +tries=2 | grep -v -e '^$' >/dev/null
 
   # Check external DNS name
-  dig google.com @169.254.20.10 +short +timeout=2 +tries=2 | grep -v -e '^$'
+  dig google.com @169.254.20.10 +short +timeout=2 +tries=2 | grep -v -e '^$' >/dev/null
 
-  curl -sS "127.0.0.1:9225/health"
+  curl -sS "127.0.0.1:9225/health" >/dev/null
 }
 
 if [[ $1 == "--config" ]] ; then
