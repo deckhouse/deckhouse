@@ -89,7 +89,7 @@ podPidsLimit: -1
 readOnlyPort: 0
 registryPullQPS: 5
 registryBurst: 10
-resolvConf: /etc/resolv.conf
+resolvConf: /run/systemd/resolve/resolv.conf
 rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
