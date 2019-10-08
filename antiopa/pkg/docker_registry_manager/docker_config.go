@@ -3,7 +3,14 @@ package docker_registry_manager
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/google/go-containerregistry/pkg/authn"
+
+	"github.com/deckhouse/deckhouse/antiopa/pkg/app"
 )
+
+// Secrets are loaded as in Kubernetes source code
+// https://github.com/kubernetes/kubernetes/blob/v1.16.0/pkg/credentialprovider/config.go
 
 // DockerConfigJSON represents a local docker auth config file
 // for pulling images.
@@ -21,17 +28,28 @@ type DockerConfig map[string]DockerConfigEntry
 type DockerConfigEntry struct {
 	Username string `json:"username,omitempty"`
 	Password string `json:"password,omitempty"`
-	Email    string `json:"email,omitempty"`
 	Auth     string `json:"auth,omitempty"`
 
-	XXX map[string]interface{} `yaml:",inline"`
-}
+	// Email is an optional value associated with the username.
+	// This field is deprecated and will be removed in a later
+	// version of docker.
+	Email string `json:"email,omitempty"`
 
-// DockerCfgAuths stores all available registries and their auths
-var DockerCfgAuths = DockerConfig{}
+	ServerAddress string `json:"serveraddress,omitempty"`
+
+	// IdentityToken is used to authenticate the user and get
+	// an access token for the registry.
+	IdentityToken string `json:"identitytoken,omitempty"`
+
+	// RegistryToken is a bearer token to be sent to a registry
+	RegistryToken string `json:"registrytoken,omitempty"`
+}
 
 // Anonymous auth for unknown registries
 var AnonymousAuth = DockerConfigEntry{}
+
+// DockerCfgAuths stores all available registries and their auths
+var DockerCfgAuths = DockerConfig{}
 
 func LoadDockerRegistrySecret(bytes []byte) error {
 	//
@@ -67,4 +85,34 @@ func LoadDockerRegistrySecret(bytes []byte) error {
 	}
 
 	return nil
+}
+
+func NewKeychain() authn.Keychain {
+	return &kubeKeychain{}
+}
+
+type kubeKeychain struct {
+}
+
+func (k *kubeKeychain) Resolve(target authn.Resource) (authn.Authenticator, error) {
+	cfg, ok := DockerCfgAuths[target.RegistryStr()]
+	if !ok {
+		if app.InsecureRegistry == "yes" {
+			return authn.Anonymous, nil
+		}
+		return nil, fmt.Errorf("no auth for registry %s", target.RegistryStr())
+	}
+
+	if cfg == AnonymousAuth {
+		return authn.Anonymous, nil
+	}
+
+	return authn.FromConfig(authn.AuthConfig{
+		Username:      cfg.Username,
+		Password:      cfg.Password,
+		Auth:          cfg.Auth,
+		IdentityToken: cfg.IdentityToken,
+		RegistryToken: cfg.RegistryToken,
+	}), nil
+
 }

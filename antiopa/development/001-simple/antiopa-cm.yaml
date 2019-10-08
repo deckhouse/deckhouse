@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: antiopa
+  labels:
+    heritage: antiopa
+data:
+  global: |
+    project: antiopa-test
+  pokeEnabled: "true"

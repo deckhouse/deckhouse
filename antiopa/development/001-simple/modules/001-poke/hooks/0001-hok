@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /antiopa/shell_lib.sh
+
+function __config__() {
+  echo '{"beforeHelm":5, "onStartup":10}'
+}
+
+function __main__() {
+  echo "[001-poke] beforeHelm=5 onStartup=10 hook"
+  echo "[001-poke] binding context"
+  cat $BINDING_CONTEXT_PATH
+  echo
+
+  exit 0
+}
+
+hook::run $@

@@ -1,0 +1,3 @@
+poke:
+  paramFoo: barValue
+pokeEnabled: true
