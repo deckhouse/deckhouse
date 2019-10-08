@@ -223,7 +223,13 @@ func (rm *MainRegistryManager) CheckIsImageUpdated() {
 		rm.ErrorCallback()
 		rm.ErrorCounter++
 		if rm.ErrorCounter >= 3 {
-			rlog.Errorf("Registry manager: registry request error: %s", err)
+			msg := ""
+			if err != nil {
+				msg = err.Error()
+			} else {
+				msg = fmt.Sprintf("digest '%s' is invalid", digest)
+			}
+			rlog.Errorf("Registry manager: registry request error: %s", msg)
 			rm.ErrorCounter = 0
 		}
 		return
