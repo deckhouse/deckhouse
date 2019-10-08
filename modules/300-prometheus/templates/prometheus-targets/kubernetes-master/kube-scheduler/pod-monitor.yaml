@@ -8,15 +8,15 @@ metadata:
 spec:
   jobLabel: prometheus-target
   podMetricsEndpoints:
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
   - scheme: https
-{{- if eq .Values.global.discovery.clusterType "Manual" }}
     targetPort: scheduler
-{{- end }}
-{{- if eq .Values.global.discovery.clusterType "Manual" }}
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+{{- else }}
+  - scheme: http
 {{- end }}
     relabelings:
 {{- if not (eq .Values.global.discovery.clusterType "Manual") }}
