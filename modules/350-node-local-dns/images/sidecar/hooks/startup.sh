@@ -24,12 +24,21 @@ else
     fi
 
     # Setup iptables
-    if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -j NOTRACK >/dev/null 2>&1; then
-      iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -j NOTRACK
+    if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p tcp -m tcp --sport 53 -j NOTRACK >/dev/null 2>&1; then
+      iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p tcp -m tcp --sport 53 -j NOTRACK
+    fi
+    if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK >/dev/null 2>&1; then
+      iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK
     fi
     if iptables -w 600 -t raw -C PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
       # Remove. Will be added later, in nanny.sh
       iptables -w 600 -t raw -D PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1
+    fi
+
+    ### Миграция 2019-10-08: https://github.com/deckhouse/deckhouse/merge_requests/1259
+    # Удалить данный кусок скрипта можно после выката MR'а
+    if iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -j NOTRACK >/dev/null 2>&1; then
+      iptables -w 600 -t raw -D OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -j NOTRACK
     fi
 
     ### Миграция 2019-09-14: https://github.com/deckhouse/deckhouse/merge_requests/1131/diffs
