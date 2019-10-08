@@ -22,19 +22,24 @@ spec:
     - kube-system
   podMetricsEndpoints:
   - scheme: https
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+    targetPort: 443
+{{- end }}
     tlsConfig:
       caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
       serverName: kubernetes
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
     relabelings:
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
     - sourceLabels: [ __address__]
       targetLabel: __address__
-{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") (eq .Values.global.discovery.clusterType "ACS") }}
-      replacement: ${1}:443
-{{- else if eq .Values.global.discovery.clusterType "Manual" }}
       replacement: ${1}:6443
-{{- else }}
+{{- else if eq .Values.global.discovery.clusterType "ACS" }}
+    - sourceLabels: [ __address__]
+      targetLabel: __address__
+      replacement: ${1}:443
+{{- else if and (ne .Values.global.discovery.clusterType "AWS") (ne .Values.global.discovery.clusterType "GCE") }}
   {{- fail "Unsupported cluster type" .Values.global.discovery.clusterType }}
 {{- end }}
     - regex: endpoint|namespace|pod|container
