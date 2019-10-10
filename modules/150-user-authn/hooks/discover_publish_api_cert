@@ -5,7 +5,7 @@ source /antiopa/shell_lib.sh
 function __config__() {
   echo '
 {
-  "afterHelm": 10,
+  "onStartup": 1,
   "onKubernetesEvent": [
     {
       "kind": "secret",
