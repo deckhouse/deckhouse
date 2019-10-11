@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse
+  labels:
+    heritage: deckhouse
+data:
+  global: |
+    project: deckhouse-test
+  pokeEnabled: "true"

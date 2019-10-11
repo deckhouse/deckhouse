@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF

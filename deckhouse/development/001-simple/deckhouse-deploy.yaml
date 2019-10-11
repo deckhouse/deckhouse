@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  labels:
+    app: "deckhouse"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deckhouse
+  template:
+    metadata:
+      labels:
+        app: deckhouse
+    spec:
+      imagePullSecrets:
+        - name: registrysecret
+      containers:
+      - name: deckhouse
+        image: localhost:32500/deckhouse:test
+        imagePullPolicy: Always
+        command: ["/deckhouse/deckhouse"]
+        env:
+          - name: ADDON_OPERATOR_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: ADDON_OPERATOR_CONFIG_MAP
+            value: "deckhouse"
+          - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
+            value: "deckhouse_"
+          - name: ADDON_OPERATOR_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: deckhouse_POD
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: RLOG_LOG_LEVEL
+            value: DEBUG
+          - name: MODULES_DIR
+            value: /deckhouse/modules
+          - name: GLOBAL_HOOKS_DIR
+            value: /deckhouse/global-hooks
+#          - name: deckhouse_INSECURE_REGISTRY
+#            value: "yes"
+        workingDir: /deckhouse
+        volumeMounts:
+        - name: regsecret
+          mountPath: "/etc/registrysecret"
+          readOnly: true
+      serviceAccountName: deckhouse
+      hostNetwork: true
+      volumes:
+      - name: regsecret
+        secret:
+          secretName: registrysecret

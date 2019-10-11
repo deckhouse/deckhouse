@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Возникла проблема: при обновлении кластера Kubernetes SemVer comparison не срабатывал, что приводило к отвалу etcd из мониторинга Prometheus.
-# Не помогал рестарт antiopa, а только полное удаление Helm релиза prometheus и последующая установка.
+# Не помогал рестарт deckhouse, а только полное удаление Helm релиза prometheus и последующая установка.
 # Целью данного хука является введение независимого от Helm механизма определения версии кластера.
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   echo '

@@ -4,13 +4,13 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: deckhouse
-  namespace: antiopa
-{{ include "helm_lib_module_labels" (list . (dict "app" "antiopa")) | indent 2 }}
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: antiopa
+    name: deckhouse
   updatePolicy:
     updateMode: "Initial"
   resourcePolicy:

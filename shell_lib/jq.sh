@@ -1,5 +1,5 @@
 #!/bin/bash
 
 function jq() {
-  command jq -L "/antiopa/jq_lib" "$@"
+  command jq -L "/deckhouse/jq_lib" "$@"
 }

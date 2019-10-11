@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+{"onKubernetesEvent":[
+{"name":"deployments_watcher",
+"kind":"deployment",
+"namespaceSelector":{"matchNames":["default"]}
+}
+]}
+EOF
+}
+
+
+function __main__() {
+  echo "[GLOB KUBE] kube event test hook"
+  echo "[GLOB KUBE] values:"
+  cat $VALUES_PATH
+  echo
+  echo "[GLOB KUBE] binding context:"
+  cat $BINDING_CONTEXT_PATH
+  echo
+
+  exit 0
+}
+
+hook::run $@

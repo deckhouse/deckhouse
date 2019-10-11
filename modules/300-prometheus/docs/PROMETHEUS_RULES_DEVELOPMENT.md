@@ -11,13 +11,13 @@
     * в [coreos](../prometheus-rules/coreos/) лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
     * в [kubernetes](../prometheus-rules/kubernetes/) лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (pod'ы, cronjob'ы, место на диске и пр.).
     * в [applications](../prometheus-rules/kubernetes/) лежат правила для мониторинга приложений (таких как redis, mongo и пр.)
-* Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя antiopa, пока отработает Prometheus Operator и компания).
+* Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
 * Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator](../../200-operator-prometheus/docs/INTERNALS.md)):
     * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
         * `kubectl -n kube-prometheus get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
-        * Если изменений нет, то надо проверить, что antiopa сдеплоилась успешно:
-            * `helm --tiller-namespace=antiopa list` — prometheus должен быть в статусе DEPLOYED
-            * `kubectl -n antiopa logs deploy/antiopa -f` — в логе не должно быть ошибок
+        * Если изменений нет, то надо проверить, что deckhouse сдеплоилась успешно:
+            * `helm --tiller-namespace=d8-system list` — prometheus должен быть в статусе DEPLOYED
+            * `kubectl -n d8s-system logs deploy/deckhouse -f` — в логе не должно быть ошибок
     * Проверить, что prometheus-config-reloader увидел ваши изменения:
           * В `kubectl -n kube-prometheus logs prometheus-main-0 prometheus-config-reloader -f` должна быть запись об этом:
 

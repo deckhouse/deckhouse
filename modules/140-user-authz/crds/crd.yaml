@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: clusterauthorizationrules.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: user-authz
 spec:
   group: deckhouse.io
@@ -39,7 +39,7 @@ spec:
               description: 'Allow scaling. Default: false.'
             allowAccessToSystemNamespaces:
               type: boolean
-              description: 'Allow access to System namespaces (antiopa, kube-*, loghouse, default). Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: false.'
+              description: 'Allow access to System namespaces (kube-*, d8-*, loghouse, default). Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: false.'
             limitNamespaces:
               type: array
               description: 'List of namespace regex-patterns to allow for user. Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: empty, no namespaces allowed.'

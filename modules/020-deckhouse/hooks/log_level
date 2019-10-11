@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   jo -p beforeHelm=0
@@ -10,11 +10,11 @@ function __main__() {
   log_level=$(values::get --required deckhouse.logLevel)
 
   if [[ "$log_level" != "Debug" && "$log_level" != "Info" && "$log_level" != "Error" ]] ; then
-    >&2 echo "Bad antiopa.logLevel value \"$log_level\", should be Debug, Info or Error."
+    >&2 echo "Bad deckhouse.logLevel value \"$log_level\", should be Debug, Info or Error."
     return 1
   fi
 
-  kubectl::jq_patch antiopa deploy/antiopa '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
+  kubectl::jq_patch d8-system deploy/deckhouse '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
 }
 
 hook::run $@

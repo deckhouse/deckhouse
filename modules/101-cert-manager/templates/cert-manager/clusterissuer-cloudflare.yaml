@@ -12,7 +12,7 @@ spec:
     {{- if and (hasKey .Values.certManager "cloudflareEmail") (.Values.certManager.cloudflareEmail) }}
     email: "{{ .Values.certManager.cloudflareEmail }}"
     {{- else }}
-      {{ cat "No key cloudflareEmail in antiopa configmap" .Values.certManager.cloudflareEmail | fail }}
+      {{ cat "No key cloudflareEmail in deckhouse configmap" .Values.certManager.cloudflareEmail | fail }}
     {{- end }}
     privateKeySecretRef:
       name: cloudflare-tls-key

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   common_hooks::https::copy_custom_certificate::config

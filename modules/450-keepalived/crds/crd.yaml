@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: keepalivedinstances.deckhouse.io
   labels:
-    heritage: antiopa
+    heritage: deckhouse
     module: keepalived
 spec:
   group: deckhouse.io

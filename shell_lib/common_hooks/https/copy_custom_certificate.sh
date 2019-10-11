@@ -12,7 +12,7 @@ function common_hooks::https::copy_custom_certificate::config() {
       ],
       "namespaceSelector": {
         "matchNames": [
-          "antiopa"
+          "d8-system"
         ]
       },
       "jqFilter": "[.data.\"tls.crt\", .data.\"tls.key\"]"
@@ -43,4 +43,3 @@ function common_hooks::https::copy_custom_certificate::main() {
     fi
   fi
 }
-

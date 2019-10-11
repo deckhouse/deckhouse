@@ -1,6 +1,0 @@
-#!/bin/sh
-
-set -e
-
-go get -v -d -t github.com/deckhouse/deckhouse/antiopa/...
-go test github.com/deckhouse/deckhouse/antiopa/...

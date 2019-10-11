@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
 # Костыль 2019-07-26: пока не разберемся как правильно создавать CRD

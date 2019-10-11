@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   echo '
@@ -25,7 +25,7 @@ function __main__() {
   fi
 
   # Get current release channel
-  current_release_channel_tag=$(kubectl -n antiopa get deploy/antiopa -o json | jq -r '.spec.template.spec.containers[0].image' | awk -F ":" '{ print $2 }')
+  current_release_channel_tag=$(kubectl -n d8-system get deploy/deckhouse -o json | jq -r '.spec.template.spec.containers[0].image' | awk -F ":" '{ print $2 }')
   if [[ ! ${release_channels_tags[$current_release_channel_tag]+_} ]]; then
     exit 0
   fi
@@ -71,7 +71,7 @@ function __main__() {
     done
   fi
   if [[ "$result_tag" != "$current_release_channel_tag" ]]; then
-    kubectl::jq_patch antiopa deploy/antiopa ".spec.template.spec.containers[0].image = \"${registry}:${result_tag}\""
+    kubectl::jq_patch d8-system deploy/deckhouse ".spec.template.spec.containers[0].image = \"${registry}:${result_tag}\""
   fi
 }
 
