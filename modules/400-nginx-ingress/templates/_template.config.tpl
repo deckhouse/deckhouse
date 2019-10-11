@@ -117,13 +117,13 @@ data:
   custom-http-errors: "{{ range $pos, $code := .customErrorsCodes }}{{ if eq $pos 0 }}{{ $code }}{{ else }},{{ $code }}{{ end }}{{ end }}"
   {{- else if or (hasKey . "customErrorsNamespace") (.customErrorsNamespace) (hasKey . "customErrorsServiceName") (.customErrorsServiceName) (hasKey . "customErrorsCodes") (.customErrorsCodes)  }}
     {{- if not (and (hasKey . "customErrorsNamespace") (.customErrorsNamespace)) }}
-      {{ fail "No key customErrorsNamespace in antiopa configmap" }}
+      {{ fail "No key customErrorsNamespace in deckhouse configmap" }}
     {{- end }}
     {{- if not (and (hasKey . "customErrorsServiceName") (.customErrorsServiceName)) }}
-      {{ fail "No key customErrorsServiceName in antiopa configmap" }}
+      {{ fail "No key customErrorsServiceName in deckhouse configmap" }}
     {{- end }}
     {{- if not (and (hasKey . "customErrorsCodes") (.customErrorsCodes)) }}
-      {{ fail "No key customErrorsCodes in antiopa configmap" }}
+      {{ fail "No key customErrorsCodes in deckhouse configmap" }}
     {{- end }}
   {{- end }}
 

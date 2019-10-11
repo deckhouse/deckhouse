@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   jo -p beforeHelm=30
@@ -31,9 +31,9 @@ function __main__() {
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX", "value": "antiopa_"}]) else . end'
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_CONFIG_MAP") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_CONFIG_MAP", "value": "antiopa"}]) else . end'
   fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ADDON_OPERATOR_LISTEN_ADDRESS") | not) then (.spec.template.spec.containers[0].env += [{"name": "ADDON_OPERATOR_LISTEN_ADDRESS", "valueFrom":{"fieldRef":{"fieldPath":"status.podIP"}}}]) else . end'
-  fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "ANTIOPA_POD") | not) then (.spec.template.spec.containers[0].env += [{"name": "ANTIOPA_POD", "valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}]) else . end'
+  fltr=$fltr' | if (any(.spec.template.spec.containers[0].env[]; .name == "DECKHOUSE_POD") | not) then (.spec.template.spec.containers[0].env += [{"name": "DECKHOUSE_POD", "valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}]) else . end'
 
-  kubectl::jq_patch antiopa deploy/antiopa "$fltr"
+  kubectl::jq_patch d8-system deploy/deckhouse "$fltr"
 }
 
 hook::run "$@"

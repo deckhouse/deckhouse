@@ -1,21 +1,30 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   jo -p onStartup=10
 }
 
 function __main__() {
+  ### Миграция 2019-09-30: https://github.com/deckhouse/deckhouse/merge_requests/1194
+  # Данный кусок кода можно удалить после выката данного МРа
+  if [[ "${ADDON_OPERATOR_NAMESPACE}" == "d8-system" ]] ; then
+    deployment="deckhouse"
+    registry_secret="deckhouse-registry"
+  else
+    deployment="antiopa"
+    registry_secret="antiopa-registry"
+  fi
   values::set global.modulesImages "{}"
 
-  registry=$(kubectl -n antiopa get deploy/antiopa -o json | jq '.spec.template.spec.containers[0].image' -r | cut -d: -f1 | sed 's/\/dev$//')
+  registry=$(kubectl -n ${ADDON_OPERATOR_NAMESPACE} get deploy/${deployment} -o json | jq '.spec.template.spec.containers[0].image' -r | cut -d: -f1 | sed 's/\/dev$//')
   values::set global.modulesImages.registry "$registry"
 
-  registry_dockercfg=$(kubectl -n antiopa get secret/antiopa-registry -o json | jq '.data.".dockercfg"' -r)
+  registry_dockercfg=$(kubectl -n ${ADDON_OPERATOR_NAMESPACE} get secret/${registry_secret} -o json | jq '.data.".dockercfg"' -r)
   values::set global.modulesImages.registryDockercfg "$registry_dockercfg"
 
-  images_tags=$(cat /antiopa/modules/images_tags.json)
+  images_tags=$(cat /deckhouse/modules/images_tags.json)
   values::set global.modulesImages.tags "$images_tags"
 }
 

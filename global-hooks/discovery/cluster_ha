@@ -7,7 +7,7 @@
 # например, в качестве значения по-умолчанию для режима отказоустойчивости
 # (см. подробнее global.highAvailability в /README.md).
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF

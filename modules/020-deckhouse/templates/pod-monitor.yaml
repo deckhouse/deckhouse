@@ -20,7 +20,7 @@ spec:
       targetLabel: job
   selector:
     matchLabels:
-      service: antiopa
+      app: deckhouse
   namespaceSelector:
     matchNames:
     - antiopa

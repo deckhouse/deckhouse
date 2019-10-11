@@ -22,7 +22,7 @@
 
 По умолчанию модуль **включен**.
 
-Добавить в ConfigMap Antiopa:
+Добавить в ConfigMap Deckhouse:
 ```yaml
 sysctlTunerEnabled: "false"
 ```

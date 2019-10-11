@@ -32,8 +32,8 @@
 --------------------------
 
 * У Madison есть [API самонастройки](https://fox.flant.com/tnt/madison/issues/73), которое позволяет, имея общий shared-ключ, зарегистрировать ключ для проекта.
-* Для antiopa [заведен](https://madison.flant.com/self_setup_keys/***REMOVED***) такой общий ключ, который позволяет регистрировать Prometheus'ы, и он [захардкожен прямо в исходниках](../initial_values).
-* При каждом запуске antiopa (точнее при каждой установке модуля):
+* Для deckhouse [заведен](https://madison.flant.com/self_setup_keys/***REMOVED***) такой общий ключ, который позволяет регистрировать Prometheus'ы, и он [захардкожен прямо в исходниках](../initial_values).
+* При каждом запуске deckhouse (точнее при каждой установке модуля):
     * если в `prometheus.madisonAuthKey` ничего нет — модуль ([хук initial_values](../initial_values)) пытается получить новый ключ через API самонастройки Madison и записать его в `prometheus.madisonAuthKey` (этот ключ и используется в `madison-proxy` для аутентификации в Madison);
     * если в `prometheus.madisonAuthKey` уже есть ключ — модуль пытается обновить сведения для этого ключа (имя проекта и URL для grafana и prometheus).
 * Список зарегистрированных ключей можно найти в Madison у каждого проекта — ключи называются `kubernetes-{{ global.clusterName }}`, например для someproject можно [посмотреть здесь](https://madison.flant.com/projects/someproject/prometheus_setups).

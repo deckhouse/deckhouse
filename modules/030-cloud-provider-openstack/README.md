@@ -16,7 +16,7 @@
 Модуль по-умолчанию **выключен**. Для включения:
 
 1. Корректно [настроить](#настройка-окружения) окружение.
-2. Инициализировать antiopa, передав параметр install.sh — `--extra-config-map-data base64_encoding_of_custom_config`.
+2. Инициализировать deckhouse, передав параметр install.sh — `--extra-config-map-data base64_encoding_of_custom_config`.
 3. Настроить параметры модуля.
 
 ### Параметры
@@ -131,6 +131,6 @@ parameters:
 ## Как мне поднять кластер
 
 1. [Настройте](#настройка-окружения) облачное окружение. Возможно, [автоматически](#автоматизированная-подготовка-окружения).
-2. [Установите](#включение-модуля) antiopa с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
+2. [Установите](#включение-модуля) deckhouse с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
 3. [Создайте](#OpenStackInstanceClass-custom-resource) один или несколько `OpenStackInstanceClass`
 4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [cloud-instance-manager](modules/040-cloud-instance-manager).

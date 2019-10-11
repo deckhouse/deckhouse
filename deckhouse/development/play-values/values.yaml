@@ -1,0 +1,34 @@
+registry:
+  secret_name: deckhouse-registry
+
+sentry:
+  release_hook:
+    _default: 'https://sentry.flant.com/api/hooks/release/builtin/8/0a23a0a2620ec644e3f879db53a202c5e472668567694ffe55a92a7e9e81fd84/'
+    production: 'https://sentry.flant.com/api/hooks/release/builtin/2/763db271ce852e4eb9c7cf787547abc1b82e300861d59e9316ae1b8414dee5eb/'
+  public_dsn:
+    _default: 'https://d85ab9d479f1403ca87e79ef17694dab@sentry.flant.com/8'
+    production: 'https://3547e0e85a854f5d8c1bd2dde8a4da0c@sentry.flant.com/2'
+
+redis:
+  replicas:
+    _default: 1
+    production: 3
+
+replicas_count:
+  redis:
+    _default: 1
+    production: 3
+  sidekiq:
+    _default: 1
+    production: 2
+  artery_worker:
+    _default: 1
+    production: 2
+  worker:
+    _default: 1
+  backend:
+    _default: 1
+    production: 2
+  assets:
+    _default: 1
+    production: 2

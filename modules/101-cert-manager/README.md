@@ -87,9 +87,9 @@ spec:
 
    В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
 
-2. Редактируем конфигурационный ConfigMap Antiopa, добавляя такую секцию:
+2. Редактируем конфигурационный ConfigMap deckhouse, добавляя такую секцию:
    ```
-   kubectl -n antiopa edit cm antiopa
+   kubectl -n d8-system edit cm deckhouse
    ```
 
    ```yaml
@@ -98,9 +98,9 @@ spec:
      cloudflareEmail: some@mail.somedomain
    ```
 
-   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
+   После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
 
-3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Antiopa:
+3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Deckhouse:
 
    ```yaml
    apiVersion: certmanager.k8s.io/v1alpha1
@@ -180,10 +180,10 @@ spec:
 
    * Заходим на страницу управления пользоватяли: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользоватяли с созданной ранее политикой.
 
-2. Редактируем ConfigMap Antiopa, добавляя такую секцию:
+2. Редактируем ConfigMap Deckhouse, добавляя такую секцию:
 
    ```
-   kubectl -n antiopa edit cm antiopa
+   kubectl -n d8-system edit cm deckhouse
    ```
 
    ```yaml
@@ -192,9 +192,9 @@ spec:
      route53SecretAccessKey: RCUasBv4xW8Gt53MX/XuiSfrBROYaDjeFsP4rM3/
    ```
 
-   После чего, Antiopa автоматически создаст ClusterIssuer и Secret для route53 в namespace `d8-cert-manager`.
+   После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для route53 в namespace `d8-cert-manager`.
 
-3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в Antiopa:
+3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в Deckhouse:
 
    ```yaml
    apiVersion: certmanager.k8s.io/v1alpha1

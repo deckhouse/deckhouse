@@ -1,11 +1,11 @@
-project: antiopa
+project: deckhouse
 configVersion: 1
 ---
 image: ~
 from: alpine:3.9
 git:
 - add: /
-  to: /antiopa
+  to: /deckhouse
   includePaths:
   - modules
   - global-hooks
@@ -18,9 +18,13 @@ git:
   - modules/*/docs
   - modules/*/README.md
 import:
-- artifact: antiopa
-  add: /antiopa/antiopa
+- artifact: deckhouse
+  add: /deckhouse/deckhouse
   to: /antiopa/antiopa
+  before: setup
+- artifact: deckhouse
+  add: /deckhouse/deckhouse
+  to: /deckhouse/deckhouse
   before: setup
 - artifact: unit-converter
   add: /unit-converter/unit-converter
@@ -110,29 +114,29 @@ ansible:
     copy:
       content: |
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
-      dest: /antiopa/modules/images_tags.json
+      dest: /deckhouse/modules/images_tags.json
   - name: "Shell comfort: inputrc"
     copy:
       content: |
-{{ .Files.Get "antiopa/files/inputrc" | indent 8 }}
+{{ .Files.Get "deckhouse/files/inputrc" | indent 8 }}
       dest: /etc/inputrc
   - name: "Shell comfort: bashrc"
     copy:
       content: |
-{{ .Files.Get "antiopa/files/bashrc" | indent 8 }}
+{{ .Files.Get "deckhouse/files/bashrc" | indent 8 }}
       dest: /root/.bashrc
   - name: "Shell comfort: vimrc"
     copy:
       content: |
-{{ .Files.Get "antiopa/files/vimrc" | indent 8 }}
+{{ .Files.Get "deckhouse/files/vimrc" | indent 8 }}
       dest: /root/.vimrc
   - name: "Shell comfort: kubectl completion"
     shell: kubectl completion bash > /root/.kubectl_completion.sh
 
 docker:
   ENV:
-    MODULES_DIR: /antiopa/modules
-    GLOBAL_HOOKS_DIR: /antiopa/global-hooks
+    MODULES_DIR: /deckhouse/modules
+    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
 ---
 artifact: unit-converter
 from: golang:1.12-alpine3.9
@@ -160,11 +164,11 @@ ansible:
     args:
       chdir: /unit-converter
 ---
-artifact: antiopa
+artifact: deckhouse
 from: golang:1.12-alpine3.9
 git:
-- add: /antiopa
-  to: /antiopa
+- add: /deckhouse
+  to: /deckhouse
   excludePaths:
   - development
   stageDependencies:
@@ -180,11 +184,11 @@ ansible:
   - command: rm -rf /var/cache/apk/*
 
   install:
-  - command: go get -v -d -t ./...
+  - shell: go mod download
     args:
-      chdir: /antiopa
+      chdir: /deckhouse
 
   setup:
-  - command: /antiopa/go-build.sh
+  - command: /deckhouse/go-build.sh
     args:
-      chdir: /antiopa
+      chdir: /deckhouse

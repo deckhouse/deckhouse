@@ -1,7 +1,7 @@
 #!/bin/bash
 ### Миграция 2019-09-30 были проблемы с перегенерацией LE-ключа
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   jo -p beforeHelm=10 afterHelm=5

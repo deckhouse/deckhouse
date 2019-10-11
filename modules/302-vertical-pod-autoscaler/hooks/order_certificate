@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /antiopa/shell_lib.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   echo '
@@ -44,4 +44,3 @@ function __main__() {
 }
 
 hook::run $@
-
