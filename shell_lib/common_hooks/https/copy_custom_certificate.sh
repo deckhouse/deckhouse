@@ -35,7 +35,7 @@ function common_hooks::https::copy_custom_certificate::main() {
       elif kubectl -n antiopa get secret ${secret_name} >/dev/null 2>&1 ; then
         namespace="antiopa"
       else
-        >&2 echo "You use the customCertificate.secretName, but there is no ${secret_name} secret neither in d8-system namespace"
+        >&2 echo "You use the customCertificate.secretName, but there is no ${secret_name} secret in d8-system namespace"
         exit 1
       fi
       kubectl -n ${namespace} get secret ${secret_name} -o json | \
