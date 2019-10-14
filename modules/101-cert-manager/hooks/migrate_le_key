@@ -20,11 +20,14 @@ function __main__() {
     fi
   else # afterHelm
     if ! kubectl -n d8-cert-manager get secret cert-manager-letsencrypt-private-key >/dev/null 2>&1 && values::has certManager.internal.oldLEKey; then
-      kubectl -n d8-cert-manager apply -f - <<< $(values::get certManager.internal.oldLEKey)
+      kubectl -n d8-cert-manager create -f - <<< $(values::get certManager.internal.oldLEKey)
       values::unset certManager.internal.oldLEKey
       exit 1 # чтобы заставить антиопу переустановить модуль
     fi
   fi
+
+  ### Миграция после миграции — удалить мусор после kubectl apply
+  kubectl -n d8-cert-manager patch secret cert-manager-letsencrypt-private-key --type=json -p='[{"op": "remove", "path": "/metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration"}]' >/dev/null 2>&1 || true
 }
 
 hook::run "$@"
