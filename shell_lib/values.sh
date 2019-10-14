@@ -150,8 +150,10 @@ function values::get_first_defined() {
   do
     if values::has $config $var ; then
       values::get $config $var
+      return 0
     fi
   done
+  return 1
 }
 
 function values::normalize_path_for_json_patch() {
