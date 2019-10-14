@@ -51,13 +51,13 @@ data:
     * `mode` — режим работы HTTPS:
         * `Disabled` — в данном режиме админка openvpn будет работать только по http;
         * `CertManager` — админка openvpn будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
-        * `CustomCertificate` — админка openvpn будет работать по https используя сертификат из namespace `antiopa`;
+        * `CustomCertificate` — админка openvpn будет работать по https используя сертификат из namespace `d8-system`;
         * `OnlyInURI` — админка openvpn будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для админки openvpn (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
     * `customCertificate`
-      * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для админки openvpn (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+      * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для админки openvpn (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
 * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
      * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
