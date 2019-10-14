@@ -25,13 +25,13 @@
     * `mode` — режим работы HTTPS:
         * `Disabled` — в данном режиме dashboard будет работать только по http;
         * `CertManager` — dashboard будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
-        * `CustomCertificate` — dashboard будут работать по https используя сертификат из namespace `antiopa`;
+        * `CustomCertificate` — dashboard будут работать по https используя сертификат из namespace `d8-system`;
         * `OnlyInURI` — dashboard будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dashboard (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
     * `customCertificate`
-      * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для dashboard (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+      * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для dashboard (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).

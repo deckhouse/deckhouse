@@ -102,13 +102,13 @@ prometheus: |
     * `mode` — режим работы HTTPS:
         * `Disabled` — в данном режиме grafana/prometheus будут работать только по http;
         * `CertManager` — grafana/prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
-        * `CustomCertificate` — grafana/prometheus будут работать по https используя сертификат из namespace `antiopa`;
+        * `CustomCertificate` — grafana/prometheus будут работать по https используя сертификат из namespace `d8-system`;
         * `OnlyInURI` — grafana/prometheus будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для grafana/prometheus (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По-умолчанию `letsencrypt`.
     * `customCertificate`
-      * `secretName` - указываем имя secret'а в namespace `antiopa`, который будет использоваться для grafana/prometheus (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+      * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для grafana/prometheus (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
 * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
      * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
