@@ -30,7 +30,8 @@ Build:
   after_script:
     - docker image rmi $SOURCE_IMAGE
     - docker image rmi $DESTINATION_IMAGE
-    - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_REF} && git push --force
+    - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_SHA}
+    - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
   when: manual
   tags:
     - build
