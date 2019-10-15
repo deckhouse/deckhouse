@@ -1,0 +1,117 @@
+diff --git a/Documentation/connectors/saml.md b/Documentation/connectors/saml.md
+index 62cf6a7ff..94b7761b1 100644
+--- a/Documentation/connectors/saml.md
++++ b/Documentation/connectors/saml.md
+@@ -43,6 +43,13 @@ connectors:
+     usernameAttr: name
+     emailAttr: email
+     groupsAttr: groups # optional
++
++    # Optional groups whitelist.
++    # If `groups` is omitted, all of the user's groups are returned when the groups scope is present.
++    # If `groups` is provided, this acts as a whitelist - only the user's groups that are in the configured `groups` below will go into the groups claim.  Conversely, if the user is not in any of the configured `groups`, the user will not be authenticated.
++    # groups:
++    # - Admins
++    # - Everyone
+
+     # CA's can also be provided inline as a base64'd blob.
+     #
+diff --git a/connector/saml/saml.go b/connector/saml/saml.go
+index 3358583db..ed7bec5bc 100644
+--- a/connector/saml/saml.go
++++ b/connector/saml/saml.go
+@@ -15,6 +15,7 @@ import (
+
+ 	"github.com/beevik/etree"
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/pkg/groups"
+ 	"github.com/dexidp/dex/pkg/log"
+ 	dsig "github.com/russellhaering/goxmldsig"
+ 	"github.com/russellhaering/goxmldsig/etreeutils"
+@@ -98,6 +99,9 @@ type Config struct {
+ 	// used split the groups string.
+ 	GroupsDelim string `json:"groupsDelim"`
+
++	// Groups whitelist, only groups from list are allowed.
++	Groups []string `json:"groups"`
++
+ 	RedirectURI string `json:"redirectURI"`
+
+ 	// Requested format of the NameID. The NameID value is is mapped to the ID Token
+@@ -161,6 +165,7 @@ func (c *Config) openConnector(logger log.Logger) (*provider, error) {
+ 		emailAttr:    c.EmailAttr,
+ 		groupsAttr:   c.GroupsAttr,
+ 		groupsDelim:  c.GroupsDelim,
++		groups:       c.Groups,
+ 		redirectURI:  c.RedirectURI,
+ 		logger:       logger,
+
+@@ -235,6 +240,7 @@ type provider struct {
+ 	emailAttr    string
+ 	groupsAttr   string
+ 	groupsDelim  string
++	groups       []string
+
+ 	redirectURI string
+
+@@ -401,12 +407,21 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
+ 		// TODO(ericchiang): Do we need to further trim whitespace?
+ 		ident.Groups = strings.Split(groupsStr, p.groupsDelim)
+ 	} else {
+-		groups, ok := attributes.all(p.groupsAttr)
++		groupsFromAttr, ok := attributes.all(p.groupsAttr)
+ 		if !ok {
+ 			return ident, fmt.Errorf("no attribute with name %q: %s", p.groupsAttr, attributes.names())
+ 		}
+-		ident.Groups = groups
++		ident.Groups = groupsFromAttr
++	}
++	// Filter groups if required groups setting exists in config.
++	if len(p.groups) > 0 {
++		filteredGroups := groups.Filter(ident.Groups, p.groups)
++		if len(filteredGroups) == 0 {
++			return ident, fmt.Errorf("user %q is not in any of the required groups", ident.Username)
++		}
++		ident.Groups = filteredGroups
+ 	}
++
+ 	return ident, nil
+ }
+
+diff --git a/connector/saml/saml_test.go b/connector/saml/saml_test.go
+index 4497d059c..59da01ea4 100644
+--- a/connector/saml/saml_test.go
++++ b/connector/saml/saml_test.go
+@@ -52,6 +52,7 @@ type responseTest struct {
+ 	usernameAttr string
+ 	emailAttr    string
+ 	groupsAttr   string
++	groups       []string
+
+ 	// Expected outcome of the test.
+ 	wantErr   bool
+@@ -85,6 +86,7 @@ func TestGroups(t *testing.T) {
+ 		usernameAttr: "Name",
+ 		emailAttr:    "email",
+ 		groupsAttr:   "groups",
++		groups:       []string{"Admins"},
+ 		inResponseTo: "6zmm5mguyebwvajyf2sdwwcw6m",
+ 		redirectURI:  "http://127.0.0.1:5556/dex/callback",
+ 		wantIdent: connector.Identity{
+@@ -92,7 +94,7 @@ func TestGroups(t *testing.T) {
+ 			Username:      "Eric",
+ 			Email:         "eric.chiang+okta@coreos.com",
+ 			EmailVerified: true,
+-			Groups:        []string{"Admins", "Everyone"},
++			Groups:        []string{"Admins"},
+ 		},
+ 	}
+ 	test.run(t)
+@@ -294,6 +296,7 @@ func (r responseTest) run(t *testing.T) {
+ 		UsernameAttr: r.usernameAttr,
+ 		EmailAttr:    r.emailAttr,
+ 		GroupsAttr:   r.groupsAttr,
++		Groups:       r.groups,
+ 		RedirectURI:  r.redirectURI,
+ 		EntityIssuer: r.entityIssuer,
+ 		// Never logging in, don't need this.

@@ -40,9 +40,14 @@ metadata:
   namespace: {{ $crd.namespace }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
   strategy:
     type: RollingUpdate
+    {{- if (include "helm_lib_ha_enabled" $context) }}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    {{- end }}
   selector:
     matchLabels:
       app: dex-authenticator
@@ -117,8 +122,7 @@ spec:
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
-        - --session-store-type=redis
-        - --redis-connection-url=redis://127.0.0.1/
+        - --session-store-type=cookie
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
@@ -157,17 +161,4 @@ spec:
         ports:
         - containerPort: 443
           protocol: TCP
-      - name: redis
-        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator-redis:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticatorRedis }}
-        args:
-        - "--save"
-        - ""
-        - "--appendonly"
-        - "no"
-        - "--bind"
-        - "127.0.0.1"
-        resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
 {{- end }}

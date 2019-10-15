@@ -35,9 +35,9 @@
         orgs:
         - name: {{ $org.name | quote }}
         {{- if $org.teams }}
-          {{- range $team := $org.teams }}
           teams:
-          - {{ $team | quote }}
+          {{- range $team := $org.teams }}
+            - {{ $team | quote }}
           {{- end }}
         {{- end }}
     {{- end }}
@@ -92,9 +92,64 @@
       {{- if $provider.saml.groupsDelim }}
         groupsDelim: {{ $provider.saml.groupsDelim }}
       {{- end }}
+      {{- if $provider.saml.groups }}
+        groups:
+{{ $provider.saml.groups | toYaml | indent 8 }}
+      {{- end }}
       {{- if $provider.saml.nameIDPolicyFormat }}
         nameIDPolicyFormat: {{ $provider.saml.nameIDPolicyFormat }}
       {{- end }}
+  {{- end }}
+
+  {{- if eq $provider.type "LDAP" }}
+    - type: ldap
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        host: {{ $provider.ldap.host | quote }}
+      {{- if $provider.ldap.insecureSkipVerify }}
+        insecureSkipVerify: {{ $provider.ldap.insecureSkipVerify | quote }}
+      {{- end }}
+      {{- if $provider.ldap.ca }}
+        rootCAData: {{ $provider.ldap.ca | b64enc }}
+      {{- end }}
+        bindDN: {{ $provider.ldap.bindDN | quote }}
+        bindPW: {{ $provider.ldap.bindPW | quote }}
+      {{- if $provider.ldap.startTLS }}
+        startTLS: true
+      {{- end }}
+        userSearch:
+{{ $provider.ldap.userSearch | toYaml | indent 8 }}
+        groupSearch:
+{{ $provider.ldap.groupSearch | toYaml | indent 8 }}
+        usernamePrompt: "LDAP username"
+  {{- end }}
+
+  {{- if eq $provider.type "OIDC" }}
+    - type: oidc
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        issuer: {{ $provider.oidc.issuer | quote }}
+        clientID: {{ $provider.oidc.clientID | quote }}
+        clientSecret: {{ $provider.oidc.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+      {{- if $provider.oidc.basicAuthUnsupported }}
+        basicAuthUnsupported: true
+      {{- end }}
+      {{- if $provider.oidc.insecureSkipEmailVerified }}
+        insecureSkipEmailVerified: true
+      {{- end }}
+      {{- if $provider.oidc.getUserInfo }}
+        getUserInfo: true
+      {{- end }}
+        userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
+        userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
+      {{- if $provider.oidc.scopes }}
+        scopes:
+{{ $provider.oidc.scopes | toYaml | indent 8 }}
+      {{- end }}
+        usernamePrompt: "OIDC username"
   {{- end }}
 
   {{- if eq $provider.type "Crowd" }}
@@ -105,6 +160,10 @@
         baseURL: {{ $provider.crowd.baseURL | quote }}
         clientID: {{ $provider.crowd.clientID | quote }}
         clientSecret: {{ $provider.crowd.clientSecret | quote }}
+      {{- if $provider.crowd.groups }}
+        groups:
+{{ $provider.crowd.groups | toYaml | indent 8 }}
+      {{- end }}
         usernamePrompt: "Crowd username"
   {{- end }}
 {{- end }}
