@@ -1,3 +1,4 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -6,3 +7,4 @@ metadata:
   annotations:
     extended-monitoring.flant.com/enabled: ""
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
+{{- end }}

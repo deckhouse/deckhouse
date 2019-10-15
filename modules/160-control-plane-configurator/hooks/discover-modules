@@ -1,0 +1,53 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "ConfigMap",
+      "namespaceSelector": {
+        "matchNames": ["d8-user-authn", "d8-user-authz"],
+        "any": false
+      },
+      "selector": {
+        "matchLabels": {
+          "control-plane-configurator": ""
+        }
+      }
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  if ! values::has --config controlPlaneConfigurator.authzWebhook.url && ! values::has --config controlPlaneConfigurator.authzWebhook.ca; then
+    # nothing was configured by hand
+    if cm_data=$(kubectl -n d8-user-authz get cm control-plane-configurator -o json 2>/dev/null | jq .data 2>/dev/null ); then
+      values::set controlPlaneConfigurator.authzWebhook.url "$(jq -rn --argjson data "${cm_data}" '$data | .url')"
+      values::set controlPlaneConfigurator.authzWebhook.ca  "$(jq -rn --argjson data "${cm_data}" '$data | .ca')"
+    else
+      values::unset controlPlaneConfigurator.authzWebhook.url
+      values::unset controlPlaneConfigurator.authzWebhook.ca
+    fi
+  fi
+
+  if ! values::has --config controlPlaneConfigurator.oidc.issuerURL && ! values::has --config controlPlaneConfigurator.oidc.ca; then
+    # nothing was configured by hand
+    if cm_data=$(kubectl -n d8-user-authn get cm control-plane-configurator -o json 2>/dev/null | jq .data 2>/dev/null ); then
+      values::set controlPlaneConfigurator.oidc.issuerURL $(jq -rn --argjson data "${cm_data}" '$data | .oidcIssuerURL')
+      if ca=$(jq -ren --argjson data "${cm_data}" '$data | .oidcCA'); then
+        values::set controlPlaneConfigurator.oidc.ca "${ca}"
+      fi
+    else
+      values::unset controlPlaneConfigurator.oidc.issuerURL
+      values::unset controlPlaneConfigurator.oidc.ca
+    fi
+  fi
+}
+
+hook::run "$@"

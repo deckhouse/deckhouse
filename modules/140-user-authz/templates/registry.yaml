@@ -1,3 +1,4 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,3 +9,4 @@ metadata:
 type: kubernetes.io/dockercfg
 data:
   .dockercfg: {{ .Values.global.modulesImages.registryDockercfg }}
+{{- end }}

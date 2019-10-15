@@ -1,0 +1,80 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: control-plane-configurator
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: control-plane-configurator
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: control-plane-configurator
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: control-plane-configurator
+  template:
+    metadata:
+      annotations:
+{{- if .Values.controlPlaneConfigurator.authzWebhook.url }}
+        authz-webhook-config-hash: {{ .Values.controlPlaneConfigurator.authzWebhook | toYaml | sha256sum }}
+{{- end }}
+{{- if .Values.controlPlaneConfigurator.oidc.issuerURL }}
+        oidc-config-hash: {{ .Values.controlPlaneConfigurator.oidc | toYaml | sha256sum }}
+{{- end }}
+      labels:
+        app: control-plane-configurator
+    spec:
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: configurator
+        image: {{ $.Values.global.modulesImages.registry }}/control-plane-configurator/control-plane-configurator:{{ $.Values.global.modulesImages.tags.controlPlaneConfigurator.controlPlaneConfigurator }}
+        env:
+        - name: IS_AUTHZ_WEBHOOK_ENABLED
+          value: '{{ if .Values.controlPlaneConfigurator.authzWebhook.url }}true{{ else }}false{{ end }}'
+        - name: IS_OIDC_ENABLED
+          value: '{{ if .Values.controlPlaneConfigurator.oidc.issuerURL }}true{{ else }}false{{ end }}'
+        volumeMounts:
+        - mountPath: /etc/kubernetes
+          name: etc-kubernetes
+{{- if .Values.controlPlaneConfigurator.authzWebhook.url }}
+        - mountPath: /etc/control-plane-configurator-authz-webhook/
+          name: control-plane-configurator-authz-webhook
+{{- end }}
+{{- if .Values.controlPlaneConfigurator.oidc.issuerURL }}
+        - mountPath: /etc/control-plane-configurator-oidc/
+          name: control-plane-configurator-oidc
+{{- end }}
+      volumes:
+      - name: etc-kubernetes
+        hostPath:
+          path: /etc/kubernetes
+          type: Directory
+{{- if .Values.controlPlaneConfigurator.authzWebhook.url }}
+      - name: control-plane-configurator-authz-webhook
+        configMap:
+          name: control-plane-configurator-authz-webhook
+{{- end }}
+{{- if .Values.controlPlaneConfigurator.oidc.issuerURL }}
+      - name: control-plane-configurator-oidc
+        configMap:
+          name: control-plane-configurator-oidc
+{{- end }}

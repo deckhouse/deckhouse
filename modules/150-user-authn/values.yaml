@@ -1,6 +1,10 @@
 userAuthn:
-  internal: {}
+  internal:
+    controlPlaneConfigurator: {}
   publishAPI:
     enable: false
     https:
       mode: SelfSigned
+  controlPlaneConfigurator:
+    enabled: true
+    dexCAMode: "DoNotNeed"

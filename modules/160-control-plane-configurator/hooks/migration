@@ -1,0 +1,26 @@
+#!/bin/bash
+### Миграция 2019-10-11: убедимся, что старого конфигуратора в системе не осталось.
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "beforeHelm": 5
+}
+EOF
+}
+
+function __main__() {
+  if [ $(kubectl -n kube-user-authz get pods -lapp=user-authz-webhook-configurator -o json | jq '.items | length') -gt 0 ]; then
+    >&2 echo "ERROR: old user-authz-webhook-configurator is still working in ns kube-user-authz."
+    exit 1
+  fi
+
+  if [ $(kubectl -n d8-user-authz get pods -lapp=user-authz-webhook-configurator -o json | jq '.items | length') -gt 0 ]; then
+    >&2 echo "ERROR: old user-authz-webhook-configurator is still working in ns d8-user-authz."
+    exit 1
+  fi
+}
+
+hook::run "$@"
