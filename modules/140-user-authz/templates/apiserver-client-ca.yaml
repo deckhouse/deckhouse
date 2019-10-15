@@ -1,3 +1,4 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -8,3 +9,4 @@ metadata:
 data:
   ca.crt: |
 {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | indent 4 }}
+{{- end }}

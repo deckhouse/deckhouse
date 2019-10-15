@@ -13,7 +13,7 @@
 **Важно!** При включении данного модуля аутентификация во всех веб-интерфейсах перестанет использовать HTTP Basic Auth и переключится на dex (который, в свою очередь, будет использовать настроенные вами внешние провайдеры). 
 Для настройки kubectl необходимо перейти по адресу: `https://kubeconfig.<modules.publicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell команды к себе в консоль.
 
-**Важно!** Для работы аутентификации в dashboard и kubectl необходимо [сконфигурировать API-сервер](#настройка-kube-apiserver).
+**Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-configurator](/modules/160-control-plane-configurator), который включён по-умолчанию.
 
 Интеграция с Okta
 -----------------
@@ -26,7 +26,7 @@
   userAuthnEnabled: "true"
   userAuthn: |
     users:
-      admin@flant.com: # <- тут достаточно пустой строки, пароль будет сгенерирован автоматически
+      admin@flant.com: "" # если оставить пустую строку, пароль будет сгенерирован автоматически
 ```
 
 
@@ -173,7 +173,19 @@ data:
   * `certManager`
     * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
   * `customCertificate`
-    * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+    * `secretName` — указываем имя secret'а в namespace `d8-system`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator](/modules/160-control-plane-configurator).
+  * `enabled` — использовать ли control-plane-configurator настройки OIDC в kube-apiserver.
+    * По-умолчанию `true`.
+  * `dexCAMode` — как вычислить CA, который будет использован при настройке kube-apiserver.
+    * Значения:
+      * `FromIngressSecret` — извлечь CA или сам сертификат из секрета, который используется в ингрессе. Если вы используете самоподписные сертификаты на ингрессах — этоваш вариант.
+      * `Custom` — использовать CA указанный явно, в параметре `dexCustomCA` (см. ниже). Этот вариант уместен, например, если вы используете внешний https-балансер перед ингрессами и на этом балансировщике используется самоподписный сертификат.
+      * `DoNotNeed` — CA не требуется (например, при использовании публичного LE или других TLS-провайдеров).
+    * По-умолчанию — `FromIngressSecret`.
+  * `dexCustomCA` — CA, которая будет использована в случае `dexCAMode` = `Custom`.
+    * Формат — обычный текст, без base64.
+    * Необязательный параметр.
 
 ### Пример конфигурации
 
@@ -256,74 +268,20 @@ annotations:
   nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
 ```
 
-
 ### Настройка kube-apiserver
 
-#### Настройка kube-apiserver у kubeadm-кластеров
+Для применения dex-аутентификатора в вашем клестере необходимо сообщить о нём kube-apiserver-у, настроив mainfest. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
 
-* Сдампить текущий конфиг кластера:
-```shell
-kubeadm config view > mycluster-config.yaml
-```
-* Отредактировать, добавив четыре параметра:
-```yaml
-apiServer:
-  extraArgs:
-    oidc-client-id: kubernetes
-    oidc-groups-claim: groups
-    oidc-issuer-url: "https://dex.<addonsPublicDomainTemplate>/"
-    oidc-username-claim: email
-```
-* Применить новые настройки:
-```shell
-kubeadm upgrade apply --config mycluster-config.yaml
-```
+<details>
+  <summary>Аргументы kube-apiserver, которые будут настроены</summary>
 
-#### Настройка kube-apiserver у kops-кластеров
+* --oidc-client-id=kubernetes
+* --oidc-groups-claim=groups
+* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
+* --oidc-username-claim=email
 
-Для этого необходимо отредактировать специфицкацию кластера:
-```shell
-kops edit cluster --name=kubernetes-cluster
-```
+В случае использования самоподписных сертификатов для dex, будет добавлен ещё один аргумент, а так же в под с apiserver будет смонтирован файл с CA:
 
-И добавить параметр:
-```yaml
-  kubeAPIServer:
-    oidcClientID: kubernetes
-    oidcGroupsClaim: groups
-    oidcIssuerURL: https://dex.<modules.publicDomainTemplate>/
-    oidcUsernameClaim: email
-```
+* --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
 
-После чего обновить кластер:
-```shell
-kops update cluster --name=kubernetes-cluster
-kops update cluster --name=kubernetes-cluster --yes
-kops rolling-update cluster --name=kubernetes-cluster
-kops rolling-update cluster --name=kubernetes-cluster --yes
-```
-
-#### Настройка kube-apiserver у aks-engine кластеров
-
-Для этого необходимо отредактировать описание кластера (`apimodel.json` файл, который был создан при генерации конфигурации кластера) и добавить в параметр `apiServerConfig` такие параметры:
-```yaml
-        "apiServerConfig": {
-          ...
-          "--oidc-client-id": "kubernetes",
-          "--oidc-groups-claim": "groups",
-          "--oidc-issuer-url": "https://dex.<modules.publicDomainTemplate>/",
-          "--oidc-username-claim": "email"
-        }
-```
-
-И обновить кластер:
-```shell
-aks-engine upgrade
-  --subscription-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
-  --api-model _output/kube-test-1-12-flant/apimodel.json \
-  --location westeurope \
-  --resource-group k-dev \
-  --upgrade-version 1.15.0 \
-  --client-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
-  --client-secret xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
+</details>

@@ -1,6 +1,5 @@
 {{- if .Values.userAuthz.enableMultiTenancy }}
-  {{- if hasKey .Values.userAuthz.internal "webhookCA" }}
-    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -15,7 +14,7 @@ spec:
     name: user-authz-webhook
   updatePolicy:
     updateMode: "Auto"
-    {{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -72,5 +71,4 @@ spec:
       - name: user-authz-webhook-config
         configMap:
           name: user-authz-webhook
-  {{- end }}
 {{- end }}

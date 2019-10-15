@@ -1,0 +1,71 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+# TODO: настроить хук на единственный секрет "ingress-tls"
+function __config__() {
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "Secret",
+      "namespaceSelector": {
+        "matchNames": ["d8-user-authn"],
+        "any": false
+      }
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  if ! values::is_true userAuthn.controlPlaneConfigurator.enabled; then
+    values::unset userAuthn.internal.controlPlaneConfigurator.oidcCA
+    exit 0
+  fi
+
+  dex_ca_mode=$(values::get userAuthn.controlPlaneConfigurator.dexCAMode)
+  case ${dex_ca_mode} in
+    FromIngressSecret)
+      https_mode=$(values::get_first_defined userAuthn.https.mode global.modules.https.mode)
+      if secret_data="$(kubectl -n d8-user-authn get secret ingress-tls -o json 2>/dev/null | jq '.data')"; then
+        if ca=$(jq -ren --argjson data "${secret_data}" '$data | ."ca.crt" | @base64d') && [ -n "${ca}" ]; then
+          values::set userAuthn.internal.controlPlaneConfigurator.oidcCA "${ca}"
+        elif tls=$(jq -ren --argjson data "${secret_data}" '$data | ."tls.crt" | @base64d') && [ -n "${tls}" ]; then
+          values::set userAuthn.internal.controlPlaneConfigurator.oidcCA "${tls}"
+        else
+          >&2 echo "ERROR: Can't get ca.crt or tls.crt from secret 'ingress-tls'."
+          exit 1
+        fi
+      elif [[ $https_mode == "CertManager" ]]; then
+        # secret isn't generated yet
+        values::unset userAuthn.internal.controlPlaneConfigurator.oidcCA
+      else
+        >&2 echo "ERROR: Can't get secret 'ingress-tls'."
+        exit 1
+      fi
+    ;;
+
+    Custom)
+      if ca=$(values::get userAuthn.controlPlaneConfigurator.dexCustomCA); then
+        values::set userAuthn.internal.controlPlaneConfigurator.oidcCA "${ca}"
+      else
+        >&2 echo "ERROR: userAuthn.controlPlaneConfigurator.dexCustomCA parameter is mandatory with userAuthn.controlPlaneConfigurator.dexCAMode == 'Custom'."
+        exit 1
+      fi
+    ;;
+
+    DoNotNeed)
+      values::unset userAuthn.internal.controlPlaneConfigurator.oidcCA
+    ;;
+
+    *)
+      >&2 echo "ERROR: Invalid controlPlaneConfigurator.dexCAMode: ${dex_ca_mode}"
+      exit 1
+    ;;
+  esac
+}
+
+hook::run "$@"

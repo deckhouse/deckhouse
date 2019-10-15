@@ -1,4 +1,5 @@
 userAuthz:
   enableMultiTenancy: false
-  disableWebhookConfigurator: false
   internal: {}
+  controlPlaneConfigurator:
+    enabled: true

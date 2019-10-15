@@ -17,10 +17,13 @@
 
 ### Параметры
 
-* `enableMultiTenancy` — запустить систему авторизации по namespace. Приведёт к [автоматической настройке kube-apiserver](#настройка-kube-apiserver). При *выключении* параметра потребуется вручную модифицировать манифест kube-apiserver.
-  * Значение по-умолчанию – `false` (то-есть multi-tenancy отключен).
-* `disableWebhookConfigurator` — отключить DaemonSet, который отвечает за [автоматическую настройку kube-apiserver](#настройка-kube-apiserver).
-  * Значение по-умолчанию – `false` (то-есть конфигуратор включен).
+* `enableMultiTenancy` — включить авторизацию по namespace.
+  * Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+  * Значение по-умолчанию – `false` (то есть multi-tenancy отключен).
+* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator](/modules/160-control-plane-configurator).
+  * `enabled` — передавать ли в control-plane-configurator параметры для настройки authz-webhook (см. [параметры control-plane-configurator-а](/modules/160-control-plane-configurator#параметры)).
+    * При выключении этого параметра, модуль control-plane-configurator будет считать, что по-умолчанию Webhook-авторизация выключена и, соответственно, если не будет дополнительных настроек, то control-plane-configurator будет стремиться вычеркнуть упоминания Webhook-плагина из манифеста. Даже если вы настроите манифест вручную.
+    * По-умолчанию `true`.
 
 ### CRD
 
@@ -142,7 +145,7 @@ spec:
 
 ## Настройка kube-apiserver
 
-После *включения* параметра `enableMultiTenancy` и успешного выката модуля, произойдёт автоматическая настройка манифеста с kube-apiserver на мастере. Соответственно, произойдёт перезагрузка kube-apiserver. Бекап оригинального манифеста появится в каталоге /etc/kubernetes.
+Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
 
 <details>
   <summary>Изменения манифеста, которые произойдут</summary>

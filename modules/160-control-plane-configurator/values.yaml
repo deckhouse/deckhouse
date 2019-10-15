@@ -1,0 +1,4 @@
+controlPlaneConfiguratorEnabled: true
+controlPlaneConfigurator:
+  authzWebhook: {}
+  oidc: {}
