@@ -14,7 +14,7 @@ function __main__() {
   if ! kubectl -n d8-system get configmap deckhouse >/dev/null 2>/dev/null ; then
     if kubectl -n antiopa get configmap antiopa >/dev/null 2>/dev/null ; then
       kubectl -n antiopa get configmap antiopa -o json | \
-        jq -r "include \"remove_empty\"; .metadata.namespace=\"d8-system\" | .metadata.name=\"deckhouse\" | remove_empty |
+        jq -r "include \"remove_empty\"; .metadata.namespace=\"d8-system\" | .metadata.name=\"deckhouse\" | .metadata.labels.heritage=\"deckhouse\" | remove_empty |
               .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
         | kubectl::replace_or_create
     fi
