@@ -43,10 +43,8 @@ spec:
         type: Recreate
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       serviceAccountName: cert-manager
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-      {{- end }}
       {{- if (include "helm_lib_ha_enabled" .) }}
       affinity:
         podAntiAffinity:

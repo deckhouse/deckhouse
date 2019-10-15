@@ -1,0 +1,40 @@
+global:
+  modules:
+    ingressClass: nginx
+    https:
+      mode: CertManager
+      certManager:
+        clusterIssuerName: letsencrypt
+  # Временный хак, который мы используем, пока не отделим enabled хук от дефолтных values.yaml в каждом модуле
+  hack:
+    namespaces:
+      prometheus: kube-prometheus
+      dashboard: d8-dashboard
+      openvpn: kube-openvpn
+
+##########################################
+# Список включенных по умолчанию модулей #
+##########################################
+operatorPrometheusCrdEnabled: true
+priorityClassEnabled: true
+verticalPodAutoscalerCrdEnabled: true
+deckhouseEnabled: true
+cloudInstanceManagerEnabled: true
+certManagerEnabled: true
+userAuthzEnabled: true
+heapsterEnabled: true
+operatorPrometheusEnabled: true
+prometheusEnabled: true
+prometheusMetricsAdapterEnabled: true
+verticalPodAutoscalerEnabled: true
+nodeProblemDetectorEnabled: true
+extendedMonitoringEnabled: true
+nodeLocalDnsEnabled: true
+deschedulerEnabled: true
+nginxIngressEnabled: true
+dashboardEnabled: true
+pingExporterEnabled: true
+secretCopierEnabled: true
+sysctlTunerEnabled: true
+systemdSlicesCleanerEnabled: true
+helmEnabled: true

@@ -61,9 +61,7 @@ spec:
         systemd-slices-cleaner.antiopa.flant.com/enabled: "true"
       imagePullSecrets:
       - name: deckhouse-registry
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-{{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       tolerations:
       - operator: Exists
       volumes:

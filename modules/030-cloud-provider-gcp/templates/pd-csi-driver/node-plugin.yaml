@@ -15,9 +15,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-critical
-{{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
       serviceAccountName: pd-csi-node
       hostNetwork: true
       tolerations:

@@ -44,9 +44,7 @@ spec:
         app: webhook
     spec:
       serviceAccountName: cert-manager-webhook
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-high
-{{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
 {{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
       affinity:
         podAntiAffinity:

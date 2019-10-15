@@ -42,9 +42,7 @@ spec:
         sidecar.istio.io/inject: "false"
     spec:
       serviceAccountName: istio-pilot-service-account
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-high
-{{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       imagePullSecrets:

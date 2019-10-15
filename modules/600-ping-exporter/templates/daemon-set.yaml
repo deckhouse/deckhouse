@@ -43,9 +43,7 @@ spec:
       - operator: "Exists"
       hostNetwork: true
       serviceAccountName: ping-exporter
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-      {{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       containers:
       - image: {{ .Values.global.modulesImages.registry }}/ping-exporter/ping-exporter:{{ .Values.global.modulesImages.tags.pingExporter.pingExporter }}
         name: ping-exporter

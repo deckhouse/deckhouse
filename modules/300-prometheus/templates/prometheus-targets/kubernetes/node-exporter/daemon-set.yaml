@@ -47,9 +47,7 @@ spec:
     spec:
       hostNetwork: true
       hostPID: true
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-medium
-      {{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/prometheus/node-exporter:{{ $.Values.global.modulesImages.tags.prometheus.nodeExporter }}
         args:

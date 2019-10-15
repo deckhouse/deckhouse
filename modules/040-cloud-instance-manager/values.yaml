@@ -1,4 +1,3 @@
-cloudInstanceManagerEnabled: true
 cloudInstanceManager:
   internal:
     cloudInitSteps:

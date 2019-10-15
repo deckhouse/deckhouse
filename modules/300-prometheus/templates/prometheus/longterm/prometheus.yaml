@@ -94,11 +94,9 @@ spec:
       threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
   secrets:
   - prometheus-api-client-tls
-  {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
-  {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-  priorityClassName: cluster-low
-  {{- end }}
+{{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
+{{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 2 }}
   {{- $storageClass := .Values.prometheus.longtermStorageClass | default .Values.prometheus.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
   {{- if $storageClass }}
   storage:

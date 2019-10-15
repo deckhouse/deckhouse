@@ -22,9 +22,7 @@ spec:
           - name: deckhouse-registry
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 10 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 10 }}
-          {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-          priorityClassName: cluster-low
-          {{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 10 }}
           containers:
           - name: descheduler
             image: {{ $.Values.global.modulesImages.registry }}/descheduler/descheduler:{{ $.Values.global.modulesImages.tags.descheduler.descheduler }}

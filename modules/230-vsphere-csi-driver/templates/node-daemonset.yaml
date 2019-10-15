@@ -33,7 +33,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       hostNetwork: true
-      priorityClassName: cluster-critical
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
       tolerations:
       - operator: Exists
       containers:

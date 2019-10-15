@@ -1,4 +1,3 @@
-prometheusEnabled: true
 prometheus:
   retentionDays: 15
   retentionGigabytes: 30
