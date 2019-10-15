@@ -53,6 +53,7 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20190917174107-a9d643a6fc9a h1:R
 github.com/flant/addon-operator v1.0.0-beta.5.0.20190917174107-a9d643a6fc9a/go.mod h1:e2rfn3wTknGKWEQZNK7vn9Lc0Na5cnExw14YhDrTneU=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20190923141242-4955bcf490b1 h1:VFPuBSPvxolqRD5bQ03SHZVOrWCkMLE3U3rwuWwjdyE=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20190923141242-4955bcf490b1/go.mod h1:TWZfGVsvM/Gmg3BoABf6qIB04Bpaw49wHX9lS+nVjkI=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20191015110824-2a9a23abd135/go.mod h1:TWZfGVsvM/Gmg3BoABf6qIB04Bpaw49wHX9lS+nVjkI=
 github.com/flant/shell-operator v1.0.0-beta.5 h1:4KYhM2YmMIWlwTiFNVzhFeoo6EPpNUyd1Tx4mOgi5jA=
 github.com/flant/shell-operator v1.0.0-beta.5/go.mod h1:qUqjq76as7qJn8BBMqCYQ+sqXBOmtk56AYY6BQQvUfA=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20190917065053-86a4b2a7a3ae h1:mtSLQERuqx7ayExSgyO07yyVF2prG2Vkg7fCRsrl1L8=

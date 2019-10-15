@@ -6,7 +6,7 @@ function __config__() {
   echo '
 {
   "afterHelm": 10,
-  "afterDeleteHelm": 10
+  "afterDeleteHelm": 20
 }'
 }
 
