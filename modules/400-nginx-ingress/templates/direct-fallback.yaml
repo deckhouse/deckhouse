@@ -64,13 +64,11 @@ spec:
     spec:
 {{- include "helm_lib_node_selector" (tuple $context "frontend" .) | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $context "frontend" . true) | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple $context "cluster-high") | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 300
-      {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-high
-      {{- end }}
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/nginx-ingress/direct-fallback:{{ $.Values.global.modulesImages.tags.nginxIngress.directFallback }}
         name: nginx

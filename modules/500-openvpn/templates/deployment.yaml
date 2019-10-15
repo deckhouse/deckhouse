@@ -39,9 +39,7 @@ spec:
       serviceAccountName: kube-{{ .Chart.Name }}
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-{{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       containers:
       - name: {{ .Chart.Name }}
         image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn:{{ $.Values.global.modulesImages.tags.openvpn.openvpn }}

@@ -11,3 +11,8 @@ global:
       prometheus: kube-prometheus
       dashboard: d8-dashboard
       openvpn: kube-openvpn
+
+##########################################
+# Список включенных по умолчанию модулей #
+##########################################
+deckhouseEnabled: true

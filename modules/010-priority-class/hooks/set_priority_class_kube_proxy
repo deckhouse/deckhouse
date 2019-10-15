@@ -3,12 +3,15 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=10
+  echo '
+{
+  "afterHelm": 10,
+  "afterDeleteHelm": 10
+}'
 }
-
 function __main__() {
   cluster_version=$(values::get global.discovery.clusterVersion)
-  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     cluster_type=$(values::get --required global.discovery.clusterType)
     # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
     # работа всего кластера может быть нарушена
@@ -16,11 +19,12 @@ function __main__() {
     # В AWS и GCE kube-proxy запущены, как static поды
     [[ "$cluster_type" == "AWS" || "$cluster_type" == "GCE" ]] && return 0
 
-    fltr='.'
-
-    # Необходимо проставить наивысший priorityClassName kube-proxy
-    fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-
+    if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
+      # Необходимо проставить наивысший priorityClassName kube-proxy
+      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+    else
+      fltr='. | del(.spec.template.spec.priorityClassName)'
+    fi
     # Применяем
     kubectl::jq_patch kube-system ds/kube-proxy "$fltr"
   fi

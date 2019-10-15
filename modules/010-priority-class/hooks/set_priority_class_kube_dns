@@ -3,12 +3,16 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=10
+  echo '
+{
+  "afterHelm": 10,
+  "afterDeleteHelm": 10
+}'
 }
 
 function __main__() {
   cluster_version=$(values::get global.discovery.clusterVersion)
-  if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     if kubectl -n kube-system get deploy kube-dns > /dev/null 2> /dev/null; then
       cluster_type=$(values::get --required global.discovery.clusterType)
       # Подам kube-dns необходимо задать максимальный priorityClass, так как без подов kube-dns
@@ -17,11 +21,12 @@ function __main__() {
       # В ACS (acs-engine) кластерах kube-dns создается из манифестов на kube-master
       [[ "$cluster_type" == "ACS" ]] && return 0
 
-      fltr='.'
-
-      # Необходимо проставить наивысший priorityClassName kube-dns
-      fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-
+      if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
+        # Необходимо проставить наивысший priorityClassName kube-dns
+        fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+       else
+        fltr='. | del(.spec.template.spec.priorityClassName)'
+      fi
       # Применяем
       kubectl::jq_patch kube-system deploy/kube-dns "$fltr"
     fi

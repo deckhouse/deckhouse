@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "afterHelm": 10,
+  "afterDeleteHelm": 10
+}'
+}
+
+function __main__() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
+    if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
+      # Необходимо проставить priorityClassName антиопе
+      fltr='. | .spec.template.spec.priorityClassName = "cluster-medium"'
+    else
+      fltr='. | del(.spec.template.spec.priorityClassName)'
+    fi
+    kubectl::jq_patch d8-system deploy/deckhouse "$fltr"
+  fi
+}
+
+hook::run $@

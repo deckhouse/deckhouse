@@ -42,9 +42,7 @@ spec:
       hostNetwork: true
       tolerations:
       - operator: Exists
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-      {{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       containers:
       - name: okagent
         image: {{ $.Values.global.modulesImages.registry }}/okmeter/okagent:{{ $.Values.global.modulesImages.tags.okmeter.okagent }}

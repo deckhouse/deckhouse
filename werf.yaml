@@ -10,6 +10,7 @@ git:
   - modules
   - global-hooks
   - shell_lib.sh
+  - entrypoint.sh
   - shell_lib
   - jq_lib
   - helm_lib
@@ -20,11 +21,7 @@ git:
 import:
 - artifact: deckhouse
   add: /deckhouse/deckhouse
-  to: /antiopa/antiopa
-  before: setup
-- artifact: deckhouse
-  add: /deckhouse/deckhouse
-  to: /deckhouse/deckhouse
+  to: /deckhouse/deckhouse-controller
   before: setup
 - artifact: unit-converter
   add: /unit-converter/unit-converter
@@ -34,17 +31,12 @@ ansible:
   beforeInstall:
   - apk: update_cache=yes
 
-  # Нам нужен bash, на нем все хуки
-  - apk:
-      name: "{{`{{ item }}`}}"
-    with_items:
-    - bash
-    - bash-completion
-
-  # Зависимости хуков
   - name: "Install dependencies"
     apk:
       name:
+      # Нам нужен bash, на нем все хуки
+      - bash
+      - bash-completion
       - jq
       - curl
       - pwgen
@@ -60,14 +52,14 @@ ansible:
   - apk: name=cfssl repository=http://nl.alpinelinux.org/alpine/edge/testing/
 
   # Ставим kubectl
-  - name: Install kubectl
+  - name: "Install kubectl"
     get_url:
       url: https://storage.googleapis.com/kubernetes-release/release/v1.11.9/bin/linux/amd64/kubectl
       dest: /usr/local/bin/kubectl
       mode: +x
 
   # Ставим semver
-  - name: Install semver
+  - name: "Install semver"
     unarchive:
       extra_opts:
       - semver-tool-2.1.0/src
@@ -80,7 +72,7 @@ ansible:
   - apk: name=ca-certificates
 
   # Ставим helm
-  - name: Install helm
+  - name: "Install helm"
     unarchive:
       extra_opts:
       - linux-amd64/helm
@@ -90,7 +82,7 @@ ansible:
       dest: /usr/local/bin
   - raw: helm init --client-only
   # Ставим tiller
-  - name: Install tiller
+  - name: "Install tiller"
     unarchive:
       extra_opts:
       - linux-amd64/tiller
@@ -99,7 +91,7 @@ ansible:
       remote_src: yes
       dest: /bin
 
-  - name: Install registry client
+  - name: "Install registry client"
     get_url:
       url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
       dest: /usr/local/bin/reg
@@ -132,6 +124,15 @@ ansible:
       dest: /root/.vimrc
   - name: "Shell comfort: kubectl completion"
     shell: kubectl completion bash > /root/.kubectl_completion.sh
+
+  # Because of https://github.com/flant/werf/issues/1741 just move the entry point
+  - name: "Move deckhouse entrypoint to the right location"
+    shell: mv /deckhouse/entrypoint.sh /deckhouse/deckhouse
+
+  # Миграция 2019-10-14: Удалить копирование в директорию antiopa после выката версии на все инстансы
+  - name: "Antiopa to Deckhouse migration"
+    shell: mkdir /antiopa/ && ln -s /deckhouse/deckhouse /antiopa/antiopa
+
 
 docker:
   ENV:

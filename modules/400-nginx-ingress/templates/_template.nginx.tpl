@@ -54,6 +54,7 @@ spec:
     spec:
 {{- include "helm_lib_node_selector" (tuple . "frontend" .) | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "frontend" .) | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
       serviceAccount: kube-nginx-ingress
       hostNetwork: {{ $hostNetwork }}
     {{- if eq $hostNetwork true }}
@@ -64,9 +65,6 @@ spec:
       terminationGracePeriodSeconds: 300
       imagePullSecrets:
       - name: deckhouse-registry
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-high
-      {{- end }}
       containers:
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/controller:{{ .Values.global.modulesImages.tags.nginxIngress.controller }}
         name: nginx

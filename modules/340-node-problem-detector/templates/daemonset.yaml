@@ -41,9 +41,7 @@ spec:
       serviceAccountName: node-problem-detector
       tolerations:
       - operator: Exists
-      {{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-low
-      {{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:

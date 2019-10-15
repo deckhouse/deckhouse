@@ -42,7 +42,7 @@ spec:
     requests:
       cpu: 50m
       memory: 128Mi
-  priorityClassName: cluster-low
+{{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 2 }}
   {{- end }}
 {{- else }}
 ---
@@ -64,5 +64,5 @@ spec:
     requests:
       cpu: 50m
       memory: 128Mi
-  priorityClassName: cluster-low
+{{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 2 }}
 {{- end }}

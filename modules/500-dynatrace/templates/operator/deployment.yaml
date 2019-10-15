@@ -34,7 +34,7 @@ spec:
       labels:
         app: operator
     spec:
-      priorityClassName: cluster-low
+{{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple $ "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
       imagePullSecrets:

@@ -3,13 +3,17 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=10
+  echo '
+{
+  "afterHelm": 10,
+  "afterDeleteHelm": 10
+}'
 }
 
 function __main__() {
   if kubectl -n kube-system get ds kube-flannel-ds >/dev/null 2>&1; then
     cluster_version=$(values::get global.discovery.clusterVersion)
-    if [ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ] ; then
+    if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
       cluster_type=$(values::get --required global.discovery.clusterType)
       # Подам kube-flannel необходимо задать максимальный priorityClass, так как без подов kube-flannel
       # работа всего кластера может быть нарушена
@@ -17,11 +21,12 @@ function __main__() {
       # flannel есть только в Manual кластерах
       [[ "$cluster_type" != "Manual" ]] && return 0
 
-      fltr='.'
-
-      # Необходимо проставить наивысший priorityClassName kube-flannel
-      fltr=$fltr' | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-
+      if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
+        # Необходимо проставить наивысший priorityClassName kube-flannel
+        fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+      else
+        fltr='. | del(.spec.template.spec.priorityClassName)'
+      fi
       # Применяем
       kubectl::jq_patch kube-system ds/kube-flannel-ds "$fltr"
     fi

@@ -39,6 +39,7 @@ spec:
     spec:
 {{- include "helm_lib_node_selector" (tuple $ "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $ "monitoring") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | indent 6 }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -48,9 +49,6 @@ spec:
                 matchLabels:
                   app: madison-proxy
               topologyKey: kubernetes.io/hostname
-      {{- if semverCompare ">=1.11" $.Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-medium
-      {{- end }}
       containers:
       - name: nginx
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/madison-proxy:{{ $.Values.global.modulesImages.tags.prometheus.madisonProxy }}

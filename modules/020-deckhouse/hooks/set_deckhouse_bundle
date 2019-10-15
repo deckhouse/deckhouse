@@ -1,0 +1,23 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  deckhouse_bundle=$(values::get deckhouse.bundle)
+  if [[ "$deckhouse_bundle" != "Default" ]] && [[ "$deckhouse_bundle" != "Minimal" ]]; then
+    echo "Deckhouse bundle \"$deckhouse_bundle\" doesn't exists."
+    exit 1
+  fi
+
+  fltr='.'
+  fltr=$fltr" | if (any(.spec.template.spec.containers[0].env[]; .name == \"DECKHOUSE_BUNDLE\") | not) then .spec.template.spec.containers[0].env += [{\"name\":\"DECKHOUSE_BUNDLE\",\"value\":\"$deckhouse_bundle\"}]"
+  fltr=$fltr" else .spec.template.spec.containers[0].env |= (map((select(.name == \"DECKHOUSE_BUNDLE\") | .value) |= \"$deckhouse_bundle\")) end"
+
+  kubectl::jq_patch d8-system deploy/deckhouse "$fltr"
+}
+
+hook::run "$@"
