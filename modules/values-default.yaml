@@ -22,6 +22,7 @@ deckhouseEnabled: true
 cloudInstanceManagerEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true
+controlPlaneConfiguratorEnabled: true
 heapsterEnabled: true
 operatorPrometheusEnabled: true
 prometheusEnabled: true
