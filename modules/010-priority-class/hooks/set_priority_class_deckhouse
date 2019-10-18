@@ -11,7 +11,13 @@ function __config__() {
 }
 
 function __main__() {
+  # Миграция 2019-10-14: Если миграция на deckhouse еще не произведена, хук сработать не должен.
+  if kubectl -n antiopa get deploy/antiopa > /dev/null 2> /dev/null ; then
+    exit 0
+  fi
+
   cluster_version=$(values::get global.discovery.clusterVersion)
+
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
       # Необходимо проставить priorityClassName антиопе
