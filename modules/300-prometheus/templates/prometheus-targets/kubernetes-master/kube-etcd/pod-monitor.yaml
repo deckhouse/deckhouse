@@ -6,7 +6,6 @@ metadata:
   namespace: kube-prometheus
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
   selector:
     matchLabels:
 {{- if not (eq .Values.global.discovery.clusterType "ACS") }}
@@ -28,11 +27,12 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
+    - targetLabel: job
+{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.clusterVersion) }}
+      replacement: kube-etcd2
+{{- else }}
+      replacement: kube-etcd3
+{{- end }}
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - targetLabel: component
@@ -47,11 +47,12 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
+    - targetLabel: job
+{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.clusterVersion) }}
+      replacement: kube-etcd2
+{{- else }}
+      replacement: kube-etcd3
+{{- end }}
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - targetLabel: component

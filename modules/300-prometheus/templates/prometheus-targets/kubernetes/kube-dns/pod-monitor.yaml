@@ -7,28 +7,18 @@ metadata:
   namespace: d8-system
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
+  jobLabel: k8s-app
   podMetricsEndpoints:
   - targetPort: 10055
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
     - targetLabel: scrape_endpoint
       replacement: skydns
   - targetPort: 10054
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
     - targetLabel: scrape_endpoint
       replacement: dnsmasq
   selector:

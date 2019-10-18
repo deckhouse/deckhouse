@@ -6,7 +6,7 @@ metadata:
   namespace: d8-operator-prometheus
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
+  jobLabel: app
   podMetricsEndpoints:
   - port: http
     scheme: http
@@ -17,11 +17,6 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
   namespaceSelector:
     matchNames:
     - d8-operator-prometheus
