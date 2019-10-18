@@ -23,5 +23,5 @@ spec:
       app: deckhouse
   namespaceSelector:
     matchNames:
-    - antiopa
+    - d8-system
 {{- end }}

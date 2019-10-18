@@ -15,7 +15,7 @@ spec:
     updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
-    - containerName: antiopa
+    - containerName: deckhouse
       maxAllowed:
         cpu: 200m
 {{- end }}
