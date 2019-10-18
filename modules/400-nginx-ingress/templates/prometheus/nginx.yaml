@@ -15,17 +15,13 @@ metadata:
   namespace: {{ include "helper.namespace" . }}
 {{ include "helm_lib_module_labels" (list $ (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
   podMetricsEndpoints:
   - targetPort: controller
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
+    - targetLabel: job
+      replacement: nginx-ingress-controller
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - targetLabel: controller
@@ -49,11 +45,8 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
+    - targetLabel: job
+      replacement: nginx-ingress-controller
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - sourceLabels: [__meta_kubernetes_pod_controller_name]

@@ -6,7 +6,6 @@ metadata:
   namespace: kube-prometheus
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
   selector:
     matchLabels:
 {{- if or (eq .Values.global.discovery.clusterType "Manual") (eq .Values.global.discovery.clusterType "ACS") }}
@@ -44,10 +43,7 @@ spec:
 {{- end }}
     - regex: endpoint|namespace|pod|container
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
+    - targetLabel: job
+      replacement: kube-apiserver
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node

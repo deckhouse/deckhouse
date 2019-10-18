@@ -16,7 +16,6 @@ metadata:
   namespace: {{ include "helper.namespace" . }}
 {{ include "helm_lib_module_labels" (list $ (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
   podMetricsEndpoints:
   - port: https-metrics
     scheme: https
@@ -27,11 +26,8 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
-    # todo: убрать после рефакторинга алертов
-    - sourceLabels: ["job"]
-      regex: '.*/(.*)'
-      replacement: '$1'
-      targetLabel: job
+    - targetLabel: job
+      replacement: nginx-ingress-direct-fallback
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
     - targetLabel: controller
