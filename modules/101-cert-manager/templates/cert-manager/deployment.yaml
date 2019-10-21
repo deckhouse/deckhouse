@@ -60,22 +60,31 @@ spec:
         - name: cert-manager
           image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-controller:{{ $.Values.global.modulesImages.tags.certManager.certManagerController }}
           args:
-          - --cluster-resource-namespace=d8-cert-manager
-          - --leader-election-namespace=d8-cert-manager
-          - --default-issuer-name=letsencrypt
-          - --default-issuer-kind=ClusterIssuer
+          - --v=1
+          - --cluster-resource-namespace=$(POD_NAMESPACE)
+          - --leader-election-namespace=$(POD_NAMESPACE)
+          - --webhook-namespace=$(POD_NAMESPACE)
+          - --webhook-ca-secret=cert-manager-webhook-ca
+          - --webhook-serving-secret=cert-manager-webhook-tls
+          - --webhook-dns-names=cert-manager-webhook,cert-manager-webhook.$(POD_NAMESPACE),cert-manager-webhook.$(POD_NAMESPACE).svc
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
           resources:
             requests:
               cpu: 10m
               memory: 32Mi
-          ports:
-          - containerPort: 9402
-            name: http-metrics
           env:
           - name: POD_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+        - name: ca-auth-proxy
+          image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+          args:
+          - "--listen=9403"
+          - "--proxy-pass=http://127.0.0.1:9402/metrics"
+          - "--user=kube-prometheus:scraper"
+          ports:
+          - containerPort: 9403
+            name: https-metrics
 {{- end }}

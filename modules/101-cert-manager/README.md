@@ -1,7 +1,7 @@
 Модуль cert-manager
-=======
+===================
 
-Модуль устанавливает [cert-manager](https://github.com/jetstack/cert-manager).
+Модуль устанавливает [cert-manager v0.10.1](https://github.com/jetstack/cert-manager).
 
 Конфигурация
 ------------

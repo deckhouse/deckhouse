@@ -14,5 +14,3 @@ subjects:
   kind: ServiceAccount
   name: cert-manager-webhook
   namespace: d8-cert-manager
-
-
