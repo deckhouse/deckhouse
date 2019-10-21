@@ -15,6 +15,10 @@ spec:
     shortNames:
     - dex-auth
   version: v1alpha1
+  additionalPrinterColumns:
+  - JSONPath: .spec.applicationDomain
+    name: Domain
+    type: string
   validation:
     openAPIV3Schema:
       type: object
@@ -38,3 +42,8 @@ spec:
               type: string
               description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
               example: 'ingress-tls'
+            allowedGroups:
+              type: array
+              description: 'Groups that the user should be in to authenticate successfully. Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).'
+              items:
+                type: string

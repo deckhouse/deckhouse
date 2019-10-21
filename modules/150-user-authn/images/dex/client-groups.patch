@@ -1,0 +1,246 @@
+diff --git a/api/api.proto b/api/api.proto
+index 5d9ce1a..716291f 100644
+--- a/api/api.proto
++++ b/api/api.proto
+@@ -12,6 +12,7 @@ message Client {
+   bool public = 5;
+   string name = 6;
+   string logo_url = 7;
++  repeated string allowed_groups = 8;
+ }
+
+ // CreateClientReq is a request to make a client.
+@@ -43,6 +44,7 @@ message UpdateClientReq {
+     repeated string trusted_peers = 3;
+     string name = 4;
+     string logo_url = 5;
++    repeated string allowed_groups = 6;
+ }
+
+ // UpdateClientResp returns the reponse form updating a client.
+diff --git a/server/handlers.go b/server/handlers.go
+index b5c7886..d406249 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -19,6 +19,7 @@ import (
+ 	jose "gopkg.in/square/go-jose.v2"
+
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/pkg/groups"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -264,6 +265,7 @@ func (s *Server) handleAuthorization(w http.ResponseWriter, r *http.Request) {
+ 		connectorInfos[i] = connectorInfo{
+ 			ID:   conn.ID,
+ 			Name: conn.Name,
++			Type: conn.Type,
+ 			// TODO(ericchiang): Make this pass on r.URL.RawQuery and let something latter
+ 			// on create the auth request.
+ 			URL: s.absPath("/auth", conn.ID) + "?req=" + authReq.ID,
+@@ -520,18 +522,35 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
+ 		return
+ 	}
+
++	client, err := s.storage.GetClient(authReq.ClientID)
++	if err != nil {
++		s.logger.Errorf("Failed to get client %q: %v", authReq.ClientID, err)
++		s.renderError(w, http.StatusInternalServerError, "Failed to retrieve client.")
++		return
++	}
++
++	if len(client.AllowedGroups) > 0 {
++		authReq.Claims.Groups = groups.Filter(authReq.Claims.Groups, client.AllowedGroups)
++		if len(authReq.Claims.Groups) == 0 {
++			s.logger.Errorf("user not in allowed groups: %v", client.AllowedGroups)
++			u, err := url.Parse(authReq.RedirectURI)
++			if err != nil {
++				s.renderError(w, http.StatusInternalServerError, "Invalid redirect URI.")
++				return
++			}
++			u.Path = ""
++			u.RawQuery = ""
++			s.renderErrorAndReturn(w, http.StatusUnauthorized, "User not in allowed groups.", u.String())
++			return
++		}
++	}
++
+ 	switch r.Method {
+ 	case http.MethodGet:
+ 		if s.skipApproval {
+ 			s.sendCodeResponse(w, r, authReq)
+ 			return
+ 		}
+-		client, err := s.storage.GetClient(authReq.ClientID)
+-		if err != nil {
+-			s.logger.Errorf("Failed to get client %q: %v", authReq.ClientID, err)
+-			s.renderError(w, http.StatusInternalServerError, "Failed to retrieve client.")
+-			return
+-		}
+ 		if err := s.templates.approval(w, authReq.ID, authReq.Claims.Username, client.Name, authReq.Scopes); err != nil {
+ 			s.logger.Errorf("Server template error: %v", err)
+ 		}
+@@ -1125,6 +1144,12 @@ func (s *Server) renderError(w http.ResponseWriter, status int, description stri
+ 	}
+ }
+
++func (s *Server) renderErrorAndReturn(w http.ResponseWriter, status int, description, returnURL string) {
++	if err := s.templates.errAndReturn(w, status, description, returnURL); err != nil {
++		s.logger.Errorf("Server template error: %v", err)
++	}
++}
++
+ func (s *Server) tokenErrHelper(w http.ResponseWriter, typ string, description string, statusCode int) {
+ 	if err := tokenErr(w, typ, description, statusCode); err != nil {
+ 		s.logger.Errorf("token error response: %v", err)
+diff --git a/server/templates.go b/server/templates.go
+index 89d4137..72c1ac2 100644
+--- a/server/templates.go
++++ b/server/templates.go
+@@ -13,11 +13,12 @@ import (
+ )
+
+ const (
+-	tmplApproval = "approval.html"
+-	tmplLogin    = "login.html"
+-	tmplPassword = "password.html"
+-	tmplOOB      = "oob.html"
+-	tmplError    = "error.html"
++	tmplApproval       = "approval.html"
++	tmplLogin          = "login.html"
++	tmplPassword       = "password.html"
++	tmplOOB            = "oob.html"
++	tmplError          = "error.html"
++	tmplErrorAndReturn = "errorAndReturn.html"
+ )
+
+ var requiredTmpls = []string{
+@@ -26,14 +27,16 @@ var requiredTmpls = []string{
+ 	tmplPassword,
+ 	tmplOOB,
+ 	tmplError,
++	tmplErrorAndReturn,
+ }
+
+ type templates struct {
+-	loginTmpl    *template.Template
+-	approvalTmpl *template.Template
+-	passwordTmpl *template.Template
+-	oobTmpl      *template.Template
+-	errorTmpl    *template.Template
++	loginTmpl          *template.Template
++	approvalTmpl       *template.Template
++	passwordTmpl       *template.Template
++	oobTmpl            *template.Template
++	errorTmpl          *template.Template
++	errorAndReturnTmpl *template.Template
+ }
+
+ type webConfig struct {
+@@ -158,11 +161,12 @@ func loadTemplates(c webConfig, templatesDir string) (*templates, error) {
+ 		return nil, fmt.Errorf("missing template(s): %s", missingTmpls)
+ 	}
+ 	return &templates{
+-		loginTmpl:    tmpls.Lookup(tmplLogin),
+-		approvalTmpl: tmpls.Lookup(tmplApproval),
+-		passwordTmpl: tmpls.Lookup(tmplPassword),
+-		oobTmpl:      tmpls.Lookup(tmplOOB),
+-		errorTmpl:    tmpls.Lookup(tmplError),
++		loginTmpl:          tmpls.Lookup(tmplLogin),
++		approvalTmpl:       tmpls.Lookup(tmplApproval),
++		passwordTmpl:       tmpls.Lookup(tmplPassword),
++		oobTmpl:            tmpls.Lookup(tmplOOB),
++		errorTmpl:          tmpls.Lookup(tmplError),
++		errorAndReturnTmpl: tmpls.Lookup(tmplErrorAndReturn),
+ 	}, nil
+ }
+
+@@ -176,6 +180,7 @@ type connectorInfo struct {
+ 	ID   string
+ 	Name string
+ 	URL  string
++	Type string
+ }
+
+ type byName []connectorInfo
+@@ -240,6 +245,20 @@ func (t *templates) err(w http.ResponseWriter, errCode int, errMsg string) error
+ 	return nil
+ }
+
++func (t *templates) errAndReturn(w http.ResponseWriter, errCode int, errMsg, returnURL string) error {
++	w.WriteHeader(errCode)
++	data := struct {
++		ErrType string
++		ErrMsg  string
++		URL string
++	}{http.StatusText(errCode), errMsg, returnURL}
++	if err := t.errorAndReturnTmpl.Execute(w, data); err != nil {
++		return fmt.Errorf("Error rendering template %s: %s", t.errorTmpl.Name(), err)
++	}
++	return nil
++}
++
++
+ // small io.Writer utility to determine if executing the template wrote to the underlying response writer.
+ type writeRecorder struct {
+ 	wrote bool
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 5324998..c4f56fe 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -241,6 +241,8 @@ type Client struct {
+
+ 	Name    string `json:"name,omitempty"`
+ 	LogoURL string `json:"logoURL,omitempty"`
++
++	AllowedGroups []string `json:"allowedGroups,omitempty"`
+ }
+
+ // ClientList is a list of Clients.
+diff --git a/storage/storage.go b/storage/storage.go
+index 893fb10..62413df 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -133,6 +133,8 @@ type Client struct {
+ 	// Name and LogoURL used when displaying this client to the end user.
+ 	Name    string `json:"name" yaml:"name"`
+ 	LogoURL string `json:"logoURL" yaml:"logoURL"`
++
++	AllowedGroups []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
+ }
+
+ // Claims represents the ID Token claims supported by the server.
+diff --git a/web/templates/errorAndReturn.html b/web/templates/errorAndReturn.html
+new file mode 100644
+index 0000000..71e4b78
+--- /dev/null
++++ b/web/templates/errorAndReturn.html
+@@ -0,0 +1,15 @@
++{{ template "header.html" . }}
++
++<div class="theme-panel">
++  <h2 class="theme-heading">{{ .ErrType }}</h2>
++  <p>{{ .ErrMsg }}</p>
++  <div class="theme-form-row">
++    <a href="{{ .URL }}" target="_self">
++      <button class="dex-btn theme-btn-provider">
++        <span class="dex-btn-text">Return</span>
++      </button>
++    </a>
++  </div>
++</div>
++
++{{ template "footer.html" . }}
+diff --git a/web/templates/login.html b/web/templates/login.html
+index 56151a7..f432dd0 100644
+--- a/web/templates/login.html
++++ b/web/templates/login.html
+@@ -7,7 +7,7 @@
+       <div class="theme-form-row">
+         <a href="{{ $c.URL }}" target="_self">
+           <button class="dex-btn theme-btn-provider">
+-            <span class="dex-btn-icon dex-btn-icon--{{ $c.ID }}"></span>
++            <span class="dex-btn-icon dex-btn-icon--{{ $c.Type }}"></span>
+             <span class="dex-btn-text">Log in with {{ $c.Name }}</span>
+           </button>
+         </a>
