@@ -1,2 +1,3 @@
 cloudProviderOpenstack:
+  internal: {}
   addPodSubnetToPortWhitelist: true

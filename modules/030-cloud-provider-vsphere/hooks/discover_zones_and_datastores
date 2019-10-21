@@ -15,8 +15,6 @@ function __config__() {
 }
 
 function __main__() {
-  values::set cloudProviderVsphere.internal "{}"
-
   GOVC_URL="$(values::get --required cloudProviderVsphere.host)"
   export GOVC_URL
   GOVC_USERNAME="$(values::get --required cloudProviderVsphere.username)"

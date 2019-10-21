@@ -4,5 +4,7 @@ password: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.passw
 domainName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.domainName | b64enc }}
 tenantName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.tenantName | b64enc }}
 {{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "caCert" }}
+  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.caCert }}
 caCert: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.caCert | b64enc }}
+  {{- end }}
 {{- end }}
