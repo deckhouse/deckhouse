@@ -4,7 +4,7 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: cert-manager-webhook
+  name: webhook
   namespace: d8-cert-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
 spec:
@@ -64,7 +64,7 @@ spec:
       - name: webhook
         image: {{ $.Values.global.modulesImages.registry }}/cert-manager/cert-manager-webhook:{{ $.Values.global.modulesImages.tags.certManager.certManagerWebhook }}
         args:
-        - --v=4
+        - --v=3
         - --secure-port=6443
         - --tls-cert-file=/certs/tls.crt
         - --tls-private-key-file=/certs/tls.key

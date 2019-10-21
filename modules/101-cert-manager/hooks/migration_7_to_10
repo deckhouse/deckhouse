@@ -1,0 +1,38 @@
+#!/bin/bash
+### Миграция 2019-10-17 служебные секреты отныне управляются напрямую, без ресурса Certificate.
+### 1. Удаляем старые секреты, для порядка.
+### 2. При автоматическом создании служебного сертификата и добавлении его в caBundle apiservice-а что-то залипает и TLS не сходится, надо рестартнуть под.
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "afterHelm": 20
+}
+EOF
+}
+
+function __main__() {
+  if [ "$(kubectl -n d8-cert-manager get secret -l certmanager.k8s.io/certificate-name=cert-manager-webhook-tls -o json | jq '.items | length')" -gt "0" ]
+  then
+    # есть секрет с лейблом от Certificate, значит — мы только что обновились
+    kubectl -n d8-cert-manager delete secret -l certmanager.k8s.io/certificate-name=cert-manager-webhook-ca >/dev/null 2>&1
+    kubectl -n d8-cert-manager delete secret -l certmanager.k8s.io/certificate-name=cert-manager-webhook-tls >/dev/null 2>&1
+
+    for i in $(seq 1 600); do
+      if kubectl get apiservice v1beta1.webhook.certmanager.k8s.io -o json | jq -e '.spec.caBundle' >/dev/null 2>&1; then
+        kubectl -n d8-cert-manager delete pod -l app=webhook
+        return 0
+      fi
+      echo "Migration: waiting for caBundle appears in Apiservice v1beta1.webhook.certmanager.k8s.io to delete webhook pod (EST 1min, MAX 10min)"
+      sleep 1
+    done
+    if [[ $i -ge 600 ]] ; then
+      >&2 echo "Migration: timeout waiting for caBundle appears in Apiservice v1beta1.webhook.certmanager.k8s.io"
+      return 0
+    fi
+  fi
+}
+
+hook::run "$@"

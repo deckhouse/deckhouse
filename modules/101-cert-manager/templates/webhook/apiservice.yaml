@@ -3,12 +3,12 @@
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
-  name: v1beta1.admission.certmanager.k8s.io
+  name: v1beta1.webhook.certmanager.k8s.io
 {{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
   annotations:
-    certmanager.k8s.io/inject-ca-from: "d8-cert-manager/cert-manager-webhook-tls"
+    certmanager.k8s.io/inject-ca-from-secret: "d8-cert-manager/cert-manager-webhook-tls"
 spec:
-  group: admission.certmanager.k8s.io
+  group: webhook.certmanager.k8s.io
   groupPriorityMinimum: 1000
   versionPriority: 15
   service:
