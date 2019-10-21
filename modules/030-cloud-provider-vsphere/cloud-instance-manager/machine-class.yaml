@@ -1,0 +1,24 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: VsphereMachineClass
+metadata:
+  name: {{ .instanceGroup.name }}-{{ printf "%v%v%v" .Values.global.project .Values.global.clusterName .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+spec:
+  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.region | quote }}
+  zone:  {{ .zoneName | quote }}
+  numCPUs: {{ .instanceGroup.instanceClass.numCPUs }}
+  memory: {{ .instanceGroup.instanceClass.memory }}
+  template: {{ .instanceGroup.instanceClass.template | quote }}
+  virtualMachineFolder: {{ .instanceGroup.instanceClass.virtualMachineFolder | quote }}
+  network: {{ .instanceGroup.instanceClass.network | quote }}
+  datastore: {{ .instanceGroup.instanceClass.datastore | quote }}
+  clusterNameTag: {{ .Values.global.project }}-{{ .Values.global.clusterName }}
+  nodeRoleTag: {{ .instanceGroup.name }}-{{ .zoneName }}
+  sshKeys:
+{{- range .Values.cloudInstanceManager.internal.cloudProvider.vsphere.sshKeys }}
+  - {{ . | quote }}
+{{- end }}
+  secretRef:
+    namespace: d8-{{ .Chart.Name }}
+    name: {{ .instanceGroup.name }}-{{ printf "%v%v%v" .Values.global.project .Values.global.clusterName .zoneName | sha256sum | trunc 8 }}

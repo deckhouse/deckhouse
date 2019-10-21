@@ -1,3 +1,4 @@
+{{- if not .Values.vsphereCsiDriver.disableCSI }}
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: CSIDriver
@@ -7,3 +8,4 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
+{{- end }}

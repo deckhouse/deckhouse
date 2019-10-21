@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-instance-manager-cloud-provider
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "vsphere" | quote }}
+  zones: {{ .Values.cloudProviderVsphere.zones | default .Values.cloudProviderVsphere.internal.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
+
+  # vsphere
+  {{- $vsphereValues := dict }}
+  {{- $_ := set $vsphereValues "host" .Values.cloudProviderVsphere.host }}
+  {{- $_ := set $vsphereValues "username" .Values.cloudProviderVsphere.username }}
+  {{- $_ := set $vsphereValues "password" .Values.cloudProviderVsphere.password }}
+  {{- $_ := set $vsphereValues "insecure" .Values.cloudProviderVsphere.insecure }}
+  {{- $_ := set $vsphereValues "regionTagCategory" .Values.cloudProviderVsphere.regionTagCategory }}
+  {{- $_ := set $vsphereValues "zoneTagCategory" .Values.cloudProviderVsphere.zoneTagCategory }}
+  {{- $_ := set $vsphereValues "region" .Values.cloudProviderVsphere.region }}
+  {{- $_ := set $vsphereValues "sshKeys" .Values.cloudProviderVsphere.sshKeys }}
+  vsphere: {{ $vsphereValues | toJson | b64enc | quote }}

@@ -45,8 +45,8 @@ spec:
         args:
         - --ip-masq
         - --kube-subnet-mgr
-{{- if hasKey .Values.cloudProviderOpenstack "internalNetworkName" }}
-        - --iface=internal
+{{- if hasKey .Values.cloudProviderOpenstack.internal "internalSubnetRegex" }}
+        - --iface-regex={{ .Values.cloudProviderOpenstack.internal.internalSubnetRegex }}
 {{- end }}
         resources:
           requests:

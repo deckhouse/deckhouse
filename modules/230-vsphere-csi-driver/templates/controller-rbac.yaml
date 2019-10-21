@@ -1,3 +1,4 @@
+{{- if not .Values.vsphereCsiDriver.disableCSI }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -32,3 +33,4 @@ roleRef:
   kind: ClusterRole
   name: kube-system:vsphere-csi-driver:controller
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

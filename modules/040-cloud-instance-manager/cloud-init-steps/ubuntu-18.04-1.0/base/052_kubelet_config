@@ -69,16 +69,14 @@ evictionPressureTransitionPeriod: 4m0s
 evictionMaxPodGracePeriod: 90
 evictionMinimumReclaim: null
 failSwapOn: true
-featureGates: {}
+featureGates:
+  ExpandCSIVolumes: true
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 50
 imageGCLowThresholdPercent: 40
 kubeAPIBurst: 50
 kubeAPIQPS: 50
-kubeReserved:
-  cpu: 80m
-  memory: 1Gi
 hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000

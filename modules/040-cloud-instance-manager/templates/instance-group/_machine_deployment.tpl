@@ -7,9 +7,9 @@ apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
   {{- if $context.Values.cloudInstanceManager.instancePrefix }}
-  name: {{ $context.Values.cloudInstanceManager.instancePrefix }}-{{ $ig.name }}-{{ $zone_name }}
+  name: {{ $context.Values.cloudInstanceManager.instancePrefix}}-{{ $ig.name }}-{{ printf "%v%v%v" $context.Values.global.project $context.Values.global.clusterName $zone_name | sha256sum | trunc 8 }}
   {{- else }}
-  name: {{ $ig.name }}-{{ $zone_name }}
+  name: {{ $ig.name }}-{{ printf "%v%v%v" $context.Values.global.project $context.Values.global.clusterName $zone_name | sha256sum | trunc 8 }}
   {{- end }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "instance-group" $ig.name)) | indent 2 }}
@@ -38,7 +38,7 @@ spec:
     spec:
       class:
         kind: {{ $context.Values.cloudInstanceManager.internal.cloudProvider.machineClassKind }}
-        name: {{ $ig.name }}-{{ $zone_name }}
+        name: {{ $ig.name }}-{{ printf "%v%v%v" $context.Values.global.project $context.Values.global.clusterName $zone_name | sha256sum | trunc 8 }}
       nodeTemplate:
         metadata:
           labels:

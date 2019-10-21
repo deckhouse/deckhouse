@@ -1,0 +1,8 @@
+host: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.host | b64enc | quote }}
+username: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.username | b64enc | quote }}
+password: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.password | b64enc | quote }}
+insecure: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.insecure | default "false" | toString | b64enc | quote }}
+regionTagCategory: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.regionTagCategory | b64enc | quote }}
+zoneTagCategory: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.zoneTagCategory | b64enc | quote }}
+clusterNameTagCategory: {{ print "deckhouse-cluster-name" | b64enc | quote }}
+nodeRoleTagCategory: {{ print "deckhouse-node-role" | b64enc | quote }}

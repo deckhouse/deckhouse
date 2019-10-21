@@ -62,6 +62,8 @@ spec:
       containers:
         - image: {{ .Values.global.modulesImages.registry }}/cloud-instance-manager/machine-controller-manager:{{ .Values.global.modulesImages.tags.cloudInstanceManager.machineControllerManager }}
           name: controller
+          command:
+          - /machine-controller-manager
           args:
           - --namespace=d8-cloud-instance-manager
           - --cloud-provider={{ .Values.cloudInstanceManager.internal.cloudProvider.type | quote }}
@@ -87,6 +89,3 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          command:
-          - /machine-controller-manager
-          - -v=2

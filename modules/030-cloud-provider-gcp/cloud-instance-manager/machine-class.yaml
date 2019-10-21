@@ -1,7 +1,7 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: GCPMachineClass
 metadata:
-  name: {{ .instanceGroup.name }}-{{ .zoneName }}
+  name: {{ .instanceGroup.name }}-{{ printf "%v%v%v" .Values.global.project .Values.global.clusterName .zoneName | sha256sum | trunc 8 }}
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
@@ -41,4 +41,4 @@ spec:
 {{- end }}
   secretRef:
     namespace: d8-{{ .Chart.Name }}
-    name: machine-class-{{ .instanceGroup.name }}-{{ .zoneName }}
+    name: {{ .instanceGroup.name }}-{{ printf "%v%v%v" .Values.global.project .Values.global.clusterName .zoneName | sha256sum | trunc 8 }}

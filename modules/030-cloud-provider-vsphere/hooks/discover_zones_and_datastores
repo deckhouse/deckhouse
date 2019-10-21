@@ -1,0 +1,47 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 20,
+  "schedule": [
+    {
+      "crontab": "53 * * * *"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  values::set cloudProviderVsphere.internal "{}"
+
+  GOVC_URL="$(values::get --required cloudProviderVsphere.host)"
+  export GOVC_URL
+  GOVC_USERNAME="$(values::get --required cloudProviderVsphere.username)"
+  export GOVC_USERNAME
+  GOVC_PASSWORD="$(values::get --required cloudProviderVsphere.password)"
+  export GOVC_PASSWORD
+  GOVC_INSECURE="$(values::get --required cloudProviderVsphere.insecure)"
+  export GOVC_INSECURE
+
+  VSPHERE_REGION_TAG_NAME="$(values::get --required cloudProviderVsphere.region)"
+  export VSPHERE_REGION_TAG_NAME
+  VSPHERE_REGION_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.regionTagCategory)"
+  export VSPHERE_REGION_TAG_CATEGORY_NAME
+  VSPHERE_ZONE_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.zoneTagCategory)"
+  export VSPHERE_ZONE_TAG_CATEGORY_NAME
+
+  result="$(vsphere-cli-helper)"
+
+  datacenter="$(echo "$result" | jq -re '.datacenter')"
+  datastores="$(echo "$result" | jq -re '.datastores')"
+  zones="$(echo "$result" | jq -re '.zones')"
+
+  values::set cloudProviderVsphere.internal.datacenter "$datacenter"
+  values::set cloudProviderVsphere.internal.zones "$zones"
+  values::set cloudProviderVsphere.internal.datastores "$datastores"
+}
+
+hook::run "$@"

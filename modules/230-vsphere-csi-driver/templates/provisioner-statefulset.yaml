@@ -1,4 +1,5 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not .Values.vsphereCsiDriver.disableCSI }}
+{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -66,3 +67,4 @@ spec:
         hostPath:
           path: /var/lib/csi/sockets/pluginproxy/vsphere.csi.vmware.com
           type: DirectoryOrCreate
+{{- end }}

@@ -30,6 +30,7 @@ function __main__() {
 
   function update_status() {
     curl -XPATCH \
+      --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
       -H "Content-Type: application/merge-patch+json" \
       -H "Accept: application/json" \
       -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \

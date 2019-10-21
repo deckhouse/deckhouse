@@ -1,7 +1,8 @@
 FROM golang:1.12-alpine
 WORKDIR /src/
+ARG CI_JOB_TOKEN
 RUN apk add --no-cache git mercurial make bash
-RUN wget https://github.com/flant/machine-controller-manager/archive/c02256bc9616f7f285edf2022736d242aed63f87.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+RUN git clone -b vsphere --single-branch https://gitlab-ci-token:${CI_JOB_TOKEN}@fox.flant.com/sys/deckhouse-mcm.git /src/ && git checkout 16372ed905f6431a01c17b9011522dcc6e421eae
 RUN make build-local
 
 FROM alpine:3.10

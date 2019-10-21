@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 10
+}'
+  # Костыль 2019-07-19: пока не разберёмся как правильно создавать CRD
+  kubectl apply -f "$(module::path)/crds/" >/dev/null 2>&1
+}
+
+function __main__() {
+  echo "hello" > /dev/null
+}
+
+hook::run "$@"

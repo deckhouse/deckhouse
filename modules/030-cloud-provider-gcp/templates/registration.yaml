@@ -15,5 +15,12 @@ data:
   machineClassKind: {{ b64enc "GCPMachineClass" | quote }}
 
   # GCP
-  gcp: {{ .Values.cloudProviderGcp | toJson | b64enc | quote }}
+  {{- $gcpValues := dict }}
+  {{- $_ := set $gcpValues "serviceAccountKey" .Values.cloudProviderGcp.serviceAccountKey }}
+  {{- $_ := set $gcpValues "region" .Values.cloudProviderGcp.region }}
+  {{- $_ := set $gcpValues "networkName" .Values.cloudProviderGcp.networkName }}
+  {{- $_ := set $gcpValues "subnetworkName" .Values.cloudProviderGcp.subnetworkName }}
+  {{- $_ := set $gcpValues "sshKey" .Values.cloudProviderGcp.sshKey }}
+  {{- $_ := set $gcpValues "extraInstanceTags" .Values.cloudProviderGcp.extraInstanceTags }}
+  gcp: {{ $gcpValues | toJson | b64enc | quote }}
 {{- end }}

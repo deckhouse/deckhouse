@@ -15,5 +15,18 @@ data:
   machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}
 
   # openstack
-  openstack: {{ .Values.cloudProviderOpenstack | toJson | b64enc | quote }}
+  {{- $openstackValues := dict }}
+  {{- $_ := set $openstackValues "authURL" .Values.cloudProviderOpenstack.authURL }}
+  {{- $_ := set $openstackValues "username" .Values.cloudProviderOpenstack.username }}
+  {{- $_ := set $openstackValues "password" .Values.cloudProviderOpenstack.password }}
+  {{- $_ := set $openstackValues "domainName" .Values.cloudProviderOpenstack.domainName }}
+  {{- $_ := set $openstackValues "tenantName" .Values.cloudProviderOpenstack.tenantName }}
+  {{- $_ := set $openstackValues "caCert" .Values.cloudProviderOpenstack.caCert }}
+  {{- $_ := set $openstackValues "region" .Values.cloudProviderOpenstack.region }}
+  {{- $_ := set $openstackValues "networkName" .Values.cloudProviderOpenstack.networkName }}
+  {{- $_ := set $openstackValues "internalNetworkName" .Values.cloudProviderOpenstack.internalNetworkName }}
+  {{- $_ := set $openstackValues "addPodSubnetToPortWhitelist" .Values.cloudProviderOpenstack.addPodSubnetToPortWhitelist }}
+  {{- $_ := set $openstackValues "sshKeyPairName" .Values.cloudProviderOpenstack.sshKeyPairName }}
+  {{- $_ := set $openstackValues "securityGroups" .Values.cloudProviderOpenstack.securityGroups }}
+  openstack: {{ $openstackValues | toJson | b64enc | quote }}
 {{- end }}

@@ -21,6 +21,7 @@ rules:
    - openstackmachineclasses
    - alicloudmachineclasses
    - packetmachineclasses
+   - vspheremachineclasses
    - machinedeployments
    - machines
    - machinesets
@@ -30,6 +31,7 @@ rules:
    - openstackmachineclasses/status
    - alicloudmachineclasses/status
    - packetmachineclasses/status
+   - vspheremachineclasses/status
    - machinedeployments/status
    - machines/status
    - machinesets/status
