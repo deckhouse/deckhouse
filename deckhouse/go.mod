@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20191015110824-2a9a23abd135 // branch: fix_after_delete_helm
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20191017121412-e4ce5b91617d // branch: master
 	github.com/flant/shell-operator v1.0.0-beta.5.0.20190923140739-5f7d9cca9885 // branch: release-1.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/btree v1.0.0 // indirect
