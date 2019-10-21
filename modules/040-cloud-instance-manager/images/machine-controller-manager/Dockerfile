@@ -2,7 +2,7 @@ FROM golang:1.12-alpine
 WORKDIR /src/
 ARG CI_JOB_TOKEN
 RUN apk add --no-cache git mercurial make bash
-RUN git clone -b vsphere --single-branch https://gitlab-ci-token:${CI_JOB_TOKEN}@fox.flant.com/sys/deckhouse-mcm.git /src/ && git checkout 4fbe982a3b0f4d233d285e3a6a67e9e1fb402013
+RUN git clone -b vsphere --single-branch https://gitlab-ci-token:${CI_JOB_TOKEN}@fox.flant.com/sys/deckhouse-mcm.git /src/ && git checkout 5ae56605eb0243faf502d633bff1cf270b47e1ef
 RUN make build-local
 
 FROM alpine:3.10
