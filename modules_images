@@ -76,7 +76,7 @@ EOF
   if [[ -n $REGISTRY_USER || -n $REGISTRY_PASSWORD ]] ; then
     echo $REGISTRY_PASSWORD | docker login --username="$REGISTRY_USER" --password-stdin $REGISTRY > /dev/null 2> >(while IFS='' read line ; do echo -e "\e[01;31m$line\e[0m" >&2; done)
   fi
-  
+
   # Получаем список образов, которые уже собраны (присутствуют локально на сборщике)
   existing_docker_images=$(docker image ls --format "{{.Repository}}:{{.Tag}}" | grep ^$REGISTRY)
 
@@ -139,7 +139,7 @@ EOF
         SQUASH=""
       fi
 
-      if ! docker image build $SQUASH -t $full_image_name . ; then
+      if ! docker image build --build-arg CI_JOB_TOKEN="$CI_JOB_TOKEN" $SQUASH -t $full_image_name . ; then
         sleep 0.1
         exit 1
       fi

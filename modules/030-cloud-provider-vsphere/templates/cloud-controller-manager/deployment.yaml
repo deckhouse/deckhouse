@@ -1,0 +1,101 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-vsphere
+{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-vsphere
+{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+spec:
+  replicas: {{ .Values.global.discovery.clusterMasterCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
+      maxUnavailable: {{ div (.Values.global.discovery.clusterMasterCount | int) 2 }}
+{{- else }}
+      maxUnavailable: 1
+{{- end }}
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+  template:
+    metadata:
+      labels:
+        app: cloud-controller-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
+      priorityClassName: cluster-critical
+{{- end }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: cloud-controller-manager
+            topologyKey: kubernetes.io/hostname
+{{- end }}
+      hostNetwork: true
+      securityContext:
+        runAsUser: 1001
+      tolerations:
+      - operator: Exists
+      serviceAccountName: cloud-controller-manager
+      containers:
+        - name: vsphere-cloud-controller-manager
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.cloudControllerManager }}
+          args:
+            - --v=4
+            - --leader-elect=true
+            - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
+            - --cloud-provider=vsphere
+            - --bind-address=127.0.0.1
+            - --secure-port=10871
+          volumeMounts:
+            - mountPath: /etc/kubernetes/pki
+              name: k8s-certs
+              readOnly: true
+            - mountPath: /etc/ssl/certs
+              name: ca-certs
+              readOnly: true
+            - mountPath: /etc/cloud-contoller-manager-config
+              name: config
+              readOnly: true
+          resources:
+            requests:
+              cpu: 200m
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/pki
+          type: DirectoryOrCreate
+        name: k8s-certs
+      - hostPath:
+          path: /etc/ssl/certs
+          type: DirectoryOrCreate
+        name: ca-certs
+      - name: config
+        secret:
+          secretName: cloud-controller-manager

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 10
+}'
+}
+
+function __main__() {
+  if values::is_true global.clusterIsBootstrapped ; then
+    fltr='include "remove_empty"; .'
+    fltr=$fltr' | .spec.template.spec.dnsPolicy = "ClusterFirstWithHostNet"'
+    kubectl::jq_patch d8-system deployment/deckhouse "$fltr"
+  fi
+}
+
+hook::run "$@"

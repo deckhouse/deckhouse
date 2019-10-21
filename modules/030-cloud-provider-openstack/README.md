@@ -48,6 +48,9 @@
 * `securityGroups` — Список securityGroups, которые нужно прикрепить к заказанным instances. Используется для задания firewall правил по отношению к заказываемым instances.
     * Опциональный параметр.
     * Формат — массив строк.
+* `internalSubnet` — subnet CIDR, использующийся для внутренней межнодовой сети. Используется для настройки параметра `--iface-regex` во flannel.
+    * Формат — string. Например, `10.201.0.0/16`.
+    * Опциональный параметр.
 
 #### Пример конфигурации
 
@@ -68,6 +71,7 @@ cloudProviderOpenstack: |
   securityGroups:
   - default
   - allow-ssh-and-icmp
+  internalSubnet: "10.0.201.0/16"
 ```
 
 ### OpenStackInstanceClass custom resource

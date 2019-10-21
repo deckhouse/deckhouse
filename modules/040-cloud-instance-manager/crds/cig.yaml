@@ -102,6 +102,7 @@ spec:
                   enum:
                   - OpenStackInstanceClass
                   - GCPInstanceClass
+                  - VsphereInstanceClass
                 name:
                   type: string
             minInstancesPerZone:

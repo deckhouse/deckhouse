@@ -1,3 +1,4 @@
+{{- if not .Values.vsphereCsiDriver.disableCSI }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -38,3 +39,4 @@ roleRef:
   kind: ClusterRole
   name: vsphere-csi-external-resizer
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

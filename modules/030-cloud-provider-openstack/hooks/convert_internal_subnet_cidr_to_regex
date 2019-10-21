@@ -1,0 +1,19 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "beforeHelm": 100
+}'
+}
+
+function __main__() {
+  if ! values::is_empty "$(values::get cloudProviderOpenstack.internalSubnet)"; then
+    subnet_regex="$(rgxg cidr "$(values::get cloudProviderOpenstack.internalSubnet)")"
+    values::set cloudProviderOpenstack.internal.internalSubnetRegex "$subnet_regex"
+  fi
+}
+
+hook::run "$@"

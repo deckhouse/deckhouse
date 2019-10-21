@@ -30,6 +30,11 @@ def main():
   rule = " -m comment --comment d8_netgw_cfgHash_" + cfgHash + " -j SNAT --to " + publicAddress
   cmds.append("iptables -w -t nat -C " + chainName + rule + " >/dev/null 2>&1 || iptables -w -t nat -A " + chainName + rule)
 
+  rule = " -s " + subnet + " -j ACCEPT"
+  cmds.append("iptables -w -t filter -C FORWARD" + rule + " >/dev/null 2>&1 || iptables -w -t filter -I FORWARD" + " 1 " + rule)
+  rule = " -d " + subnet + " -j ACCEPT"
+  cmds.append("iptables -w -t filter -C FORWARD" + rule + " >/dev/null 2>&1 || iptables -w -t filter -I FORWARD" + " 1 " + rule)
+
   while True:
     os.system(';'.join(cmds))
     time.sleep(60)

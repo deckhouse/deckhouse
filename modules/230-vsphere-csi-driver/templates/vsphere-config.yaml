@@ -16,7 +16,7 @@ insecure-flag = "0"
 datacenters = {{ .Values.vsphereCsiDriver.virtualCenter.datacenter | quote }}
 
 {{- end }}
-
+{{- if not .Values.vsphereCsiDriver.disableCSI }}
 ---
 apiVersion: v1
 kind: Secret
@@ -28,3 +28,4 @@ type: Opaque
 data:
   vsphere.conf: |
     {{ include "vsphere_conf" . | b64enc | indent 4 }}
+{{- end }}

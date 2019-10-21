@@ -6,7 +6,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: machine-class-{{ $ig.name }}-{{ $zone_name }}
+  name: {{ $ig.name }}-{{ printf "%v%v%v" $context.Values.global.project $context.Values.global.clusterName $zone_name | sha256sum | trunc 8 }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context) | indent 2 }}
 type: Opaque
