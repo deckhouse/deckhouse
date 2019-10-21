@@ -92,9 +92,9 @@
       {{- if $provider.saml.groupsDelim }}
         groupsDelim: {{ $provider.saml.groupsDelim }}
       {{- end }}
-      {{- if $provider.saml.groups }}
-        groups:
-{{ $provider.saml.groups | toYaml | indent 8 }}
+      {{- if $provider.saml.allowedGroups }}
+        allowedGroups:
+{{ $provider.saml.allowedGroups | toYaml | indent 8 }}
       {{- end }}
       {{- if $provider.saml.nameIDPolicyFormat }}
         nameIDPolicyFormat: {{ $provider.saml.nameIDPolicyFormat }}
