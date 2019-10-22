@@ -1,4 +1,4 @@
-{{- if or (.Values.userAuthn.publishAPI) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if or (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.kubeconfigGenerator) }}
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
