@@ -42,6 +42,12 @@
 * `internalSubnet` — subnet CIDR, использующийся для внутренней межнодовой сети. Используется для настройки параметра `--iface-regex` во flannel.
     * Формат — string. Например, `10.201.0.0/16`.
     * Опциональный параметр.
+* `externalNetworkName` — имя сети (не полный путь, а просто имя), подключённой к VirtualMachines, и используемой vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
+    * Формат — string. Например, `MAIN-1`.
+    * Опциональный параметр.
+* `internalNetworkName` — имя сети (не полный путь, а просто имя), подключённой к VirtualMachines, и используемой vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
+    * Формат — string. Например, `KUBE-3`.
+    * Опциональный параметр.
 
 #### Пример конфигурации
 
@@ -56,6 +62,8 @@ cloudProviderVsphere: |
   sshKeys:
   - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD5sAcceTHeT6ZnU+PUF1rhkIHG8/B36VWy/j7iwqqimC9CxgFTEi8MPPGNjf+vwZIepJU8cWGB/By1z1wLZW3H0HMRBhv83FhtRzOaXVVHw38ysYdQvYxPC0jrQlcsJmLi7Vm44KwA+LxdFbkj+oa9eT08nQaQD6n3Ll4+/8eipthZCDFmFgcL/IWy6DjumN0r4B+NKHVEdLVJ2uAlTtmiqJwN38OMWVGa4QbvY1qgwcyeCmEzZdNCT6s4NJJpzVsucjJ0ZqbFqC7luv41tNuTS3Moe7d8TwIrHCEU54+W4PIQ5Z4njrOzze9/NlM935IzpHYw+we+YR+Nz6xHJwwj i@my-PC"
   internalSubnet: "10.0.201.0/16"
+  externalNetworkName: "MAIN-1"
+  internalNetworkName: "KUBE-3"
 ```
 
 ### VsphereInstanceClass custom resource
