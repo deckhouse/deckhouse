@@ -1,4 +1,4 @@
-{{- if or (.Values.userAuthn.publishAPI) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if or (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.kubeconfigGenerator) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
