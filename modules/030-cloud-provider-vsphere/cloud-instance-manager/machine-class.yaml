@@ -9,6 +9,7 @@ spec:
   zone:  {{ .zoneName | quote }}
   numCPUs: {{ .instanceGroup.instanceClass.numCPUs }}
   memory: {{ .instanceGroup.instanceClass.memory }}
+  rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
   template: {{ .instanceGroup.instanceClass.template | quote }}
   virtualMachineFolder: {{ .instanceGroup.instanceClass.virtualMachineFolder | quote }}
   network: {{ .instanceGroup.instanceClass.network | quote }}
