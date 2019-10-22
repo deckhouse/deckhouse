@@ -30,6 +30,7 @@ spec:
           required:
           - numCPUs
           - memory
+          - rootDiskSize
           - template
           - virtualMachineFolder
           - network
@@ -42,6 +43,10 @@ spec:
             memory:
               description: Memory in MiB to allocate to vSphere VirtualMachines.
               example: 8192
+              type: integer
+            rootDiskSize:
+              description: Root disk size in GiB to use in vSphere VirtualMachines.
+              example: 20
               type: integer
             template:
               description: Path to the template to be cloned. Relative to the datacenter.
