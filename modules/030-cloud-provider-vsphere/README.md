@@ -94,6 +94,8 @@ cloudProviderVsphere: |
     * Формат — integer
 * `memory` — количество памяти, выделенных VirtualMachine.
     * Формат — integer. В мебибайтах.
+* `rootDiskSize` — размер корневого диска в VirtualMachine. Если в template диск меньше, автоматически произойдёт его расширение.
+    * Формат — integer. В гибибайтах.
 * `template` — путь до VirtualMachine Template, который будет склонирован для создания новой VirtualMachine.
     * Пример — `dev/golden_image`
 * `virtualMachineFolder` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
@@ -123,6 +125,7 @@ metadata:
 spec:
   numCPUs: 2
   memory: 2048
+  rootDiskSize: 20
   template: dev/golden_image
   virtualMachineFolder: dev
   network: k8s-msk-178
@@ -148,6 +151,8 @@ StorageClass будет создан автоматически для кажд�
         * На Cluster **необходимо** "повесить" тэг из категории тэгов, указанный в `zoneTagCategory` (по-умолчанию, `k8s-zone`). Этот тэг будет обозначать **зону**.
     5. Folder для создаваемых VirtualMachines.
         * Опциональный. По-умолчанию будет использоваться root vm папка.
+    6. Создать роль с необходимым [набором](#Список-привилегий-для-использования-модуля) прав.
+    7. Создать пользователя, привязав к нему роль из пункта #6.
 
 4. На созданный Datacenter **необходимо** "повесить" тэг из категории тэгов, указанный в `regionTagCategory` (по-умолчанию, `k8s-region`). Этот тэг будет обозначать **регион**.
 5. Настроенная(-ые) Kubernetes master ноды. [Пример](install-kubernetes/common/ansible/kubernetes/tasks/master.yml) настройки ОС для master'а через kubeadm. Для созданных vSphere VirtualMachine прописать extraConfig согласно [инструкции](modules/030-cloud-provider-vsphere/docs/csi/disk_uuid.md).
@@ -158,3 +163,118 @@ StorageClass будет создан автоматически для кажд�
 2. [Установите](#включение-модуля) deckhouse с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
 3. [Создайте](#VsphereInstanceClass-custom-resource) один или несколько `VsphereInstanceClass`
 4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [cloud-instance-manager](modules/040-cloud-instance-manager).
+
+## Список привилегий для использования модуля
+
+```none
+Datastore.AllocateSpace
+Datastore.FileManagement
+Global.GlobalTag
+Global.SystemTag
+InventoryService.Tagging.AttachTag
+InventoryService.Tagging.CreateCategory
+InventoryService.Tagging.CreateTag
+InventoryService.Tagging.DeleteCategory
+InventoryService.Tagging.DeleteTag
+InventoryService.Tagging.EditCategory
+InventoryService.Tagging.EditTag
+InventoryService.Tagging.ModifyUsedByForCategory
+InventoryService.Tagging.ModifyUsedByForTag
+Network.Assign
+Resource.AssignVMToPool
+StorageProfile.View
+System.Anonymous
+System.Read
+System.View
+VirtualMachine.Config.AddExistingDisk
+VirtualMachine.Config.AddNewDisk
+VirtualMachine.Config.AddRemoveDevice
+VirtualMachine.Config.AdvancedConfig
+VirtualMachine.Config.Annotation
+VirtualMachine.Config.CPUCount
+VirtualMachine.Config.ChangeTracking
+VirtualMachine.Config.DiskExtend
+VirtualMachine.Config.DiskLease
+VirtualMachine.Config.EditDevice
+VirtualMachine.Config.HostUSBDevice
+VirtualMachine.Config.ManagedBy
+VirtualMachine.Config.Memory
+VirtualMachine.Config.MksControl
+VirtualMachine.Config.QueryFTCompatibility
+VirtualMachine.Config.QueryUnownedFiles
+VirtualMachine.Config.RawDevice
+VirtualMachine.Config.ReloadFromPath
+VirtualMachine.Config.RemoveDisk
+VirtualMachine.Config.Rename
+VirtualMachine.Config.ResetGuestInfo
+VirtualMachine.Config.Resource
+VirtualMachine.Config.Settings
+VirtualMachine.Config.SwapPlacement
+VirtualMachine.Config.ToggleForkParent
+VirtualMachine.Config.UpgradeVirtualHardware
+VirtualMachine.GuestOperations.Execute
+VirtualMachine.GuestOperations.Modify
+VirtualMachine.GuestOperations.ModifyAliases
+VirtualMachine.GuestOperations.Query
+VirtualMachine.GuestOperations.QueryAliases
+VirtualMachine.Hbr.ConfigureReplication
+VirtualMachine.Hbr.MonitorReplication
+VirtualMachine.Hbr.ReplicaManagement
+VirtualMachine.Interact.AnswerQuestion
+VirtualMachine.Interact.Backup
+VirtualMachine.Interact.ConsoleInteract
+VirtualMachine.Interact.CreateScreenshot
+VirtualMachine.Interact.CreateSecondary
+VirtualMachine.Interact.DefragmentAllDisks
+VirtualMachine.Interact.DeviceConnection
+VirtualMachine.Interact.DisableSecondary
+VirtualMachine.Interact.DnD
+VirtualMachine.Interact.EnableSecondary
+VirtualMachine.Interact.GuestControl
+VirtualMachine.Interact.MakePrimary
+VirtualMachine.Interact.Pause
+VirtualMachine.Interact.PowerOff
+VirtualMachine.Interact.PowerOn
+VirtualMachine.Interact.PutUsbScanCodes
+VirtualMachine.Interact.Record
+VirtualMachine.Interact.Replay
+VirtualMachine.Interact.Reset
+VirtualMachine.Interact.SESparseMaintenance
+VirtualMachine.Interact.SetCDMedia
+VirtualMachine.Interact.SetFloppyMedia
+VirtualMachine.Interact.Suspend
+VirtualMachine.Interact.TerminateFaultTolerantVM
+VirtualMachine.Interact.ToolsInstall
+VirtualMachine.Interact.TurnOffFaultTolerance
+VirtualMachine.Inventory.Create
+VirtualMachine.Inventory.CreateFromExisting
+VirtualMachine.Inventory.Delete
+VirtualMachine.Inventory.Move
+VirtualMachine.Inventory.Register
+VirtualMachine.Inventory.Unregister
+VirtualMachine.Namespace.Event
+VirtualMachine.Namespace.EventNotify
+VirtualMachine.Namespace.Management
+VirtualMachine.Namespace.ModifyContent
+VirtualMachine.Namespace.Query
+VirtualMachine.Namespace.ReadContent
+VirtualMachine.Provisioning.Clone
+VirtualMachine.Provisioning.CloneTemplate
+VirtualMachine.Provisioning.CreateTemplateFromVM
+VirtualMachine.Provisioning.Customize
+VirtualMachine.Provisioning.DeployTemplate
+VirtualMachine.Provisioning.DiskRandomAccess
+VirtualMachine.Provisioning.DiskRandomRead
+VirtualMachine.Provisioning.FileRandomAccess
+VirtualMachine.Provisioning.GetVmFiles
+VirtualMachine.Provisioning.MarkAsTemplate
+VirtualMachine.Provisioning.MarkAsVM
+VirtualMachine.Provisioning.ModifyCustSpecs
+VirtualMachine.Provisioning.PromoteDisks
+VirtualMachine.Provisioning.PutVmFiles
+VirtualMachine.Provisioning.ReadCustSpecs
+VirtualMachine.State.CreateSnapshot
+VirtualMachine.State.RemoveSnapshot
+VirtualMachine.State.RenameSnapshot
+VirtualMachine.State.RevertToSnapshot
+```
