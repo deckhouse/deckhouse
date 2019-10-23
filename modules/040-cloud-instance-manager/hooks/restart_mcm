@@ -1,0 +1,23 @@
+#!/bin/bash
+
+### Костыль 2019-10-23
+# Так как machine controller manager течет по CPU, то мы будем рестартить его раз в 2 часа.
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  echo '
+{
+  "schedule": [
+    {
+      "crontab": "19 */2 * * *"
+    }
+  ]
+}'
+}
+
+function __main__() {
+  kubectl -n d8-cloud-instance-manager delete pod -l app=machine-controller-manager
+}
+
+hook::run "$@"
