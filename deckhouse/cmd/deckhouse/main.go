@@ -5,7 +5,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	"github.com/romana/rlog"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	shell_operator_app "github.com/flant/shell-operator/pkg/app"
@@ -38,19 +38,20 @@ func main() {
 	shell_operator_app.Version = ShellOperatorVersion
 	addon_operator_app.Version = AddonOperatorVersion
 
-	rlog.Infof("deckhouse %s (shell-operator %s, addon-operator %s)", DeckhouseVersion, ShellOperatorVersion, AddonOperatorVersion)
-
 	kpApp := kingpin.New(app.AppName, fmt.Sprintf("%s %s: %s", app.AppName, DeckhouseVersion, app.AppDescription))
 
-	// global defaults
-	app.SetupGlobalSettings(kpApp)
-	// set global options for addon-operator
+	// Add global flags
+	shell_operator_app.SetupGlobalSettings(kpApp)
 	addon_operator_app.SetupGlobalSettings(kpApp)
+	app.SetupGlobalSettings(kpApp)
 
 	// start main loop
 	kpApp.Command("start", "Start deckhouse.").
 		Default().
 		Action(func(c *kingpin.ParseContext) error {
+			shell_operator_app.SetupLogging()
+			log.Infof("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
+
 			// Be a good parent - clean up after the child processes
 			// in case if addon-operator is a PID 1 process.
 			go executor.Reap()

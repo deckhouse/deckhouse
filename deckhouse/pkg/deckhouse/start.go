@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/romana/rlog"
+	log "github.com/sirupsen/logrus"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 
@@ -15,18 +15,17 @@ import (
 
 // Start runs registry watcher and start addon_operator
 func Start() {
-	rlog.Debug("DECKHOUSE: Start")
-
-	// BeforeHelmInitCb is called when kube client is initialized and metrics storage is started
+	// WatchRegistry requires kubernetes api client and metrics storage.
+	// BeforeHelmInitCb is called when kubernetes client and metrics storage are available
 	addon_operator.BeforeHelmInitCb = func() {
 		if app.FeatureWatchRegistry == "yes" {
 			err := StartWatchRegistry()
 			if err != nil {
-				rlog.Errorf("Cannot start watch registry: %s", err)
+				log.Errorf("Cannot start watch registry: %s", err)
 				os.Exit(1)
 			}
 		} else {
-			rlog.Debugf("Deckhouse: registry manager disabled with DECKHOUSE_WATCH_REGISTRY=%s.", app.FeatureWatchRegistry)
+			log.Debugf("Deckhouse: registry manager disabled with DECKHOUSE_WATCH_REGISTRY=%s.", app.FeatureWatchRegistry)
 		}
 	}
 
@@ -46,7 +45,7 @@ func StartWatchRegistry() error {
 		addon_operator.MetricsStorage.SendCounterMetric("deckhouse_registry_errors", 1.0, map[string]string{})
 		nowTime := time.Now()
 		if LastSuccessTime.Add(app.RegistryErrorsMaxTimeBeforeRestart).Before(nowTime) {
-			rlog.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
+			log.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
 			os.Exit(1)
 		}
 		return
@@ -59,7 +58,7 @@ func StartWatchRegistry() error {
 
 	err := RegistryManager.Init()
 	if err != nil {
-		rlog.Errorf("MAIN Fatal: Cannot initialize registry manager: %s", err)
+		log.Errorf("Initialize registry manager: %s", err)
 		return err
 	}
 	go RegistryManager.Run()
@@ -71,7 +70,7 @@ func StartWatchRegistry() error {
 func UpdateDeploymentImage(newImageId string) {
 	deployment, err := GetDeploymentOfCurrentPod()
 	if err != nil {
-		rlog.Errorf("KUBE get current deployment: %s", err)
+		log.Errorf("Get deployment of current pod: %s", err)
 		return
 	}
 
@@ -79,11 +78,11 @@ func UpdateDeploymentImage(newImageId string) {
 
 	err = UpdateDeployment(deployment)
 	if err != nil {
-		rlog.Errorf("KUBE deployment update error: %s", err)
+		log.Errorf("Update Deployment/%s error: %s", deployment.Name, err)
 		return
 	}
 
-	rlog.Infof("KUBE deployment update successful, exiting ...")
+	log.Infof("Update Deployment/%s is successful, exiting ...", deployment.Name)
 	os.Exit(1)
 }
 
@@ -110,7 +109,7 @@ func NormalizeLabelValue(value string) string {
 func GetCurrentPodImageInfo() (imageName string, imageId string) {
 	res, err := GetCurrentPod()
 	if err != nil {
-		rlog.Debugf("KUBE Get current pod info: %v", err)
+		log.Debugf("Get current pod info: %v", err)
 		return "", ""
 	}
 
