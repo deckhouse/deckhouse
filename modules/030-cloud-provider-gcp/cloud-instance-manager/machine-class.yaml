@@ -12,7 +12,7 @@ spec:
   disks:
   - autoDelete: true
     boot: true
-    sizeGb: {{ .instanceGroup.instanceClass.diskSizeGb | default 50 }}
+    sizeGb: {{ .instanceGroup.instanceClass.diskSizeGb | default 20 }}
     type: {{ .instanceGroup.instanceClass.diskType | default "pd-standard" | quote }}
     image: {{ .instanceGroup.instanceClass.image | quote }}
   serviceAccounts:
@@ -29,7 +29,7 @@ spec:
     preemptible: {{ .instanceGroup.instanceClass.preemptible | default false }}
   metadata:
   - key: ssh-keys
-    value: "ubuntu:{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshKey }}"
+    value: "{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshUser }}:{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshKey }}"
   tags:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
   - kubernetes-io-cluster-deckhouse-{{ .Values.global.project }}-{{ .Values.global.clusterName }}

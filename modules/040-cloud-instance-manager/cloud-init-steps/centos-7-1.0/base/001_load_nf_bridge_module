@@ -1,0 +1,3 @@
+#!/bin/bash
+
+modprobe br_netfilter

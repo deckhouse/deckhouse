@@ -1,0 +1,73 @@
+#!/bin/bash -e
+
+yum install -y 'docker-ce-18.09*' 'docker-ce-cli-18.09*' containerd.io
+
+mkdir -p /etc/docker
+cat << "EOF" > /etc/docker/daemon.json
+{
+        "log-driver": "json-file",
+        "log-opts": {
+                "max-file": "5",
+                "max-size": "10m"
+        }
+}
+EOF
+
+# Configure log rotation for all logs in /var/lib/docker/containers/*/*.log, which is where docker containers
+# are configured to write their log files. Whenever logrotate is ran, this
+# config will:
+# * rotate the log file if its size is > 100Mb OR if one day has elapsed
+# * save rotated logs into a gzipped timestamped backup
+# * log file timestamp (controlled by 'dateformat') includes seconds too. This
+#   ensures that logrotate can generate unique logfiles during each rotation
+#   (otherwise it skips rotation if 'maxsize' is reached multiple times in a
+#   day).
+# * keep only 14 old (rotated) logs, and will discard older logs.
+cat << "EOF" > /etc/logrotate.d/docker-containers
+/var/lib/docker/containers/*/*.log {
+    rotate 14
+    copytruncate
+    missingok
+    notifempty
+    compress
+    maxsize 100M
+    daily
+    dateext
+    dateformat -%Y%m%d-%s
+    create 0644 root root
+}
+EOF
+
+
+
+cat << "EOF" > /etc/systemd/system/docker-logrotate.service
+[Unit]
+Description=Rotate and Compress System Logs
+
+[Service]
+ExecStart=/usr/sbin/logrotate /etc/docker-logrotate.conf
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat << "EOF" > /etc/systemd/system/docker-logrotate.timer
+[Unit]
+Description=Log Rotation at each 10 minutes
+
+[Timer]
+OnCalendar=*:0/10
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
+units="docker-logrotate.service docker-logrotate.timer docker.service"
+
+for unit in $units; do
+  systemctl enable "$unit" && systemctl restart "$unit"
+done
