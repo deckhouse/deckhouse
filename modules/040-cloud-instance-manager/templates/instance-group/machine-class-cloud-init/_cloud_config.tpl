@@ -3,7 +3,7 @@
   {{- $ig := index . 1 }}
   {{- $zone_name := index . 2 -}}
 #cloud-config
-apt_update: True
+package_update: True
 packages: ['jq']
 write_files:
 - path: '/var/lib/machine-bootstrap/ca.crt'

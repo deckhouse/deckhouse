@@ -7,7 +7,6 @@
 #!/bin/bash
 
 set -Eeuo pipefail
-shopt -s inherit_errexit
 shopt -s failglob
 
 BOOTSTRAP_DIR="/var/lib/machine-bootstrap"
@@ -69,7 +68,6 @@ for step in $(ls -1 $BOOTSTRAP_DIR/steps/ | sort); do
   while true; do
     if ! (
       set -Eeuo pipefail
-      shopt -s inherit_errexit
       shopt -s failglob
 
       . $BOOTSTRAP_DIR/steps/$step

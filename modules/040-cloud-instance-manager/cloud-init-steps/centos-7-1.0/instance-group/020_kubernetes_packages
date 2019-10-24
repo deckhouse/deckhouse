@@ -1,0 +1,5 @@
+#!/bin/bash
+
+{{- $kubernetes_version := .instanceGroup.instanceClass.cloudInitSteps.options.kubernetesVersion | default .Values.cloudInstanceManager.internal.cloudInitSteps.options.kubernetesVersion }}
+
+yum install -y "kubelet-{{ $kubernetes_version }}*"

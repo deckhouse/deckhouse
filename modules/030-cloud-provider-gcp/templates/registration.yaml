@@ -21,6 +21,7 @@ data:
   {{- $_ := set $gcpValues "networkName" .Values.cloudProviderGcp.networkName }}
   {{- $_ := set $gcpValues "subnetworkName" .Values.cloudProviderGcp.subnetworkName }}
   {{- $_ := set $gcpValues "sshKey" .Values.cloudProviderGcp.sshKey }}
+  {{- $_ := set $gcpValues "sshUser" .Values.cloudProviderGcp.sshUser }}
   {{- $_ := set $gcpValues "extraInstanceTags" .Values.cloudProviderGcp.extraInstanceTags }}
   gcp: {{ $gcpValues | toJson | b64enc | quote }}
 {{- end }}
