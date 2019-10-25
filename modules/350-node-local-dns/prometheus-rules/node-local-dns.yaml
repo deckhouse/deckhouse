@@ -14,7 +14,7 @@
         Check its logs.
 
   - alert: NodeLocalDnsSidecarHasHung
-    expr: max(min_over_time(shell_operator_tasks_queue_length{job="node-local-dns"}[5m])) > 4
+    expr: max by (node) (min_over_time(shell_operator_tasks_queue_length{job="node-local-dns"}[5m])) > 4
     for: 1m
     labels:
       likelihood: certain
