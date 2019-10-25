@@ -74,7 +74,7 @@ spec:
   - name: kernel.version
     rules:
     - alert: UbuntuUnsupportedKernel
-      expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*"})
+      expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*", os_image=~".*(Ubuntu|ubuntu).*"})
       for: 20m
       labels:
         impact: negligible
