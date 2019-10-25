@@ -35,9 +35,9 @@
 * `serviceAccountKey` — ключ к Service Account'у с правами Project Admin.
     * Формат — строка c JSON.
     * [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys).
-* `provisionExternalIP` — bool. Прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `false`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
-    * Опциональный параметр.
-    * По-умолчанию `false`.
+* `disableExternalIP` — прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `true`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
+    * Формат — bool. Опциональный параметр.
+    * По-умолчанию `true`.
 
 #### Пример конфигурации:
 
@@ -53,7 +53,7 @@ cloudProviderGcp: |
   - europe-north1-c
   extraInstanceTags:
   - kube
-  provisionExternalIP: true
+  disableExternalIP: false
   sshKey: "ssh-rsa testetestest"
   serviceAccountKey: |
     {
