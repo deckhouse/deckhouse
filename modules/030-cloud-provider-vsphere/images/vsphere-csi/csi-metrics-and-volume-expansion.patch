@@ -1,8 +1,8 @@
 diff --git a/go.mod b/go.mod
-index 8cd71fd..261a79e 100644
+index 8cd71fd..9fa2003 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -2,24 +2,28 @@ module sigs.k8s.io/vsphere-csi-driver
+@@ -2,24 +2,29 @@ module sigs.k8s.io/vsphere-csi-driver
  
  go 1.12
  
@@ -16,6 +16,7 @@ index 8cd71fd..261a79e 100644
 +	github.com/container-storage-interface/spec v1.1.0
  	github.com/google/uuid v1.1.1 // indirect
  	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
++	github.com/hashicorp/go-version v1.2.0
  	github.com/imdario/mergo v0.3.7 // indirect
  	github.com/onsi/ginkgo v1.8.0
  	github.com/onsi/gomega v1.4.3
@@ -30,7 +31,7 @@ index 8cd71fd..261a79e 100644
 +	github.com/vmware/govmomi v0.21.1-0.20191021230255-674286cbacce
 +	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
 +	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
-+	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7 // indirect
++	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7
 +	golang.org/x/text v0.3.2 // indirect
  	google.golang.org/grpc v1.19.0
 -	k8s.io/cloud-provider-vsphere v0.1.2-0.20190402145035-39e2b5e81d7e
@@ -40,7 +41,7 @@ index 8cd71fd..261a79e 100644
 +	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7
  )
 diff --git a/go.sum b/go.sum
-index 33a6fc8..eb0a27a 100644
+index 33a6fc8..7bebc8d 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,9 +1,6 @@
@@ -53,7 +54,7 @@ index 33a6fc8..eb0a27a 100644
  github.com/NYTimes/gziphandler v1.0.1/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
  github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
  github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-@@ -13,101 +10,112 @@ github.com/akutz/gosync v0.1.0 h1:naxPT/aDYDh79PMwM3XmencmNQeYmpNFSZy4ZE9zIW0=
+@@ -13,101 +10,113 @@ github.com/akutz/gosync v0.1.0 h1:naxPT/aDYDh79PMwM3XmencmNQeYmpNFSZy4ZE9zIW0=
  github.com/akutz/gosync v0.1.0/go.mod h1:I8I4aiqJI1nqaeYOOB1WS+CgRJVVPqhct9Y4njywM84=
  github.com/akutz/memconn v0.1.0 h1:NawI0TORU4hcOMsMr11g7vwlCdkYeLKXBcxWu2W/P8A=
  github.com/akutz/memconn v0.1.0/go.mod h1:Jo8rI7m0NieZyLI5e2CDlRdRqRRB4S7Xp77ukDjH+Fw=
@@ -136,7 +137,7 @@ index 33a6fc8..eb0a27a 100644
  github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
  github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf h1:+RRA9JqSOZFfKrOeqr2z77+8R2RKyh8PG66dcu1V0ck=
  github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf/go.mod h1:HP5RmnzzSNb993RKQDq4+1A4ia9nllfqcQFTQJedwGI=
- github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+-github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 -github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 +github.com/google/uuid v0.0.0-20170306145142-6a5e28554805/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
  github.com/google/uuid v1.1.1 h1:Gkbcsh/GbpXz7lPftLA3P6TYMwjCLYm83jiFQZF/3gY=
@@ -160,6 +161,8 @@ index 33a6fc8..eb0a27a 100644
  github.com/grpc-ecosystem/grpc-gateway v1.8.2/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 +github.com/grpc-ecosystem/grpc-gateway v1.9.1 h1:LgwPEIdyJmF9Ug9nINVNspG6Z6P8/TM0yKdQ5h3VQaQ=
 +github.com/grpc-ecosystem/grpc-gateway v1.9.1/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
++github.com/hashicorp/go-version v1.2.0 h1:3vNe/fWF5CBgRIguda1meWhsZHy3m8gCJ5wx+dIzX/E=
++github.com/hashicorp/go-version v1.2.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
  github.com/hashicorp/golang-lru v0.0.0-20180201235237-0fb14efe8c47 h1:UnszMmmmm5vLwWzDjTFVIkfhvWF1NdrmChl8L2NUDCw=
  github.com/hashicorp/golang-lru v0.0.0-20180201235237-0fb14efe8c47/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 -github.com/hashicorp/golang-lru v0.5.0 h1:CL2msUPvZTLb5O648aiLNJw3hnBxN2+1Jq8rCOH9wdo=
@@ -186,7 +189,7 @@ index 33a6fc8..eb0a27a 100644
  github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
  github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
  github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
-@@ -122,11 +130,12 @@ github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 h1:Esafd1046DLD
+@@ -122,11 +131,12 @@ github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 h1:Esafd1046DLD
  github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
  github.com/modern-go/reflect2 v1.0.1 h1:9f412s+6RmYXLWZSEzVVgPGK7C2PphHj5RJrvfx9AWI=
  github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
@@ -201,7 +204,7 @@ index 33a6fc8..eb0a27a 100644
  github.com/onsi/gomega v1.4.3 h1:RE1xgDvH7imwFD45h+u2SgIfERHlS2yNG4DObb5BSKU=
  github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
  github.com/opencontainers/go-digest v1.0.0-rc1 h1:WzifXhOVOEOuFYOJAW6aQqW0TooG2iki3E3Ii+WN7gQ=
-@@ -135,20 +144,32 @@ github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c h1:MUyE44mTvnI5A0xrxI
+@@ -135,20 +145,32 @@ github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c h1:MUyE44mTvnI5A0xrxI
  github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c/go.mod h1:VyrYX9gd7irzKovcSS6BIIEwPRkP2Wm2m9ufcdFSJ34=
  github.com/peterbourgon/diskv v2.0.1+incompatible h1:UBdAOUP5p4RWqPBg048CAvpKN+vxiaj6gdUUzhl4XmI=
  github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
@@ -237,7 +240,7 @@ index 33a6fc8..eb0a27a 100644
  github.com/sirupsen/logrus v1.3.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
  github.com/sirupsen/logrus v1.4.1 h1:GL2rEmy6nsikmW0r8opw9JIRScdMF5hA8cOYLH7In1k=
  github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
-@@ -156,9 +177,9 @@ github.com/soheilhy/cmux v0.1.4 h1:0HKaf1o97UwFjHH9o5XsHUOF+tqmdA7KEzXLpiyaw0E=
+@@ -156,9 +178,9 @@ github.com/soheilhy/cmux v0.1.4 h1:0HKaf1o97UwFjHH9o5XsHUOF+tqmdA7KEzXLpiyaw0E=
  github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
  github.com/spf13/afero v1.2.1 h1:qgMbHoJbPbw579P+1zVY+6n4nIFuIchaIjzZ/I/Yq8M=
  github.com/spf13/afero v1.2.1/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
@@ -249,21 +252,17 @@ index 33a6fc8..eb0a27a 100644
  github.com/spf13/pflag v1.0.2 h1:Fy0orTDgHdbnzHcsOgfCN4LtHf0ec3wwtiwJqwvf3Gc=
  github.com/spf13/pflag v1.0.2/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
  github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-@@ -177,64 +198,74 @@ github.com/ugorji/go v1.1.1 h1:gmervu+jDMvXTbcHQ0pd2wee85nEoE0BsVyEuzkfK8w=
+@@ -175,66 +197,68 @@ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc
+ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
+ github.com/ugorji/go v1.1.1 h1:gmervu+jDMvXTbcHQ0pd2wee85nEoE0BsVyEuzkfK8w=
  github.com/ugorji/go v1.1.1/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
- github.com/vmware/govmomi v0.20.0 h1:+1IyhvoVb5JET2Wvgw9J3ZDv6CK4sxzUunpH8LhQqm4=
- github.com/vmware/govmomi v0.20.0/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
-+github.com/vmware/govmomi v0.20.3 h1:gpw/0Ku+6RgF3jsi7fnCLmlcikBHfKBCUcu1qgc16OU=
-+github.com/vmware/govmomi v0.20.3/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
+-github.com/vmware/govmomi v0.20.0 h1:+1IyhvoVb5JET2Wvgw9J3ZDv6CK4sxzUunpH8LhQqm4=
+-github.com/vmware/govmomi v0.20.0/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
 +github.com/vmware/govmomi v0.21.1-0.20191021230255-674286cbacce h1:d2Wukbr1ehTzqi2czUyMdj5Sv21Fuwo6/nJYBYt79ao=
 +github.com/vmware/govmomi v0.21.1-0.20191021230255-674286cbacce/go.mod h1:zbnFoBQ9GIjs2RVETy8CNEpb+L+Lwkjs3XZUL0B3/m0=
 +github.com/vmware/vmw-guestinfo v0.0.0-20170707015358-25eff159a728/go.mod h1:x9oS4Wk2s2u4tS29nEaDLdzvuHdB19CvSGJjPgkZJNk=
  github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
  github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
-+github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20191022074014-4dc2f9621226 h1:/waam/QrIuSgrrjiQ7KsUO6jivv03JBeHQ7i1bafQks=
-+github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20191022074014-4dc2f9621226/go.mod h1:NFJuq0wgbjt3jErnuYKg8bDHa9eI5hPzMg798WGS41w=
-+github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20191022141606-855c716355b8 h1:qPBmv76gE9byab3hF4dUby1kHuu+WnBs+mj4G37FYdc=
-+github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20191022141606-855c716355b8/go.mod h1:CoT8zl1qde1sT8W+mFrGn+vGMFGN2xJC3Xa/aaQH+Mc=
 +github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20191022141901-389db8581e09 h1:jLumseUQvwUduEBoPKRZK34LfGh1GR3V0o0PEEisfdg=
 +github.com/zuzzas/cloud-provider-vsphere v0.2.1-0.20191022141901-389db8581e09/go.mod h1:KgNphUHPP3sZFKqfGJblH52RybhsONck876mnAthTD8=
  go.etcd.io/bbolt v1.3.2 h1:Z/90sZLPOeCy2PwprqkFa25PdkusRzaj9P8zm/KNyvk=
@@ -348,7 +347,7 @@ index 33a6fc8..eb0a27a 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-@@ -242,8 +273,6 @@ gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
+@@ -242,8 +266,6 @@ gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
  gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
  gopkg.in/gcfg.v1 v1.2.3 h1:m8OOJ4ccYHnx2f4gQwpno8nAX5OGOh7RLaaz0pj3Ogs=
  gopkg.in/gcfg.v1 v1.2.3/go.mod h1:yesOnuUOFQAhST5vPY4nbZsb/huCgGGXlipJsBn0b3o=
@@ -357,7 +356,7 @@ index 33a6fc8..eb0a27a 100644
  gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
  gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
  gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
-@@ -260,46 +289,21 @@ gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+@@ -260,46 +282,21 @@ gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
  k8s.io/api v0.0.0-20180628040859-072894a440bd h1:HzgYeLDS1jLxw8DGr68KJh9cdQ5iZJizG0HZWstIhfQ=
  k8s.io/api v0.0.0-20180628040859-072894a440bd/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
@@ -529,21 +528,28 @@ index 17c037e..47772ca 100644
  	}
  	return rep, nil
 diff --git a/pkg/csi/service/node.go b/pkg/csi/service/node.go
-index 53d6b9f..21362cb 100644
+index 53d6b9f..bc590dd 100644
 --- a/pkg/csi/service/node.go
 +++ b/pkg/csi/service/node.go
-@@ -17,8 +17,10 @@ limitations under the License.
+@@ -17,19 +17,25 @@ limitations under the License.
  package service
  
  import (
 +	"bytes"
  	"fmt"
++	"golang.org/x/sys/unix"
  	"io/ioutil"
 +	"k8s.io/utils/exec"
  	"os"
  	"path"
  	"path/filepath"
-@@ -30,6 +32,7 @@ import (
++	"regexp"
+ 	"strings"
+ 
+ 	"github.com/akutz/gofsutil"
+ 	"github.com/container-storage-interface/spec/lib/go/csi"
++	goVersion "github.com/hashicorp/go-version"
+ 	log "github.com/sirupsen/logrus"
  	"golang.org/x/net/context"
  	"google.golang.org/grpc/codes"
  	"google.golang.org/grpc/status"
@@ -551,7 +557,18 @@ index 53d6b9f..21362cb 100644
  
  	"sigs.k8s.io/vsphere-csi-driver/pkg/csi/service/fcd"
  )
-@@ -338,7 +341,51 @@ func (s *service) NodeGetVolumeStats(
+@@ -40,6 +46,10 @@ const (
+ 	dmiDir      = "/sys/class/dmi"
+ )
+ 
++var (
++	kernelVersionRegex = regexp.MustCompile(`\d+\.\d+\.\d+`)
++)
++
+ func (s *service) NodeStageVolume(
+ 	ctx context.Context,
+ 	req *csi.NodeStageVolumeRequest) (
+@@ -338,7 +348,51 @@ func (s *service) NodeGetVolumeStats(
  	req *csi.NodeGetVolumeStatsRequest) (
  	*csi.NodeGetVolumeStatsResponse, error) {
  
@@ -604,7 +621,7 @@ index 53d6b9f..21362cb 100644
  }
  
  func (s *service) NodeGetCapabilities(
-@@ -355,6 +402,20 @@ func (s *service) NodeGetCapabilities(
+@@ -355,6 +409,20 @@ func (s *service) NodeGetCapabilities(
  					},
  				},
  			},
@@ -625,7 +642,7 @@ index 53d6b9f..21362cb 100644
  		},
  	}, nil
  }
-@@ -364,7 +425,7 @@ func (s *service) NodeGetInfo(
+@@ -364,7 +432,7 @@ func (s *service) NodeGetInfo(
  	req *csi.NodeGetInfoRequest) (
  	*csi.NodeGetInfoResponse, error) {
  
@@ -634,20 +651,94 @@ index 53d6b9f..21362cb 100644
  	if err != nil {
  		return nil, status.Errorf(codes.Internal,
  			"Unable to retrieve Node ID, err: %s", err)
-@@ -755,7 +816,12 @@ func getDiskID(volID string, pubCtx map[string]string) (string, error) {
- }
+@@ -728,7 +796,12 @@ func getSystemUUID() (string, error) {
  
- func convertUUID(id string) string {
--	// convert UUID to vSphere format
-+	// if product_uuid is uppercase, then it's correct already
-+	if id == strings.ToUpper(id) {
-+		return strings.ToLower(id)
+ 	id := strings.TrimSpace(string(idb))
+ 
+-	return convertUUID(id), nil
++	uuid, err := convertUUID(id)
++	if err != nil {
++		return "", err
 +	}
 +
-+	// otherwise, perform voodoo ritual
- 	uuid := fmt.Sprintf("%s%s%s%s-%s%s-%s%s-%s-%s",
- 		id[6:8], id[4:6], id[2:4], id[0:2],
- 		id[11:13], id[9:11],
++	return uuid, nil
+ }
+ 
+ func getDiskID(volID string, pubCtx map[string]string) (string, error) {
+@@ -754,15 +827,51 @@ func getDiskID(volID string, pubCtx map[string]string) (string, error) {
+ 	return diskID, nil
+ }
+ 
+-func convertUUID(id string) string {
+-	// convert UUID to vSphere format
+-	uuid := fmt.Sprintf("%s%s%s%s-%s%s-%s%s-%s-%s",
+-		id[6:8], id[4:6], id[2:4], id[0:2],
+-		id[11:13], id[9:11],
+-		id[16:18], id[14:16],
+-		id[19:23],
+-		id[24:36])
+-	return strings.ToLower(uuid)
++func convertUUID(id string) (string, error) {
++	linux415, err := goVersion.NewVersion("4.15")
++	linux418, err := goVersion.NewVersion("4.18")
++	linux50, err := goVersion.NewVersion("5.0")
++	if err != nil {
++		return "", err
++	}
++
++	var uname unix.Utsname
++	err = unix.Uname(&uname)
++	if err != nil {
++		return "", err
++	}
++
++	kernelVersionString := string(uname.Release[:])
++	kernelSemVer := kernelVersionRegex.FindString(kernelVersionString)
++	if kernelSemVer == "" {
++		return "", fmt.Errorf("regexp \"%s\" not matched: %s", kernelVersionRegex.String(), kernelVersionString)
++	}
++
++	kernelVersion, err := goVersion.NewVersion(kernelSemVer)
++	if err != nil {
++		return "", err
++	}
++
++	if kernelVersion.GreaterThanOrEqual(linux415) && kernelVersion.LessThan(linux418) {
++		return strings.ToLower(id), nil
++	}
++
++	if kernelVersion.GreaterThanOrEqual(linux418) && kernelVersion.LessThan(linux50) {
++		uuid := fmt.Sprintf("%s%s%s%s-%s%s-%s%s-%s-%s",
++			id[6:8], id[4:6], id[2:4], id[0:2],
++			id[11:13], id[9:11],
++			id[16:18], id[14:16],
++			id[19:23],
++			id[24:36])
++
++		return strings.ToLower(uuid), nil
++	}
++
++	if kernelVersion.GreaterThanOrEqual(linux50) {
++		return strings.ToLower(id), nil
++	}
++
++	return strings.ToLower(id), nil
+ }
+ 
+ func getDevFromMount(target string) (*Device, error) {
+diff --git a/pkg/csi/service/node_test.go b/pkg/csi/service/node_test.go
+index 8ead7c5..9ccd279 100644
+--- a/pkg/csi/service/node_test.go
++++ b/pkg/csi/service/node_test.go
+@@ -113,7 +113,7 @@ func TestConvertUUID(t *testing.T) {
+ 		tt := tt
+ 		t.Run("", func(st *testing.T) {
+ 			st.Parallel()
+-			result := convertUUID(tt.pre)
++			result, _ := convertUUID(tt.pre)
+ 			if result != tt.post {
+ 				t.Errorf("Expected: %s, got %s", tt.post, result)
+ 			}
 diff --git a/pkg/csi/service/service.go b/pkg/csi/service/service.go
 index cbfb10c..8a54858 100644
 --- a/pkg/csi/service/service.go
