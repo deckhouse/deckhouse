@@ -41,6 +41,7 @@ func main() {
 	kpApp := kingpin.New(app.AppName, fmt.Sprintf("%s %s: %s", app.AppName, DeckhouseVersion, app.AppDescription))
 
 	// Add global flags
+	shell_operator_app.LogType = "json"
 	shell_operator_app.SetupGlobalSettings(kpApp)
 	addon_operator_app.SetupGlobalSettings(kpApp)
 	app.SetupGlobalSettings(kpApp)
