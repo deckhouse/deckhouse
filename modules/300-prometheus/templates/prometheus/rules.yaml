@@ -74,7 +74,7 @@ spec:
   - name: kernel.version
     rules:
     - alert: UbuntuUnsupportedKernel
-      expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*", os_image=~".*(Ubuntu|ubuntu).*"})
+      expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*|5\\..*", os_image=~".*(Ubuntu|ubuntu).*"})
       for: 20m
       labels:
         impact: negligible
@@ -84,5 +84,5 @@ spec:
         description: |-
           Unsupported kernel version of ubuntu OS on {{`{{$labels.node}}`}}.
           * For actual supported Ubuntu 16.04 kernel launch: `apt install linux-image-unsigned-4.18.0-20-generic linux-modules-4.18.0-20-generic linux-modules-extra-4.18.0-20-generic linux-headers-4.18.0-20-generic linux-headers-4.18.0-20`
-          * For actual supported Ubuntu 18.04 kernel launch: `apt install -y linux-generic-hwe-18.04 linux-headers-generic-hwe-18.04 linux-image-generic-hwe-18.04`
+          * For actual supported Ubuntu 18.04 just install latest 5.* kernel
 {{- end }}
