@@ -43,7 +43,7 @@ function __main__() {
   function update_instance_group() {
     if ! ig_specs=$(kubectl get cig "$1" -o json 2>/dev/null | jq -cr '.spec') ; then
       # CloudInstanceGroup object was deleted
-      return 1
+      exit 0
     fi
     zones=$(values::get --required cloudInstanceManager.internal.cloudProvider.zones | jq 'length')
     max=$(( $(echo "$ig_specs" | jq -r '.maxInstancesPerZone') * zones ))
@@ -65,27 +65,28 @@ function __main__() {
 
   if [[ "$kind" == "CloudInstanceGroup" ]]; then
     update_instance_group "$name"
-  else
-    if ! ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -ojsonpath="{.metadata.labels.instance-group}" 2>/dev/null); then
-      # MachineDeployment object was deleted or has no associated instance-group
-      exit 0
-    fi
-    if ! kubectl get cig "$ig" -o json >/dev/null 2>/dev/null ; then
-      # CloudInstanceGroup object was deleted
-      exit 0
-    fi
-    desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
-      | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
-
-    machines=$(kubectl -n d8-cloud-instance-manager get machine -o json \
-      | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]" | jq 'length')
-
-    nodes_in_ig=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json)
-    nodes=$(echo "$nodes_in_ig" | jq -r '.items | length')
-    ready=$(echo "$nodes_in_ig" | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
-
-    update_status "$ig" "$(jo desired=$desired machines=$machines nodes=$nodes ready=$ready)"
+    exit 0
   fi
+
+  if ! ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -ojsonpath="{.metadata.labels.instance-group}" 2>/dev/null); then
+    # MachineDeployment object was deleted or has no associated instance-group
+    exit 0
+  fi
+  if ! kubectl get cig "$ig" -o json >/dev/null 2>/dev/null ; then
+    # CloudInstanceGroup object was deleted
+    exit 0
+  fi
+  desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
+    | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
+
+  machines=$(kubectl -n d8-cloud-instance-manager get machine -o json \
+    | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]" | jq 'length')
+
+  nodes_in_ig=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json)
+  nodes=$(echo "$nodes_in_ig" | jq -r '.items | length')
+  ready=$(echo "$nodes_in_ig" | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
+
+  update_status "$ig" "$(jo desired=$desired machines=$machines nodes=$nodes ready=$ready)"
 }
 
 hook::run "$@"
