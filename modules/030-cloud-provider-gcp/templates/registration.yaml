@@ -23,5 +23,6 @@ data:
   {{- $_ := set $gcpValues "sshKey" .Values.cloudProviderGcp.sshKey }}
   {{- $_ := set $gcpValues "sshUser" .Values.cloudProviderGcp.sshUser }}
   {{- $_ := set $gcpValues "extraInstanceTags" .Values.cloudProviderGcp.extraInstanceTags }}
+  {{- $_ := set $gcpValues "disableExternalIP" .Values.cloudProviderGcp.disableExternalIP }}
   gcp: {{ $gcpValues | toJson | b64enc | quote }}
 {{- end }}
