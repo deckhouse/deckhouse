@@ -36,7 +36,9 @@ rules:
   - ""
   resources:
   - services
+  - services/status
   verbs:
+  - get
   - list
   - patch
   - update
@@ -72,6 +74,10 @@ rules:
   - get
   - list
   - watch
+  - create
+  - update
+  - delete
+  - patch
 - apiGroups:
   - ""
   resources:
