@@ -4,7 +4,7 @@
   {{- if eq $provider.type "Crowd" }}
     {{- if $provider.crowd.enableBasicAuth }}
       {{- if $crowd_config }}
-        {{- required "enableBasicAuth option must be enabled ONLY in one Atlassian Crowd provider" .error }}
+        {{- fail "enableBasicAuth option must be enabled ONLY in one Atlassian Crowd provider" }}
       {{- end }}
       {{- $crowd_config = $provider.crowd }}
     {{- end }}
