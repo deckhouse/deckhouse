@@ -128,7 +128,7 @@ data:
       * По-умолчанию `sub`.
     * `userNameKey` — [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения имени пользователя;
       * По-умолчанию `name`.  
-* `publishAPI` — настройки публикации API-сервера, чреез ingress:
+* `publishAPI` — настройки публикации API-сервера, чeрез ingress:
   * `enable` — если выставить данный параметр в `true`, то в кластере будет создан ingress в namespace d8-user-authn, который выставляет Kubernetes API наружу.
     * По-умолчанию: `false`.
   * `https` — режим работы https для ingress'а API-сервера:
@@ -165,8 +165,9 @@ data:
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * `ingressClass` — класс ingress контроллера, который используется для dex и kubeconfig-generator.
   * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
-* `https` — выбираем, какой типа сертификата использовать для dex и kubeconfig-generator.
-  * `mode` - режим работы HTTPS:
+* `https` — выбираем, какой тип сертификата использовать для dex и kubeconfig-generator.
+  * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+  * `mode` — режим работы HTTPS:
     * `Disabled` — при данном значении модуль автоматически отключается.
     * `CertManager` — dex и kubeconfig-generator будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
     * `CustomCertificate` — dex и kubeconfig-generator будут работать по https используя сертификат из namespace `d8-system`;
