@@ -99,6 +99,7 @@ prometheus: |
 * `ingressClass` — класс ingress контроллера, который используется для grafana/prometheus.
     * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
 * `https` — выбираем, какой типа сертификата использовать для grafana/prometheus.
+    * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     * `mode` — режим работы HTTPS:
         * `Disabled` — в данном режиме grafana/prometheus будут работать только по http;
         * `CertManager` — grafana/prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;

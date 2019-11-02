@@ -10,62 +10,66 @@
   {{- end -}}
 {{- end -}}
 
-{{- /* Usage: {{ if (include "helm_lib_module_https_mode" .) }} */ -}}
-{{- define "helm_lib_module_https_mode" -}}
+{{- /* Usage: {{ $https_values := include "helm_lib_https_values" . | fromYaml }} */ -}}
+{{- define "helm_lib_https_values" -}}
   {{- $context := . -}}
-
   {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
-  {{- $result := "" -}}
+  {{- $mode := "" -}}
+  {{- $certManagerClusterIssuerName := "" -}}
 
   {{- if hasKey $module_values "https" -}}
     {{- if hasKey $module_values.https "mode" -}}
-        {{- $result = $module_values.https.mode -}}
+      {{- $mode = $module_values.https.mode -}}
+      {{- if eq $mode "CertManager" -}}
+        {{- if not (hasKey $module_values.https "certManager") -}}
+          {{- cat "<module>.https.certManager.clusterIssuerName is mandatory when <module>.https.mode is set to CertManager" | fail -}}
+        {{- end -}}
+        {{- if hasKey $module_values.https.certManager "clusterIssuerName" -}}
+          {{- $certManagerClusterIssuerName = $module_values.https.certManager.clusterIssuerName -}}
+        {{- else -}}
+          {{- cat "<module>.https.certManager.clusterIssuerName is mandatory when <module>.https.mode is set to CertManager" | fail -}}
+        {{- end -}}
+      {{- end -}}
+    {{- else -}}
+      {{- cat "<module>.https.mode is mandatory when <module>.https is defined" | fail -}}
     {{- end -}}
-  {{- else if hasKey $context.Values.global.modules.https "mode" -}}
-      {{- $result = $context.Values.global.modules.https.mode -}}
   {{- end -}}
 
-  {{- if empty $result -}}
-    {{- cat "modules.https.mode is not defined neither globally nor in module" | fail -}}
-  {{- else if and (eq $result "CertManager") (not ($context.Values.global.enabledModules | has "cert-manager")) -}}
-    {{- cat "https.mode has value CertManager but cert-manager module not enabled" | fail -}}
-  {{- else -}}
-    {{- $result -}}
+  {{- if empty $mode -}}
+    {{- $mode = $context.Values.global.modules.https.mode -}}
+    {{- if eq $mode "CertManager" -}}
+      {{- $certManagerClusterIssuerName = $context.Values.global.modules.https.certManager.clusterIssuerName -}}
+    {{- end -}}
   {{- end -}}
+
+  {{- if not (has $mode (list "Disabled" "CertManager" "CustomCertificate" "OnlyInURI")) -}}
+    {{- cat "Unknown https.mode:" $mode | fail -}}
+  {{- end -}}
+
+  {{- if and (eq $mode "CertManager") (not ($context.Values.global.enabledModules | has "cert-manager")) -}}
+    {{- cat "https.mode has value CertManager but cert-manager module not enabled" | fail -}}
+  {{- end -}}
+
+mode: {{ $mode }}
+  {{- if eq $mode "CertManager" }}
+certManager:
+  clusterIssuerName: {{ $certManagerClusterIssuerName }}
+  {{- end -}}
+
+{{- end -}}
+
+{{- /* Usage: {{ if (include "helm_lib_module_https_mode" .) }} */ -}}
+{{- define "helm_lib_module_https_mode" -}}
+  {{- $context := . -}}
+  {{- $https_values := include "helm_lib_https_values" $context | fromYaml -}}
+  {{- $https_values.mode -}}
 {{- end -}}
 
 {{- /* Usage: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }} */ -}}
 {{- define "helm_lib_module_https_cert_manager_cluster_issuer_name" -}}
   {{- $context := . -}}
-
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
-  {{- $result := "" -}}
-
-  {{- if hasKey $module_values "https" -}}
-    {{- if hasKey $module_values.https "mode" -}}
-      {{- if eq $module_values.https.mode "CertManager" -}}
-        {{- if hasKey $module_values.https "certManager" -}}
-          {{- if hasKey $module_values.https.certManager "clusterIssuerName" -}}
-            {{- $result = $module_values.https.certManager.clusterIssuerName -}}
-          {{- end -}}
-        {{- end -}}
-      {{- end -}}
-    {{- end -}}
-  {{- else if hasKey $context.Values.global.modules.https "mode" -}}
-    {{- if eq $context.Values.global.modules.https.mode "CertManager" -}}
-      {{- if hasKey $context.Values.global.modules.https "certManager" -}}
-        {{- if hasKey $context.Values.global.modules.https.certManager "clusterIssuerName" -}}
-          {{- $result = $context.Values.global.modules.https.certManager.clusterIssuerName -}}
-        {{- end -}}
-      {{- end -}}
-    {{- end -}}
-  {{- end -}}
-
-  {{- if empty $result -}}
-    {{ cat "No certManager.clusterIssuerName in module or global configuration" | fail -}}
-  {{- else -}}
-    {{- $result -}}
-  {{- end -}}
+  {{- $https_values := include "helm_lib_https_values" $context | fromYaml -}}
+  {{- $https_values.certManager.clusterIssuerName -}}
 {{- end -}}
 
 {{- /* Usage: {{ if (include "helm_lib_module_https_ingress_tls_enabled" .) }} */ -}}
