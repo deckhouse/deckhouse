@@ -19,7 +19,7 @@
       description: |
         В prometheus более 30 минут не увеличивается метрика deckhouse_live_ticks (а должна каждые 10 секунд).
   - alert: DeckhouseIsHung
-    expr: max(min_over_time(deckhouse_tasks_queue_length[2m])) > 0
+    expr: max(min_over_time(deckhouse_tasks_queue_length[2m])) > 10
     for: 30m
     labels:
       severity: critical
