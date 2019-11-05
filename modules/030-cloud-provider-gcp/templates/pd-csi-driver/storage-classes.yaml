@@ -10,6 +10,7 @@ parameters:
   type: pd-standard
   replication-type: none
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
@@ -20,6 +21,7 @@ parameters:
   type: pd-standard
   replication-type: regional-pd
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
@@ -30,6 +32,7 @@ parameters:
   type: pd-ssd
   replication-type: none
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
@@ -40,3 +43,4 @@ parameters:
   type: pd-ssd
   replication-type: regional-pd
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
