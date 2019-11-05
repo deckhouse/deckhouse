@@ -21,9 +21,10 @@ metadata:
  annotations:
    dex-authenticator.deckhouse.io/use-kubernetes-app-key: "true"
 spec:
- applicationDomain: "$(common::module_public_domain dashboard)"
- sendAuthorizationHeader: true
- applicationIngressCertificateSecretName: "ingress-tls"
+  applicationDomain: "$(common::module_public_domain dashboard)"
+  sendAuthorizationHeader: true
+  applicationIngressCertificateSecretName: "ingress-tls"
+  applicationIngressClassName: "$(common::module_ingress_class)"
 EOF
   else
      kubectl -n d8-dashboard delete dex-authenticator dashboard >/dev/null 2>&1 || true

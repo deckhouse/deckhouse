@@ -8,6 +8,10 @@ function __config__() {
 
 function __main__() {
   if values::has prometheus.internal.deployDexAuthenticator ; then
+    allowedGroups=""
+    if values::has prometheus.allowedUserGroups ; then
+      allowedGroups="allowedGroups: $(values::get prometheus.allowedUserGroups)"
+    fi
     cat <<EOF | kubectl apply -f -
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
@@ -21,6 +25,8 @@ metadata:
 spec:
   applicationDomain: "$(common::module_public_domain grafana)"
   applicationIngressCertificateSecretName: "ingress-tls"
+  applicationIngressClassName: "$(common::module_ingress_class)"
+  $allowedGroups
 EOF
   else
      kubectl -n kube-prometheus delete dex-authenticator grafana >/dev/null 2>&1 || true

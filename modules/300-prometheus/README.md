@@ -54,6 +54,8 @@ prometheus: |
     * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
 * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
     * Используется если не включен модуль `user-authn`.
+* `allowedUserGroups` — массив групп, пользователям которых позволен доступ в grafana и prometheus. 
+    * Используется если включен модуль `user-authn`.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
   * По-умолчанию `1095`.
   * Работает совместно с параметром `longtermRetentionGigabytes`.
