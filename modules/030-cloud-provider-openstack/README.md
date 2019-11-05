@@ -119,6 +119,7 @@ metadata:
 provisioner: csi-cinderplugin # обязательно такой
 parameters:
   type: ceph-ssd
+volumeBindingMode: WaitForFirstConsumer
 ```
 
 ## Требования к окружениям
