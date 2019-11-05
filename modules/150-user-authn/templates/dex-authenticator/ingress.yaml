@@ -5,7 +5,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" $context | quote }}
+    kubernetes.io/ingress.class: {{ $crd.applicationIngressClassName }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
   name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
