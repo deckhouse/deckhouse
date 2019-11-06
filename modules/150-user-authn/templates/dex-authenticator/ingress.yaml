@@ -7,6 +7,9 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ $crd.applicationIngressClassName }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+  {{- if $crd.spec.sendAuthorizationHeader }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  {{- end }}
   name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
