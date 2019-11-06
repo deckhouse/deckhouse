@@ -47,6 +47,10 @@ spec:
               type: string
               description: 'Ingress class that serves your application ingress resource.'
               example: 'nginx'
+            keepUsersLoggedInFor:
+              type: string
+              description: 'User session will be keeped for specified amount of time even if user will not log in.'
+              example: '24h'
             allowedGroups:
               type: array
               description: 'Groups that the user should be in to authenticate successfully. Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).'

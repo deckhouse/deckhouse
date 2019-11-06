@@ -112,7 +112,8 @@ spec:
     {{- if $crd.spec.sendAuthorizationHeader }}
         - --set-authorization-header=true
     {{- end }}
-        - --scope=groups email openid
+        - --set-xauthrequest
+        - --scope=groups email openid offline_access
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
@@ -120,7 +121,11 @@ spec:
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
+        - --silence-ping-logging
         - --session-store-type=cookie
+        - --exclude-logging-paths=/dex-authenticator/auth
+        - --cookie-refresh={{ $context.Values.userAuthn.idTokenTTL | default "10m" }}
+        - --cookie-expire={{ $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:

@@ -13,8 +13,9 @@
     issuerUrl: "https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}"
     logoUrl: "https://kubernetes.io/images/favicon.png"
   expiry:
-    signingKeys: {{ $context.Values.userAuthn.accessTokenTTL | default "10m" | quote }}
-    idTokens: {{ $context.Values.userAuthn.refreshTokenTTL | default "4320h" | quote }}
+    authRequests: "1h"
+    signingKeys: "6h"
+    idTokens: {{ $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
   logger:
     level: debug
     format: json
@@ -67,38 +68,6 @@
         - {{ $group | quote }}
       {{- end }}
     {{- end }}
-  {{- end }}
-
-  {{- if eq $provider.type "SAML" }}
-    - type: saml
-      id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
-      config:
-        ssoURL: {{ $provider.saml.ssoURL }}
-        caData: {{ $provider.saml.ca | b64enc }}
-        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
-        usernameAttr: {{ $provider.saml.usernameAttr | default "name" | quote }}
-        emailAttr: {{ $provider.saml.emailAttr | default "email" | quote }}
-        groupsAttr: {{ $provider.saml.groupsAttr | default "groups" | quote }}
-      {{- if $provider.saml.insecureSkipSignatureValidation }}
-        insecureSkipSignatureValidation: true
-      {{- end }}
-      {{- if $provider.saml.entityIssuer }}
-        entityIssuer: {{ $provider.saml.entityIssuer }}
-      {{- end }}
-      {{- if $provider.saml.ssoIssuer }}
-        ssoIssuer: {{ $provider.saml.ssoIssuer }}
-      {{- end }}
-      {{- if $provider.saml.groupsDelim }}
-        groupsDelim: {{ $provider.saml.groupsDelim }}
-      {{- end }}
-      {{- if $provider.saml.allowedGroups }}
-        allowedGroups:
-{{ $provider.saml.allowedGroups | toYaml | indent 8 }}
-      {{- end }}
-      {{- if $provider.saml.nameIDPolicyFormat }}
-        nameIDPolicyFormat: {{ $provider.saml.nameIDPolicyFormat }}
-      {{- end }}
   {{- end }}
 
   {{- if eq $provider.type "LDAP" }}
