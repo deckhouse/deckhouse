@@ -31,7 +31,13 @@ function __main__() {
   VSPHERE_ZONE_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.zoneTagCategory)"
   export VSPHERE_ZONE_TAG_CATEGORY_NAME
 
-  result="$(vsphere-cli-helper)"
+  if values::get --required cloudProviderVsphere.internal.datacenter >/dev/null 2>&1 ||
+        values::get --required cloudProviderVsphere.internal.zones >/dev/null 2>&1 ||
+        values::get --required cloudProviderVsphere.internal.datastores >/dev/null 2>&1 ; then
+    result="$(timeout -s ABRT -k 5 30 vsphere-cli-helper)" || { echo 'vsphere-cli-helper exited by timeout, preserving old discovery information' && exit 0; }
+    else
+    result="$(timeout -s ABRT -k 5 30 vsphere-cli-helper)"
+  fi
 
   datacenter="$(echo "$result" | jq -re '.datacenter')"
   datastores="$(echo "$result" | jq -re '.datastores')"
