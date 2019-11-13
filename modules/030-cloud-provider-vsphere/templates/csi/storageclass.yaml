@@ -13,7 +13,7 @@ metadata:
   {{- end }}
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 provisioner: vsphere.csi.vmware.com
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
 parameters:
   parent_type: "Datastore"
   parent_name: {{ $ds.path | quote }}
