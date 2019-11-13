@@ -8,7 +8,7 @@ spec:
   region: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.region | quote }}
   zone:  {{ .zoneName | quote }}
   numCPUs: {{ .instanceGroup.instanceClass.numCPUs }}
-  memory: {{ .instanceGroup.instanceClass.memory }}
+  memory: {{ add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4) }}
   rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
   template: {{ .instanceGroup.instanceClass.template | quote }}
   virtualMachineFolder: {{ .instanceGroup.instanceClass.virtualMachineFolder | quote }}
