@@ -22,3 +22,28 @@ spec:
         backend:
           serviceName: dex
           servicePort: 5556
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: dex-token
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    nginx.ingress.kubernetes.io/proxy-next-upstream: "error timeout invalid_header http_500 http_502 http_503 http_504 non_idempotent"
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+spec:
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    http:
+      paths:
+      - path: /token
+        backend:
+          serviceName: dex
+          servicePort: 5556

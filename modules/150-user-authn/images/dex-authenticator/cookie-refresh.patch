@@ -1,0 +1,211 @@
+diff --git a/docs/configuration/configuration.md b/docs/configuration/configuration.md
+index 2f5d049..4871dae 100644
+--- a/docs/configuration/configuration.md
++++ b/docs/configuration/configuration.md
+@@ -38,6 +38,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
+ | `-cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable | |
+ | `-cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
+ | `-cookie-secure` | bool | set secure (HTTPS) cookie flag | true |
++| `-cookie-refresh-token-only` | bool | store refresh token in cookie (for redis storage type)| false |
+ | `-custom-templates-dir` | string | path to custom html templates | |
+ | `-display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
+ | `-email-domain` | string | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
+diff --git a/main.go b/main.go
+index e84a796..c34ec6e 100644
+--- a/main.go
++++ b/main.go
+@@ -86,6 +86,7 @@ func main() {
+ 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
+ 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
+ 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
++	flagSet.Bool("cookie-refresh-token-only", false, "store only refresh token in cookie (worked with redis storage)")
+
+ 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+ 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
+diff --git a/pkg/apis/options/cookie.go b/pkg/apis/options/cookie.go
+index 80ecf57..45b1615 100644
+--- a/pkg/apis/options/cookie.go
++++ b/pkg/apis/options/cookie.go
+@@ -4,12 +4,13 @@ import "time"
+
+ // CookieOptions contains configuration options relating to Cookie configuration
+ type CookieOptions struct {
+-	CookieName     string        `flag:"cookie-name" cfg:"cookie_name" env:"OAUTH2_PROXY_COOKIE_NAME"`
+-	CookieSecret   string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
+-	CookieDomain   string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
+-	CookiePath     string        `flag:"cookie-path" cfg:"cookie_path" env:"OAUTH2_PROXY_COOKIE_PATH"`
+-	CookieExpire   time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
+-	CookieRefresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
+-	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure" env:"OAUTH2_PROXY_COOKIE_SECURE"`
+-	CookieHTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly" env:"OAUTH2_PROXY_COOKIE_HTTPONLY"`
++	CookieName             string        `flag:"cookie-name" cfg:"cookie_name" env:"OAUTH2_PROXY_COOKIE_NAME"`
++	CookieSecret           string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
++	CookieDomain           string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
++	CookiePath             string        `flag:"cookie-path" cfg:"cookie_path" env:"OAUTH2_PROXY_COOKIE_PATH"`
++	CookieExpire           time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
++	CookieRefresh          time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
++	CookieSecure           bool          `flag:"cookie-secure" cfg:"cookie_secure" env:"OAUTH2_PROXY_COOKIE_SECURE"`
++	CookieHTTPOnly         bool          `flag:"cookie-httponly" cfg:"cookie_httponly" env:"OAUTH2_PROXY_COOKIE_HTTPONLY"`
++	CookieOnlyRefreshToken bool          `flag:"cookie-refresh-token-only" cfg:"cookie_refresh_token_only" env:"OAUTH2_PROXY_COOKIE_REFRESH_TOKEN_ONLY"`
+ }
+diff --git a/pkg/sessions/redis/redis_store.go b/pkg/sessions/redis/redis_store.go
+index ed33d72..c00c789 100644
+--- a/pkg/sessions/redis/redis_store.go
++++ b/pkg/sessions/redis/redis_store.go
+@@ -6,8 +6,10 @@ import (
+ 	"crypto/rand"
+ 	"encoding/base64"
+ 	"encoding/hex"
++	"encoding/json"
+ 	"fmt"
+ 	"io"
++	"log"
+ 	"net/http"
+ 	"strings"
+ 	"time"
+@@ -25,6 +27,11 @@ type TicketData struct {
+ 	Secret   []byte
+ }
+
++type CookieRefreshToken struct {
++	Ticket   string    `json:"Ticket"`
++	RefreshToken string    `json:"RefreshToken"`
++}
++
+ // SessionStore is an implementation of the sessions.SessionStore
+ // interface that stores sessions in redis
+ type SessionStore struct {
+@@ -82,19 +89,34 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
+ 	if err != nil {
+ 		return err
+ 	}
+-	ticketString, err := store.storeValue(value, store.CookieOptions.CookieExpire, requestCookie)
++
++	ttl := store.CookieOptions.CookieExpire
++	if store.CookieOptions.CookieOnlyRefreshToken {
++		ttl = store.CookieOptions.CookieRefresh
++	}
++
++	ticketString, err := store.storeValue(value, ttl, requestCookie)
+ 	if err != nil {
+ 		return err
+ 	}
+
+-	ticketCookie := store.makeCookie(
+-		req,
+-		ticketString,
+-		store.CookieOptions.CookieExpire,
+-		s.CreatedAt,
+-	)
++	if store.CookieOptions.CookieOnlyRefreshToken {
++		encryptedToken, encodingErr := store.CookieCipher.Encrypt(s.RefreshToken)
++		if encodingErr != nil {
++		    return err
++		}
++
++		cookieWithRefreshToken, encodingErr := json.Marshal(CookieRefreshToken{Ticket: ticketString, RefreshToken: encryptedToken})
++		if encodingErr != nil {
++			return err
++		}
++		ticketString = string(cookieWithRefreshToken)
++	}
++
++	ticketCookie := store.makeCookie(req, ticketString, store.CookieOptions.CookieExpire, s.CreatedAt)
+
+ 	http.SetCookie(rw, ticketCookie)
++	log.Printf("Cookie stored: %v", ticketString)
+ 	return nil
+ }
+
+@@ -108,8 +130,13 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
+
+ 	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+ 	if !ok {
+-		return nil, fmt.Errorf("Cookie Signature not valid")
++		return nil, fmt.Errorf("cookie signature not valid")
+ 	}
++
++	if store.CookieOptions.CookieOnlyRefreshToken {
++		return store.loadSessionWithRefreshToken(val)
++	}
++
+ 	session, err := store.loadSessionFromString(val)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("error loading session: %s", err)
+@@ -117,6 +144,27 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
+ 	return session, nil
+ }
+
++
++func (store *SessionStore) loadSessionWithRefreshToken(value string) (*sessions.SessionState, error) {
++	cookie, err := store.unmarshalCookieWithRefreshToken(value)
++	if err != nil {
++		return nil, err
++	}
++
++	decryptedRefreshToken, err := store.CookieCipher.Decrypt(cookie.RefreshToken)
++	if err != nil {
++	    return nil, err
++	}
++
++	session, err := store.loadSessionFromString(cookie.Ticket)
++	if err != nil {
++		return &sessions.SessionState{RefreshToken: decryptedRefreshToken}, err
++	}
++
++	session.RefreshToken = decryptedRefreshToken
++	return session, nil
++}
++
+ // loadSessionFromString loads the session based on the ticket value
+ func (store *SessionStore) loadSessionFromString(value string) (*sessions.SessionState, error) {
+ 	ticket, err := decodeTicket(store.CookieOptions.CookieName, value)
+@@ -168,9 +216,16 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
+
+ 	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+ 	if !ok {
+-		return fmt.Errorf("Cookie Signature not valid")
++		return fmt.Errorf("cookie signature not valid")
+ 	}
+
++	if store.CookieOptions.CookieOnlyRefreshToken {
++		data, err := store.unmarshalCookieWithRefreshToken(val)
++		if err != nil {
++			return err
++		}
++		val = data.Ticket
++	}
+ 	// We only return an error if we had an issue with redis
+ 	// If there's an issue decoding the ticket, ignore it
+ 	ticket, _ := decodeTicket(store.CookieOptions.CookieName, val)
+@@ -236,6 +291,14 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
+ 		return newTicket()
+ 	}
+
++	if store.CookieOptions.CookieOnlyRefreshToken {
++		data, err := store.unmarshalCookieWithRefreshToken(val)
++		if err != nil {
++			return newTicket()
++		}
++        val = data.Ticket
++	}
++
+ 	// Valid cookie, decode the ticket
+ 	ticket, err := decodeTicket(store.CookieOptions.CookieName, val)
+ 	if err != nil {
+@@ -245,6 +308,15 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
+ 	return ticket, nil
+ }
+
++func (store *SessionStore) unmarshalCookieWithRefreshToken(value string) (CookieRefreshToken, error) {
++	var cookie CookieRefreshToken
++	err := json.Unmarshal([]byte(value), &cookie)
++	if err != nil {
++		return cookie, fmt.Errorf("error while loading cookie with refresh token: %v", err)
++	}
++	return cookie, nil
++}
++
+ func newTicket() (*TicketData, error) {
+ 	rawID := make([]byte, 16)
+ 	if _, err := io.ReadFull(rand.Reader, rawID); err != nil {

@@ -1,0 +1,202 @@
+diff --git a/server/handlers.go b/server/handlers.go
+index 1391e58..113b36e 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -924,7 +924,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
+ 		return
+ 	}
+-	if refresh.Token != token.Token {
++
++	if refresh.Token != token.Token && refresh.ObsoleteToken != token.Token {
+ 		s.logger.Errorf("refresh token with id %s claimed twice", refresh.ID)
+ 		s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
+ 		return
+@@ -961,12 +962,6 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		scopes = requestedScopes
+ 	}
+ 
+-	conn, err := s.getConnector(refresh.ConnectorID)
+-	if err != nil {
+-		s.logger.Errorf("connector with ID %q not found: %v", refresh.ConnectorID, err)
+-		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+-		return
+-	}
+ 	ident := connector.Identity{
+ 		UserID:        refresh.Claims.UserID,
+ 		Username:      refresh.Claims.Username,
+@@ -976,19 +971,28 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		ConnectorData: refresh.ConnectorData,
+ 	}
+ 
+-	// Can the connector refresh the identity? If so, attempt to refresh the data
+-	// in the connector.
+-	//
+-	// TODO(ericchiang): We may want a strict mode where connectors that don't implement
+-	// this interface can't perform refreshing.
+-	if refreshConn, ok := conn.Connector.(connector.RefreshConnector); ok {
+-		newIdent, err := refreshConn.Refresh(r.Context(), parseScopes(scopes), ident)
++	if refresh.ObsoleteToken != token.Token {
++		conn, err := s.getConnector(refresh.ConnectorID)
+ 		if err != nil {
+-			s.logger.Errorf("failed to refresh identity: %v", err)
++			s.logger.Errorf("connector with ID %q not found: %v", refresh.ConnectorID, err)
+ 			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+ 			return
+ 		}
+-		ident = newIdent
++
++		// Can the connector refresh the identity? If so, attempt to refresh the data
++		// in the connector.
++		//
++		// TODO(ericchiang): We may want a strict mode where connectors that don't implement
++		// this interface can't perform refreshing.
++		if refreshConn, ok := conn.Connector.(connector.RefreshConnector); ok {
++			newIdent, err := refreshConn.Refresh(r.Context(), parseScopes(scopes), ident)
++			if err != nil {
++				s.logger.Errorf("failed to refresh identity: %v", err)
++				s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
++				return
++			}
++			ident = newIdent
++		}
+ 	}
+ 
+ 	claims := storage.Claims{
+@@ -1013,10 +1017,11 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		return
+ 	}
+ 
+-	newToken := &internal.RefreshToken{
+-		RefreshId: refresh.ID,
+-		Token:     storage.NewID(),
++	newToken := token
++	if refresh.ObsoleteToken != token.Token {
++		newToken.Token = storage.NewID()
+ 	}
++
+ 	rawNewToken, err := internal.Marshal(newToken)
+ 	if err != nil {
+ 		s.logger.Errorf("failed to marshal refresh token: %v", err)
+@@ -1024,43 +1029,47 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		return
+ 	}
+ 
+-	lastUsed := s.now()
+-	updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
+-		if old.Token != refresh.Token {
+-			return old, errors.New("refresh token claimed twice")
++	if refresh.ObsoleteToken != token.Token {
++		lastUsed := s.now()
++
++		updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			if old.Token != refresh.Token {
++				return old, errors.New("refresh token claimed twice")
++			}
++			old.ObsoleteToken = old.Token
++			old.Token = newToken.Token
++			// Update the claims of the refresh token.
++			//
++			// UserID intentionally ignored for now.
++			old.Claims.Username = ident.Username
++			old.Claims.Email = ident.Email
++			old.Claims.EmailVerified = ident.EmailVerified
++			old.Claims.Groups = ident.Groups
++			old.ConnectorData = ident.ConnectorData
++			old.LastUsed = lastUsed
++			return old, nil
+ 		}
+-		old.Token = newToken.Token
+-		// Update the claims of the refresh token.
+-		//
+-		// UserID intentionally ignored for now.
+-		old.Claims.Username = ident.Username
+-		old.Claims.Email = ident.Email
+-		old.Claims.EmailVerified = ident.EmailVerified
+-		old.Claims.Groups = ident.Groups
+-		old.ConnectorData = ident.ConnectorData
+-		old.LastUsed = lastUsed
+-		return old, nil
+-	}
+-
+-	// Update LastUsed time stamp in refresh token reference object
+-	// in offline session for the user.
+-	if err := s.storage.UpdateOfflineSessions(refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
+-		if old.Refresh[refresh.ClientID].ID != refresh.ID {
+-			return old, errors.New("refresh token invalid")
++
++		// Update LastUsed time stamp in refresh token reference object
++		// in offline session for the user.
++		if err := s.storage.UpdateOfflineSessions(refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++			if old.Refresh[refresh.ClientID].ID != refresh.ID {
++				return old, errors.New("refresh token invalid")
++			}
++			old.Refresh[refresh.ClientID].LastUsed = lastUsed
++			return old, nil
++		}); err != nil {
++			s.logger.Errorf("failed to update offline session: %v", err)
++			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
++			return
+ 		}
+-		old.Refresh[refresh.ClientID].LastUsed = lastUsed
+-		return old, nil
+-	}); err != nil {
+-		s.logger.Errorf("failed to update offline session: %v", err)
+-		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+-		return
+-	}
+ 
+-	// Update refresh token in the storage.
+-	if err := s.storage.UpdateRefreshToken(refresh.ID, updater); err != nil {
+-		s.logger.Errorf("failed to update refresh token: %v", err)
+-		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+-		return
++		// Update refresh token in the storage.
++		if err := s.storage.UpdateRefreshToken(refresh.ID, updater); err != nil {
++			s.logger.Errorf("failed to update refresh token: %v", err)
++			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
++			return
++		}
+ 	}
+ 
+ 	s.writeAccessToken(w, idToken, accessToken, rawNewToken, expiry)
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 1ed405b..71979e9 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -446,6 +446,7 @@ type RefreshToken struct {
+ 	Scopes   []string `json:"scopes,omitempty"`
+ 
+ 	Token string `json:"token,omitempty"`
++	ObsoleteToken string `json:"obsoleteToken,omitempty"`
+ 
+ 	Nonce string `json:"nonce,omitempty"`
+ 
+@@ -465,6 +466,7 @@ func toStorageRefreshToken(r RefreshToken) storage.RefreshToken {
+ 	return storage.RefreshToken{
+ 		ID:            r.ObjectMeta.Name,
+ 		Token:         r.Token,
++		ObsoleteToken: r.ObsoleteToken,
+ 		CreatedAt:     r.CreatedAt,
+ 		LastUsed:      r.LastUsed,
+ 		ClientID:      r.ClientID,
+@@ -487,6 +489,7 @@ func (cli *client) fromStorageRefreshToken(r storage.RefreshToken) RefreshToken
+ 			Namespace: cli.namespace,
+ 		},
+ 		Token:         r.Token,
++		ObsoleteToken: r.ObsoleteToken,
+ 		CreatedAt:     r.CreatedAt,
+ 		LastUsed:      r.LastUsed,
+ 		ClientID:      r.ClientID,
+diff --git a/storage/storage.go b/storage/storage.go
+index 893fb10..aecba7a 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -228,6 +228,7 @@ type RefreshToken struct {
+ 	//
+ 	// May be empty.
+ 	Token string
++	ObsoleteToken string
+ 
+ 	CreatedAt time.Time
+ 	LastUsed  time.Time
