@@ -1,6 +1,6 @@
 #!/bin/bash
 
-### Миграция 2019-11-02: https://github.com/deckhouse/deckhouse/merge_requests/1347
+### Миграция 2019-11-13: https://github.com/deckhouse/deckhouse/merge_requests/1377
 # Удалить данный хук после выката MR'а
 
 source /deckhouse/shell_lib.sh
@@ -12,7 +12,7 @@ function __config__() {
 function __main__() {
   old_datastores="$(values::get cloudProviderVsphere.internal.datastores | jq -r 'map(.name)')"
   read -ra wrong_scs <<<$(kubectl get sc -o json | jq -r --argjson old_datastores "$old_datastores" '.items[] |
-                                                select((.volumeBindingMode != "WaitForFirstConsumer") and ([.metadata.name] | inside($old_datastores // []))) | .metadata.name')
+                                                select((.volumeBindingMode != "Immediate") and ([.metadata.name] | inside($old_datastores // []))) | .metadata.name')
 
   if (( ${#wrong_scs[@]} )); then
     kubectl delete sc "${wrong_scs[@]}"
