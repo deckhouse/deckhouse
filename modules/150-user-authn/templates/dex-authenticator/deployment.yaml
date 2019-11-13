@@ -122,10 +122,12 @@ spec:
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
         - --silence-ping-logging
-        - --session-store-type=cookie
+        - --session-store-type=redis
+        - --redis-connection-url=redis://127.0.0.1/
         - --exclude-logging-paths=/dex-authenticator/auth
         - --cookie-refresh={{ $context.Values.userAuthn.idTokenTTL | default "10m" }}
         - --cookie-expire={{ $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+        - --cookie-refresh-token-only # store everything in redis except refresh token
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
@@ -164,4 +166,17 @@ spec:
         ports:
         - containerPort: 443
           protocol: TCP
+      - name: redis
+        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator-redis:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticatorRedis }}
+        args:
+          - "--save"
+          - ""
+          - "--appendonly"
+          - "no"
+          - "--bind"
+          - "127.0.0.1"
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
 {{- end }}

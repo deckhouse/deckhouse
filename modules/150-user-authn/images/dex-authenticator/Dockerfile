@@ -8,11 +8,12 @@ RUN apk --update add make git build-base curl bash ca-certificates wget \
  && update-ca-certificates
 RUN git clone https://github.com/pusher/oauth2_proxy.git . \
  && git checkout v4.0.0
-ADD rd.patch .
-RUN patch -p1 < rd.patch \
- && GO111MODULE=on go mod download \
- && ./configure \
- && make build
+ADD rd.patch cookie-refresh.patch /
+RUN patch -p1 < /rd.patch \
+  && patch -p1 < /cookie-refresh.patch \
+  && GO111MODULE=on go mod download \
+  && ./configure \
+  && make build
 
 FROM alpine:3.10
 RUN apk --update add curl bash  ca-certificates && update-ca-certificates
