@@ -1,9 +1,9 @@
 diff --git a/connector/atlassian_crowd/atlassian_crowd.go b/connector/atlassian_crowd/atlassian_crowd.go
 new file mode 100644
-index 000000000..a5dad9abf
+index 0000000..15658ca
 --- /dev/null
 +++ b/connector/atlassian_crowd/atlassian_crowd.go
-@@ -0,0 +1,447 @@
+@@ -0,0 +1,443 @@
 +// Package atlassian_crowd provides authentication strategies using Atlassian Crowd.
 +package atlassian_crowd
 +
@@ -116,7 +116,6 @@ index 000000000..a5dad9abf
 +
 +type refreshData struct {
 +	Username string    `json:"username"`
-+	User     crowdUser `json:"user"`
 +}
 +
 +func (c *crowdConnector) Login(ctx context.Context, s connector.Scopes, username, password string) (ident connector.Identity, validPass bool, err error) {
@@ -162,10 +161,7 @@ index 000000000..a5dad9abf
 +	}
 +
 +	if s.OfflineAccess {
-+		refresh := refreshData{
-+			Username: username,
-+			User:     user,
-+		}
++		refresh := refreshData{Username: username}
 +		// Encode entry for follow up requests such as the groups query and
 +		// refresh attempts.
 +		if ident.ConnectorData, err = json.Marshal(refresh); err != nil {
@@ -452,12 +448,12 @@ index 000000000..a5dad9abf
 +	return req, nil
 +}
 diff --git a/server/server.go b/server/server.go
-index 69b4d0d7b..29c9b737c 100644
+index 69b4d0d..29c9b73 100644
 --- a/server/server.go
 +++ b/server/server.go
 @@ -17,6 +17,7 @@ import (
  	"golang.org/x/crypto/bcrypt"
- 
+
  	"github.com/dexidp/dex/connector"
 +	"github.com/dexidp/dex/connector/atlassian_crowd"
  	"github.com/dexidp/dex/connector/authproxy"
