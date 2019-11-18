@@ -1,0 +1,20 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+---
+  {{- if not $crd.useKubernetesAppKey }}
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: {{ $crd.encodedName }}
+  namespace: d8-{{ $context.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex")) | indent 2 }}
+id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+secret: {{ $crd.credentials.appDexSecret }}
+    {{- if $crd.spec.allowedGroups }}
+allowedGroups: {{ $crd.spec.allowedGroups }}
+    {{- end }}
+redirectURIs:
+- https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
+  {{- end }}
+{{- end }}

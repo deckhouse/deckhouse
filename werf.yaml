@@ -31,6 +31,10 @@ import:
   add: /vsphere-cli-helper/vsphere-cli-helper
   to: /usr/local/bin/vsphere-cli-helper
   before: setup
+- artifact: fnv-encoder
+  add: /fnv-encoder/fnv-encoder
+  to: /usr/local/bin/fnv-encoder
+  before: setup
 ansible:
   beforeInstall:
   - apk: update_cache=yes
@@ -172,6 +176,20 @@ ansible:
   - command: go build -o unit-converter main.go
     args:
       chdir: /unit-converter
+---
+artifact: fnv-encoder
+from: golang:1.12-alpine3.9
+git:
+- add: /fnv-encoder
+  to: /fnv-encoder
+  stageDependencies:
+    setup:
+    - main.go
+ansible:
+  setup:
+  - command: go build -o fnv-encoder main.go
+    args:
+      chdir: /fnv-encoder
 ---
 artifact: vsphere-cli-helper
 from: golang:1.12-alpine3.9

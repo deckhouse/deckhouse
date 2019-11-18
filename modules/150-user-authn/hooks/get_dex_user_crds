@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+# Костыль 2019-07-26: пока не разберемся как правильно создавать CRD
+kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
+
+  cat << EOF
+{
+  "beforeHelm": 10,
+  "onKubernetesEvent": [
+    {
+      "kind": "User",
+      "jqFilter": ".spec"
+    }
+  ]
+}
+EOF
+}
+
+
+function __main__() {
+  crds=$(kubectl get users.deckhouse.io --all-namespaces -o json \
+    | jq -r '[.items[] | .spec.userID = (.spec.userID // .metadata.name) | {"name": .metadata.name, "spec": .spec}]')
+
+  for name in $(echo "$crds" | jq -rc '.[].name'); do
+    email=$(kubectl get users.deckhouse.io "$name" -o json | jq -rc '.spec.email')
+    encodedName=$(fnv-encoder "$email")
+    crds=$(echo "$crds" | jq -rc "[ .[] | (select(.name == \"$name\") | . ) += {\"encodedName\":\"$encodedName\"}]")
+  done
+  values::set userAuthn.internal.dexUsersCRDs "$crds"
+}
+
+
+hook::run "$@"
