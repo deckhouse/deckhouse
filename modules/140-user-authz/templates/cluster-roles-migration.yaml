@@ -1,0 +1,23 @@
+### Миграция 2019-11-11: Переименование accessLevel с Master -> PrivilegedUser и Deploy -> Editor
+### Инструкция в тикете https://github.com/deckhouse/deckhouse/issues/717
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:master
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+rules:
+{{- include "user_authz_common_rules" "PrivilegedUser" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:deploy
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+rules:
+{{- include "user_authz_common_rules" "Editor" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+{{- include "user_authz_editor_rules" . }}

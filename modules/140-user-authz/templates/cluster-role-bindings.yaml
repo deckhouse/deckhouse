@@ -15,28 +15,28 @@ subjects:
   {{- end }}
 
   {{- if hasKey $crd.spec "accessLevel" }}
-    {{- if not (list "User" "Master" "Deploy" "Admin" | has $crd.spec.accessLevel) }}
+    {{- if not (list "User" "Master" "PrivilegedUser" "Deploy" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel) }}
       {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
     {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | lower }}
+  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: user-authz:{{ $crd.spec.accessLevel | lower }}
+  name: user-authz:{{ $crd.spec.accessLevel | kebabcase }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
 
-    {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | lower) $.Values.userAuthz.internal.customClusterRoles | first) }}
+    {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customClusterRoles | first) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | lower }}:custom-cluster-role:{{ $customClusterRole }}
+  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}:custom-cluster-role:{{ $customClusterRole }}
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io

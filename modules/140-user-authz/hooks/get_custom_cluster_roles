@@ -20,14 +20,25 @@ function __main__() {
   customClusterRoles=$(
     kubectl get clusterrole -o json | jq '
       [
-        .items[] | select(.metadata.annotations."user-authz.deckhouse.io/access-level" == ("User", "Master", "Deploy", "Admin")) |
-        {level: (.metadata.annotations."user-authz.deckhouse.io/access-level" | ascii_downcase), name: .metadata.name}
-      ] | reduce .[] as $i ({"user": [], "master":[], "deploy": [], "admin": []}; .[$i.level] += [$i.name] ) |
-      {
+        .items[]
+        | select(
+          .metadata.annotations."user-authz.deckhouse.io/access-level" == ("User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin")
+        )
+        | {
+          level: (
+            .metadata.annotations."user-authz.deckhouse.io/access-level" as $accessLevel | ($accessLevel[0:1] | ascii_downcase) + $accessLevel[1:]
+          ),
+          name: .metadata.name
+        }
+      ]
+      | reduce .[] as $i ({"user": [], "privilegedUser":[], "editor": [], "admin": [], "clusterEditor": [], "clusterAdmin": []}; .[$i.level] += [$i.name] )
+      | {
         user:   (.user | unique),
-        master: (.user + .master | unique),
-        deploy: (.user + .master + .deploy | unique),
-        admin:  (.user + .master + .deploy + .admin | unique)
+        privilegedUser: (.user + .privilegedUser | unique),
+        editor: (.user + .privilegedUser + .editor | unique),
+        admin:  (.user + .privilegedUser + .editor + .admin | unique),
+        clusterEditor: (.user + .privilegedUser + .editor + .clusterEditor | unique),
+        clusterAdmin:  (.user + .privilegedUser + .editor + .admin + .clusterEditor + .clusterAdmin | unique)
       }')
   values::set userAuthz.internal.customClusterRoles "$customClusterRoles"
 }

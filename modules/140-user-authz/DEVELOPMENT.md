@@ -1,7 +1,7 @@
 Для разработчиков
 =================
 
-## Настройка дополнительных ClusterRole для разных accessLevel
+## Кастомизация прав для предустановленных accessLevel
 
 Если требуется добавить прав для определённого accessLevel, то достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`. Пример:
 
@@ -10,8 +10,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: Master
-  name: mymodule:master
+    user-authz.deckhouse.io/access-level: PrivilegedUser
+  name: d8-mymodule-ns:privileged-user
 rules:
 - apiGroups:
   - mymodule.io

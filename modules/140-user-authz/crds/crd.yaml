@@ -28,9 +28,9 @@ spec:
             accessLevel:
               type: string
               description: |
-                Pre-configured access level to Kubernetes API (optional). "User": [exec, port-forward, get secret, delete objects, create/edit namespace, create objects] not allowed, [list objects, logs] allowed. "Master": [port-forward, delete system objects (ReplicaSets, certmanager.k8s.io/orders, ...), create/edit namespace, create objects] not allowed, [list objects, logs, exec, get secret, delete pod] allowed. "Deploy": [port-forward, delete system objects (ReplicaSets, certmanager.k8s.io/orders, ...)] not allowed, [list objects, logs, exec, get secret, delete pod, create/edit namespace, create objects (except Pods)] allowed. "Admin": [port-forward] not allowed, [list objects, logs, exec, get secret, delete pod, create/edit namespace, create objects (except Pods), delete objects] allowed.
-              enum: [User,Master,Deploy,Admin]
-              example: 'Master'
+                Pre-configured access level to Kubernetes API (optional). "User": allowed — [list objects, logs], everything else not allowed — [exec, port-forward, get secret, delete objects, create/edit namespace, create objects]. "PrivilegedUser": `User` + [exec, get secret, delete pod] allowed. "Editor": `PrivilegedUser` + [create/edit namespace, create objects (except Pods)] allowed. "Admin": `Editor` + [delete objects] allowed; "ClusterEditor": `Editor` + [create/edit/delete cluster-wide application resources] allowed; "ClusterAdmin": `ClusterEditor` + `Admin` + [create/edit/delete cluster-wide system resources] allowed; "SuperAdmin": no limits.
+              enum: [User,Master,PrivilegedUser,Deploy,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
+              example: 'PrivilegedUser'
             portForwarding:
               type: boolean
               description: 'Allow port-forward. Default: false.'

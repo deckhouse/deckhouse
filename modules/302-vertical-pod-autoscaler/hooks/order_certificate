@@ -25,16 +25,16 @@ function __main__() {
     # Создаем и подписываем сертификат для admission controller
     cert=$(jo CN=vpa-webhook hosts="$(jo -a vpa-webhook.kube-system vpa-webhook.kube-system.svc)" key="$(jo algo=ecdsa size=256)"  | cfssl gencert -ca=<(echo "$ca" | jq .cert -r) -ca-key=<(echo "$ca" | jq .key -r) -config=<(echo "$config") -)
 
-    caCert=$(echo $ca | jq .cert -r)
-    caKey=$(echo $ca | jq .key -r)
-    serverCert=$(echo $cert | jq .cert -r)
-    serverKey=$(echo $cert | jq .key -r)
+    caCert=$(echo "$ca" | jq .cert -r)
+    caKey=$(echo "$ca" | jq .key -r)
+    serverCert=$(echo "$cert" | jq .cert -r)
+    serverKey=$(echo "$cert" | jq .key -r)
   else
     cert=$(kubectl -n kube-system get secret/vpa-tls-certs -o json)
-    caCert=$(echo $cert | jq '.data."caCert.pem"' -r | base64 -d)
-    caKey=$(echo $cert | jq '.data."caKey.pem"' -r | base64 -d)
-    serverCert=$(echo $cert | jq '.data."serverCert.pem"' -r | base64 -d)
-    serverKey=$(echo $cert | jq '.data."serverKey.pem"' -r | base64 -d)
+    caCert=$(echo "$cert" | jq '.data."caCert.pem"' -r | base64 -d)
+    caKey=$(echo "$cert" | jq '.data."caKey.pem"' -r | base64 -d)
+    serverCert=$(echo "$cert" | jq '.data."serverCert.pem"' -r | base64 -d)
+    serverKey=$(echo "$cert" | jq '.data."serverKey.pem"' -r | base64 -d)
   fi
 
   values::set verticalPodAutoscaler.internal.CACert "$caCert"
