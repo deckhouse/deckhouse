@@ -33,7 +33,7 @@ cluster-autoscaler манипулирует полем replicas в MachineDeploy
 #### Пример конфигурации
 
 ```yaml
-cloudInstanceManager:
+cloudInstanceManager: |
   instancePrefix: kube
 ```
 
