@@ -38,7 +38,8 @@ function __main__() {
         cookieSecret=$(values::generate_password)
         appDexSecret=$(values::generate_password)
       fi
-      crds=$(echo "$crds" | jq ".[] | (select(.namespace == \"$namespace\" and .name == \"$name\") | .credentials) |= {\"cookieSecret\": \"$cookieSecret\", \"appDexSecret\": \"$appDexSecret\"}" | jq -s)
+      encodedName=$(fnv-encoder "${name}-${namespace}-dex-authenticator")
+      crds=$(echo "$crds" | jq "[ .[] | (select(.namespace == \"$namespace\" and .name == \"$name\") | . ) += {\"encodedName\":\"$encodedName\", \"credentials\":{\"cookieSecret\": \"$cookieSecret\", \"appDexSecret\": \"$appDexSecret\"}}]")
     done
   done
   values::set userAuthn.internal.dexAuthenticatorCRDs "$crds"

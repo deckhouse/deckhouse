@@ -1,0 +1,51 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: users.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: users
+    singular: user
+    kind: User
+  version: v1alpha1
+  additionalPrinterColumns:
+  - JSONPath: .spec.email
+    name: Email
+    type: string
+  - JSONPath: .spec.groups
+    name: Groups
+    type: string
+  validation:
+    openAPIV3Schema:
+      type: object
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - email
+          - password
+          properties:
+            email:
+              type: string
+              description: 'Static user email.'
+              example: 'user@domain.com'
+            password:
+              type: string
+              description: 'Hashed user password.'
+              example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
+            userID:
+              type: string
+              description: 'Unique issuer user ID. It equals to .metadata.name by default.'
+              example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
+            groups:
+              type: array
+              description: 'Static user groups.'
+              items:
+                type: string

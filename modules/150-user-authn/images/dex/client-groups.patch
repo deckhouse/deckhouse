@@ -185,7 +185,7 @@ index 89d4137..72c1ac2 100644
  type writeRecorder struct {
  	wrote bool
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 5324998..c4f56fe 100644
+index 5324998..f8b4e00 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -241,6 +241,8 @@ type Client struct {
@@ -197,6 +197,48 @@ index 5324998..c4f56fe 100644
  }
 
  // ClientList is a list of Clients.
+@@ -260,25 +262,27 @@ func (cli *client) fromStorageClient(c storage.Client) Client {
+ 			Name:      cli.idToName(c.ID),
+ 			Namespace: cli.namespace,
+ 		},
+-		ID:           c.ID,
+-		Secret:       c.Secret,
+-		RedirectURIs: c.RedirectURIs,
+-		TrustedPeers: c.TrustedPeers,
+-		Public:       c.Public,
+-		Name:         c.Name,
+-		LogoURL:      c.LogoURL,
++		ID:            c.ID,
++		Secret:        c.Secret,
++		RedirectURIs:  c.RedirectURIs,
++		TrustedPeers:  c.TrustedPeers,
++		Public:        c.Public,
++		Name:          c.Name,
++		LogoURL:       c.LogoURL,
++		AllowedGroups: c.AllowedGroups,
+ 	}
+ }
+
+ func toStorageClient(c Client) storage.Client {
+ 	return storage.Client{
+-		ID:           c.ID,
+-		Secret:       c.Secret,
+-		RedirectURIs: c.RedirectURIs,
+-		TrustedPeers: c.TrustedPeers,
+-		Public:       c.Public,
+-		Name:         c.Name,
+-		LogoURL:      c.LogoURL,
++		ID:            c.ID,
++		Secret:        c.Secret,
++		RedirectURIs:  c.RedirectURIs,
++		TrustedPeers:  c.TrustedPeers,
++		Public:        c.Public,
++		Name:          c.Name,
++		LogoURL:       c.LogoURL,
++		AllowedGroups: c.AllowedGroups,
+ 	}
+ }
+
 diff --git a/storage/storage.go b/storage/storage.go
 index 893fb10..62413df 100644
 --- a/storage/storage.go

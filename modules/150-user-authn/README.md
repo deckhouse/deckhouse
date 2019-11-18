@@ -117,7 +117,6 @@ data:
       * По-умолчанию: `SelfSigned`
     * `global` — дополнительный параметр для режима `Global`;
       * `kubeconfigGeneratorMasterCA` — если у вас перед ingress'ом есть внешний балансер, который терминирует HTTPS трафик, то тут необходимо вставить CA от сертификата на балансировщике, что бы kubectl мог достучаться до API-сервера; 
-* `users` — данный параметр позволяет завести постоянных пользователей для логина (массив таких пользователей). В качестве ключа указывается email-адрес пользователя, а в качестве значения данного ключа - пароль. Если значеинем пароля будет пустая строка `""`, то пароль будет сгенерирован автоматически;
 * `kubeconfigGenerator` — массив, в котором указываются дополнительные возможные способы доступа к API. Это может быть полезно, в случае если вы не хотите предоставить доступ к API-кластера через ingress, а хотите предоставить доступ другими способами (например, с бастион-хоста или через OpenVPN).
   * `id` — имя способа доступа к API-серверу (без пробелов, маленькими буквами);
   * `masterURI` — адрес API-сервера;
@@ -247,6 +246,30 @@ annotations:
   nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+```
+### Настройка статических пользователей для Dex
+
+Dex может работать без подключения провайдеров. Эта возможность реализована при помощи заведения статических пользователей (users).
+
+#### Параметры:
+* `email` — email-адрес пользователя;
+* `groups` — массив групп, в которых состоит пользователь;
+* `password` — хэшированный пароль пользователя;
+    * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`
+
+#### Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@yourcompany.com
+  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  userID: some-unique-user-id
+  groups:
+  - Everyone
+  - admins
 ```
 
 ### Настройка kube-apiserver

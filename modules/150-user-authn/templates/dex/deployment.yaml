@@ -39,9 +39,6 @@ spec:
         app: dex
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/dex/config.yaml") . | sha256sum }}
-{{- if .Values.userAuthn.internal.dexAuthenticatorCRDs }}
-        checksum/dex-client-apps-configs-sha256: {{ .Values.userAuthn.internal.dexAuthenticatorCRDs | toJson | sha256sum }}
-{{- end }}
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
@@ -65,37 +62,6 @@ spec:
           items:
           - key: config.yaml
             path: config.yaml
-      - name: config
-        emptyDir: {}
-{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- if not $crd.useKubernetesAppKey }}
-      - name: {{ $crd.name }}-{{ $crd.namespace }}-dex-client-app
-        secret:
-          secretName: {{ $crd.name }}-{{ $crd.namespace }}-dex-client-app
-  {{- end }}
-{{- end }}
-      initContainers:
-      - name: prepare-config
-        image: {{ .Values.global.modulesImages.registry }}/common/busybox:{{ .Values.global.modulesImages.tags.common.busybox }}
-        command:
-        - sh
-        - -c
-        - |
-          cat /opt/dex/config.yaml > /etc/dex/config.yaml
-          cat /opt/dex-client-app-config/* >> /etc/dex/config.yaml
-          true
-        volumeMounts:
-        - mountPath: /opt/dex/
-          name: original-config
-        - mountPath: /etc/dex
-          name: config
-{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- if not $crd.useKubernetesAppKey }}
-        - mountPath: /opt/dex-client-app-config/{{ $crd.name }}-{{ $crd.namespace }}-dex-client-app.yaml
-          name: {{ $crd.name }}-{{ $crd.namespace }}-dex-client-app
-          subPath: config.yaml
-  {{- end }}
-{{- end }}
       containers:
       - name: dex
         image: {{ .Values.global.modulesImages.registry }}/user-authn/dex:{{ .Values.global.modulesImages.tags.userAuthn.dex }}
@@ -115,7 +81,7 @@ spec:
           initialDelaySeconds: 5
           timeoutSeconds: 1
         volumeMounts:
-        - name: config
+        - name: original-config
           mountPath: /etc/dex
         resources:
           requests:

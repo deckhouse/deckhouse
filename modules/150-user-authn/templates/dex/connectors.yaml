@@ -1,0 +1,124 @@
+# email = config, баг в dex
+{{- $context := . }}
+{{- range $provider := $context.Values.userAuthn.providers }}
+---
+apiVersion: dex.coreos.com/v1
+kind: Connector
+metadata:
+  name: {{ $provider.id | quote }}
+  namespace: d8-{{ $context.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex")) | indent 2 }}
+
+  {{- if eq $provider.type "Github" }}
+type: github
+id: {{ $provider.id | quote }}
+name: {{ $provider.name | quote }}
+email:
+  clientID: {{ $provider.github.clientID | quote }}
+  clientSecret: {{ $provider.github.clientSecret | quote }}
+  redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+    {{- range $org := $provider.github.orgs }}
+  orgs:
+  - name: {{ $org.name | quote }}
+      {{- if $org.teams }}
+    teams:
+        {{- range $team := $org.teams }}
+    - {{ $team | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if $provider.github.loadAllGroups }}
+  loadAllGroups: true
+    {{- end }}
+    {{- if $provider.github.teamNameField }}
+  teamNameField: {{ $provider.teamNameFiled }}
+    {{- end }}
+    {{- if $provider.github.useLoginAsId }}
+  useLoginAsId: true
+    {{- end }}
+  {{- end }}
+
+  {{- if eq $provider.type "Gitlab" }}
+type: gitlab
+id: {{ $provider.id | quote }}
+name: {{ $provider.name | quote }}
+email:
+  baseURL: {{ $provider.gitlab.baseURL | quote }}
+  clientID: {{ $provider.gitlab.clientID | quote }}
+  clientSecret: {{ $provider.gitlab.clientSecret | quote }}
+  redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+    {{- if $provider.gitlab.groups }}
+  groups:
+      {{- range $group := $provider.gitlab.groups }}
+  - {{ $group | quote }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- if eq $provider.type "LDAP" }}
+type: ldap
+id: {{ $provider.id | quote }}
+name: {{ $provider.name | quote }}
+email:
+  host: {{ $provider.ldap.host | quote }}
+    {{- if $provider.ldap.insecureSkipVerify }}
+  insecureSkipVerify: {{ $provider.ldap.insecureSkipVerify | quote }}
+    {{- end }}
+    {{- if $provider.ldap.ca }}
+  rootCAData: {{ $provider.ldap.ca | b64enc }}
+    {{- end }}
+  bindDN: {{ $provider.ldap.bindDN | quote }}
+  bindPW: {{ $provider.ldap.bindPW | quote }}
+    {{- if $provider.ldap.startTLS }}
+  startTLS: true
+    {{- end }}
+  userSearch:
+{{ $provider.ldap.userSearch | toYaml | indent 2 }}
+  groupSearch:
+{{ $provider.ldap.groupSearch | toYaml | indent 2 }}
+  usernamePrompt: "LDAP username"
+  {{- end }}
+
+  {{- if eq $provider.type "OIDC" }}
+type: oidc
+id: {{ $provider.id | quote }}
+name: {{ $provider.name | quote }}
+email:
+  issuer: {{ $provider.oidc.issuer | quote }}
+  clientID: {{ $provider.oidc.clientID | quote }}
+  clientSecret: {{ $provider.oidc.clientSecret | quote }}
+  redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+    {{- if $provider.oidc.basicAuthUnsupported }}
+  basicAuthUnsupported: true
+    {{- end }}
+   {{- if $provider.oidc.insecureSkipEmailVerified }}
+  insecureSkipEmailVerified: true
+    {{- end }}
+    {{- if $provider.oidc.getUserInfo }}
+  getUserInfo: true
+    {{- end }}
+  userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
+  userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
+    {{- if $provider.oidc.scopes }}
+  scopes:
+{{ $provider.oidc.scopes | toYaml | indent 2 }}
+    {{- end }}
+  usernamePrompt: "OIDC username"
+  {{- end }}
+
+  {{- if eq $provider.type "Crowd" }}
+type: atlassian-crowd
+id: {{ $provider.id | quote }}
+name: {{ $provider.name | quote }}
+email:
+  baseURL: {{ $provider.crowd.baseURL | quote }}
+  clientID: {{ $provider.crowd.clientID | quote }}
+  clientSecret: {{ $provider.crowd.clientSecret | quote }}
+    {{- if $provider.crowd.groups }}
+  groups:
+{{ $provider.crowd.groups | toYaml | indent 2 }}
+    {{- end }}
+  usernamePrompt: "Crowd username"
+  {{- end }}
+
+{{- end }}
