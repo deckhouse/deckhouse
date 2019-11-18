@@ -3,11 +3,6 @@
 
 Данный модуль отвечает за генерацию RBAC для пользователей и реализует простейший multi-tenancy с разграничением доступа по namespace.
 
-**Важно!** Модуль управляет правами пользователей, а не правами администраторов кластера. Даже уровень доступа `Admin`, представленный в данном модуле, значительно ограничен по правам. Наиболее значительные ограничения:
-1. Полностью отсутствует доступ на запись к любым глобальным объектам (кроме namespace), и только некоторые доступны для чтения.
-2. Нет доступа на создание DaemonSet'ов (это служебный контроллер, мы категорически не рекомендуем его использовать в конечных приложениях пользователей).
-
-
 **Важно!** Мы категорически не рекомендуем создавать Pod'ы и ReplicaSet'ы – эти объекты являются второстепенными и должны создаваться из других контроллеров. Доступ к созданию и изменению Pod'ов и ReplicaSet'ов полностью отсутствует.  
 
 Конфигурация
@@ -41,7 +36,7 @@ spec:
     name: some@example.com
   - kind: Group
     name: some-group-name
-  accessLevel: Master
+  accessLevel: PrivilegedUser
   portForwarding: true
   allowAccessToSystemNamespaces: false     # Опция доступна только при enableMultiTenancy
   limitNamespaces:                         # Опция доступна только при enableMultiTenancy
@@ -57,15 +52,21 @@ spec:
 ```
 
 В `spec` возможны такие параметры:
-* `subjects` - Пользователи и/или группы, которым вы хотите предоставить права. [Спецификация](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#subject-v1-rbac-authorization-k8s-io).
-* `accessLevel` - `User`, `Master`, `Deploy` или `Admin`. Не обязательный параметр.
-    * `User` - позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-    * `Master` - то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять поды (что обеспечивает возможность перезагрузки);
-    * `Deploy` - то же самое, что и Master, но предоставляет возможность создавать и изменять namespace и большинство объектов (не позволяет создавать Pod'ы);
-    * `Admin` - то же самое, что и Deploy, но позволяет удалять служебные объекты (ReplicaSet'ы, certmanager.k8s.io/challenges и certmanager.k8s.io/orders);
-* `portForwarding` - возможные значения `true`, `false` разрешить выполнять `port-forward`;
+* `subjects` — Пользователи и/или группы, которым вы хотите предоставить права. [Спецификация](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#subject-v1-rbac-authorization-k8s-io).
+* `accessLevel` — `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterAdmin`, `SuperAdmin`. Не обязательный параметр.
+    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
+    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять поды (что обеспечивает возможность перезагрузки);
+    * `Editor` — то же самое, что и PrivilegedUser, но предоставляет возможность создавать и изменять namespace и все объекты, которые обычно нужны для прикладных задач;
+      * **Важно!** т.к. Editor уполномочен редактировать RoleBindings, он может сам себе расширить полномочия в рамках namespace.
+    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, ReplicaSet'ы, certmanager.k8s.io/challenges и certmanager.k8s.io/orders);
+    * `ClusterEditor` — то же самое, что и Editor, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (ClusterXXXMetric, ClusterRoleBindings, KeepalivedInstance, DaemonSet...).
+      * **Важно!** т.к. ClusterEditor уполномочен редактировать ClusterRoleBindings, он может сам себе расширить полномочия.
+    * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, MachineSets, Machines, OpenstackInstanceClasses...).
+      * **Важно!** т.к. ClusterAdmin уполномочен редактировать ClusterRoleBindings, он может сам себе расширить полномочия.
+    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
+* `portForwarding` — возможные значения `true`, `false` разрешить выполнять `port-forward`;
     * По-умолчанию `false`.
-* `allowScale` - возможные значения `true`, `false` разрешить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы;
+* `allowScale` — возможные значения `true`, `false` разрешить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы;
     * По-умолчанию `false`.
 * `limitNamespaces` — белый список разрешённых namespace в формате регулярных выражений.
     * Политика:
@@ -139,7 +140,7 @@ spec:
   subjects:
   - kind: User
     name: myuser
-  accessLevel: Master
+  accessLevel: PrivilegedUser
   portForwarding: true
 ```
 
@@ -167,6 +168,6 @@ spec:
 ```
 </details>
 
-## Настройка дополнительных ClusterRole для разных accessLevel
+## Кастомизация прав для предустановленных accessLevel
 
-См. [DEVELOPMENT.md](/modules/140-user-authz/DEVELOPMENT.md#настройка-дополнительных-clusterrole-для-разных-accesslevel).
+См. [DEVELOPMENT.md](/modules/140-user-authz/DEVELOPMENT.md#кастомизация-прав-для-предустановленных-accesslevel).

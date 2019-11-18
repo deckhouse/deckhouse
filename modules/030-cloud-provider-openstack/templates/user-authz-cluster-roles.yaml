@@ -4,13 +4,13 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
-  name: d8-{{ .Chart.Name }}:user-authz:authentication:user
+  name: d8-{{ .Chart.Name }}:user-authz:user
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
-  - authentication.istio.io
+  - deckhouse.io
   resources:
-  - policies
+  - openstackinstanceclasses
   verbs:
   - get
   - list
@@ -20,14 +20,14 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: Deploy
-  name: d8-{{ .Chart.Name }}:user-authz:authentication:deploy
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8-{{ .Chart.Name }}:user-authz:cluster-admin
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
-  - authentication.istio.io
+  - deckhouse.io
   resources:
-  - policies
+  - openstackinstanceclasses
   verbs:
   - create
   - delete
