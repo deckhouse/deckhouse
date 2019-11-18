@@ -3,8 +3,8 @@ module flant/deckhouse
 go 1.12
 
 require (
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20191114120048-4f1260b1aa5d // branch: fix_synchronization
-	github.com/flant/shell-operator v1.0.0-beta.5.0.20191112094847-62345f773937 // branch: fix_synchronization
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20191118201604-70d0c9b65592 // branch: fix_synchronization
+	github.com/flant/shell-operator v1.0.0-beta.5.0.20191118155959-e6e9bf5837dc // branch: fix_filter_result_for_deleted
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
