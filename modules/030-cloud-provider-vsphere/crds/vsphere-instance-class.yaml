@@ -33,7 +33,7 @@ spec:
           - rootDiskSize
           - template
           - virtualMachineFolder
-          - network
+          - mainNetwork
           - datastore
           properties:
             numCPUs:
@@ -56,10 +56,18 @@ spec:
               description: Path to the folder in which VirtualMachines will be cloned. Relative to the datacenter.
               example: dev
               type: string
-            network:
-              description: Path to the network that VirtualMachines' primary NIC will connect to. Relative to the datacenter.
+            mainNetwork:
+              description: Path to the network that VirtualMachines' primary NICs will connect to. Relative to the datacenter.
               example: k8s-msk-178
               type: string
+            additionalNetworks:
+              description: Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
+              example:
+              - DEVOPS_32
+              - DEVOPS_50
+              type: array
+              items:
+                type: string
             datastore:
               description: Path to the datastore in which VirtualMachines will be cloned. Relative to the datacenter.
               example: lun-1201

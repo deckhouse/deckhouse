@@ -12,7 +12,11 @@ spec:
   rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
   template: {{ .instanceGroup.instanceClass.template | quote }}
   virtualMachineFolder: {{ .instanceGroup.instanceClass.virtualMachineFolder | quote }}
-  network: {{ .instanceGroup.instanceClass.network | quote }}
+  mainNetwork: {{ .instanceGroup.instanceClass.mainNetwork | quote }}
+  additionalNetworks:
+{{- range .instanceGroup.instanceClass.additionalNetworks }}
+  - {{ . | quote }}
+{{- end }}
   datastore: {{ .instanceGroup.instanceClass.datastore | quote }}
   clusterNameTag: {{ .Values.global.project }}-{{ .Values.global.clusterName }}
   nodeRoleTag: {{ .instanceGroup.name }}-{{ .zoneName }}

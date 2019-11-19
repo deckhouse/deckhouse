@@ -100,8 +100,17 @@ cloudProviderVsphere: |
     * Пример — `dev/golden_image`
 * `virtualMachineFolder` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
     * Пример — `dev`
-* `network` — путь до network, которая будет подключена к виртуальной машине.
+* `mainNetwork` — путь до network, которая будет подключена к виртуальной машине.
     * Пример — `k8s-msk-178`
+* `additionalNetworks` — список путей до networks, которые будут подключены к виртуальной машине.
+    * Формат — массив строк.
+    * Пример:
+
+        ```yaml
+        - DEVOPS_49
+        - DEVOPS_50
+        ```
+
 * `datastore` — путь до Datastore, на котором будет созданы склонированные виртуальные машины.
     * Пример — `lun-1201`
 * `cloudInitSteps` — параметры bootstrap фазы.
