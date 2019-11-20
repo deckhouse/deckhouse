@@ -32,7 +32,6 @@ spec:
           - memory
           - rootDiskSize
           - template
-          - virtualMachineFolder
           - mainNetwork
           - datastore
           properties:
@@ -51,10 +50,6 @@ spec:
             template:
               description: Path to the template to be cloned. Relative to the datacenter.
               example: dev/golden_image
-              type: string
-            virtualMachineFolder:
-              description: Path to the folder in which VirtualMachines will be cloned. Relative to the datacenter.
-              example: dev
               type: string
             mainNetwork:
               description: Path to the network that VirtualMachines' primary NICs will connect to. Relative to the datacenter.
