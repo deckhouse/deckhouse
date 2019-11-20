@@ -66,7 +66,7 @@ spec:
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=unix://csi/csi.sock"
             - "--cloud-config=/etc/config/cloud-config"
-            - "--cluster={{ .Values.global.project }}.{{ .Values.global.clusterName }}"
+            - "--cluster={{ .Values.global.discovery.clusterUUID }}"
           env:
             - name: NODE_ID
               valueFrom:
