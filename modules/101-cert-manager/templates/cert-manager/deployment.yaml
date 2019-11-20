@@ -83,7 +83,7 @@ spec:
           args:
           - "--listen=9403"
           - "--proxy-pass=http://127.0.0.1:9402/metrics"
-          - "--user=kube-prometheus:scraper"
+          - "--user=d8-monitoring:scraper"
           ports:
           - containerPort: 9403
             name: https-metrics

@@ -45,15 +45,6 @@ function __main__() {
   max_cpu="$(bc -l <<< "scale=2; $pod_count * $cpu_per_pod / 3")"
   values::set prometheus.internal.vpa.longtermMaxMemory "$max_memory"
   values::set prometheus.internal.vpa.longtermMaxCPU "$max_cpu"
-
-  # Kube-state-metrics resources
-  memory_per_node="30"
-  cpu_per_node="15"
-  node_count=$(kubectl get nodes -o json | jq '.items | length')
-  max_memory="$(bc -l <<< "scale=0; 150 + ($node_count * $memory_per_node / 1)")Mi"
-  max_cpu="$(bc -l <<< "scale=0; 100 + ($node_count * $cpu_per_node / 1)")"
-  values::set prometheus.internal.vpa.kubeStateMetricsMaxMemory "$max_memory"
-  values::set prometheus.internal.vpa.kubeStateMetricsMaxCPU "$max_cpu"
 }
 
 hook::run "$@"

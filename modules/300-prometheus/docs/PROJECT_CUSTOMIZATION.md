@@ -25,7 +25,7 @@
 
 ### Как добавлять кастомные rule'ы в конкретном проекте?
 
-А очень просто! Любой PrometheusRule объект с лейблами `component=rules` и `prometheus=main` в namespace `kube-prometheus` будет автоматически подхвачен prometheus'ом (см. [подробнее](../../200-operator-prometheus/docs/INTERNALS.md) о том, как это работает).
+А очень просто! Любой PrometheusRule объект с лейблами `component=rules` и `prometheus=main` в namespace с лейблом `heritage=deckhouse` будет автоматически подхвачен prometheus'ом (см. [подробнее](../../200-operator-prometheus/docs/INTERNALS.md) о том, как это работает).
 * Рекомендуется называть этот PrometheusRule `prometheus-rules-custom`. В названиях групп правил рекомендуется использовать или `custom.<имя файла>.<имя группы>` или просто `custom.<имя файла>`.
 
     ```yaml
@@ -33,7 +33,7 @@
     kind: PrometheusRule
     metadata:
       name: prometheus-rules-custom
-      namespace: kube-prometheus
+      namespace: d8-monitoring
       labels:
         component: rules
         prometheus: main
@@ -58,7 +58,7 @@
 
 ### Как добавить кастомные конфиги scrape_configs, alert_relabel_configs, alertmanager_config?
 
-Создать в неймспейсе `kube-prometheus` новый `Secret`:
+Создать в неймспейсе `d8-monitoring` новый `Secret`:
 * Рекомендуемое имя — prometheus-main-additional-configs-XXX.
 * Лейбл — `additional-configs-for-prometheus=main`.
 * Содержимое:

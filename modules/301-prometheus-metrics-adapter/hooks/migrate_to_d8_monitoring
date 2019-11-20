@@ -1,0 +1,44 @@
+#!/bin/bash
+
+### Миграция 2019-10-15: https://github.com/deckhouse/deckhouse/merge_requests/1222
+# Хук для удаления старых ресурсов
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if kubectl get namespace kube-prometheus >/dev/null 2>/dev/null ; then
+    if kubectl -n kube-prometheus get configmap prometheus-metrics-adapter-apiserver-proxy-client-ca >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete configmap prometheus-metrics-adapter-apiserver-proxy-client-ca >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get configmap prometheus-metrics-adapter-config >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete configmap prometheus-metrics-adapter-config >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get vpa prometheus-metrics-adapter >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete vpa prometheus-metrics-adapter >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get deployments.apps prometheus-metrics-adapter >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete deployments.apps prometheus-metrics-adapter >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get pdb prometheus-metrics-adapter >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete pdb prometheus-metrics-adapter >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get secret prometheus-metrics-adapter-cert >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete secret prometheus-metrics-adapter-cert >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get secret prometheus-metrics-adapter-prometheus-api-client-tls >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete secret prometheus-metrics-adapter-prometheus-api-client-tls >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get serviceaccount prometheus-metrics-adapter >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete serviceaccount prometheus-metrics-adapter >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get service prometheus-metrics-adapter >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete service prometheus-metrics-adapter >/dev/null 2>/dev/null
+    fi
+  fi
+}
+
+hook::run "$@"

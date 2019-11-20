@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-main
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | indent 2 }}
 spec:
   targetRef:
@@ -25,14 +25,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   name: main
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.retentionGigabytes }}GB
   image: {{ .Values.global.modulesImages.registry }}/prometheus/prometheus:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}
-  version: v2.7.2
+  version: v2.13.0
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -43,7 +43,7 @@ spec:
     - "--listen=$(MY_POD_IP):9090"
     - "--location=/"
     - "--proxy-pass=http://127.0.0.1:9090/"
-    - "--user=nginx-ingress:.*|.*:prometheus-api-client|kube-prometheus:scraper"
+    - "--user=nginx-ingress:.*|.*:prometheus-api-client|d8-monitoring:scraper"
     - "--probe-proxy-pass=http://127.0.0.1:9090/-/"
     - "--probe-listen=3500"
     ports:
@@ -97,6 +97,9 @@ spec:
   serviceMonitorNamespaceSelector:
     matchLabels:
       heritage: deckhouse
+  ruleNamespaceSelector:
+    matchLabels:
+      heritage: deckhouse
   podMetadata:
     annotations:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
@@ -125,11 +128,11 @@ spec:
   additionalAlertManagerConfigs:
     name: prometheus-main-additional-configs
     key: alert-managers.yaml
-{{- if or (hasKey .Values.prometheus "madisonAuthKey") (hasKey .Values.prometheus "additionalAlertmanagers") }}
+{{- if or (.Values.global.enabledModules | has "prometheus-madison-integration") (hasKey .Values.prometheus "additionalAlertmanagers") }}
   alerting:
     alertmanagers:
-  {{- if hasKey .Values.prometheus "madisonAuthKey" }}
-    - namespace: kube-prometheus
+  {{- if (.Values.global.enabledModules | has "prometheus-madison-integration") }}
+    - namespace: d8-monitoring
       name: madison-proxy
       port: http
   {{- end }}

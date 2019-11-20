@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
   name: prometheus
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | indent 2 }}
 rules:
 - apiGroups: [""]

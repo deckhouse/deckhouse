@@ -27,8 +27,10 @@ spec:
   applicationIngressClassName: "$(common::module_ingress_class)"
 EOF
   else
-     kubectl -n d8-dashboard delete dex-authenticator dashboard >/dev/null 2>&1 || true
+    if kubectl -n d8-dashboard get dex-authenticator dashboard >/dev/null 2>/dev/null ; then
+      kubectl -n d8-dashboard delete dex-authenticator dashboard >/dev/null 2>/dev/null
+    fi
   fi
 }
 
-hook::run $@
+hook::run "$@"

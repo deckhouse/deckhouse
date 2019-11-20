@@ -8,7 +8,7 @@ global:
   # Временный хак, который мы используем, пока не отделим enabled хук от дефолтных values.yaml в каждом модуле
   hack:
     namespaces:
-      prometheus: kube-prometheus
+      prometheus: d8-monitoring
       dashboard: d8-dashboard
       openvpn: kube-openvpn
 
@@ -28,13 +28,16 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 verticalPodAutoscalerEnabled: true
-nodeProblemDetectorEnabled: true
+monitoringKubernetesEnabled: true
+monitoringKubernetesControlPlaneEnabled: true
+monitoringNodeProblemDetectorEnabled: true
+monitoringPingEnabled: true
+prometheusMadisonIntegrationEnabled: true
 extendedMonitoringEnabled: true
 nodeLocalDnsEnabled: true
 deschedulerEnabled: true
 nginxIngressEnabled: true
 dashboardEnabled: true
-pingExporterEnabled: true
 secretCopierEnabled: true
 sysctlTunerEnabled: true
 systemdSlicesCleanerEnabled: true

@@ -8,7 +8,7 @@ spec:
   caBundle: {{ .Values.prometheusMetricsAdapter.internal.adapterCA | b64enc }}
   service:
     name: prometheus-metrics-adapter
-    namespace: kube-prometheus
+    namespace: d8-monitoring
   group: custom.metrics.k8s.io
   version: v1beta1
   groupPriorityMinimum: 100
@@ -23,7 +23,7 @@ spec:
   caBundle: {{ .Values.prometheusMetricsAdapter.internal.adapterCA | b64enc }}
   service:
     name: prometheus-metrics-adapter
-    namespace: kube-prometheus
+    namespace: d8-monitoring
   group: metrics.k8s.io
   version: v1beta1
   groupPriorityMinimum: 100
@@ -38,7 +38,7 @@ spec:
   caBundle: {{ .Values.prometheusMetricsAdapter.internal.adapterCA | b64enc }}
   service:
     name: prometheus-metrics-adapter
-    namespace: kube-prometheus
+    namespace: d8-monitoring
   group: external.metrics.k8s.io
   version: v1beta1
   groupPriorityMinimum: 100

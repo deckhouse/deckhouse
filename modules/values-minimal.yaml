@@ -8,7 +8,7 @@ global:
   # Временный хак, который мы используем, пока не отделим enabled хук от дефолтных values.yaml в каждом модуле
   hack:
     namespaces:
-      prometheus: kube-prometheus
+      prometheus: d8-monitoring
       dashboard: d8-dashboard
       openvpn: kube-openvpn
 

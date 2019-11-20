@@ -1,0 +1,17 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+{{- range (tuple "coreos" "kubernetes") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: monitoring-kubernetes-{{ . }}
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list $ (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | indent 2 }}
+spec:
+  groups:
+  {{- $root := $ }}
+  {{- range $path, $bytes := $.Files.Glob (print "monitoring/prometheus-rules/" . "/*.yaml") }}
+{{ $root.Files.Get $path | indent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

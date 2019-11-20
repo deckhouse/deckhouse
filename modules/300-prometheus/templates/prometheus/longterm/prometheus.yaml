@@ -5,7 +5,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-longterm
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | indent 2 }}
 spec:
   targetRef:
@@ -26,14 +26,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   name: longterm
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | indent 2 }}
 spec:
   replicas: 1
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
   retentionSize: {{ .Values.prometheus.longtermRetentionGigabytes }}GB
   image: {{ .Values.global.modulesImages.registry }}/prometheus/prometheus:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}
-  version: v2.7.2
+  version: v2.13.0
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -44,7 +44,7 @@ spec:
     - "--listen=$(MY_POD_IP):9090"
     - "--location=/"
     - "--proxy-pass=http://127.0.0.1:9090/"
-    - "--user=nginx-ingress:.*|.*:prometheus-api-client|kube-prometheus:scraper"
+    - "--user=nginx-ingress:.*|.*:prometheus-api-client|d8-monitoring:scraper"
     - "--probe-proxy-pass=http://127.0.0.1:9090/-/"
     - "--probe-listen=3500"
     ports:

@@ -1,0 +1,72 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: monitoring-ping
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: monitoring-ping
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: monitoring-ping
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.05Gi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: monitoring-ping
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      name: monitoring-ping
+  template:
+    metadata:
+      labels:
+        name: monitoring-ping
+    spec:
+      terminationGracePeriodSeconds: 0
+      tolerations:
+      - operator: "Exists"
+      hostNetwork: true
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      serviceAccountName: monitoring-ping
+      containers:
+      - image: {{ .Values.global.modulesImages.registry }}/monitoring-ping/monitoring-ping:{{ .Values.global.modulesImages.tags.monitoringPing.monitoringPing }}
+        name: monitoring-ping
+        env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: PROMETHEUS_TEXTFILE_DIR
+            value: /node-exporter-textfile/
+          - name: PROMETHEUS_TEXTFILE_PREFIX
+            value: monitoring-ping_
+        volumeMounts:
+          - name: textfile
+            mountPath: /node-exporter-textfile
+          - name: config
+            mountPath: /config
+      volumes:
+        - name: textfile
+          hostPath:
+            path: /var/run/node-exporter-textfile
+        - name: config
+          configMap:
+            name: monitoring-ping-config
+      imagePullSecrets:
+      - name: deckhouse-registry

@@ -10,21 +10,21 @@ function __config__() {
 }
 
 function __main__() {
-  if ! kubectl -n kube-prometheus get secret prometheus-metrics-adapter-cert > /dev/null 2> /dev/null ; then
+  if ! kubectl -n d8-monitoring get secret prometheus-metrics-adapter-cert > /dev/null 2> /dev/null ; then
     ca=$(jo CN=prometheus-metrics-adapter key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
     ca_cert=$(echo "$ca" | jq .cert -r)
 
     # Создадим конфиг для cfssl gencert
     config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
 
-    cert=$(jo CN=prometheus-metrics-adapter hosts="$(jo -a prometheus-metrics-adapter.kube-prometheus prometheus-metrics-adapter.kube-prometheus.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo "$ca" | jq .cert -r) -ca-key=<(echo "$ca" | jq .key -r) -config=<(echo "$config") -)
-    cert_pem=$(echo "$cert" | jq .cert -r)
-    cert_key=$(echo "$cert" | jq .key -r)
+    cert=$(jo CN=prometheus-metrics-adapter hosts="$(jo -a prometheus-metrics-adapter.d8-monitoring prometheus-metrics-adapter.d8-monitoring.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
+    cert_pem=$(echo $cert | jq .cert -r)
+    cert_key=$(echo $cert | jq .key -r)
   else
-    cert=$(kubectl -n kube-prometheus get secret prometheus-metrics-adapter-cert -o json)
-    ca_cert=$(echo "$cert" | jq -r '.data."adapter-ca.crt"' | base64 -d)
-    cert_pem=$(echo "$cert" | jq -r '.data."tls.crt"' | base64 -d)
-    cert_key=$(echo "$cert" | jq -r '.data."tls.key"' | base64 -d)
+    cert=$(kubectl -n d8-monitoring get secret prometheus-metrics-adapter-cert -o json)
+    ca_cert=$(echo $cert | jq -r '.data."adapter-ca.crt"' | base64 -d)
+    cert_pem=$(echo $cert | jq -r '.data."tls.crt"' | base64 -d)
+    cert_key=$(echo $cert | jq -r '.data."tls.key"' | base64 -d)
   fi
 
   values::set prometheusMetricsAdapter.internal.adapterCA "$ca_cert"

@@ -142,7 +142,7 @@ spec:
         args:
         - "--listen=$(MY_POD_IP):9103"
         - "--proxy-pass=http://127.0.0.1:9102/metrics"
-        - "--user=kube-prometheus:scraper"
+        - "--user=d8-monitoring:scraper"
         env:
         - name: MY_POD_IP
           valueFrom:

@@ -17,7 +17,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
 metadata:
   name: grafana
-  namespace: kube-prometheus
+  namespace: d8-monitoring
   labels:
     heritage: deckhouse
     module: grafana
@@ -29,8 +29,10 @@ spec:
   $allowedGroups
 EOF
   else
-     kubectl -n kube-prometheus delete dex-authenticator grafana >/dev/null 2>&1 || true
+    if kubectl -n d8-monitoring get dex-authenticator grafana >/dev/null 2>/dev/null ; then
+      kubectl -n d8-monitoring delete dex-authenticator grafana >/dev/null 2>/dev/null
+    fi
   fi
 }
 
-hook::run $@
+hook::run "$@"

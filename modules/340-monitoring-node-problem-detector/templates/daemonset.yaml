@@ -1,0 +1,106 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: monitoring-node-problem-detector
+  namespace: d8-monitoring-node-problem-detector
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-node-problem-detector")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: monitoring-node-problem-detector
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: monitoring-node-problem-detector
+      maxAllowed:
+        cpu: 0.1
+        memory: 0.05Gi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: monitoring-node-problem-detector
+  namespace: d8-monitoring-node-problem-detector
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-node-problem-detector")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: monitoring-node-problem-detector
+  template:
+    metadata:
+      labels:
+        app: monitoring-node-problem-detector
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: monitoring-node-problem-detector
+      tolerations:
+      - operator: Exists
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: monitoring-node-problem-detector
+        command:
+        - /node-problem-detector
+        - --logtostderr
+        - --system-log-monitors=/config/kernel-monitor.json,/config/docker-monitor.json
+        - --prometheus-address=127.0.0.1
+        - --prometheus-port=20257
+        image: {{ $.Values.global.modulesImages.registry }}/monitoring-node-problem-detector/monitoring-node-problem-detector:{{ $.Values.global.modulesImages.tags.monitoringNodeProblemDetector.monitoringNodeProblemDetector }}
+        securityContext:
+          privileged: true
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: log
+          mountPath: /var/log
+          readOnly: true
+        - name: kmsg
+          mountPath: /dev/kmsg
+          readOnly: true
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: config
+          mountPath: /config
+          readOnly: true
+      - name: ca-auth-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ .Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=443"
+        - "--proxy-pass=http://127.0.0.1:20257/metrics"
+        - "--user=d8-monitoring:scraper"
+        ports:
+        - containerPort: 443
+          name: https-metrics
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+      volumes:
+      - name: log
+        hostPath:
+          path: /var/log/
+      - name: kmsg
+        hostPath:
+          path: /dev/kmsg
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: config
+        configMap:
+          name: monitoring-node-problem-detector-config
+          items:
+          - key: kernel-monitor.json
+            path: kernel-monitor.json
+          - key: docker-monitor.json
+            path: docker-monitor.json

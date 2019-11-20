@@ -1,0 +1,35 @@
+#!/bin/bash
+
+### Миграция 2019-10-15: https://github.com/deckhouse/deckhouse/merge_requests/1222
+# Хук для удаления старых ресурсов
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=10
+}
+
+function __main__() {
+  if kubectl get namespace kube-prometheus >/dev/null 2>/dev/null ; then
+    if kubectl -n kube-prometheus get vpa extended-monitoring >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete vpa extended-monitoring >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get deployments.apps extended-monitoring >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete deployments.apps extended-monitoring >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get pdb extended-monitoring >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete pdb extended-monitoring >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get podmonitor extended-monitoring >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete podmonitor extended-monitoring >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get prometheusrule extended-monitoring >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete prometheusrule extended-monitoring >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get serviceaccount extended-monitoring >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete serviceaccount extended-monitoring >/dev/null
+    fi
+  fi
+}
+
+hook::run "$@"

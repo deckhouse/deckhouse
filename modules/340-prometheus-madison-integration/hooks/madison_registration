@@ -1,0 +1,74 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=1 #after madison_revoke
+}
+
+function madison_api() {
+    local response=$(curl -s -H "Content-Type: application/json" -X $1 -d "$3" https://madison.flant.com$2)
+
+    if [[ "$(echo "$response" | jq 'has("auth_key")')" != "true" ]] ; then
+      if [[ "$(echo "$response" | jq 'has("error")')" != "false" ]] ; then
+        >&2 echo "Failed to self setup in madison: $(echo "$response" | jq .error -r)."
+      else
+        >&2 echo "Failed to self setup in madison: unknown error."
+      fi
+
+      >&2 echo 'Command: curl -s -H "Content-Type: application/json" -X '$1' -d "'$3'" https://madison.flant.com'$2
+
+      return 1
+    fi
+
+    echo "$response" | jq .auth_key -r
+}
+
+function __main__() {
+  cluster_name=$(values::get --required global.clusterName)
+  request_data=$(jo \
+    name=kubernetes-$cluster_name \
+    prometheus_url=- \
+    grafana_url=- \
+    extra_data="$(jo \
+      labels="$(jo \
+        kubernetes=$cluster_name \
+      )"
+    )"
+  )
+
+  if values::has global.modules.publicDomainTemplate ; then
+    prometheus_https=$(kubectl -n antiopa  get cm antiopa -o json | jq '.data.prometheus' -r | yq r - https.mode)
+    global_https=$(values::get global.modules.https.mode)
+
+    if [ "$prometheus_https" == "null" ] ; then
+      if [ "$global_https" != "Disabled" ] ; then
+        scheme=https
+      else
+        scheme=http
+      fi
+    elif [ "$prometheus_https" == "Disabled" ] ; then
+      scheme=http
+    else
+      scheme=https
+    fi
+
+    request_data=$(jq -s '.[0] * .[1]' <(echo "$request_data") <(jo \
+      grafana_url="$scheme://$(common::module_public_domain grafana)/" \
+      prometheus_url="$scheme://$(common::module_public_domain grafana)/prometheus/"
+    ))
+  fi
+
+  project=$(values::get --required global.project)
+
+  if values::has prometheusMadisonIntegration.madisonAuthKey ; then
+    madison_api PUT "/api/$project/self_update/$(values::get --required prometheusMadisonIntegration.madisonAuthKey)" "$request_data"
+  elif values::has prometheusMadisonIntegration.madisonSelfSetupKey && ! values::is_false prometheusMadisonIntegration.madisonSelfSetupKey ; then
+    request_data=$(echo "$request_data" | jq '.type = "prometheus"')
+
+    madison_auth_key=$(madison_api POST "/api/$project/self_setup/$(values::get --required prometheusMadisonIntegration.madisonSelfSetupKey)" "$request_data")
+    values::set --config prometheusMadisonIntegration.madisonAuthKey $madison_auth_key
+  fi
+}
+
+hook::run "$@"

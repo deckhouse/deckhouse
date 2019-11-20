@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-metrics-adapter
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter")) | indent 2 }}
 spec:
   targetRef:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus-metrics-adapter
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter")) | indent 2 }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
@@ -90,7 +90,7 @@ spec:
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-metrics-adapter/prometheus-reverse-proxy:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.prometheusReverseProxy }}
         env:
         - name: PROMETHEUS_URL
-          value: "https://trickster.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}"
+          value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
         readinessProbe:
           httpGet:
             path: /healthz

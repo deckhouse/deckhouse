@@ -1,7 +1,6 @@
 prometheus:
   retentionDays: 15
   retentionGigabytes: 30
-  madisonSelfSetupKey: ***REMOVED***
   longtermRetentionDays: 1095
   longtermRetentionGigabytes: 30
   vpa:

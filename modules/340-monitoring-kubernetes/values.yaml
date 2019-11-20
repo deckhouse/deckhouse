@@ -1,0 +1,4 @@
+monitoringKubernetes:
+  vpa: {}
+  internal:
+    vpa: {}

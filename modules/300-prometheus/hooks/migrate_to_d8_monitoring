@@ -1,0 +1,116 @@
+#!/bin/bash
+
+### Миграция 2019-10-15: https://github.com/deckhouse/deckhouse/merge_requests/1222
+# Хук для удаления старых ресурсов
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=0
+}
+
+function __main__() {
+  if kubectl get namespace kube-prometheus >/dev/null 2>/dev/null ; then
+    INGRESSES=$(cat <<-EOF
+grafana
+prometheus
+prometheus-longterm
+trickster
+EOF
+)
+    for ingress in ${INGRESSES} ; do
+      if kubectl -n kube-prometheus get ingress ${ingress} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete ingress ${ingress} >/dev/null 2>/dev/null
+      fi
+    done
+
+    SERVICES=$(cat <<-EOF
+grafana
+prometheus
+prometheus-longterm
+trickster
+EOF
+)
+    for service in ${SERVICES} ; do
+      if kubectl -n kube-prometheus get service ${service} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete service ${service} >/dev/null 2>/dev/null
+      fi
+    done
+    if kubectl -n kube-prometheus get deployments.apps trickster >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete deployments.apps trickster >/dev/null 2>/dev/null
+    fi
+    PROMETHEUSRULES=$(cat <<-EOF
+applications
+cert-manager
+coreos
+docker-version
+kubernetes
+node-local-dns
+EOF
+)
+    for prometheusrule in ${PROMETHEUSRULES} ; do
+      if kubectl -n kube-prometheus get prometheusrule ${prometheusrule} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete prometheusrule ${prometheusrule} >/dev/null 2>/dev/null
+      fi
+    done
+
+    CONFIGMAPS=$(cat <<-EOF
+grafana-dashboard-definitions-applications
+grafana-dashboard-definitions-ingress-nginx-constructor
+grafana-dashboard-definitions-ingress-nginx-namespace
+grafana-dashboard-definitions-ingress-nginx-vhost
+grafana-dashboard-definitions-kubernetes-cluster
+grafana-dashboard-definitions-kubernetes-cluster-dns
+grafana-dashboard-definitions-kubernetes-cluster-ingress-nginx
+grafana-dashboard-definitions-kubernetes-cluster-nodes
+grafana-dashboard-definitions-kubernetes-cluster-prometheus
+grafana-dashboards
+grafana-datasources
+trickster-config
+EOF
+)
+    for configmap in ${CONFIGMAPS} ; do
+      if kubectl -n kube-prometheus get configmap ${configmap} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete configmap ${configmap} >/dev/null 2>/dev/null
+      fi
+    done
+
+  # migrate custom configmap with dashboards
+  if ! kubect-n d8-monitoring get configmap grafana-dashboard-definitions-custom >/dev/null 2>/dev/null ; then
+    if kubectl -n kube-prometheus get configmap grafana-dashboard-definitions-custom >/dev/null 2>/dev/null ; then
+      kubectl -n kbue-prometheus get configmap grafana-dashboard-definitions-custom -o json | \
+        jq -r "include \"remove_empty\"; .metadata.namespace=\"d8-monitoring\" | remove_empty |
+              .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
+          | kubectl::replace_or_create
+    fi
+  fi
+
+  SERVICEMONITORS=$(cat <<-EOF
+consul
+custom
+elasticsearch
+etcd3
+fluentd
+memcached
+minio
+mongodb
+nats
+nginx
+php-fpm
+prometheus
+rabbitmq
+redis
+sidekiq
+trickster
+uwsgi
+EOF
+)
+    for servicemonitor in ${SERVICEMONITORS} ; do
+      if kubectl -n kube-prometheus get servicemonitor ${servicemonitor} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete servicemonitor ${servicemonitor} >/dev/null 2>/dev/null
+      fi
+    done
+  fi
+}
+
+hook::run "$@"

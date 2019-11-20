@@ -12,7 +12,7 @@ function __main__() {
   cluster_version=$(values::get global.discovery.clusterVersion)
   pvc_list="prometheus-main-db-prometheus-main-0 prometheus-longterm-db-prometheus-longterm-0"
   if module::is_ha_enabled; then
-    pvc_list="$pvc_list prometheus-main-db-prometheus-main-1"
+    pvc_list="$pvc_list prometheus-main-db-prometheus-main-1 "
   fi
 
   # Убедимся, что версия кластера выше 1.11 и мы можем, в теории, ресайзить PVC
@@ -20,25 +20,25 @@ function __main__() {
     for pvc in $pvc_list; do
       pod_name=$(echo $pvc | sed -r 's/^prometheus-(\w+)-.*-([0-9]+)$/prometheus-\1-\2/') # prometheus-main-db-prometheus-main-0 -> prometheus-main-0
       # Не имеет смысла все это делать, если у нас нет PVC, а используется emptydir
-      if kubectl -n kube-prometheus get pvc "$pvc" >/dev/null 2>&1 ; then
+      if kubectl -n d8-monitoring get pvc "$pvc" >/dev/null 2>&1 ; then
         # Проверим, что такой storageclass существует, а значит это не localstorage
-        if kubectl get sc $(kubectl -n kube-prometheus get pvc ${pvc} -o json | jq -r '.spec.storageClassName') >/dev/null 2>&1 ; then
+        if kubectl get sc $(kubectl -n d8-monitoring get pvc ${pvc} -o json | jq -r '.spec.storageClassName') >/dev/null 2>&1 ; then
           # Проверим, поддерживает ли storage class expansion PVC
-          if [ "$(kubectl get sc "$(kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.spec.storageClassName' -r)" -o json | jq '.allowVolumeExpansion')" = "true" ] ; then
-            if kubectl -n kube-prometheus get pod $pod_name -o json | jq -e '.status.conditions | all(.[] ; .status == "True")' >/dev/null 2>&1 ; then
+          if [ "$(kubectl get sc "$(kubectl -n d8-monitoring get pvc "$pvc" -o json | jq '.spec.storageClassName' -r)" -o json | jq '.allowVolumeExpansion')" = "true" ] ; then
+            if kubectl -n d8-monitoring get pod $pod_name -o json | jq -e '.status.conditions | all(.[] ; .status == "True")' >/dev/null 2>&1 ; then
               # Посчитаем, сколько занято диско в prometheus
-              prometheus_size=$(kubectl -n kube-prometheus exec $pod_name -c prometheus --  df -h /prometheus/ | grep -v 'Filesystem' | awk '{print $5}' | tr -d '%')
+              prometheus_size=$(kubectl -n d8-monitoring exec $pod_name -c prometheus --  df -h /prometheus/ | grep -v 'Filesystem' | awk '{print $5}' | tr -d '%')
               # Если у нас Kubernetes версии 1.11 и SC поддерживает Expansion и в PVC занято более 90% места
               if [ "$prometheus_size" -gt "90" ] ; then
                 # Проверим, что диск уже не отресайзили, проверив статус и если диск не ждет ресайза (удаления пода), то произведем увеличение диска
-                if ! kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.conditions[] | select (.type=="FileSystemResizePending" and .status=="True") | .message' >/dev/null 2>&1 ; then
-                  size=$(kubectl -n kube-prometheus get pvc "$pvc" -o json | jq '.status.capacity.storage' -r | unit-converter --mode=kube-resource-unit)
+                if ! kubectl -n d8-monitoring get pvc "$pvc" -o json | jq '.status.conditions[] | select (.type=="FileSystemResizePending" and .status=="True") | .message' >/dev/null 2>&1 ; then
+                  size=$(kubectl -n d8-monitoring get pvc "$pvc" -o json | jq '.status.capacity.storage' -r | unit-converter --mode=kube-resource-unit)
                   # Накидываем 5 ГиБ
                   new_size=$((size + 5368709120))
                   fltr='. | .spec.resources.requests.storage = '"\"${new_size}\""
                   echo "!!! $pod_name's storage has been resized from $(( size / 1024 / 1024 / 1024 )) to $(( new_size / 1024 / 1024 / 1024 )) !!!"
                   # Пропатчим PVC
-                  kubectl::jq_patch "kube-prometheus" "pvc/$pvc" "$fltr"
+                  kubectl::jq_patch "d8-monitoring" "pvc/$pvc" "$fltr"
                 fi
               fi
             fi
