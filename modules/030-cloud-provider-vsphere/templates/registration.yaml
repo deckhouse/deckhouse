@@ -23,4 +23,5 @@ data:
   {{- $_ := set $vsphereValues "zoneTagCategory" .Values.cloudProviderVsphere.zoneTagCategory }}
   {{- $_ := set $vsphereValues "region" .Values.cloudProviderVsphere.region }}
   {{- $_ := set $vsphereValues "sshKeys" .Values.cloudProviderVsphere.sshKeys }}
+  {{- $_ := set $vsphereValues "vmFolderPath" .Values.cloudProviderVsphere.vmFolderPath }}
   vsphere: {{ $vsphereValues | toJson | b64enc | quote }}

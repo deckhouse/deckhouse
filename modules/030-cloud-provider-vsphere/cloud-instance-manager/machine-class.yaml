@@ -11,7 +11,7 @@ spec:
   memory: {{ add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4) }}
   rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
   template: {{ .instanceGroup.instanceClass.template | quote }}
-  virtualMachineFolder: {{ .instanceGroup.instanceClass.virtualMachineFolder | quote }}
+  virtualMachineFolder: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
   mainNetwork: {{ .instanceGroup.instanceClass.mainNetwork | quote }}
   additionalNetworks:
 {{- range .instanceGroup.instanceClass.additionalNetworks }}

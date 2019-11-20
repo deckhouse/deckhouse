@@ -23,6 +23,8 @@
 * `host` — домен vCenter сервера.
 * `username` — логин.
 * `password` — пароль.
+* `vmFolderPath` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
+    * Пример — `dev/test`
 * `insecure` — можно выставить в `true`, если vCenter имеет самоподписанный сертификат.
     * Формат — bool.
     * Опциональный параметр. По-умолчанию `false`.
@@ -71,6 +73,7 @@ cloudProviderVsphere: |
   host: vc-3.internal
   username: user
   password: password
+  vmFolderPath: dev/test
   insecure: true
   region: moscow-x001
   sshKeys:
@@ -98,8 +101,6 @@ cloudProviderVsphere: |
     * Формат — integer. В гибибайтах.
 * `template` — путь до VirtualMachine Template, который будет склонирован для создания новой VirtualMachine.
     * Пример — `dev/golden_image`
-* `virtualMachineFolder` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
-    * Пример — `dev`
 * `mainNetwork` — путь до network, которая будет подключена к виртуальной машине.
     * Пример — `k8s-msk-178`
 * `additionalNetworks` — список путей до networks, которые будут подключены к виртуальной машине.
@@ -136,7 +137,6 @@ spec:
   memory: 2048
   rootDiskSize: 20
   template: dev/golden_image
-  virtualMachineFolder: dev
   network: k8s-msk-178
   datastore: lun-1201
 ```
