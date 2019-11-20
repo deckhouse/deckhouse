@@ -80,7 +80,7 @@ data:
 ```
 openvpnEnabled: "true"
 openvpn: |
-  inlet: ExternalIp
+  inlet: ExternalIP
   externalIP: 5.4.54.4
 ```
 
