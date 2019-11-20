@@ -54,6 +54,7 @@ ansible:
       - tar
       - unzip
       - coreutils
+      - util-linux
 
   # Зависимости хуков (из edge/testing)
   - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
