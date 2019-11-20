@@ -2,7 +2,7 @@ global:
   scrape_interval: 5m
   scrape_timeout: 1m
   evaluation_interval: 5m
-{{- if or (hasKey .Values.prometheus "madisonAuthKey") (hasKey .Values.prometheus "additionalAlertmanagers") }}
+{{- if or (.Values.global.enabledModules | has "prometheus-madison-integration") (hasKey .Values.prometheus "additionalAlertmanagers") }}
 alerting:
   alert_relabel_configs:
   - separator: ;
@@ -10,12 +10,12 @@ alerting:
     replacement: $1
     action: labeldrop
   alertmanagers:
-  {{- if hasKey .Values.prometheus "madisonAuthKey" }}
+  {{- if (.Values.global.enabledModules | has "prometheus-madison-integration") }}
   - kubernetes_sd_configs:
     - role: endpoints
       namespaces:
         names:
-        - kube-prometheus
+        - d8-monitoring
     scheme: http
     path_prefix: /
     timeout: 10s
@@ -69,7 +69,7 @@ scrape_configs:
     - '{job=~".+"}'
   static_configs:
   {{- if (include "helm_lib_ha_enabled" .) }}
-  - targets: ['prometheus-affinitive.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}.:9090']
+  - targets: ['prometheus-affinitive.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090']
   {{- else }}
-  - targets: ['prometheus.kube-prometheus.svc.{{ .Values.global.discovery.clusterDomain }}.:9090']
+  - targets: ['prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090']
   {{- end }}

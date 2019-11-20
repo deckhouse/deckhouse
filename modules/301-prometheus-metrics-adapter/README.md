@@ -249,7 +249,7 @@ spec:
 
 ### Скейлинг по внешним метрикам
 
-**Важно!** Настраивать скейлинг по внешним метрикам (добавлять PrometheusRule в namespace kube-prometheus) корректно ТОЛЬКО из некоторого инфраструктурного репозитария, но никак не из git-репозитариев прилоежний. Всячески старайтесь вместо этого использовать, например, NamespaceMetric.
+**Важно!** Настраивать скейлинг по внешним метрикам (добавлять PrometheusRule в namespace d8-monitoring) корректно ТОЛЬКО из некоторого инфраструктурного репозитария, но никак не из git-репозитариев прилоежний. Всячески старайтесь вместо этого использовать, например, NamespaceMetric.
 
 #### Регистрируем внешние метрики в Kubernetes API
 
@@ -262,7 +262,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: prometheus-metrics-adapter-mymetric # Рекомендованный шаблон для названия вашего PrometheusRule.
-  namespace: kube-prometheus # Важно!
+  namespace: d8-monitoring # Важно!
   labels:
     prometheus: main # Важно!
     component: rules # Важно!
@@ -315,7 +315,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: prometheus-metrics-adapter-sqs-messages-visible # Рекомендованное название — prometheus-metrics-adapter-<metric name>
-  namespace: kube-prometheus # Важно!
+  namespace: d8-monitoring # Важно!
   labels:
     prometheus: main # Важно!
     component: rules # Важно!

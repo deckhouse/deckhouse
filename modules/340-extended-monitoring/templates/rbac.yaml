@@ -1,0 +1,65 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8-monitoring:extended-monitoring
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - namespaces
+  - pods
+  - nodes
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  verbs:
+  - list
+  - watch
+  - get
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - list
+  - watch
+  - get
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: extended-monitoring
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8-monitoring:extended-monitoring
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: extended-monitoring
+  namespace: d8-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-monitoring:extended-monitoring

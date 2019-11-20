@@ -11,7 +11,7 @@ function __config__() {
          "kind": "Secret",
          "namespaceSelector": {
             "matchNames": [
-               "kube-prometheus"
+               "d8-monitoring"
             ]
          },
          "selector": {
@@ -26,7 +26,7 @@ EOF
 }
 
 function __main__() {
-  kubectl -n kube-prometheus get secret -ladditional-configs-for-prometheus=main -o json | \
+  kubectl -n d8-monitoring get secret -ladditional-configs-for-prometheus=main -o json | \
   jq '[.items[].data]
     | reduce .[] as $i
       (
@@ -48,7 +48,7 @@ function __main__() {
           "scrapes.yaml":        (."scrapes.yaml"        | @base64)
         }
       }' | \
-  kubectl -n kube-prometheus apply -f -
+  kubectl -n d8-monitoring apply -f -
 }
 
 hook::run "$@"

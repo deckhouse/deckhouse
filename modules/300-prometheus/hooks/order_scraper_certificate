@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  common_hooks::certificates::order_certificate::main "kube-prometheus" "prometheus-scraper-tls" "kube-prometheus:scraper" "internal.prometheusScraperTLS"
+  common_hooks::certificates::order_certificate::main "d8-monitoring" "prometheus-scraper-tls" "d8-monitoring:scraper" "internal.prometheusScraperTLS"
 }
 
 hook::run "$@"

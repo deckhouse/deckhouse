@@ -1,0 +1,67 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: extended-monitoring
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: extended-monitoring
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: extended-monitoring
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring")) | indent 2 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      module: {{ $.Chart.Name }}
+      app: extended-monitoring
+  template:
+    metadata:
+      labels:
+        module: {{ $.Chart.Name }}
+        app: extended-monitoring
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: extended-monitoring
+        image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoring }}
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "32Mi"
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+          name: http-metrics
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+            timeoutSeconds: 5
+        args:
+        - "/app/extended-monitoring.py"
+        env:
+        - name: "PYTHONUNBUFFERED"
+          value: "1"
+      serviceAccountName: extended-monitoring

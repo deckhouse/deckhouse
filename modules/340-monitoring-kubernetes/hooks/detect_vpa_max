@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+# TODO
+#{
+#  "beforeHelm": 20,
+#   "onKubernetesEvent": [
+#      {
+#         "kind": "node",
+#         "event": [
+#            "add",
+#            "update",
+#            "delete"
+#         ],
+#         "jqFilter": ".status.capacity.pods"
+#      }
+#   ]
+#}'
+
+  echo '
+{
+   "beforeHelm": 20,
+   "schedule": [
+      {
+        "crontab": "*/10 * * * *"
+      }
+  ]
+}'
+}
+
+function __main__() {
+  # Kube-state-metrics resources
+  memory_per_node="30"
+  cpu_per_node="15"
+  node_count=$(kubectl get nodes -o json | jq '.items | length')
+  max_memory="$(bc -l <<< "scale=0; 150 + ($node_count * $memory_per_node / 1)")Mi"
+  max_cpu="$(bc -l <<< "scale=0; 100 + ($node_count * $cpu_per_node / 1)")"
+  values::set monitoringKubernetes.internal.vpa.kubeStateMetricsMaxMemory "$max_memory"
+  values::set monitoringKubernetes.internal.vpa.kubeStateMetricsMaxCPU "$max_cpu"
+}
+
+hook::run "$@"

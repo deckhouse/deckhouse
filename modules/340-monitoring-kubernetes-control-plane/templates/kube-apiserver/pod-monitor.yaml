@@ -1,0 +1,49 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-apiserver
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+{{- if or (eq .Values.global.discovery.clusterType "Manual") (eq .Values.global.discovery.clusterType "ACS") }}
+      component: kube-apiserver
+      tier: control-plane
+{{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+      k8s-app: kube-apiserver
+{{- else }}
+      {{- fail "Unsupported cluster type" .Values.global.discovery.clusterType }}
+{{- end }}
+  namespaceSelector:
+    matchNames:
+    - kube-system
+  podMetricsEndpoints:
+  - scheme: https
+{{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+    targetPort: 443
+{{- end }}
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      serverName: kubernetes
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    relabelings:
+{{- if eq .Values.global.discovery.clusterType "Manual" }}
+    - sourceLabels: [ __address__]
+      targetLabel: __address__
+      replacement: ${1}:6443
+{{- else if eq .Values.global.discovery.clusterType "ACS" }}
+    - sourceLabels: [ __address__]
+      targetLabel: __address__
+      replacement: ${1}:443
+{{- else if and (ne .Values.global.discovery.clusterType "AWS") (ne .Values.global.discovery.clusterType "GCE") }}
+  {{- fail "Unsupported cluster type" .Values.global.discovery.clusterType }}
+{{- end }}
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-apiserver
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node

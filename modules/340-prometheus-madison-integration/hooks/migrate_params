@@ -1,0 +1,22 @@
+#!/bin/bash
+
+### Миграция 2019-10-02: https://github.com/deckhouse/deckhouse/merge_requests/1222
+# После выката данного MR'а необходимо сделать хук в prometheus модуле,
+# который будет удалять данные параметры из configmap deckhouse
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p onStartup=10
+}
+
+function __main__() {
+  madison_auth_key=$(kubectl -n d8-system  get configmap deckhouse -o json | jq '.data.prometheus' -r | yq r - madisonAuthKey)
+  if [ "$madison_auth_key" != "null" ] ; then
+    if ! values::has --config prometheusMadisonIntegration.madisonAuthKey ; then
+      values::set --config prometheusMadisonIntegration.madisonAuthKey "${madison_auth_key}"
+    fi
+  fi
+}
+
+hook::run "$@"

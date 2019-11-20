@@ -32,9 +32,9 @@ function __main__() {
     fi
 
     # Проверяем, существует ли pvc
-    if ! kubectl -n kube-prometheus get pvc "$pvc" > /dev/null 2> /dev/null ; then
+    if ! kubectl -n d8-monitoring get pvc "$pvc" > /dev/null 2> /dev/null ; then
       # Проверим, что такой storageclass существует, а значит это не localstorage
-      if kubectl get storageclass $(kubectl -n kube-prometheus get pvc ${pvc} -o json 2>/dev/null | jq -r '.spec.storageClassName') > /dev/null 2>&1  ; then
+      if kubectl get storageclass $(kubectl -n d8-monitoring get pvc ${pvc} -o json 2>/dev/null | jq -r '.spec.storageClassName') > /dev/null 2>&1  ; then
         # Проверяем версию kubernetes
         if [ "$(semver compare "$cluster_version" 1.11.0)" -ne "-1" ] ; then
           # Если это версия kubernetes выше 1.11, то проверяем, есть ли у storageclass, который будет использоваться в prometheus
@@ -76,8 +76,8 @@ function __main__() {
       fi
     else
       # Если pvc уже есть для prometheus выставляем retention по диску в его размер
-      if kubectl -n kube-prometheus get sts $sts > /dev/null 2> /dev/null; then
-        size=$(kubectl -n kube-prometheus get pvc $pvc -o json 2>/dev/null | jq '.spec.resources.requests.storage'  -r | unit-converter --mode=kube-resource-unit)
+      if kubectl -n d8-monitoring get sts $sts > /dev/null 2> /dev/null; then
+        size=$(kubectl -n d8-monitoring get pvc $pvc -o json 2>/dev/null | jq '.spec.resources.requests.storage'  -r | unit-converter --mode=kube-resource-unit)
         new_retention=$(bc <<< "$size * 0.8" | cut -f1 -d'.')
         new_retention_gigabytes=$(bc <<< "$new_retention / 1024 / 1024 / 1024")
         values::set prometheus."$disk_size" "$(bc <<< "$size / 1024 / 1024 / 1024")"

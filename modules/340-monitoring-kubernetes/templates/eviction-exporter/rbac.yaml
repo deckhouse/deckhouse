@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: d8-monitoring:kubelet-eviction-thresholds-exporter
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubelet-eviction-thresholds-exporter")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-monitoring:kubelet-eviction-thresholds-exporter
+subjects:
+- kind: ServiceAccount
+  name: kubelet-eviction-thresholds-exporter
+  namespace: d8-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: d8-monitoring:kubelet-eviction-thresholds-exporter
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubelet-eviction-thresholds-exporter")) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubelet-eviction-thresholds-exporter
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubelet-eviction-thresholds-exporter")) | indent 2 }}

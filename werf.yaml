@@ -67,6 +67,12 @@ ansible:
       dest: /usr/local/bin/kubectl
       mode: +x
 
+  - name: Install yq
+    get_url:
+      url: https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64
+      dest: /usr/local/bin/yq
+      mode: +x
+
   # Ставим semver
   - name: "Install semver"
     unarchive:

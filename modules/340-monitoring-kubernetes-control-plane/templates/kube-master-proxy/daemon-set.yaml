@@ -1,0 +1,190 @@
+{{- if not (eq .Values.global.discovery.clusterType "ACS") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: d8-monitoring-kube-master-proxy
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "d8-monitoring-kube-master-proxy")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: d8-monitoring-kube-master-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      maxAllowed:
+        cpu: 0.01
+        memory: 0.02Gi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: d8-monitoring-kube-master-proxy
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "d8-monitoring-kube-master-proxy")) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: d8-monitoring-kube-master-proxy
+  template:
+    metadata:
+      labels:
+        app: d8-monitoring-kube-master-proxy
+    spec:
+      hostNetwork: true
+{{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+  {{- if eq .Values.global.discovery.clusterType "Manual" }}
+      - name: ca-auth-proxy-for-kube-scheduler
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):10360"
+        - "--proxy-pass=http://127.0.0.1:10251/metrics"
+        - "--user=d8-monitoring:scraper"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 10360
+          name: scheduler
+      - name: ca-auth-proxy-for-kube-controller-manager
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):10361"
+        - "--proxy-pass=http://127.0.0.1:10252/metrics"
+        - "--user=d8-monitoring:scraper"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 10361
+          name: controller
+      - name: ca-auth-proxy-for-kube-etcd
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):10362"
+        - "--user=d8-monitoring:scraper"
+        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
+        - "--proxy-pass=https://127.0.0.1:2379/metrics"
+        {{- else }}
+        - "--proxy-pass=http://127.0.0.1:2379/metrics"
+        {{- end }}
+        {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/apiserver-etcd-client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/apiserver-etcd-client.key"
+        {{- end }}
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 10362
+          name: etcd
+      {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
+        volumeMounts:
+        - mountPath: /etc/nginx/certs/apiserver-etcd-client.crt
+          name: crt
+        - mountPath: /etc/nginx/certs/apiserver-etcd-client.key
+          name: key
+      {{- end }}
+  {{- else if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
+      - name: ca-auth-proxy-for-kube-etcd
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):10362"
+        - "--user=d8-monitoring:scraper"
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/etcd-client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/etcd-client.key"
+        - "--proxy-pass=https://127.0.0.1:4001/metrics"
+      {{- else }}
+        - "--proxy-pass=http://127.0.0.1:4001/metrics"
+      {{- end }}
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        volumeMounts:
+        - mountPath: /etc/nginx/certs/etcd-client.crt
+          name: crt
+        - mountPath: /etc/nginx/certs/etcd-client.key
+          name: key
+      {{- end }}
+        ports:
+        - containerPort: 10362
+          name: etcd
+      - name: ca-auth-proxy-for-kube-etcd-events
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):10363"
+        - "--user=d8-monitoring:scraper"
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/etcd-client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/etcd-client.key"
+        - "--proxy-pass=https://127.0.0.1:4001/metrics"
+      {{- else }}
+        - "--proxy-pass=http://127.0.0.1:4002/metrics"
+      {{- end }}
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+      {{- if semverCompare ">=1.12" .Values.global.discovery.clusterVersion }}
+        volumeMounts:
+        - mountPath: /etc/nginx/certs/etcd-client.crt
+          name: crt
+        - mountPath: /etc/nginx/certs/etcd-client.key
+          name: key
+      {{- end }}
+        ports:
+        - containerPort: 10363
+          name: etcd-events
+  {{- end }}
+  {{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.10" .Values.global.discovery.clusterVersion) }}
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/pki/apiserver-etcd-client.crt
+          type: File
+        name: crt
+      - hostPath:
+          path: /etc/kubernetes/pki/apiserver-etcd-client.key
+          type: File
+        name: key
+  {{- else if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare ">=1.12" .Values.global.discovery.clusterVersion) }}
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/pki/kube-apiserver/etcd-client.crt
+          type: File
+        name: crt
+      - hostPath:
+          path: /etc/kubernetes/pki/kube-apiserver/etcd-client.key
+          type: File
+        name: key
+  {{- end }}
+      nodeSelector:
+  {{- if eq .Values.global.discovery.clusterType "ACS" }}
+        kubernetes.io/role: master
+  {{- else }}
+        node-role.kubernetes.io/master: ""
+  {{- end }}
+      tolerations:
+      - operator: Exists
+{{- end }}

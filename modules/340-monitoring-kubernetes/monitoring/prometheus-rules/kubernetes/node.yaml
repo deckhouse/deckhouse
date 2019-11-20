@@ -1,0 +1,118 @@
+- name: kubernetes.node
+  rules:
+  - record: node_ntp_offset_seconds:abs
+    expr: abs(node_ntp_offset_seconds)
+
+  - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
+    expr: (min by (node) (node_ntp_sanity)) == 0
+    for: 2h
+    labels:
+      impact: marginal
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |
+        1. Please, check the NTP daemon's status by executing the following commands on the node:
+           * for ntpd - 'ntpq -p' or 'ntpdc -c sysinfo' or 'ntpdc -c sysstats'
+           * for chronyd - 'chronyc sources -v' or 'chronyc tracking' or 'chronyc sourcestats -v' or 'chronyc ntpdata'
+           * for systemd-timesyncd - 'timedatectl status' or 'systemctl status systemd-timesyncd'
+        2. Correct the time synchronization problems:
+           * restart NTP daemon:
+             - for ntpd - 'service ntp restart' or 'service ntpd restart' or 'systemctl restart ntp' or 'systemctl restart ntpd'
+             - for chronyd - 'systemctl restart chronyd'
+             - for systemd-timesyncd - 'systemctl restart systemd-timesyncd'
+           * correct network problems:
+             - provide availability to upstream time synchronization servers defined in the NTP daemon configuration file
+             - eliminate large packet loss and excessive latency to upstream time synchronization servers
+           * correct errors in the NTP daemon configuration file:
+             - for ntpd - '/etc/ntp.conf'
+             - for chronyd - '/etc/chrony.conf'
+             - for systemd-timesyncd - '/etc/systemd/timesyncd.conf'
+      summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long
+
+  - alert: NodeTimeOutOfSync
+    expr: max by (node) (abs(node_time_seconds - timestamp(node_time_seconds)) > 10)
+    for: 5m
+    labels:
+      impact: critical
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |
+        Node's {{$labels.node}} time is out of sync from Prometheus node by {{ $value }} seconds
+      summary: Node's {{$labels.node}} clock is drifting
+
+  - alert: NodePingPacketLoss
+    expr: >-
+      (
+        sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))
+        -
+        sum by (destination_node) (increase(kube_node_ping_packets_received_total[5m]))
+      )
+      /
+      sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))  > 0.05
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
+      summary: Ping loss more than 5%
+
+  - alert: CPUStealHigh
+    expr: max by (node) (irate(node_cpu_seconds_total{mode="steal"}[30m]) * 100) > 10
+    for: 30m
+    labels:
+      impact: marginal
+      likelihood: certain
+    annotations:
+      description: |-
+        В течение 30 минут, на ноде {{ $labels.node }} слишком большой показатель CPU steal. Кто-то, например, соседняя виртуалка, подворовывает ресурсы у ноды. Такое бывает если на гипервизоре запустить больше виртуалок, чем он может переварить (oversell).
+      summary: >
+        CPU Steal на ноде {{ $labels.node }} слишком высок.
+
+  - alert: NodeSystemExporterDoesNotExistsForNode
+    expr: sum by (node) (kubernetes_build_info{job="kubelet"}) unless (sum by (node) (up{node=~".+", job="kubelet"}) and sum by (node) (up{node=~".+", job="node-exporter"}))
+    for: 5m
+    labels:
+      impact: marginal
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Some of node system exporter don't work correctly for {{ $labels.node }} node.
+        Consider the following:
+        1. Find node exporter pod for this node: `kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"`
+        2. Describe node exporter pod: `kubectl -n d8-monitoring describe pod <pod_name>`
+        3. Check that kubelet is running on the {{ $labels.node }}
+
+  - alert: NodeConntrackTableFull
+    expr: max by (node) ( node_nf_conntrack_entries / node_nf_conntrack_entries_limit * 100 > 70 )
+    for: 5m
+    labels:
+      impact: catastrophic
+      likelihood: unlikely
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Таблица коннтраков на ноде {{ $labels.node }} заполнена на {{ $value }}%. Если она занята процентов на 70-80, то ничего страшного нет, но если она кончится — начнутся проблемы с новыми коннектами и ПО начнёт проявлять неочевидные проблемы.
+        Что делать?
+        * Найти источник "лишних" коннтраков с помощью графиков в окметре или графане.
+        * [Подстроить лимит коннтраков под проект].(https://github.com/deckhouse/deckhouse/tree/master/modules/700-sysctl-tuner#%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D1%8F)
+      summary: >
+        Таблица коннтраков близка к переполнению.
+
+  - alert: NodeConntrackTableFull
+    expr: max by (node) ( node_nf_conntrack_entries / node_nf_conntrack_entries_limit * 100 > 95 )
+    for: 1m
+    labels:
+      impact: catastrophic
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |-
+        Таблица коннтраков на ноде {{ $labels.node }} переполнена! Новые коннекты на ноде не создаются и не принимаются, на ноде начнут проявляться необъяснимые проблемы с ПО.
+        Что делать?
+        * Найти источник "лишних" коннтраков с помощью графиков в окметре или графане.
+        * [Подстроить лимит коннтраков под проект].(https://github.com/deckhouse/deckhouse/tree/master/modules/700-sysctl-tuner#%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D1%8F)
+      summary: >
+        Таблица коннтраков переполнена.

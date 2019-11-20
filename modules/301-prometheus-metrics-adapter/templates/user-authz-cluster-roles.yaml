@@ -4,7 +4,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
-  name: kube-prometheus:user-authz:pma:user
+  name: d8-monitoring:user-authz:pma:user
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
@@ -33,7 +33,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Editor
-  name: kube-prometheus:user-authz:pma:editor
+  name: d8-monitoring:user-authz:pma:editor
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
@@ -57,7 +57,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: ClusterEditor
-  name: kube-prometheus:user-authz:pma:cluster-editor
+  name: d8-monitoring:user-authz:pma:cluster-editor
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:

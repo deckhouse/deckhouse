@@ -1,0 +1,47 @@
+{{- define "additional-scrape-config" }}
+- job_name: kube-state-metrics/main
+  honor_labels: true
+  metrics_path: '/metrics'
+  scheme: https
+  tls_config:
+    cert_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+    key_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    insecure_skip_verify: true
+  static_configs:
+  - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8443']
+  relabel_configs:
+  - regex: endpoint|namespace|pod|service
+    action: labeldrop
+  - target_label: scrape_endpoint
+    replacement: main
+  - target_label: job
+    replacement: kube-state-metrics
+
+- job_name: kube-state-metrics/self
+  honor_labels: true
+  metrics_path: '/metrics'
+  scheme: https
+  tls_config:
+    cert_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+    key_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    insecure_skip_verify: true
+  static_configs:
+  - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9443']
+  relabel_configs:
+  - regex: endpoint|namespace|pod|service
+    action: labeldrop
+  - target_label: scrape_endpoint
+    replacement: self
+  - target_label: job
+    replacement: kube-state-metrics
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-main-additional-configs-kube-state-metrics
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "additional-configs-for-prometheus" "main")) | indent 2 }}
+data:
+  scrapes.yaml: |
+    {{ include "additional-scrape-config" . | b64enc }}

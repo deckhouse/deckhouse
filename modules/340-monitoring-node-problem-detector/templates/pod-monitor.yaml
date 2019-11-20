@@ -1,0 +1,27 @@
+{{- if semverCompare ">=1.13" .Values.global.discovery.clusterVersion }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: monitoring-node-problem-detector
+  namespace: d8-monitoring-node-problem-detector
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  jobLabel: prometheus-target
+  podMetricsEndpoints:
+  - scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    port: https-metrics
+    relablings:
+    - regex: endpoint|namespace|container
+      action: labeldrop
+  selector:
+    matchLabels:
+      app: monitoring-node-problem-detector
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring-node-problem-detector
+{{- end }}

@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: trickster
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
 spec:
   targetRef:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: trickster
-  namespace: kube-prometheus
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
@@ -95,7 +95,7 @@ spec:
         - "--listen=8443"
         - "--location=/metrics"
         - "--proxy-pass=http://127.0.0.1:8001/metrics"
-        - "--user=kube-prometheus:scraper"
+        - "--user=d8-monitoring:scraper"
         - "--probe-proxy-pass=http://127.0.0.1:8000/main/health"
         - "--probe-listen=3501"
         ports:

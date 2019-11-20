@@ -29,8 +29,10 @@ spec:
   $allowedGroups
 EOF
   else
-     kubectl -n kube-openvpn delete dex-authenticator openvpn >/dev/null 2>&1 || true
+    if kubectl -n kube-openvpn get dex-authenticator openvpn >/dev/null 2>/dev/null ; then
+      kubectl -n kube-openvpn delete dex-authenticator openvpn >/dev/null 2>/dev/null
+    fi
   fi
 }
 
-hook::run $@
+hook::run "$@"
