@@ -35,6 +35,10 @@ import:
   add: /fnv-encoder/fnv-encoder
   to: /usr/local/bin/fnv-encoder
   before: setup
+- artifact: aws-cli-helper
+  add: /aws-cli-helper/aws-cli-helper
+  to: /usr/local/bin/aws-cli-helper
+  before: setup
 ansible:
   beforeInstall:
   - apk: update_cache=yes
@@ -83,9 +87,6 @@ ansible:
       src: https://github.com/fsaintjacques/semver-tool/archive/2.1.0.tar.gz
       remote_src: yes
       dest: /usr/local/bin
-
-  # govc для работы vsphere-cloud-provider
-  - shell: wget -O- https://github.com/vmware/govmomi/releases/download/v0.21.0/govc_linux_amd64.gz | gunzip -cq - > /usr/local/bin/govc && chmod +x /usr/local/bin/govc
 
   # ca-certificates нужны для работы helm
   - apk: name=ca-certificates
@@ -227,6 +228,36 @@ ansible:
       GOARCH: "amd64"
     args:
       chdir: /vsphere-cli-helper
+---
+artifact: aws-cli-helper
+from: golang:1.13-alpine3.10
+git:
+- add: /go_lib/aws-cli-helper
+  to: /aws-cli-helper
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - main.go
+ansible:
+  beforeInstall:
+  - apk: name=git update_cache=yes
+  - command: rm -rf /var/cache/apk/*
+
+  install:
+  - command: go mod download
+    args:
+      chdir: /aws-cli-helper
+
+  setup:
+  - command: go build -o aws-cli-helper
+    environment:
+      CGO_ENABLED: "0"
+      GOOS: "linux"
+      GOARCH: "amd64"
+    args:
+      chdir: /aws-cli-helper
 ---
 artifact: deckhouse
 from: golang:1.12-alpine3.9

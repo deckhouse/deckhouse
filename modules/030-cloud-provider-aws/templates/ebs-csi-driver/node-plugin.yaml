@@ -1,0 +1,82 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: ebs-csi-node
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-node")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: csi-ebs-node
+  template:
+    metadata:
+      labels:
+        app: csi-ebs-node
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+      serviceAccountName: ebs-csi-node
+      hostNetwork: true
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: csi-node-driver-registrar
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-node-driver-registrar:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiNodeDriverRegistrar }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        - "--kubelet-registration-path=/var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock"
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "rm -rf /registration/ebs.csi.aws.com-reg.sock /csi/csi.sock"]
+        env:
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: plugin-dir
+          mountPath: /csi
+        - name: registration-dir
+          mountPath: /registration
+      - name: ebs-csi-controller
+        securityContext:
+          privileged: true
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/ebs-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderAws.ebsCsiPlugin }}
+        args:
+        - "--v=5"
+        - "--endpoint=unix:/csi/csi.sock"
+        volumeMounts:
+        - name: kubelet-dir
+          mountPath: /var/lib/kubelet
+          mountPropagation: "Bidirectional"
+        - name: plugin-dir
+          mountPath: /csi
+        - name: device-dir
+          mountPath: /dev
+      - name: liveness-probe
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-liveness-probe:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiLivenessProbe }}
+        args:
+          - --csi-address=/csi/csi.sock
+        volumeMounts:
+          - name: plugin-dir
+            mountPath: /csi
+      volumes:
+      - name: registration-dir
+        hostPath:
+          path: /var/lib/kubelet/plugins_registry/
+          type: Directory
+      - name: kubelet-dir
+        hostPath:
+          path: /var/lib/kubelet
+          type: Directory
+      - name: plugin-dir
+        hostPath:
+          path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+          type: DirectoryOrCreate
+      - name: device-dir
+        hostPath:
+          path: /dev
+          type: Directory

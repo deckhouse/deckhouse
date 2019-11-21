@@ -1,0 +1,80 @@
+{{- range $zone, $_ := .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: flannel-{{ $zone }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "flannel")) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: flannel
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple $ "cluster-critical") | indent 6 }}
+      hostNetwork: true
+      nodeSelector:
+        failure-domain.beta.kubernetes.io/zone: {{ $zone }}
+      tolerations:
+      - operator: Exists
+      serviceAccountName: flannel
+      initContainers:
+      - name: install-cni
+        image: {{ $.Values.global.modulesImages.registry }}/cloud-provider-aws/flanneld:{{ $.Values.global.modulesImages.tags.cloudProviderAws.flanneld }}
+        command:
+        - cp
+        args:
+        - -f
+        - /etc/kube-flannel/cni-conf.json
+        - /etc/cni/net.d/10-flannel.conflist
+        volumeMounts:
+        - name: cni
+          mountPath: /etc/cni/net.d
+        - name: flannel-cfg
+          mountPath: /etc/kube-flannel/
+      containers:
+      - name: kube-flannel
+        image: {{ $.Values.global.modulesImages.registry }}/cloud-provider-aws/flanneld:{{ $.Values.global.modulesImages.tags.cloudProviderAws.flanneld }}
+        command:
+        - /opt/bin/flanneld
+        args:
+        - --ip-masq
+        - --kube-subnet-mgr
+        - --kube-annotation-prefix=flannel.alpha.coreos.com-{{ $zone }}
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+        securityContext:
+          privileged: true
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: run
+          mountPath: /run
+        - name: flannel-cfg
+          mountPath: /etc/kube-flannel/
+      volumes:
+        - name: run
+          hostPath:
+            path: /run
+        - name: cni
+          hostPath:
+            path: /etc/cni/net.d
+        - name: flannel-cfg
+          configMap:
+            name: flannel
+{{- end }}
