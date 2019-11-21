@@ -13,9 +13,11 @@ spec:
   template: {{ .instanceGroup.instanceClass.template | quote }}
   virtualMachineFolder: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
   mainNetwork: {{ .instanceGroup.instanceClass.mainNetwork | quote }}
+{{- if .instanceGroup.instanceClass.additionalNetworks }}
   additionalNetworks:
-{{- range .instanceGroup.instanceClass.additionalNetworks }}
+  {{- range .instanceGroup.instanceClass.additionalNetworks }}
   - {{ . | quote }}
+  {{- end }}
 {{- end }}
   datastore: {{ .instanceGroup.instanceClass.datastore | quote }}
   clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
