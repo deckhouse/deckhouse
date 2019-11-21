@@ -32,7 +32,7 @@ spec:
     value: "{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshUser }}:{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshKey }}"
   tags:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
-  - kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}
+  - kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}
   - kubernetes-io-role-deckhouse-{{ .instanceGroup.name }}-{{ .zoneName }}
 {{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.gcp "extraInstanceTags" }}
   {{- range .Values.cloudInstanceManager.internal.cloudProvider.gcp.extraInstanceTags }}
