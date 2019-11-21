@@ -5,17 +5,20 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   echo '
 {
-  "beforeHelm": 15
+  "afterHelm": 15
 }'
 }
 
 function __main__() {
 ### Миграция 2019-11-08 network -> mainNetwork
-  read -ra ics <<< "$(kubectl get vsphereinstanceclass -o json | jq -r '.items[] | select(.spec.network) | .metadata.name')"
-  for ic in "${ics[@]}"; do
-    main_network=$(kubectl get vsphereinstanceclass "$ic" -o json | jq -r '.spec.network')
-    kubectl::jq_patch "default" "vsphereinstanceclass/$ic" ".spec |= (del(.network) | .mainNetwork = \"$main_network\")"
-  done
+  read -ra ics <<< "$(kubectl get vsphereinstanceclass -o json | jq -r '[.items[] | select(.spec.network) | .metadata.name] | @tsv')"
+  if [ -n "${ics[*]}" ]; then
+    sleep 60
+    for ic in "${ics[@]}"; do
+      main_network=$(kubectl get vsphereinstanceclass "$ic" -o json | jq -r '.spec.network')
+      kubectl::jq_patch "default" "vsphereinstanceclass/$ic" ".spec |= (del(.network) | .mainNetwork = \"$main_network\")"
+    done
+  fi
 }
 
 hook::run "$@"
