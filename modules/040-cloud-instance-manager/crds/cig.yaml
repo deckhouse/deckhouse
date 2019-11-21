@@ -103,6 +103,7 @@ spec:
                   - OpenStackInstanceClass
                   - GCPInstanceClass
                   - VsphereInstanceClass
+                  - AWSInstanceClass
                 name:
                   type: string
             minInstancesPerZone:

@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-instance-manager-cloud-provider
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "aws" | quote }}
+  zones: {{ .Values.cloudProviderAws.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
+
+  # AWS
+  {{- $awsValues := dict }}
+  {{- $_ := set $awsValues "providerAccessKeyId" .Values.cloudProviderAws.providerAccessKeyId }}
+  {{- $_ := set $awsValues "providerSecretAccessKey" .Values.cloudProviderAws.providerSecretAccessKey }}
+  {{- $_ := set $awsValues "region" .Values.cloudProviderAws.region }}
+  {{- $_ := set $awsValues "instances" dict }}
+  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.instances.iamProfileName }}
+  {{- $_ := set $awsValues.instances "securityGroupIDs" .Values.cloudProviderAws.instances.securityGroupIDs }}
+  {{- $_ := set $awsValues.instances "extraTags" .Values.cloudProviderAws.instances.extraTags }}
+  {{- $_ := set $awsValues "internal" dict }}
+  {{- $_ := set $awsValues.internal "zoneToSubnetIdMap" .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
+  {{- $_ := set $awsValues "loadBalancerSecurityGroupID" .Values.cloudProviderAws.loadBalancerSecurityGroupID }}
+  {{- $_ := set $awsValues "keyName" .Values.cloudProviderAws.keyName }}
+  aws: {{ $awsValues | toJson | b64enc | quote }}
