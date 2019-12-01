@@ -1,5 +1,5 @@
 Модуль user-authn
-=======
+=================
 
 Данный модуль устанавливает [dex](https://github.com/dexidp/dex) в кластер для возможности использования внешней аутентификации как в самом кластере (API) так и во всех веб-интерфейсах (Grafana, Dashboard и др.). 
 
@@ -191,21 +191,22 @@ data:
         clientID: 480dc4611c987b4997s605821ea3e79957be2a15cdz1664149643014a7c619c6379
         clientSecret: 22d134403a3a446fsee57a4a4d6262ba33fb1511375665fa76028d3039c307c9aca
     kubeconfigGenerator:
-      - id: direct
-        masterURI: https://159.89.5.247:6443
-        description: "Direct access to kubernetes API"
-    publishAPI: true
+    - id: direct
+      masterURI: https://159.89.5.247:6443
+      description: "Direct access to kubernetes API"
+    publishAPI:
+      enable: true
 ```
-### Настройка DEX-аутентикатора
+### Настройка Dex-аутентификатора
 Для автоматического деплоя [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения, и подключения его к dex, реализован CRD `DexAuthenticator`. 
 
 При появлении объекта DexAuthenticator в неймспейсе будут созданы:
-* Deployment с oauth2-proxy
+* Deployment с oauth2-proxy и redis
 * Service, ведущий на Deployment с oauth2-proxy
 * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса
 * Secret'ы, необходимые для доступа к Dex
 
-**Важно!** При перезапуске oauth2-proxy при помощи refresh token будут получены и сохранены в память (redis) актуальные access token и id token.
+**Важно!** При перезапуске pod'а с oauth2-proxy при помощи refresh token'а будут получены и сохранены в память (redis) актуальные access token и id token.
 
 #### Параметры:
 * `applicationDomain` — внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
