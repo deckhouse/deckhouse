@@ -39,7 +39,7 @@ for steps_collection in steps-{{ $cloud_init_steps_version }} steps-{{ $cloud_in
         --cacert "$BOOTSTRAP_DIR/ca.crt" \
         "https://$server:6443/api/v1/namespaces/d8-cloud-instance-manager/secrets/cloud-init-${steps_collection}" | jq .data > $BOOTSTRAP_DIR/${steps_collection}.json ; then
 
-        if [[ ! -s $BOOTSTRAP_DIR/${steps_collection}.json ]] ; then
+        if [[ -s $BOOTSTRAP_DIR/${steps_collection}.json ]] ; then
           echo "Successfully downloaded cloud init steps collection "$steps_collection" from https://$server:6443/."
           break
         fi
