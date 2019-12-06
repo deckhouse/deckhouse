@@ -19,6 +19,13 @@ function __config__() {
 }
 
 function __main__() {
+  if values::is_true global.clusterIsBootstrapped ; then
+    return 0
+  fi
+
+  # Check if api-server is up and running
+  kubectl get namespace kube-system >/dev/null 2>/dev/null
+
   if kubectl -n kube-system get cm/d8-cluster-is-bootstraped > /dev/null 2> /dev/null ; then
     values::set global.clusterIsBootstrapped true
   else
