@@ -1,5 +1,7 @@
 userAuthz:
   enableMultiTenancy: false
-  internal: {}
+  internal:
+    customClusterRoles: {}
+    crds: {}
   controlPlaneConfigurator:
     enabled: true

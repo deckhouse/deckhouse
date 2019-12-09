@@ -1,0 +1,99 @@
+matrixTestDefaults:
+  internal: &internalDefaults
+    webhookServerCrt: certificatestring
+    webhookServerKey: keystring
+    webhookCA: castring
+    customClusterRolesFlat:
+      admin:
+      - d8-cert-manager:user-authz:admin
+      - d8-cert-manager:user-authz:deploy
+      - d8-cert-manager:user-authz:user
+      - kube-prometheus:user-authz:pma:deploy
+      - kube-prometheus:user-authz:pma:user
+      deploy:
+      - d8-cert-manager:user-authz:deploy
+      - d8-cert-manager:user-authz:user
+      - kube-prometheus:user-authz:pma:deploy
+      - kube-prometheus:user-authz:pma:user
+      master:
+      - d8-cert-manager:user-authz:user
+      - kube-prometheus:user-authz:pma:user
+      user:
+      - d8-cert-manager:user-authz:user
+      - kube-prometheus:user-authz:pma:user
+
+
+global:
+  enabledModules:
+    __ConstantChoices__:
+      - ["vertical-pod-autoscaler-crd"]
+      - []
+  modulesImages:
+    registryDockercfg: cfg
+    tags:
+      userAuthz:
+        webhook: imagehash
+  discovery:
+    extensionAPIServerAuthenticationRequestheaderClientCA: apiservercaclientstring
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    nodeCountByRole:
+      system: 3
+    clusterVersion: 1.15.5
+
+userAuthz:
+  __ConstantChoices__:
+  - controlPlaneConfigurator:
+      enabled:
+        __ConstantChoices__: [true, false]
+    enableMultiTenancy: true
+    internal:
+      <<: *internalDefaults
+      crds:
+        __ConstantChoices__:
+        - []
+        -
+          - name: editor-crd
+            spec:
+              accessLevel: Editor
+              subjects:
+              - kind: Group
+                name: Editors
+        -
+          - name: user-crd
+            spec:
+              accessLevel: User
+              subjects:
+              - kind: Group
+                name: Everyone
+  - controlPlaneConfigurator:
+      enabled:
+        __ConstantChoices__: [true, false]
+    enableMultiTenancy: False
+    internal:
+      <<: *internalDefaults
+      crds:
+        __ConstantChoices__:
+        - []
+        -
+          - name: editor-crd
+            spec:
+              accessLevel: Editor
+              subjects:
+              - kind: Group
+                name: Editors
+        -
+          - name: admin-crd
+            spec:
+              accessLevel: Admin
+              allowScale: false
+              portForwarding: true
+              subjects:
+              - kind: Group
+                name: NotEveryone
+          - name: user-crd
+            spec:
+              accessLevel: User
+              subjects:
+                - kind: Group
+                  name: Everyone

@@ -1,0 +1,31 @@
+global:
+  enabledModules:
+    __ConstantChoices__:
+      - ["vertical-pod-autoscaler-crd"]
+      - []
+  modulesImages:
+    registryDockercfg: registry.example.com
+    tags:
+      basicAuth:
+        nginx: hashstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    nodeCountByRole:
+      system:
+        __ConstantChoices__: [1, 2, 3]
+    clusterVersion: 1.15.5
+
+basicAuth:
+  locations:
+    __ConstantChoices__:
+    - []
+    -
+      - location: /
+        users:
+          admin: R0BkCCBLbnLC
+    -
+      - location: /test
+        whitelist:
+        - 127.0.0.111
+        - 127.0.0.1

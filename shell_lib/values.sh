@@ -159,3 +159,34 @@ function values::get_first_defined() {
 function values::normalize_path_for_json_patch() {
   echo /$1 | sed -e s/\'/\"/g -e ':loop' -e 's/"\([^".]\+\)\.\([^"]\+\)"/"\1##DOT##\2"/g' -e 't loop' -e s/\"//g -e 's/\./\//g' -e 's/##DOT##/./g'
 }
+
+function values::store::replace_row_by_key() {
+  # [--config] <path> <key> <row>
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  KEY_VALUE=$(jq -rn --argjson row_values "$3" '$row_values | .'$2 )
+  if INDEX=$(values::get $config $1 | jq -er 'to_entries[] | select(.value.'$2' == "'$KEY_VALUE'") | .key'); then
+    values::json_patch $config remove $(values::normalize_path_for_json_patch $1)/$INDEX
+    values::json_patch $config add $(values::normalize_path_for_json_patch $1)/$INDEX "$3"
+  else
+    values::json_patch $config add $(values::normalize_path_for_json_patch $1)/- "$3"
+  fi
+}
+
+function values::store::unset_row_by_key() {
+  # [--config] <path> <key> <row>
+  local config=""
+  if [[ "$1" == "--config" ]] ; then
+    config=$1
+    shift
+  fi
+
+  KEY_VALUE=$(jq -rn --argjson row_values "$3" '$row_values | .'$2 )
+  if INDEX=$(values::get $config $1 | jq -er 'to_entries[] | select(.value.'$2' == "'$KEY_VALUE'") | .key'); then
+    values::json_patch $config remove $(values::normalize_path_for_json_patch $1)/$INDEX
+  fi
+}

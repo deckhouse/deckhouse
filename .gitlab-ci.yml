@@ -1,5 +1,6 @@
 stages:
   - build
+  - testing
   - deploy
   - cleanup_registry
   - cleanup_builder
@@ -10,8 +11,34 @@ Build:
     - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.0 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE}/dev
+    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE} dev
+    - werf build --stages-storage :local tests
     - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --stages-storage :local --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE}; fi
+  except:
+    - schedules
+  tags:
+    - build
+
+Tests:
+  stage: testing
+  script:
+    - pwd
+    - ./modules_images bp --write-tags=modules/images_tags.json
+    - type multiwerf && source <(multiwerf use 1.0 beta)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local -- bash -c "cd /deckhouse/testing/global-hooks/; ginkgo -r . && cd /deckhouse/testing/modules/; ginkgo -r ."
+  except:
+    - schedules
+  tags:
+    - build
+
+Matrix Tests:
+  stage: testing
+  script:
+    - pwd
+    - type multiwerf && source <(multiwerf use 1.0 beta)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local -- bash -c "cd /deckhouse/testing/; ginkgo -r ./matrix/ --slowSpecThreshold=30s;"
   except:
     - schedules
   tags:
