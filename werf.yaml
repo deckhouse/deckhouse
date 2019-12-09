@@ -1,25 +1,5 @@
-project: deckhouse
-configVersion: 1
----
-image: ~
-from: alpine:3.9
-git:
-- add: /
-  to: /deckhouse
-  includePaths:
-  - modules
-  - global-hooks
-  - shell_lib.sh
-  - entrypoint.sh
-  - shell_lib
-  - jq_lib
-  - helm_lib
-  excludePaths:
-  - modules/*/images
-  - modules/*/docs
-  - modules/*/README.md
-import:
-- artifact: deckhouse
+{{- define "deckhouse_artifacts" }}
+- artifact: deckhouse-controller
   add: /deckhouse/deckhouse
   to: /deckhouse/deckhouse-controller
   before: setup
@@ -39,86 +19,118 @@ import:
   add: /aws-cli-helper/aws-cli-helper
   to: /usr/local/bin/aws-cli-helper
   before: setup
+{{- end }}
+
+{{- define "deckhouse_dependencies" }}
+- apk: update_cache=yes
+
+- name: "Install dependencies"
+  apk:
+    name:
+    - bash  # All hooks written in bash
+    - bash-completion
+    - jq
+    - curl
+    - pwgen
+    - apache2-utils
+    - bc
+    - grep
+    - tar
+    - unzip
+    - coreutils
+    - util-linux
+
+# Hooks dependencies (from edge/testing)
+- apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
+- apk: name=cfssl repository=http://nl.alpinelinux.org/alpine/edge/testing/
+- apk: name=rgxg repository=http://nl.alpinelinux.org/alpine/edge/testing/
+
+- name: "Install yq"
+  get_url:
+    url: https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
+    checksum: "sha256:754c6e6a7ef92b00ef73b8b0bb1d76d651e04d26aa6c6625e272201afa889f8b"
+    dest: /usr/local/bin/yq
+    mode: +x
+
+- name: "Install kubectl"
+  get_url:
+    url: https://storage.googleapis.com/kubernetes-release/release/v1.11.9/bin/linux/amd64/kubectl
+    checksum: "sha256:946b186715234df92fbea3b77e2fbbe7bb2a8498af8103316514e1612ab6895f"
+    dest: /usr/local/bin/kubectl
+    mode: +x
+
+# TODO: checksum
+- name: "Install semver"
+  unarchive:
+    extra_opts:
+    - semver-tool-2.1.0/src
+    - --strip-components=2
+    src: https://github.com/fsaintjacques/semver-tool/archive/2.1.0.tar.gz
+    remote_src: yes
+    dest: /usr/local/bin
+
+# govc for vsphere-cloud-provider
+# TODO: checksum
+- shell: wget -O- https://github.com/vmware/govmomi/releases/download/v0.21.0/govc_linux_amd64.gz | gunzip -cq - > /usr/local/bin/govc && chmod +x /usr/local/bin/govc
+
+# ca-certificates for helm
+- apk: name=ca-certificates
+
+# TODO: checksum
+- name: "Install helm"
+  unarchive:
+    extra_opts:
+    - linux-amd64/helm
+    - --strip-components=1
+    src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
+    remote_src: yes
+    dest: /usr/local/bin
+- raw: helm init --client-only
+
+# TODO зачем второй раз скачиваем?
+- name: "Install tiller"
+  unarchive:
+    extra_opts:
+    - linux-amd64/tiller
+    - --strip-components=1
+    src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
+    remote_src: yes
+    dest: /bin
+
+- name: "Install registry client"
+  get_url:
+    url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
+    dest: /usr/local/bin/reg
+    mode: +x
+    checksum: "sha256:0470b6707ac68fa89d0cd92c83df5932c9822df7176fcf02d131d75f74a36a19"
+{{- end }}
+
+
+project: deckhouse
+configVersion: 1
+---
+image: dev
+from: alpine:3.10
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+  - modules
+  - global-hooks
+  - shell_lib.sh
+  - entrypoint.sh
+  - shell_lib
+  - jq_lib
+  - helm_lib
+  excludePaths:
+  - modules/*/docs
+  - modules/*/README.md
+import:
+{{ include "deckhouse_artifacts" . }}
 ansible:
   beforeInstall:
-  - apk: update_cache=yes
+{{ include "deckhouse_dependencies" . | indent 2 }}
 
-  - name: "Install dependencies"
-    apk:
-      name:
-      # Нам нужен bash, на нем все хуки
-      - bash
-      - bash-completion
-      - jq
-      - curl
-      - pwgen
-      - apache2-utils
-      - bc
-      - grep
-      - tar
-      - unzip
-      - coreutils
-      - util-linux
-
-  # Зависимости хуков (из edge/testing)
-  - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
-  - apk: name=cfssl repository=http://nl.alpinelinux.org/alpine/edge/testing/
-  - apk: name=rgxg repository=http://nl.alpinelinux.org/alpine/edge/testing/
-
-  # Ставим kubectl
-  - name: "Install kubectl"
-    get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.11.9/bin/linux/amd64/kubectl
-      dest: /usr/local/bin/kubectl
-      mode: +x
-
-  - name: Install yq
-    get_url:
-      url: https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64
-      dest: /usr/local/bin/yq
-      mode: +x
-
-  # Ставим semver
-  - name: "Install semver"
-    unarchive:
-      extra_opts:
-      - semver-tool-2.1.0/src
-      - --strip-components=2
-      src: https://github.com/fsaintjacques/semver-tool/archive/2.1.0.tar.gz
-      remote_src: yes
-      dest: /usr/local/bin
-
-  # ca-certificates нужны для работы helm
-  - apk: name=ca-certificates
-
-  # Ставим helm
-  - name: "Install helm"
-    unarchive:
-      extra_opts:
-      - linux-amd64/helm
-      - --strip-components=1
-      src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
-      remote_src: yes
-      dest: /usr/local/bin
-  - raw: helm init --client-only
-  # Ставим tiller
-  - name: "Install tiller"
-    unarchive:
-      extra_opts:
-      - linux-amd64/tiller
-      - --strip-components=1
-      src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
-      remote_src: yes
-      dest: /bin
-
-  - name: "Install registry client"
-    get_url:
-      url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
-      dest: /usr/local/bin/reg
-      mode: +x
-      checksum: sha256:0470b6707ac68fa89d0cd92c83df5932c9822df7176fcf02d131d75f74a36a19
-
-    # Чистим кеш
   - raw: rm -rf /var/cache/apk/*
 
   setup:
@@ -153,14 +165,53 @@ ansible:
   - name: "Antiopa to Deckhouse migration"
     shell: mkdir /antiopa/ && ln -s /deckhouse/deckhouse /antiopa/antiopa
 
+docker:
+  ENV:
+    MODULES_DIR: /deckhouse/modules
+    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
+
+---
+image: tests
+from: golang:1.13-alpine3.10
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+  - testing
+  stageDependencies:
+    install:
+      - testing/go.mod
+      - testing/go.sum
+import:
+{{ include "deckhouse_artifacts" . }}
+- artifact: libjq
+  add: /libjq
+  to: /libjq
+  before: setup
+ansible:
+  beforeInstall:
+{{ include "deckhouse_dependencies" . | indent 2 }}
+  - apk:
+      name:
+      - vim
+      - git
+      - build-base
+  - command: go get github.com/onsi/ginkgo/ginkgo
+  install:
+  - command: go mod download
+    args:
+      chdir: /deckhouse/testing
 
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
+    CGO_CFLAGS: "-I/libjq/build/jq/include"
+    CGO_LDFLAGS: "'-L/libjq/build/onig/lib -L/libjq/build/jq/lib'"
+
 ---
 artifact: unit-converter
-from: golang:1.12-alpine3.9
+from: golang:1.13-alpine3.10
 git:
 - add: /unit-converter
   to: /unit-converter
@@ -186,7 +237,7 @@ ansible:
       chdir: /unit-converter
 ---
 artifact: fnv-encoder
-from: golang:1.12-alpine3.9
+from: golang:1.13-alpine3.10
 git:
 - add: /fnv-encoder
   to: /fnv-encoder
@@ -200,7 +251,7 @@ ansible:
       chdir: /fnv-encoder
 ---
 artifact: vsphere-cli-helper
-from: golang:1.12-alpine3.9
+from: golang:1.13-alpine3.10
 git:
 - add: /go_lib/vsphere-cli-helper
   to: /vsphere-cli-helper
@@ -258,9 +309,10 @@ ansible:
       GOARCH: "amd64"
     args:
       chdir: /aws-cli-helper
+
 ---
-artifact: deckhouse
-from: golang:1.12-alpine3.9
+artifact: deckhouse-controller
+from: golang:1.13-alpine3.10
 git:
 - add: /deckhouse
   to: /deckhouse
@@ -273,9 +325,16 @@ git:
     setup:
     - "**/*.go"
     - go-build.sh
+import:
+- artifact: libjq
+  add: /libjq
+  to: /libjq
+  before: setup
 ansible:
   beforeInstall:
-  - apk: name=git update_cache=yes
+  - apk:
+      name: git,ca-certificates,gcc,libc-dev
+      update_cache: yes
   - command: rm -rf /var/cache/apk/*
 
   install:
@@ -284,6 +343,25 @@ ansible:
       chdir: /deckhouse
 
   setup:
-  - command: /deckhouse/go-build.sh
+  - command: /deckhouse/go-build.sh /libjq
     args:
       chdir: /deckhouse
+
+---
+artifact: libjq
+from: alpine:3.10
+git:
+- url: https://github.com/flant/libjq-go
+  branch: master
+  add: /
+  to: /src
+  stageDependencies:
+    install:
+      - "scripts/**"
+    setup:
+      - "modules/**"
+ansible:
+  install:
+  - shell: /src/scripts/install-libjq-dependencies-alpine.sh
+  setup:
+  - shell: /src/scripts/build-libjq-static.sh /src /libjq

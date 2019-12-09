@@ -1,0 +1,160 @@
+global:
+  highAvailability: [true, false]
+  enabledModules:
+    __ConstantChoices__:
+      - ["cert-manager", "vertical-pod-autoscaler-crd"]
+      - ["cert-manager"]
+  modulesImages:
+    registryDockercfg: registry.example.com
+    tags:
+      userAuthn:
+        busybox: tagstring
+        cfssl: tagstring
+        crowdBasicAuthProxy: tagstring
+        dex: tagstring
+        dexAuthenticator: tagstring
+        dexAuthenticatorRedis: tagstring
+        kubeconfigGenerator: tagstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    nodeCountByRole:
+      system: 2
+    clusterVersion: 1.15.5
+  modules:
+    publicDomainTemplate: "%s.example.com"
+    https:
+      __ConstantChoices__:
+      - certManager:
+          clusterIssuerName: letsencrypt
+        mode: CertManager
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: plainstring
+userAuthn:
+  controlPlaneConfigurator:
+    enabled:
+      __ConstantChoices__: [true, false]
+  providers:
+    __ConstantChoices__:
+    - __EmptyItem__
+    -
+      - id: github
+        name: github
+        type: github
+        github:
+          clientID: plainstring
+          clientSecret: plainstring
+          orgs:
+          - opensource
+          - closesource
+          teams:
+          - Testers
+          - Developers
+          teamNameField: slug
+          useLoginAsID: true
+      - id: crowd
+        name: crowd
+        type: crowd
+        crowd:
+          clientID: plainstring
+          clientSecret: plainstring
+          groups:
+          - only
+          - team
+          enableBasicAuth: true
+    -
+      - id: crowd-next
+        name: crowd-next
+        type: crowd-next
+        crowd:
+          clientID: plainstring
+          clientSecret: plainstring
+          enableBasicAuth: false
+      - id: gitlab
+        name: gitlab
+        type: gitlab
+        gitlab:
+          clientID: plainstring
+          clientSecret: plainstring
+          groups:
+          - only
+          - team
+    -
+      - id: oidc
+        name: google
+        type: oidc
+        oidc:
+          issuer: "https://issue.example.com"
+          clientID: plainstring
+          clientSecret: plainstring
+          basicAuthUnsupported: true
+          insecureSkipEmailVerified: true
+          getUserInfo: true
+          scopes:
+          - profile
+          - email
+          userIDKey: subsub
+          userNameKey: noname
+    -
+      - id: ldap
+        type: ldap
+        name: ldap
+        ldap:
+          host: "https://ldap.host.example.com"
+          ca: plainstring
+          insecureSkipVerify: true
+          bindDN: plainstring
+          bindPW: plainstring
+          startTLS: true
+          userSearch:
+            baseDN: plainstring
+            filter: plainstring
+            username: uuid
+            idAttr: uuid
+            emailAttr: email
+            nameAttr: sub
+          groupSearch:
+            baseDN: plainstring
+            filter: plainstring
+            nameAttr: name
+            userAttr: uuid
+            groupAttr: groups
+  publishAPI:
+    enable: [false, true]
+    https:
+      __ConstantChoices__:
+      - mode: SelfSigned
+      - mode: Global
+        kubeconfigGeneratorMasterCA: plainstring
+  idTokenTTL: [10000m, __EmptyItem__]
+  internal:
+    kubernetesDexClientAppSecret: plainstring
+    kubernetesCA: plainstring
+    dexAuthenticatorCRDs:
+      __ConstantChoices__:
+      - __EmptyItem__
+      -
+        - credentials:
+            appDexSecret: plainstring
+            cookieSecret: plainstring
+          name: dex-authenticator
+          namespace: dex-authenticator-namespace
+          spec:
+            applicationDomain: dex-authenticator.example.com
+            applicationIngressCertificateSecretName: dex-authenticator-tls
+            applicationIngressClassName: nginx
+            sendAuthorizationHeader: true
+          useKubernetesAppKey: "true"
+        - credentials:
+            appDexSecret: plainstring
+            cookieSecret: plainstring
+          name: test
+          namespace: test-namespace
+          spec:
+            applicationDomain: test.example.com
+            applicationIngressCertificateSecretName: test-tls
+            applicationIngressClassName: not-nginx
+          useKubernetesAppKey: null
