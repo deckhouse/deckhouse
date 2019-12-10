@@ -7,7 +7,8 @@ function __config__() {
 }
 
 function __main__() {
-  if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined dashboard.https.mode global.modules.https.mode) != "Disabled" ]]; then
+  if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined dashboard.https.mode global.modules.https.mode) != "Disabled" ]]
+  then
     if ! values::has --config dashboard.externalAuthentication ; then
       values::set dashboard.externalAuthentication '{}'
       values::set dashboard.externalAuthentication.authURL "https://dashboard-dex-authenticator.d8-dashboard.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"

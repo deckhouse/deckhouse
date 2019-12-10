@@ -1,3 +1,4 @@
 dashboard:
+  version: "1"
   accessLevel: User
   internal: {}

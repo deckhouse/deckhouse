@@ -1,3 +1,4 @@
+{{- if eq .Values.dashboard.version "1" -}}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -13,3 +14,4 @@ spec:
   selector:
     matchLabels:
       app: dashboard
+{{- end }}

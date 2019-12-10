@@ -1,3 +1,4 @@
+{{- if eq .Values.dashboard.version "1" -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
@@ -33,3 +34,4 @@ rules:
   resources: ["services/proxy"]
   resourceNames: ["heapster", "http:heapster:", "https:heapster:"]
   verbs: ["get"]
+{{- end }}
