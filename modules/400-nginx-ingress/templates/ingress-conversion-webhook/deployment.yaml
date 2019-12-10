@@ -27,6 +27,7 @@ spec:
     metadata:
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
+        checksum/certificate: {{ include (print .Template.BasePath "/ingress-conversion-webhook/secret.yaml") . | sha256sum }}
       labels:
         heritage: deckhouse
         module: {{ .Chart.Name }}
