@@ -1,1 +1,1 @@
-FROM quay.io/k8scsi/csi-provisioner:v1.1.0
+FROM quay.io/k8scsi/csi-provisioner:v1.2.2

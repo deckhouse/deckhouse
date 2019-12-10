@@ -1,1 +1,1 @@
-FROM quay.io/k8scsi/csi-resizer:v0.2.0
+FROM quay.io/k8scsi/csi-resizer:v0.3.0
