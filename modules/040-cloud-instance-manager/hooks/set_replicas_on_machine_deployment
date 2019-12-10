@@ -35,7 +35,7 @@ function __main__() {
       replicas_should_be=$ig_max_instances
     elif [[ "$replicas" == "null" || $replicas -eq 0 ]] ; then
       replicas_should_be=$ig_min_instances
-    elif [[ $replicas -lt $ig_min_instances ]] ; then
+    elif [[ $replicas -le $ig_min_instances ]] ; then
       replicas_should_be=$ig_min_instances
     elif [[ $replicas -gt $ig_max_instances ]] ; then
       replicas_should_be=$ig_max_instances
