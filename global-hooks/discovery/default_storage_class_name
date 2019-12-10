@@ -1,11 +1,15 @@
 #!/bin/bash
-
+# TODO: need SyncAll mode
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
-    "$(jo kind=storageclass jqFilter='[.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class", .metadata.annotations."storageclass.kubernetes.io/is-default-class", .metadata.name]')" \
-  )"
+  yq r -j - << EOF
+    configVersion: v1
+    kubernetes:
+    - apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      jqFilter: '[.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class", .metadata.annotations."storageclass.kubernetes.io/is-default-class", .metadata.name]'
+EOF
 }
 
 function __main__() {
@@ -16,4 +20,4 @@ function __main__() {
   fi
 }
 
-hook::run $@
+hook::run_ng $@

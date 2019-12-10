@@ -48,7 +48,7 @@ function hook::run_ng() {
         case "${BINDING_CONTEXT_TYPE}" in
         "Synchronization")
           HANDLER="${HANDLER}::synchronization::${BINDING_CONTEXT_BINDING}"
-          ARG1="$(hook::context_jq -cr '[(.['$i'].objects // [])[] | select(has("filterResult")) | .filterResult | fromjson]')"
+          ARG1="$(hook::context_jq -cr '[(.['$i'].objects // [])[] | select(has("filterResult")) | if .filterResult == "" then "\"\"" else .filterResult end | fromjson]')"
           ARG2="$(hook::context_jq -c  '[(.['$i'].objects // [])[] | .object]')"
         ;;
         "Event")

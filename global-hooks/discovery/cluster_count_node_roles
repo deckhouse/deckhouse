@@ -1,22 +1,19 @@
 #!/bin/bash
+#TODO: Need SyncAll mode
 
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-# TODO
-#  jo -p onStartup=150 onKubernetesEvent="$(jo -a \
-#    "$(jo kind=node jqFilter=".metadata.labels" disableDebug=true)" \
-#  )"
-
-  echo '
-{
-  "onStartup": 150,
-  "schedule": [
-    {
-      "crontab": "* * * * *"
-    }
-  ]
-}'
+  yq r -j - << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node-roles
+      apiVersion: v1
+      kind: Node
+      jqFilter: '
+        .metadata.labels // {} | keys[] | select(startswith("node-role.flant.com/")) | split("/")[1] | gsub("-(?<a>[a-z])"; .a|ascii_upcase)
+      '
+EOF
 }
 
 function __main__() {
@@ -25,4 +22,4 @@ function __main__() {
   values::set global.discovery.nodeCountByRole "$node_counts"
 }
 
-hook::run "$@"
+hook::run_ng "$@"
