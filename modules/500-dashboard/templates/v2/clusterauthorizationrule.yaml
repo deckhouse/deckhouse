@@ -1,3 +1,4 @@
+{{- if eq .Values.dashboard.version "2" -}}
 {{- if or (not .Values.dashboard.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
   {{- if and (eq (include "helm_lib_module_https_mode" .) "Disabled") (ne .Values.dashboard.accessLevel "User") }}
     {{- cat "On https.mode Disabled the only allowed accessLevel is User" | fail }}
@@ -6,16 +7,17 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterAuthorizationRule
 metadata:
-  name: kube-system-dashboard
+  name: d8-dashboard
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   subjects:
   - kind: ServiceAccount
     name: dashboard
-    namespace: kube-system
+    namespace: d8-{{ .Chart.Name }}
   accessLevel: {{ .Values.dashboard.accessLevel }}
   portForwarding: false
   {{- if .Values.dashboard.allowScale }}
   allowScale: true
   {{- end }}
+{{- end }}
 {{- end }}

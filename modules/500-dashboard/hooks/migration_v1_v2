@@ -1,0 +1,26 @@
+#!/bin/bash
+# Миграция 2019-11-24 переезд dashboard из ns kube-system в d8-dashboard
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p beforeHelm=20
+}
+
+function __main__() {
+  if [[ "$(values::get dashboard.version)" == "1" ]]; then
+    ns="d8-dashboard"
+  else
+    ns="kube-system"
+  fi
+
+  if kubectl -n $ns get ing dashboard >/dev/null 2>&1;                          then kubectl -n $ns delete ing dashboard >/dev/null 2>&1; fi
+  if kubectl -n $ns get service dashboard >/dev/null 2>&1;                      then kubectl -n $ns delete service dashboard >/dev/null 2>&1; fi
+  if kubectl -n $ns get deploy dashboard >/dev/null 2>&1;                       then kubectl -n $ns delete deploy dashboard >/dev/null 2>&1; fi
+  if kubectl -n $ns get pdb dashboard >/dev/null 2>&1;                          then kubectl -n $ns delete pdb dashboard >/dev/null 2>&1; fi
+  if kubectl -n $ns get secret kubernetes-dashboard-key-holder >/dev/null 2>&1; then kubectl -n $ns delete secret kubernetes-dashboard-key-holder >/dev/null 2>&1; fi
+  if kubectl -n $ns get role dashboard >/dev/null 2>&1;                         then kubectl -n $ns delete role dashboard >/dev/null 2>&1; fi
+  if kubectl -n $ns get rolebinding dashboard >/dev/null 2>&1;                  then kubectl -n $ns delete rolebinding dashboard >/dev/null 2>&1; fi
+}
+
+hook::run $@
