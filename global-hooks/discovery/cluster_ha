@@ -1,37 +1,31 @@
 #!/bin/bash
 
-# Автоопределятор отказоустойчивости control plane  в кластере.
-#
-# Если apiserver-ов больше одного, значит кто-то об этом позаботился и можно считать,
-# что кластеру требуется отказоустойчивость. Далее это значение используется,
-# например, в качестве значения по-умолчанию для режима отказоустойчивости
-# (см. подробнее global.highAvailability в /README.md).
+# Hook detects if control plane in the cluster configured as HA
+# If there are more than one replicas of apiserver, someone has cared about it. It means that our cluster
+# needs High Availability, for example, in modules.
+# (Read more about global.highAvailability in /README.md).
 
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  cat << EOF
-{
-   "onStartup": 100,
-   "onKubernetesEvent": [
-      {
-         "kind": "Endpoints",
-         "namespaceSelector": {
-            "matchNames": [
-               "default"
-            ]
-         }
-      }
-   ]
-}
+  yq r -j - << EOF
+    configVersion: v1
+    kubernetes:
+    - name: kube-api-ep
+      apiVersion: v1
+      kind: Endpoints
+      namespace:
+        nameSelector:
+          matchNames: [default]
+      nameSelector:
+        matchNames: [kubernetes]
+      jqFilter: '.subsets[].addresses | length'
 EOF
 }
 
-function __main__() {
-  num_apiservers=$(kubectl -n default get ep kubernetes -o json | jq '.subsets[].addresses | length')
-
+function _handle_num_apiservers() {
+  num_apiservers=$1
   values::set global.discovery.clusterMasterCount "$num_apiservers"
-
   if [ $num_apiservers -gt 1 ]; then
     values::set global.discovery.clusterControlPlaneIsHighlyAvailable true
   else
@@ -39,4 +33,12 @@ function __main__() {
   fi
 }
 
-hook::run $@
+function __on_kubernetes::synchronization::kube-api-ep() {
+  _handle_num_apiservers "$(jq -r '.[0]' <<< ${1})"
+}
+
+function __on_kubernetes::added_or_modified::kube-api-ep() {
+  _handle_num_apiservers "${1}"
+}
+
+hook::run_ng $@

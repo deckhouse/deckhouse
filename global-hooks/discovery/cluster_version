@@ -7,29 +7,31 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "onStartup": 100,
-  "onKubernetesEvent": [
-    {
-      "kind": "pod",
-      "event": [
-        "add",
-        "update"
-      ],
-      "selector": {
-        "matchLabels": {
-          "component": "kube-apiserver",
-          "tier": "control-plane"
-        }
-      },
-      "namespaceSelector": {
-        "matchNames": ["kube-system"]
-      },
-      "jqFilter": ".spec.containers[0].image"
-    }
-  ]
-}'
+  yq r -j - << EOF
+    configVersion: v1
+    kubernetes:
+    - apiVersion: v1
+      kind: pod
+      watchEvent: [Added, Modified]
+      labelSelector:
+        matchLabels:
+          component: kube-apiserver
+          tier: control-plane
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      jqFilter: '.spec.containers[].image'
+    - apiVersion: v1
+      kind: pod
+      watchEvent: [Added, Modified]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-apiserver
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      jqFilter: '.spec.containers[].image'
+EOF
 }
 
 function __main__() {

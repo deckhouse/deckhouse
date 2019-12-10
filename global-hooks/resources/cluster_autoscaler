@@ -3,37 +3,30 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "onStartup": 350,
-  "onKubernetesEvent": [
-    {
-      "kind": "deployment",
-      "name": "cluster-autoscaler",
-      "event": [
-        "add",
-        "update"
-      ],
-      "namespaceSelector": {
-        "matchNames": [
-          "kube-system"
-        ]
-      },
-      "jqFilter": "[.spec.template.spec.containers[0].resources]"
-    }
-  ]
-}'
+  yq r -j - << EOF
+   configVersion: v1
+   kubernetes:
+   - name: cluster-autoscaler
+     apiVersion: apps/v1
+     kind: Deployment
+     watchEvent: [Added, Modified]
+     namespace:
+       nameSelector:
+         matchNames: [kube-system]
+     nameSelector:
+       matchNames: [cluster-autoscaler]
+     jqFilter: '[.spec.template.spec.containers[0].resources]'
+EOF
 }
 
-function __main__() {
-  # cluster-autoscaler в данный момент ставится НЕ antiop'ой, поэтому нужно хуком убирать лимиты ресурсов
-  if kubectl -n kube-system get deploy cluster-autoscaler >/dev/null 2>/dev/null ; then
-    if kubectl -n kube-system get deploy cluster-autoscaler -o json | jq -e '.spec.template.spec.containers[0].resources.limits' > /dev/null ; then
-      fltr='. | .spec.template.spec.containers[0].resources.limits = {}'
-      kubectl::jq_patch "kube-system" "deploy/cluster-autoscaler" "$fltr"
-    fi
+function __on_kubernetes::synchronization::cluster-autoscaler() {
+  if [[ $(jq -r 'length' <<< ${1}) > 0 ]]; then
+    kubernetes::patch_jq kube-system deployment/cluster-autoscaler 'del(.spec.template.spec.containers[0].resources.limits)'
   fi
 }
 
-hook::run $@
+function __on_kubernetes::added_or_modified::cluster-autoscaler() {
+  kubernetes::patch_jq kube-system deployment/cluster-autoscaler 'del(.spec.template.spec.containers[0].resources.limits)'
+}
 
+hook::run_ng $@
