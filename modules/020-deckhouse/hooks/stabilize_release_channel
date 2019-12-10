@@ -61,13 +61,13 @@ function __main__() {
   else
     # If current release channel docker image digest equals to next order release channel docker image digest, we can switch to it
     while [[ "$index" -ne 4 ]]; do
+      index=$(("$index" + 1))
       candidate_tag=${orders_to_tags[$index]}
       candidate_digest=$(reg digest $credentials "${registry}:${candidate_tag}")
       if [[ "$current_digest" != "$candidate_digest" ]]; then
         break
       fi
       result_tag=$candidate_tag
-      index=$(("$index" + 1))
     done
   fi
   if [[ "$result_tag" != "$current_release_channel_tag" ]]; then
