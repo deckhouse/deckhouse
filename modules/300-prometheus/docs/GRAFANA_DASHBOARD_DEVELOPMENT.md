@@ -1,3 +1,12 @@
+---
+title: "Разработка графиков Grafana"
+tags:
+  - grafana
+type:
+  - instruction
+search: grafana разработка графиков
+---
+
 Разработка графиков Grafana
 ===========================
 

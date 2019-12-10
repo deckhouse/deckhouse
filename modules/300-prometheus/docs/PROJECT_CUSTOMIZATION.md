@@ -1,3 +1,12 @@
+---
+title: "prometheus Кастомизация проекта"
+tags:
+  - prometheus
+type:
+  - instruction
+search: prometheus custom alert, prometheus кастомный алертинг
+---
+
 Кастомизация проекта
 ====================
 

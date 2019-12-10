@@ -1,3 +1,12 @@
+---
+title: "Модуль prometheus"
+tags:
+  - prometheus
+type:
+  - instruction
+search: prometheus
+---
+
 Модуль prometheus
 =======
 

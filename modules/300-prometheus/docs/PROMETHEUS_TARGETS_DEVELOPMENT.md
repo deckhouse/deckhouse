@@ -1,3 +1,12 @@
+---
+title: "Разработка target'ов Prometheus"
+tags:
+  - prometheus
+type:
+  - instruction
+search: Разработка target'ов Prometheus, prometheus target
+---
+
 Разработка target'ов Prometheus
 ===============================
 

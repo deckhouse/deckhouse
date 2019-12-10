@@ -1,3 +1,12 @@
+---
+title: "Разработка правил Prometheus"
+tags:
+  - prometheus
+type:
+  - instruction
+search: Разработка правил Prometheus, prometheus alerting rules
+---
+
 Разработка правил Prometheus
 ============================
 
