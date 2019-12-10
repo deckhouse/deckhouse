@@ -15,8 +15,8 @@ data:
       metricsQuery: 'label_replace(<<.Series>>{<<.LabelMatchers>>}, "__name__", "$1", "__name__", "^kube_adapter_metric_(.*)$")'
     resourceRules:
       cpu:
-        containerQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, container!="POD"}[1m])) by (<<.GroupBy>>)
-        nodeQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[1m])) by (<<.GroupBy>>)
+        containerQuery: sum(irate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, container!="POD"}[5m])) by (<<.GroupBy>>)
+        nodeQuery: sum(irate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>)
         resources:
           overrides:
             node:
@@ -40,7 +40,34 @@ data:
         containerLabel: container
       window: 30s
     rules:
-{{- range list "1m" "5m" "15m" }}
+    - seriesQuery: 'ingress_nginx_detail_requests_total{namespace!="",ingress!=""}'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+          ingress: {resource: ingress}
+      name:
+        matches: ".*"
+        as: "rps_1m"
+      metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>)'
+    - seriesQuery: 'container_cpu_usage_seconds_total{namespace!="",pod!="",container!="POD"}'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+          pod: {resource: pod}
+      name:
+        matches: ".*"
+        as: "cpu_1m"
+      metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>, container!="POD"}[5m])) by (<<.GroupBy>>)'
+    - seriesQuery: 'container_memory_working_set_bytes{namespace!="",pod!="",container!="POD"}'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+          pod: {resource: pod}
+      name:
+        matches: ".*"
+        as: "memory_1m"
+      metricsQuery: 'sum(avg_over_time(<<.Series>>{<<.LabelMatchers>>, container!="POD"}[1m])) by (<<.GroupBy>>)'
+{{- range list "5m" "15m" }}
     - seriesQuery: 'ingress_nginx_detail_requests_total{namespace!="",ingress!=""}'
       resources:
         overrides:
