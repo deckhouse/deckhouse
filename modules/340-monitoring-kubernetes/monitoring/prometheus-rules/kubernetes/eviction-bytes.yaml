@@ -14,15 +14,15 @@
     expr: |
       (
         (
-          max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+          max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
           max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="soft"} - 5)
         )
         or
         (
-          max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+          max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
           max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"} - 10)
         )
-      ) * 100
+      )
     for: 1m
     labels:
       impact: critical
@@ -39,9 +39,9 @@
   - alert: KubeletNodeFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
         max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="soft"})
-      ) * 100
+      )
     labels:
       impact: critical
       likelihood: unlikely
@@ -57,9 +57,9 @@
   - alert: KubeletNodeFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
         max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"} - 5)
-      ) * 100
+      )
     for: 1m
     labels:
       impact: critical
@@ -76,9 +76,9 @@
   - alert: KubeletNodeFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
         max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"})
-      ) * 100
+      )
     labels:
       impact: critical
       likelihood: likely
@@ -111,9 +111,9 @@
   - alert: KubeletImageFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
         max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="soft"} - 5)
-      ) * 100
+      )
     for: 1m
     labels:
       impact: critical
@@ -130,9 +130,9 @@
   - alert: KubeletImageFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
         max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="soft"})
-      ) * 100
+      )
     labels:
       impact: critical
       likelihood: unlikely
@@ -148,9 +148,9 @@
   - alert: KubeletImageFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
-        max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"} - 5)
-      ) * 100
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
+        max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="hard"} - 5)
+      )
     for: 1m
     labels:
       impact: critical
@@ -167,9 +167,9 @@
   - alert: KubeletImageFSBytesUsage
     expr: |
       (
-        max by (node, mountpoint) (1 - (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) >
+        max by (node, mountpoint) ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes) * 100 >
         max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="hard"})
-      ) * 100
+      )
     labels:
       impact: critical
       likelihood: likely
