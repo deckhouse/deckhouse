@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"github.com/deckhouse/deckhouse/testing/library"
 	. "github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/tidwall/gjson"
 )
@@ -32,8 +33,12 @@ func (bcs *BindingContextsSlice) Set(contexts ...BindingContext) {
 	*bcs = contexts
 }
 
-func (fr FilterResult) Get(path string) gjson.Result {
-	return gjson.Get(string(fr), path)
+func (fr FilterResult) Get(path string) library.KubeResult {
+	return library.KubeResult{Result: gjson.Get(string(fr), path)}
+}
+
+func (fr FilterResult) Parse() library.KubeResult {
+	return library.KubeResult{Result: gjson.Parse(string(fr))}
 }
 
 func (fr FilterResult) String() string {

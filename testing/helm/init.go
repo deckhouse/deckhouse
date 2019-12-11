@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/tidwall/gjson"
-
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
 
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
@@ -41,7 +39,7 @@ type HelmConfig struct {
 	Session     *gexec.Session
 }
 
-func (hec HelmConfig) ValuesGet(path string) gjson.Result {
+func (hec HelmConfig) ValuesGet(path string) library.KubeResult {
 	return hec.values.Get(path)
 }
 

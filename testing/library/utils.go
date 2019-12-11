@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/tidwall/gjson"
+
 	"github.com/deckhouse/deckhouse/testing/library/git"
 
 	"github.com/segmentio/go-camelcase"
@@ -123,4 +125,19 @@ func mergeValues(final *map[string]interface{}, iterations ...interface{}) error
 	}
 
 	return nil
+}
+
+// refactor into a "store" package
+
+type KubeResult struct {
+	gjson.Result
+}
+
+func (kr KubeResult) AsStringSlice() []string {
+	var result []string
+	for _, element := range kr.Array() {
+		result = append(result, element.String())
+	}
+
+	return result
 }
