@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/testing/library"
+
 	"github.com/tidwall/gjson"
 )
 
@@ -24,12 +26,20 @@ func newErrObjectNotFound(index MetaIndex) *ErrObjectNotFound {
 
 type KubeObject map[string]interface{}
 
-func (obj KubeObject) Field(path string) gjson.Result {
+func (obj KubeObject) Field(path string) library.KubeResult {
 	jsonBytes, _ := json.Marshal(obj)
 
 	result := gjson.GetBytes(jsonBytes, path)
 
-	return result
+	return library.KubeResult{Result: result}
+}
+
+func (obj KubeObject) Parse() library.KubeResult {
+	jsonBytes, _ := json.Marshal(obj)
+
+	result := gjson.ParseBytes(jsonBytes)
+
+	return library.KubeResult{Result: result}
 }
 
 func (obj KubeObject) Exists() bool {

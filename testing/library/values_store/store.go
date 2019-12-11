@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/testing/library"
+
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
@@ -36,8 +38,10 @@ func NewStoreFromRawJson(rawJson []byte) *ValuesStore {
 	}
 }
 
-func (store *ValuesStore) Get(path string) gjson.Result {
-	return gjson.GetBytes(store.JsonRepr, path)
+func (store *ValuesStore) Get(path string) library.KubeResult {
+	gjsonResult := gjson.GetBytes(store.JsonRepr, path)
+	kubeResult := library.KubeResult{Result: gjsonResult}
+	return kubeResult
 }
 
 func (store *ValuesStore) GetAsYaml() []byte {

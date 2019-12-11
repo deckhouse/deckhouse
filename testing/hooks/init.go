@@ -10,9 +10,9 @@ import (
 	"runtime"
 	"strings"
 
-	. "github.com/flant/libjq-go"
+	"github.com/deckhouse/deckhouse/testing/library"
 
-	"github.com/tidwall/gjson"
+	. "github.com/flant/libjq-go"
 
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
 
@@ -58,16 +58,15 @@ type CustomCRD struct {
 }
 
 type HookExecutionConfig struct {
-	tmpDir            string // FIXME
-	HookPath          string
-	values            *values_store.ValuesStore
-	configValues      *values_store.ValuesStore
-	hookConfig        string // <hook> --config output
-	KubeExtraCRDs     []CustomCRD
-	IsKubeStateInited bool
-	KubeState         string // yaml string
-	ObjectStore       object_store.ObjectStore
-	//KubernetesClusterObjects map[string]unstructured.Unstructured
+	tmpDir                   string // FIXME
+	HookPath                 string
+	values                   *values_store.ValuesStore
+	configValues             *values_store.ValuesStore
+	hookConfig               string // <hook> --config output
+	KubeExtraCRDs            []CustomCRD
+	IsKubeStateInited        bool
+	KubeState                string // yaml string
+	ObjectStore              object_store.ObjectStore
 	BindingContexts          BindingContextsSlice
 	BindingContextsRaw       string // array of contexts
 	BindingContextController context.BindingContextController
@@ -80,11 +79,11 @@ func (hec *HookExecutionConfig) RegisterCRD(group, version, kind string, namespa
 	hec.KubeExtraCRDs = append(hec.KubeExtraCRDs, newCRD)
 }
 
-func (hec *HookExecutionConfig) ValuesGet(path string) gjson.Result {
+func (hec *HookExecutionConfig) ValuesGet(path string) library.KubeResult {
 	return hec.values.Get(path)
 }
 
-func (hec *HookExecutionConfig) ConfigValuesGet(path string) gjson.Result {
+func (hec *HookExecutionConfig) ConfigValuesGet(path string) library.KubeResult {
 	return hec.configValues.Get(path)
 }
 
@@ -94,6 +93,14 @@ func (hec *HookExecutionConfig) ValuesSet(path string, value interface{}) {
 
 func (hec *HookExecutionConfig) ConfigValuesSet(path string, value interface{}) {
 	hec.configValues.SetByPath(path, value)
+}
+
+func (hec *HookExecutionConfig) ValuesDelete(path string) {
+	hec.values.DeleteByPath(path)
+}
+
+func (hec *HookExecutionConfig) ConfigValuesDelete(path string) {
+	hec.configValues.DeleteByPath(path)
 }
 
 func (hec *HookExecutionConfig) ValuesSetFromYaml(path string, value []byte) {
@@ -257,7 +264,8 @@ func (hec *HookExecutionConfig) RunHook() {
 	hec.Session, err = gexec.Start(hookCmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	<-hec.Session.Exited
+	hec.Session.Wait(10)
+
 	Expect(hec.Session.ExitCode()).To(Equal(0))
 
 	out := hec.Session.Out.Contents()
