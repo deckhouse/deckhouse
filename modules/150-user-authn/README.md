@@ -147,14 +147,14 @@ data:
   * `customCertificate`
     * `secretName` — указываем имя secret'а в namespace `d8-system`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
 * `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator](/modules/160-control-plane-configurator).
-  * `enabled` — использовать ли control-plane-configurator настройки OIDC в kube-apiserver.
+  * `enabled` — использовать ли control-plane-configurator для настройки OIDC в kube-apiserver.
     * По-умолчанию `true`.
   * `dexCAMode` — как вычислить CA, который будет использован при настройке kube-apiserver.
     * Значения:
-      * `FromIngressSecret` — извлечь CA или сам сертификат из секрета, который используется в ингрессе. Если вы используете самоподписные сертификаты на ингрессах — этоваш вариант.
+      * `FromIngressSecret` — извлечь CA или сам сертификат из секрета, который используется в ингрессе. Если вы используете самоподписные сертификаты на ингрессах — это ваш вариант.
       * `Custom` — использовать CA указанный явно, в параметре `dexCustomCA` (см. ниже). Этот вариант уместен, например, если вы используете внешний https-балансер перед ингрессами и на этом балансировщике используется самоподписный сертификат.
       * `DoNotNeed` — CA не требуется (например, при использовании публичного LE или других TLS-провайдеров).
-    * По-умолчанию — `FromIngressSecret`.
+    * По-умолчанию — `DoNotNeed`.
   * `dexCustomCA` — CA, которая будет использована в случае `dexCAMode` = `Custom`.
     * Формат — обычный текст, без base64.
     * Необязательный параметр.
