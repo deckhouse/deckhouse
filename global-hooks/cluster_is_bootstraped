@@ -37,7 +37,7 @@ function __on_kubernetes::added_or_modified::is-bootstraped-cm() {
 
 function __on_kubernetes::synchronization::not-master-and-ready-nodes() {
   if values::is_true global.clusterIsBootstrapped; then
-    exit 0
+    return 0
   fi
 
   if jq -e 'any' >/dev/null 2>&1 <<< "${1}"; then
@@ -54,7 +54,7 @@ EOF
 
 function __on_kubernetes::added_or_modified::not-master-and-ready-nodes() {
   if values::is_true global.clusterIsBootstrapped; then
-    exit 0
+    return 0
   fi
 
   if [[ "${1}" == "true" ]]; then
