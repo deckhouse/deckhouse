@@ -3,9 +3,6 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-# Костыль 2019-08-29: пока не разберемся как правильно создавать CRD
-kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
-
   cat << EOF
 {
   "beforeHelm": 10,
