@@ -54,7 +54,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 
 	// 3. Get image tags
 	imageTagsRaw, err := ioutil.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
-	if err != nil {
+	if err != nil || len(imageTagsRaw) == 0 {
 		moduleImagesValues = map[string]map[string]map[string]map[string]map[string]string{
 			"global": {
 				"modulesImages": {
@@ -63,17 +63,19 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 			},
 		}
 
-		imageTags, err := git.ListTreeObjects(filepath.Join(modulePath, "images"))
-		if err != nil {
-			return nil, err
-		}
+		for _, path := range []string{modulePath, filepath.Join(filepath.Dir(modulePath), "000-common")} {
+			imageTags, err := git.ListTreeObjects(filepath.Join(path, "images"))
+			if err != nil {
+				return nil, err
+			}
 
-		_, moduleDir := filepath.Split(modulePath)
-		moduleDirClean := string([]byte(moduleDir)[4:])
-		moduleName := camelcase.Camelcase(moduleDirClean)
-		moduleImagesValues["global"]["modulesImages"]["tags"][moduleName] = map[string]string{}
-		for _, tag := range imageTags {
-			moduleImagesValues["global"]["modulesImages"]["tags"][moduleName][tag.File] = tag.Object
+			_, moduleDir := filepath.Split(path)
+			moduleDirClean := string([]byte(moduleDir)[4:])
+			moduleName := camelcase.Camelcase(moduleDirClean)
+			moduleImagesValues["global"]["modulesImages"]["tags"][moduleName] = map[string]string{}
+			for _, tag := range imageTags {
+				moduleImagesValues["global"]["modulesImages"]["tags"][moduleName][tag.File] = tag.Object
+			}
 		}
 	} else {
 		var imageTags map[string]map[string]string
