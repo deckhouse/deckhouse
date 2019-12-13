@@ -28,7 +28,6 @@ spec:
       app: user-authz-webhook
   template:
     metadata:
-      annotations:
       labels:
         app: user-authz-webhook
     spec:

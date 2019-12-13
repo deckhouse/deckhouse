@@ -1,0 +1,63 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  yq r -j - << EOF
+    configVersion: v1
+    beforeHelm: 5
+    kubernetes:
+    - name: webhook-secret
+      apiVersion: v1
+      kind: Secret
+      watchEvent: [Added, Modified]
+      namespace:
+        nameSelector:
+          matchNames: [d8-user-authz]
+      nameSelector:
+        matchNames: [user-authz-webhook]
+      jqFilter: |
+        {
+          webhookCA: (.data."ca.crt" | @base64d),
+          webhookServerCrt: (.data."webhook-server.crt" | @base64d),
+          webhookServerKey: (.data."webhook-server.key" | @base64d)
+        }
+EOF
+}
+
+function _set_webhook_cert() {
+    values::set userAuthz.internal.webhookCA "$(jq -r '.webhookCA' <<< "${1}")"
+    values::set userAuthz.internal.webhookServerCrt "$(jq -r '.webhookServerCrt' <<< "${1}")"
+    values::set userAuthz.internal.webhookServerKey "$(jq -r '.webhookServerKey' <<< "${1}")"
+}
+
+function __on_kubernetes::synchronization::webhook-secret() {
+  if jq -e 'length > 0' <<< "${1}" >/dev/null 2>&1; then
+    _set_webhook_cert "$(jq -r '.[0]' <<< "${1}")"
+  fi
+}
+
+function __on_kubernetes::added_or_modified::webhook-secret() {
+  _set_webhook_cert "${1}"
+}
+
+function __on_before_helm() {
+  # If MultiTenancy is off and also during Synchronization event there wasn't the Secret in the cluster, we need to generate it
+  if values::is_true userAuthz.enableMultiTenancy && ! values::has userAuthz.internal.webhookCA; then
+    ca="$(jo CN=user-authz-webhook key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)"
+    ca_crt="$(jq .cert -r <<< "$ca")"
+
+    # config for cfssl gencert
+    config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
+
+    cert="$(jo CN=user-authz-webhook hosts="[\"127.0.0.1\"]" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(jq .cert -r <<< ${ca}) -ca-key=<(jq .key -r <<< "$ca") -config=<(echo "$config") -)"
+    webhook_server_crt="$(jq .cert -r <<< "$cert")"
+    webhook_server_key="$(jq .key -r <<< "$cert")"
+
+    values::set userAuthz.internal.webhookCA "$ca_crt"
+    values::set userAuthz.internal.webhookServerCrt "$webhook_server_crt"
+    values::set userAuthz.internal.webhookServerKey "$webhook_server_key"
+  fi
+}
+
+hook::run_ng "$@"

@@ -48,7 +48,7 @@ function hook::run_ng() {
         case "${BINDING_CONTEXT_TYPE}" in
         "Synchronization")
           HANDLER="${HANDLER}::synchronization::${BINDING_CONTEXT_BINDING}"
-          ARG1="$(hook::context_jq -cr '[(.['$i'].objects // [])[] | select(has("filterResult")) | if .filterResult == "" then "\"\"" else .filterResult end | fromjson]')"
+          ARG1="$(hook::context_jq -cr '[(.['$i'].objects // [])[] | select(has("filterResult") and .filterResult != "") | .filterResult | fromjson]')"
           ARG2="$(hook::context_jq -c  '[(.['$i'].objects // [])[] | .object]')"
         ;;
         "Event")
@@ -105,15 +105,21 @@ function hook::generate::store_handlers() {
     }
 
     function __on_kubernetes::added::${bindingContextBinding}() {
-      values::store::replace_row_by_key "${storePath}" "${key}" "\${1}"
+      if [ -n "\${1}" ]; then
+        values::store::replace_row_by_key "${storePath}" "${key}" "\${1}"
+      fi
     }
 
     function __on_kubernetes::modified::${bindingContextBinding}() {
-      values::store::replace_row_by_key "${storePath}" "${key}" "\${1}"
+      if [ -n "\${1}" ]; then
+        values::store::replace_row_by_key "${storePath}" "${key}" "\${1}"
+      fi
     }
 
     function __on_kubernetes::deleted::${bindingContextBinding}() {
-      values::store::unset_row_by_key "${storePath}" "${key}" "\${1}"
+      if [ -n "\${1}" ]; then
+        values::store::unset_row_by_key "${storePath}" "${key}" "\${1}"
+      fi
     }
 EOF
 }
