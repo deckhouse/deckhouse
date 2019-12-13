@@ -47,8 +47,8 @@ func (hec *HelmConfig) ValuesSet(path string, value interface{}) {
 	hec.values.SetByPath(path, value)
 }
 
-func (hec *HelmConfig) ValuesSetFromYaml(path string, value []byte) {
-	hec.values.SetByPathFromYaml(path, value)
+func (hec *HelmConfig) ValuesSetFromYaml(path, value string) {
+	hec.values.SetByPathFromYaml(path, []byte(value))
 }
 
 func (hec *HelmConfig) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
@@ -59,7 +59,7 @@ func (hec *HelmConfig) KubernetesResource(kind, namespace, name string) object_s
 	return hec.objectStore.KubernetesResource(kind, namespace, name)
 }
 
-func SetupHelmConfig(values []byte) *HelmConfig {
+func SetupHelmConfig(values string) *HelmConfig {
 	_, path, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("can't execute runtime.Caller")
@@ -67,7 +67,7 @@ func SetupHelmConfig(values []byte) *HelmConfig {
 
 	modulePath := filepath.Dir(filepath.Dir(path))
 
-	initialValues, err := library.InitValues(modulePath, values)
+	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {
 		panic(err)
 	}
@@ -82,6 +82,10 @@ func SetupHelmConfig(values []byte) *HelmConfig {
 
 	BeforeEach(func() {
 		config.values = values_store.NewStoreFromRawJson(initialValuesJson)
+
+		// set some common values
+		config.values.SetByPath("global.discovery.clusterVersion", "1.17.0")
+		config.values.SetByPath("global.modulesImages.registry", "registry.example.com")
 	})
 
 	globalTmpDir, err = ioutil.TempDir("", "")
