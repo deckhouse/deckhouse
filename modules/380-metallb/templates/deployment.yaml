@@ -43,15 +43,28 @@ spec:
           image: {{ $.Values.global.modulesImages.registry }}/metallb/controller:{{ $.Values.global.modulesImages.tags.metallb.controller }}
           imagePullPolicy: IfNotPresent
           name: controller
-          ports:
-            - containerPort: 7472
-              name: monitoring
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - all
             readOnlyRootFilesystem: true
+        - name: ca-auth-proxy
+          image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+          args:
+            - "--listen=7473"
+            - "--proxy-pass=http://127.0.0.1:7472/metrics"
+            - "--user=d8-monitoring:scraper"
+          ports:
+            - containerPort: 7473
+              name: https-metrics
+          volumeMounts:
+          - name: ca-auth-proxy-etc-nginx
+            mountPath: /etc/nginx/
+          - name: ca-auth-proxy-var-run
+            mountPath: /var/run/
+          - name: ca-auth-proxy-var-cache-nginx
+            mountPath: /var/cache/nginx/
       nodeSelector:
         beta.kubernetes.io/os: linux
       securityContext:
@@ -59,3 +72,10 @@ spec:
         runAsUser: 65534
       serviceAccountName: controller
       terminationGracePeriodSeconds: 0
+      volumes:
+      - name: ca-auth-proxy-etc-nginx
+        emptyDir: {}
+      - name: ca-auth-proxy-var-run
+        emptyDir: {}
+      - name: ca-auth-proxy-var-cache-nginx
+        emptyDir: {}
