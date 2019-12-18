@@ -4,11 +4,11 @@ index a00318b..92990d4 100755
 +++ b/dist.sh
 @@ -14,25 +14,13 @@ goversion=$(go version | awk '{print $3}')
  sha256sum=()
- 
+
  echo "... running tests"
 -./test.sh
 +#./test.sh
- 
+
 -for os in windows linux darwin; do
 -    echo "... building v$version for $os/$arch"
 -    EXT=
@@ -31,7 +31,7 @@ index a00318b..92990d4 100755
 +TARGET="oauth2_proxy-$version.$os-$arch.$goversion"
 +GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
 +    go build -ldflags="-s -w" -o ./dist/oauth2_proxy || exit 1
- 
+
  checksum_file="sha256sum.txt"
  cd $DIR/dist
 diff --git a/oauthproxy.go b/oauthproxy.go
