@@ -121,7 +121,7 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |
-        Close to soft eviction threshold of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
+        Close to soft eviction threshold of imagefs (filesystem that container runtimes uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
         Currently at: {{ .Value }}%
       summary: >
@@ -139,7 +139,7 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |
-        Soft eviction of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
+        Soft eviction of imagefs (filesystem that container runtimes uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
         Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
         Currently at: {{ .Value }}%
       summary: >
@@ -158,7 +158,7 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |
-        Close to hard eviction threshold of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
+        Close to hard eviction threshold of imagefs (filesystem that container runtimes uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
         Currently at: {{ .Value }}%
       summary: >
@@ -176,7 +176,7 @@
     annotations:
       polk_flant_com_markup_format: markdown
       description: |
-        Hard eviction of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
+        Hard eviction of imagefs (filesystem that container runtimes uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
         Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
         Currently at: {{ .Value }}%
       summary: >
@@ -196,5 +196,7 @@
       likelihood: certain
     annotations:
       polk_flant_com_markup_format: markdown
+      description: |
+        No more free bytes on imagefs (filesystem that container runtimes uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
       summary: >
         No more free bytes on imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
