@@ -1,0 +1,64 @@
+myTemplates:
+  speaker: &speakerTemplate
+    __ConstantChoices__:
+      - nodeSelector:
+          mylabel: myvalue
+      - nodeSelector:
+          mylabel: myvalue
+        tolerations:
+          - operator: Exists
+  bgpPeers: &bgpPeersTemplate
+    __ConstantChoices__:
+      - []
+      - - peer-address: 1.1.1.1
+          peer-asn: 111
+          my-asn: 222
+          hold-time: 3s
+  addressPools: &addressPoolsTemplate
+    __ConstantChoices__:
+      - []
+      -
+        - name: mypool
+          protocol: bgp
+          addresses:
+          - 1.2.3.4-2.3.3.3
+
+global:
+  enabledModules:
+    __ConstantChoices__:
+      - ["vertical-pod-autoscaler-crd"]
+      - []
+  modulesImages:
+    registryDockercfg: cfg
+    tags:
+      metallb:
+        controller: imagehash
+        speaker: imagehash
+      common:
+        kubeCaAuthProxy: imagehash
+
+  discovery:
+    nodeCountByRole:
+      __ConstantChoices__:
+        - system: 3
+        - {}
+    clusterVersion: 1.15.5
+
+metallb:
+  __ConstantChoices__:
+    - speaker:
+        <<: *speakerTemplate
+    - speaker:
+        <<: *speakerTemplate
+      bgpPeers:
+        <<: *bgpPeersTemplate
+      addressPools:
+        <<: *addressPoolsTemplate
+    - speaker:
+        <<: *speakerTemplate
+      bgpPeers:
+        <<: *bgpPeersTemplate
+    - speaker:
+        <<: *speakerTemplate
+      addressPools:
+        <<: *addressPoolsTemplate

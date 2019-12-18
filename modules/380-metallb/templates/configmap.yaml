@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "speaker")) | indent 2 }}
+data:
+  config: |
+{{ if .Values.metallb.bgpPeers }}
+    peers:
+{{ .Values.metallb.bgpPeers | toYaml | indent 4 }}
+{{- end }}
+    address-pools:
+{{ .Values.metallb.addressPools | toYaml | indent 4 }}
