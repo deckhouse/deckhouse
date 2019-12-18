@@ -1,0 +1,61 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: controller
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "controller")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: controller
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "controller")) | indent 2 }}
+spec:
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: controller
+  template:
+    metadata:
+      labels:
+        app: controller
+    spec:
+{{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - args:
+            - --port=7472
+            - --config=config
+          image: {{ $.Values.global.modulesImages.registry }}/metallb/controller:{{ $.Values.global.modulesImages.tags.metallb.controller }}
+          imagePullPolicy: IfNotPresent
+          name: controller
+          ports:
+            - containerPort: 7472
+              name: monitoring
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccountName: controller
+      terminationGracePeriodSeconds: 0
