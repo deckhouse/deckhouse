@@ -17,6 +17,7 @@ function __config__() {
     - name: not-master-and-ready-nodes
       apiVersion: v1
       kind: Node
+      watchEvent: ["Added", "Modified"]
       jqFilter: '
       (.spec.taints == null or ([.spec.taints[] | select(.key == "node-role.kubernetes.io/master")] | any | not))
       and
