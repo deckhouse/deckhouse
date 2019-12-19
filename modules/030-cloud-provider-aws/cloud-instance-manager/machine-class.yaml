@@ -11,8 +11,10 @@ spec:
   iam:
     name: {{ .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.iamProfileName | quote }}
   keyName: {{ .Values.cloudInstanceManager.internal.cloudProvider.aws.keyName }}
+  sourceDestCheck: false
   networkInterfaces:
   - subnetID: {{ index .Values.cloudInstanceManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
+    associatePublicIPAddress: true
     securityGroupIDs:
 {{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances }}
   {{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
