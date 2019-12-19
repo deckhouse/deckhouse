@@ -19,7 +19,7 @@ metadata:
    module: dashboard
    app: dex-authenticator
  annotations:
-   dex-authenticator.deckhouse.io/use-kubernetes-app-key: "true"
+   dex-authenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: "$(common::module_public_domain dashboard)"
   sendAuthorizationHeader: true
