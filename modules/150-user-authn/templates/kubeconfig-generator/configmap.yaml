@@ -9,11 +9,13 @@ metadata:
 data:
   config.yaml: |-
     listen: "http://0.0.0.0:5555"
+    logo_uri: "https://kubernetes.io/images/favicon.png"
     web_path_prefix: /
     debug: false
+    kubectl_version: "v{{ .Values.global.discovery.clusterVersion }}"
     clusters:
   {{- if and .Values.userAuthn.publishAPI.enable }}
-    - client_id: "kubernetes"
+    - client_id: "kubeconfig-generator"
       client_secret: {{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
       issuer: "https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/"
   {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
@@ -31,9 +33,11 @@ data:
       name: {{ printf "%s.%s" .Values.global.project .Values.global.clusterName | quote }}
       redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}/callback/"
       short_description: "https://{{ include "helm_lib_module_public_domain" (list . "api") }}"
+      scopes:
+      - audience:server:client_id:kubernetes
   {{- end }}
   {{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
-    - client_id: "kubernetes"
+    - client_id: "kubeconfig-generator-{{ $index }}"
       client_secret: {{ $.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
       issuer: "https://{{ include "helm_lib_module_public_domain" (list $ "dex") }}/"
       k8s_ca_pem: |
@@ -42,5 +46,7 @@ data:
       name: {{ printf "%s.%s.%s" $.Values.global.project $.Values.global.clusterName $cluster.id | quote }}
       redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}"
       short_description: "{{ $cluster.description }}"
+      scopes:
+      - audience:server:client_id:kubernetes
   {{- end }}
 {{- end }}

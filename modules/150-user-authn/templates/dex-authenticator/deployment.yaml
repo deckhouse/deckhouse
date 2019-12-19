@@ -99,11 +99,7 @@ spec:
       containers:
       - args:
         - --provider=oidc
-    {{- if $crd.useKubernetesAppKey }}
-        - --client-id=kubernetes
-    {{- else }}
         - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
-    {{- end }}
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
@@ -113,7 +109,7 @@ spec:
         - --set-authorization-header=true
     {{- end }}
         - --set-xauthrequest
-        - --scope=groups email openid offline_access
+        - --scope=groups email openid offline_access{{- if $crd.allowAccessToKubernetes }} audience:server:client_id:kubernetes{{- end }}
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*

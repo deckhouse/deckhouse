@@ -21,8 +21,7 @@ EOF
 
 function __main__() {
   allowed_namespaces=$(values::get global.hack.namespaces | jq ' to_entries[] | .value' | jq -sr 'join ("\", \"")')
-  crds=$(kubectl get dex-authenticators.deckhouse.io --all-namespaces -o json  | jq "def IN(s): first(select(s == .)) // false; .items | to_entries[] | (select(.value.namespace | IN(\"$allowed_namespaces\")) | .value.metadata.annotations ) |= null | {\"name\": .value.metadata.name, \"namespace\": .value.metadata.namespace, \"spec\": .value.spec, \"useKubernetesAppKey\": .value.metadata.annotations.\"dex-authenticator.deckhouse.io/use-kubernetes-app-key\"}" -rc | jq -sc '.')
-
+  crds=$(kubectl get dex-authenticators.deckhouse.io --all-namespaces -o json  | jq "def IN(s): first(select(s == .)) // false; .items | to_entries[] | (select(.value.namespace | IN(\"$allowed_namespaces\")) | .value.metadata.annotations ) |= null | {\"name\": .value.metadata.name, \"namespace\": .value.metadata.namespace, \"spec\": .value.spec, \"allowAccessToKubernetes\": .value.metadata.annotations.\"dex-authenticator.deckhouse.io/allow-access-to-kubernetes\"}" -rc | jq -sc '.')
   if kubectl -n d8-user-authn get secret kubernetes-dex-client-app-secret > /dev/null 2> /dev/null ; then
     kubernetes_dex_client_app_secret=$(kubectl -n d8-user-authn get secret kubernetes-dex-client-app-secret -o json | jq '.data.secret' -r | base64 -d)
     values::set userAuthn.internal.kubernetesDexClientAppSecret "${kubernetes_dex_client_app_secret}"

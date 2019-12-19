@@ -1,9 +1,9 @@
 diff --git a/connector/atlassian_crowd/atlassian_crowd.go b/connector/atlassian_crowd/atlassian_crowd.go
 new file mode 100644
-index 0000000..15658ca
+index 0000000..c3c46ae
 --- /dev/null
 +++ b/connector/atlassian_crowd/atlassian_crowd.go
-@@ -0,0 +1,443 @@
+@@ -0,0 +1,442 @@
 +// Package atlassian_crowd provides authentication strategies using Atlassian Crowd.
 +package atlassian_crowd
 +
@@ -16,7 +16,6 @@ index 0000000..15658ca
 +	"io/ioutil"
 +	"net"
 +	"net/http"
-+	"strings"
 +	"time"
 +
 +	"github.com/dexidp/dex/connector"
@@ -265,7 +264,7 @@ index 0000000..15658ca
 +			return false, fmt.Errorf("unmarshal auth pass response: %d %v %q", resp.StatusCode, err, string(body))
 +		}
 +
-+		if authError.Reason == "INVALID_USER_AUTHENTICATION" && strings.Contains(authError.Message, "password was invalid") {
++		if authError.Reason == "INVALID_USER_AUTHENTICATION" {
 +			return true, nil
 +		}
 +
