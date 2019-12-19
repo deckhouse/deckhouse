@@ -28,7 +28,7 @@ function kubectl::jq_patch() {
     return 1
   fi
 
-  diff -u $a $b || kubectl patch -f $a --patch "$(cat $b)"
+  diff -u $a $b || kubectl replace -f $b
   rm $a $b $tmp
   return 0
 }
