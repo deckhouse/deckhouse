@@ -117,6 +117,7 @@ spec:
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
+        - --whitelist-domain={{ $crd.spec.applicationDomain }}
         - --upstream=file:///dev/null
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
