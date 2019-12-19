@@ -6,7 +6,7 @@
     * Создаёт route'ы для PodNetwork в cloud provider'е.
     * Создаёт LoadBalancer'ы для Service-объектов Kubernetes с типом LoadBalancer.
     * Синхронизирует метаданные AWS Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в AWS.
-2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
+2. simple-bridge — DaemonSet. Настраивает bridge между нодами.
 3. CSI storage — для заказа дисков в AWS.
 4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [AWSInstanceClass'ы](#AWSInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#cloudinstancegroup-custom-resource).
 

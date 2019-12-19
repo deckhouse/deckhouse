@@ -79,6 +79,17 @@ spec:
           - name: healthz
             containerPort: 9808
             protocol: TCP
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: credentials
+              key: access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: credentials
+              key: secret_key
         livenessProbe:
           httpGet:
             path: /healthz
