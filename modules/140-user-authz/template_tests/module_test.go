@@ -56,7 +56,7 @@ crds:
 var testCRDsWithCrdsKeyJson, _ = ConvertYamlToJson([]byte(testCRDsWithCrdsKey))
 
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
-	f := SetupHelmConfig([]byte{})
+	f := SetupHelmConfig(``)
 
 	BeforeEach(func() {
 		// TODO: move to some common function???
@@ -66,8 +66,8 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.crds", []byte(testCRDs))
-			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", []byte(customClusterRolesFlat))
+			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDs)
+			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
 			f.HelmRender()
 		})
 
@@ -130,14 +130,14 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
-			f.ValuesSetFromYaml("userAuthz.controlPlaneConfigurator", []byte(`enabled: true`))
+			f.ValuesSetFromYaml("userAuthz.controlPlaneConfigurator", `enabled: true`)
 			f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 			f.ValuesSet("userAuthz.internal.webhookCA", "test")
 			f.ValuesSet("userAuthz.internal.webhookServerCrt", "test")
 			f.ValuesSet("userAuthz.internal.webhookServerKey", "test")
 
-			f.ValuesSetFromYaml("userAuthz.internal.crds", []byte(testCRDs))
-			f.ValuesSetFromYaml("userAuthz.internal.customClusterRolesFlat", []byte(customClusterRolesFlat))
+			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDs)
+			f.ValuesSetFromYaml("userAuthz.internal.customClusterRolesFlat", customClusterRolesFlat)
 
 			f.HelmRender()
 		})
