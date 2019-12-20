@@ -62,6 +62,9 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20191118201604-70d0c9b65592/go.m
 github.com/flant/addon-operator v1.0.0-beta.5.0.20191125113700-f40af7536584/go.mod h1:3mlw37MT24GVf45MS+z99m0w3yIMAV1j4g/9v4q9sFI=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20191204133625-4b3cdb825f42 h1:vPlixeLr9S04iNPTKjqjzCKGEVi3CW5ou6tEQEe68Eg=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20191204133625-4b3cdb825f42/go.mod h1:WtpzJnKehYQBDa0MVVoHhJeSDFHWmB/O7CHUwXZ52TA=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20191204193348-9ad4c350d069/go.mod h1:UuBT0kwM11pII8AGptGMW3D0p7dpwVvACT6cz7jAL/w=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20191219055822-7918681679a8/go.mod h1:uBRONUWf/3beIxsgAd1qtpOcQH28NafD2+LumNNY5OY=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20191220121544-357e29a32f4d/go.mod h1:VHziOT7nclrsf7ZGDKDPYoxiotKk6+w8rVHLuXlkiCw=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3 h1:2xoWU3Rdo5OU44AmwQz8nlpYlwc+tKQ6EwyT2wDP0Dg=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3/go.mod h1:/BPS5XK5Ak0UPBf4hTu7xHS/D5DeY4qO2Q0KLQPNTRw=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191023115920-4f35920cc42f h1:UwikOFWT3eCWIRYNugKHdZPa19mhIMEd1VWtNXoNpos=
@@ -75,6 +78,9 @@ github.com/flant/shell-operator v1.0.0-beta.5.0.20191125141713-10c2856508ac/go.m
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191125211303-b7995a1124da/go.mod h1:iz7qANZtT3bm9eH10uSE+IUhavOAFx/AEnaKNtrO5DI=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191204133405-bbed1e842207 h1:DERVxl2L2G6bx72PnQ37tNkXJbLlHEtpaP+Blz8wsGY=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191204133405-bbed1e842207/go.mod h1:nbDW9IjtULQjngL5sk1lbJMrYF6Lbj3InH53vyXazug=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20191204193157-e41a96ef63c1/go.mod h1:nbDW9IjtULQjngL5sk1lbJMrYF6Lbj3InH53vyXazug=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20191219055645-4efd2cc45048/go.mod h1:+yJ06N85mQ5CuM8WxgS5QW1SSFi/zKJtg2QD3Qq7n2Q=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20191220121341-f6bdd60b5e0e/go.mod h1:+yJ06N85mQ5CuM8WxgS5QW1SSFi/zKJtg2QD3Qq7n2Q=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
@@ -279,6 +285,8 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+github.com/tidwall/gjson v1.3.4/go.mod h1:P256ACg0Mn+j1RXIDXoss50DeIABTYK1PULOJHhxOls=
+github.com/tidwall/match v1.0.1/go.mod h1:LujAq0jyVjBy028G1WhWfIzbpQfMO8bBZ6Tyb0+pL9E=
 github.com/tidwall/pretty v1.0.0 h1:HsD+QiTn7sK6flMKIvNmpqz1qrpP3Ps6jOKIKMooyg4=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
