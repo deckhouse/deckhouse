@@ -33,21 +33,21 @@ const (
 )
 
 var _ = Describe("Module :: metallb :: helm template ::", func() {
-	f := SetupHelmConfig([]byte{})
+	f := SetupHelmConfig(``)
 
 	BeforeEach(func() {
 		f.ValuesSet("global.discovery.clusterVersion", "1.15.6")
 		f.ValuesSet("global.modulesImages.registry", "registryAddr")
 		f.ValuesSet("global.modulesImages.tags.common.kubeCaAuthProxy", "xxx")
 
-		f.ValuesSetFromYaml("global.discovery.nodeCountByRole", []byte("{}"))
+		f.ValuesSetFromYaml("global.discovery.nodeCountByRole", "{}")
 		f.ValuesSet("metallb.speaker.nodeSelector.mylabel", "myvalue")
 	})
 
 	Context("bgpPeers and addressPools are set", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("metallb.bgpPeers", []byte(bgpPeers))
-			f.ValuesSetFromYaml("metallb.addressPools", []byte(addressPools))
+			f.ValuesSetFromYaml("metallb.bgpPeers", bgpPeers)
+			f.ValuesSetFromYaml("metallb.addressPools", addressPools)
 			f.HelmRender()
 		})
 
