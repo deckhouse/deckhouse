@@ -109,6 +109,8 @@ const largeClusterRolesStore = `
 ]
 `
 
+// TODO переделать Expect(valuesGet) на Array.ContainElement(...)
+
 var _ = Describe("User Authz hooks :: stores handler ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterAuthorizationRule", false)
@@ -121,8 +123,8 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 		It("CCR and CAR must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(Equal(`[{"name":"ccr0","accessLevel":"clusterEditor"}]`))
-			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(Equal(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}}]`))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"accessLevel": "clusterEditor", "name": "ccr0"}]`))
+			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}}]`))
 		})
 
 		Context("Both CCR and CAR are modified", func() {
@@ -133,8 +135,8 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 			It("Modified CCR and CAR must be stored in values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(Equal(`[{"name":"ccr0","accessLevel":"clusterAdmin"}]`))
-				Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(Equal(`[{"name":"car0","spec":{"accessLevel":"ClusterAdmin"}}]`))
+				Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"name":"ccr0","accessLevel":"clusterAdmin"}]`))
+				Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterAdmin"}}]`))
 			})
 		})
 
@@ -146,8 +148,8 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 			It("Extra CCR and CAR must be stored in values with original CCR and CAR", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(Equal(`[{"name":"ccr0","accessLevel":"clusterEditor"},{"name":"ccr1","accessLevel":"clusterAdmin"}]`))
-				Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(Equal(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin"}}]`))
+				Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"accessLevel":"clusterEditor","name":"ccr0"},{"name":"ccr1","accessLevel":"clusterAdmin"}]`))
+				Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin"}}]`))
 			})
 
 			Context("Extra CCR and CAR deleted", func() {
@@ -158,8 +160,8 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 				It("Original CCR and CAR must be stored in values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(Equal(`[{"name":"ccr0","accessLevel":"clusterEditor"}]`))
-					Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(Equal(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}}]`))
+					Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"accessLevel":"clusterEditor","name":"ccr0"}]`))
+					Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}}]`))
 				})
 			})
 		})
@@ -174,7 +176,7 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 		It("userAuthz.internal.customClusterRoles must be calculated to flat version of customClusterRolesStore", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(Equal(`{"user":["ccr0"],"privilegedUser":["ccr0","ccr1"],"editor":["ccr0","ccr1","ccr2"],"admin":["ccr0","ccr1","ccr2","ccr3"],"clusterEditor":["ccr0","ccr1","ccr2","ccr4"],"clusterAdmin":["ccr0","ccr1","ccr2","ccr3","ccr4","ccr5"]}`))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(`{"user":["ccr0"],"privilegedUser":["ccr0","ccr1"],"editor":["ccr0","ccr1","ccr2"],"admin":["ccr0","ccr1","ccr2","ccr3"],"clusterEditor":["ccr0","ccr1","ccr2","ccr4"],"clusterAdmin":["ccr0","ccr1","ccr2","ccr3","ccr4","ccr5"]}`))
 		})
 	})
 })

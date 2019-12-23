@@ -3,7 +3,7 @@
 ### Миграция 2019-10-15: https://github.com/deckhouse/deckhouse/merge_requests/1222
 # Хук для удаления старых ресурсов
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   jo -p beforeHelm=0

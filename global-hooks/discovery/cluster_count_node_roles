@@ -1,7 +1,7 @@
 #!/bin/bash
 #TODO: Need SyncAll mode
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   yq r -j - << EOF
@@ -22,4 +22,4 @@ function __main__() {
   values::set global.discovery.nodeCountByRole "$node_counts"
 }
 
-hook::run_ng "$@"
+hook::run "$@"

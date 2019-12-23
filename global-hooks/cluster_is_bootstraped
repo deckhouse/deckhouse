@@ -19,31 +19,31 @@ function __config__() {
       kind: Node
       watchEvent: ["Added", "Modified"]
       jqFilter: '
-      (.spec.taints == null or ([.spec.taints[] | select(.key == "node-role.kubernetes.io/master")] | any | not))
-      and
-      (.status.conditions | [.[] | select(.type == "Ready")] | all(.[] ; .status == "True"))
+        (.spec.taints == null or ([.spec.taints[] | select(.key == "node-role.kubernetes.io/master")] | any | not))
+        and
+        (.status.conditions | [.[] | select(.type == "Ready")] | all(.[] ; .status == "True"))
       '
 EOF
 }
 
-function __on_kubernetes::synchronization::is-bootstraped-cm() {
-  if jq -e 'length > 0' >/dev/null 2>&1 <<< "${2}"; then
+function __on_kubernetes::is-bootstraped-cm::synchronization() {
+  if context::has objects.0; then
     values::set global.clusterIsBootstrapped true
   fi
 }
 
-function __on_kubernetes::added_or_modified::is-bootstraped-cm() {
+function __on_kubernetes::is-bootstraped-cm::added_or_modified() {
   values::set global.clusterIsBootstrapped true
 }
 
-function __on_kubernetes::synchronization::not-master-and-ready-nodes() {
+function __on_kubernetes::not-master-and-ready-nodes::synchronization() {
   if values::is_true global.clusterIsBootstrapped; then
     return 0
   fi
 
-  if jq -e 'any' >/dev/null 2>&1 <<< "${1}"; then
+  if context::jq -e '[.objects[] | .filterResult] | any' >/dev/null 2>&1; then
     values::set global.clusterIsBootstrapped true
-    kubernetes::create_if_not_exists_yaml << EOF
+    kubernetes::create_yaml << EOF
       apiVersion: v1
       kind: ConfigMap
       metadata:
@@ -53,14 +53,14 @@ EOF
   fi
 }
 
-function __on_kubernetes::added_or_modified::not-master-and-ready-nodes() {
+function __on_kubernetes::not-master-and-ready-nodes::added_or_modified() {
   if values::is_true global.clusterIsBootstrapped; then
     return 0
   fi
 
-  if [[ "${1}" == "true" ]]; then
+  if context::is_true filterResult; then
     values::set global.clusterIsBootstrapped true
-    kubernetes::create_if_not_exists_yaml << EOF
+    kubernetes::create_yaml << EOF
       apiVersion: v1
       kind: ConfigMap
       metadata:
@@ -70,4 +70,4 @@ EOF
   fi
 }
 
-hook::run_ng $@
+hook::run $@

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
 # TODO
@@ -79,6 +79,7 @@ function __main__() {
   fltr=$fltr' | .spec.template.spec.affinity |= remove_empty'
 
   # Применяем
+  echo kubectl::jq_patch kube-system ${kube_dns_deployment_name} "$fltr" >> /tmp/jq.txt
   kubectl::jq_patch kube-system ${kube_dns_deployment_name} "$fltr"
 }
 

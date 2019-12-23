@@ -4,7 +4,7 @@
 # Не помогал рестарт deckhouse, а только полное удаление Helm релиза prometheus и последующая установка.
 # Целью данного хука является введение независимого от Helm механизма определения версии кластера.
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   yq r -j - << EOF

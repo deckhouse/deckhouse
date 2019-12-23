@@ -29,7 +29,7 @@
 #  * таким образом мы считаем, что если AWS и GCE — это всегда kops, если Azure — это всегда acs-engine (пока kops
 #    не научился, потом придумаем как отличать), а если ничего из этих трех — значит это "без облака" и kubeadm
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   jo -p onStartup=100

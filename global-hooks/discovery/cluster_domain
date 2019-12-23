@@ -2,7 +2,7 @@
 
 # Автоопределятор внутреннего домена DNS кластера Kubernetes (cluster.local, например).
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   jo -p onStartup=100

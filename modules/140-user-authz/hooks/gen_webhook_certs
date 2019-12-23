@@ -31,14 +31,14 @@ function _set_webhook_cert() {
     values::set userAuthz.internal.webhookServerKey "$(jq -r '.webhookServerKey' <<< "${1}")"
 }
 
-function __on_kubernetes::synchronization::webhook-secret() {
-  if jq -e 'length > 0' <<< "${1}" >/dev/null 2>&1; then
-    _set_webhook_cert "$(jq -r '.[0]' <<< "${1}")"
+function __on_kubernetes::webhook-secret::synchronization() {
+  if context::has objects.0; then
+    _set_webhook_cert "$(context::get objects.0.filterResult)"
   fi
 }
 
-function __on_kubernetes::added_or_modified::webhook-secret() {
-  _set_webhook_cert "${1}"
+function __on_kubernetes::webhook-secret::added_or_modified() {
+  _set_webhook_cert "$(context::get filterResult)"
 }
 
 function __on_before_helm() {
@@ -60,4 +60,4 @@ function __on_before_helm() {
   fi
 }
 
-hook::run_ng "$@"
+hook::run "$@"

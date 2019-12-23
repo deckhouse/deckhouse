@@ -20,4 +20,4 @@ function __main__() {
   fi
 }
 
-hook::run_ng $@
+hook::run $@

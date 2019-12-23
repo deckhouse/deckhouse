@@ -4,7 +4,7 @@
 # После выката данного MR'а необходимо сделать хук в prometheus модуле,
 # который будет удалять данные параметры из configmap deckhouse
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   jo -p onStartup=10

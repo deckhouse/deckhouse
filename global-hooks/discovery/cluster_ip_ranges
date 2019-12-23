@@ -2,7 +2,7 @@
 
 # Автоопределятор cluster-cidr (адреса подов), service-cluster-ip-range (адреса сервисов) и node-internal-ips (внутренние адреса нод).
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
 # TODO
