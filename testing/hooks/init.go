@@ -261,7 +261,7 @@ func (hec *HookExecutionConfig) RunHook() {
 		Env:  append(os.Environ(), hookEnvs...),
 	}
 
-	hec.Session, err = gexec.Start(hookCmd, GinkgoWriter, GinkgoWriter)
+	hec.Session, err = gexec.Start(hookCmd, nil, GinkgoWriter)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	hec.Session.Wait(10)
