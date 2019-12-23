@@ -1,9 +1,9 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 function __main__() {
-  module::disable_if_cluster_is_not_bootstraped
+  enabled::disable_module_if_cluster_is_not_bootstraped
   ### Миграция 2019-10-02: https://github.com/deckhouse/deckhouse/merge_requests/1222
   # Данный хук можно удалить, после того, как мы выкатим релиз с этим MR
   # а в следующем релизе будут выпилены настройки связанные с madison в модуле prometheus

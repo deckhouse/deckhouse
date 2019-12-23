@@ -19,14 +19,14 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::synchronization::cluster-autoscaler() {
-  if [[ $(jq -r 'length' <<< ${1}) > 0 ]]; then
+function __on_kubernetes::cluster-autoscaler::synchronization() {
+  if context::has objects.0; then
     kubernetes::patch_jq kube-system deployment/cluster-autoscaler 'del(.spec.template.spec.containers[0].resources.limits)'
   fi
 }
 
-function __on_kubernetes::added_or_modified::cluster-autoscaler() {
+function __on_kubernetes::cluster-autoscaler::added_or_modified() {
   kubernetes::patch_jq kube-system deployment/cluster-autoscaler 'del(.spec.template.spec.containers[0].resources.limits)'
 }
 
-hook::run_ng $@
+hook::run $@

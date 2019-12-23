@@ -3,7 +3,7 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  module::disable_if_cluster_is_not_bootstraped
+  enabled::disable_module_if_cluster_is_not_bootstraped
 
   if values::has global.modules.publicDomainTemplate ; then
     if ! values::array_has global.enabledModules "user-authz" ; then
@@ -16,4 +16,4 @@ function __main__() {
   fi
 }
 
-hook::run $@
+enabled::run $@

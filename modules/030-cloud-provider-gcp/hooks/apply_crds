@@ -10,4 +10,4 @@ function __on_startup() {
   kubectl apply -f $(module::path)/crds/
 }
 
-hook::run_ng "$@"
+hook::run "$@"

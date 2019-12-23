@@ -25,9 +25,6 @@ backtrace() {
 
 trap backtrace ERR
 
-# override jq first
-source "/deckhouse/shell_lib/jq.sh"
-
 for f in $(find /deckhouse/shell_lib/ -type f -iname "*.sh"); do
   source $f
 done

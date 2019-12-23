@@ -46,4 +46,4 @@ function __on_before_helm() {
 
 source <(hook::generate::store_handlers ccr userAuthz.internal.customClusterRolesStore name)
 source <(hook::generate::store_handlers car userAuthz.internal.crds name)
-hook::run_ng "$@"
+hook::run "$@"

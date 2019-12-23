@@ -62,6 +62,24 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 
 	var err error
 	switch kpo.Op {
+	case "Create":
+		var t interface{}
+		dec := yaml.NewDecoder(strings.NewReader(kpo.ResourceSpec))
+		err = dec.Decode(&t)
+		if err != nil {
+			return object_store.ObjectStore{}, fmt.Errorf("operation \"Create\", failed to decode YAML: %s\n", err)
+		}
+		if t == nil {
+			return object_store.ObjectStore{}, errors.New("kubernetes Create operation should contain pure YAML")
+		}
+
+		var newObj unstructured.Unstructured
+		newObj.SetUnstructuredContent(t.(map[string]interface{}))
+		if newObjectStore.KubernetesResource(newObj.GetKind(), newObj.GetNamespace(), newObj.GetName()).Exists() {
+			return object_store.ObjectStore{}, fmt.Errorf("kubernetes Create operation failed: resource %s/%s in ns %s is already exists", newObj.GetKind(), newObj.GetName(), newObj.GetNamespace())
+		}
+		newObjectStore.PutObject(newObj.Object, object_store.NewMetaIndex(newObj.GetKind(), newObj.GetNamespace(), newObj.GetName()))
+
 	case "CreateIfNotExists":
 		var t interface{}
 		dec := yaml.NewDecoder(strings.NewReader(kpo.ResourceSpec))

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib.sh
+source /deckhouse/shell_lib_legacy.sh
 
 # TODO: настроить хук на единственный секрет "ingress-tls"
 function __config__() {

@@ -19,26 +19,16 @@ function __config__() {
           matchNames: [default]
       nameSelector:
         matchNames: [kubernetes]
-      jqFilter: '.subsets[].addresses | length'
+      jqFilter: '.subsets[].addresses | length > 1'
 EOF
 }
 
-function _handle_num_apiservers() {
-  num_apiservers=$1
-  values::set global.discovery.clusterMasterCount "$num_apiservers"
-  if [ $num_apiservers -gt 1 ]; then
-    values::set global.discovery.clusterControlPlaneIsHighlyAvailable true
-  else
-    values::set global.discovery.clusterControlPlaneIsHighlyAvailable false
-  fi
+function __on_kubernetes::kube-api-ep::synchronization() {
+  values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get objects.0.filterResult)"
 }
 
-function __on_kubernetes::synchronization::kube-api-ep() {
-  _handle_num_apiservers "$(jq -r '.[0]' <<< ${1})"
+function __on_kubernetes::kube-api-ep::added_or_modified() {
+  values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get filterResult)"
 }
 
-function __on_kubernetes::added_or_modified::kube-api-ep() {
-  _handle_num_apiservers "${1}"
-}
-
-hook::run_ng $@
+hook::run $@
