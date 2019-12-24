@@ -1,70 +1,68 @@
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/testing/library"
-	. "github.com/deckhouse/deckhouse/testing/library/object_store"
+	"encoding/json"
+	"fmt"
+
 	"github.com/tidwall/gjson"
+
+	"github.com/deckhouse/deckhouse/testing/library"
 )
 
-type BindingContext struct {
-	Binding      string                 `json:"binding"`
-	Name         string                 `json:"name,omitempty"`
-	Type         string                 `json:"type,omitempty"`
-	WatchEvent   string                 `json:"watchEvent,omitempty"`
-	Object       KubeObject             `json:"object,omitempty"`
-	Objects      []BindingContextObject `json:"objects,omitempty"`
-	FilterResult FilterResult           `json:"filterResult,omitempty"`
-}
-
-type BindingContextObject struct {
-	Object       KubeObject   `json:"object"`
-	FilterResult FilterResult `json:"filterResult,omitempty"`
-}
-
-type BindingContextsSlice []BindingContext
-
-type FilterResult struct {
+type BindingContextsSlice struct {
 	JSON string
 }
 
-func (bcs *BindingContextsSlice) Add(contexts ...BindingContext) {
-	*bcs = append(*bcs, contexts...)
-}
-
-func (bcs *BindingContextsSlice) Set(contexts ...BindingContext) {
-	*bcs = contexts
-}
-
-func (fr *FilterResult) Get(path string) library.KubeResult {
-	return library.KubeResult{Result: gjson.Get(fr.JSON, path)}
-}
-
-func (fr *FilterResult) Parse() library.KubeResult {
-	return library.KubeResult{Result: gjson.Parse(fr.JSON)}
-}
-
-func (fr *FilterResult) String() string {
-	return fr.JSON
-}
-
-func (fr *FilterResult) UnmarshalJSON(b []byte) error {
-	fr.JSON = string(b)
-	return nil
-}
-
-func (fr *FilterResult) MarshalJSON() ([]byte, error) {
-	if fr.JSON == "" {
-		return []byte(`""`), nil
+func (bcs *BindingContextsSlice) Set(contexts ...string) {
+	if len(contexts) == 0 {
+		bcs.JSON = `""`
+		return
 	}
-	return []byte(fr.JSON), nil
+
+	var rawContexts []interface{}
+	for _, jsonContext := range contexts {
+		var data []interface{}
+
+		err := json.Unmarshal([]byte(jsonContext), &data)
+		if err != nil {
+			// TODO: Remove panic here
+			panic(err)
+		}
+		for _, context := range data {
+			rawContexts = append(rawContexts, context)
+		}
+	}
+
+	combinedContexts, err := json.Marshal(rawContexts)
+	if err != nil {
+		// TODO: Remove panic here
+		panic(err)
+	}
+	bcs.JSON = string(combinedContexts)
+}
+
+func (bcs *BindingContextsSlice) Get(path string) library.KubeResult {
+	return library.KubeResult{Result: gjson.Get(bcs.JSON, path)}
+}
+
+func (bcs *BindingContextsSlice) Parse() library.KubeResult {
+	return library.KubeResult{Result: gjson.Parse(bcs.JSON)}
+}
+
+func (bcs *BindingContextsSlice) Array() []gjson.Result {
+	return library.KubeResult{Result: gjson.Parse(bcs.JSON)}.Array()
+}
+
+func (bcs *BindingContextsSlice) String() string {
+	return bcs.JSON
 }
 
 var (
-	OnStartupContext  = BindingContext{Binding: "onStartup"}
-	BeforeHelmContext = BindingContext{Binding: "beforeHelm"}
-	AfterHelmContext  = BindingContext{Binding: "afterHelm"}
+	OnStartupContext  = `[{"binding":"onStartup"}]`
+	BeforeHelmContext = `[{"binding":"beforeHelm"}]`
+	AfterHelmContext  = `[{"binding":"afterHelm"}]`
 )
 
-func ScheduleBindingContext(name string) BindingContext {
-	return BindingContext{Binding: "schedule", Name: name}
+func ScheduleBindingContext(name string) string {
+	return fmt.Sprintf(`[{"binding":"schedule","name":%q}]`, name)
 }

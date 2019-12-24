@@ -55,7 +55,7 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateEmpty)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateEmpty))
 			f.RunHook()
 		})
 
@@ -65,7 +65,7 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 		Context("Secret Created", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated))
 				f.RunHook()
 			})
 
@@ -78,7 +78,7 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 			Context("Secret Changed", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateSecretChanged)...)
+					f.BindingContexts.Set(f.KubeStateSet(stateSecretChanged))
 					f.RunHook()
 				})
 
@@ -94,7 +94,7 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 	Context("Cluster with secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated))
 			f.RunHook()
 		})
 

@@ -8,7 +8,6 @@ User-stories:
 package hooks
 
 import (
-	"sort"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -125,37 +124,37 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 	Context("Cluster has no nodes except master", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMasterOnly)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateMasterOnly))
 			f.RunHook()
 		})
 
 		It("filterResult must be 'false'; `global.clusterIsBootstrapped` must not exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts[1].Objects[0].FilterResult.Parse().Bool()).To(BeFalse())
+			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 		})
 
 		Context("Worker node with status NotReady added", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateMasterAndNotReadyNode)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateMasterAndNotReadyNode))
 				f.RunHook()
 			})
 
 			It("'filterResult' must be false; `global.clusterIsBootstrapped` must not exist", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts[0].FilterResult.Parse().Bool()).To(BeFalse())
+				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 			})
 
 			Context("State of additional node changed to Ready", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateMasterAndReadyNode)...)
+					f.BindingContexts.Set(f.KubeStateSet(stateMasterAndReadyNode))
 					f.RunHook()
 				})
 
 				It("filterResult must be 'true'; `global.clusterIsBootstrapped` must be 'true'; CM `d8-cluster-is-bootstraped` must be created", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts[0].FilterResult.Parse().Bool()).To(BeTrue())
+					Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
 					Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 					Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
 				})
@@ -164,7 +163,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 		Context("Someone created cm kube-system/d8-cluster-is-bootstraped", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateMasterAndCM)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateMasterAndCM))
 				f.RunHook()
 			})
 
@@ -177,33 +176,31 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 	Context("Cluster has master and additional nodes in NotReady state", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndNotReadyNode)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndNotReadyNode))
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
 		It("filterResult must be 'false'; `global.clusterIsBootstrapped` must not exist", func() {
-			Expect(len(f.BindingContexts[1].Objects)).To(Equal(2))
-			Expect(f.BindingContexts[1].Objects[0].FilterResult.Parse().Bool()).To(BeFalse())
-			Expect(f.BindingContexts[1].Objects[1].FilterResult.Parse().Bool()).To(BeFalse())
+			Expect(len(f.BindingContexts.Get("1.objects").Array())).To(Equal(2))
+			Expect(f.BindingContexts.Get("1.object.0.filterResult").Bool()).To(BeFalse())
+			Expect(f.BindingContexts.Get("1.object.1.filterResult").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 		})
 	})
 
 	Context("Cluster has master and additional nodes in Ready state", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndReadyNode)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndReadyNode))
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
 		It("BINDING_CONTEXT must have Synchronization event with two objects with filterResult 'false' and 'true'; `global.clusterIsBootstrapped` must be 'true'", func() {
-			Expect(len(f.BindingContexts[1].Objects)).To(Equal(2))
-			tmpSlice := []string{}
-			tmpSlice = append(tmpSlice, f.BindingContexts[1].Objects[0].FilterResult.Parse().String())
-			tmpSlice = append(tmpSlice, f.BindingContexts[1].Objects[1].FilterResult.Parse().String())
-			sort.Strings(tmpSlice)
-			Expect(tmpSlice).To(Equal([]string{"false", "true"}))
+			Expect(len(f.BindingContexts.Get("1.objects").Array())).To(Equal(2))
+			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Bool()).To(BeFalse())
+			Expect(f.BindingContexts.Get("1.objects.1.filterResult").Bool()).To(BeTrue())
+
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
 		})
@@ -211,7 +208,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 	Context("Cluster has cm kube-system/d8-cluster-is-bootstraped", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndCM)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndCM))
 			f.RunHook()
 		})
 

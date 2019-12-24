@@ -68,27 +68,27 @@ var _ = Describe("Global hooks :: resources/cluster_autoscaler ::", func() {
 
 	Context("There is no Deployment kube-system/cluster-autoscaler in cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateEmpty)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateEmpty))
 			f.RunHook()
 		})
 
 		It("BINDING_CONTEXT must be empty", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts[0].Objects).To(BeEmpty())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.Objects").Array()).To(BeEmpty())
 		})
 
 		Context("Someone created Deployment kube-system/cluster-autoscaler with `spec.template.spec.containers.0.resources.limits`", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreSet)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreSet))
 				f.RunHook()
 			})
 
 			It("BINDING_CONTEXT must contain Added event; section `limits` must be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts).ShouldNot(BeEmpty())
-				Expect(f.BindingContexts[0].Binding).To(Equal("cluster-autoscaler"))
-				Expect(f.BindingContexts[0].WatchEvent).To(Equal("Added"))
+				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("cluster-autoscaler"))
+				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Added"))
 				Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources.limits").Exists()).To(BeFalse())
 			})
@@ -97,16 +97,16 @@ var _ = Describe("Global hooks :: resources/cluster_autoscaler ::", func() {
 
 	Context("There is Deployment kube-system/cluster-autoscaler in cluster with section `spec.template.spec.containers.0.resources.limits`", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreSet)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreSet))
 			f.RunHook()
 		})
 
 		It("BINDING_CONTEXT must contain Synchronization event with cluster-autoscaler Deployment; section `limits` must be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts[0].Binding).To(Equal("cluster-autoscaler"))
-			Expect(f.BindingContexts[0].Type).To(Equal("Synchronization"))
-			Expect(f.BindingContexts[0].Objects[0].Object.Field("metadata.name").String()).To(Equal("cluster-autoscaler"))
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("cluster-autoscaler"))
+			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
+			Expect(f.BindingContexts.Get("0.objects.0.object.metadata.name").String()).To(Equal("cluster-autoscaler"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources.limits").Exists()).To(BeFalse())
 		})
@@ -114,32 +114,32 @@ var _ = Describe("Global hooks :: resources/cluster_autoscaler ::", func() {
 
 	Context("There is Deployment kube-system/cluster-autoscaler in cluster without section `spec.template.spec.containers.0.resources.limits`", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreUnset)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreUnset))
 			f.RunHook()
 		})
 
 		It("BINDING_CONTEXT must contain Synchronization event with cluster-autoscaler Deployment; section `limits` must be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts[0].Binding).To(Equal("cluster-autoscaler"))
-			Expect(f.BindingContexts[0].Type).To(Equal("Synchronization"))
-			Expect(f.BindingContexts[0].Objects[0].Object.Field("metadata.name").String()).To(Equal("cluster-autoscaler"))
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("cluster-autoscaler"))
+			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
+			Expect(f.BindingContexts.Get("0.objects.0.object.metadata.name").String()).To(Equal("cluster-autoscaler"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources.limits").Exists()).To(BeFalse())
 		})
 
 		Context("Someone modified Deployment kube-system/cluster-autoscaler by adding section `spec.template.spec.containers.0.resources.limits`", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreSet)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateLimitsAreSet))
 				f.RunHook()
 			})
 
 			It("BINDING_CONTEXT must contain Modified event; section `limits` must be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts).ShouldNot(BeEmpty())
-				Expect(f.BindingContexts[0].Binding).To(Equal("cluster-autoscaler"))
-				Expect(f.BindingContexts[0].WatchEvent).To(Equal("Modified"))
-				Expect(f.BindingContexts[0].Object.Field("metadata.name").String()).To(Equal("cluster-autoscaler"))
+				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("cluster-autoscaler"))
+				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
+				Expect(f.BindingContexts.Get("0.object.metadata.name").String()).To(Equal("cluster-autoscaler"))
 				Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("Deployment", "kube-system", "cluster-autoscaler").Field("spec.template.spec.containers.0.resources.limits").Exists()).To(BeFalse())
 			})

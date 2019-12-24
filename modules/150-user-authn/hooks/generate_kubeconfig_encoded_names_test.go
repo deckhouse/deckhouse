@@ -25,7 +25,7 @@ var _ = Describe("User Authn hooks :: generate kubeconfig encoded names ::", fun
 
 		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 		})
 	})
 
@@ -41,7 +41,7 @@ var _ = Describe("User Authn hooks :: generate kubeconfig encoded names ::", fun
 
 		It("Should add encoded kubeconfig names", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Parse().Array()).ShouldNot(BeEmpty())
 			Expect(f.ValuesGet("userAuthn.internal.kubeconfigEncodedNames").String()).To(MatchJSON(`["nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuymx4u44scceizf", "nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuy4x4u44scceizf"]`))
 		})
 	})
