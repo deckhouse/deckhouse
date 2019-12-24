@@ -109,27 +109,25 @@ const largeClusterRolesStore = `
 ]
 `
 
-// TODO переделать Expect(valuesGet) на Array.ContainElement(...)
-
 var _ = Describe("User Authz hooks :: stores handler ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterAuthorizationRule", false)
 
 	Context("Cluster with CCR and CAR", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCCR0andCAR0)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateCCR0andCAR0))
 			f.RunHook()
 		})
 
 		It("CCR and CAR must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"accessLevel": "clusterEditor", "name": "ccr0"}]`))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"name":"ccr0","accessLevel":"clusterEditor"}]`))
 			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}}]`))
 		})
 
 		Context("Both CCR and CAR are modified", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateCCR0andCAR0Modified)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateCCR0andCAR0Modified))
 				f.RunHook()
 			})
 
@@ -142,25 +140,25 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 		Context("Extra CCR and CAR added", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateCCR0CCR1andCAR0CAR1)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateCCR0CCR1andCAR0CAR1))
 				f.RunHook()
 			})
 
 			It("Extra CCR and CAR must be stored in values with original CCR and CAR", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"accessLevel":"clusterEditor","name":"ccr0"},{"name":"ccr1","accessLevel":"clusterAdmin"}]`))
+				Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"name":"ccr0","accessLevel":"clusterEditor"},{"name":"ccr1","accessLevel":"clusterAdmin"}]`))
 				Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin"}}]`))
 			})
 
 			Context("Extra CCR and CAR deleted", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateCCR0andCAR0)...)
+					f.BindingContexts.Set(f.KubeStateSet(stateCCR0andCAR0))
 					f.RunHook()
 				})
 
 				It("Original CCR and CAR must be stored in values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"accessLevel":"clusterEditor","name":"ccr0"}]`))
+					Expect(f.ValuesGet("userAuthz.internal.customClusterRolesStore").String()).To(MatchJSON(`[{"name":"ccr0","accessLevel":"clusterEditor"}]`))
 					Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}}]`))
 				})
 			})

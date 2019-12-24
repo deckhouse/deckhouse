@@ -55,31 +55,31 @@ var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 
 	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
 			f.RunHook()
 		})
 
 		It("filterResult must be false; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts[0].Binding).To(Equal("kube-api-ep"))
-			Expect(f.BindingContexts[0].Type).To(Equal("Synchronization"))
-			Expect(f.BindingContexts[0].Objects[0].FilterResult.Parse().Bool()).To(BeFalse())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())
 		})
 
 		Context("Someone added additional addresses to .subsets[]", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses))
 				f.RunHook()
 			})
 
 			It("filterResult must be true; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts).ShouldNot(BeEmpty())
-				Expect(f.BindingContexts[0].Binding).To(Equal("kube-api-ep"))
-				Expect(f.BindingContexts[0].WatchEvent).To(Equal("Modified"))
-				Expect(f.BindingContexts[0].FilterResult.Parse().Bool()).To(BeTrue())
+				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
+				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
 				Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeTrue())
 			})
 		})
@@ -87,31 +87,31 @@ var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 
 	Context("Endpoint default/kubernetes has multiple addresses in .subsets[]", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses)...)
+			f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses))
 			f.RunHook()
 		})
 
 		It("filterResult must be true; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts[0].Binding).To(Equal("kube-api-ep"))
-			Expect(f.BindingContexts[0].Type).To(Equal("Synchronization"))
-			Expect(f.BindingContexts[0].Objects[0].FilterResult.Parse().Bool()).To(BeTrue())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeTrue())
 		})
 
 		Context("Someone set number of addresses in .subsets[] to one", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress)...)
+				f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
 				f.RunHook()
 			})
 
 			It("filterResult must be false; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts).ShouldNot(BeEmpty())
-				Expect(f.BindingContexts[0].Binding).To(Equal("kube-api-ep"))
-				Expect(f.BindingContexts[0].WatchEvent).To(Equal("Modified"))
-				Expect(f.BindingContexts[0].FilterResult.Parse().Bool()).To(BeFalse())
+				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
+				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())
 			})
 		})

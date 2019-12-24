@@ -68,7 +68,6 @@ type HookExecutionConfig struct {
 	KubeState                string // yaml string
 	ObjectStore              object_store.ObjectStore
 	BindingContexts          BindingContextsSlice
-	BindingContextsRaw       string // array of contexts
 	BindingContextController context.BindingContextController
 
 	Session *gexec.Session
@@ -173,7 +172,8 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	return hookConfig
 }
 
-func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) []BindingContext {
+func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
+	var contexts string
 	var err error
 	if hec.IsKubeStateInited == false {
 		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig, newKubeState)
@@ -187,24 +187,18 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) []BindingConte
 			}
 		}
 
-		hec.BindingContextsRaw, err = hec.BindingContextController.Run()
+		contexts, err = hec.BindingContextController.Run()
 		if err != nil {
 			panic(err)
 		}
 		hec.IsKubeStateInited = true
 	} else {
-		hec.BindingContextsRaw, err = hec.BindingContextController.ChangeState(newKubeState)
+		contexts, err = hec.BindingContextController.ChangeState(newKubeState)
 		if err != nil {
 			panic(err)
 		}
 	}
 	hec.KubeState = newKubeState
-
-	var contexts []BindingContext
-	err = json.Unmarshal([]byte(hec.BindingContextsRaw), &contexts)
-	if err != nil {
-		panic(err)
-	}
 	return contexts
 }
 
@@ -285,9 +279,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 	*/
 
-	bindingContextBytes, err := json.Marshal(hec.BindingContexts)
 	Expect(err).ShouldNot(HaveOccurred())
-	hec.BindingContextsRaw = string(bindingContextBytes)
 
 	tmpDir, err = ioutil.TempDir(globalTmpDir, "")
 	Expect(err).ShouldNot(HaveOccurred())
@@ -325,7 +317,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	hec.Session = sandbox_runner.Run(hookCmd,
 		sandbox_runner.WithFile(ValuesFile.Name(), hec.values.JsonRepr),
 		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JsonRepr),
-		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContextsRaw)),
+		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContexts.JSON)),
 	)
 
 	valuesJsonPatchBytes, err := ioutil.ReadAll(ValuesJsonPatchFile)
