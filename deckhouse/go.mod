@@ -3,8 +3,8 @@ module flant/deckhouse
 go 1.12
 
 require (
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20191223123252-ff4a45cf4bb0 // branch: feat_include_snapshots
-	github.com/flant/shell-operator v1.0.0-beta.5.0.20191223123144-33b2126ef623 // branch: feat_kubernetes_binding_mode
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20191224114930-3e60be21291b // branch: feat_include_snapshots
+	github.com/flant/shell-operator v1.0.0-beta.5.0.20191224114800-310df3bb9a88 // branch: feat_kubernetes_binding_mode
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
