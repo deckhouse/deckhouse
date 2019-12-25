@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
@@ -15,4 +15,4 @@ function __main__() {
   fi
 }
 
-hook::run $@
+enabled::run $@
