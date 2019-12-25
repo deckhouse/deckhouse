@@ -29,6 +29,9 @@ data:
         * `peer-address` — IP внешнего BGP-роутера.
         * `peer-asn` — номер автономки на внешнем BGP-роутере.
         * `my-asn` — номер автономки на вашем кластере.
+        * `hold-time` — таймаут, после которого партнёрский BGP-пир считается утерянным. Это значение делится на три и получается интервал для keep-alive.
+            * Рекомендуемое значение — `3s` (keep-alive раз в секунду), протокол BGP не поддерживает значения меньше.
+            * По-умолчанию — `90s` (keep-alive раз в 30 секунд).
         * `node-selector` — дополнительный псевдо-селектор, который реализуется приложением speaker-а. Говорит о том, с каких нод стоит устанавливать связь с внешними BGP-роутерами. Не путать с `speaker.nodeSelector` и  `nodeSelector`.
             * Опциональный параметр.
             * Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
