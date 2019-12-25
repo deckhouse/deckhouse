@@ -148,8 +148,8 @@ function values::get_first_defined() {
 
   for var in "$@"
   do
-    if values::has "$config" "$var" ; then
-      values::get "$config" "$var"
+    if values::has $config "$var" ; then
+      values::get $config "$var"
       return 0
     fi
   done

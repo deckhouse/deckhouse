@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
@@ -12,4 +12,4 @@ function __main__() {
   fi
 }
 
-hook::run "$@"
+enabled::run "$@"
