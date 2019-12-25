@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/flant/addon-operator v1.0.0-beta.5.0.20191224114930-3e60be21291b // branch: feat_include_snapshots
-	github.com/flant/shell-operator v1.0.0-beta.5.0.20191224114800-310df3bb9a88 // branch: feat_kubernetes_binding_mode
+	github.com/flant/shell-operator v1.0.0-beta.5.0.20191225090236-995455cb489b // branch: feat_kubernetes_binding_mode
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
