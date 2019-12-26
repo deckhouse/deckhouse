@@ -153,19 +153,12 @@
   verbs:
   {{- include "user_authz_verbs" "r" }}
 - apiGroups:
-  - v1
+  - ""
   resources:
   - nodes
   - persistentvolumes
   verbs:
   {{- include "user_authz_verbs" "r" }}
-- apiGroups:
-  - v1
-  resources:
-  - persistentvolumeclaims
-  verbs:
-  {{- include "user_authz_verbs" $mode }}
-
   {{- include "user_authz_rules_for_not_recommended_objects" . }}
 {{- end -}}
 
