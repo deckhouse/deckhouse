@@ -10,7 +10,7 @@ function __main__() {
   for i in $(seq 1 120); do
     master_nodes=$(kubectl get node -l node-role.kubernetes.io/master="" -o json)
 
-    all_initialized=$(echo "$master_nodes" | jq '[.items[].spec.taints | [(.[] | select(.key == "node.cloudprovider.kubernetes.io/uninitialized"))] | length == 0] | all')
+    all_initialized=$(echo "$master_nodes" | jq '[(.items[].spec.taints // []) | [(.[] | select(.key == "node.cloudprovider.kubernetes.io/uninitialized"))] | length == 0] | all')
     all_ready=$(echo "$master_nodes" | jq '[.items[].status.conditions | [(.[] | select(.type == "Ready"))] | all(.[] ; .status == "True")] | all')
 
     if [[ "x$all_initialized" == "xfalse" && "x$all_ready" == "xfalse" ]] ; then
