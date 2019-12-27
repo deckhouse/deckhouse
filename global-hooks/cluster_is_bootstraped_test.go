@@ -198,8 +198,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 		It("BINDING_CONTEXT must have Synchronization event with two objects with filterResult 'false' and 'true'; `global.clusterIsBootstrapped` must be 'true'", func() {
 			Expect(len(f.BindingContexts.Get("1.objects").Array())).To(Equal(2))
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Bool()).To(BeFalse())
-			Expect(f.BindingContexts.Get("1.objects.1.filterResult").Bool()).To(BeTrue())
+			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Bool()).ToNot(Equal(f.BindingContexts.Get("1.objects.1.filterResult").Bool()))
 
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
