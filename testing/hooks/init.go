@@ -10,28 +10,23 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/testing/library"
-
 	. "github.com/flant/libjq-go"
-
-	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
-
-	"github.com/deckhouse/deckhouse/testing/library/values_store"
-
-	jsonpatch "gopkg.in/evanphx/json-patch.v4"
-
-	"gopkg.in/yaml.v3"
-
-	"github.com/onsi/gomega/gexec"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
+
+	jsonpatch "gopkg.in/evanphx/json-patch.v4"
+	yaml_v3 "gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/flant/shell-operator/test/hook/context"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
+	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
+	"github.com/deckhouse/deckhouse/testing/library/values_store"
 )
 
 var globalTmpDir string
@@ -158,7 +153,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	}
 
 	var config ShellOperatorHookConfig
-	err = json.Unmarshal(stdout.Bytes(), &config)
+	err = yaml.Unmarshal(stdout.Bytes(), &config)
 	if err != nil {
 		panic(err)
 	}
@@ -205,7 +200,7 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
 func (hec *HookExecutionConfig) KubeStateToKubeObjects() error {
 	var err error
 	hec.ObjectStore = make(object_store.ObjectStore)
-	dec := yaml.NewDecoder(strings.NewReader(hec.KubeState))
+	dec := yaml_v3.NewDecoder(strings.NewReader(hec.KubeState))
 	for {
 		var t interface{}
 		err = dec.Decode(&t)
@@ -266,7 +261,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	By("Parsing config " + string(out))
 
 	var parsedConfig json.RawMessage
-	Expect(json.Unmarshal(out, &parsedConfig)).To(Succeed())
+	Expect(yaml.Unmarshal(out, &parsedConfig)).To(Succeed())
 
 	Expect(hec.values.JsonRepr).ToNot(BeEmpty())
 
