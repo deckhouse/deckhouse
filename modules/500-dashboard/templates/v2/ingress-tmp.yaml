@@ -2,6 +2,7 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 
 {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 {{- if eq (include "helm_lib_module_https_cert_manager_cluster_issuer_name" .) "letsencrypt" }}
 
 ---
@@ -69,6 +70,7 @@ spec:
     kind: ClusterIssuer
   {{- end }}
 
+{{- end }}
 {{- end }}
 {{- end }}
 
