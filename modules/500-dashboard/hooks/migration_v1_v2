@@ -22,6 +22,9 @@ function __main__() {
   if kubectl -n $ns get role dashboard >/dev/null 2>&1;                         then kubectl -n $ns delete role dashboard >/dev/null 2>&1; fi
   if kubectl -n $ns get rolebinding dashboard >/dev/null 2>&1;                  then kubectl -n $ns delete rolebinding dashboard >/dev/null 2>&1; fi
   if kubectl -n $ns get certificate dashboard >/dev/null 2>&1;                  then kubectl -n $ns delete certificate dashboard >/dev/null 2>&1; fi
+
+  if kubectl -n $ns get certificate dashboard-tmp >/dev/null 2>&1;              then kubectl -n $ns delete certificate dashboard-tmp >/dev/null 2>&1; fi
+  if kubectl -n $ns get ing dashboard-tmp >/dev/null 2>&1;                      then kubectl -n $ns delete ing dashboard-tmp >/dev/null 2>&1; fi
 }
 
 hook::run $@
