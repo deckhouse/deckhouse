@@ -28,8 +28,8 @@ spec:
 {{- end }}
 {{- if .instanceGroup.instanceClass.runtimeOptions }}
   runtimeOptions:
-  {{- if .instanceGroup.instanceClass.runtimeOptions.nestedHvEnabled }}
-    nestedHvEnabled: true
+  {{- if .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization }}
+    nestedHardwareVirtualization: true
   {{- end }}
 {{- end }}
   secretRef:

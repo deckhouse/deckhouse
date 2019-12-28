@@ -64,10 +64,6 @@
         ```
 
     * Опциональный параметр.
-* `runtimeOptions` — опциональные параметры виртуальных машин.
-    * `nestedHvEnabled` — включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах
-        * Формат — bool.
-        * Опциональный параметр.
 
 #### Пример конфигурации
 
@@ -118,6 +114,10 @@ cloudProviderVsphere: |
 
 * `datastore` — путь до Datastore, на котором будет созданы склонированные виртуальные машины.
     * Пример — `lun-1201`
+* `runtimeOptions` — опциональные параметры виртуальных машин.
+    * `nestedHardwareVirtualization` — включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах
+        * Формат — bool.
+        * Опциональный параметр.
 * `cloudInitSteps` — параметры bootstrap фазы.
     * `version` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/cloud-init-steps).
         * По-умолчанию `ubuntu-18.04-1.0`.
