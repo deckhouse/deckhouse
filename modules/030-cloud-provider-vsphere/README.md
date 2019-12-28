@@ -64,6 +64,10 @@
         ```
 
     * Опциональный параметр.
+* `runtimeOptions` — опциональные параметры виртуальных машин.
+    * `nestedHvEnabled` — включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах
+        * Формат — bool.
+        * Опциональный параметр.
 
 #### Пример конфигурации
 
