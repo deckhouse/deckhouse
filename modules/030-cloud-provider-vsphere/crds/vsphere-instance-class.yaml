@@ -67,6 +67,12 @@ spec:
               description: Path to the datastore in which VirtualMachines will be cloned. Relative to the datacenter.
               example: lun-1201
               type: string
+            runtimeOptions:
+              type: object
+              properties:
+                nestedHardwareVirtualization:
+                  description: Whether to enable or disable nested hardware virtualization.
+                  type: boolean
             cloudInitSteps:
               type: object
               properties:
