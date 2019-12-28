@@ -1,0 +1,20 @@
+global:
+  enabledModules:
+    __ConstantChoices__:
+      - ["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]
+      - ["vertical-pod-autoscaler-crd"]
+      - ["operator-prometheus-crd"]
+      - []
+  discovery:
+    clusterDomain: 
+      __ConstantChoices__: ["cluster.local", "cluster-hz1.local"]
+    clusterDNSAddress: 
+      __ConstantChoices__: ["192.168.0.10", "142.15.0.10"]
+    clusterVersion: 1.15.6
+  modulesImages:
+    registry: registry.example.com
+    tags:
+      nodeLocalDns:
+        coredns: tagstring
+      common:
+        kubeCaAuthProxy: tagstring

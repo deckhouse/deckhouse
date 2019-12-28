@@ -1,31 +1,5 @@
 - name: node-local-dns
   rules:
-  - alert: NodeLocalDnsSidecarIsNotRunning
-    expr: max by (node) (increase(shell_operator_live_ticks{job="node-local-dns"}[5m])) < 1
-    for: 1m
-    labels:
-      likelihood: certain
-      impact: critical
-    annotations:
-      summary: node-local-dns shell-operator-sidecar on node {{ $labels.node }} is not running for 5 minutes
-      description: |
-        node-local-dns shell-operator-sidecar on node {{ $labels.node }} is not running for 5 minutes
-
-        Check its logs.
-
-  - alert: NodeLocalDnsSidecarHasHung
-    expr: max by (node) (min_over_time(shell_operator_tasks_queue_length{job="node-local-dns"}[5m])) > 4
-    for: 1m
-    labels:
-      likelihood: certain
-      impact: critical
-    annotations:
-      summary: node-local-dns shell-operator-sidecar on node {{ $labels.node }} is stuck
-      description: |
-        node-local-dns shell-operator-sidecar on node {{ $labels.node }} is stuck
-
-        Check its logs.
-
   - alert: NodeLocalDnsNotScheduledOnNode
     expr: |
       max by (node) (kube_node_info)

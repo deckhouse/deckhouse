@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-local-dns
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+data:
+  Corefile: |
+    .:53 {
+      errors {
+        consolidate 10s ".* i/o timeout$"
+        consolidate 10s ".* write: operation not permitted$"
+      }
+      cache {
+        success 39936
+        denial 9984
+        prefetch 10 1m 25%
+        serve_stale 12h
+      }
+      reload 2s
+      loop
+      bind {{ .Values.global.discovery.clusterDNSAddress }} 169.254.20.10
+      forward . {{ .Values.global.discovery.clusterDNSAddress }} {{ .Values.global.discovery.clusterDNSAddress }} {{ .Values.global.discovery.clusterDNSAddress }} {
+        max_fails 0
+      }
+      prometheus 127.0.0.1:9254
+      health 127.0.0.1:9225
+    }

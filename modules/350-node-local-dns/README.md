@@ -26,6 +26,27 @@
 
 **Внимание!** Работает только для iptables режима `kube-proxy` (ipvs не поддерживается и поведение с ipvs не проверялось).
 
+## Особеннсти
+**Внимание!** `node-local-dns` по умолчанию **не работает** для запросов из `hostNetwork`, все запросы уходят в `kube-dns`. В данном случае можно самостоятельно в конфигурации пода указать адрес `169.254.20.10`, но тогда в случае падения `node-local-dns` не будет работать fallback на `kube-dns`.
+
+Пример настройки кастомного DNS в поде
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dns-example
+spec:
+  dnsPolicy: "None"
+  dnsConfig:
+    nameservers:
+      - 169.254.20.10
+  containers:
+    - name: test
+      image: nginx
+```
+Подробнее про настроку DNS https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config
+
 ## Grafana dashboard
 
 `Kubernetes / DNS (node local)`, на которой отображены:
@@ -40,14 +61,10 @@
 - запускается кеширующий CoreDNS, который слушает на этом адресе,
 - добавлено хитрое правило в iptables, что если сокет открыт – идти туда, если не открыт – работает обычная магия куба для clusterIP.
 
-Чтобы это реализовать, модуль запускает в DaemonSet'е CoreDNS с sidecar'ом, который обновляет iptables и создаёт dummy интерфейс при старте.
-
-Само правило, которое и позволяет сделать беспроблемный fallback: `-A PREROUTING -d <IP-адрес kube-dns> -m socket --nowildcard -j ACCEPT`.
+Само правило, которое и позволяет сделать беспроблемный fallback: `-A PREROUTING -d <IP-адрес kube-dns> -m socket --nowildcard -j NOTRACK`.
 
 ### Особенности конфигурации CoreDNS
 
 Основные характеристики конфига CoreDNS:
 1. Кэширование всех запросов
-1. Forward DNS запросов, содержаших cluster domain (по-умолчанию, `cluster.local`) и PTR записи, в ClusterIP кластерного DNS
-1. Forward всех остальных запросов на указанные в `resolv.conf` DNS серверы
-1. Работает с кластерным kube-dns по TCP, что снижает задержки при потере пакетов по сравнению с классическим вариантом работы по udp.
+1. Forward всех DNS запросов в ClusterIP кластерного DNS
