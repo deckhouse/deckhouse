@@ -26,6 +26,12 @@ spec:
 {{- range .Values.cloudInstanceManager.internal.cloudProvider.vsphere.sshKeys }}
   - {{ . | quote }}
 {{- end }}
+{{- if .instanceGroup.instanceClass.runtimeOptions }}
+  runtimeOptions:
+  {{- if .instanceGroup.instanceClass.runtimeOptions.nestedHvEnabled }}
+    nestedHvEnabled: true
+  {{- end }}
+{{- end }}
   secretRef:
     namespace: d8-{{ .Chart.Name }}
     name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
