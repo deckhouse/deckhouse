@@ -1,5 +1,8 @@
-FROM alpine:3.10
-COPY --from=k8s.gcr.io/coredns:1.5.0 /coredns  /coredns
+FROM alpine:3.11.2
+COPY --from=gcr.io/google-containers/coredns:1.6.6 /coredns  /coredns
 COPY start.sh /
-RUN apk add --no-cache bind-tools bash curl
+COPY liveness.sh /
+COPY stop.sh /
+RUN apk add --no-cache bind-tools bash curl iptables iproute2 jq grep lockfile-progs
+RUN mkdir /etc/coredns
 ENTRYPOINT ["/coredns"]

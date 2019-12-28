@@ -56,54 +56,21 @@ spec:
         app: node-local-dns
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-      serviceAccountName: node-local-dns
       hostNetwork: true
-      dnsPolicy: Default
+      serviceAccountName: default
+      serviceAccount: default
+      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
       - operator: Exists
       containers:
-      - name: sidecar
-        image: {{ .Values.global.modulesImages.registry }}/node-local-dns/sidecar:{{ .Values.global.modulesImages.tags.nodeLocalDns.sidecar }}
-        securityContext:
-          privileged: true
-        args:
-        - "start"
-        - "--listen-address=127.0.0.1:9255"
-        env:
-        - name: KUBE_CLUSTER_DOMAIN
-          value: {{ .Values.global.discovery.clusterDomain }}
-        - name: KUBE_DNS_SVC_IP
-          value: {{ .Values.global.discovery.clusterDNSAddress }}
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        readinessProbe:
-          exec:
-            command:
-            - rm
-            - /ready
-          periodSeconds: 10
-        livenessProbe:
-          exec:
-            command:
-            - rm
-            - /alive
-          periodSeconds: 20
-        volumeMounts:
-        - mountPath: /run/xtables.lock
-          name: xtables-lock
-          readOnly: false
-        - name: config-volume
-          mountPath: /etc/coredns
-        - name: shared
-          mountPath: /shared
       - name: coredns
         image: {{ .Values.global.modulesImages.registry }}/node-local-dns/coredns:{{ .Values.global.modulesImages.tags.nodeLocalDns.coredns }}
         command: ["/bin/bash", "-l", "-c", "/start.sh"]
         env:
+        - name: KUBE_CLUSTER_DOMAIN
+          value: {{ .Values.global.discovery.clusterDomain | quote }}
         - name: KUBE_DNS_SVC_IP
-          value: {{ .Values.global.discovery.clusterDNSAddress }}
+          value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
         resources:
           requests:
             cpu: 25m
@@ -117,29 +84,25 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
-        - containerPort: 9225
-          name: health
-          protocol: TCP
         livenessProbe:
           exec:
             command:
-            - rm
-            - /shared/dns_alive
-          periodSeconds: 20
-        readinessProbe:
-          exec:
-            command:
-            - rm
-            - /shared/dns_ready
-          periodSeconds: 10
+            - /liveness.sh
+          periodSeconds: 1
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/bash
+              - -l
+              - -c
+              - /stop.sh
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
-        - name: config-volume
+        - name: coredns-config
           mountPath: /etc/coredns
-        - name: shared
-          mountPath: /shared
       - name: ca-auth-proxy-coredns
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
@@ -158,32 +121,13 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-      - name: ca-auth-proxy-sidecar
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
-        args:
-        - "--listen=$(MY_POD_IP):9255"
-        - "--proxy-pass=http://127.0.0.1:9255/metrics"
-        - "--user=d8-monitoring:scraper"
-        env:
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        ports:
-        - containerPort: 9255
-          name: sidecar-metrics
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       volumes:
       - name: xtables-lock
         hostPath:
           path: /run/xtables.lock
           type: FileOrCreate
-      - name: config-volume
-        emptyDir: {}
-      - name: shared
-        emptyDir: {}
+      - name: coredns-config
+        configMap:
+          name: node-local-dns
       imagePullSecrets:
       - name: deckhouse-registry
