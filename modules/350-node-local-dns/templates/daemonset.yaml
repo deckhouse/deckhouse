@@ -31,11 +31,8 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: coredns-metrics
+  - name: https-metrics
     port: 9254
-    protocol: TCP
-  - name: sidecar-metrics
-    port: 9255
     protocol: TCP
   selector:
     app: node-local-dns
@@ -116,7 +113,7 @@ spec:
               fieldPath: status.podIP
         ports:
         - containerPort: 9254
-          name: coredns-metrics
+          name: https-metrics
         resources:
           requests:
             memory: 20Mi
