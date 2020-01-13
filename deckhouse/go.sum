@@ -68,6 +68,9 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20191220121544-357e29a32f4d/go.m
 github.com/flant/addon-operator v1.0.0-beta.5.0.20191223123252-ff4a45cf4bb0/go.mod h1:W9hqv39b6xujHrmXTgCmj1/CMocGdTuKnS4Fv/KSRy8=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20191224114930-3e60be21291b/go.mod h1:7JW8dp2VQ0ceszQeKrmgpBxuKyIe4Yr3T75Lxd1yHMk=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20191225200427-0d93dfd9aa9d/go.mod h1:fq2TWcvxqd/cvEUWwPmbGgRGYWEx0Qxm9WEnIHtj3yg=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200110163429-0a6d29311554/go.mod h1:4FtNnGmNcH80+8aZtWoC6wmxE+oN+3pINiR2dNiKbds=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200110165359-5968149b99db h1:/etDRLmMpFdzVbXUjEESDyWcvFuOnyOOAOzy1s6CJZI=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200110165359-5968149b99db/go.mod h1:huJMiwMR8WZQdU0To9F3d7CL258ValdNJm6mwQ8u2xA=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3 h1:2xoWU3Rdo5OU44AmwQz8nlpYlwc+tKQ6EwyT2wDP0Dg=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3/go.mod h1:/BPS5XK5Ak0UPBf4hTu7xHS/D5DeY4qO2Q0KLQPNTRw=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191023115920-4f35920cc42f h1:UwikOFWT3eCWIRYNugKHdZPa19mhIMEd1VWtNXoNpos=
@@ -87,6 +90,9 @@ github.com/flant/shell-operator v1.0.0-beta.5.0.20191220121341-f6bdd60b5e0e/go.m
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191223123144-33b2126ef623/go.mod h1:+yJ06N85mQ5CuM8WxgS5QW1SSFi/zKJtg2QD3Qq7n2Q=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191224114800-310df3bb9a88/go.mod h1:+yJ06N85mQ5CuM8WxgS5QW1SSFi/zKJtg2QD3Qq7n2Q=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20191225102028-12bc030213b2/go.mod h1:aUy2eWCCHlmfYGfIcLhHYKjUIlzjsIBNa0EJ5eAXoGk=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20200110162130-75d0f7425c07/go.mod h1:l//F2yW4PBHo669EEpkIhuyTa/PkUr1TJ5ZTl9ASr0s=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20200110164619-e0f3412abc4f h1:K7QHJX+wIkerkeMShCvZWarBgIiRMqoiKSwpVQwewuc=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20200110164619-e0f3412abc4f/go.mod h1:l//F2yW4PBHo669EEpkIhuyTa/PkUr1TJ5ZTl9ASr0s=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
@@ -395,6 +401,7 @@ gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.4 h1:/eiJrUcujPVeJ3xlSWaiNi3uSVmDGBK1pDHUHAnao1I=
 gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.7 h1:VUgggvou5XRW9mHwD/yXxIYSMtY0zoKQf/v226p2nyo=
 gopkg.in/yaml.v2 v2.2.7/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20191010095647-fc94e3f71652/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=
@@ -424,4 +431,5 @@ k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7/go.mod h1:8k8uAuAQ0rXslZKaEWd0c3
 sigs.k8s.io/kind v0.0.0-20191024075107-85a46de11816/go.mod h1:OLjBz2mDaA0leJCal/rumRCymPWFD4VWXaw+i8XZSa4=
 sigs.k8s.io/yaml v1.1.0 h1:4A07+ZFc2wgJwo8YNlQpr1rVlgUDlxXHhPJciaPY5gs=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
+sigs.k8s.io/yaml v1.1.1-0.20191128155103-745ef44e09d6 h1:CxbKZzQCneWbuKHPtMF3rxWzMq8dAjXuH5gF63mRuH0=
 sigs.k8s.io/yaml v1.1.1-0.20191128155103-745ef44e09d6/go.mod h1:lmqJX76E7IeysRh7rkvzR6NeY8NsXX2tWMCS9WtUQgM=

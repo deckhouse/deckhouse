@@ -1,4 +1,4 @@
-package docker_registry_manager
+package docker_registry_watcher
 
 import (
 	"crypto/tls"

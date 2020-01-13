@@ -43,9 +43,14 @@ func main() {
 
 	// Add global flags
 	shell_operator_app.LogType = "json"
-	shell_operator_app.SetupGlobalSettings(kpApp)
 	addon_operator_app.SetupGlobalSettings(kpApp)
 	app.SetupGlobalSettings(kpApp)
+
+	// print version
+	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
+		fmt.Printf("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
+		return nil
+	})
 
 	// start main loop
 	kpApp.Command("start", "Start deckhouse.").
@@ -61,7 +66,10 @@ func main() {
 			jqDone := make(chan struct{})
 			go JqCallLoop(jqDone)
 
-			deckhouse.Start()
+			err := deckhouse.InitAndStart(deckhouse.DefaultDeckhouse())
+			if err != nil {
+				os.Exit(1)
+			}
 
 			// Block action by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption()
