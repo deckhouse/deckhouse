@@ -129,6 +129,9 @@ function _M.call()
     _hist(buffer, "ed#" .. detail_key, var_request_length)
 
     -- upstreams
+    ngx.var.total_upstream_response_time = 0
+    ngx.var.upstream_retries = 0
+
     if var_upstream_addr then
       local backends = {}
       for backend in string.gmatch(var_upstream_addr, "([%d.]+):") do
