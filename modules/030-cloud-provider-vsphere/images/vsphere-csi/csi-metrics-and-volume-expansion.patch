@@ -404,10 +404,10 @@ index 33a6fc8..7bebc8d 100644
 -sigs.k8s.io/yaml v1.1.0 h1:4A07+ZFc2wgJwo8YNlQpr1rVlgUDlxXHhPJciaPY5gs=
 -sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 diff --git a/pkg/csi/service/fcd/controller.go b/pkg/csi/service/fcd/controller.go
-index 34496de..a8ceb71 100644
+index 34496de..3984eca 100644
 --- a/pkg/csi/service/fcd/controller.go
 +++ b/pkg/csi/service/fcd/controller.go
-@@ -38,7 +38,6 @@ import (
+@@ -38,10 +38,11 @@ import (
  	cm "k8s.io/cloud-provider-vsphere/pkg/common/connectionmanager"
  	k8s "k8s.io/cloud-provider-vsphere/pkg/common/kubernetes"
  	"k8s.io/cloud-provider-vsphere/pkg/common/vclib"
@@ -415,7 +415,25 @@ index 34496de..a8ceb71 100644
  	vTypes "sigs.k8s.io/vsphere-csi-driver/pkg/csi/types"
  )
  
-@@ -322,9 +321,9 @@ func (c *controller) ControllerPublishVolume(
++var volumeResizeRequired = make(map[string]interface{})
++
+ type controller struct {
+ 	cfg     *vcfg.Config
+ 	connMgr *cm.ConnectionManager
+@@ -313,6 +314,12 @@ func (c *controller) ControllerPublishVolume(
+ 		return nil, status.Errorf(codes.Internal, msg)
+ 	}
+ 
++	if _, ok := volumeResizeRequired[req.VolumeId]; ok {
++		msg := "Resize required, not publishing."
++		log.Error(msg)
++		return nil, status.Errorf(codes.Internal, msg)
++	}
++
+ 	discoveryInfo, err := c.connMgr.WhichVCandDCByFCDId(ctx, req.VolumeId)
+ 	if err != nil {
+ 		msg := fmt.Sprintf("WhichVCandDCByFCDId(%s) failed. Err: %v", req.VolumeId, err)
+@@ -322,9 +329,9 @@ func (c *controller) ControllerPublishVolume(
  
  	fcd := discoveryInfo.FCDInfo
  
@@ -427,7 +445,7 @@ index 34496de..a8ceb71 100644
  		return nil, err
  	}
  
-@@ -384,9 +383,9 @@ func (c *controller) ControllerUnpublishVolume(
+@@ -384,9 +391,9 @@ func (c *controller) ControllerUnpublishVolume(
  
  	fcd := discoveryInfo.FCDInfo
  
@@ -439,7 +457,7 @@ index 34496de..a8ceb71 100644
  		return nil, err
  	}
  
-@@ -484,6 +483,55 @@ func (c *controller) ListVolumes(
+@@ -484,6 +491,59 @@ func (c *controller) ListVolumes(
  	return resp, nil
  }
  
@@ -477,6 +495,7 @@ index 34496de..a8ceb71 100644
 +		return nil, status.Errorf(codes.Internal, msg)
 +	}
 +	if assocCount > 0 {
++		volumeResizeRequired[req.VolumeId] = nil
 +		return nil, status.Errorf(codes.FailedPrecondition, "FCD(%s) is attached to VM(s) already", req.VolumeId)
 +	}
 +
@@ -484,10 +503,13 @@ index 34496de..a8ceb71 100644
 +
 +	err = discoveryInfo.DataCenter.ExtendFirstClassDisk(ctx, req.VolumeId, volSizeMB)
 +	if err != nil {
++		volumeResizeRequired[req.VolumeId] = nil
 +		msg := fmt.Sprintf("ExtendFirstClassDisk(%s) failed. Err: %v", req.VolumeId, err)
 +		log.Errorf(msg)
 +		return nil, status.Errorf(codes.Internal, msg)
 +	}
++
++	delete(volumeResizeRequired, req.VolumeId)
 +
 +	return &csi.ControllerExpandVolumeResponse{CapacityBytes: req.GetCapacityRange().GetRequiredBytes(), NodeExpansionRequired: true}, nil
 +}
@@ -495,7 +517,7 @@ index 34496de..a8ceb71 100644
  func (c *controller) GetCapacity(
  	ctx context.Context,
  	req *csi.GetCapacityRequest) (
-@@ -520,6 +568,13 @@ func (c *controller) ControllerGetCapabilities(
+@@ -520,6 +580,13 @@ func (c *controller) ControllerGetCapabilities(
  					},
  				},
  			},
