@@ -3,28 +3,27 @@ package deckhouse
 import (
 	"fmt"
 
+	client "github.com/flant/shell-operator/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	client "github.com/flant/shell-operator/pkg/kube"
 
 	addon_operator_app "github.com/flant/addon-operator/pkg/app"
 
 	"flant/deckhouse/pkg/app"
 )
 
-func GetCurrentPod() (pod *v1.Pod, err error) {
-	pod, err = client.Kubernetes.CoreV1().Pods(addon_operator_app.Namespace).Get(app.PodName, metav1.GetOptions{})
+func GetCurrentPod(klient client.KubernetesClient) (pod *v1.Pod, err error) {
+	pod, err = klient.CoreV1().Pods(addon_operator_app.Namespace).Get(app.PodName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return pod, nil
 }
 
-func GetDeploymentOfCurrentPod() (deployment *appsv1.Deployment, err error) {
-	pod, err := GetCurrentPod()
+func GetDeploymentOfCurrentPod(klient client.KubernetesClient) (deployment *appsv1.Deployment, err error) {
+	pod, err := GetCurrentPod(klient)
 	if err != nil {
 		return nil, fmt.Errorf("get current pod: %v", err)
 	}
@@ -37,7 +36,7 @@ func GetDeploymentOfCurrentPod() (deployment *appsv1.Deployment, err error) {
 
 	for _, ownerRef := range pod.OwnerReferences {
 		if ownerRef.Kind == "ReplicaSet" {
-			rs, err = client.Kubernetes.AppsV1().ReplicaSets(addon_operator_app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
+			rs, err = klient.AppsV1().ReplicaSets(addon_operator_app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("get ReplicaSet of current pod: %v", err)
 			}
@@ -55,7 +54,7 @@ func GetDeploymentOfCurrentPod() (deployment *appsv1.Deployment, err error) {
 
 	for _, ownerRef := range rs.OwnerReferences {
 		if ownerRef.Kind == "Deployment" {
-			deployment, err = client.Kubernetes.AppsV1().Deployments(addon_operator_app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
+			deployment, err = klient.AppsV1().Deployments(addon_operator_app.Namespace).Get(ownerRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("get Deployment of current pod: %v", err)
 			}
@@ -70,8 +69,8 @@ func GetDeploymentOfCurrentPod() (deployment *appsv1.Deployment, err error) {
 	return deployment, nil
 }
 
-func UpdateDeployment(deployment *appsv1.Deployment) error {
-	_, err := client.Kubernetes.AppsV1().Deployments(addon_operator_app.Namespace).Update(deployment)
+func UpdateDeployment(klient client.KubernetesClient, deployment *appsv1.Deployment) error {
+	_, err := klient.AppsV1().Deployments(addon_operator_app.Namespace).Update(deployment)
 	switch {
 	case errors.IsConflict(err):
 		// Deployment is modified in the meanwhile, query the latest version
