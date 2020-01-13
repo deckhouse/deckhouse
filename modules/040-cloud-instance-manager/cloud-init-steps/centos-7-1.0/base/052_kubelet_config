@@ -5,6 +5,7 @@ cat << "EOF" > /etc/systemd/system/kubelet.service.d/cim.conf
 EnvironmentFile=-/etc/sysconfig/kubelet
 ExecStart=
 ExecStart=/usr/bin/kubelet \
+    --register-with-taints=node.flant.com/csi-not-bootstrapped=:NoSchedule \
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
     --config=/var/lib/kubelet/config.yaml \
     --cni-bin-dir=/opt/cni/bin/ \

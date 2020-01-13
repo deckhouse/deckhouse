@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib_legacy.sh
+
+function __config__() {
+  cat << EOF
+{
+   "onKubernetesEvent": [
+      {
+          "kind": "CSINode"
+      }
+   ]
+}
+EOF
+}
+
+function __main__() {
+  node_name=$(hook::context_jq -r '.[0].resourceName')
+  if ! stderr=$(kubectl taint node "$node_name" node.flant.com/csi-not-bootstrapped- 2>&1 >/dev/null); then
+    if ! grep -q -P '(taint.*not found|nodes.*not found)' <<< "$stderr"; then
+      exit 1
+    fi
+  fi
+}
+
+hook::run "$@"
