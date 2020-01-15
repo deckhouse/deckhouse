@@ -3,7 +3,7 @@ module flant/deckhouse
 go 1.12
 
 require (
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20200110165359-5968149b99db // branch: feat_named_queues, +feat_include_snapshots
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20200114095051-b0b562219877 // branch: feat_named_queues, +feat_include_snapshots
 	github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3
 	github.com/flant/shell-operator v1.0.0-beta.5.0.20200110164619-e0f3412abc4f // branch: feat_named_queues, +feat_kubernetes_binding_mode
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
