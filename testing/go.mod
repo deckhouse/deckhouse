@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3
-	github.com/flant/shell-operator v1.0.0-beta.5.0.20200110172532-8294a3561d0e // branch: feat_named_queues, +feat_kubernetes_binding_mode
+	github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a // branch: feat_named_queues, +feat_kubernetes_binding_mode
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/imdario/mergo v0.3.8
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
