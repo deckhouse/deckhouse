@@ -57,31 +57,6 @@ search: prometheus
 * `longtermRetentionGigabytes` — сколько гигабайт хранить.
     * По-умолчанию `30` гигабайт.
     * Работает совместно с параметром `longtermRetentionDays`.
-* `madisonAuthKey` — ключ для отправки алертов в Madison ([подробнее об интеграции с Madison](docs/MADISON.md)).
-* `madisonSelfSetupKey` — ключ для автоматической регистрации в Madison, значение по-умолчанию лежит в [values.yaml](values.yaml).
-    * Если указать `false` — автоматическая регистрация будет отключена.
-* `additionalAlertmanagers` — массив, позволяющий указать дополнительные Endpoints, указывающие на внешние Alertmanager'ы. Endpoints объект необходимо создать вручную. **ВНИМАНИЕ!** В данный момент поддерживается только plain HTTP протокол.
-    * Пример массива:
-      ```yaml
-      additionalAlertmanagers:
-      - namespace: default
-        name: external-alertmanager
-        port: 8080
-        pathPrefix: "/"
-      ```
-    * Пример Endpoint'а:
-        ```yaml
-        kind: Endpoints
-        apiVersion: v1
-        metadata:
-          name: external-alertmanager
-          namespace: default
-        subsets:
-          - addresses:
-              - ip: 1.2.3.4
-            ports:
-              - port: 8080
-        ```
 * `grafana` - настройки для инсталяции Grafana.
     * `storageClass` — имя storageClass'а, который использовать для Grafana.
        * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.

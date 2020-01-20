@@ -1,0 +1,41 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: alertmanager_services
+      includeSnapshotsFrom: ["alertmanager_services"]
+      apiVersion: v1
+      kind: Service
+      labelSelector:
+        matchExpressions:
+        - key: prometheus.deckhouse.io/alertmanager
+          operator: Exists
+      jqFilter: |
+        {
+          "prometheus": (.metadata.labels."prometheus.deckhouse.io/alertmanager"),
+          "service":
+          {
+            "namespace": .metadata.namespace,
+            "name": .metadata.name,
+            "port": .spec.ports[0].port,
+            "pathPrefix": (.metadata.annotations."prometheus.deckhouse.io/alertmanager-path-prefix" // "/")
+          }
+        }
+EOF
+}
+
+function __on_kubernetes::alertmanager_services() {
+  alertmanagers="$(context::jq -rc '
+    [.snapshots.alertmanager_services[] | .filterResult] |
+    reduce .[] as $i (
+      {}; .[$i.prometheus] = (.[$i.prometheus] // []) + [$i.service]
+    )
+  ')"
+  values::set prometheus.internal.alertmanagers "${alertmanagers}"
+}
+
+hook::run $@

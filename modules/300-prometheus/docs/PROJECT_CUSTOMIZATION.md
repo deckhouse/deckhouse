@@ -32,6 +32,38 @@ search: prometheus custom alert, prometheus кастомный алертинг
 
 [Читайте подробнее](GRAFANA_DASHBOARD_DEVELOPMENT.md) в документации по разработке графиков Grafana.
 
+### Как добавить кастомный alertmanager?
+
+Создать сервис с лейблом `prometheus.deckhouse.io/alertmanager: main`, который указывает на ваш Alertmanager. Опциональные аннотации:
+
+* `prometheus.deckhouse.io/alertmanager-path-prefix` — префикс, который будет добавлен к HTTP-запросам.
+  * По-умолчанию — "/".
+
+**Важно!** На данный момент поддерживается только plain HTTP схема.
+
+Пример:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-alertmanager
+  namespace: my-monitoring
+  labels:
+    prometheus.deckhouse.io/alertmanager: main
+  annotations:
+    prometheus.deckhouse.io/alertmanager-path-prefix: /myprefix/
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: my-alertmanager
+```
+
 ### Как добавлять кастомные rule'ы в конкретном проекте?
 
 А очень просто! Любой PrometheusRule объект с лейблами `component=rules` и `prometheus=main` в namespace с лейблом `heritage=deckhouse` будет автоматически подхвачен prometheus'ом (см. [подробнее](../../200-operator-prometheus/docs/INTERNALS.md) о том, как это работает).

@@ -2,7 +2,7 @@ global:
   scrape_interval: 5m
   scrape_timeout: 1m
   evaluation_interval: 5m
-{{- if or (.Values.global.enabledModules | has "prometheus-madison-integration") (hasKey .Values.prometheus "additionalAlertmanagers") }}
+{{- if (hasKey .Values.prometheus.internal.alertmanagers "main") }}
 alerting:
   alert_relabel_configs:
   - separator: ;
@@ -10,29 +10,7 @@ alerting:
     replacement: $1
     action: labeldrop
   alertmanagers:
-  {{- if (.Values.global.enabledModules | has "prometheus-madison-integration") }}
-  - kubernetes_sd_configs:
-    - role: endpoints
-      namespaces:
-        names:
-        - d8-monitoring
-    scheme: http
-    path_prefix: /
-    timeout: 10s
-    relabel_configs:
-    - source_labels: [__meta_kubernetes_service_name]
-      separator: ;
-      regex: madison-proxy
-      replacement: $1
-      action: keep
-    - source_labels: [__meta_kubernetes_endpoint_port_name]
-      separator: ;
-      regex: http
-      replacement: $1
-      action: keep
-  {{- end }}
-  {{- if hasKey .Values.prometheus "additionalAlertmanagers" }}
-    {{- range .Values.prometheus.additionalAlertmanagers }}
+  {{- range .Values.prometheus.internal.alertmanagers.main }}
   - kubernetes_sd_configs:
     - role: endpoints
       namespaces:
@@ -52,7 +30,6 @@ alerting:
       regex: {{ .port | quote }}
       replacement: $1
       action: keep
-    {{- end }}
   {{- end }}
 {{- end }}
 scrape_configs:

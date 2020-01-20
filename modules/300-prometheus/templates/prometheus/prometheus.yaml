@@ -128,22 +128,15 @@ spec:
   additionalAlertManagerConfigs:
     name: prometheus-main-additional-configs
     key: alert-managers.yaml
-{{- if or (.Values.global.enabledModules | has "prometheus-madison-integration") (hasKey .Values.prometheus "additionalAlertmanagers") }}
+{{- if (hasKey .Values.prometheus.internal.alertmanagers "main") }}
   alerting:
     alertmanagers:
-  {{- if (.Values.global.enabledModules | has "prometheus-madison-integration") }}
-    - namespace: d8-monitoring
-      name: madison-proxy
-      port: http
-  {{- end }}
-  {{- if hasKey .Values.prometheus "additionalAlertmanagers" }}
-    {{- range .Values.prometheus.additionalAlertmanagers }}
+  {{- range .Values.prometheus.internal.alertmanagers.main }}
     - namespace: {{ .namespace }}
       name: {{ .name }}
       port: {{ .port }}
       scheme: http
       pathPrefix: {{ .pathPrefix }}
-    {{- end }}
   {{- end }}
 {{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
