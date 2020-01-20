@@ -34,9 +34,9 @@ function __main__() {
   if values::get --required cloudProviderVsphere.internal.datacenter >/dev/null 2>&1 ||
         values::get --required cloudProviderVsphere.internal.zones >/dev/null 2>&1 ||
         values::get --required cloudProviderVsphere.internal.datastores >/dev/null 2>&1 ; then
-    result="$(timeout -s ABRT -k 5 30 vsphere-cli-helper)" || { echo 'vsphere-cli-helper exited by timeout, preserving old discovery information' && exit 0; }
+    result="$(timeout -s ABRT -k 5 30 deckhouse-controller helper vsphere get-zones-datastores)" || { echo 'vsphere-cli-helper exited by timeout, preserving old discovery information' && exit 0; }
     else
-    result="$(timeout -s ABRT -k 5 30 vsphere-cli-helper)"
+    result="$(timeout -s ABRT -k 5 30 deckhouse-controller helper vsphere get-zones-datastores)"
   fi
 
   datacenter="$(echo "$result" | jq -re '.datacenter')"

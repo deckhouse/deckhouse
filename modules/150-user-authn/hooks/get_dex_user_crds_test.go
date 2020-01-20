@@ -93,23 +93,19 @@ spec:
 					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 					Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchJSON(`
-[
-  [
-    {
-      "name": "admin",
-      "spec": {
-        "email": "adminNext@example.com",
-        "groups": [
-          "Admins",
-          "Everyone"
-        ],
-        "password": "password",
-        "userID": "admin"
-      },
-      "encodedName": "mfsg22lojzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji"
-    }
-  ]
-]`))
+[{
+  "name": "admin",
+  "spec": {
+	"email": "adminNext@example.com",
+	"groups": [
+	  "Admins",
+	  "Everyone"
+	],
+	"password": "password",
+	"userID": "admin"
+  },
+  "encodedName": "mfsg22lojzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji"
+}]`))
 				})
 			})
 		})

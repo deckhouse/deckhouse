@@ -20,4 +20,4 @@ EOF
 
 ln -s ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml ${MODULES_DIR}/values.yaml
 
-exec /deckhouse/deckhouse-controller "$@"
+exec /usr/bin/deckhouse-controller "$@"

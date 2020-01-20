@@ -1,4 +1,4 @@
-package main
+package vsphere
 
 var mapping = map[string]string{
 	"0": "0",

@@ -24,7 +24,7 @@ function __main__() {
   CLUSTER_ID="$(values::get --required cloudProviderAws.keyName)"
   export CLUSTER_ID
 
-  result="$(aws-cli-helper)"
+  result="$(deckhouse-controller helper aws map-zone-to-subnets)"
 
   values::set cloudProviderAws.internal.zoneToSubnetIdMap "$result"
 

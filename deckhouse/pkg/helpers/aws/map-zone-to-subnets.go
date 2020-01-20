@@ -1,4 +1,4 @@
-package main
+package aws
 
 import (
 	"encoding/json"
@@ -8,19 +8,24 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+
+	"flant/deckhouse/pkg/helpers/utils"
 )
 
 type ZonesToSubnetIdMap map[string]string
 
-func main() {
+func MapZoneToSubnets() error {
 	sess := session.Must(session.NewSession())
 	ec2Svc := ec2.New(sess)
 
-	clusterID := getEnvOrDie("CLUSTER_ID")
+	clusterID, err := utils.GetEnvOrDie("CLUSTER_ID")
+	if err != nil {
+		return err
+	}
 
 	availZones, err := ec2Svc.DescribeAvailabilityZones(nil)
 	if err != nil || availZones == nil {
-		panic(fmt.Sprintf("List of availability zones is empty or an error was returned: %v", err))
+		return fmt.Errorf("list of availability zones is empty, or an error was returned: %v", err)
 	}
 
 	var zonesToSubnetMap = make(ZonesToSubnetIdMap)
@@ -37,28 +42,21 @@ func main() {
 				},
 			}})
 		if err != nil || subnets.Subnets == nil {
-			panic(fmt.Sprintf("List of availability zones is empty or an error was returned: %v", err))
+			return fmt.Errorf("list of availability zones is empty, or an error was returned: %v", err)
 		}
 
 		zonesToSubnetMap[*az.ZoneName] = *subnets.Subnets[0].SubnetId
-
 	}
 
 	marshalledMapping, err := json.Marshal(zonesToSubnetMap)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = os.Stdout.Write(marshalledMapping)
 	if err != nil {
-		panic(err)
+		return err
 	}
-}
 
-func getEnvOrDie(envName string) string {
-	if value, ok := os.LookupEnv(envName); !ok {
-		panic(fmt.Sprintf("env \"%s\" is not defined", envName))
-	} else {
-		return value
-	}
+	return nil
 }

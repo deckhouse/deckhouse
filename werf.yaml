@@ -1,26 +1,3 @@
-{{- define "deckhouse_artifacts" }}
-- artifact: deckhouse-controller
-  add: /deckhouse/deckhouse
-  to: /deckhouse/deckhouse-controller
-  before: setup
-- artifact: unit-converter
-  add: /unit-converter/unit-converter
-  to: /usr/local/bin/unit-converter
-  before: setup
-- artifact: vsphere-cli-helper
-  add: /vsphere-cli-helper/vsphere-cli-helper
-  to: /usr/local/bin/vsphere-cli-helper
-  before: setup
-- artifact: fnv-encoder
-  add: /fnv-encoder/fnv-encoder
-  to: /usr/local/bin/fnv-encoder
-  before: setup
-- artifact: aws-cli-helper
-  add: /aws-cli-helper/aws-cli-helper
-  to: /usr/local/bin/aws-cli-helper
-  before: setup
-{{- end }}
-
 {{- define "deckhouse_dependencies" }}
 - apk: update_cache=yes
 
@@ -128,7 +105,10 @@ git:
   - modules/*/docs
   - modules/*/README.md
 import:
-{{ include "deckhouse_artifacts" . }}
+- artifact: deckhouse-controller
+  add: /deckhouse/deckhouse
+  to: /usr/bin/deckhouse-controller
+  before: setup
 ansible:
   beforeInstall:
 {{ include "deckhouse_dependencies" . | indent 2 }}
@@ -185,7 +165,10 @@ git:
       - testing/go.mod
       - testing/go.sum
 import:
-{{ include "deckhouse_artifacts" . }}
+- artifact: deckhouse-controller
+  add: /deckhouse/deckhouse
+  to: /usr/bin/deckhouse-controller
+  before: setup
 - artifact: libjq
   add: /libjq
   to: /libjq
@@ -206,111 +189,12 @@ ansible:
 
 docker:
   ENV:
+    ADDON_OPERATOR_NAMESPACE: tests
+    DECKHOUSE_POD: tests
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
     CGO_CFLAGS: "-I/libjq/build/jq/include"
     CGO_LDFLAGS: "'-L/libjq/build/onig/lib -L/libjq/build/jq/lib'"
-
----
-artifact: unit-converter
-from: golang:1.13-alpine3.10
-git:
-- add: /unit-converter
-  to: /unit-converter
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - main.go
-ansible:
-  beforeInstall:
-  - apk: name=git update_cache=yes
-  - command: rm -rf /var/cache/apk/*
-
-  install:
-  - command: go get -v -d -t ./...
-    args:
-      chdir: /unit-converter
-
-  setup:
-  - command: go build -o unit-converter main.go
-    args:
-      chdir: /unit-converter
----
-artifact: fnv-encoder
-from: golang:1.13-alpine3.10
-git:
-- add: /fnv-encoder
-  to: /fnv-encoder
-  stageDependencies:
-    setup:
-    - main.go
-ansible:
-  setup:
-  - command: go build -o fnv-encoder main.go
-    args:
-      chdir: /fnv-encoder
----
-artifact: vsphere-cli-helper
-from: golang:1.13-alpine3.10
-git:
-- add: /go_lib/vsphere-cli-helper
-  to: /vsphere-cli-helper
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - main.go
-ansible:
-  beforeInstall:
-  - apk: name=git update_cache=yes
-  - command: rm -rf /var/cache/apk/*
-
-  install:
-  - command: go mod download
-    args:
-      chdir: /vsphere-cli-helper
-
-  setup:
-  - command: go build -o vsphere-cli-helper
-    environment:
-      CGO_ENABLED: "0"
-      GOOS: "linux"
-      GOARCH: "amd64"
-    args:
-      chdir: /vsphere-cli-helper
----
-artifact: aws-cli-helper
-from: golang:1.13-alpine3.10
-git:
-- add: /go_lib/aws-cli-helper
-  to: /aws-cli-helper
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - main.go
-ansible:
-  beforeInstall:
-  - apk: name=git update_cache=yes
-  - command: rm -rf /var/cache/apk/*
-
-  install:
-  - command: go mod download
-    args:
-      chdir: /aws-cli-helper
-
-  setup:
-  - command: go build -o aws-cli-helper
-    environment:
-      CGO_ENABLED: "0"
-      GOOS: "linux"
-      GOARCH: "amd64"
-    args:
-      chdir: /aws-cli-helper
 
 ---
 artifact: deckhouse-controller
