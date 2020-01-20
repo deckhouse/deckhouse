@@ -107,7 +107,7 @@ func (hec *HookExecutionConfig) ConfigValuesSetFromYaml(path string, value []byt
 
 func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecutionConfig {
 	var err error
-	hookEnvs := []string{}
+	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hookConfig := new(HookExecutionConfig)
 	_, filepath, _, ok := runtime.Caller(1)
@@ -242,7 +242,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	err = hec.KubeStateToKubeObjects()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	hookEnvs = append(hookEnvs, "D8_IS_TESTS_ENVIRONMENT=yes")
+	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes")
 
 	hookCmd := &exec.Cmd{
 		Path: hec.HookPath,

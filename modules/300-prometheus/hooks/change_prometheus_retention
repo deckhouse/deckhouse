@@ -77,7 +77,7 @@ function __main__() {
     else
       # Если pvc уже есть для prometheus выставляем retention по диску в его размер
       if kubectl -n d8-monitoring get sts $sts > /dev/null 2> /dev/null; then
-        size=$(kubectl -n d8-monitoring get pvc $pvc -o json 2>/dev/null | jq '.spec.resources.requests.storage'  -r | unit-converter --mode=kube-resource-unit)
+        size=$(kubectl -n d8-monitoring get pvc $pvc -o json 2>/dev/null | jq '.spec.resources.requests.storage'  -r | deckhouse-controller helper unit convert --mode=kube-resource-unit)
         new_retention=$(bc <<< "$size * 0.8" | cut -f1 -d'.')
         new_retention_gigabytes=$(bc <<< "$new_retention / 1024 / 1024 / 1024")
         values::set prometheus."$disk_size" "$(bc <<< "$size / 1024 / 1024 / 1024")"

@@ -17,6 +17,7 @@ import (
 
 	"flant/deckhouse/pkg/app"
 	"flant/deckhouse/pkg/deckhouse"
+	"flant/deckhouse/pkg/helpers"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -77,7 +78,7 @@ func main() {
 			return nil
 		})
 
+	helpers.Register(kpApp)
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
-
 	return
 }

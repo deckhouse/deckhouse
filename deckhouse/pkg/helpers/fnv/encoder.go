@@ -1,21 +1,21 @@
-package main
+package fnv
 
 import (
 	"encoding/base32"
 	"fmt"
 	"hash/fnv"
-	"os"
 	"strings"
 )
 
 var encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Print("Not enough arguments to encode")
-		os.Exit(1)
+func Encode(input string) error {
+	if input == "" {
+		return fmt.Errorf("not enough arguments to encode")
 	}
-	toDecodeString := []byte(os.Args[1])
+	toDecodeString := []byte(input)
 	encodedString := strings.TrimRight(encoding.EncodeToString(fnv.New64().Sum(toDecodeString)), "=")
 	fmt.Print(encodedString)
+
+	return nil
 }

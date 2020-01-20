@@ -56,7 +56,7 @@ function  __main__() {
       allowAccessToKubernetes=""
     fi
 
-    encodedName=$(fnv-encoder "${name}-${namespace}-dex-authenticator")
+    encodedName=$(deckhouse-controller helper fnv encode "${name}-${namespace}-dex-authenticator")
 
     credentials=$(jq -rc ".[] | select(.uuid == \"dex-authenticator-${name}@${namespace}\") | .credentials" <<< ${credentialsFromSnapshots})
     if [[ "$credentials" == "" ]]; then
@@ -71,4 +71,5 @@ function  __main__() {
   values::set userAuthn.internal.dexAuthenticatorCRDs "$crds"
 }
 
-hook::run $@
+
+hook::run "$@"

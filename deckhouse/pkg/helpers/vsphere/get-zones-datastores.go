@@ -1,16 +1,11 @@
-package main
+package vsphere
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flant/deckhouse/pkg/helpers/utils"
 	"fmt"
-	"github.com/vmware/govmomi"
-	"github.com/vmware/govmomi/find"
-	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vapi/rest"
-	"github.com/vmware/govmomi/vapi/tags"
-	"github.com/vmware/govmomi/vim25/mo"
 	"net/url"
 	"os"
 	"path"
@@ -19,82 +14,114 @@ import (
 	"strings"
 
 	"github.com/spaolacci/murmur3"
+	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vapi/rest"
+	"github.com/vmware/govmomi/vapi/tags"
+	"github.com/vmware/govmomi/vim25/mo"
 )
 
 const slugSeparator = "-"
 
 type vsphereClient struct {
-	client *govmomi.Client
+	client     *govmomi.Client
 	restClient *rest.Client
 
-	host string
+	host     string
 	username string
 	password string
 	insecure bool
 }
 
 type ZonedDataStore struct {
-	Zones      []string `json:"zones"`
-	InventoryPath string `json:"path"`
-	Name string `json:"name"`
+	Zones         []string `json:"zones"`
+	InventoryPath string   `json:"path"`
+	Name          string   `json:"name"`
 }
 
 type Output struct {
-	Datacenter string `json:"datacenter"`
-	Zones []string `json:"zones"`
+	Datacenter      string           `json:"datacenter"`
+	Zones           []string         `json:"zones"`
 	ZonedDataStores []ZonedDataStore `json:"datastores"`
 }
-
 
 var (
 	dnsLabelRegex   = regexp.MustCompile(`^(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])$`)
 	dnsLabelMaxSize = 150
 )
 
-func main() {
+func GetZonesDatastores() error {
 	c, err := createVsphereClient()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	dc, err := getDCByRegion(context.TODO(), c, getEnvOrDie("VSPHERE_REGION_TAG_NAME"), getEnvOrDie("VSPHERE_REGION_TAG_CATEGORY_NAME"))
+	regionTagName, err := utils.GetEnvOrDie("VSPHERE_REGION_TAG_NAME")
 	if err != nil {
-		panic(err)
+		return err
+	}
+	regionTagCategoryName, err := utils.GetEnvOrDie("VSPHERE_REGION_TAG_CATEGORY_NAME")
+	if err != nil {
+		return err
+	}
+	zoneTagCategoryName, err := utils.GetEnvOrDie("VSPHERE_ZONE_TAG_CATEGORY_NAME")
+	if err != nil {
+		return err
 	}
 
-	zonedDataStores, err := getDataStoresInDC(context.TODO(), c, dc, getEnvOrDie("VSPHERE_REGION_TAG_NAME"), getEnvOrDie("VSPHERE_ZONE_TAG_CATEGORY_NAME"))
+	dc, err := getDCByRegion(context.TODO(), c, regionTagName, regionTagCategoryName)
 	if err != nil {
-		panic(err)
+		return err
+	}
+
+	zonedDataStores, err := getDataStoresInDC(context.TODO(), c, dc, regionTagName, zoneTagCategoryName)
+	if err != nil {
+		return err
 	}
 	if len(zonedDataStores) == 0 {
 		panic("no zonedDataStores returned")
 	}
 
-	zones, err := getZonesInDC(context.TODO(), c, dc, getEnvOrDie("VSPHERE_ZONE_TAG_CATEGORY_NAME"))
+	zones, err := getZonesInDC(context.TODO(), c, dc, zoneTagCategoryName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	marshalledZonedDataStores, err := json.Marshal(Output{
-		Datacenter: dc.Name(),
-		Zones:          zones,
+		Datacenter:      dc.Name(),
+		Zones:           zones,
 		ZonedDataStores: zonedDataStores,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = os.Stdout.Write(marshalledZonedDataStores)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func createVsphereClient() (vsphereClient, error) {
-	host := getEnvOrDie("GOVC_URL")
-	username := getEnvOrDie("GOVC_USERNAME")
-	password := getEnvOrDie("GOVC_PASSWORD")
-	insecure, err := strconv.ParseBool(getEnvOrDie("GOVC_INSECURE"))
+	host, err := utils.GetEnvOrDie("GOVC_URL")
+	if err != nil {
+		return vsphereClient{}, err
+	}
+	username, err := utils.GetEnvOrDie("GOVC_USERNAME")
+	if err != nil {
+		return vsphereClient{}, err
+	}
+	password, err := utils.GetEnvOrDie("GOVC_PASSWORD")
+	if err != nil {
+		return vsphereClient{}, err
+	}
+	insecureRaw, err := utils.GetEnvOrDie("GOVC_INSECURE")
+	if err != nil {
+		return vsphereClient{}, err
+	}
+	insecure, err := strconv.ParseBool(insecureRaw)
 	if err != nil {
 		return vsphereClient{}, fmt.Errorf("\"GOVC_INSECURE\" is not bool: %v", insecure)
 	}
@@ -120,12 +147,12 @@ func createVsphereClient() (vsphereClient, error) {
 	}
 
 	return vsphereClient{
-		client:   vcClient,
+		client:     vcClient,
 		restClient: restClient,
-		host:     host,
-		username: username,
-		password: password,
-		insecure: insecure,
+		host:       host,
+		username:   username,
+		password:   password,
+		insecure:   insecure,
 	}, nil
 }
 
@@ -142,7 +169,7 @@ func getDCByRegion(ctx context.Context, client vsphereClient, regionTagName, reg
 	dcs, err := tagsClient.ListAttachedObjects(ctx, regionTag.ID)
 	if len(dcs) != 1 {
 		return nil, fmt.Errorf("only one DC should match \"region\" tag")
-		}
+	}
 
 	finder := find.NewFinder(client.client.Client)
 
@@ -153,14 +180,13 @@ func getDCByRegion(ctx context.Context, client vsphereClient, regionTagName, reg
 
 	datacenter = dcRef.(*object.Datacenter)
 
-
 	return datacenter, nil
 }
 
-func getZonesInDC (ctx context.Context, client vsphereClient, datacenter *object.Datacenter, zoneTagCategoryName string) ([]string, error) {
+func getZonesInDC(ctx context.Context, client vsphereClient, datacenter *object.Datacenter, zoneTagCategoryName string) ([]string, error) {
 	finder := find.NewFinder(client.client.Client, true)
 
-	clusters, err := finder.ClusterComputeResourceList(ctx,  path.Join(datacenter.InventoryPath ,"..."))
+	clusters, err := finder.ClusterComputeResourceList(ctx, path.Join(datacenter.InventoryPath, "..."))
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +242,7 @@ func getZonesInDC (ctx context.Context, client vsphereClient, datacenter *object
 func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *object.Datacenter, regionTagName, zoneTagCategoryName string) ([]ZonedDataStore, error) {
 	finder := find.NewFinder(client.client.Client, true)
 
-	datastores, err := finder.DatastoreList(ctx,  path.Join(datacenter.InventoryPath ,"..."))
+	datastores, err := finder.DatastoreList(ctx, path.Join(datacenter.InventoryPath, "..."))
 	if err != nil {
 		return nil, err
 	}
@@ -258,22 +284,14 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 		}
 
 		zds = append(zds, ZonedDataStore{
-			Zones:      dsZones,
+			Zones:         dsZones,
 			InventoryPath: ds.InventoryPath,
-			Name: slugKubernetesName(strings.Join(strings.Split(ds.InventoryPath, "/")[3:], "-")),
+			Name:          slugKubernetesName(strings.Join(strings.Split(ds.InventoryPath, "/")[3:], "-")),
 		})
 	}
 
 	return zds, nil
 
-}
-
-func getEnvOrDie(envName string) string {
-	if value, ok := os.LookupEnv(envName); !ok {
-		panic(fmt.Sprintf("env \"%s\" is not defined", envName))
-	} else {
-		return value
-	}
 }
 
 func slugKubernetesName(data string) string {
