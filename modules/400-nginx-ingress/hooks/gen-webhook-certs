@@ -17,7 +17,7 @@ function __main__() {
     # Создадим конфиг для cfssl gencert
     config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
 
-    cert=$(jo CN=ingress-conversion-webhook hosts="$(jo -a ingress-conversion-webhook.d8-system ingress-conversion-webhook.d8-system.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
+    cert=$(jo CN=ingress-conversion-webhook hosts="$(jo -a ingress-conversion-webhook.d8-system ingress-conversion-webhook.d8-system.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo "$ca" | jq .cert -r) -ca-key=<(echo "$ca" | jq .key -r) -config=<(echo "$config") -)
     cert_pem=$(echo "$cert" | jq .cert -r)
     cert_key=$(echo "$cert" | jq .key -r)
   else
