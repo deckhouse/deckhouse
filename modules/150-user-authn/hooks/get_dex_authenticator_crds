@@ -1,48 +1,74 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-# Костыль 2019-07-26: пока не разберемся как правильно создавать CRD
-kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
-
   cat << EOF
-{
-  "beforeHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "DexAuthenticator",
-      "jqFilter": ".spec"
-    }
-  ]
-}
+   configVersion: v1
+   kubernetes:
+   - name: authenticator
+     apiVersion: deckhouse.io/v1alpha1
+     kind: DexAuthenticator
+     includeSnapshotsFrom:
+     - authenticator
+     - credentials
+     jqFilter: |
+       {
+         "uuid": "\(.metadata.name)@\(.metadata.namespace)",
+         "name": .metadata.name,
+         "namespace": .metadata.namespace,
+         "spec": .spec,
+         "allowAccessToKubernetes": ( .metadata.annotations."dex-authenticator.deckhouse.io/allow-access-to-kubernetes" // "" )
+       }
+   - name: credentials
+     apiVersion: v1
+     kind: Secret
+     includeSnapshotsFrom:
+     - authenticator
+     - credentials
+     labelSelector:
+       matchLabels:
+         app: dex-authenticator
+         name: credentials
+     jqFilter: |
+       {
+         "uuid": "\(.metadata.name)@\(.metadata.namespace)",
+         "name": .metadata.name,
+         "namespace": .metadata.namespace,
+         "credentials": {
+           "cookieSecret": "\(.data."cookie-secret" | @base64d )",
+           "appDexSecret": "\(.data."client-secret" | @base64d )"
+         }
+       }
 EOF
 }
 
-function __main__() {
-  allowed_namespaces=$(values::get global.hack.namespaces | jq ' to_entries[] | .value' | jq -sr 'join ("\", \"")')
-  crds=$(kubectl get dex-authenticators.deckhouse.io --all-namespaces -o json  | jq "def IN(s): first(select(s == .)) // false; .items | to_entries[] | (select(.value.namespace | IN(\"$allowed_namespaces\")) | .value.metadata.annotations ) |= null | {\"name\": .value.metadata.name, \"namespace\": .value.metadata.namespace, \"spec\": .value.spec, \"allowAccessToKubernetes\": .value.metadata.annotations.\"dex-authenticator.deckhouse.io/allow-access-to-kubernetes\"}" -rc | jq -sc '.')
-  if kubectl -n d8-user-authn get secret kubernetes-dex-client-app-secret > /dev/null 2> /dev/null ; then
-    kubernetes_dex_client_app_secret=$(kubectl -n d8-user-authn get secret kubernetes-dex-client-app-secret -o json | jq '.data.secret' -r | base64 -d)
-    values::set userAuthn.internal.kubernetesDexClientAppSecret "${kubernetes_dex_client_app_secret}"
-  else
-    values::set userAuthn.internal.kubernetesDexClientAppSecret $(values::generate_password)
-  fi
-  for namespace in $(echo "$crds" | jq -r '.[].namespace' | uniq ); do
-    for name in $(echo "$crds" | jq -r ".[] | select(.namespace == \"$namespace\") | .name "); do
-      if kubectl -n "$namespace" get secret dex-authenticator-${name}  > /dev/null 2> /dev/null ; then
-        cookieSecret=$(kubectl -n "$namespace" get secret dex-authenticator-${name} -o jsonpath="{.data.cookie-secret}" | base64 -d)
-        appDexSecret=$(kubectl -n "$namespace" get secret dex-authenticator-${name} -o jsonpath="{.data.client-secret}" | base64 -d)
-      else
-        cookieSecret=$(values::generate_password)
-        appDexSecret=$(values::generate_password)
-      fi
-      encodedName=$(fnv-encoder "${name}-${namespace}-dex-authenticator")
-      crds=$(echo "$crds" | jq "[ .[] | (select(.namespace == \"$namespace\" and .name == \"$name\") | . ) += {\"encodedName\":\"$encodedName\", \"credentials\":{\"cookieSecret\": \"$cookieSecret\", \"appDexSecret\": \"$appDexSecret\"}}]")
-    done
-  done
+function  __main__() {
+  allowed_namespaces=( $(values::get global.hack.namespaces | jq ' to_entries[] | .value') )
+  credentialsFromSnapshots=$(context::jq -rc '[(.snapshots.credentials // []) | .[].filterResult'])
+
+  crds=$(context::jq -rc '(.snapshots.authenticator // []) | .[].filterResult' | while read rawCRD ; do
+    name=$(jq -rc '.name' <<< ${rawCRD})
+    namespace=$(jq -rc '.namespace' <<< ${rawCRD})
+
+    allowAccessToKubernetes=$(jq -rc '.allowAccessToKubernetes' <<< ${rawCRD})
+    if [[ ! "${allowed_namespaces[@]} " =~ "$namespace" ]]; then
+      allowAccessToKubernetes=""
+    fi
+
+    encodedName=$(fnv-encoder "${name}-${namespace}-dex-authenticator")
+
+    credentials=$(jq -rc ".[] | select(.uuid == \"dex-authenticator-${name}@${namespace}\") | .credentials" <<< ${credentialsFromSnapshots})
+    if [[ "$credentials" == "" ]]; then
+      cookieSecret=$(tools::generate_password)
+      appDexSecret=$(tools::generate_password)
+      credentials="{\"cookieSecret\":\"${cookieSecret}\", \"appDexSecret\":\"${appDexSecret}\"}"
+    fi
+
+    jq ".encodedName |= \"${encodedName}\" | .allowAccessToKubernetes |= \"${allowAccessToKubernetes}\" | .credentials |= ${credentials}" <<< ${rawCRD}
+  done | jq -s '.')
+
   values::set userAuthn.internal.dexAuthenticatorCRDs "$crds"
 }
 
-
-hook::run "$@"
+hook::run $@

@@ -1,4 +1,4 @@
-{{ define "publish_api_ingress_annotations" }}
+{{- define "publish_api_ingress_annotations" }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
     {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
 certmanager.k8s.io/cluster-issuer: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
@@ -20,6 +20,7 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
+{{ include "publish_api_ingress_annotations" . | indent 4 }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
   {{- if include "is_basic_auth_enabled_in_any_crowd" . }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -27,7 +28,6 @@ metadata:
         rewrite ^(.*)$ /basic-auth$1;
       }
   {{- end }}
-{{ include "publish_api_ingress_annotations" . | indent 4 }}
   name: kubernetes-api
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}

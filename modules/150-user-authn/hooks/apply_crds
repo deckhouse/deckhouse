@@ -1,12 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=10
+  jo -p configVersion=v1 onStartup=10
 }
 
-function __main__() {
+function __on_startup() {
   kubectl apply -f $(module::path)/crds/
 }
 
