@@ -38,7 +38,7 @@ function __main__() {
   )
 
   if values::has global.modules.publicDomainTemplate ; then
-    prometheus_https=$(kubectl -n antiopa  get cm antiopa -o json | jq '.data.prometheus' -r | yq r - https.mode)
+    prometheus_https=$(kubectl -n d8-system get cm deckhouse -o json | jq '.data.prometheus' -r | yq r - https.mode)
     global_https=$(values::get global.modules.https.mode)
 
     if [ "$prometheus_https" == "null" ] ; then
