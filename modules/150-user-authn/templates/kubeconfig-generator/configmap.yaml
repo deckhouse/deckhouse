@@ -14,21 +14,21 @@ data:
     debug: false
     kubectl_version: "v{{ .Values.global.discovery.clusterVersion }}"
     clusters:
-  {{- if and .Values.userAuthn.publishAPI.enable }}
+  {{- if .Values.userAuthn.publishAPI.enable }}
     - client_id: "kubeconfig-generator"
       client_secret: {{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
       issuer: "https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/"
-  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
-    {{- if hasKey .Values.userAuthn.publishAPI.https "global" }}
-      {{- if hasKey .Values.userAuthn.publishAPI.https.global "kubeconfigGeneratorMasterCA" }}
+    {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+      {{- if hasKey .Values.userAuthn.publishAPI.https "global" }}
+        {{- if hasKey .Values.userAuthn.publishAPI.https.global "kubeconfigGeneratorMasterCA" }}
       k8s_ca_pem: |
 {{ .Values.userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA | indent 8 }}
+        {{- end }}
       {{- end }}
-    {{- end }}
-  {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
+    {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
       k8s_ca_pem: |
 {{ .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA | default .Values.userAuthn.internal.kubernetesCA | indent 8 }}
-  {{- end }}
+    {{- end }}
       k8s_master_uri: "https://{{ include "helm_lib_module_public_domain" (list . "api") }}"
       name: {{ printf "%s.%s" .Values.global.project .Values.global.clusterName | quote }}
       redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}/callback/"

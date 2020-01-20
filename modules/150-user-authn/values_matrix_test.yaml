@@ -43,21 +43,21 @@ userAuthn:
     -
       - id: github
         name: github
-        type: github
+        type: Github
         github:
           clientID: plainstring
           clientSecret: plainstring
           orgs:
-          - opensource
-          - closesource
-          teams:
-          - Testers
-          - Developers
+          - name: opensource
+            teams:
+            - Testers
+            - Developers
+          - name: closesource
           teamNameField: slug
           useLoginAsID: true
       - id: crowd
         name: crowd
-        type: crowd
+        type: Crowd
         crowd:
           clientID: plainstring
           clientSecret: plainstring
@@ -68,14 +68,14 @@ userAuthn:
     -
       - id: crowd-next
         name: crowd-next
-        type: crowd-next
+        type: Crowd
         crowd:
           clientID: plainstring
           clientSecret: plainstring
           enableBasicAuth: false
       - id: gitlab
         name: gitlab
-        type: gitlab
+        type: Gitlab
         gitlab:
           clientID: plainstring
           clientSecret: plainstring
@@ -85,7 +85,7 @@ userAuthn:
     -
       - id: oidc
         name: google
-        type: oidc
+        type: OIDC
         oidc:
           issuer: "https://issue.example.com"
           clientID: plainstring
@@ -100,7 +100,7 @@ userAuthn:
           userNameKey: noname
     -
       - id: ldap
-        type: ldap
+        type: LDAP
         name: ldap
         ldap:
           host: "https://ldap.host.example.com"
@@ -123,13 +123,15 @@ userAuthn:
             userAttr: uuid
             groupAttr: groups
   publishAPI:
-    enable: [false, true]
+    enable:
+      __ConstantChoices__: [false, true]
     https:
       __ConstantChoices__:
       - mode: SelfSigned
       - mode: Global
         kubeconfigGeneratorMasterCA: plainstring
-  idTokenTTL: [10000m, __EmptyItem__]
+  idTokenTTL:
+    __ConstantChoices__: [10000m, __EmptyItem__]
   internal:
     kubernetesDexClientAppSecret: plainstring
     kubernetesCA: plainstring

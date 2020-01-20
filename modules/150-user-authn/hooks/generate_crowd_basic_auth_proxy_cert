@@ -6,6 +6,7 @@ source /deckhouse/shell_lib_legacy.sh
 function __config__() {
   echo '
   {
+    "configVersion": "v1",
     "beforeHelm": 10,
     "schedule": [
       {
@@ -18,14 +19,20 @@ function __config__() {
 function __main__() {
   # Проверяем условия, при которых должен быть выложен прокси
   if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
-    exit 0
+    return 0
+  fi
+  if ! values::has userAuthn.providers ; then
+    return 0
+  fi
+  if ! values::has userAuthn.providers ; then
+    return 0
   fi
   crowd_configs=$(values::get userAuthn.providers | jq -r ' .[] | select (.type == "Crowd")')
-  if [[ $(echo $crowd_configs | jq ' . | length' | wc -l) -ne 1 ]]; then
-    exit 0
+  if [[ $(jq ' . | length' <<< ${crowd_configs} | wc -l) -ne 1 ]]; then
+    return 0
   fi
-  if [[ $(echo $crowd_configs | jq -r ' .crowd.enableBasicAuth') != "true" ]]; then
-    exit 0
+  if [[ $(jq -r ' .crowd.enableBasicAuth' <<< ${crowd_configs} ) != "true" ]]; then
+    return 0
   fi
 
   # Проверяем, нужно ли нам продлить или выпустить сертификат
@@ -35,19 +42,19 @@ function __main__() {
     valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
 
     # Если до окончания сертификата осталось более двух дней, пропускаем перевыпуск
-    if [[ $valid_for -gt 172800 ]]; then
+    if [[ "$valid_for" -gt 172800 ]]; then
       values::set userAuthn.internal.crowdProxyCert $(kubectl -n d8-user-authn get secret/crowd-basic-auth-cert -o jsonpath="{.data['client\.crt']}")
       values::set userAuthn.internal.crowdProxyKey $(kubectl -n d8-user-authn get secret/crowd-basic-auth-cert -o jsonpath="{.data['client\.key']}")
-      exit 0
+      return 0
     fi
   fi
 
   # Создаем CSR
   config='{"CN":"front-proxy-client","key":{"algo":"rsa","size": 2048},"signing":{"default":{"expiry":"72h","usages":["signing","key encipherment","requestheader-client"]}}}'
-  csr_response=$(echo $config | cfssl genkey - )
+  csr_response=$(cfssl genkey - <<< ${config} )
 
-  private_key=$(echo $csr_response | jq -r .key | base64 | tr -d '\n')
-  csr=$(echo $csr_response | jq .csr -r | base64 | tr -d '\n')
+  private_key=$(jq -r '.key' <<< ${csr_response} | base64 | tr -d '\n')
+  csr=$(jq -r '.csr' <<< ${csr_response} | base64 | tr -d '\n')
 
   # Если предыдущий запуск хука завершился с ошибкой, нам необходимо удалить предыдущую job'у, чтобы заново её запустить
   kubectl -n d8-system delete job crowd-proxy-cert-generate-job > /dev/null 2> /dev/null || true
@@ -83,10 +90,10 @@ spec:
         command: ["bash", "-c"]
         args:
         - |
-$script
+${script}
         env:
         - name: CSR
-          value: $csr
+          value: ${csr}
         volumeMounts:
         - name: root
           readOnly:  true
@@ -103,11 +110,11 @@ EOF
   kubectl -n d8-system wait --for=condition=complete job crowd-proxy-cert-generate-job --timeout=30s
   logs=$(kubectl -n d8-system logs -l job-name=crowd-proxy-cert-generate-job | grep "^Certificate:")
   kubectl -n d8-system delete job crowd-proxy-cert-generate-job > /dev/null 2> /dev/null
-  if [[ $logs == " " ]]; then
-    exit 1
+  if [[ "$logs" == " " ]]; then
+    return 1
   fi
-  values::set userAuthn.internal.crowdProxyCert $(echo $logs | awk -F ": " '{ print $2 }')
-  values::set userAuthn.internal.crowdProxyKey $private_key
+  values::set userAuthn.internal.crowdProxyCert $(awk -F ": " '{ print $2 }' <<< ${logs})
+  values::set userAuthn.internal.crowdProxyKey "$private_key"
 }
 
 hook::run "$@"

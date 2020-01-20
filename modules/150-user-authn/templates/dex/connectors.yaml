@@ -8,17 +8,16 @@ metadata:
   name: {{ $provider.id | quote }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex")) | indent 2 }}
-
-  {{- if eq $provider.type "Github" }}
-type: github
 id: {{ $provider.id | quote }}
 name: {{ $provider.name | quote }}
+  {{- if eq $provider.type "Github" }}
+type: github
 email:
   clientID: {{ $provider.github.clientID | quote }}
   clientSecret: {{ $provider.github.clientSecret | quote }}
   redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
-    {{- range $org := $provider.github.orgs }}
   orgs:
+    {{- range $org := $provider.github.orgs }}
   - name: {{ $org.name | quote }}
       {{- if $org.teams }}
     teams:
@@ -27,21 +26,14 @@ email:
         {{- end }}
       {{- end }}
     {{- end }}
-    {{- if $provider.github.loadAllGroups }}
-  loadAllGroups: true
-    {{- end }}
     {{- if $provider.github.teamNameField }}
   teamNameField: {{ $provider.teamNameFiled }}
     {{- end }}
-    {{- if $provider.github.useLoginAsId }}
-  useLoginAsId: true
-    {{- end }}
-  {{- end }}
+  useLoginAsID: {{ $provider.github.useLoginAsID | default false }}
+  loadAllGroups: {{ $provider.github.loadAllGroups | default false }}
 
-  {{- if eq $provider.type "Gitlab" }}
+  {{- else if  eq $provider.type "Gitlab" }}
 type: gitlab
-id: {{ $provider.id | quote }}
-name: {{ $provider.name | quote }}
 email:
   baseURL: {{ $provider.gitlab.baseURL | quote }}
   clientID: {{ $provider.gitlab.clientID | quote }}
@@ -53,50 +45,34 @@ email:
   - {{ $group | quote }}
       {{- end }}
     {{- end }}
-  {{- end }}
 
-  {{- if eq $provider.type "LDAP" }}
+  {{- else if eq $provider.type "LDAP" }}
 type: ldap
-id: {{ $provider.id | quote }}
-name: {{ $provider.name | quote }}
 email:
   host: {{ $provider.ldap.host | quote }}
-    {{- if $provider.ldap.insecureSkipVerify }}
-  insecureSkipVerify: {{ $provider.ldap.insecureSkipVerify | quote }}
-    {{- end }}
+  insecureSkipVerify: {{ $provider.ldap.insecureSkipVerify | default false }}
     {{- if $provider.ldap.ca }}
   rootCAData: {{ $provider.ldap.ca | b64enc }}
     {{- end }}
   bindDN: {{ $provider.ldap.bindDN | quote }}
   bindPW: {{ $provider.ldap.bindPW | quote }}
-    {{- if $provider.ldap.startTLS }}
-  startTLS: true
-    {{- end }}
+  startTLS: {{ $provider.ldap.startTLS | default false }}
   userSearch:
 {{ $provider.ldap.userSearch | toYaml | indent 2 }}
   groupSearch:
 {{ $provider.ldap.groupSearch | toYaml | indent 2 }}
   usernamePrompt: "LDAP username"
-  {{- end }}
 
-  {{- if eq $provider.type "OIDC" }}
+  {{- else if eq $provider.type "OIDC" }}
 type: oidc
-id: {{ $provider.id | quote }}
-name: {{ $provider.name | quote }}
 email:
   issuer: {{ $provider.oidc.issuer | quote }}
   clientID: {{ $provider.oidc.clientID | quote }}
   clientSecret: {{ $provider.oidc.clientSecret | quote }}
   redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
-    {{- if $provider.oidc.basicAuthUnsupported }}
-  basicAuthUnsupported: true
-    {{- end }}
-   {{- if $provider.oidc.insecureSkipEmailVerified }}
-  insecureSkipEmailVerified: true
-    {{- end }}
-    {{- if $provider.oidc.getUserInfo }}
-  getUserInfo: true
-    {{- end }}
+  basicAuthUnsupported: {{ $provider.oidc.basicAuthUnsupported | default false }}
+  insecureSkipEmailVerified: {{ $provider.oidc.insecureSkipEmailVerified | default false }}
+  getUserInfo: {{ $provider.oidc.getUserInfo | default false }}
   userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
   userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
     {{- if $provider.oidc.scopes }}
@@ -104,12 +80,9 @@ email:
 {{ $provider.oidc.scopes | toYaml | indent 2 }}
     {{- end }}
   usernamePrompt: "OIDC username"
-  {{- end }}
 
-  {{- if eq $provider.type "Crowd" }}
+  {{- else if eq $provider.type "Crowd" }}
 type: atlassian-crowd
-id: {{ $provider.id | quote }}
-name: {{ $provider.name | quote }}
 email:
   baseURL: {{ $provider.crowd.baseURL | quote }}
   clientID: {{ $provider.crowd.clientID | quote }}
@@ -119,6 +92,8 @@ email:
 {{ $provider.crowd.groups | toYaml | indent 2 }}
     {{- end }}
   usernamePrompt: "Crowd username"
+  {{- else }}
+{{ printf "Unknown provider type %s" $provider.type | fail }}
   {{- end }}
 
 {{- end }}

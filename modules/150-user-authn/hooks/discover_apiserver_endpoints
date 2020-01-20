@@ -1,35 +1,52 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-  "beforeHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "Endpoints",
-      "objectName": "kubernetes",
-      "namespaceSelector": {
-        "matchNames": [
-          "default"
-        ]
-      }
-    }
-  ]
-}
+   configVersion: v1
+   beforeHelm: 10
+   kubernetes:
+   - name: endpoints
+     apiVersion: v1
+     kind: Endpoints
+     watchEvent: ["Added", "Modified"]
+     includeSnapshotsFrom:
+     - endpoints
+     - service
+     nameSelector:
+       matchNames: ["kubernetes"]
+     namespace:
+       nameSelector:
+         matchNames: ["default"]
+     jqFilter: "[ (.subsets // []) | .[].addresses[].ip]"
+   - name: service
+     apiVersion: v1
+     kind: Service
+     watchEvent: ["Added", "Modified"]
+     includeSnapshotsFrom:
+     - endpoints
+     - service
+     nameSelector:
+       matchNames: ["kubernetes"]
+     namespace:
+       nameSelector:
+         matchNames: ["default"]
+     jqFilter: ".spec.ports[0].targetPort"
 EOF
 }
 
-function __main__() {
-  if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
-    exit 0
-  fi
-  kubernetes_apiserver_addresses=$(kubectl -n default get ep kubernetes -o json | jq -r '[.subsets[].addresses[].ip]')
-  kubernetes_apiserver_target_port=$(kubectl -n default get svc kubernetes -o json | jq -r '.spec.ports[0].targetPort')
 
-  values::set userAuthn.internal.kubernetesApiserverAddresses "$kubernetes_apiserver_addresses"
-  values::set userAuthn.internal.kubernetesApiserverTargetPort "$kubernetes_apiserver_target_port"
+function __main__(){
+  if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
+    values::unset userAuthn.internal.kubernetesApiserverAddresses
+    values::unset userAuthn.internal.kubernetesApiserverTargetPort
+    return 0
+  fi
+
+  values::set userAuthn.internal.kubernetesApiserverAddresses "$(context::get snapshots.endpoints.0.filterResult)"
+  values::set userAuthn.internal.kubernetesApiserverTargetPort "$(context::get snapshots.service.0.filterResult)"
 }
+
 
 hook::run $@

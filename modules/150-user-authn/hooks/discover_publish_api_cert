@@ -1,39 +1,31 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "onStartup": 1,
-  "onKubernetesEvent": [
-    {
-      "kind": "secret",
-      "name": "kubernetes-tls",
-      "event": [
-        "add",
-        "update"
-      ],
-      "namespaceSelector": {
-        "matchNames": [
-          "d8-user-authn"
-        ]
-      },
-      "jqFilter": ".data.\"ca.crt\""
-    }
-  ]
-}'
+  cat << EOF
+   configVersion: v1
+   kubernetes:
+   - name: secret
+     apiVersion: v1
+     kind: Secret
+     watchEvent: ["Added", "Modified"]
+     nameSelector:
+       matchNames: ["kubernetes-tls"]
+     namespace:
+       nameSelector:
+         matchNames: ["d8-user-authn"]
+     jqFilter: ".data.\"ca.crt\" | @base64d"
+EOF
 }
 
-function __main__() {
-  if values::is_true userAuthn.publishAPI.enable ; then
-    if [[ "$(values::get userAuthn.publishAPI.https.mode)" == "SelfSigned" ]] ; then
-      if kubectl -n d8-user-authn get secret kubernetes-tls > /dev/null 2>/dev/null ; then
-        selfsigned_publish_api_ca=$(kubectl -n d8-user-authn get secret kubernetes-tls -o json | jq '.data."ca.crt"' -r | base64 -d)
-        values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$selfsigned_publish_api_ca"
-      fi
-    fi
-  fi
+function __on_kubernetes::secret::synchronization() {
+  values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$(context::get objects.0.filterResult)"
 }
 
-hook::run "$@"
+function __on_kubernetes::secret::added_or_modified() {
+  values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$(context::get filterResult)"
+}
+
+
+hook::run $@

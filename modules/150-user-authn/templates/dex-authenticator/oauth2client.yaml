@@ -10,9 +10,10 @@ metadata:
 id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 secret: {{ $crd.credentials.appDexSecret }}
-  {{- if $crd.spec.allowedGroups }}
-allowedGroups: {{ $crd.spec.allowedGroups }}
-  {{- end }}
+    {{- if $crd.spec.allowedGroups }}
+allowedGroups:
+{{ $crd.spec.allowedGroups | toYaml }}
+    {{- end }}
 redirectURIs:
 - https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
 {{- end }}

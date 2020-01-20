@@ -1,4 +1,5 @@
 {{- if include "is_basic_auth_enabled_in_any_crowd" . }}
+---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:

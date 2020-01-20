@@ -1,34 +1,61 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-# Костыль 2019-07-26: пока не разберемся как правильно создавать CRD
-kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
-
   cat << EOF
-{
-  "beforeHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "User",
-      "jqFilter": ".spec"
-    }
-  ]
-}
+   configVersion: v1
+   kubernetes:
+   - name: user
+     apiVersion: deckhouse.io/v1alpha1
+     kind: User
+     jqFilter: '.spec.userID = (.spec.userID // .metadata.name) | {"name": .metadata.name, "spec": .spec }'
 EOF
 }
 
 
-function __main__() {
-  crds=$(kubectl get users.deckhouse.io --all-namespaces -o json \
-    | jq -r '[.items[] | .spec.userID = (.spec.userID // .metadata.name) | {"name": .metadata.name, "spec": .spec}]')
-
-  for name in $(echo "$crds" | jq -rc '.[].name'); do
-    email=$(kubectl get users.deckhouse.io "$name" -o json | jq -rc '.spec.email')
+function __on_kubernetes::user::synchronization() {
+  crds=$(context::jq -rc '.objects[].filterResult' | while read userCRD ; do
+    email=$(jq -rc '.spec.email' <<< ${userCRD})
     encodedName=$(fnv-encoder "$email")
-    crds=$(echo "$crds" | jq -rc "[ .[] | (select(.name == \"$name\") | . ) += {\"encodedName\":\"$encodedName\"}]")
-  done
+    jq -rc " .encodedName |= \"$encodedName\"" <<< ${userCRD}
+  done | jq -s '.')
+
+  values::set userAuthn.internal.dexUsersCRDs "$crds"
+}
+
+function __on_kubernetes::user::added() {
+  crds=$(values::get userAuthn.internal.dexUsersCRDs)
+
+  name=$(context::get filterResult.name)
+  email=$(context::get filterResult.spec.email)
+
+  encodedName=$(fnv-encoder "$email")
+  crd=$(jq -rc " .encodedName |= \"$encodedName\"" <<< $(context::get filterResult))
+
+  crds=$(jq -rc ". += [$crd]" <<< ${crds})
+  values::set userAuthn.internal.dexUsersCRDs "$crds"
+}
+
+function __on_kubernetes::user::modified() {
+  crds=$(values::get userAuthn.internal.dexUsersCRDs)
+
+  name=$(context::get filterResult.name)
+  email=$(context::get filterResult.spec.email)
+
+  encodedName=$(fnv-encoder "$email")
+  crd=$(jq -rc " .encodedName |= \"$encodedName\"" <<< $(context::get filterResult))
+
+  crds=$(jq -rc "[ .[] | (select(.name == \"$name\") | . ) |= [$crd]]" <<< ${crds})
+  values::set userAuthn.internal.dexUsersCRDs "$crds"
+}
+
+function __on_kubernetes::user::deleted() {
+  crds=$(values::get userAuthn.internal.dexUsersCRDs)
+
+  name=$(context::get filterResult.name)
+  crds=$(jq -rc "[ .[] | select(.name != \"$name\") ]" <<< ${crds})
+
   values::set userAuthn.internal.dexUsersCRDs "$crds"
 }
 
