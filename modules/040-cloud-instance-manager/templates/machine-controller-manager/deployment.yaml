@@ -53,7 +53,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                app: prometheus-metrics-adapter
+                app: machine-controller-manager
             topologyKey: kubernetes.io/hostname
 {{- end }}
       serviceAccountName: machine-controller-manager

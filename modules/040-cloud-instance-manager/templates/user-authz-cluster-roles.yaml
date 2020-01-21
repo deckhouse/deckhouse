@@ -24,6 +24,7 @@ rules:
   - vspheremachineclasses
   - gcpmachineclasses
   - alicloudmachineclasses
+  - yandexmachineclasses
   - packetmachineclasses
   - machines
   - machinesets
@@ -69,6 +70,7 @@ rules:
   - vspheremachineclasses
   - gcpmachineclasses
   - alicloudmachineclasses
+  - yandexmachineclasses
   - packetmachineclasses
   - machines
   - machinesets

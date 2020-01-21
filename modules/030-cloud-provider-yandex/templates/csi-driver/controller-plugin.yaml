@@ -2,19 +2,18 @@
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: ebs-csi-controller
+  name: csi-controller
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-driver")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "csi-driver")) | indent 2 }}
 spec:
-  serviceName: ebs-csi-controller
   replicas: 1
   selector:
     matchLabels:
-      app: ebs-csi-controller
+      app: csi-controller
   template:
     metadata:
       labels:
-        app: ebs-csi-controller
+        app: csi-controller
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -23,19 +22,20 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
       tolerations:
       - operator: Exists
-      serviceAccountName: ebs-csi-controller
+      serviceAccountName: csi-controller
       containers:
       - name: csi-provisioner
-        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiProvisioner }}
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderYandex.csiProvisioner }}
         args:
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
         - "--feature-gates=Topology=true"
+        - "--strict-topology"
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
       - name: csi-attacher
-        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiAttacher }}
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderYandex.csiAttacher }}
         args:
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
@@ -43,7 +43,7 @@ spec:
         - name: socket-dir
           mountPath: /csi
       - name: csi-resizer
-        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiResizer }}
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderYandex.csiResizer }}
         args:
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
@@ -51,46 +51,44 @@ spec:
         - name: socket-dir
           mountPath: /csi
       - name: csi-snapshotter
-        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-snapshotter:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiSnapshotter }}
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/csi-snapshotter:{{ .Values.global.modulesImages.tags.cloudProviderYandex.csiSnapshotter }}
         args:
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
-      - name: ebs-csi-controller
-        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/ebs-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderAws.ebsCsiPlugin }}
+      - name: csi-controller
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/yandex-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderYandex.yandexCsiPlugin }}
         args:
-        - "--v=5"
+        - "--address=$MY_POD_IP:12302"
         - "--endpoint=unix:/csi/csi.sock"
+        - "--folder-id={{ .Values.cloudProviderYandex.folderID }}"
         ports:
           - name: healthz
-            containerPort: 9808
+            containerPort: 12302
             protocol: TCP
         env:
-        - name: AWS_ACCESS_KEY_ID
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: YANDEX_AUTH_KEYS
           valueFrom:
             secretKeyRef:
-              name: credentials
-              key: access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: credentials
-              key: secret_key
-        livenessProbe:
+              name: csi-credentials
+              key: serviceAccountJSON
+        readinessProbe:
           httpGet:
-            path: /healthz
-            port: healthz
+            path: /health
+            port: 12302
           initialDelaySeconds: 10
-          timeoutSeconds: 3
-          periodSeconds: 10
-          failureThreshold: 5
+          periodSeconds: 15
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
       - name: liveness-probe
-        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-liveness-probe:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiLivenessProbe }}
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/csi-liveness-probe:{{ .Values.global.modulesImages.tags.cloudProviderYandex.csiLivenessProbe }}
         args:
           - --csi-address=/csi/csi.sock
         volumeMounts:

@@ -104,6 +104,7 @@ spec:
                   - GCPInstanceClass
                   - VsphereInstanceClass
                   - AWSInstanceClass
+                  - YandexInstanceClass
                 name:
                   type: string
             minInstancesPerZone:

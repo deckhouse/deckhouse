@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager
-  namespace: d8-cloud-provider-gcp
+  namespace: d8-cloud-provider-yandex
 {{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
 spec:
   targetRef:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cloud-controller-manager
-  namespace: d8-cloud-provider-gcp
+  namespace: d8-cloud-provider-yandex
 {{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
 spec:
   replicas: {{ .Values.global.discovery.clusterMasterCount }}
@@ -63,33 +63,19 @@ spec:
       - operator: Exists
       serviceAccountName: cloud-controller-manager
       containers:
-        - name: gcp-cloud-controller-manager
-          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderGcp.cloudControllerManager }}
+        - name: yandex-cloud-controller-manager
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderYandex.cloudControllerManager }}
           command:
-            - /usr/local/bin/cloud-controller-manager
-            - --v=2
-            - --allocate-node-cidrs=true
-            - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
-            - --leader-elect=true
-            - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
-            - --cloud-provider=gce
-            - --bind-address=127.0.0.1
-            - --secure-port=10871
-          volumeMounts:
-            - mountPath: /etc/kubernetes/pki
-              name: k8s-certs
-              readOnly: true
-            - mountPath: /etc/cloud-contoller-manager-config
-              name: config
-              readOnly: true
+            - /bin/yandex-cloud-controller-manager
+            - --cloud-provider=yandex
+            - --v=3
+            - --use-service-account-credentials=true
           resources:
             requests:
               cpu: 200m
-      volumes:
-      - hostPath:
-          path: /etc/kubernetes/pki
-          type: DirectoryOrCreate
-        name: k8s-certs
-      - name: config
-        secret:
-          secretName: cloud-controller-manager
+          env:
+            - name: YANDEX_CLOUD_SERVICE_ACCOUNT_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-controller-manager
+                  key: service-acount-json

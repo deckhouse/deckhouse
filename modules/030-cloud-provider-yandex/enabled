@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
+
+  self_name=cloud-provider-yandex
+  if values::get global.enabledModules | jq '.[]' -r | grep -v -E '^'$self_name'$' | grep -E '^cloud-provider-[a-z-]+$' ; then
+    >&2 echo "Unable to enable module $self_name: More than one cloud provider is enabled!"
+    exit 1
+  else
+    echo "YandexInstanceClass" > /tmp/cloud-instance-manager-instance-class-kind
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  fi
+}
+
+enabled::run "$@"

@@ -1,0 +1,43 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: YandexMachineClass
+metadata:
+  name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+spec:
+  regionID: {{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.region }}
+  zoneID: {{ .zoneName }}
+  platformID: {{ .instanceGroup.instanceClass.platformID }}
+  resourcesSpec:
+    cores: {{ .instanceGroup.instanceClass.cores }}
+    coreFraction: {{ .instanceGroup.instanceClass.coreFraction | default 100 }}
+    memory: {{ mul .instanceGroup.instanceClass.memory 1024 1024 }}
+    gpus: {{ .instanceGroup.instanceClass.gpus | default 0 }}
+  bootDiskSpec:
+    autoDelete: true
+    typeID: {{ .instanceGroup.instanceClass.diskType }}
+    size: {{ mul (.instanceGroup.instanceClass.diskGB | default 50) 1024 1024 1024 }}
+    imageID: {{ .instanceGroup.instanceClass.imageID }}
+  networkInterfaceSpecs:
+  - subnetID: {{ index .Values.cloudInstanceManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName }}
+{{- if .instanceGroup.instanceClass.assignPublicIPAddress }}
+    assignPublicIPAddress: true
+{{- end }}
+{{- if .instanceGroup.instanceClass.preemptible }}
+  schedulingPolicy:
+    preemptible: true
+{{- end }}
+  labels:
+  # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
+    kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}: "1"
+    kubernetes-io-role-deckhouse-{{ .instanceGroup.name }}-{{ .zoneName }}: "1"
+{{- if hasKey .instanceGroup.instanceClass "labels" }}
+  {{- range $k, $v := .instanceGroup.instanceClass.labels }}
+    {{ $k }}: {{ $v }}
+  {{- end }}
+{{- end }}
+  metadata:
+    ssh-keys: "{{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.sshUser }}:{{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.sshKey }}"
+  secretRef:
+    namespace: d8-{{ .Chart.Name }}
+    name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
