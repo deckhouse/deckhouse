@@ -1,0 +1,24 @@
+---
+apiVersion: storage.k8s.io/v1beta1
+kind: StorageClass
+metadata:
+  name: network-hdd
+{{ include "helm_lib_module_labels" (list . (dict "app" "csi-driver")) | indent 2 }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: yandex.csi.flant.com
+parameters:
+  typeID: network-hdd
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1beta1
+kind: StorageClass
+metadata:
+  name: network-ssd
+{{ include "helm_lib_module_labels" (list . (dict "app" "csi-driver")) | indent 2 }}
+provisioner: yandex.csi.flant.com
+parameters:
+  typeID: network-ssd
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer

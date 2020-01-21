@@ -112,8 +112,11 @@ spec:
 
 1. Настройте один из поддерживаемых `cloud-provider-` модулей:
 
+    * [AWS](modules/030-cloud-provider-aws/README.md)
     * [GCP](modules/030-cloud-provider-gcp/README.md)
-    * [OpenStack](modules/030-cloud-provider-gcp/README.md)
+    * [OpenStack](modules/030-cloud-provider-openstack/README.md)
+    * [vSphere](modules/030-cloud-provider-vsphere/README.md)
+    * [Yandex](modules/030-cloud-provider-yandex/README.md)
 
 2. [Настройте](#параметры) модуль.
 3. Создайте `CloudInstanceGroup` с желаемыми [параметрами](#CloudInstanceGroup-custom-resource) InstanceGroup.

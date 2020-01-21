@@ -1,0 +1,84 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: yandexinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-yandex
+spec:
+  group: deckhouse.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  scope: Cluster
+  names:
+    plural: yandexinstanceclasses
+    singular: yandexinstanceclass
+    kind: YandexInstanceClass
+    categories:
+    - cloudinstanceclasses
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: YandexInstanceClass defines Yandex-specific properties for to-be-provisioned Instances.
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - platformID
+          - cores
+          - memory
+          - imageID
+          properties:
+            cores:
+              description: Amount of CPU cores to provision on a Yandex Compute Instance.
+              example: 4
+              type: integer
+            coreFraction:
+              description: Percent of reserved CPU capacity on a Yandex Compute Instance.
+              example: 100
+              type: integer
+            memory:
+              description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+              example: 8192
+              type: integer
+            imageID:
+              description: Image ID to use while provisioning Yandex Compute Instances.
+              example: fd8nb7ecsbvj76dfaa8b
+              type: string
+            preemptible:
+              description: Should a provisioned Yandex Compute Instance be preemtible.
+              type: boolean
+            diskType:
+              description: Instance disk type.
+              example: "network-ssd"
+              type: string
+              enum:
+              - "network-ssd"
+              - "network-hdd"
+            diskSizeGB:
+              description: Yandex Compute Instance disk size in gigabytes.
+              example: 20
+              type: integer
+            assignPublicIPAddress:
+              description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+              example: false
+              type: boolean
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            cloudInitSteps:
+              type: object
+              properties:
+                version:
+                  description: cloud-init-steps version
+                  example: "ubuntu-18.04-1.0"
+                  type: string
+                options:
+                  description: "Options to pass to cloud-init-steps. Vary between different cloud-init-steps versions"
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true

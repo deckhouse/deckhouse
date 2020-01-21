@@ -235,6 +235,42 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
+  name: yandexmachineclasses.machine.sapcloud.io
+  labels:
+    heritage: deckhouse
+    module: cloud-instance-manager
+    app: machine-controller-manager
+spec:
+  group: machine.sapcloud.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    kind: YandexMachineClass
+    plural: yandexmachineclasses
+    singular: yandexmachineclass
+    shortNames:
+      - yandexcls
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Region
+      type: string
+      priority: 1
+      JSONPath: .spec.region
+    - name: Age
+      type: date
+      description: >
+        CreationTimestamp is a timestamp representing the server time when this object was created.
+        It is not guaranteed to be set in happens-before order across separate operations.
+        Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+        Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+      JSONPath: .metadata.creationTimestamp
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
   name: packetmachineclasses.machine.sapcloud.io
   labels:
     heritage: deckhouse

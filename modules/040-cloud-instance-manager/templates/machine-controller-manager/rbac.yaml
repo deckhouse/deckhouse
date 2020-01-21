@@ -22,6 +22,7 @@ rules:
    - alicloudmachineclasses
    - packetmachineclasses
    - vspheremachineclasses
+   - yandexmachineclasses
    - machinedeployments
    - machines
    - machinesets
@@ -32,6 +33,7 @@ rules:
    - alicloudmachineclasses/status
    - packetmachineclasses/status
    - vspheremachineclasses/status
+   - yandexmachineclasses/status
    - machinedeployments/status
    - machines/status
    - machinesets/status
