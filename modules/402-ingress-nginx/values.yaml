@@ -1,0 +1,4 @@
+ingressNginx:
+  internal:
+    ingressControllerCRDs: []
+  defaultControllerVersion: "0.25"

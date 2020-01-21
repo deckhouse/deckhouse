@@ -1,0 +1,43 @@
+global:
+  highAvailability: [true, false]
+  enabledModules:
+    __ConstantChoices__:
+      - ["cert-manager", "vertical-pod-autoscaler-crd"]
+      - ["cert-manager"]
+  modulesImages:
+    registryDockercfg: registry.example.com
+    tags:
+      common:
+        kubeCaAuthProxy: tagstring
+      ingressNginx:
+        controller025: tagstring
+        controller026: tagstring
+        statsdExporter: tagstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    nodeCountByRole:
+      system: 2
+    clusterVersion: 1.15.5
+  modules:
+    publicDomainTemplate: "%s.example.com"
+ingressNginx:
+  internal:
+    webhookCertificates:
+      ca: testca
+      key: testkey
+      crt: testcrt
+    nginxAuthTLStest:
+      certificate: test
+      key: test
+    ingressControllerCRDs:
+      __ConstantChoices__:
+        - __EmptyItem__
+        -
+          - name: test
+            spec:
+              config: {}
+              ingressClass: nginx
+              controllerVersion: "0.25"
+              inlet: LoadBalancer
+              loadBalancer: {}

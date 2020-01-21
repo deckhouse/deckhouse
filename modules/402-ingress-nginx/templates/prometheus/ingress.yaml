@@ -1,0 +1,53 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ingress-nginx-controller
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  podMetricsEndpoints:
+  - targetPort: controller
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: nginx-ingress-controller
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: scrape_source
+      replacement: controller
+    metricRelabelings:
+    # remove ingress_class, we have "controller" label
+    - regex: ingress_class
+      action: labeldrop
+  - targetPort: statsd
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: nginx-ingress-controller
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_pod_controller_name]
+      targetLabel: app
+    - targetLabel: scrape_source
+      replacement: statsd
+  selector:
+    matchLabels:
+      app: controller
+  namespaceSelector:
+    matchNames:
+    - d8-ingress-nginx
+{{- end }}

@@ -1,0 +1,209 @@
+{{- define "ingress-controller" }}
+{{- $context := index . 0 }}
+{{- $crd := index . 1 }}
+{{- $name := index . 2 }}
+
+  {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: controller-{{ $name }}
+  updatePolicy:
+    updateMode: "Off"
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: controller
+        name: {{ $name }}
+    spec:
+  {{- if $crd.spec.nodeSelector }}
+      nodeSelector:
+{{ $crd.spec.nodeSelector | toYaml | indent 6 }}
+  {{- else }}
+{{- include "helm_lib_node_selector" (tuple $context "frontend" $context) | indent 6 }}
+  {{- end }}
+  {{- if $crd.spec.tolerations }}
+      tolerations:
+{{ $crd.spec.tolerations | toYaml | indent 6 }}
+  {{- else }}
+{{- include "helm_lib_tolerations" (tuple $context "frontend" $context) | indent 6 }}
+  {{- end }}
+{{- include "helm_lib_priority_class" (tuple $context "cluster-high") | indent 6 }}
+      serviceAccountName: controller
+      terminationGracePeriodSeconds: 300
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/controller-{{ $crd.spec.controllerVersion | replace "." "-" }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}
+        name: ingress-nginx-controller
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 2
+          timeoutSeconds: 5
+        args:
+        - /nginx-ingress-controller
+        - --configmap=$(POD_NAMESPACE)/{{ $crd.name }}-config
+        - --v=2
+        - --ingress-class={{ $crd.spec.ingressClass }}
+        - --healthz-port=10254
+        - --http-port=80
+        - --https-port=443
+        - --update-status=false
+  {{- if $crd.spec.customErrors }}
+        - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
+  {{- end }}
+  {{- if semverCompare ">=0.26" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /wait-shutdown
+  {{- end }}
+        volumeMounts:
+        - mountPath: /var/lib/nginx/body
+          name: client-body-temp-path
+        - mountPath: /var/lib/nginx/fastcgi
+          name: fastcgi-temp-path
+        - mountPath: /var/lib/nginx/proxy
+          name: proxy-temp-path
+        - mountPath: /var/lib/nginx/scgi
+          name: scgi-temp-path
+        - mountPath: /var/lib/nginx/uwsgi
+          name: uwsgi-temp-path
+        - mountPath: /etc/nginx/ssl/client.crt
+          name: secret-nginx-auth-tls-crt
+          subPath: client.crt
+          readOnly: true
+        - mountPath: /etc/nginx/ssl/client.key
+          name: secret-nginx-auth-tls-key
+          subPath: client.key
+          readOnly: true
+        - mountPath: /etc/sockets
+          name: unix-sockets
+      - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/statsd-exporter:{{ $context.Values.global.modulesImages.tags.ingressNginx.statsdExporter }}
+        name: statsd-exporter
+        args:
+        - "--statsd.listen-tcp="
+        - "--statsd.listen-udp="
+        - "--statsd.listen-unixgram=/etc/sockets/statsd.sock"
+        - "--statsd.unixsocket-mode=777"
+        - "--web.listen-address=127.0.0.1:9102"
+        - "--statsd.mapping-config=/etc/statsd_mapping.conf"
+        volumeMounts:
+        - mountPath: /etc/sockets
+          name: unix-sockets
+      - name: ca-auth-proxy-statsd
+        image: {{ $context.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):9103"
+        - "--proxy-pass=http://127.0.0.1:9102/metrics"
+        - "--user=kube-prometheus:scraper"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 9103
+          name: statsd
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+      - name: ca-auth-proxy-controller
+        image: {{ $context.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=$(MY_POD_IP):10354"
+        - "--proxy-pass=http://127.0.0.1:10254/metrics"
+        - "--user=kube-prometheus:scraper"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 10354
+          name: controller
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+        volumeMounts:
+        - mountPath: /etc/sockets
+          name: unix-sockets
+      volumes:
+      - name: client-body-temp-path
+        emptyDir: {}
+      - name: fastcgi-temp-path
+        emptyDir: {}
+      - name: proxy-temp-path
+        emptyDir: {}
+      - name: scgi-temp-path
+        emptyDir: {}
+      - name: uwsgi-temp-path
+        emptyDir: {}
+      # https://github.com/kubernetes/kubernetes/issues/53423
+      - name: unix-sockets
+        emptyDir:
+          medium: "Memory"
+      - name: secret-nginx-auth-tls-crt
+        secret:
+          secretName: {{ $crd.name }}-ingress-nginx-auth-tls
+          items:
+          - key: tls.crt
+            path: client.crt
+      - name: secret-nginx-auth-tls-key
+        secret:
+          secretName: {{ $crd.name }}-ingress-nginx-auth-tls
+          items:
+          - key: tls.key
+            path: client.key
+{{- end }}
+
+
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllerCRDs }}
+  {{ include "ingress-controller" (list $context $crd $crd.name ) }}
+{{- end }}

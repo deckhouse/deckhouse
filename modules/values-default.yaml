@@ -39,6 +39,7 @@ extendedMonitoringEnabled: true
 nodeLocalDnsEnabled: true
 deschedulerEnabled: true
 nginxIngressEnabled: true
+ingressNginxEnabled: true
 dashboardEnabled: true
 secretCopierEnabled: true
 sysctlTunerEnabled: true
