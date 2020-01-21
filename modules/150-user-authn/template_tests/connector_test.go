@@ -24,7 +24,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry", "registry.example.com")
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager"})
-		hec.ValuesSet("global.discovery.nodeCountByRole.system", 2)
+		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.kubernetesCA", "plainstring")

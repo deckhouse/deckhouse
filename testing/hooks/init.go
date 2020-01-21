@@ -267,13 +267,6 @@ func (hec *HookExecutionConfig) RunHook() {
 
 	Expect(hec.configValues.JsonRepr).ToNot(BeEmpty())
 
-	/* TODO: не нужно?
-	if hec.BindingContextsRaw != "" {
-		err := json.Unmarshal([]byte(hec.BindingContextsRaw), &bindingContexts)
-		Expect(err).ShouldNot(HaveOccurred())
-	}
-	*/
-
 	Expect(err).ShouldNot(HaveOccurred())
 
 	tmpDir, err = ioutil.TempDir(globalTmpDir, "")

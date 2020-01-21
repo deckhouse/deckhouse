@@ -1,16 +1,30 @@
 #!/bin/bash
 
-# Автоопределятор внутреннего адреса DNS.
-
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=50
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: kube_dns_svc
+      apiVersion: v1
+      kind: Service
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-dns]
+      jqFilter: '.spec.clusterIP'
+      watchEvent: ["Added", "Modified"]
+EOF
 }
 
-function __main__() {
-  cluster_dns_address=$(kubectl --namespace kube-system get service kube-dns -o json | jq -r '.spec.clusterIP')
-  values::set global.discovery.clusterDNSAddress "${cluster_dns_address}"
+function __on_kubernetes::kube_dns_svc::synchronization() {
+  values::set global.discovery.clusterDNSAddress "$(context::get objects.0.filterResult)"
+}
+
+function __on_kubernetes::kube_dns_svc::added_or_modified() {
+  values::set global.discovery.clusterDNSAddress "$(context::get filterResult)"
 }
 
 hook::run "$@"

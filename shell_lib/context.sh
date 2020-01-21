@@ -55,3 +55,8 @@ function context::is_false() {
   jqPath="$(values::_convert_user_path_to_jq_path "${1:-}")"
   context::jq -e "${jqPath} == false" >/dev/null
 }
+
+function context::is_null() {
+  jqPath="$(values::_convert_user_path_to_jq_path "${1:-}")"
+  context::jq -e "${jqPath} == null" >/dev/null
+}

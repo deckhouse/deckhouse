@@ -3,10 +3,10 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  yq r -j - << EOF
+  cat << EOF
     configVersion: v1
     kubernetes:
-    - name: is-bootstraped-cm
+    - name: is_bootstraped_cm
       apiVersion: v1
       kind: ConfigMap
       namespace:
@@ -14,7 +14,7 @@ function __config__() {
           matchNames: [kube-system]
       nameSelector:
         matchNames: [d8-cluster-is-bootstraped]
-    - name: not-master-and-ready-nodes
+    - name: not_master_and_ready_nodes
       apiVersion: v1
       kind: Node
       watchEvent: ["Added", "Modified"]
@@ -26,17 +26,22 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::is-bootstraped-cm::synchronization() {
+function __on_kubernetes::is_bootstraped_cm::synchronization() {
   if context::has objects.0; then
     values::set global.clusterIsBootstrapped true
   fi
 }
 
-function __on_kubernetes::is-bootstraped-cm::added_or_modified() {
+function __on_kubernetes::is_bootstraped_cm::added_or_modified() {
   values::set global.clusterIsBootstrapped true
 }
 
-function __on_kubernetes::not-master-and-ready-nodes::synchronization() {
+function __on_kubernetes::is_bootstraped_cm::deleted() {
+  >&2 echo "ERROR: CM kube-system/d8-cluster-is-bootstraped was deleted. Don't know what to do."
+  return 1
+}
+
+function __on_kubernetes::not_master_and_ready_nodes::synchronization() {
   if values::is_true global.clusterIsBootstrapped; then
     return 0
   fi
@@ -53,7 +58,7 @@ EOF
   fi
 }
 
-function __on_kubernetes::not-master-and-ready-nodes::added_or_modified() {
+function __on_kubernetes::not_master_and_ready_nodes::added_or_modified() {
   if values::is_true global.clusterIsBootstrapped; then
     return 0
   fi

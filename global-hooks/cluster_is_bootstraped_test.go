@@ -216,5 +216,16 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
 		})
+
+		Context("CM kube-system/d8-cluster-is-bootstraped deleted", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateMasterOnly))
+				f.RunHook()
+			})
+
+			It("Hook must fail", func() {
+				Expect(f).To(Not(ExecuteSuccessfully()))
+			})
+		})
 	})
 })

@@ -42,7 +42,7 @@ spec:
       annotations:
         checksum/config: {{ index (include (print $.Template.BasePath "/config-map.yaml") . | fromYaml) "data" "config.yaml" | sha256sum}}
         checksum/cert: {{ include (print $.Template.BasePath "/prometheus-metrics-adapter-cert.yaml") . | sha256sum}}
-        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
       labels:
         app: prometheus-metrics-adapter
       name: prometheus-metrics-adapter

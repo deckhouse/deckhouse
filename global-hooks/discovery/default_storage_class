@@ -1,0 +1,28 @@
+#!/bin/bash
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: default_sc
+      includeSnapshotsFrom: ["default_sc"]
+      apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      jqFilter: |
+        (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
+        (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+EOF
+}
+
+function __on_kubernetes::default_sc() {
+  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
+
+  if [[ "$default_sc" != "null" ]]; then
+    values::set global.discovery.defaultStorageClass "$default_sc"
+  else
+    values::unset global.discovery.defaultStorageClass
+  fi
+}
+
+hook::run $@

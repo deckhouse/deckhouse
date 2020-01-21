@@ -1,32 +1,33 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=530
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: kpds
+      apiVersion: apps/v1
+      kind: DaemonSet
+      includeSnapshotsFrom: ["kpds"]
+      watchEvent: ["Added", "Modified"]
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-proxy]
+      jqFilter: '.spec.template.spec.tolerations'
+EOF
 }
 
-function __main__() {
-  cluster_type=$(values::get --required global.discovery.clusterType)
-  # Политика: kube-proxy должен быть запущен на всех узлах, вне зависимости от taint'ов
+function __on_kubernetes::kpds() {
+  # Policy: kube-proxy must work on every node regardles of taints.
   #
-  # Даже если узел выделен под какую-то задачу, kube-proxy туда в любом случае должен доехать, нам же нужна сеть и сервисы.
+  # Even if some node is dedicated to special task we still need network and services working.
 
-  # В AWS и GCE кластер разворачивается kops'ом, а он вместо ds/kube-proxy генерит на каждом
-  # узле манифест в /etc/kubernetes/manifests, так что для kops не актуально.
-  [[ "$cluster_type" == "AWS" || "$cluster_type" == "GCE" ]] && return 0
-
-  # В Azure (точнее в acs-engine) на данный момент нет возможности указывать taint'ы группам узлов,
-  # так что там никакой узел не может быть заблокирован.
-  [[ "$cluster_type" == "ACS" ]] && return 0
-
-  fltr='.'
-
-  # Разрешаем запуск на любом узле с любыми taint'ами
-  fltr=$fltr' | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
-
-  # Применяем
-  kubectl::jq_patch kube-system ds/kube-proxy "$fltr"
+  if context::has snapshots.kpds.0; then
+    kubernetes::patch_jq kube-system daemonset/kube-proxy '. | .spec.template.spec.tolerations = [{"operator":"Exists"}]'
+  fi
 }
 
 hook::run $@

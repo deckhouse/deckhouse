@@ -1,0 +1,52 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: uuid_config
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cluster-uuid]
+      jqFilter: '.data."cluster-uuid"'
+EOF
+}
+
+function __on_kubernetes::uuid_config::synchronization() {
+  if context::has objects.0; then
+    cluster_uuid="$(context::get objects.0.filterResult)"
+  else
+    cluster_uuid=$(uuidgen -r)
+    kubernetes::create_yaml << EOF
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-uuid
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+data:
+  cluster-uuid: "${cluster_uuid}"
+EOF
+  fi
+
+  values::set global.discovery.clusterUUID "${cluster_uuid}"
+}
+
+function __on_kubernetes::uuid_config::added_or_modified() {
+  values::set global.discovery.clusterUUID "$(context::get filterResult)"
+}
+
+function __on_kubernetes::uuid_config::deleted() {
+  >&2 echo "ERROR: CM kube-system/d8-cluster-uuid was deleted. Don't know what to do."
+  return 1
+}
+
+hook::run "$@"

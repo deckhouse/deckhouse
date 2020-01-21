@@ -40,7 +40,7 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 		f.ValuesSet("global.modulesImages.registry", "registryAddr")
 		f.ValuesSet("global.modulesImages.tags.common.kubeCaAuthProxy", "xxx")
 
-		f.ValuesSetFromYaml("global.discovery.nodeCountByRole", "{}")
+		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", "{}")
 		f.ValuesSet("metallb.speaker.nodeSelector.mylabel", "myvalue")
 	})
 

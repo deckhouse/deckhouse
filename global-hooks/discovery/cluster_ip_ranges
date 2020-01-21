@@ -1,110 +1,118 @@
 #!/bin/bash
 
-# Автоопределятор cluster-cidr (адреса подов), service-cluster-ip-range (адреса сервисов) и node-internal-ips (внутренние адреса нод).
-
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-# TODO
-#{
-#  "onStartup": 100,
-#  "onKubernetesEvent": [
-#    {
-#      "kind": "node",
-#      "jqFilter": ".status.addresses[]? | select (.type == \"InternalIP\")"
-#    },
-#    {
-#      "kind": "pod",
-#      "namespaceSelector": {
-#        "matchNames": ["kube-system"]
-#      },
-#      "selector": {
-#        "matchLabels": {
-#          "component": "kube-apiserver",
-#          "tier": "control-plane"
-#        }
-#      },
-#      "jqFilter": ".spec.containers[].command"
-#    },
-#    {
-#      "kind": "pod",
-#      "namespaceSelector": {
-#        "matchNames": ["kube-system"]
-#      },
-#      "selector": {
-#        "matchLabels": {
-#          "k8s-app": "kube-apiserver"
-#        }
-#      },
-#      "jqFilter": ".spec.containers[].command"
-#    },
-#    {
-#      "kind": "pod",
-#      "namespaceSelector": {
-#        "matchNames": ["kube-system"]
-#      },
-#      "selector": {
-#        "matchLabels": {
-#          "component": "kube-controller-manager",
-#          "tier": "control-plane"
-#        }
-#      },
-#      "jqFilter": ".spec.containers[].command"
-#    },
-#    {
-#      "kind": "pod",
-#      "namespaceSelector": {
-#        "matchNames": ["kube-system"]
-#      },
-#      "selector": {
-#        "matchLabels": {
-#          "k8s-app": "kube-controller-manager"
-#        }
-#      },
-#      "jqFilter": ".spec.containers[].command"
-#    }
-#  ]
-#}
   cat << EOF
-{
-  "onStartup": 100,
-  "schedule": [
-    {
-      "crontab": "* * * * *"
-    }
-  ]
-}
+    configVersion: v1
+    kubernetes:
+    - name: node_internal_ips
+      includeSnapshotsFrom: ["node_internal_ips"]
+      kind: Node
+      apiVersion: v1
+      jqFilter: '[.status.addresses[]? | select (.type == "InternalIP") | .address]'
+
+    - name: pod_subnet_by_component
+      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-controller-manager
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        match( "(^|\\\\s+)--cluster-cidr=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
+
+    - name: pod_subnet_by_k8s_app
+      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-controller-manager
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        match( "(^|\\\\s+)--cluster-cidr=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
+
+    - name: service_subnet_by_component
+      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-apiserver
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-apiserver") |
+        (.command + .args) | join(" ") |
+        match( "(^|\\\\s+)--service-cluster-ip-range=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
+
+    - name: service_subnet_by_k8s_app
+      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-apiserver
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-apiserver") |
+        (.command + .args) | join(" ") |
+        match( "(^|\\\\s+)--service-cluster-ip-range=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
+
 EOF
+
+
 }
 
-function __main__() {
-  pod_subnet=`kubectl -n kube-system get pods -o json |\
-    jq -r '.items[] |
-      select(
-        (.metadata.labels.component == "kube-controller-manager" and .metadata.labels.tier == "control-plane") or
-         .metadata.labels."k8s-app" == "kube-controller-manager"
-      ) |
-      .spec.containers[] |
-      select(.name == "kube-controller-manager") |
-      (.command + .args)[]' |\
-    xargs | sed -r 's/.*--cluster-cidr=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+).*/\1/'`
+### nodeInternalIPs
+function __on_kubernetes::node_internal_ips() {
+  node_internal_ips="$(context::jq -r '[.snapshots.node_internal_ips[] | .filterResult] | add | sort')"
+  values::set global.discovery.nodeInternalIPs "$node_internal_ips"
+}
 
-  service_subnet=`kubectl -n kube-system get pods -o json |\
-    jq -r '.items[] |
-      select(
-        (.metadata.labels.component == "kube-apiserver" and .metadata.labels.tier == "control-plane") or
-         .metadata.labels."k8s-app" == "kube-apiserver"
-      ) |
-      .spec.containers[] |
-      select(.name == "kube-apiserver") |
-      (.command + .args)[]' |\
-    xargs | sed -r 's/.*--service-cluster-ip-range=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+).*/\1/'`
 
-  node_internal_ips=`kubectl get nodes -o json | jq -r '.items[].status.addresses[]? | select (.type == "InternalIP") | .address' | paste -sd "," -`
+### podSubnet
+function _pod_subnet() {
+  pod_subnet="$(context::jq -er '(.snapshots.pod_subnet_by_component + .snapshots.pod_subnet_by_k8s_app)[0].filterResult')"
+  values::set global.discovery.podSubnet "$pod_subnet"
+}
 
-  values::set global.discovery.podSubnet             "$pod_subnet"
-  values::set global.discovery.serviceSubnet         "$service_subnet"
-  values::set global.discovery.nodeInternalIPs       "$node_internal_ips"
+function __on_kubernetes::pod_subnet_by_component() {
+  _pod_subnet
+}
+
+function __on_kubernetes::pod_subnet_by_k8s_app() {
+  _pod_subnet
+}
+
+
+### serviceSubnet
+function _service_subnet() {
+  service_subnet="$(context::jq -er '(.snapshots.service_subnet_by_component + .snapshots.service_subnet_by_k8s_app)[0].filterResult')"
+  values::set global.discovery.serviceSubnet "$service_subnet"
+}
+
+function __on_kubernetes::service_subnet_by_component() {
+  _service_subnet
+}
+
+function __on_kubernetes::service_subnet_by_k8s_app() {
+  _service_subnet
 }
 
 hook::run $@

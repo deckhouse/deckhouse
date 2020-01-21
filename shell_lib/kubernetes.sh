@@ -59,7 +59,7 @@ function kubernetes::_apply_patch_set() {
       fi
     ;;
     "JQPatch")
-      kubectl::_jq_patch "$(jq -r '.namespace' <<< ${line})" "$(jq -r '.resource' <<< ${line})" "$(jq -r '.jqFilter' <<< ${line})"
+      kubernetes::_jq_patch "$(jq -r '.namespace' <<< ${line})" "$(jq -r '.resource' <<< ${line})" "$(jq -r '.jqFilter' <<< ${line})"
     ;;
     "Delete")
       namespace="$(jq -r '.namespace' <<< ${line})"
@@ -101,7 +101,7 @@ function kubernetes::_jq_patch() {
     return 1
   fi
 
-  diff -u $a $b || kubectl patch -f $a --patch "$(cat $b)"
+  diff -u $a $b || kubectl replace -f $b
   rm $a $b $tmp
   return 0
 }

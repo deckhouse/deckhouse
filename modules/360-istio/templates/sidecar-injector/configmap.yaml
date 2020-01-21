@@ -11,7 +11,7 @@ data:
       rewriteAppHTTPProbe: "true"
       clusterDomain: "{{ .Values.global.discovery.clusterDomain }}"
       proxy:
-        includeIPRanges:      "{{ .Values.istio.sidecar.includeOutboundIPRanges | default ( list .Values.global.discovery.podSubnet .Values.global.discovery.serviceSubnet .Values.global.discovery.nodeInternalIPs ) | join "," }}"
+        includeIPRanges:      "{{ .Values.istio.sidecar.includeOutboundIPRanges | default (list .Values.global.discovery.podSubnet .Values.global.discovery.serviceSubnet (.Values.global.discovery.nodeInternalIPs | join ",")) | join "," }}"
         excludeIPRanges:      "{{ .Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," }}"
         excludeOutboundPorts: "{{ .Values.istio.sidecar.excludeOutboundPorts    | default list | join "," }}"
         excludeInboundPorts:  "{{ .Values.istio.sidecar.excludeInboundPorts     | default list | join "," }}"

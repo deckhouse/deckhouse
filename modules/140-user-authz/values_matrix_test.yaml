@@ -37,7 +37,7 @@ global:
     extensionAPIServerAuthenticationRequestheaderClientCA: apiservercaclientstring
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
-    nodeCountByRole:
+    d8SpecificNodeCountByRole:
       system: 3
     clusterVersion: 1.15.5
 

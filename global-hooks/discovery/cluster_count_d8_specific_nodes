@@ -1,0 +1,43 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node_roles
+      apiVersion: v1
+      kind: Node
+      includeSnapshotsFrom: ["node_roles"]
+      jqFilter: |
+        .metadata.labels // {} |
+        if ([keys[] | select(startswith("node-role.flant.com/"))] | length > 0) then
+          [keys[] | select(startswith("node-role.flant.com/"))][0]
+        elif ([keys[] | select(startswith("node-role.deckhouse.io/"))] | length > 0) then
+          [keys[] | select(startswith("node-role.deckhouse.io/"))][0]
+        elif ([keys[] | select(startswith("node-role.kubernetes.io/"))] | length > 0) then
+          [keys[] | select(startswith("node-role.kubernetes.io/"))][0]
+        else
+          null
+        end |
+        if . != null then
+          . | split("/")[1] | gsub("-(?<a>[a-z])"; .a|ascii_upcase)
+        else
+          .
+        end
+EOF
+}
+
+function __on_kubernetes::node_roles() {
+  node_counts="$(
+    context::jq -r '
+      [
+        .snapshots.node_roles[] | select(.filterResult != null) | .filterResult
+      ] |
+      group_by(.) | map({(.[0]): length}) | add // {}'
+  )"
+  values::set global.discovery.d8SpecificNodeCountByRole "$node_counts"
+}
+
+hook::run "$@"

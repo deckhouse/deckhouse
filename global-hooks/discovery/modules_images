@@ -1,0 +1,68 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+    kubernetes:
+    - name: d8_deployment
+      apiVersion: apps/v1
+      kind: Deployment
+      watchEvent: ["Added", "Modified"]
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      nameSelector:
+        matchNames: [deckhouse]
+      jqFilter: '.spec.template.spec.containers[0].image | split(":")[0] | sub("/dev$"; "")'
+    - name: d8_registry_secret
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      nameSelector:
+        matchNames: [deckhouse-registry]
+      jqFilter: '.data.".dockercfg"'
+EOF
+}
+
+function __on_kubernetes::d8_deployment::synchronization() {
+  if context::has objects.0; then
+    values::set global.modulesImages.registry "$(context::get objects.0.filterResult)"
+  else
+    >&2 echo "There is no Deployment 'deckhouse' in NS 'd8-system'"
+    return 1
+  fi
+}
+
+function __on_kubernetes::d8_deployment::added_or_modified() {
+  values::set global.modulesImages.registry "$(context::get filterResult)"
+}
+
+function __on_kubernetes::d8_registry_secret::synchronization() {
+  if context::has objects.0; then
+    values::set global.modulesImages.registryDockercfg "$(context::get objects.0.filterResult)"
+  else
+    >&2 echo "There is no Secret 'deckhouse-secret' in NS 'd8-system'"
+    return 1
+  fi
+}
+
+function __on_kubernetes::d8_registry_secret::added_or_modified() {
+  values::set global.modulesImages.registryDockercfg "$(context::get filterResult)"
+}
+
+function __on_kubernetes::d8_registry_secret::deleted() {
+  >&2 echo "ERROR: Secret d8-system/deckhouse-secret was deleted. Don't know what to do."
+  return 1
+}
+
+function __on_startup() {
+  images_tags=$(cat /deckhouse/modules/images_tags.json)
+  values::set global.modulesImages.tags "$images_tags"
+}
+
+hook::run $@

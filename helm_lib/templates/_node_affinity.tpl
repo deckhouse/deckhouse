@@ -37,13 +37,13 @@
     {{- if $module_values.nodeSelector }}
 nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $strategy | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$strategy}}: ""
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole "system" | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
 nodeSelector:
   node-role.flant.com/system: ""
     {{- end }}
@@ -52,10 +52,10 @@ nodeSelector:
     {{- if $module_values.nodeSelector }}
 nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $strategy | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$strategy}}: ""
     {{- end }}
@@ -64,10 +64,10 @@ nodeSelector:
     {{- if $module_values.nodeSelector }}
 nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $camel_chart_name | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$context.Chart.Name}}: ""
-    {{- else if gt (index $context.Values.global.discovery.nodeCountByRole $strategy | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$strategy}}: ""
     {{- end }}

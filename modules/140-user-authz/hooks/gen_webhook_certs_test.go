@@ -23,8 +23,6 @@ const (
 )
 
 const (
-	stateEmpty = ``
-
 	stateSecretCreated = `
 apiVersion: v1
 kind: Secret
@@ -55,7 +53,7 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateEmpty))
+			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 

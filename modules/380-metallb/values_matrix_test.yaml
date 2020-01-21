@@ -38,7 +38,7 @@ global:
         kubeCaAuthProxy: imagehash
 
   discovery:
-    nodeCountByRole:
+    d8SpecificNodeCountByRole:
       __ConstantChoices__:
         - system: 3
         - {}
