@@ -6,7 +6,7 @@
   {{- $cloud_init_steps_version := $ig.instanceClass.cloudInitSteps.version | default $context.Values.cloudInstanceManager.internal.cloudInitSteps.version -}}
 #!/bin/bash
 
-set -Eeuo pipefail
+set -Eeuom pipefail
 shopt -s failglob
 
 BOOTSTRAP_DIR="/var/lib/machine-bootstrap"
@@ -24,6 +24,39 @@ if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-{{ $cloud_init_steps_version }}
     fi
 
     break
+  done
+fi
+
+perl_installed=$(type perl || echo '0')
+if [ "$perl_installed" != "0" ]; then
+  # Start output cloud init logs
+  cloud_init_output_log_port=8000
+  export cloud_init_output_log_port=$cloud_init_output_log_port
+  while true; do perl -MIO::Socket::INET -ne 'BEGIN{$l=IO::Socket::INET->new(LocalPort=>$ENV{cloud_init_output_log_port},Proto=>"tcp",Listen=>5,ReuseAddr=>1);$l=$l->accept}print $l $_' < /var/log/cloud-init-output.log; done &
+
+  patch_pending=true
+  while [ "$patch_pending" = true ] ; do
+    for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
+      cloud_init_tcp_endpoint=$(ip ro get ${server} | grep -Po '(?<=src )([0-9\.]+)')
+      if curl -s --fail \
+        --max-time 10 \
+        -XPATCH \
+        -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
+        -H "Accept: application/json" \
+        -H "Content-Type: application/json-patch+json" \
+        --cacert "$BOOTSTRAP_DIR/ca.crt" \
+        --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${cloud_init_tcp_endpoint} ${cloud_init_output_log_port}' to get cloud init logs.\", \"tcpEndpoint\": \"${cloud_init_tcp_endpoint}\"} }]" \
+        "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+
+        echo "Successfully patched machine $(hostname) status."
+        patch_pending=false
+        break
+      else
+        >&2 echo "Failed to patch machine $(hostname) status."
+        sleep 10
+        continue
+      fi
+    done
   done
 fi
 
@@ -80,4 +113,34 @@ for step in $(ls -1 $BOOTSTRAP_DIR/steps/ | sort); do
     break
   done
 done
+
+if [ "$perl_installed" != "0" ]; then
+  # Stop output cloud init logs
+  patch_pending=true
+  while [ "$patch_pending" = true ] ; do
+    for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
+      if curl -s --fail \
+        --max-time 10 \
+        -XPATCH \
+        -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
+        -H "Accept: application/json" \
+        -H "Content-Type: application/json-patch+json" \
+        --cacert "$BOOTSTRAP_DIR/ca.crt" \
+        --data "[{\"op\":\"remove\",\"path\":\"/status/bootstrapStatus\"}]" \
+        "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+
+        echo "Successfully patched machine $(hostname) status."
+        patch_pending=false
+        break
+      else
+        >&2 echo "Failed to patch machine $(hostname) status."
+        sleep 10
+        continue
+      fi
+    done
+  done
+
+  kill -9 %1
+fi
+
 {{ end }}
