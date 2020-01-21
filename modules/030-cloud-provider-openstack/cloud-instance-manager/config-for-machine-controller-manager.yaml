@@ -2,7 +2,15 @@ authURL: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.authUR
 username: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.username | b64enc }}
 password: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.password | b64enc }}
 domainName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.domainName | b64enc }}
+{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "tenantID" }}
+  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.tenantID }}
+tenantID: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.tenantID | b64enc }}
+  {{- end }}
+{{- else if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "tenantName" }}
+  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.tenantName }}
 tenantName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.tenantName | b64enc }}
+  {{- end }}
+{{- end }}
 {{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "caCert" }}
   {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.caCert }}
 caCert: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.caCert | b64enc }}
