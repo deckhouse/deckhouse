@@ -20,7 +20,12 @@ data:
   {{- $_ := set $openstackValues "username" .Values.cloudProviderOpenstack.username }}
   {{- $_ := set $openstackValues "password" .Values.cloudProviderOpenstack.password }}
   {{- $_ := set $openstackValues "domainName" .Values.cloudProviderOpenstack.domainName }}
+  {{- if hasKey .Values.cloudProviderOpenstack "tenantName" }}
   {{- $_ := set $openstackValues "tenantName" .Values.cloudProviderOpenstack.tenantName }}
+  {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack "tenantID" }}
+  {{- $_ := set $openstackValues "tenantID" .Values.cloudProviderOpenstack.tenantID }}
+  {{- end }}
   {{- $_ := set $openstackValues "caCert" .Values.cloudProviderOpenstack.caCert }}
   {{- $_ := set $openstackValues "region" .Values.cloudProviderOpenstack.region }}
   {{- $_ := set $openstackValues "networkName" .Values.cloudProviderOpenstack.networkName }}
