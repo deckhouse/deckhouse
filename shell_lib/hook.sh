@@ -75,8 +75,11 @@ function hook::run() {
       __main__
     else
       >&2 echo -n "ERROR: Can't find handler '${HANDLER}'"
-      if [ -n "${HANDLER_SPARE}" ]; then
+      if [[ "${HANDLER_SPARE}" != "__undefined" ]]; then
         >&2 echo -n " or '${HANDLER_SPARE}'"
+      fi
+      if [[ "${HANDLER_SPARE_SPARE}" != "__undefined" ]]; then
+        >&2 echo -n " or '${HANDLER_SPARE_SPARE}'"
       fi
       >&2 echo " or '__main__'"
       exit 1

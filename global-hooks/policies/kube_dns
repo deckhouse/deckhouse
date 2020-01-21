@@ -1,58 +1,89 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-# TODO
-#  jo -p onStartup=520 onKubernetesEvent="$(jo -a \
-#    "$(jo kind=node jqFilter=".metadata.labels" disableDebug=true)" \
-#  )"
-  echo '
-{
-  "onStartup": 520,
-  "schedule": [
-    {
-      "crontab": "*/10 * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node_roles
+      apiVersion: v1
+      kind: Node
+      includeSnapshotsFrom: ["node_roles", "kube_dns_autoscaler", "kube_dns"]
+      jqFilter: |
+        .metadata.labels // {} |
+        if ([keys[] | select(startswith("node-role.flant.com/"))] | length > 0) then
+          [keys[] | select(startswith("node-role.flant.com/"))][0]
+        elif ([keys[] | select(startswith("node-role.deckhouse.io/"))] | length > 0) then
+          [keys[] | select(startswith("node-role.deckhouse.io/"))][0]
+        elif ([keys[] | select(startswith("node-role.kubernetes.io/"))] | length > 0) then
+          [keys[] | select(startswith("node-role.kubernetes.io/"))][0]
+        else
+          null
+        end |
+        if . != null then
+          . | split("/")[1] | gsub("-(?<a>[a-z])"; .a|ascii_upcase)
+        else
+          .
+        end
+    - name: kube_dns
+      apiVersion: apps/v1
+      kind: Deployment
+      includeSnapshotsFrom: ["node_roles", "kube_dns_autoscaler", "kube_dns"]
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    - name: kube_dns_autoscaler
+      apiVersion: apps/v1
+      kind: Deployment
+      includeSnapshotsFrom: ["node_roles", "kube_dns_autoscaler", "kube_dns"]
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-dns-autoscaler
+EOF
 }
 
-
-
 function __main__() {
-  fltr='include "remove_empty"; .'
+  count_system_nodes=$(context::jq -er '[.snapshots.node_roles[] | select(.filterResult == "system")] | length')
+  count_kube_dns_nodes=$(context::jq -er '[.snapshots.node_roles[] | select(.filterResult == "kubeDns")] | length')
+  count_nonspecific_nodes=$(context::jq -er '[.snapshots.node_roles[] | select(.filterResult == null)] | length')
 
-  count_system_nodes=$(cluster::count_nodes_by_role "system")
-  count_kube_dns_nodes=$(cluster::count_nodes_by_role "kubeDns")
+  fltr="$(jq::include::remove_empty) ."
 
   ###
-  # Политика #1: kube-dns должен выполняться на system-узлах, если они есть
+  # Policy #1: kube-dns must work on special nodes if they are
 
-  # Добавляем toleration, если не добавлен
   if (( "$count_system_nodes" > 0 || "$count_kube_dns_nodes" > 0 )); then
-      fltr=$fltr' | .spec.template.spec.tolerations = ([{"key":"dedicated.flant.com","operator":"Equal","value": "kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value": "system"},{"key":"node-role/system"},{"key":"node-role.kubernetes.io/master"}] | unique)'
+    fltr=$fltr' | .spec.template.spec.tolerations = ((.spec.template.spec.tolerations // []) + [{"key":"dedicated.flant.com","operator":"Equal","value": "kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value": "system"},{"key":"node-role/system"},{"key":"node-role.kubernetes.io/master"}] | unique)'
+
     if (( "$count_kube_dns_nodes" > 0 )); then
-      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms = [{"matchExpressions": [{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]}]'
-    elif (( "$count_system_nodes" > 0 )); then
-      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms = [{"matchExpressions": [{"key":"node-role.flant.com/system","operator":"Exists"}]}]'
-    else
-      # Удаляем из каждого nodeSelectorTerm по matchExpression, если он был добавлен
-      fltr=$fltr' | del(.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms)'
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms = [{"matchExpressions":[{"key":"node-role.flant.com/kube-dns","operator":"Exists"}]},{"matchExpressions":[{"key":"node-role.deckhouse.io/kube-dns","operator":"Exists"}]},{"matchExpressions":[{"key":"node-role.kubernetes.io/kube-dns","operator":"Exists"}]}]'
+    else # $count_system_nodes > 0
+      fltr=$fltr' | .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms = [{"matchExpressions":[{"key":"node-role.flant.com/system","operator":"Exists"}]},{"matchExpressions":[{"key":"node-role.deckhouse.io/system","operator":"Exists"}]},{"matchExpressions":[{"key":"node-role.kubernetes.io/system","operator":"Exists"}]}]'
     fi
+  else
+    fltr=$fltr' | del(.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms)'
   fi
 
   ###
-  # Политика #2: Количество реплик kube-dns
-  #  * В AWS и GCE — работает kube-dns-autoscaler (который ставит kops, и мы не хотим с ним спорить)
-  #  * В других случаях:
-  #    * Если есть system-узлы, то kube-dns должен выполняться на каждом system-узле
-  #      * если системный узел один, то количество реплик должно равняться 2, чтобы избежать перебоев сервиса при перекате kube-dns
-  #    * Иначе количество реплик должно быть:
-  #      * равно 2 или больше (если руками кто-то поставил),
-  #      * но не больше, чем количество неспецифичных нод в кластере (без наших специальных taint)
-  cluster_type=$(values::get --required global.discovery.clusterType)
-  if [[ "$cluster_type" != "AWS" && "$cluster_type" != "GCE" ]] ; then
+  # policy #2: replicas
+  #  * There is kube-dns-autoscaler in kops-deployed AWS and GCE. We don't want to interfere with him
+  #  * In other cases:
+  #    * If there are special nodes for kube-dns then deployment must fit there
+  #      * If there is a single node then kube-dns must have two replicas to avoid problems with redeploy
+  #    * If there are system-nodes then deployment must fit there
+  #      * If there is a single node then kube-dns must have two replicas to avoid problems with redeploy
+  #    * Else:
+  #      * there should be 2 replicas or more if someone configured it manually
+  #      * there must not be more replicas then non-specific nodes
+
+  if ! context::has snapshots.kube_dns_autoscaler.0 ; then
     if (( "$count_kube_dns_nodes" > 1 )); then
       fltr=$fltr' | .spec.replicas = '$count_kube_dns_nodes
     elif (( "$count_kube_dns_nodes" == 1 )); then
@@ -62,25 +93,18 @@ function __main__() {
     elif (( "$count_system_nodes" == 1 )); then
       fltr=$fltr' | .spec.replicas = 2'
     else
-      count_nonspecific_nodes=$(cluster::nonspecific_nodes | wc -l)
       fltr=$fltr' | .spec.replicas |= ([([2,.] | max), ([2, '$count_nonspecific_nodes'] | max)] | min)'
     fi
   fi
 
-
   ###
-  # Политика #3: Не нужно запускать больше одного kube-dns на узле
-  fltr=$fltr' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution = ([{"weight":100,"podAffinityTerm":{"labelSelector":{"matchLabels":{"k8s-app":"kube-dns"}},"topologyKey":"kubernetes.io/hostname"}}] | unique)'
+  # Policy #3: don't run more than one kube-dns on single node
+  fltr=$fltr' | .spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution = ((.spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution // []) + [{"weight":100,"podAffinityTerm":{"labelSelector":{"matchLabels":{"k8s-app":"kube-dns"}},"topologyKey":"kubernetes.io/hostname"}}] | unique)'
 
-  # Определяем имя deployment'а (в Azure он называется не kube-dns)
-  kube_dns_deployment_name=$(kubectl -n kube-system get deployment -l k8s-app=kube-dns -o name)
-
-  # Удаляем пустые поля в affinity
+  # wipe empty fields
   fltr=$fltr' | .spec.template.spec.affinity |= remove_empty'
 
-  # Применяем
-  echo kubectl::jq_patch kube-system ${kube_dns_deployment_name} "$fltr" >> /tmp/jq.txt
-  kubectl::jq_patch kube-system ${kube_dns_deployment_name} "$fltr"
+  kubernetes::patch_jq kube-system deployment/$(context::get snapshots.kube_dns.0.object.metadata.name) "$fltr"
 }
 
 hook::run $@

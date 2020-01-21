@@ -1,4 +1,6 @@
 global:
+  discovery: {}
+  modulesImages: {}
   modules:
     ingressClass: nginx
     https:

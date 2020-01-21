@@ -3,10 +3,10 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  yq r -j - << EOF
+  cat << EOF
    configVersion: v1
    kubernetes:
-   - name: cluster-autoscaler
+   - name: cluster_autoscaler
      apiVersion: apps/v1
      kind: Deployment
      watchEvent: [Added, Modified]
@@ -19,13 +19,13 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::cluster-autoscaler::synchronization() {
+function __on_kubernetes::cluster_autoscaler::synchronization() {
   if context::has objects.0; then
     kubernetes::patch_jq kube-system deployment/cluster-autoscaler 'del(.spec.template.spec.containers[0].resources.limits)'
   fi
 }
 
-function __on_kubernetes::cluster-autoscaler::added_or_modified() {
+function __on_kubernetes::cluster_autoscaler::added_or_modified() {
   kubernetes::patch_jq kube-system deployment/cluster-autoscaler 'del(.spec.template.spec.containers[0].resources.limits)'
 }
 

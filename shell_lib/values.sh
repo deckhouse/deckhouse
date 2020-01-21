@@ -49,7 +49,7 @@ function values::get() {
     esac
   done
 
-  if [[ "$required" == "yes" ]] && ! values::has "$config" "${1:-}"; then
+  if [[ "$required" == "yes" ]] && ! values::has $config "${1:-}"; then
       >&2 echo "Error: Value $1 required, but doesn't exist"
       return 1
   fi

@@ -1,38 +1,26 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-# TODO
-#{
-#   "onStartup": 75,
-#   "onKubernetesEvent": [
-#      {
-#         "kind": "ConfigMap",
-#         "namespaceSelector": {
-#            "matchNames": [
-#               "kube-system"
-#            ]
-#         },
-#         "jqFilter": ".data"
-#      }
-#   ]
-#}
-
   cat << EOF
-{
-   "onStartup": 75
-}
+    configVersion: v1
+    kubernetes:
+    - name: extension_api_server_authentication
+      includeSnapshotsFrom: ["extension_api_server_authentication"]
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [extension-apiserver-authentication]
+      jqFilter: '.data."requestheader-client-ca-file"'
 EOF
 }
 
-function __main__() {
-  extension_api_server_authentication_data="$(kubectl -n kube-system get cm extension-apiserver-authentication -o json | jq '.data')"
-  extension_api_server_authentication_checksum="$(echo "${extension_api_server_authentication_data}" | sha256sum | awk '{print $1}')"
-  requestheader_client_ca="$(jq -nr --argjson in "${extension_api_server_authentication_data}" '$in | ."requestheader-client-ca-file"')"
-
-  values::set global.discovery.extensionAPIServerAuthenticationChecksum "${extension_api_server_authentication_checksum}"
-  values::set global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA "${requestheader_client_ca}"
+function __on_kubernetes::extension_api_server_authentication() {
+  values::set global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA "$(context::get snapshots.extension_api_server_authentication.0.filterResult)"
 }
 
 hook::run "$@"

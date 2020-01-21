@@ -51,7 +51,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationChecksum }}
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
         checksum/certificate: {{ include (print .Template.BasePath "/tls-certs.yaml") . | sha256sum }}
       labels:
         app: vpa-admission-controller

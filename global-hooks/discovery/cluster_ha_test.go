@@ -8,26 +8,20 @@ User-stories:
 package hooks
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
+var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
+	const (
+		initValuesString       = `{"global": {"discovery": {}}}`
+		initConfigValuesString = `{}`
+	)
 
-const (
-	initValuesString       = `{"global": {"discovery": {}}}`
-	initConfigValuesString = `{}`
-)
-
-const (
-	stateSingleAddress = `
+	const (
+		stateSingleAddress = `
 apiVersion: v1
 kind: Endpoints
 metadata:
@@ -37,7 +31,7 @@ subsets:
 - addresses:
   - ip: 10.0.3.192`
 
-	stateMultipleAddresses = `
+		stateMultipleAddresses = `
 apiVersion: v1
 kind: Endpoints
 metadata:
@@ -48,9 +42,8 @@ subsets:
   - ip: 10.0.3.192
   - ip: 10.0.3.193
   - ip: 10.0.3.194`
-)
+	)
 
-var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
@@ -62,7 +55,7 @@ var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 		It("filterResult must be false; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
 			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())
@@ -77,7 +70,7 @@ var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 			It("filterResult must be true; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
 				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
 				Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeTrue())
@@ -94,7 +87,7 @@ var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 		It("filterResult must be true; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
 			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeTrue())
@@ -109,7 +102,7 @@ var _ = Describe("Global hooks :: discovery/cluster_ha ::", func() {
 			It("filterResult must be false; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube-api-ep"))
+				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
 				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())

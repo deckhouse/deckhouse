@@ -18,7 +18,7 @@ global:
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
-    nodeCountByRole:
+    d8SpecificNodeCountByRole:
       system: 2
     clusterVersion: 1.15.5
   modules:

@@ -1,27 +1,52 @@
 #!/bin/bash
 
-# Автоопределятор внутреннего домена DNS кластера Kubernetes (cluster.local, например).
+# Auto-detector for internal domain (i.e. cluster.local).
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=100
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+
+    - name: cm
+      includeSnapshotsFrom: ["cm", "pod"]
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [coredns]
+      jqFilter: |
+        .data.Corefile | match("\\\\s+kubernetes\\\\s+(\\\\S+?)\\\\.?\\\\s+in-addr.arpa\\\\s+ip6.arpa\\\\s+\\\\{") | .captures[0].string
+
+    - name: pod
+      includeSnapshotsFrom: ["cm", "pod"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-dns
+      jqFilter: |
+        .spec.containers[0] | (.command + .args) | join(" ") |
+        match( "(^|\\\\s+)--domain=(\\\\S+?)\\\\.?(\\\\s+|$)") | .captures[1].string
+EOF
 }
 
 function __main__() {
-  if kubectl -n kube-system get cm coredns > /dev/null 2> /dev/null; then
-    cluster_domain=$(kubectl -n kube-system  get cm coredns -o json | jq '.data.Corefile' -r | grep -E '\s+kubernetes\s+[a-zA-Z0-9\.\-]+\s+in-addr.arpa\s+ip6.arpa\s+\{$' | awk '{print $2}')
+  if ! context::is_null snapshots.cm.0.filterResult; then
+    cluster_domain="$(context::get snapshots.cm.0.filterResult)"
+  elif ! context::is_null snapshots.pod.0.filterResult; then
+    cluster_domain="$(context::get snapshots.pod.0.filterResult)"
   else
-    cluster_domain=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o=jsonpath='{.items[0].spec.containers[0].command}  {.items[0].spec.containers[0].args}' 2>/dev/null | grep -Eo -- '--domain=[^\ ]+' | sed -e s/--domain=//g)
+    cluster_domain="cluster.local"
   fi
 
-  if [[ $cluster_domain == "" ]]; then
-	  cluster_domain="cluster.local"
-  fi
-
-  cluster_domain=$(echo "$cluster_domain" | sed s/\\.$//g)
-
-  values::set global.discovery.clusterDomain $cluster_domain
+  values::set global.discovery.clusterDomain "${cluster_domain}"
 }
 
 hook::run $@

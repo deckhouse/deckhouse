@@ -15,6 +15,7 @@ github.com/alessio/shellescape v0.0.0-20190409004728-b115ca0f9053/go.mod h1:xW8s
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a h1:idn718Q4B6AGu/h5Sxe66HYVdqdGu2l9Iebqhi/AEoA=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
+github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea/go.mod h1:jfBxQAPihPj5l6sipcapjHruLizHrt3RKuppDE97K+g=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -41,6 +42,7 @@ github.com/flant/shell-operator v1.0.0-beta.5.0.20191225102028-12bc030213b2/go.m
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200110162130-75d0f7425c07/go.mod h1:l//F2yW4PBHo669EEpkIhuyTa/PkUr1TJ5ZTl9ASr0s=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200110164619-e0f3412abc4f/go.mod h1:l//F2yW4PBHo669EEpkIhuyTa/PkUr1TJ5ZTl9ASr0s=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200110172532-8294a3561d0e/go.mod h1:l//F2yW4PBHo669EEpkIhuyTa/PkUr1TJ5ZTl9ASr0s=
+github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a h1:CArHxJYd9gFaLOng8t2HrMMiBjj/guEXEqLNQi8VtM0=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a/go.mod h1:syafiwIeRpxLhccoTUnkZ2GfBvAtKwsogTntkFqXTlc=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=

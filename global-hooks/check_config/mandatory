@@ -1,17 +1,14 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=0
+  jo -p configVersion=v1 onStartup=0
 }
 
 function __main__() {
   values::require_in_config global.project
   values::require_in_config global.clusterName
-
-  values::set global.discovery '{}'
-  values::set global.discovery.nodeCountByRole '{}'
 }
 
 hook::run "$@"

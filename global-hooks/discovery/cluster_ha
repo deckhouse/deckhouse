@@ -8,10 +8,10 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  yq r -j - << EOF
+  cat << EOF
     configVersion: v1
     kubernetes:
-    - name: kube-api-ep
+    - name: kube_api_ep
       apiVersion: v1
       kind: Endpoints
       namespace:
@@ -23,11 +23,11 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::kube-api-ep::synchronization() {
+function __on_kubernetes::kube_api_ep::synchronization() {
   values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get objects.0.filterResult)"
 }
 
-function __on_kubernetes::kube-api-ep::added_or_modified() {
+function __on_kubernetes::kube_api_ep::added_or_modified() {
   values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get filterResult)"
 }
 

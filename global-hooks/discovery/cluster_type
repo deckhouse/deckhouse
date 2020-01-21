@@ -29,24 +29,56 @@
 #  * таким образом мы считаем, что если AWS и GCE — это всегда kops, если Azure — это всегда acs-engine (пока kops
 #    не научился, потом придумаем как отличать), а если ничего из этих трех — значит это "без облака" и kubeadm
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=100
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+
+    - name: controller_manager_by_component
+      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-controller-manager
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
+
+    - name: controller_manager_by_k8s_app
+      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-controller-manager
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
+
+EOF
 }
 
 function __main__() {
-  if kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command} {.items[0].spec.containers[0].args}' 2>/dev/null | grep -- '--cloud-provider=aws' > /dev/null ;  then
-    cluster_type=AWS
-  elif kubectl -n kube-system get pod -l k8s-app=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command} {.items[0].spec.containers[0].args}' 2>/dev/null | grep -- '--cloud-provider=gce' > /dev/null ; then
-    cluster_type=GCE
-  elif kubectl -n kube-system get pod -l component=kube-controller-manager -o=jsonpath='{.items[0].spec.containers[0].command} {.items[0].spec.containers[0].args}' 2>/dev/null | grep -- '--cloud-provider=azure' > /dev/null ;  then
-    cluster_type=ACS
-  else
-    cluster_type=Manual
-  fi
+  cluster_type="$(context::jq -r '
+    [
+      (.snapshots.controller_manager_by_k8s_app + .snapshots.controller_manager_by_component)[] | select(.filterResult != null) | .filterResult
+    ] | first |
+    {"aws": "AWS", "gce": "GCE", "azure": "ACS"}[.] | if . == null then "Manual" else . end
+  ')"
 
-  values::set global.discovery.clusterType $cluster_type
+  values::set global.discovery.clusterType "$cluster_type"
 }
 
 hook::run $@
