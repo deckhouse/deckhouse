@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib_legacy.sh
+
+function __config__() {
+  common_hooks::certificates::order_certificate::config
+}
+
+function __main__() {
+  for name in $(values::get ingressNginx.internal.ingressControllerCRDs | jq -r '.[].name') ; do
+    common_hooks::certificates::order_certificate::main "d8-ingress-nginx" "${name}-nginx-auth-tls" "nginx-ingress:${name}" "internal.nginxAuthTLS${name}"
+  done
+}
+
+hook::run "$@"

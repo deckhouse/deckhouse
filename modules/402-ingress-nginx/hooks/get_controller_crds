@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib_legacy.sh
+
+function __config__() {
+# Костыль 2019-07-26: пока не разберемся как правильно создавать CRD
+kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
+
+  cat << EOF
+{
+  "beforeHelm": 4,
+  "onKubernetesEvent": [
+    {
+      "kind": "IngressNginxController",
+      "jqFilter": ".spec"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  default_controller_version=$(values::get ingressNginx.defaultControllerVersion)
+
+  fltr='[.items | to_entries[] | .value ] | .[] '
+  fltr=$fltr" | .spec.controllerVersion = (.spec.controllerVersion // \"$default_controller_version\")"
+  fltr=$fltr' | .spec.validationEnabled = (.spec.validationEnabled // true)'
+  fltr=$fltr' | .spec.config = (.spec.config // {})'
+  fltr=$fltr' | if .spec.inlet == "LoadBalancer" then .spec.loadBalancer = (.spec.loadBalancer // {}) else .spec.loadBalancer = {} end'
+  fltr=$fltr' | {"name": .metadata.name, "spec": .spec}'
+
+  crds=$(kubectl get ingressnginxcontrollers -o json | jq -rc "[ $fltr ]")
+  values::set ingressNginx.internal.ingressControllerCRDs "$crds"
+}
+
+hook::run "$@"

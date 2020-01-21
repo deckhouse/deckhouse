@@ -1,0 +1,115 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressnginxcontrollers.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: ingressnginxcontrollers
+    singular: ingressnginxcontroller
+    kind: IngressNginxController
+  version: v1alpha1
+  additionalPrinterColumns:
+  - JSONPath: .spec.ingressClass
+    name: Ingress Class
+    description: 'Name of served ingress class.'
+    type: string
+  - JSONPath: .spec.inlet
+    name: Inlet
+    description: 'The way traffic goes to current Ingress Controller from the outer network.'
+    type: string
+  - JSONPath: .spec.controllerVersion
+    name: Controller Version
+    description: 'Current NGINX Ingress Controller version.'
+    type: string
+  validation:
+    openAPIV3Schema:
+      type: object
+      required: ['spec']
+      properties:
+        spec:
+          type: object
+          required: ['ingressClass', 'inlet']
+          properties:
+            ingressClass:
+              type: string
+              description: 'Name of served ingress class.'
+              example: 'nginx'
+              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+            inlet:
+              type: string
+              description: 'The way traffic goes to cluster from the outer network.'
+              enum: ['LoadBalancer']
+            controllerVersion:
+              type: string
+              description: 'One of the supported NGINX Ingress Controller versions.'
+              enum: ['0.25', '0.26']
+            nodeSelector:
+              type: object
+              description: 'Controller nodeSelector field.'
+              x-kubernetes-preserve-unknown-fields: true
+            tolerations:
+              type: object
+              description: 'Controller tolerations field.'
+              x-kubernetes-preserve-unknown-fields: true
+            loadBalancer:
+              type: object
+              properties:
+                sourceRanges:
+                  type: array
+                  description: 'IP ranges (CIDR) that are allowed to access the load balancer.'
+                  items:
+                    type: string
+                    pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                annotations:
+                  type: object
+                  description: 'Annotations that will be passed to service with type load balancer to configure it.'
+                  x-kubernetes-preserve-unknown-fields: true
+                behindL7Proxy:
+                  type: boolean
+                  description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
+                realIPHeader:
+                  type: string
+                  description: 'Sets the header field for identifying the originating IP address of a client.'
+                  example: 'CF-Connecting-IP'
+            hsts:
+              type: boolean
+              description: 'Enable hsts.'
+            legacySSL:
+              type: boolean
+              description: 'Enable old TLS protocol versions and legacy cipher suites.'
+            disableHTTP2:
+              type: boolean
+              description: 'Switch off HTTP2 support.'
+            config:
+              type: object
+              description: 'Another ingress nginx configuration parameters to add to ingress controller configmap.'
+              x-kubernetes-preserve-unknown-fields: true
+            additionalHeaders:
+              type: object
+              description: 'Headers to add to all request.'
+              x-kubernetes-preserve-unknown-fields: true
+            customErrors:
+              type: object
+              required: ['namespace', 'serviceName', 'codes']
+              properties:
+                serviceName:
+                  type: string
+                  description: 'Name of kubernetes service that leads to custom errors backend.'
+                  example: 'custom-errors-backend-service'
+                namespace:
+                  type: string
+                  description: 'Namespace of custom errors backend.'
+                  example: 'default'
+                codes:
+                  type: array
+                  description: 'Error codes which should be redirected to custom errors backend.'
+                  items:
+                    type: string
+                    name: 'Error code.'
+                    pattern: '^[1-5][0-9][0-9]$'

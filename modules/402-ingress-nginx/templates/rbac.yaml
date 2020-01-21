@@ -1,0 +1,98 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: d8-ingress-nginx:controller
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps" ,"endpoints", "nodes", "pods", "secrets"]
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses/status"]
+  verbs: ["update"]
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews"]
+  verbs: ["create"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: controller
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: d8-ingress-nginx:controller
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-ingress-nginx:controller
+subjects:
+- kind: ServiceAccount
+  name: controller
+  namespace: d8-ingress-nginx
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: d8-ingress-nginx:controller
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "pods", "secrets", "namespaces"]
+  verbs: ["get"]
+{{- if .Values.ingressNginx.internal.ingressControllerCRDs }}
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames:
+{{ $leaderElectionConfigMapNames := list }}
+  {{- range $crd := .Values.ingressNginx.internal.ingressControllerCRDs }}
+    {{ $name := printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+    {{- if not (has $name $leaderElectionConfigMapNames) }}
+  - {{ $name }}
+    {{- end }}
+    {{- $leaderElectionConfigMapNames := append $leaderElectionConfigMapNames $name }}
+  {{- end }}
+  verbs: ["get", "update"]
+{{- end }}
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: d8-ingress-nginx:controller
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8-ingress-nginx:controller
+subjects:
+- kind: ServiceAccount
+  name: controller
+  namespace: d8-ingress-nginx
