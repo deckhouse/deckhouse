@@ -61,7 +61,7 @@ spec:
       - name: csi-controller
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/yandex-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderYandex.yandexCsiPlugin }}
         args:
-        - "--address=$MY_POD_IP:12302"
+        - "--address=$(MY_POD_IP):12302"
         - "--endpoint=unix:/csi/csi.sock"
         - "--folder-id={{ .Values.cloudProviderYandex.folderID }}"
         ports:
