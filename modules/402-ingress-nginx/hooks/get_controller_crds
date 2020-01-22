@@ -1,35 +1,34 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-# Костыль 2019-07-26: пока не разберемся как правильно создавать CRD
-kubectl apply -f $(module::path)/crds/ >/dev/null 2>&1
-
   cat << EOF
-{
-  "beforeHelm": 4,
-  "onKubernetesEvent": [
-    {
-      "kind": "IngressNginxController",
-      "jqFilter": ".spec"
-    }
-  ]
-}
+    configVersion: v1
+    kubernetes:
+    - name: controller
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IngressNginxController
+      includeSnapshotsFrom:
+      - controller
+      jqFilter: |
+        .spec.config = (.spec.config // {})
+        | .spec.loadBalancer = (.spec.loadBalancer // {})
+        | {"name": .metadata.name, "spec": .spec}
 EOF
 }
 
 function __main__() {
+  if [[ $(context::jq -rc '.snapshots.controller | length') == "0" ]]; then
+    values::set ingressNginx.internal.ingressControllerCRDs '[]'
+    return 0
+  fi
+
   default_controller_version=$(values::get ingressNginx.defaultControllerVersion)
+  crds=$(context::jq -rc '.snapshots.controller | .[].filterResult' | while read crd ; do
+    jq -rc ".spec.controllerVersion |= (.spec.controllerVersion // \"${default_controller_version}\")" <<< ${crd}
+  done | jq -s '.')
 
-  fltr='[.items | to_entries[] | .value ] | .[] '
-  fltr=$fltr" | .spec.controllerVersion = (.spec.controllerVersion // \"$default_controller_version\")"
-  fltr=$fltr' | .spec.validationEnabled = (.spec.validationEnabled // true)'
-  fltr=$fltr' | .spec.config = (.spec.config // {})'
-  fltr=$fltr' | if .spec.inlet == "LoadBalancer" then .spec.loadBalancer = (.spec.loadBalancer // {}) else .spec.loadBalancer = {} end'
-  fltr=$fltr' | {"name": .metadata.name, "spec": .spec}'
-
-  crds=$(kubectl get ingressnginxcontrollers -o json | jq -rc "[ $fltr ]")
   values::set ingressNginx.internal.ingressControllerCRDs "$crds"
 }
 
