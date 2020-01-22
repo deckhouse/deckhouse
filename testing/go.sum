@@ -44,6 +44,7 @@ github.com/flant/shell-operator v1.0.0-beta.5.0.20200110164619-e0f3412abc4f/go.m
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200110172532-8294a3561d0e/go.mod h1:l//F2yW4PBHo669EEpkIhuyTa/PkUr1TJ5ZTl9ASr0s=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a h1:CArHxJYd9gFaLOng8t2HrMMiBjj/guEXEqLNQi8VtM0=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a/go.mod h1:syafiwIeRpxLhccoTUnkZ2GfBvAtKwsogTntkFqXTlc=
+github.com/flant/shell-operator v1.0.0-beta.6.0.20200122060338-5bcb9a731be3/go.mod h1:syafiwIeRpxLhccoTUnkZ2GfBvAtKwsogTntkFqXTlc=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622 h1:lxbhOGZ9pU3Kf8P6lFluUcE82yVZn2EqEf4+mWRNPV0=
