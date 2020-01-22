@@ -7,8 +7,7 @@
 
 ### Включение модуля
 
-Модуль по-умолчанию **включен**. Для выключения добавьте в CM `d8-system/deckhouse`:
-
+Модуль по-умолчанию **включен** в кластерах начиная с версии 1.15 (данный модуль работает только в кластерах начиная с версии 1.15). Для выключения добавьте в CM `d8-system/deckhouse`:
 ```yaml
 ingressNginxEnabled: "false"
 ```
@@ -75,7 +74,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  realIPHeader: "CF-Connecting-IP"
+  hsts: true
   config:
     gzip-level: "4"
     worker-processes: "8"
