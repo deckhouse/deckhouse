@@ -54,10 +54,12 @@ github.com/evanphx/json-patch v4.5.0+incompatible h1:ouOWdg56aJriqS0huScTkVXPC5I
 github.com/evanphx/json-patch v4.5.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200116181100-1881269dd216 h1:kD3T5MZdXv6wYSb3FJD8YD3iZj1a3L4OpGQC62s1478=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200116181100-1881269dd216/go.mod h1:4BaWLGV+tijOq44PJeOHUgQOYIk0Tqx5LaWqXiFnRxc=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200122061656-94a9d46d726b/go.mod h1:QEjTq35AgHWWsROa3kIAPp9DnlggkpF7xjWEpDIgwlQ=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3 h1:2xoWU3Rdo5OU44AmwQz8nlpYlwc+tKQ6EwyT2wDP0Dg=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3/go.mod h1:/BPS5XK5Ak0UPBf4hTu7xHS/D5DeY4qO2Q0KLQPNTRw=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a h1:CArHxJYd9gFaLOng8t2HrMMiBjj/guEXEqLNQi8VtM0=
 github.com/flant/shell-operator v1.0.0-beta.5.0.20200116180311-86c4055da42a/go.mod h1:syafiwIeRpxLhccoTUnkZ2GfBvAtKwsogTntkFqXTlc=
+github.com/flant/shell-operator v1.0.0-beta.6.0.20200122060338-5bcb9a731be3/go.mod h1:syafiwIeRpxLhccoTUnkZ2GfBvAtKwsogTntkFqXTlc=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
