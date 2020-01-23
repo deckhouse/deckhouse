@@ -1,0 +1,18 @@
+#!/bin/bash
+
+{{- if .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers }}
+
+main_interface_name=$(ip ro get 8.8.8.8 | grep -Po '(?<=dev )[a-z0-9]+')
+
+cat > /etc/netplan/51-nameservers.yaml <<END
+network:
+    version: 2
+    ethernets:
+        ${main_interface_name}:
+            nameservers:
+                addresses: [{{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers | join ", " }}]
+END
+
+netplan generate
+netplan apply
+{{- end }}
