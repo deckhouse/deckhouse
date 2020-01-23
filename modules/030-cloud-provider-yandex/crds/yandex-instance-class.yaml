@@ -67,6 +67,18 @@ spec:
               description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
               example: false
               type: boolean
+            mainSubnet:
+              description: Subnet id that VirtualMachines' primary NICs will connect to.
+              example: e9bnc7g9mu9mper9clk4
+              type: string
+            additionalSubnets:
+              description: Subnet id that VirtualMachines' secondary NICs will connect to.
+              example:
+                - b0csh41c1or82vuch89v
+                - e2lgddi5svochh5fbq96
+              type: array
+              items:
+                type: string
             labels:
               type: object
               additionalProperties:

@@ -95,6 +95,18 @@ cloudProviderYandex: |
     * Формат — bool.
     * По-умолчанию `true`.
     * Опциональный параметр.
+* `mainSubnet` — позволяет переопределить имя основного subnet, к которому будет подключен инстанс, по-умолчанию 
+используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`
+    * Формат — string. 
+    * Пример — `e9bnc7g9mu9mper9clk4`
+* `additionalSubnets` — список subnet, которые будут подключены к инстансу.
+    * Формат — массив строк.
+    * Пример:
+
+        ```yaml
+        - enp6t4snovl2ko4p15em
+        - enp34dkcinm1nr5999lu
+        ```
 * `labels` - Метки инстанса
     * Формат — key:value
     * Опциональный параметр.
