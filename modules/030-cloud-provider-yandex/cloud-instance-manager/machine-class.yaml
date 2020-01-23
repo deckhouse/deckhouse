@@ -19,9 +19,16 @@ spec:
     size: {{ mul (.instanceGroup.instanceClass.diskGB | default 50) 1024 1024 1024 }}
     imageID: {{ .instanceGroup.instanceClass.imageID }}
   networkInterfaceSpecs:
+{{- if .instanceGroup.instanceClass.mainSubnet }}
+  - subnetID: {{ .instanceGroup.instanceClass.mainSubnet }}
+{{- else}}
   - subnetID: {{ index .Values.cloudInstanceManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName }}
+{{- end }}
 {{- if .instanceGroup.instanceClass.assignPublicIPAddress }}
     assignPublicIPAddress: true
+{{- end }}
+{{- range .instanceGroup.instanceClass.additionalSubnets }}
+  - subnetID: {{ . | quote }}
 {{- end }}
 {{- if .instanceGroup.instanceClass.preemptible }}
   schedulingPolicy:

@@ -1,3 +1,4 @@
+{{- if not .Values.networkGateway.disableDHCP }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -86,4 +87,5 @@ spec:
         requests:
           storage: 32Mi
       storageClassName: {{ $storageClass }}
+{{- end }}
 {{- end }}
