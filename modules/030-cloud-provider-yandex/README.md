@@ -32,6 +32,8 @@
 * `serviceAccountJSON` — авторизованный ключ для Service Account'у с правами editor для каталога.
     * Формат — строка c JSON.
     * [Как получить](https://cloud.yandex.ru/docs/iam/operations/iam-token/create-for-sa#via-cli).
+* `nameservers` — массив nameserver'ов, которые будут использоваться вместо получаемых по DHCP от Yandex.
+    * **Внимание!** Эта опция – workaround отсутствия возможности управления DNS в Яндекс. Как только такая возможность появится – опция станет deprectated.
 
 #### Пример конфигурации:
 
