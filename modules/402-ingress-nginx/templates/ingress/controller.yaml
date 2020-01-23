@@ -41,7 +41,7 @@ spec:
     spec:
   {{- if $crd.spec.nodeSelector }}
       nodeSelector:
-{{ $crd.spec.nodeSelector | toYaml | indent 6 }}
+{{ $crd.spec.nodeSelector | toYaml | indent 8 }}
   {{- else }}
 {{- include "helm_lib_node_selector" (tuple $context "frontend" $context) | indent 6 }}
   {{- end }}

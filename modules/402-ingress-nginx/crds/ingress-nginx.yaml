@@ -54,9 +54,20 @@ spec:
               description: 'Controller nodeSelector field.'
               x-kubernetes-preserve-unknown-fields: true
             tolerations:
-              type: object
+              type: array
               description: 'Controller tolerations field.'
-              x-kubernetes-preserve-unknown-fields: true
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  operator:
+                    type: string
+                    enum:
+                  value:
+                    type: string
+                  effect:
+                    type: string
             loadBalancer:
               type: object
               properties:
