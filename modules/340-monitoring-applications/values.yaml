@@ -1,0 +1,4 @@
+monitoringApplications:
+  discovery:
+    enabledApplications: {}
+  enabledApplications: []

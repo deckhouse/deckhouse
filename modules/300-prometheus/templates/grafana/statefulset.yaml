@@ -35,13 +35,14 @@ spec:
       labels:
         app: grafana
       annotations:
-        checksum/dashboards: {{ include (print $.Template.BasePath "/grafana/dashboards.yaml") . | sha256sum }}
-        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/datasources.yaml") . | sha256sum }}
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/cm-datasources-list.yaml") . | sha256sum }}
+        checksum/dashboards-list-custom: {{ include (print $.Template.BasePath "/grafana/cm-dashboards-list-custom.yaml") . | sha256sum }}
         threshold.extended-monitoring.flant.com/container-throttling-warning: "40"
     spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
+      serviceAccountName: grafana
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -49,13 +50,11 @@ spec:
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
         env:
         - name: GF_AUTH_BASIC_ENABLED
-          value: "false"
+          value: "true"
         - name: GF_AUTH_PROXY_ENABLED
           value: "false"
         - name: GF_AUTH_ANONYMOUS_ENABLED
-          value: "true"
-        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-          value: "Admin"
+          value: "false"
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_USERS_DEFAULT_THEME
@@ -77,16 +76,11 @@ spec:
           mountPath: /var/lib/grafana-storage
         - name: grafana-datasources
           mountPath: /grafana/conf/provisioning/datasources
-        - name: grafana-dashboards
-          mountPath: /grafana/conf/provisioning/dashboards
-{{- define "dashboard_definition_volume_mount" }}
-{{- $folder := index . 1 }}
-        - name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
-          mountPath: /grafana-dashboard-definitions/{{ $folder }}
-{{- end }}
-{{- tuple . "dashboard_definition_volume_mount" | include "for_each_dashboard_folder" }}
+        - name: grafana-dashboards-list-custom
+          mountPath: /grafana/conf/provisioning/dashboards/d8-custom.yaml
+          subPath: d8-custom.yaml
         - name: grafana-dashboard-definitions-custom
-          mountPath: /grafana-dashboard-definitions/custom
+          mountPath: /grafana-dashboard-definitions-custom
         resources:
           requests:
             memory: 100Mi
@@ -96,12 +90,24 @@ spec:
             path: /
             port: 3500
           initialDelaySeconds: 10
+      - name: dashboard-provisioner
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana-dashboard-provisioner:{{ $.Values.global.modulesImages.tags.prometheus.grafanaDashboardProvisioner }}
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 100m
+      - name: nginx-firewall
+        image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana-nginx-firewall:{{ $.Values.global.modulesImages.tags.prometheus.grafanaNginxFirewall }}
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 100m
       - name: ca-auth-proxy
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:
         - "--listen=443"
         - "--location=/"
-        - "--proxy-pass=http://127.0.0.1:3000/"
+        - "--proxy-pass=http://127.0.0.1:3080/"
         - "--user=nginx-ingress:.*"
         - "--probe-proxy-pass=http://127.0.0.1:3000/api/health"
         - "--probe-listen=3500"
@@ -118,16 +124,9 @@ spec:
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
-      - name: grafana-dashboards
+      - name: grafana-dashboards-list-custom
         configMap:
-          name: grafana-dashboards
-{{- define "dashboard_definition_volume" }}
-{{- $folder := index . 1 }}
-      - name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
-        configMap:
-          name: grafana-dashboard-definitions-{{ $folder | replace "/" "-" }}
-{{- end }}
-{{- tuple . "dashboard_definition_volume" | include "for_each_dashboard_folder" }}
+          name: grafana-dashboards-list-custom
       - name: grafana-dashboard-definitions-custom
         configMap:
           name: grafana-dashboard-definitions-custom

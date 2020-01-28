@@ -72,7 +72,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 
 		It("Should create a ClusterRoleBinding for each additionalRole", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:cluster-write-all")
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:additional-role:cluster-write-all")
 			Expect(crb.Exists()).To(BeTrue())
 
 			Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-write-all"))

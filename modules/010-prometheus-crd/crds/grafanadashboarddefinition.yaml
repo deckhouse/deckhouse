@@ -1,0 +1,43 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanadashboarddefinitions.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: grafana
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: grafanadashboarddefinitions
+    singular: grafanadashboarddefinition
+    kind: GrafanaDashboardDefinition
+  version: v1alpha1
+  additionalPrinterColumns:
+  - JSONPath: .spec.folder
+    name: Folder
+    description: 'Folder in Grafana.'
+    type: string
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'GrafanaDashboardDefinition is an interface for describing grafana dashboards.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - folder
+          - definition
+          properties:
+            folder:
+              type: string
+              description: |
+                Which folder will the dashboard end up in.
+              example: 'My Folder'
+            definition:
+              type: string
+              description: |
+                JSON-specs of the dashboard.
