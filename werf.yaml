@@ -153,6 +153,10 @@ docker:
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
 
 ---
+artifact: kcov
+from: flant/kcov-alpine:v0.4
+
+---
 image: tests
 from: golang:1.13-alpine3.10
 git:
@@ -173,6 +177,10 @@ import:
   add: /libjq
   to: /libjq
   before: setup
+- artifact: kcov
+  add: /usr/bin/kcov
+  to: /usr/bin/kcov
+  before: setup
 ansible:
   beforeInstall:
 {{ include "deckhouse_dependencies" . | indent 2 }}
@@ -181,11 +189,23 @@ ansible:
       - vim
       - git
       - build-base
+      - libstdc++
+      - libgcc
+      - curl
+      - bash
+      - libcurl
+  - apk:
+      name:
+      - binutils
+      - binutils-dev
+      - elfutils-dev
+      repository: http://nl.alpinelinux.org/alpine/edge/main/
   - command: go get github.com/onsi/ginkgo/ginkgo
   install:
   - command: go mod download
     args:
       chdir: /deckhouse/testing
+  - command: adduser -u 500 -D -H -s /bin/bash kcov-runner
 
 docker:
   ENV:
