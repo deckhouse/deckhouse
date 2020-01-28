@@ -1,10 +1,12 @@
 package sandbox_runner
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/onsi/ginkgo"
@@ -38,8 +40,6 @@ func Run(cmd *exec.Cmd, opts ...SandboxOption) *gexec.Session {
 
 	session.Wait(30 * time.Second)
 
-	Expect(os.RemoveAll(cmd.Dir)).Should(Succeed())
-
 	return session
 }
 
@@ -70,5 +70,31 @@ func WithEnvSetToFilePath(envName string) EnvOption {
 func WithSourceDirectory(fromPath string, toPath string) SandboxOption {
 	return func(conf sandboxConfig) error {
 		return copy.Copy(fromPath, toPath)
+	}
+}
+
+func WithKcovWrapper(tmpDir string) SandboxOption {
+	return func(conf sandboxConfig) error {
+		kcovPath, err := exec.LookPath("kcov")
+		if err != nil {
+			return fmt.Errorf("cannot find kcov binary: %w", err)
+		}
+
+		// TODO: do something about path constants
+		newArgs := []string{kcovPath, tmpDir}
+		newArgs = append(newArgs, conf.cmd.Args...)
+
+		conf.cmd.Path = kcovPath
+		conf.cmd.Args = newArgs
+
+		return nil
+	}
+}
+
+func AsUser(uid, gid uint32) SandboxOption {
+	return func(conf sandboxConfig) error {
+		conf.cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uid, Gid: gid}}
+
+		return nil
 	}
 }

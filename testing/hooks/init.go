@@ -3,10 +3,12 @@ package hooks
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -17,7 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	jsonpatch "gopkg.in/evanphx/json-patch.v4"
-	yaml_v3 "gopkg.in/yaml.v3"
+	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
@@ -29,7 +31,13 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
 )
 
-var globalTmpDir string
+var (
+	globalTmpDir string
+)
+
+const (
+	globalKcovDir = "/deckhouse/kcov-report"
+)
 
 func (hec *HookExecutionConfig) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
 	return hec.ObjectStore.KubernetesGlobalResource(kind, name)
@@ -110,11 +118,11 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hookConfig := new(HookExecutionConfig)
-	_, filepath, _, ok := runtime.Caller(1)
+	_, f, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("can't execute runtime.Caller")
 	}
-	hookConfig.HookPath = strings.TrimSuffix(filepath, "_test.go")
+	hookConfig.HookPath = strings.TrimSuffix(f, "_test.go")
 
 	hookConfig.KubeExtraCRDs = []CustomCRD{}
 
@@ -149,7 +157,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	}
 
 	if err := cmd.Run(); err != nil {
-		panic(err)
+		panic(fmt.Errorf("%s\nstdout:\n%s\n\nstderr:\n%s", err, stdout.String(), stderr.String()))
 	}
 
 	var config ShellOperatorHookConfig
@@ -200,7 +208,7 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
 func (hec *HookExecutionConfig) KubeStateToKubeObjects() error {
 	var err error
 	hec.ObjectStore = make(object_store.ObjectStore)
-	dec := yaml_v3.NewDecoder(strings.NewReader(hec.KubeState))
+	dec := yamlv3.NewDecoder(strings.NewReader(hec.KubeState))
 	for {
 		var t interface{}
 		err = dec.Decode(&t)
@@ -242,7 +250,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	err = hec.KubeStateToKubeObjects()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes")
+	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes", "PATH="+os.Getenv("PATH"))
 
 	hookCmd := &exec.Cmd{
 		Path: hec.HookPath,
@@ -254,8 +262,20 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	hec.Session.Wait(10)
-
 	Expect(hec.Session.ExitCode()).To(Equal(0))
+
+	// let's re-run --config again, but this time with kcov wrapper
+	// it is required since kcov quitely eats all the stdout
+	kcovConfigCmd := &exec.Cmd{
+		Path: hec.HookPath,
+		Args: []string{hec.HookPath, "--config"},
+		Dir:  "/deckhouse",
+		Env:  append(os.Environ(), hookEnvs...),
+	}
+	sandbox_runner.Run(kcovConfigCmd,
+		sandbox_runner.WithKcovWrapper(globalKcovDir),
+		sandbox_runner.AsUser(500, 500),
+	)
 
 	out := hec.Session.Out.Contents()
 	By("Parsing config " + string(out))
@@ -296,9 +316,12 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "D8_KUBERNETES_PATCH_SET_FILE="+KubernetesPatchSetFile.Name())
 
+	_ = chmodR(tmpDir, 0777)
+
 	hookCmd = &exec.Cmd{
 		Path: hec.HookPath,
 		Args: []string{hec.HookPath},
+		Dir:  "/deckhouse",
 		Env:  hookEnvs,
 	}
 
@@ -306,6 +329,8 @@ func (hec *HookExecutionConfig) RunHook() {
 		sandbox_runner.WithFile(ValuesFile.Name(), hec.values.JsonRepr),
 		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JsonRepr),
 		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContexts.JSON)),
+		sandbox_runner.WithKcovWrapper(globalKcovDir),
+		sandbox_runner.AsUser(500, 500),
 	)
 
 	valuesJsonPatchBytes, err := ioutil.ReadAll(ValuesJsonPatchFile)
@@ -353,10 +378,26 @@ var _ = BeforeSuite(func() {
 	var err error
 	globalTmpDir, err = ioutil.TempDir("", "")
 	Expect(err).ToNot(HaveOccurred())
+	err = chmodR(globalTmpDir, 0777)
+	Expect(err).ToNot(HaveOccurred())
+	_ = os.Mkdir(globalKcovDir, 0777)
+	_ = chmodR(globalKcovDir, 0777)
+
 })
 
 var _ = AfterSuite(func() {
 	By("Removing temporary directories")
 	Expect(os.RemoveAll(globalTmpDir)).Should(Succeed())
+	_ = chmodR(globalKcovDir, os.FileMode(0777))
 	doneChan <- struct{}{}
 })
+
+func chmodR(path string, mode os.FileMode) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Chmod(name, mode)
+		}
+
+		return err
+	})
+}

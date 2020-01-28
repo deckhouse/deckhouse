@@ -34,3 +34,5 @@
 venv/
 .vscode
 .editorconfig
+
+kcov-report

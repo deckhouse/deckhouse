@@ -26,9 +26,31 @@ Tests:
     - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.0 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local -- bash -c "cd /deckhouse/testing/global-hooks/ && ginkgo -r . && cd /deckhouse/testing/modules/ && ginkgo -r ."
+    - >
+      werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local --
+      bash -c "cd /deckhouse/testing/global-hooks/ && ginkgo -vet off -r . && cd /deckhouse/testing/modules/ && ginkgo -vet off -r ."
+    - cat kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   except:
     - schedules
+  artifacts:
+    when: always
+    paths:
+    - kcov-report
+    expire_in: 10 days
+  tags:
+    - build
+
+pages:
+  stage: deploy
+  dependencies:
+  - Tests
+  script:
+  - mv kcov-report/ public/
+  artifacts:
+    paths:
+    - public
+    expire_in: 1 year
+  when: always
   tags:
     - build
 
