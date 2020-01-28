@@ -4,12 +4,16 @@ import kubernetes
 import copy
 from abc import ABC, abstractmethod
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 
 kubernetes.config.load_incluster_config()
 
 EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX = "threshold.extended-monitoring.flant.com/"
 EXTENDED_MONITORING_ENABLED_ANNOTATION = "extended-monitoring.flant.com/enabled"
 
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
 
 class Annotated(ABC):
     default_thresholds = {}
@@ -226,6 +230,6 @@ class GetHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    server = HTTPServer(('0.0.0.0', 8080), GetHandler)
+    server = ThreadingHTTPServer(('0.0.0.0', 8080), GetHandler)
     print('Starting server...')
     server.serve_forever()
