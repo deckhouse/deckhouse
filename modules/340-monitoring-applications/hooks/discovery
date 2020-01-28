@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: services
+      includeSnapshotsFrom: ["services"]
+      apiVersion: v1
+      kind: Service
+      labelSelector:
+        matchExpressions:
+        - key: prometheus-target
+          operator: Exists
+EOF
+}
+
+function __on_kubernetes::services() {
+  enabledApplications="$(context::jq -r '[.snapshots.services[] | .object.metadata.labels."prometheus-target"] | sort | unique')"
+  values::set monitoringApplications.discovery.enabledApplications "$enabledApplications"
+}
+
+hook::run $@

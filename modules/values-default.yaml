@@ -19,6 +19,7 @@ global:
 ##########################################
 operatorPrometheusCrdEnabled: true
 priorityClassEnabled: true
+prometheusCrdEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 deckhouseEnabled: true
 cloudInstanceManagerEnabled: true
@@ -30,6 +31,7 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 verticalPodAutoscalerEnabled: true
+monitoringApplicationsEnabled: true
 monitoringKubernetesEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
 monitoringNodeProblemDetectorEnabled: true

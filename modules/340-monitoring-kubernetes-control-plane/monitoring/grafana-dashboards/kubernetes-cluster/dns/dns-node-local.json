@@ -16,8 +16,7 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 42,
-  "iteration": 1562945734865,
+  "iteration": 1562945728425,
   "links": [],
   "panels": [
     {
@@ -50,7 +49,7 @@
         "x": 0,
         "y": 1
       },
-      "id": 177,
+      "id": 172,
       "legend": {
         "alignAsTable": true,
         "avg": true,
@@ -85,7 +84,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_panic_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_panic_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -93,7 +92,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_panic_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_panic_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -188,15 +187,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -287,10 +286,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod) / sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) / sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 40
         }
@@ -365,7 +364,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (le)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -446,16 +445,16 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -546,10 +545,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod) / sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) / sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "C",
           "step": 40
         }
@@ -623,7 +622,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (le)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -671,7 +670,7 @@
         "x": 0,
         "y": 28
       },
-      "id": 203,
+      "id": 174,
       "legend": {
         "alignAsTable": true,
         "avg": true,
@@ -706,7 +705,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -714,7 +713,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -790,7 +789,7 @@
       "lines": true,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "null as zero",
+      "nullPointMode": "null",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -801,10 +800,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_cache_hits_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)\n/\n(\nsum(rate(coredns_cache_hits_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod) +\nsum(rate(coredns_cache_misses_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod) \n)",
+          "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node) \n)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 40
         }
@@ -891,10 +890,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(coredns_cache_size{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 40
         }
@@ -950,7 +949,7 @@
       "grid": {},
       "gridPos": {
         "h": 4,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 38
       },
@@ -997,15 +996,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", rcode=~\"$rcode\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", rcode=~\"$rcode\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1063,11 +1062,11 @@
       "grid": {},
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 38
       },
-      "id": 206,
+      "id": 178,
       "legend": {
         "alignAsTable": true,
         "avg": true,
@@ -1091,7 +1090,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1562945734865,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 36,
       "scopedVars": {
         "rcode": {
@@ -1112,130 +1111,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", rcode=~\"$rcode\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{node}}",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", rcode=~\"$rcode\"}[$__interval_rv]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Total",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "$rcode",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "pps",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "editable": true,
-      "error": false,
-      "fill": 1,
-      "grid": {},
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 38
-      },
-      "id": 207,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": true,
-        "min": true,
-        "rightSide": true,
-        "show": false,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": false,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "null as zero",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1562945734865,
-      "repeatPanelId": 36,
-      "scopedVars": {
-        "rcode": {
-          "selected": false,
-          "text": "REFUSED",
-          "value": "REFUSED"
-        }
-      },
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "bars": false,
-          "stack": false
-        }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", rcode=~\"$rcode\"}[$__interval_rv])) by (pod)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "step": 40
-        },
-        {
-          "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", rcode=~\"$rcode\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1324,7 +1208,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\",proto=\"tcp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "TCP",
@@ -1332,7 +1216,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\",proto=\"udp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "UDP",
@@ -1429,13 +1313,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -1444,7 +1323,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_type_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (type)",
+              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -1532,13 +1411,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -1547,7 +1421,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[5m])) by (rcode)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{rcode}}",
@@ -1634,13 +1508,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [
@@ -1655,7 +1524,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (to)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1664,7 +1533,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1751,13 +1620,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [
@@ -1772,7 +1636,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1781,7 +1645,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1844,7 +1708,7 @@
             "x": 0,
             "y": 60
           },
-          "id": 204,
+          "id": 175,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -1868,10 +1732,10 @@
           "renderer": "flot",
           "repeatDirection": "h",
           "scopedVars": {
-            "pod": {
+            "node": {
               "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [
@@ -1886,7 +1750,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (upstream)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -1894,7 +1758,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1980,13 +1844,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -1995,7 +1854,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\",proto=\"tcp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP",
@@ -2003,7 +1862,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\",proto=\"udp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP",
@@ -2079,7 +1938,7 @@
           "lines": true,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "null as zero",
+          "nullPointMode": "null",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -2087,13 +1946,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [],
@@ -2102,10 +1956,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_cache_hits_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))\n)",
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "",
+              "legendFormat": "Hit",
               "refId": "A",
               "step": 40
             }
@@ -2189,13 +2043,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [
@@ -2210,7 +2059,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(max_over_time(coredns_cache_size{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (type)",
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -2218,7 +2067,7 @@
               "step": 40
             },
             {
-              "expr": "sum(max_over_time(coredns_cache_size{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2294,7 +2143,7 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -2302,13 +2151,8 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "seriesOverrides": [
@@ -2323,7 +2167,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (zone)",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (zone)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{zone}}",
@@ -2331,7 +2175,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2410,18 +2254,13 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -2483,18 +2322,13 @@
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-jzhtl",
-              "value": "coredns-69cf6b55b4-jzhtl"
+              "text": "kube-c-1",
+              "value": "kube-c-1"
             }
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -2526,15 +2360,15 @@
           "yBucketSize": null
         }
       ],
-      "repeat": "pod",
+      "repeat": "node",
       "scopedVars": {
-        "pod": {
+        "node": {
           "selected": false,
-          "text": "coredns-69cf6b55b4-jzhtl",
-          "value": "coredns-69cf6b55b4-jzhtl"
+          "text": "kube-c-1",
+          "value": "kube-c-1"
         }
       },
-      "title": "Pod $pod",
+      "title": "Node $node",
       "type": "row"
     },
     {
@@ -2545,7 +2379,7 @@
         "x": 0,
         "y": 46
       },
-      "id": 208,
+      "id": 179,
       "panels": [
         {
           "aliasColors": {},
@@ -2563,7 +2397,7 @@
             "x": 0,
             "y": 46
           },
-          "id": 209,
+          "id": 180,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2585,19 +2419,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 12,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -2606,7 +2435,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_type_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (type)",
+              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -2669,7 +2498,7 @@
             "x": 12,
             "y": 46
           },
-          "id": 210,
+          "id": 181,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2691,19 +2520,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 5,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -2712,7 +2536,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[5m])) by (rcode)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{rcode}}",
@@ -2775,7 +2599,7 @@
             "x": 0,
             "y": 53
           },
-          "id": 211,
+          "id": 182,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2796,19 +2620,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 47,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [
@@ -2823,7 +2642,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (to)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2832,7 +2651,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2895,7 +2714,7 @@
             "x": 12,
             "y": 53
           },
-          "id": 212,
+          "id": 183,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -2916,19 +2735,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 49,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [
@@ -2943,7 +2757,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2952,7 +2766,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3015,7 +2829,7 @@
             "x": 0,
             "y": 60
           },
-          "id": 213,
+          "id": 184,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3038,14 +2852,14 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "h",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 204,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 175,
           "repeatedByRow": true,
           "scopedVars": {
-            "pod": {
+            "node": {
               "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [
@@ -3060,7 +2874,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (upstream)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -3068,7 +2882,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3130,7 +2944,7 @@
             "x": 0,
             "y": 63
           },
-          "id": 214,
+          "id": 185,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3151,19 +2965,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 135,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -3172,7 +2981,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\",proto=\"tcp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP",
@@ -3180,7 +2989,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\",proto=\"udp\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP",
@@ -3242,7 +3051,7 @@
             "x": 0,
             "y": 66
           },
-          "id": 215,
+          "id": 186,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3256,24 +3065,19 @@
           "lines": true,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "null as zero",
+          "nullPointMode": "null",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 80,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [],
@@ -3282,10 +3086,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_cache_hits_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))\n)",
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "",
+              "legendFormat": "Hit",
               "refId": "A",
               "step": 40
             }
@@ -3345,7 +3149,7 @@
             "x": 12,
             "y": 66
           },
-          "id": 216,
+          "id": 187,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3366,19 +3170,14 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 81,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [
@@ -3393,7 +3192,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(max_over_time(coredns_cache_size{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (type)",
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -3401,7 +3200,7 @@
               "step": 40
             },
             {
-              "expr": "sum(max_over_time(coredns_cache_size{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3463,7 +3262,7 @@
             "x": 0,
             "y": 73
           },
-          "id": 217,
+          "id": 188,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3477,24 +3276,19 @@
           "lines": false,
           "linewidth": 2,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null as zero",
           "percentage": false,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 2,
           "repeatedByRow": true,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "seriesOverrides": [
@@ -3509,7 +3303,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (zone)",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (zone)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{zone}}",
@@ -3517,7 +3311,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_request_count_total{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3587,30 +3381,25 @@
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 218,
+          "id": 189,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 18,
           "repeatedByRow": true,
           "reverseYBuckets": false,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -3663,30 +3452,25 @@
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 219,
+          "id": 190,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562945734865,
+          "repeatIteration": 1562945728425,
           "repeatPanelId": 20,
           "repeatedByRow": true,
           "reverseYBuckets": false,
           "scopedVars": {
             "node": {
               "selected": false,
-              "text": "kube-master",
-              "value": "kube-master"
-            },
-            "pod": {
-              "selected": false,
-              "text": "coredns-69cf6b55b4-kf6m7",
-              "value": "coredns-69cf6b55b4-kf6m7"
+              "text": "kube-b-1",
+              "value": "kube-b-1"
             }
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -3719,16 +3503,16 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562945734865,
+      "repeatIteration": 1562945728425,
       "repeatPanelId": 38,
       "scopedVars": {
-        "pod": {
+        "node": {
           "selected": false,
-          "text": "coredns-69cf6b55b4-kf6m7",
-          "value": "coredns-69cf6b55b4-kf6m7"
+          "text": "kube-b-1",
+          "value": "kube-b-1"
         }
       },
-      "title": "Pod $pod",
+      "title": "Node $node",
       "type": "row"
     },
     {
@@ -3739,7 +3523,7 @@
         "x": 0,
         "y": 47
       },
-      "id": 148,
+      "id": 191,
       "panels": [
         {
           "aliasColors": {},
@@ -3755,9 +3539,556 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 46
           },
-          "id": 149,
+          "id": 192,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 12,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_type_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests (by qtype)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 46
+          },
+          "id": 193,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 5,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[5m])) by (rcode)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Responses (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 53
+          },
+          "id": 194,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 47,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (to)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{to}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by upstream)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 53
+          },
+          "id": 195,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 49,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (rcode)",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{rcode}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Forwarded requests count (by rcode)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "Если на данном графике есть данные, то это значит,  что какие-то запросы в CoreDNS завершились паникой и в логах контейнера вы можете увидеть конкретную ошибку",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 60
+          },
+          "id": 196,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatDirection": "h",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 175,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv])) by (upstream)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "CoreDNS Forward Healthcheck Failure Count",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 63
+          },
+          "id": 197,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3778,9 +4109,603 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1560933196142,
-          "repeatPanelId": 113,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 135,
           "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "TCP",
+              "refId": "C",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_rv]))\n/\nsum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "UDP",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "TCP/UDP requests ratio",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "logBase": 1,
+              "max": "1",
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 66
+          },
+          "id": 198,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 80,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))\n)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Hit",
+              "refId": "A",
+              "step": 40
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Cache hit rate",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 66
+          },
+          "id": 199,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 81,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 40
+            },
+            {
+              "expr": "sum(max_over_time(coredns_cache_size{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Cache size",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "short",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 73
+          },
+          "id": 200,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 2,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (zone)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{zone}}",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "expr": "sum(rate(coredns_dns_request_count_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_rv]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Total",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests (by zone)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            },
+            {
+              "format": "pps",
+              "logBase": 1,
+              "max": null,
+              "min": 0,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateMagma",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "datasource": "$ds_prometheus",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 80
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 201,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 18,
+          "repeatedByRow": true,
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Request duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": true
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        },
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateMagma",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 87
+          },
+          "heatmap": {},
+          "hideZeroBuckets": false,
+          "highlightCards": true,
+          "id": 202,
+          "legend": {
+            "show": false
+          },
+          "links": [],
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 20,
+          "repeatedByRow": true,
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "node": {
+              "selected": false,
+              "text": "kube-a-1",
+              "value": "kube-a-1"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_rv])) by (le)",
+              "format": "heatmap",
+              "intervalFactor": 1,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Forward duration",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": null,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": 1562945728425,
+      "repeatPanelId": 38,
+      "scopedVars": {
+        "node": {
+          "selected": false,
+          "text": "kube-a-1",
+          "value": "kube-a-1"
+        }
+      },
+      "title": "Node $node",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 100,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "grid": {},
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 49
+          },
+          "id": 113,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": false,
+            "max": true,
+            "min": true,
+            "show": false,
+            "sort": "avg",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "null as zero",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
           "scopedVars": {
             "upstream": {
               "selected": false,
@@ -3800,7 +4725,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3808,10 +4733,10 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "{{node}}",
               "refId": "A"
             }
           ],
@@ -3868,9 +4793,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 48
+            "y": 49
           },
-          "id": 150,
+          "id": 114,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -3891,9 +4816,6 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1560933196142,
-          "repeatPanelId": 114,
-          "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
               "selected": false,
@@ -3913,7 +4835,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3922,7 +4844,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3985,19 +4907,16 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 55
+            "y": 56
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 151,
+          "id": 115,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1560933196142,
-          "repeatPanelId": 115,
-          "repeatedByRow": true,
           "reverseYBuckets": false,
           "scopedVars": {
             "upstream": {
@@ -4008,7 +4927,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -4054,9 +4973,9 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 62
+            "y": 63
           },
-          "id": 205,
+          "id": 177,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4098,7 +5017,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -4106,7 +5025,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4154,8 +5073,6 @@
         }
       ],
       "repeat": "upstream",
-      "repeatIteration": 1560933196142,
-      "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
           "selected": false,
@@ -4172,9 +5089,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 49
       },
-      "id": 220,
+      "id": 203,
       "panels": [
         {
           "aliasColors": {},
@@ -4190,9 +5107,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 49
           },
-          "id": 221,
+          "id": 204,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4213,8 +5130,8 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 149,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 113,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -4235,7 +5152,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4243,10 +5160,10 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "{{node}}",
               "refId": "A"
             }
           ],
@@ -4303,9 +5220,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 48
+            "y": 49
           },
-          "id": 222,
+          "id": 205,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4326,8 +5243,8 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 150,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 114,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -4348,7 +5265,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -4357,7 +5274,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4420,18 +5337,18 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 55
+            "y": 56
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 223,
+          "id": 206,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 151,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 115,
           "repeatedByRow": true,
           "reverseYBuckets": false,
           "scopedVars": {
@@ -4443,7 +5360,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -4489,9 +5406,9 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 62
+            "y": 63
           },
-          "id": 224,
+          "id": 207,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4514,8 +5431,8 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "h",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 205,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 177,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -4536,7 +5453,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -4544,7 +5461,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4592,8 +5509,8 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562945734865,
-      "repeatPanelId": 148,
+      "repeatIteration": 1562945728425,
+      "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
           "selected": false,
@@ -4610,9 +5527,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 50
       },
-      "id": 225,
+      "id": 208,
       "panels": [
         {
           "aliasColors": {},
@@ -4628,9 +5545,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 49
           },
-          "id": 226,
+          "id": 209,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4651,8 +5568,8 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 149,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 113,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -4673,7 +5590,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4681,10 +5598,10 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "{{node}}",
               "refId": "A"
             }
           ],
@@ -4741,9 +5658,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 48
+            "y": 49
           },
-          "id": 227,
+          "id": 210,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4764,8 +5681,8 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 150,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 114,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -4786,7 +5703,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -4795,7 +5712,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4858,18 +5775,18 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 55
+            "y": 56
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 228,
+          "id": 211,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 151,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 115,
           "repeatedByRow": true,
           "reverseYBuckets": false,
           "scopedVars": {
@@ -4881,7 +5798,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -4927,9 +5844,9 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 62
+            "y": 63
           },
-          "id": 229,
+          "id": 212,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -4952,8 +5869,8 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "h",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 205,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 177,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -4974,7 +5891,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -4982,7 +5899,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5030,8 +5947,8 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562945734865,
-      "repeatPanelId": 148,
+      "repeatIteration": 1562945728425,
+      "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
           "selected": false,
@@ -5048,9 +5965,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 51
       },
-      "id": 230,
+      "id": 213,
       "panels": [
         {
           "aliasColors": {},
@@ -5066,9 +5983,9 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 49
           },
-          "id": 231,
+          "id": 214,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -5089,8 +6006,8 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 149,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 113,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -5111,7 +6028,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5119,10 +6036,10 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_request_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_request_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "{{node}}",
               "refId": "A"
             }
           ],
@@ -5179,9 +6096,9 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 48
+            "y": 49
           },
-          "id": 232,
+          "id": 215,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -5202,8 +6119,8 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 150,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 114,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -5224,7 +6141,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -5233,7 +6150,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_response_rcode_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_response_rcode_count_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5296,18 +6213,18 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 55
+            "y": 56
           },
           "heatmap": {},
           "hideZeroBuckets": false,
           "highlightCards": true,
-          "id": 233,
+          "id": 216,
           "legend": {
             "show": false
           },
           "links": [],
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 151,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 115,
           "repeatedByRow": true,
           "reverseYBuckets": false,
           "scopedVars": {
@@ -5319,7 +6236,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -5365,9 +6282,9 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 62
+            "y": 63
           },
-          "id": 234,
+          "id": 217,
           "legend": {
             "alignAsTable": true,
             "avg": true,
@@ -5390,8 +6307,8 @@
           "points": false,
           "renderer": "flot",
           "repeatDirection": "h",
-          "repeatIteration": 1562945734865,
-          "repeatPanelId": 205,
+          "repeatIteration": 1562945728425,
+          "repeatPanelId": 177,
           "repeatedByRow": true,
           "scopedVars": {
             "upstream": {
@@ -5412,7 +6329,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv])) by (pod)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -5420,7 +6337,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"coredns\", pod=~\"$pod\", to=~\"$upstream\"}[$__interval_rv]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failure_count_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_rv]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5468,8 +6385,8 @@
         }
       ],
       "repeat": null,
-      "repeatIteration": 1562945734865,
-      "repeatPanelId": 148,
+      "repeatIteration": 1562945728425,
+      "repeatPanelId": 100,
       "scopedVars": {
         "upstream": {
           "selected": false,
@@ -5508,17 +6425,19 @@
         "allValue": null,
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
-        "definition": "label_values(up{job=\"coredns\"}, pod)",
+        "definition": "label_values(coredns_build_info, node)",
         "hide": 0,
         "includeAll": true,
-        "label": "Pod",
+        "label": "Node",
         "multi": true,
-        "name": "pod",
+        "name": "node",
         "options": [],
-        "query": "label_values(up{job=\"coredns\"}, pod)",
+        "query": "label_values(coredns_build_info, node)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -5532,6 +6451,7 @@
       {
         "allValue": null,
         "current": {
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -5557,11 +6477,6 @@
             "selected": false,
             "text": "SERVFAIL",
             "value": "SERVFAIL"
-          },
-          {
-            "selected": false,
-            "text": "REFUSED",
-            "value": "REFUSED"
           }
         ],
         "query": "label_values(coredns_dns_response_rcode_count_total{rcode!=\"NOERROR\"}, rcode)",
@@ -5633,7 +6548,7 @@
     ]
   },
   "timezone": "",
-  "title": "DNS (coredns)",
-  "uid": "KsgnV_7Zz",
-  "version": 4
+  "title": "DNS (node local)",
+  "uid": "HrJTjvuiz",
+  "version": 3
 }

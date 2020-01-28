@@ -3,35 +3,28 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  yq r -j - << EOF
+  cat << EOF
     configVersion: v1
-    beforeHelm: 10
     kubernetes:
     - name: ccr
+      includeSnapshotsFrom: ["ccr"]
       kind: ClusterRole
       apiVersion: 'rbac.authorization.k8s.io/v1'
       jqFilter: |
         select(
           .metadata.annotations."user-authz.deckhouse.io/access-level" == ("User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin")
-        ) |
-        {
-          "name": .metadata.name,
-          "accessLevel": (
-            .metadata.annotations."user-authz.deckhouse.io/access-level" as \$accessLevel | (\$accessLevel[0:1] | ascii_downcase) + \$accessLevel[1:]
-          )
-        }
+        ) | .metadata.annotations."user-authz.deckhouse.io/access-level" as \$accessLevel | ((\$accessLevel[0:1] | ascii_downcase) + \$accessLevel[1:])
     - name: car
+      includeSnapshotsFrom: ["car"]
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterAuthorizationRule
-      jqFilter: '{"name": .metadata.name, "spec": .spec}'
 EOF
 }
 
-function __on_before_helm() {
-  customClusterRolesStore="$(values::get userAuthz.internal.customClusterRolesStore)"
-  customClusterRoles=$(jq -c '.
-    | reduce .[] as $i
-    ({"user": [], "privilegedUser":[], "editor": [], "admin": [], "clusterEditor": [], "clusterAdmin": []}; .[$i.accessLevel] += [$i.name])
+function __on_kubernetes::ccr() {
+  customClusterRoles="$(
+    context::jq -r '[.snapshots.ccr[] | select(.filterResult != null)] | reduce .[] as $i
+    ({"user": [], "privilegedUser":[], "editor": [], "admin": [], "clusterEditor": [], "clusterAdmin": []}; .[$i.filterResult] += [$i.object.metadata.name])
     | {
       user:           (.user | unique),
       privilegedUser: (.user + .privilegedUser | unique),
@@ -39,11 +32,12 @@ function __on_before_helm() {
       admin:          (.user + .privilegedUser + .editor + .admin | unique),
       clusterEditor:  (.user + .privilegedUser + .editor + .clusterEditor | unique),
       clusterAdmin:   (.user + .privilegedUser + .editor + .admin + .clusterEditor + .clusterAdmin | unique)
-    }' <<< "${customClusterRolesStore}")
-
+    }')"
   values::set userAuthz.internal.customClusterRoles "${customClusterRoles}"
 }
 
-source <(hook::generate::store_handlers ccr userAuthz.internal.customClusterRolesStore name)
-source <(hook::generate::store_handlers car userAuthz.internal.crds name)
+function __on_kubernetes::car() {
+  values::set userAuthz.internal.crds "$(context::jq -r '[.snapshots.car[] | {"name": .object.metadata.name, "spec": .object.spec}]')"
+}
+
 hook::run "$@"

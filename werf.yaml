@@ -94,6 +94,7 @@ git:
   includePaths:
   - modules
   - global-hooks
+  - shell-operator/frameworks/shell
   - shell_lib.sh
   - shell_lib_legacy.sh
   - shell_lib
