@@ -5,7 +5,7 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: user-authz:{{ $crd.name }}:{{ $additional_role.name }}
+  name: user-authz:{{ $crd.name }}:additional-role:{{ $additional_role.name }}
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 roleRef:
 {{ $additional_role | toYaml | indent 2 }}
