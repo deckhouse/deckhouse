@@ -7,3 +7,4 @@ User Stories
 5. Enabling of publishAPI option leads to the creation of Ingress object for apiserver connection with desired ingress-shim annotation
 6. Switching on Control Plane Configurator for the module should add special Configmap to the cluster and generate necessary values
 7. Specifying KubeconfigGenerator in module settings adds parameters to KubeconfigGenerator Configmap
+8. Deploy of DexClient CRD must register oauth2 client entry to Dex.

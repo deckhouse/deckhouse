@@ -1,0 +1,25 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.userAuthn.internal.dexClientCRDs }}
+---
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: {{ $crd.encodedID }}
+  namespace: d8-{{ $context.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | indent 2 }}
+id: {{ $crd.id }}
+name: {{ $crd.id }}
+secret: {{ $crd.clientSecret }}
+  {{ if $crd.spec.trustedPeers }}
+trustedPeers:
+{{ $crd.spec.trustedPeers | toYaml }}
+  {{- end }}
+  {{ if $crd.spec.redirectURIs }}
+redirectURIs:
+{{ $crd.spec.redirectURIs | toYaml }}
+  {{- end }}
+  {{ if $crd.spec.allowedGroups }}
+allowedGroups:
+{{ $crd.spec.allowedGroups | toYaml }}
+  {{- end }}
+{{- end }}

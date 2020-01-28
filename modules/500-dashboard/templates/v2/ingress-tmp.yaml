@@ -12,10 +12,10 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication }}
-    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.dashboard.externalAuthentication.authSignInURL | quote }}
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.dashboard.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: "https://dashboard-tmp-dex-authenticator.d8-dashboard.svc.{{ .Values.global.discovery.clusterDomain }}/dex-authenticator/auth"
- {{- if .Values.dashboard.externalAuthentication.useBearerTokens }}
+ {{- if .Values.dashboard.auth.externalAuthentication.useBearerTokens }}
     nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
  {{- end }}
     nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
@@ -28,6 +28,9 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+{{- end }}
+{{- if .Values.dashboard.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.dashboard.auth.whitelistSourceRanges | join "," }}
 {{- end }}
   name: dashboard-tmp
   namespace: d8-{{ .Chart.Name }}

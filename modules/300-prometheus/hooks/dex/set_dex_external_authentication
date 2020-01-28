@@ -3,25 +3,25 @@
 source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
-  jo -p beforeHelm=10
+  jo -p beforeHelm=9
 }
 
 function __main__() {
   if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined prometheus.https.mode global.modules.https.mode) != "Disabled" ]]; then
-    if ! values::has --config prometheus.externalAuthentication ; then
-      values::set prometheus.externalAuthentication '{}'
-      values::set prometheus.externalAuthentication.authURL "https://grafana-dex-authenticator.d8-monitoring.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
-      values::set prometheus.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
+    if ! values::has --config prometheus.auth.externalAuthentication ; then
+      values::set prometheus.auth.externalAuthentication '{}'
+      values::set prometheus.auth.externalAuthentication.authURL "https://grafana-dex-authenticator.d8-monitoring.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
+      values::set prometheus.auth.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
       values::set prometheus.internal.deployDexAuthenticator "true"
     else
       values::unset prometheus.internal.deployDexAuthenticator
-      values::set prometheus.externalAuthentication "$(values::get --config prometheus.externalAuthentication)"
+      values::set prometheus.auth.externalAuthentication "$(values::get --config prometheus.externalAuthentication)"
     fi
   else
-    if ! values::has --config prometheus.externalAuthentication ; then
-      values::unset prometheus.externalAuthentication
+    if ! values::has --config prometheus.auth.externalAuthentication ; then
+      values::unset prometheus.auth.externalAuthentication
     else
-      values::set prometheus.externalAuthentication "$(values::get --config prometheus.externalAuthentication)"
+      values::set prometheus.auth.externalAuthentication "$(values::get --config prometheus.auth.externalAuthentication)"
     fi
     values::unset prometheus.internal.deployDexAuthenticator
   fi

@@ -47,16 +47,22 @@ search: prometheus
     * Если не указано — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
 * `longtermStorageClass` — имя storageClass'а, который использовать для Longterm Prometheus.
     * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
-* `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
-    * Используется если не включен модуль `user-authn`.
-* `allowedUserGroups` — массив групп, пользователям которых позволен доступ в grafana и prometheus. 
-    * Используется если включен модуль `user-authn`.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
   * По-умолчанию `1095`.
   * Работает совместно с параметром `longtermRetentionGigabytes`.
 * `longtermRetentionGigabytes` — сколько гигабайт хранить.
     * По-умолчанию `30` гигабайт.
     * Работает совместно с параметром `longtermRetentionDays`.
+* `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
+    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+    * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+         * Используется если не включен параметр `externalAuthentication`.
+    * `allowedUserGroups` — массив групп, пользователям которых позволен доступ в grafana и prometheus. 
+         * Используется если включен параметр `externalAuthentication` и модуль `user-authn`.
+    * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить авторизацию в grafana и prometheus.
+    * `satisfyAny` — разрешает пройти только одну из аутентификаций. В комбинации с опцией whitelistSourceRanges позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
 * `grafana` - настройки для инсталяции Grafana.
     * `storageClass` — имя storageClass'а, который использовать для Grafana.
        * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
@@ -83,9 +89,6 @@ search: prometheus
     * `customCertificate`
       * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для grafana/prometheus (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
-* `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
-     * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
-     * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
 * `vpa`
     * `maxCPU` — максимальная граница CPU requests, выставляемая VPA контроллером для pod'ов основного Prometheus.
         * Значение по-умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее [см. хук](hooks/detect_vpa_max).

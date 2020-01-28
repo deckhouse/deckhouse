@@ -17,13 +17,22 @@
 * `version` — версия дашборды.
     * Возможные значения — "1" или "2".
     * По-умолчанию "2".
-* `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
-    * Используется если не включена внешняя аутентификация `externalAuthentication`.
 * `ingressClass` — класс ingress контроллера, который используется для dashboard.
     * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
 * `accessLevel` — уровень доступа в dashboard при отсутсвии внешней аутентификации `externalAuthentication`. Возможные значения описаны в [user-authz](../140-user-authz/README.md).
-  * По-умолчанию: `User`.
-* `allowScale` — если указать данный параметр в `true`, то в Kubernetes Dashboard появится возможность скейлить deployment и statefulset.
+    * По-умолчанию: `User`.
+* `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
+    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+         * `useBearerTokens` – dashboard должен работать с Kubernetes API от имени пользователя (сервис аутентификации при этом должен обязательно возвращать в своих ответах HTTP-заголовок Authorization, в котором должен быть bearer-token – именно под этим токеном dashboard будет производить запросы к API-серверу Kubernetes).
+             * Значение по-умолчанию: `false`.
+             * Важно! Из соображений безопасности этот режим работает только если https.mode (глобальный, или в модуле) не установлен в значение Disabled.
+    * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+         * Используется если не включен параметр `externalAuthentication`.
+    * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить аутентификацию для доступа в dashboard.
+    * `allowScale` — если указать данный параметр в `true`, то в Kubernetes Dashboard появится возможность скейлить deployment и statefulset.
+         * Используется если не включен параметр `externalAuthentication`.
 * `https` — выбираем, какой типа сертификата использовать для dashboard.
     * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     * `mode` — режим работы HTTPS:
@@ -43,12 +52,6 @@
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-* `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
-     * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
-     * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-     * `useBearerTokens` – dashboard должен работать с Kubernetes API от имени пользователя (сервис аутентификации при этом должен обязательно возвращать в своих ответах HTTP-заголовок Authorization, в котором должен быть bearer-token – именно под этим токеном dashboard будет производить запросы к API-серверу Kubernetes).
-         * Значение по-умолчанию: `false`.
-         * Важно! Из соображений безопасности этот режим работает только если https.mode (глобальный, или в модуле) не установлен в значение Disabled.
 ### Пример конфига
 ```yaml
 dashboard: |

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+   configVersion: v1
+   kubernetes:
+   - name: client
+     apiVersion: deckhouse.io/v1alpha1
+     kind: DexClient
+     includeSnapshotsFrom:
+     - client
+     - credentials
+     jqFilter: |
+       {
+         "id": "dex-client-\(.metadata.name):\(.metadata.namespace)",
+         "name": .metadata.name,
+         "namespace": .metadata.namespace,
+         "spec": .spec
+       }
+   - name: credentials
+     apiVersion: v1
+     kind: Secret
+     includeSnapshotsFrom:
+     - client
+     - credentials
+     labelSelector:
+       matchLabels:
+         app: dex-client
+         name: credentials
+     jqFilter: |
+       {
+         "id": "\(.metadata.name):\(.metadata.namespace)",
+         "name": .metadata.name,
+         "namespace": .metadata.namespace,
+         "clientSecret": "\(.data.clientSecret | @base64d )"
+       }
+EOF
+}
+
+
+function __main__() {
+  credentialsFromSnapshots=$(context::jq -rc '[(.snapshots.credentials // []) | .[].filterResult'])
+
+  crds=$(context::jq -rc '.snapshots.client | .[].filterResult' | while read crd ; do
+    id=$(jq -rc  '.id' <<< ${crd})
+    encodedID=$(deckhouse-controller helper fnv encode "$id")
+
+    clientSecret=$(jq -rc ".[] | select(.id == \"$id\") | .clientSecret" <<< ${credentialsFromSnapshots})
+    if [[ "$clientSecret" == "" ]]; then
+      clientSecret=$(tools::generate_password)
+    fi
+
+    jq -rc " .encodedID |= \"$encodedID\" | .clientSecret |= \"$clientSecret\"" <<< ${crd}
+  done | jq -s '.')
+
+  values::set userAuthn.internal.dexClientCRDs "$crds"
+}
+
+hook::run "$@"

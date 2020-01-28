@@ -3,6 +3,7 @@ prometheus:
   retentionGigabytes: 30
   longtermRetentionDays: 1095
   longtermRetentionGigabytes: 30
+  auth: {}
   vpa:
     updateMode: Initial
   internal:

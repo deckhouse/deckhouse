@@ -9,13 +9,15 @@ function __config__() {
    - name: user
      apiVersion: deckhouse.io/v1alpha1
      kind: User
+     includeSnapshotsFrom:
+     - user
      jqFilter: '.spec.userID = (.spec.userID // .metadata.name) | {"name": .metadata.name, "spec": .spec }'
 EOF
 }
 
 
-function __on_kubernetes::user::synchronization() {
-  crds=$(context::jq -rc '.objects[].filterResult' | while read userCRD ; do
+function __main__() {
+  crds=$(context::jq -rc '.snapshots.user | .[].filterResult' | while read userCRD ; do
     email=$(jq -rc '.spec.email' <<< ${userCRD})
     encodedName=$(deckhouse-controller helper fnv encode "$email")
     jq -rc " .encodedName |= \"$encodedName\"" <<< ${userCRD}
@@ -23,41 +25,5 @@ function __on_kubernetes::user::synchronization() {
 
   values::set userAuthn.internal.dexUsersCRDs "$crds"
 }
-
-function __on_kubernetes::user::added() {
-  crds=$(values::get userAuthn.internal.dexUsersCRDs)
-
-  name=$(context::get filterResult.name)
-  email=$(context::get filterResult.spec.email)
-
-  encodedName=$(deckhouse-controller helper fnv encode "$email")
-  crd=$(jq -rc " .encodedName |= \"$encodedName\"" <<< $(context::get filterResult))
-
-  crds=$(jq -rc ". += [$crd]" <<< ${crds})
-  values::set userAuthn.internal.dexUsersCRDs "$crds"
-}
-
-function __on_kubernetes::user::modified() {
-  crds=$(values::get userAuthn.internal.dexUsersCRDs)
-
-  name=$(context::get filterResult.name)
-  email=$(context::get filterResult.spec.email)
-
-  encodedName=$(deckhouse-controller helper fnv encode "$email")
-  crd=$(jq -rc " .encodedName |= \"$encodedName\"" <<< $(context::get filterResult))
-
-  crds=$(jq -rc "[ .[] | (select(.name == \"$name\") | . ) |= $crd]" <<< ${crds})
-  values::set userAuthn.internal.dexUsersCRDs "$crds"
-}
-
-function __on_kubernetes::user::deleted() {
-  crds=$(values::get userAuthn.internal.dexUsersCRDs)
-
-  name=$(context::get filterResult.name)
-  crds=$(jq -rc "[ .[] | select(.name != \"$name\") ]" <<< ${crds})
-
-  values::set userAuthn.internal.dexUsersCRDs "$crds"
-}
-
 
 hook::run "$@"

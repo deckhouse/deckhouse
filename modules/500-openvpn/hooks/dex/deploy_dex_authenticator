@@ -9,8 +9,8 @@ function __config__() {
 function __main__() {
   if values::has openvpn.internal.deployDexAuthenticator ; then
     allowedGroups=""
-    if values::has openvpn.allowedUserGroups ; then
-      allowedGroups="allowedGroups: $(values::get openvpn.allowedUserGroups)"
+    if values::has openvpn.auth.allowedUserGroups ; then
+      allowedGroups="allowedGroups: $(values::get openvpn.auth.allowedUserGroups)"
     fi
     cat <<EOF | kubectl apply -f -
 apiVersion: deckhouse.io/v1alpha1

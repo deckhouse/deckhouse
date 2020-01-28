@@ -168,6 +168,18 @@ spec:
   applicationDomain: test
   sendAuthorizationHeader: false
   applicationIngressClassName: "nginx"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-authenticator-test-2
+  namespace: d8-monitoring
+  labels:
+    app: dex-authenticator
+    name: credentials
+data:
+  client-secret: dGVzdA==
+  cookie-secret: dGVzdE5leHQ=
 `))
 			f.RunHook()
 		})

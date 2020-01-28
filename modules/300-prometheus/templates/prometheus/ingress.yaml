@@ -16,6 +16,12 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
 {{- end }}
+{{- if .Values.prometheus.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+{{- end }}
+{{- if .Values.prometheus.auth.satisfyAny }}
+    nginx.ingress.kubernetes.io/satisfy: "any"
+{{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;

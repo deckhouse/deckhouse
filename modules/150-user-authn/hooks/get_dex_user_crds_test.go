@@ -43,21 +43,16 @@ spec:
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 				Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchJSON(`
-[
-  {
+[{
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "groups": [
-        "Admins",
-        "Everyone"
-      ],
+      "groups": ["Admins", "Everyone"],
       "password": "password",
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf"
-  }
-]`))
+}]`))
 			})
 
 			Context("With deleting User object", func() {
@@ -96,13 +91,10 @@ spec:
 [{
   "name": "admin",
   "spec": {
-	"email": "adminNext@example.com",
-	"groups": [
-	  "Admins",
-	  "Everyone"
-	],
-	"password": "password",
-	"userID": "admin"
+    "email": "adminNext@example.com",
+    "groups": ["Admins", "Everyone"],
+    "password": "password",
+    "userID": "admin"
   },
   "encodedName": "mfsg22lojzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji"
 }]`))
