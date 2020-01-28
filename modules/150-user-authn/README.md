@@ -105,6 +105,8 @@ data:
 * `publishAPI` — настройки публикации API-сервера, чeрез ingress:
   * `enable` — если выставить данный параметр в `true`, то в кластере будет создан ingress в namespace d8-user-authn, который выставляет Kubernetes API наружу.
     * По-умолчанию: `false`.
+  * `whitelistSourceRanges` — массив CIDR, которым разрешено подключение к API.
+    * Если параметр не указан, подключение к API не ограничивается по IP.
   * `https` — режим работы https для ingress'а API-сервера:
     * `mode` — режим выдачи сертификатов для данного ingress ресурса. Возможные значения `SelfSigned` и `Global`. В случае использования режима `SelfSigned` для ingress ресурса будет выпущен самоподписанный сертификат. В случае использования `Global` будут применены политики из глобальной настроки `global.modules.https.mode`. Т.е. если в глобальной настройке стоит режим `CertManager` с clusterissuer `letsnecrypt`, то для ingress ресурса будет заказан сертификат Lets Encrypt.
       * По-умолчанию: `SelfSigned`
@@ -206,12 +208,15 @@ data:
 * `applicationDomain` — внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
     * Формат — строка с адресом (пример: `my-app.kube.my-domain.com`, обязательно НЕ указывать HTTP схему.
 * `sendAuthorizationHeader` — флаг, который отвечает за отправку конечному приложению header'а `Authorization: Bearer`.
-     Включать только если ваше приложение умеет этот header обрабатывать.
+     * Включать только если ваше приложение умеет этот header обрабатывать.
 * `keepUsersLoggedInFor` — отвечает за то, как долго пользовательская сессия будет считаться активной, если пользователь бездействует (указывается с суффиксом s, m или h).
     * По-умолчанию — 7 дней (`168h`).
 * `applicationIngressCertificateSecretName` — имя secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress объекте вашего приложения. Secret должен обязательно находится в том же неймспейсе, что и DexAuthenticator.
 * `applicationIngressClassName` — имя Ingress класса, который будет использоватья в ingress-объекте (должно совпадать с именем ingress класса для `applicationDomain`).
-* `allowedGroups` — группы, пользователям которых разрешено проходить аутентификацию. Дополнительно, опция помогает ограничить список групп до тех, которые несут для приложения полезную информацию (для примера у пользователя 50+ групп, но приложению grafana мы хотим передать только определенные 5).
+* `allowedGroups` — группы, пользователям которых разрешено проходить аутентификацию. Дополнительно, опция помогает ограничить список групп до тех, которые несут для приложения полезную информацию (для примера у пользователя 50+ групп, но приложению grafana мы хотим передать только определенные 5). 
+    * По умолчанию разрешены все группы.
+* `whitelistSourceRanges` — список CIDR, которым разрешено проходить аутентификацию. 
+    * Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
 
 #### Пример:
 ```yaml
@@ -229,6 +234,9 @@ spec:
   allowedGroups:
   - everyone
   - admins
+  whitelistSourceRanges:
+  - 1.1.1.1
+  - 192.168.0.0/24
 ```
 
 После появления `DexAuthenticator` в кластере, в указанном namespace'е появятся необходимые deployment, service, ingress, secret.
@@ -242,6 +250,20 @@ annotations:
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
+
+##### Настройки ограничений на основе CIDR
+
+В DexAuthenticator нет встроенной управления разрешением аутентификации на основе IP адреса пользователя. Вместо этого вы можете воспользоваться аннотациями для ingress:
+
+* Если нужно ограничить доступ по IP и оставить прохождение аутентификации в Dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
+```yaml
+nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
+```
+* Если вы хотите, чтобы пользователи из указанных сетей были освобождены от прохождения аутентификации в Dex, а пользователи из остальных сетей были обязаны аутентифицироваться в Dex - добавьте следующу аннотацию:
+```yaml
+nginx.ingress.kubernetes.io/satisfy: "any"
+```
+
 ### Настройка статических пользователей для Dex
 
 Dex может работать без подключения провайдеров. Эта возможность реализована при помощи заведения статических пользователей (users).
@@ -267,9 +289,51 @@ spec:
   - admins
 ```
 
+### Настройка OAuth2 клиента в Dex для подключения приложения
+
+Данный вариант настройки подходит приложением, которые имеют возможность использовать oauth2 аутентификацию самостоятельно без помощи oauth2-proxy.
+Чтобы позволить подобным приложениям взаимодействовать с dex, вводится новый примитив - `DexClient`.
+
+#### Параметры:
+* `redirectURIs` — список адресов, на которые допустимо редиректить dex'у после успешного прохождения аутентификации.
+* `trustedPeers` — id клиентов, которым позволена cross аутентификация. [Подробнее тут](https://developers.google.com/identity/protocols/CrossClientAuth).
+* `allowedGroups` — список групп, участникам которых разрешено подключаться к этому клиенту;
+    * По умолчанию разрешено всем группам.
+#### Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DexClient
+metadata:
+  name: myname
+  namespace: mynamespace
+spec:
+  redirectURIs:
+  - https://app.example.com/callback
+  - https://app.example.com/callback-reserve
+  allowedGroups:
+  - Everyone
+  - admins
+  trustedPeers:
+  - opendistro-sibling 
+```
+
+После выкладывания описанного выше ресурса в Dex'е будет зарегистрирован клиент с идентификатором (clientID) - `dex-client-myname:mynamespace`
+
+Пароль для доступа к клиенту (clientSecret) будет сохранен в секрете:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-client-myname
+  namespace: mynamespace
+type: Opaque
+data:
+  clientSecret: c2VjcmV0
+```
+
 ### Настройка kube-apiserver
 
-Для применения dex-аутентификатора в вашем клестере необходимо сообщить о нём kube-apiserver-у, настроив mainfest. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+Для работы dashboard и kubeconfig-generator в вашем кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
 
 <details>
   <summary>Аргументы kube-apiserver, которые будут настроены</summary>

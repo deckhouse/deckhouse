@@ -63,7 +63,7 @@ spec:
         - --insecure-bind-address=127.0.0.1
         - --logtostderr
         - --namespace=d8-{{ .Chart.Name }}
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication  }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
         - --auto-generate-certificates
         - --bind-address=0.0.0.0
     {{- else }}
@@ -74,14 +74,14 @@ spec:
           timeoutSeconds: 30
           httpGet:
             path: /
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
             port: 8443
             scheme: HTTPS
     {{- else }}
             port: 3500
     {{- end }}
         ports:
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.externalAuthentication }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443
     {{- end }}
         volumeMounts:
@@ -92,7 +92,7 @@ spec:
           readOnlyRootFilesystem: true
           runAsUser: 1001
           runAsGroup: 2001
-    {{- if or (not .Values.dashboard.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+    {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: ca-auth-proxy
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
         args:

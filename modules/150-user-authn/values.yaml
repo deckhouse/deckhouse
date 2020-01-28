@@ -1,6 +1,9 @@
 userAuthn:
   internal:
     controlPlaneConfigurator: {}
+    dexClientCRDs: []
+    dexUsersCRDs: []
+    dexAuthenticatorCRDs: []
   publishAPI:
     enable: false
     https:

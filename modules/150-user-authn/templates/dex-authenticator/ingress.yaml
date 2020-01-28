@@ -10,6 +10,9 @@ metadata:
   {{- if $crd.spec.sendAuthorizationHeader }}
     nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
   {{- end }}
+  {{- if $crd.spec.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ $crd.spec.whitelistSourceRanges | join "," }}
+  {{- end }}
   name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}

@@ -60,6 +60,10 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
     clientID: clientID
     clientSecret: secret
     baseURL: https://example.com`)
+			hec.ValuesSetFromYaml("userAuthn.publishAPI.whitelistSourceRanges", `
+- 1.1.1.1
+- 192.168.0.0/24
+`)
 			hec.HelmRender()
 		})
 		It("Should deploy basic auth proxy deployment and ingress", func() {
@@ -70,6 +74,9 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(
 				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\n"))
+			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
+				Equal("1.1.1.1,192.168.0.0/24"))
 		})
 	})
 })

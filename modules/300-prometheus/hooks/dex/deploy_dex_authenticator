@@ -9,8 +9,8 @@ function __config__() {
 function __main__() {
   if values::has prometheus.internal.deployDexAuthenticator ; then
     allowedGroups=""
-    if values::has prometheus.allowedUserGroups ; then
-      allowedGroups="allowedGroups: $(values::get prometheus.allowedUserGroups)"
+    if values::has prometheus.auth.allowedUserGroups ; then
+      allowedGroups="allowedGroups: $(values::get prometheus.auth.allowedUserGroups)"
     fi
     cat <<EOF | kubectl apply -f -
 apiVersion: deckhouse.io/v1alpha1

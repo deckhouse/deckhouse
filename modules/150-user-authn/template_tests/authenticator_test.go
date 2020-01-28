@@ -37,6 +37,9 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     applicationIngressClassName: test
     sendAuthorizationHeader: true
     keepUsersLoggedInFor: "1020h"
+    whitelistSourceRanges:
+    - 1.1.1.1
+    - 192.168.0.0/24
     allowedGroups:
     - everyone
     - admins`)
@@ -59,6 +62,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(ingress.Exists()).To(BeTrue())
 			Expect(ingress.Field("metadata.annotations.kubernetes\\.io/ingress\\.class").String()).To(Equal("test"))
 			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").String()).To(Equal("32k"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(Equal("1.1.1.1,192.168.0.0/24"))
+
 			Expect(ingress.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.example.com"]`))
 			Expect(ingress.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 
