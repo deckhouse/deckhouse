@@ -11,6 +11,8 @@ network:
         ${main_interface_name}:
             nameservers:
                 addresses: [{{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers | join ", " }}]
+            dhcp4-overrides:
+              use-dns: false
 END
 
 netplan generate
