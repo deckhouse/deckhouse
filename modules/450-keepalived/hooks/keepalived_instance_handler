@@ -1,56 +1,53 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-  "beforeHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "KeepalivedInstance",
-      "jqFilter": ".spec"
-    },
-    {
-      "kind": "Node",
-      "jqFilter": ".metadata.labels"
-    }
-  ]
-}
+   configVersion: v1
+   kubernetes:
+   - name: k8s_nodes
+     includeSnapshotsFrom: ["keepalived_instances", "k8s_nodes", "secrets"]
+     apiVersion: v1
+     kind: Node
+     jqFilter: '.metadata.labels'
+   - name: secrets
+     includeSnapshotsFrom: ["keepalived_instances", "k8s_nodes", "secrets"]
+     apiVersion: v1
+     kind: Secret
+     namespace:
+       nameSelector:
+         matchNames: ["d8-keepalived"]
+     labelSelector:
+       matchLabels:
+         app: keepalived
+   - name: keepalived_instances
+     includeSnapshotsFrom: ["keepalived_instances", "k8s_nodes", "secrets"]
+     apiVersion: deckhouse.io/v1alpha1
+     kind: KeepalivedInstance
 EOF
 }
 
 function __main__() {
-  instances=$(kubectl get keepalivedinstance.deckhouse.io -o json | jq -c '[.items[] | {(.metadata.name): .spec}] | reduce .[] as $i ({}; . * $i)')
-  values::set keepalived.instances "$instances"
-
-  isVRRPInstancesUnique=$(jq -n -r --argjson a "${instances}" '
-    $a |
-    ([to_entries[] | .value.vrrpInstances[].id] | length)
-    ==
-    ([to_entries[] | .value.vrrpInstances[].id] | unique | length)
-  ')
-
-  if [[ $isVRRPInstancesUnique != "true" ]]; then
+  if context::jq -e '([.snapshots.keepalived_instances[] | .object.spec.vrrpInstances[] | .id] | unique | length) != ([.snapshots.keepalived_instances[] | .object.spec.vrrpInstances[] | .id] | length)'; then
     echo "KeepalivedInstances handler ERROR: All vrrpInstances[].id in all KeepalivedInstances must be unique cluster-wide."
     exit 1
   fi
 
-  nodeSelectors=$(
-    jq -n -r --argjson a "${instances}" '$a | to_entries[] | .key +";"+ ([.value.nodeSelector | to_entries[] | .key+"="+.value] | join(","))'
-  )
-  for i in $nodeSelectors; do
-    IFS=";" read instanceName nodeSelector <<< "$i"
-    replicas=$(kubectl get nodes -l "${nodeSelector}" -o json | jq -r '.items | length')
+  instances="$(context::jq -r '[.snapshots.keepalived_instances[].object | {(.metadata.name): .spec}] | reduce .[] as $i ({}; . * $i)')"
+  values::set keepalived.instances "${instances}"
+
+  for instanceName in $(jq -r '. | keys[]' <<< ${instances}); do
+    nodeSelector=$(jq -r '.'"${instanceName}".'nodeSelector' <<< "$instances")
+    replicas=$(context::jq -r "[.snapshots.k8s_nodes[] | select(.object.metadata.labels | contains(${nodeSelector}))] | length")
     values::set keepalived.instances."${instanceName}".replicas $replicas
   done
 
-  instancesList=$(jq -n -r --argjson a "${instances}" '$a | to_entries[] | .key')
-  for i in $instancesList; do
-    if authPass=$(kubectl -n d8-keepalived get secret "keepalived-instance-secret-${i}" -o jsonpath='{.data.authPass}' | base64 -d); then
-      values::set keepalived.instances."${i}".authPass "${authPass}"
+  for instance in $(jq -nr --argjson a "${instances}" '$a | to_entries[] | .key'); do
+    if authPass=$(context::jq -re ".snapshots.secrets[] | select(.object.metadata.name==\"keepalived-instance-secret-$instance\") | .object.data.authPass" | base64 -d); then
+      values::set keepalived.instances."${instance}".authPass "$authPass"
     else
-      values::set keepalived.instances."${i}".authPass $(values::generate_password | cut -c -8)
+      values::set keepalived.instances."${instance}".authPass $(tools::generate_password | cut -c -8)
     fi
   done
 }
