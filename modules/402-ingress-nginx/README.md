@@ -31,7 +31,7 @@ ingressNginxEnabled: "false"
 **Необязательные параметры:**
 * `controllerVersion` — версия ingress-nginx контроллера;
     * По-умолчанию берется версия из настроек модуля.
-    * Доступные варианты: `0.25`, `0.26`.
+    * Доступные варианты: `"0.25"`, `"0.26"`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
@@ -74,6 +74,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+  controllerVersion: "0.26"
   hsts: true
   config:
     gzip-level: "4"

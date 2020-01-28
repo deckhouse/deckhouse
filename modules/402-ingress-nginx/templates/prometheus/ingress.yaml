@@ -21,6 +21,8 @@ spec:
       replacement: nginx-ingress-controller
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
+    - sourceLabels: [__meta_kubernetes_pod_label_name]
+      targetLabel: controller
     - targetLabel: scrape_source
       replacement: controller
     metricRelabelings:
@@ -40,6 +42,8 @@ spec:
       replacement: nginx-ingress-controller
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
+    - sourceLabels: [__meta_kubernetes_pod_label_name]
+      targetLabel: controller
     - sourceLabels: [__meta_kubernetes_pod_controller_name]
       targetLabel: app
     - targetLabel: scrape_source
