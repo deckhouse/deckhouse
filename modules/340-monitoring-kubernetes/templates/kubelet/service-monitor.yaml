@@ -38,19 +38,29 @@ spec:
     - targetLabel: scrape_endpoint
       replacement: cadvisor
     metricRelabelings:
+    - sourceLabels: [namespace]
+      regex: '^$'
+      action: drop
+{{- if semverCompare ">=1.16" .Values.global.discovery.clusterVersion }}
+    - sourceLabels: [pod]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container]
+      regex: '^$'
+      action: drop
+{{- else }}
     - sourceLabels: [pod_name]
       regex: '^$'
       action: drop
     - sourceLabels: [container_name]
-      regex: '^$'
-      action: drop
-    - sourceLabels: [namespace]
+      separator: ""
       regex: '^$'
       action: drop
     - sourceLabels: [container_name]
       targetLabel: container
     - sourceLabels: [pod_name]
       targetLabel: pod
+{{- end }}
     - regex: container_name|pod_name|id|image|name
       action: labeldrop
   selector:
