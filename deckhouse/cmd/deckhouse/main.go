@@ -9,11 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	shell_operator_app "github.com/flant/shell-operator/pkg/app"
+	sh_app "github.com/flant/shell-operator/pkg/app"
+	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"github.com/flant/shell-operator/pkg/executor"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 
-	addon_operator_app "github.com/flant/addon-operator/pkg/app"
+	ad_app "github.com/flant/addon-operator/pkg/app"
 
 	"flant/deckhouse/pkg/app"
 	"flant/deckhouse/pkg/deckhouse"
@@ -37,15 +38,13 @@ func main() {
 	}
 	// END DELETE THIS AFTER MIGRATION
 
-	shell_operator_app.Version = ShellOperatorVersion
-	addon_operator_app.Version = AddonOperatorVersion
+	sh_app.Version = ShellOperatorVersion
+	ad_app.Version = AddonOperatorVersion
 
 	kpApp := kingpin.New(app.AppName, fmt.Sprintf("%s %s: %s", app.AppName, DeckhouseVersion, app.AppDescription))
 
-	// Add global flags
-	shell_operator_app.LogType = "json"
-	addon_operator_app.SetupGlobalSettings(kpApp)
-	app.SetupGlobalSettings(kpApp)
+	// override usage template to reveal additional commands with information about start command
+	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(app.AppName))
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
@@ -54,10 +53,10 @@ func main() {
 	})
 
 	// start main loop
-	kpApp.Command("start", "Start deckhouse.").
+	startCmd := kpApp.Command("start", "Start deckhouse.").
 		Default().
 		Action(func(c *kingpin.ParseContext) error {
-			shell_operator_app.SetupLogging()
+			sh_app.SetupLogging()
 			log.Infof("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
 
 			// Be a good parent - clean up after the child processes
@@ -67,18 +66,30 @@ func main() {
 			jqDone := make(chan struct{})
 			go JqCallLoop(jqDone)
 
-			err := deckhouse.InitAndStart(deckhouse.DefaultDeckhouse())
+			operator := deckhouse.DefaultDeckhouse()
+			err := deckhouse.InitAndStart(operator)
 			if err != nil {
 				os.Exit(1)
 			}
 
 			// Block action by waiting signals from OS.
-			utils_signal.WaitForProcessInterruption()
+			utils_signal.WaitForProcessInterruption(func() {
+				operator.Stop()
+			})
 
 			return nil
 		})
+	// Set default log type as json
+	sh_app.LogType = "json"
+	ad_app.SetupStartCommandFlags(kpApp, startCmd)
+	app.DefineStartCommandFlags(startCmd)
 
-	helpers.Register(kpApp)
+	// Add debug commands from shell-operator and addon-operator
+	sh_debug.DefineDebugCommands(kpApp)
+	ad_app.DefineDebugCommands(kpApp)
+
+	helpers.DefineHelperCommands(kpApp)
+
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
 	return
 }

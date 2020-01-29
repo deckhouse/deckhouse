@@ -3,14 +3,16 @@ package helpers
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	sh_app "github.com/flant/shell-operator/pkg/app"
+
 	"flant/deckhouse/pkg/helpers/aws"
 	"flant/deckhouse/pkg/helpers/fnv"
 	"flant/deckhouse/pkg/helpers/unit"
 	"flant/deckhouse/pkg/helpers/vsphere"
 )
 
-func Register(kpApp *kingpin.Application) {
-	helpersCommand := kpApp.Command("helper", "Deckhouse helpers.")
+func DefineHelperCommands(kpApp *kingpin.Application) {
+	helpersCommand := sh_app.CommandWithDefaultUsageTemplate(kpApp, "helper", "Deckhouse helpers.")
 
 	fnvCommand := helpersCommand.Command("fnv", "Section for command related tp fnv encoding and decoding.")
 	fnvEncodeCommand := fnvCommand.Command("encode", "Encode input in FNV styled string.")

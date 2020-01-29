@@ -13,7 +13,7 @@ import (
 	"flant/deckhouse/pkg/app"
 	"flant/deckhouse/pkg/docker_registry_watcher"
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
-	shell_operator_app "github.com/flant/shell-operator/pkg/app"
+	sh_app "github.com/flant/shell-operator/pkg/app"
 )
 
 type DeckhouseController struct {
@@ -49,12 +49,13 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	// Metric storage.
 	metricStorage := metrics_storage.NewMetricStorage()
 	metricStorage.WithContext(d.ctx)
+	metricStorage.WithPrefix(sh_app.PrometheusMetricsPrefix)
 	metricStorage.Start()
 
 	// Initialize kube client.
 	kubeClient := kube.NewKubernetesClient()
-	kubeClient.WithContextName(shell_operator_app.KubeContext)
-	kubeClient.WithConfigPath(shell_operator_app.KubeConfig)
+	kubeClient.WithContextName(sh_app.KubeContext)
+	kubeClient.WithConfigPath(sh_app.KubeConfig)
 	err := kubeClient.Init()
 	if err != nil {
 		log.Errorf("MAIN Fatal: initialize kube client: %s\n", err)
@@ -71,7 +72,7 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 		return
 	})
 	registryWatcher.WithErrorCallback(func() {
-		d.MetricStorage.SendCounterMetric("deckhouse_registry_errors", 1.0, map[string]string{})
+		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_errors", 1.0, map[string]string{})
 		nowTime := time.Now()
 		if LastSuccessTime.Add(app.RegistryErrorsMaxTimeBeforeRestart).Before(nowTime) {
 			log.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
