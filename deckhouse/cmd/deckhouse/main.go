@@ -5,7 +5,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	. "github.com/flant/libjq-go"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -63,9 +62,6 @@ func main() {
 			// in case if addon-operator is a PID 1 process.
 			go executor.Reap()
 
-			jqDone := make(chan struct{})
-			go JqCallLoop(jqDone)
-
 			operator := deckhouse.DefaultDeckhouse()
 			err := deckhouse.InitAndStart(operator)
 			if err != nil {
@@ -81,7 +77,7 @@ func main() {
 		})
 	// Set default log type as json
 	sh_app.LogType = "json"
-	ad_app.SetupStartCommandFlags(kpApp, startCmd)
+	ad_app.DefineStartCommandFlags(kpApp, startCmd)
 	app.DefineStartCommandFlags(startCmd)
 
 	// Add debug commands from shell-operator and addon-operator

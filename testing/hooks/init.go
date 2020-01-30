@@ -12,8 +12,6 @@ import (
 	"runtime"
 	"strings"
 
-	. "github.com/flant/libjq-go"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -370,10 +368,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 }
 
-var doneChan = make(chan struct{})
-
 var _ = BeforeSuite(func() {
-	go JqCallLoop(doneChan)
 	By("Init temporary directories")
 	var err error
 	globalTmpDir, err = ioutil.TempDir("", "")
@@ -389,7 +384,6 @@ var _ = AfterSuite(func() {
 	By("Removing temporary directories")
 	Expect(os.RemoveAll(globalTmpDir)).Should(Succeed())
 	_ = chmodR(globalKcovDir, os.FileMode(0777))
-	doneChan <- struct{}{}
 })
 
 func chmodR(path string, mode os.FileMode) error {
