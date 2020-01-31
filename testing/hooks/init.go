@@ -47,8 +47,8 @@ func (hec *HookExecutionConfig) KubernetesResource(kind, namespace, name string)
 
 type ShellOperatorHookConfig struct {
 	ConfigVersion interface{} `json:"configVersion,omitempty"`
-	Schedule      interface{} `json:"kubernetes,omitempty"`
-	Kubernetes    interface{} `json:"schedule,omitempty"`
+	Kubernetes    interface{} `json:"kubernetes,omitempty"`
+	Schedule      interface{} `json:"schedule,omitempty"`
 }
 
 type CustomCRD struct {
@@ -200,6 +200,17 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
 		}
 	}
 	hec.KubeState = newKubeState
+	return contexts
+}
+
+func (hec *HookExecutionConfig) RunSchedule(crontab string) string {
+	if &hec.BindingContextController == nil {
+		return ScheduleBindingContext("Empty Schedule")
+	}
+	contexts, err := hec.BindingContextController.RunSchedule(crontab)
+	if err != nil {
+		panic(err)
+	}
 	return contexts
 }
 
