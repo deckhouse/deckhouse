@@ -11,6 +11,16 @@ function kubernetes::create_yaml() {
 }
 
 # stdin resource_spec
+function kubernetes::create_if_not_exists_json() {
+  cat | jq -c '{op: "CreateIfNotExists", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+}
+
+# stdin resource_spec
+function kubernetes::create_if_not_exists_yaml() {
+  cat | yq r -j - | jq -c '{op: "CreateIfNotExists", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+}
+
+# stdin resource_spec
 function kubernetes::replace_json() {
   cat | jq -c '{op: "Replace", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
@@ -53,7 +63,10 @@ function kubernetes::_apply_patch_set() {
     case "$(jq -r '.op' <<< ${line})" in
     "Create")
       resourceSpec="$(jq -r '.resourceSpec' <<< ${line})"
-      # TODO убрать после того, как хук is_cluster_bootstraped переделают на снепшоты
+      kubectl create -f - <<< "${resourceSpec}" >/dev/null
+    ;;
+    "CreateIfNotExists")
+      resourceSpec="$(jq -r '.resourceSpec' <<< ${line})"
       if ! kubectl get -f - <<< "${resourceSpec}" >/dev/null 2>/dev/null; then
         kubectl create -f - <<< "${resourceSpec}" >/dev/null
       fi

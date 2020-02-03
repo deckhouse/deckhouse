@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: is_bootstraped_cm
+      includeSnapshotsFrom: ["is_bootstraped_cm", "not_master_and_ready_nodes"]
       apiVersion: v1
       kind: ConfigMap
       namespace:
@@ -15,6 +16,7 @@ function __config__() {
       nameSelector:
         matchNames: [d8-cluster-is-bootstraped]
     - name: not_master_and_ready_nodes
+      includeSnapshotsFrom: ["is_bootstraped_cm", "not_master_and_ready_nodes"]
       apiVersion: v1
       kind: Node
       watchEvent: ["Added", "Modified"]
@@ -26,53 +28,37 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::is_bootstraped_cm::synchronization() {
-  if context::has objects.0; then
-    values::set global.clusterIsBootstrapped true
-  fi
+function _create_is_bootstraped_cm() {
+    kubernetes::create_if_not_exists_yaml << EOF
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: d8-cluster-is-bootstraped
+        namespace: kube-system
+EOF
 }
 
-function __on_kubernetes::is_bootstraped_cm::added_or_modified() {
-  values::set global.clusterIsBootstrapped true
+function __main__() {
+  if context::has snapshots.is_bootstraped_cm.0; then
+    values::set global.clusterIsBootstrapped true
+    return 0
+  fi
+
+  if values::is_true global.clusterIsBootstrapped; then
+    _create_is_bootstraped_cm
+    return 0
+  fi
+
+  if context::jq -e '[.snapshots.not_master_and_ready_nodes[] | .filterResult] | any' >/dev/null 2>&1; then
+    values::set global.clusterIsBootstrapped true
+    _create_is_bootstraped_cm
+    return 0
+  fi
 }
 
 function __on_kubernetes::is_bootstraped_cm::deleted() {
   >&2 echo "ERROR: CM kube-system/d8-cluster-is-bootstraped was deleted. Don't know what to do."
   return 1
-}
-
-function __on_kubernetes::not_master_and_ready_nodes::synchronization() {
-  if values::is_true global.clusterIsBootstrapped; then
-    return 0
-  fi
-
-  if context::jq -e '[.objects[] | .filterResult] | any' >/dev/null 2>&1; then
-    values::set global.clusterIsBootstrapped true
-    kubernetes::create_yaml << EOF
-      apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: d8-cluster-is-bootstraped
-        namespace: kube-system
-EOF
-  fi
-}
-
-function __on_kubernetes::not_master_and_ready_nodes::added_or_modified() {
-  if values::is_true global.clusterIsBootstrapped; then
-    return 0
-  fi
-
-  if context::is_true filterResult; then
-    values::set global.clusterIsBootstrapped true
-    kubernetes::create_yaml << EOF
-      apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: d8-cluster-is-bootstraped
-        namespace: kube-system
-EOF
-  fi
 }
 
 hook::run $@
