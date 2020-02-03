@@ -1,6 +1,6 @@
-FROM grafana/build-container:1.2.7
+FROM grafana/build-container:1.2.13
 RUN mkdir -p /go/src/github.com/grafana/grafana && \
-    curl -LSs https://github.com/grafana/grafana/archive/v6.4.2.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
+    curl -LSs https://github.com/grafana/grafana/archive/v6.6.0.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
 WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .
@@ -14,7 +14,7 @@ RUN apk add --no-cache git ruby ruby-dev libffi-dev build-base && \
     gem install sass --no-document && \
     npm install --global grunt-cli && \
     cd /plugin && \
-    git clone --branch v0.1.1 https://github.com/flant/grafana-statusmap.git . && \
+    git clone --branch v0.2.0 https://github.com/flant/grafana-statusmap.git . && \
     npm install && \
     grunt
 

@@ -5,7 +5,10 @@ RUN mkdir /coreos && cd /coreos \
   && git clone -b "v0.33.0" --single-branch https://github.com/coreos/prometheus-operator
 WORKDIR /coreos/prometheus-operator
 ADD tls-config.patch .
-RUN patch -p1 < tls-config.patch && make operator
+ADD scrape_params.patch .
+RUN patch -p1 < tls-config.patch && \
+    patch -p1 < scrape_params.patch && \
+    make operator
 
 # todo: подобрать подходящий образ
 FROM quay.io/prometheus/busybox:latest

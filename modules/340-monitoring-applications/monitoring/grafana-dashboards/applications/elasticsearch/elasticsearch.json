@@ -731,7 +731,7 @@
                 }
               ],
               "dsType": "elasticsearch",
-              "expr": "avg(rate(elasticsearch_process_cpu_time_seconds_sum{namespace=~\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv])) by (name)",
+              "expr": "avg(rate(elasticsearch_process_cpu_time_seconds_sum{namespace=~\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_sx4])) by (name)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ name }}",
@@ -824,7 +824,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name) (rate(elasticsearch_transport_rx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum by (name) (rate(elasticsearch_transport_rx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ name }} RX",
@@ -832,7 +832,7 @@
               "step": 20
             },
             {
-              "expr": "sum by (name)  (rate(elasticsearch_transport_tx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv])) * -1",
+              "expr": "sum by (name)  (rate(elasticsearch_transport_tx_size_bytes_total{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_sx4])) * -1",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ name }} TX",
@@ -1181,7 +1181,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name, type, cluster) (rate(elasticsearch_thread_pool_completed_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[$__interval_rv]))",
+              "expr": "sum by (name, type, cluster) (rate(elasticsearch_thread_pool_completed_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ type }}",
@@ -1354,7 +1354,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name, type, cluster) (rate(elasticsearch_thread_pool_rejected_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[$__interval_rv]))",
+              "expr": "sum by (name, type, cluster) (rate(elasticsearch_thread_pool_rejected_count{name=~\"$node\", namespace=~\"$namespace\", cluster=~\"$cluster\", type!=\"management\"}[$__interval_sx4]))",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -1533,7 +1533,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name) (rate(elasticsearch_indices_translog_size_in_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum by (name) (rate(elasticsearch_indices_translog_size_in_bytes{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ name }}",
@@ -1633,7 +1633,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name) (rate(elasticsearch_jvm_gc_collection_seconds_sum{cluster=~\"$cluster\", namespace=~\"$namespace\", name=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum by (name) (rate(elasticsearch_jvm_gc_collection_seconds_sum{cluster=~\"$cluster\", namespace=~\"$namespace\", name=~\"$node\"}[$__interval_sx4]))",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -1894,7 +1894,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (name, breaker) (rate(elasticsearch_breakers_tripped{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_rv]))",
+              "expr": "sum by (name, breaker) (rate(elasticsearch_breakers_tripped{namespace=\"$namespace\", cluster=~\"$cluster\", name=~\"$node\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ name }} / {{ breaker }}",

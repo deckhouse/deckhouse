@@ -279,7 +279,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__interval_rv])",
+          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

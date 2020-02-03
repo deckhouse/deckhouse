@@ -97,7 +97,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_rv])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))",
+          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_sx4])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\"}) by (cpu))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1148,7 +1148,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\"}[$__interval_sx4])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1157,7 +1157,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\"}[$__interval_sx4])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1166,7 +1166,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\"}[$__interval_sx4])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Iowait",
@@ -1174,7 +1174,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (node)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\"}[$__interval_sx4])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy IRQs",
@@ -1182,7 +1182,7 @@
           "step": 240
         },
         {
-          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\"}[$__interval_sx4])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Other",
@@ -1190,7 +1190,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_rv])) * 100",
+          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_sx4])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1523,7 +1523,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\"}[$__interval_rv])",
+          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "recv {{device}}",
@@ -1531,7 +1531,7 @@
           "step": 240
         },
         {
-          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\"}[$__interval_rv])",
+          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trans {{device}} ",
@@ -1764,7 +1764,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1774,7 +1774,7 @@
               "step": 20
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "User - Normal processes executing in user mode",
@@ -1782,7 +1782,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='nice',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='nice',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Nice - Niced processes executing in user mode",
@@ -1790,7 +1790,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Idle - Waiting for something to happen",
@@ -1798,7 +1798,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Iowait - Waiting for I/O to complete",
@@ -1806,7 +1806,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='irq',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='irq',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Irq - Servicing interrupts",
@@ -1814,7 +1814,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='softirq',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='softirq',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Softirq - Servicing softirqs",
@@ -1822,7 +1822,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='steal',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='steal',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Steal - Time spent in other operating systems when running in a virtualized environment",
@@ -1830,7 +1830,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='guest',node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='guest',node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Guest - Time spent running a virtual CPU for a guest operating system",
@@ -2148,7 +2148,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_bytes_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_bytes_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -2156,7 +2156,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -2370,7 +2370,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_rv])",
+              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2379,7 +2379,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_rv])",
+              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2475,7 +2475,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"} [$__interval_rv])",
+              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",device=~\"[a-z]*[a-z]\"} [$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4415,7 +4415,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgpgin{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgpgin{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesin - Page in operations",
@@ -4423,7 +4423,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgpgout{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgpgout{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesout - Page out operations",
@@ -4517,7 +4517,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pswpin{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pswpin{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpin - Pages swapped in",
@@ -4525,7 +4525,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pswpout{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pswpout{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpout - Pages swapped out",
@@ -4634,7 +4634,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgdeactivate{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgdeactivate{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgdeactivate - Pages moved from active to inactive",
@@ -4642,7 +4642,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgfree{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgfree{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgfree - Page free operations",
@@ -4650,7 +4650,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgactivate{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgactivate{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgactivate - Pages moved from inactive to active",
@@ -4765,7 +4765,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgfault{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgfault{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgfault - Page major and minor fault operations",
@@ -4773,7 +4773,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgmajfault{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgmajfault{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgmajfault - Major page fault operations",
@@ -4781,7 +4781,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgfault{node=~\"$node\"}[$__interval_rv])  - rate(node_vmstat_pgmajfault{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgfault{node=~\"$node\"}[$__interval_sx4])  - rate(node_vmstat_pgmajfault{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgminfault - Minnor page fault operations",
@@ -4890,7 +4890,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_kswapd_inodesteal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_kswapd_inodesteal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Kswapd_inodesteal - Pages reclaimed via kswapd inode freeing",
@@ -4898,7 +4898,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pginodesteal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pginodesteal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgindesteal - Pages reclaimed via inode freeing",
@@ -5007,7 +5007,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pageoutrun{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pageoutrun{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pageoutrun - Kswapd calls to page reclaim",
@@ -5015,7 +5015,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_allocstall{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_allocstall{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Allocstall - Direct reclaim calls",
@@ -5023,7 +5023,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_zone_reclaim_failed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_zone_reclaim_failed{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Zone_reclaim_failed - Zone reclaim failures",
@@ -5132,7 +5132,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgrotated{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgrotated{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgrotated - Pages rotated to tail of the LRU",
@@ -5358,7 +5358,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_slabs_scanned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_slabs_scanned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Slabs_scanned - Slab pages scanned",
@@ -5467,7 +5467,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_cleared{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_cleared{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable_pgs_cleared - Unevictable pages cleared",
@@ -5475,7 +5475,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_culled{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_culled{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable_pgs_culled - Unevictable pages culled",
@@ -5483,7 +5483,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_mlocked{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_mlocked{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable_pgs_mlocked - Unevictable pages mlocked",
@@ -5491,7 +5491,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_munlocked{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_munlocked{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable_pgs_munlocked - Unevictable pages munlocked",
@@ -5499,7 +5499,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_rescued{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_rescued{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable_pgs_rescued- Unevictable pages rescued",
@@ -5507,7 +5507,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_scanned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_scanned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable_pgs_scanned - Unevictable pages scanned",
@@ -5515,7 +5515,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_unevictable_pgs_stranded{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_unevictable_pgs_stranded{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "unevictable_pgs_stranded - Unevictable pages stranded",
@@ -5624,7 +5624,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgalloc_dma{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgalloc_dma{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgalloc_dma - Dma mem page allocations",
@@ -5632,7 +5632,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgalloc_dma32{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgalloc_dma32{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgalloc_dma32 - Dma32 mem page allocations",
@@ -5640,7 +5640,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgalloc_movable{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgalloc_movable{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgalloc_movable - Movable mem page allocations",
@@ -5648,7 +5648,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgalloc_normal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgalloc_normal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgalloc_normal - Normal mem page allocations",
@@ -5757,7 +5757,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgrefill_dma{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgrefill_dma{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgrefill_dma - Dma mem pages inspected in refill_inactive_zone",
@@ -5765,7 +5765,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgrefill_dma32{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgrefill_dma32{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgrefill_dma32 - Dma32 mem pages inspected in refill_inactive_zone",
@@ -5773,7 +5773,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgrefill_movable{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgrefill_movable{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgrefill_movable - Movable mem pages inspected in refill_inactive_zone",
@@ -5781,7 +5781,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgrefill_normal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgrefill_normal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgrefill_normal - Normal mem pages inspected in refill_inactive_zone",
@@ -5890,7 +5890,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgsteal_direct_dma{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_direct_dma{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_direct_dma - Dma mem pages stealed",
@@ -5898,7 +5898,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgsteal_direct_dma32{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_direct_dma32{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_direct_dma32 - Dma32 mem pages scanned",
@@ -5906,7 +5906,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgsteal_direct_movable{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_direct_movable{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_direct_movable - Movable mem pages scanned",
@@ -5914,7 +5914,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgsteal_direct_normal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_direct_normal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_direct_normal - Normal mem pages scanned",
@@ -6023,7 +6023,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgsteal_kswapd_dma{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_kswapd_dma{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_kswapd_dma - Dma mem pages scanned by kswapd",
@@ -6031,7 +6031,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgsteal_kswapd_dma32{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_kswapd_dma32{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_kswapd_dma32 - Dma32 mem pages scanned by kswapd",
@@ -6039,7 +6039,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgsteal_kswapd_movable{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_kswapd_movable{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_kswapd_movable - Movable mem pages scanned by kswapd",
@@ -6047,7 +6047,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgsteal_kswapd_normal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgsteal_kswapd_normal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgsteal_kswapd_normal - Normal mem pages scanned by kswapd",
@@ -6156,7 +6156,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgscan_direct_dma{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_direct_dma{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_direct_dma - Dma mem pages scanned",
@@ -6164,7 +6164,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_direct_dma32{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_direct_dma32{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_direct_dma32 - Dma32 mem pages scanned",
@@ -6172,7 +6172,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_direct_movable{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_direct_movable{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_direct_movable - Movable mem pages scanned",
@@ -6180,7 +6180,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_direct_normal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_direct_normal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_direct_normal - Normal mem pages scanned",
@@ -6188,7 +6188,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_direct_throttle{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_direct_throttle{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -6298,7 +6298,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgscan_kswapd_dma{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_kswapd_dma{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_kswapd_dma - Dma mem pages scanned by kswapd",
@@ -6306,7 +6306,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_kswapd_dma32{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_kswapd_dma32{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_kswapd_dma32 - Dma32 mem pages scanned by kswapd",
@@ -6314,7 +6314,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_kswapd_movable{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_kswapd_movable{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_kswapd_movable - Movable mem pages scanned by kswapd",
@@ -6322,7 +6322,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgscan_kswapd_normal{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgscan_kswapd_normal{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgscan_kswapd_normal - Normal mem pages scanned by kswapd",
@@ -6438,7 +6438,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_compact_free_scanned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_compact_free_scanned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Compact_free_scanned - Pages scanned for freeing by compaction daemon",
@@ -6446,7 +6446,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_compact_isolated{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_compact_isolated{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Compact_isolated - Page isolations for memory compaction",
@@ -6454,7 +6454,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_compact_migrate_scanned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_compact_migrate_scanned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Compact_migrate_scanned - Pages scanned for migration by compaction daemon",
@@ -6570,7 +6570,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_compact_fail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_compact_fail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Compact_fail - Unsuccessful compactions for high order allocations",
@@ -6578,7 +6578,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_compact_stall{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_compact_stall{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Compact_stall - Failures to even start compacting",
@@ -6586,7 +6586,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_compact_success{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_compact_success{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Compact_sucess - Successful compactions for high order allocations",
@@ -6929,7 +6929,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_numa_foreign{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_foreign{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_foreign - Foreign NUMA zone allocations",
@@ -6937,7 +6937,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_hit{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_hit{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_hit - Successful allocations from preferred NUMA zone",
@@ -6945,7 +6945,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_interleave{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_interleave{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_interleave - Interleaved NUMA allocations in each zone for each NUMA node",
@@ -6953,7 +6953,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_local{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_local{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_local - Successful allocations from local NUMA zone",
@@ -6961,7 +6961,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_miss{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_miss{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_miss - Unsuccessful allocations from preferred NUMA zona",
@@ -6969,7 +6969,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_other{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_other{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_other - Unsuccessful allocations from local NUMA zone",
@@ -7084,7 +7084,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_numa_pages_migrated{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_pages_migrated{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_pages_migrated - NUMA page migrations",
@@ -7092,7 +7092,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgmigrate_fail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgmigrate_fail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgmigrate_fail - Unsuccessful NUMA page migrations",
@@ -7100,7 +7100,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_pgmigrate_success{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_pgmigrate_success{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgmigrate_success - Successful NUMA page migrations",
@@ -7209,7 +7209,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_numa_hint_faults{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_hint_faults{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_hint_faults - NUMA hint faults trapped",
@@ -7217,7 +7217,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_hint_faults_local{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_hint_faults_local{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_hint_faults_local - Hinting faults to local nodes",
@@ -7326,7 +7326,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_numa_pte_updates{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_pte_updates{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Numa_pte_updates - NUMA page table entry updates",
@@ -7334,7 +7334,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_numa_huge_pte_updates{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_numa_huge_pte_updates{node=~\"$node\"}[$__interval_sx4])",
               "intervalFactor": 1,
               "legendFormat": "Numa_huge_pte_updates - NUMA huge page table entry updates",
               "refId": "A",
@@ -7442,7 +7442,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_thp_split{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_split{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Thp_split - Transparent huge page splits",
@@ -7551,7 +7551,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_workingset_activate{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_workingset_activate{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Workingset_activate - Page activations to form the working set",
@@ -7559,7 +7559,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_workingset_nodereclaim{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_workingset_nodereclaim{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Workingset_nodereclaim - NUMA node working set page reclaims",
@@ -7567,7 +7567,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_workingset_refault{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_workingset_refault{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Workingset_refault - Refaults of previously evicted pages",
@@ -7676,7 +7676,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_thp_collapse_alloc{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_collapse_alloc{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Thp_collapse_alloc - Transparent huge page collapse allocations",
@@ -7684,7 +7684,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_thp_collapse_alloc_failed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_collapse_alloc_failed{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Thp_collapse_alloc_failed - Transparent huge page collapse allocation failures",
@@ -7692,7 +7692,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_thp_zero_page_alloc{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_zero_page_alloc{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Thp_zero_page_alloc - Transparent huge page zeroed page allocations",
@@ -7700,7 +7700,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_thp_zero_page_alloc_failed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_zero_page_alloc_failed{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Thp_zero_page_alloc_failed - Transparent huge page zeroed page allocation failures",
@@ -7708,14 +7708,14 @@
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_thp_fault_alloc{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_fault_alloc{node=~\"$node\"}[$__interval_sx4])",
               "intervalFactor": 1,
               "legendFormat": "Thp_fault_alloc - Transparent huge page fault allocations",
               "refId": "B",
               "step": 600
             },
             {
-              "expr": "rate(node_vmstat_thp_fault_fallback{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_vmstat_thp_fault_fallback{node=~\"$node\"}[$__interval_sx4])",
               "intervalFactor": 1,
               "legendFormat": "Thp_fault_fallback - Transparent huge page fault fallbacks",
               "refId": "D",
@@ -9788,7 +9788,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_context_switches_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_context_switches_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Context switches",
@@ -9796,7 +9796,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_intr_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_intr_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Interrupts",
@@ -10276,7 +10276,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_forks_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_forks_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -10467,7 +10467,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_time_seconds{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_time_seconds{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -10476,7 +10476,7 @@
               "step": 600
             },
             {
-              "expr": "rate(process_start_time_seconds{node=~\"$node\", job=\"node-exporter\"}[$__interval_rv])",
+              "expr": "rate(process_start_time_seconds{node=~\"$node\", job=\"node-exporter\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Of the process since unix epoch in seconds",
@@ -10807,7 +10807,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_read_time_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_read_time_seconds_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -10816,7 +10816,7 @@
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_write_time_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_write_time_seconds_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -10993,7 +10993,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_nfsd_disk_bytes_read_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_nfsd_disk_bytes_read_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Bytes read",
@@ -11001,7 +11001,7 @@
               "step": 1200
             },
             {
-              "expr": "rate(node_nfsd_disk_bytes_written_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_nfsd_disk_bytes_written_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Bytes written",
@@ -11178,7 +11178,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Reads completed",
@@ -11186,7 +11186,7 @@
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
@@ -11364,7 +11364,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_sectors_read_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_sectors_read_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -11373,7 +11373,7 @@
               "step": 1200
             },
             {
-              "expr": "rate(node_disk_sectors_written_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_sectors_written_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -11548,7 +11548,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_weighted_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_io_time_weighted_seconds_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO time weighted",
@@ -11726,7 +11726,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_merged_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_reads_merged_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Merged read",
@@ -11734,7 +11734,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_disk_writes_merged_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_writes_merged_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Merged write",
@@ -11908,7 +11908,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO time ms",
@@ -12082,7 +12082,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_now{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_disk_io_now{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO now",
@@ -12895,7 +12895,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_packets_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_packets_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -12903,7 +12903,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_packets_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_packets_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -13029,7 +13029,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_errs_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_errs_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive errors",
@@ -13037,7 +13037,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_errs_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_errs_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Rransmit errors",
@@ -13163,7 +13163,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_drop_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_drop_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive drop",
@@ -13171,7 +13171,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_drop_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_drop_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit drop",
@@ -13297,7 +13297,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_compressed_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_compressed_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive compressed",
@@ -13305,7 +13305,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_compressed_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_compressed_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit compressed",
@@ -13431,7 +13431,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_multicast_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_multicast_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive multicast",
@@ -13439,7 +13439,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_multicast_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_multicast_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit multicast",
@@ -13565,7 +13565,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_fifo_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_fifo_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive fifo",
@@ -13573,7 +13573,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_fifo_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_fifo_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit fifo",
@@ -13699,7 +13699,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_frame_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_receive_frame_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13708,7 +13708,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_network_transmit_frame_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_network_transmit_frame_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -14476,7 +14476,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Ip_InReceives{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InReceives{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -14485,7 +14485,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_DefaultTTL{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_DefaultTTL{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -14494,7 +14494,7 @@
               "step": 10
             },
             {
-              "expr": "rate(node_netstat_Ip_InDelivers_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InDelivers_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDelivers - Ip indelivers",
@@ -14502,7 +14502,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_OutRequests_total{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_OutRequests_total{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -14623,7 +14623,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InOctets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InOctets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InOctets - Received octets",
@@ -14631,7 +14631,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutOctets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_OutOctets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutOctets - Sent octets",
@@ -14751,7 +14751,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InBcastPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InBcastPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InBcastPkts - Received IP broadcast datagrams",
@@ -14759,7 +14759,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutBcastPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_OutBcastPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutBcastPkts - Sent IP broadcast datagrams",
@@ -14879,7 +14879,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InBcastOctets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InBcastOctets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InBcastOctets - Received IP broadcast octets",
@@ -14887,7 +14887,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutBcastOctets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_OutBcastOctets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutBcastOctets - Sent IP broadcast octects",
@@ -15007,7 +15007,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InMcastPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InMcastPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15016,7 +15016,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutMcastPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_OutMcastPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15137,7 +15137,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InMcastOctets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InMcastOctets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15146,7 +15146,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutMcastOctets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_OutMcastOctets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15242,7 +15242,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Ip_ForwDatagrams{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_ForwDatagrams{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ForwDatagrams - Ip outforwdatagrams",
@@ -15250,7 +15250,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_Forwarding{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_Forwarding{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Forwarding - Ip forwarding",
@@ -15345,7 +15345,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Ip_FragCreates{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_FragCreates{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "FragCreates - Ip fragmentation creations",
@@ -15353,7 +15353,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_FragFails{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_FragFails{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "FragFails - Ip fragmentation failures",
@@ -15361,7 +15361,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_FragOKs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_FragOKs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "FragOKs - Ip fragmentation oks",
@@ -15456,7 +15456,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InCEPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InCEPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InCEPkts - Congestion Experimented datagrams in",
@@ -15464,7 +15464,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_InECT0Pkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InECT0Pkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InECT0Pkts - Datagrams received with ECT(0)",
@@ -15472,7 +15472,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_InECT1Pkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InECT1Pkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InECT1Pkt - Datarams received with ECT(1)",
@@ -15480,7 +15480,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_InNoECTPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InNoECTPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InNoECTPkts - Datagrams received with NOECT",
@@ -15575,7 +15575,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Ip_ReasmFails{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_ReasmFails{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ReasmFails - Ip reassembly failures",
@@ -15583,7 +15583,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_ReasmOKs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_ReasmOKs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ReasmOKs - Ip reassembly oks",
@@ -15591,7 +15591,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_ReasmReqds{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_ReasmReqds{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ReasmReqds - Ip reassembly requireds",
@@ -15599,7 +15599,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_ReasmTimeout{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_ReasmTimeout{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ReasmTimeout - Ip reasmtimeout",
@@ -15707,7 +15707,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Ip_InDiscards{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InDiscards{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDiscards - Ip indiscards",
@@ -15715,7 +15715,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_InHdrErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InHdrErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InHdrErrors - Ip inhdrerrors",
@@ -15723,7 +15723,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_InUnknownProtos{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InUnknownProtos{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InUnknownProtos - Ip inunknownprotos",
@@ -15731,7 +15731,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_OutDiscards{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_OutDiscards{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutDiscards - Ip outdiscards",
@@ -15739,7 +15739,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_OutNoRoutes{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_OutNoRoutes{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutNoRoutes - Ip outnoroutes",
@@ -15747,7 +15747,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_InNoRoutes{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InNoRoutes{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InNoRoutes - IP datagrams discarded due to no routes in forwarding path",
@@ -15755,7 +15755,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_InCsumErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InCsumErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InCsumErrors - IP datagrams with checksum errors",
@@ -15763,7 +15763,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IpExt_InTruncatedPkts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IpExt_InTruncatedPkts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InTruncatedPkts - IP datagrams discarded due to frame not carrying enough data",
@@ -15771,7 +15771,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Ip_InAddrErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Ip_InAddrErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InAddrErrors - Ip inaddrerrors",
@@ -15892,7 +15892,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Tcp_InCsumErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_InCsumErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15901,7 +15901,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_InErrs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_InErrs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15910,7 +15910,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_InSegs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_InSegs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15919,7 +15919,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_OutRsts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_OutRsts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15928,7 +15928,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_OutSegs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_OutSegs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -15937,7 +15937,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_RetransSegs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_RetransSegs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RetransSegs - Segments retransmitted - that is, the number of TCP segments transmitted containing one or more previously transmitted octets",
@@ -16248,7 +16248,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Tcp_ActiveOpens{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_ActiveOpens{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ActiveOpens - TCP connections that have made a direct transition to the SYN-SENT state from the CLOSED state",
@@ -16256,7 +16256,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_AttemptFails{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_AttemptFails{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AttemptFails - TCP connections that have made a direct transition to the CLOSED state from either the SYN-SENT and SYN-RCVD",
@@ -16264,7 +16264,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_EstabResets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_EstabResets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "EstabResets - TCP connections that have made a direct transition to the CLOSED state from either the ESTABLISHED state or the CLOSE-WAIT state",
@@ -16272,7 +16272,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Tcp_PassiveOpens{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Tcp_PassiveOpens{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "PassiveOpens - TCP connections that have made a direct transition to the SYN-RCVD state from the LISTEN state",
@@ -16382,7 +16382,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAbortOnClose{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAbortOnClose{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16391,7 +16391,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAbortOnData{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAbortOnData{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16400,7 +16400,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAbortOnLinger{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAbortOnLinger{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16409,7 +16409,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAbortOnMemory{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAbortOnMemory{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16418,7 +16418,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAbortOnTimeout{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAbortOnTimeout{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPAbortOnTimeout - Connections aborted due timeout",
@@ -16426,7 +16426,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAbortFailed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAbortFailed{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPAbortFailed - Connections aborted without send RST due insuffient memory",
@@ -16434,7 +16434,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPTimeouts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPTimeouts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPTimeouts - Other TCP connections timeouts",
@@ -16524,7 +16524,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_DelayedACKLocked{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_DelayedACKLocked{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DelayedACKLocked - Delayed acks further delayed because of locked socket",
@@ -16532,7 +16532,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_DelayedACKLost{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_DelayedACKLost{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DelayedACKLost - Times quick ack mode was activated",
@@ -16540,7 +16540,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_DelayedACKs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_DelayedACKs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DelayedACKs - Delayed acks sent",
@@ -16643,7 +16643,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesFailed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesFailed{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16652,7 +16652,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesRecv{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesRecv{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16661,7 +16661,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesSent{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesSent{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16670,7 +16670,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSYNChallenge{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSYNChallenge{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SynChallenge - Challenge ACKs sent in response to SYN packets",
@@ -16678,7 +16678,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPChallengeACK{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPChallengeACK{node=~\"$node\"}[$__interval_sx4])",
               "intervalFactor": 1,
               "legendFormat": "TCPChallengeACK - Challenge ACKs sent (RFC 5961 3.2)",
               "refId": "B",
@@ -16767,7 +16767,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPLossFailures{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPLossFailures{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16776,7 +16776,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPLossProbeRecovery{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPLossProbeRecovery{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16785,7 +16785,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPLossProbes{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPLossProbes{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16794,7 +16794,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPLossUndo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPLossUndo{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPLossUndo - Congestion windows recovered without slow start after partial ack",
@@ -16802,7 +16802,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPLostRetransmit{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPLostRetransmit{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPLostRetransmit - Retransmits lost",
@@ -16892,7 +16892,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_ListenDrops{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_ListenDrops{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ListenDrops - SYNs to LISTEN sockets ignored",
@@ -16900,7 +16900,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_LockDroppedIcmps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_LockDroppedIcmps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "LockDroppedIcmps - ICMP packets dropped because socket was locked",
@@ -16908,7 +16908,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDeferAcceptDrop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDeferAcceptDrop{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPDeferAcceptDrop - Dropped ACK frames received by a socket in SYN_RECV state",
@@ -16916,7 +16916,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPBacklogDrop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPBacklogDrop{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPBacklogDrop - Packets dropped bacause the socket's receive queue was full",
@@ -16924,7 +16924,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_OutOfWindowIcmps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_OutOfWindowIcmps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutOfWindowIcmps - ICMP packets dropped because they were out-of-window",
@@ -16932,7 +16932,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPMinTTLDrop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPMinTTLDrop{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPMinTTLDrop - TCP packets dropped under minTTL condition",
@@ -17021,7 +17021,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPForwardRetrans{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPForwardRetrans{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17030,7 +17030,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSlowStartRetrans{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSlowStartRetrans{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17039,7 +17039,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSynRetrans{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSynRetrans{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17048,7 +17048,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSpuriousRTOs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSpuriousRTOs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSpuriousRTOs - FRTO's successfully detected spurious RTOs",
@@ -17056,7 +17056,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSpuriousRtxHostQueues{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSpuriousRtxHostQueues{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSpuriousRtxHostQueues - Times detected that the fast clone is not yet freed in tcp_transmit_skb()",
@@ -17064,7 +17064,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFullUndo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFullUndo{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPFullUndo - Retransmits that undid the CWND reduction",
@@ -17072,7 +17072,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRetransFail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRetransFail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPRetransFail - Failed tcp_retransmit_skb() calls",
@@ -17080,7 +17080,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPPartialUndo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPPartialUndo{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPPartialUndo - Congestion windows partially recovered using Hoe heuristic",
@@ -17170,7 +17170,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_PruneCalled{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_PruneCalled{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17179,7 +17179,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_RcvPruned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_RcvPruned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17188,7 +17188,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_OfoPruned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_OfoPruned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OfoPruned - Packets dropped from out-of-order queue because of socket buffer overrun",
@@ -17196,7 +17196,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_OfoPruned{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_OfoPruned{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OfoPruned - Packets dropped from out-of-order queue because of socket buffer overrun",
@@ -17286,7 +17286,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDirectCopyFromBacklog{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDirectCopyFromBacklog{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPDirectCopyFromBacklog - Packets directly received from backlog",
@@ -17294,7 +17294,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDirectCopyFromPrequeue{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDirectCopyFromPrequeue{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPDirectCopyFromPrequeue - Packets directly received from prequeue",
@@ -17382,7 +17382,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TW{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TW{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17391,7 +17391,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TWKilled{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TWKilled{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17400,7 +17400,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TWRecycled{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TWRecycled{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17409,7 +17409,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPTimeWaitOverflow{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPTimeWaitOverflow{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPTimeWaitOverflow - Occurences of time wait bucket overflow",
@@ -17499,7 +17499,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_PAWSActive{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_PAWSActive{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17508,7 +17508,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_PAWSEstab{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_PAWSEstab{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17517,7 +17517,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_PAWSPassive{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_PAWSPassive{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17608,7 +17608,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSackRecovery{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSackRecovery{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackRecovery - Times recovered from packet loss by selective acknowledgements",
@@ -17616,7 +17616,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSackRecoveryFail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSackRecoveryFail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackRecoveryFail - Issue while recovering packets lost using selective ACK",
@@ -17624,7 +17624,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSackShiftFallback{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSackShiftFallback{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackShiftFallback - SACKs fallbacks",
@@ -17632,7 +17632,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSackShifted{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSackShifted{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackShifted - SACKs shifted",
@@ -17640,7 +17640,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSACKDiscard{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSACKDiscard{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackDiscard -  Discarded due invalid SACK block.",
@@ -17648,7 +17648,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSackFailures{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSackFailures{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackFailures - Timeouts after SACK recovery",
@@ -17656,7 +17656,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSackMerged{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSackMerged{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSackMerged - SACKs merged",
@@ -17664,7 +17664,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSACKReneging{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSACKReneging{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSACKReneging - Bad SACK blocks received",
@@ -17672,7 +17672,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSACKReorder{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSACKReorder{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSACKReorder - Times detected reordering using SACK",
@@ -17762,7 +17762,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKIgnoredOld{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKIgnoredOld{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17771,7 +17771,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKOfoRecv{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKOfoRecv{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17780,7 +17780,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKOfoSent{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKOfoSent{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17789,7 +17789,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKOldSent{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKOldSent{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17798,7 +17798,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKRecv{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKRecv{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17807,7 +17807,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKUndo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKUndo{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17816,7 +17816,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPDSACKIgnoredNoUndo{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPDSACKIgnoredNoUndo{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPDSACKIgnoredNoUndo - Discarded packets with duplicate SACK",
@@ -17906,7 +17906,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastOpenActive{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastOpenActive{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17915,7 +17915,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastOpenActiveFail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastOpenActiveFail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17924,7 +17924,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastOpenCookieReqd{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastOpenCookieReqd{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17933,7 +17933,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastOpenListenOverflow{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastOpenListenOverflow{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17942,7 +17942,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastOpenPassive{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastOpenPassive{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17951,7 +17951,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastOpenPassiveFail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastOpenPassiveFail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17960,7 +17960,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFastRetrans{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFastRetrans{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18051,7 +18051,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPHPAcks{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPHPAcks{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18060,7 +18060,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPHPHits{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPHPHits{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18069,7 +18069,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPHPHitsToUser{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPHPHitsToUser{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18160,7 +18160,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPToZeroWindowAdv{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPToZeroWindowAdv{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPToZeroWindowAdv - Times window went from zero to non-zero",
@@ -18168,7 +18168,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPWantZeroWindowAdv{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPWantZeroWindowAdv{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPWantZeroWindowAdv - Times zero window announced",
@@ -18176,7 +18176,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFromZeroWindowAdv{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFromZeroWindowAdv{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPFromZeroWindowAdv - Times window went from zero to non-zero",
@@ -18266,7 +18266,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPFACKReorder{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPFACKReorder{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPFACKReorder - Detected packets with re-ordering using FACK",
@@ -18274,7 +18274,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPTSReorder{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPTSReorder{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPTSReorder - Times detected packets with re-ordering using timestamp option",
@@ -18364,7 +18364,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRenoFailures{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRenoFailures{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18373,7 +18373,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRenoRecovery{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRenoRecovery{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPRenoRecovery - Times recovered from packet loss due to fast retransmit",
@@ -18381,7 +18381,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRenoRecoveryFail{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRenoRecoveryFail{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPRenoRecoveryFail - Times reno fast retransmits failed",
@@ -18389,7 +18389,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRenoReorder{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRenoReorder{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPRenoReorder - Times detected reordering using reno fast retransmit",
@@ -18479,7 +18479,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPReqQFullDoCookies{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPReqQFullDoCookies{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18488,7 +18488,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPReqQFullDrop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPReqQFullDrop{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPReqQFullDrop - Times SYN request was dropped due to disabled syncookies",
@@ -18578,7 +18578,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPOFODrop{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPOFODrop{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18587,7 +18587,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPOFOMerge{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPOFOMerge{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18596,7 +18596,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPOFOQueue{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPOFOQueue{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPOFOQueue - Packets queued in OFO queue",
@@ -18686,7 +18686,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPMD5NotFound{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPMD5NotFound{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18695,7 +18695,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPMD5Unexpected{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPMD5Unexpected{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18786,7 +18786,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPPrequeued{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPPrequeued{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18795,7 +18795,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPPrequeueDropped{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPPrequeueDropped{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18886,7 +18886,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRcvCoalesce{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRcvCoalesce{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18895,7 +18895,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPRcvCollapsed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPRcvCollapsed{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18986,7 +18986,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPOrigDataSent{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPOrigDataSent{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPOrigDataSent - Outgoing packets with original data",
@@ -19076,7 +19076,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_ArpFilter{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_ArpFilter{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ArpFilter - Arp packets filtered",
@@ -19084,7 +19084,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_IPReversePathFilter{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_IPReversePathFilter{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "IPReversePathFilter - Packets arrive from non directly connected network",
@@ -19174,7 +19174,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPPureAcks{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPPureAcks{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPPureAcks - Acknowledgments not containing data payload received",
@@ -19264,7 +19264,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TCPAutoCorking{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPAutoCorking{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPAutoCorking - Times stack detected skb was underused and its flush was deferred",
@@ -19354,7 +19354,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_BusyPollRxPackets{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_BusyPollRxPackets{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "BusyPollRxPackets - Low latency application-fetched packets",
@@ -19362,7 +19362,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_EmbryonicRsts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_EmbryonicRsts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "EmbryonicRsts - Resets received for embryonic SYN_RECV sockets",
@@ -19370,7 +19370,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_ListenOverflows{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_ListenOverflows{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ListenOverflows - Times the listen queue of a socket overflowed",
@@ -19378,14 +19378,14 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSchedulerFailed{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPSchedulerFailed{node=~\"$node\"}[$__interval_sx4])",
               "intervalFactor": 1,
               "legendFormat": "TCPSchedulerFailed - Times receiver scheduled too late for direct processing",
               "refId": "A",
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPMemoryPressures{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_TcpExt_TCPMemoryPressures{node=~\"$node\"}[$__interval_sx4])",
               "intervalFactor": 1,
               "legendFormat": "TCPMemoryPressures - TCP ran low on memory",
               "refId": "C",
@@ -19501,7 +19501,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Udp_InDatagrams{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_InDatagrams{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDatagrams - Datagrams received",
@@ -19509,7 +19509,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Udp_OutDatagrams{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_OutDatagrams{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutDatagrams - Datagrams sent",
@@ -19615,7 +19615,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Udp_InCsumErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_InCsumErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InCsumErrors - Datagrams with checksum errors",
@@ -19623,7 +19623,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Udp_InErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_InErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - Datagrams that could not be delivered to an application",
@@ -19631,7 +19631,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Udp_RcvbufErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_RcvbufErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RcvbufErrors - Datagrams for which not enough socket buffer memory to receive",
@@ -19639,7 +19639,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Udp_SndbufErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_SndbufErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SndbufErrors - Datagrams for which not enough socket buffer memory to transmit",
@@ -19647,7 +19647,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Udp_NoPorts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Udp_NoPorts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NoPorts - Datagrams received on a port with no listener",
@@ -19749,7 +19749,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_UdpLite_InDatagrams{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_InDatagrams{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDatagrams - Packets received",
@@ -19757,7 +19757,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_UdpLite_OutDatagrams{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_OutDatagrams{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutDatagrams - Packets sent",
@@ -19859,7 +19859,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_UdpLite_InCsumErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_InCsumErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InCsumErrors - Datagrams with checksum errors",
@@ -19867,7 +19867,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_UdpLite_InErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_InErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - Datagrams that could not be delivered to an application",
@@ -19875,7 +19875,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_UdpLite_RcvbufErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_RcvbufErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RcvbufErrors - Datagrams for which not enough socket buffer memory to receive",
@@ -19883,7 +19883,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_UdpLite_SndbufErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_SndbufErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SndbufErrors - Datagrams for which not enough socket buffer memory to transmit",
@@ -19891,7 +19891,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_UdpLite_NoPorts{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_UdpLite_NoPorts{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NoPorts - Datagrams received on a port with no listener",
@@ -20033,7 +20033,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - Messages which the entity received but determined as having ICMP-specific errors (bad ICMP checksums, bad length, etc.)",
@@ -20041,7 +20041,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutErrors - Messages which this entity did not send due to problems discovered within ICMP, such as a lack of buffers",
@@ -20049,7 +20049,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InDestUnreachs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InDestUnreachs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDestUnreachs - Destination Unreachable messages received",
@@ -20057,7 +20057,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutDestUnreachs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutDestUnreachs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutDestUnreachs - Destination Unreachable messages sent",
@@ -20065,7 +20065,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IcmpMsg_InType3{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IcmpMsg_InType3{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20074,7 +20074,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_IcmpMsg_OutType3{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_IcmpMsg_OutType3{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20202,7 +20202,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InCsumErrors{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InCsumErrors{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20211,7 +20211,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InTimeExcds{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InTimeExcds{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20220,7 +20220,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutTimeExcds{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutTimeExcds{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20229,7 +20229,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InParmProbs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InParmProbs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20238,7 +20238,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutParmProbs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutParmProbs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20247,7 +20247,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InSrcQuenchs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InSrcQuenchs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20256,7 +20256,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutSrcQuenchs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutSrcQuenchs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20364,7 +20364,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InMsgs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InMsgs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InMsgs -  Messages which the entity received. Note that this counter includes all those counted by icmpInErrors",
@@ -20372,7 +20372,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InRedirects{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InRedirects{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InRedirects - Redirect messages received",
@@ -20380,7 +20380,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutMsgs{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutMsgs{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutMsgs - Messages which this entity attempted to send. Note that this counter includes all those counted by icmpOutErrors",
@@ -20388,7 +20388,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutRedirects{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutRedirects{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutRedirects -  Redirect messages sent. For a host, this object will always be zero, since hosts do not send redirects",
@@ -20495,7 +20495,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InTimestampReps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InTimestampReps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InTimestampReps - Timestamp Reply messages received",
@@ -20503,7 +20503,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InTimestamps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InTimestamps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InTimestamps - Timestamp (request) messages received",
@@ -20511,7 +20511,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutTimestampReps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutTimestampReps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutTimestampReps - Timestamp Reply messages sent",
@@ -20519,7 +20519,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutTimestamps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutTimestamps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutTimestamps - Timestamp (request) messages sent",
@@ -20626,7 +20626,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InEchoReps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InEchoReps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InEchoReps - Echo Reply messages received",
@@ -20634,7 +20634,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InEchos{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InEchos{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InEchos - Echo (request) messages received",
@@ -20642,7 +20642,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutEchoReps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutEchoReps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutEchoReps - Echo Reply messages sent",
@@ -20650,7 +20650,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutEchos{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutEchos{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutEchos - Echo (request) messages sent",
@@ -20757,7 +20757,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InAddrMaskReps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InAddrMaskReps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InAddrMaskReps - Address Mask Reply messages received",
@@ -20765,7 +20765,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_InAddrMasks{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_InAddrMasks{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InAddrMasks - Address Mask Request messages received",
@@ -20773,7 +20773,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutAddrMaskReps{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutAddrMaskReps{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutAddrMaskReps - Address Mask Reply messages sent",
@@ -20781,7 +20781,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutAddrMasks{node=~\"$node\"}[$__interval_rv])",
+              "expr": "rate(node_netstat_Icmp_OutAddrMasks{node=~\"$node\"}[$__interval_sx4])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutAddrMasks - Address Mask Request messages sent",
@@ -20884,7 +20884,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_exporter_scrape_duration_seconds_sum{node=~\"$node\",result=\"success\"}[$__interval_rv])",
+              "expr": "rate(node_exporter_scrape_duration_seconds_sum{node=~\"$node\",result=\"success\"}[$__interval_sx4])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,

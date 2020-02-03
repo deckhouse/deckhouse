@@ -1,0 +1,94 @@
+diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
+index b5bb1d29..eaa870b2 100644
+--- a/pkg/prometheus/promcfg.go
++++ b/pkg/prometheus/promcfg.go
+@@ -19,6 +19,7 @@ import (
+ 	"regexp"
+ 	"sort"
+ 	"strings"
++	"time"
+ 
+ 	"github.com/blang/semver"
+ 	"github.com/go-kit/kit/log"
+@@ -206,12 +207,12 @@ func (cg *configGenerator) generateConfig(
+ 	var scrapeConfigs []yaml.MapSlice
+ 	for _, identifier := range sMonIdentifiers {
+ 		for i, ep := range sMons[identifier].Spec.Endpoints {
+-			scrapeConfigs = append(scrapeConfigs, cg.generateServiceMonitorConfig(version, sMons[identifier], ep, i, apiserverConfig, basicAuthSecrets))
++			scrapeConfigs = append(scrapeConfigs, cg.generateServiceMonitorConfig(version, sMons[identifier], ep, i, apiserverConfig, basicAuthSecrets, scrapeInterval))
+ 		}
+ 	}
+ 	for _, identifier := range pMonIdentifiers {
+ 		for i, ep := range pMons[identifier].Spec.PodMetricsEndpoints {
+-			scrapeConfigs = append(scrapeConfigs, cg.generatePodMonitorConfig(version, pMons[identifier], ep, i, apiserverConfig, basicAuthSecrets))
++			scrapeConfigs = append(scrapeConfigs, cg.generatePodMonitorConfig(version, pMons[identifier], ep, i, apiserverConfig, basicAuthSecrets, scrapeInterval))
+ 		}
+ 	}
+ 
+@@ -294,7 +295,7 @@ func (cg *configGenerator) generateConfig(
+ 	return yaml.Marshal(cfg)
+ }
+ 
+-func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v1.PodMonitor, ep v1.PodMetricsEndpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials) yaml.MapSlice {
++func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v1.PodMonitor, ep v1.PodMetricsEndpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials, globalScrapeInterval string) yaml.MapSlice {
+ 	cfg := yaml.MapSlice{
+ 		{
+ 			Key:   "job_name",
+@@ -320,11 +321,22 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
+ 		cfg = append(cfg, cg.generateK8SSDConfig(getNamespacesFromPodMonitor(m), apiserverConfig, basicAuthSecrets, kubernetesSDRolePod))
+ 	}
+ 
++	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
+ 	if ep.Interval != "" {
+ 		cfg = append(cfg, yaml.MapItem{Key: "scrape_interval", Value: ep.Interval})
+ 	}
+ 	if ep.ScrapeTimeout != "" {
+-		cfg = append(cfg, yaml.MapItem{Key: "scrape_timeout", Value: ep.ScrapeTimeout})
++		scrapeTimeout := ep.ScrapeTimeout
++		podMonitorScrapeTimeoutDuration, _ := time.ParseDuration(scrapeTimeout)
++		if ep.Interval != "" {
++			podMonitorScrapeInterval, _ := time.ParseDuration(ep.Interval)
++			if podMonitorScrapeTimeoutDuration.Seconds() > podMonitorScrapeInterval.Seconds() {
++				scrapeTimeout = ep.Interval
++			}
++		} else if podMonitorScrapeTimeoutDuration.Seconds() > globalScrapeIntervalDuration.Seconds() {
++			scrapeTimeout = globalScrapeInterval
++		}
++		cfg = append(cfg, yaml.MapItem{Key: "scrape_timeout", Value: scrapeTimeout})
+ 	}
+ 	if ep.Path != "" {
+ 		cfg = append(cfg, yaml.MapItem{Key: "metrics_path", Value: ep.Path})
+@@ -523,7 +535,7 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
+ 	return cfg
+ }
+ 
+-func (cg *configGenerator) generateServiceMonitorConfig(version semver.Version, m *v1.ServiceMonitor, ep v1.Endpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials) yaml.MapSlice {
++func (cg *configGenerator) generateServiceMonitorConfig(version semver.Version, m *v1.ServiceMonitor, ep v1.Endpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials, globalScrapeInterval string) yaml.MapSlice {
+ 	cfg := yaml.MapSlice{
+ 		{
+ 			Key:   "job_name",
+@@ -549,11 +561,23 @@ func (cg *configGenerator) generateServiceMonitorConfig(version semver.Version,
+ 		cfg = append(cfg, cg.generateK8SSDConfig(getNamespacesFromServiceMonitor(m), apiserverConfig, basicAuthSecrets, kubernetesSDRoleEndpoint))
+ 	}
+ 
++	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
++
+ 	if ep.Interval != "" {
+ 		cfg = append(cfg, yaml.MapItem{Key: "scrape_interval", Value: ep.Interval})
+ 	}
+ 	if ep.ScrapeTimeout != "" {
+-		cfg = append(cfg, yaml.MapItem{Key: "scrape_timeout", Value: ep.ScrapeTimeout})
++		scrapeTimeout := ep.ScrapeTimeout
++		serviceMonitorScrapeTimeoutDuration, _ := time.ParseDuration(scrapeTimeout)
++		if ep.Interval != "" {
++			serviceMonitorScrapeInterval, _ := time.ParseDuration(ep.Interval)
++			if serviceMonitorScrapeTimeoutDuration.Seconds() > serviceMonitorScrapeInterval.Seconds() {
++				scrapeTimeout = ep.Interval
++			}
++		} else if serviceMonitorScrapeTimeoutDuration.Seconds() > globalScrapeIntervalDuration.Seconds() {
++			scrapeTimeout = globalScrapeInterval
++		}
++		cfg = append(cfg, yaml.MapItem{Key: "scrape_timeout", Value: scrapeTimeout})
+ 	}
+ 	if ep.Path != "" {
+ 		cfg = append(cfg, yaml.MapItem{Key: "metrics_path", Value: ep.Path})
