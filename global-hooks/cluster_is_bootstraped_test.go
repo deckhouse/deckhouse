@@ -10,6 +10,8 @@ package hooks
 import (
 	"testing"
 
+	"github.com/onsi/gomega/gbytes"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -225,6 +227,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 			It("Hook must fail", func() {
 				Expect(f).To(Not(ExecuteSuccessfully()))
+				Expect(f.Session.Err).Should(gbytes.Say("ERROR: CM kube-system/d8-cluster-is-bootstraped was deleted. Don't know what to do."))
 			})
 		})
 	})
