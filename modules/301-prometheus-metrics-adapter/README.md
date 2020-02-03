@@ -223,7 +223,7 @@ kind: PodMetric
 metadata:
   name: php-fpm-active-workers
 spec:
-  query: sum (phpfpm_active_max_processes{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+  query: sum (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) by (<<.GroupBy>>)
 ---
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2

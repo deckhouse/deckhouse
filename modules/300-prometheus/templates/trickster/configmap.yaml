@@ -51,6 +51,8 @@ data:
         server_name 127.0.0.1;
         listen 127.0.0.1:9090;
 
+        large_client_header_buffers 4 32k;
+
         location / {
         {{- if (include "helm_lib_ha_enabled" .) }}
           set                           $backend "https://prometheus-affinitive.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090";
@@ -68,6 +70,8 @@ data:
       server {
         server_name 127.0.0.1;
         listen 127.0.0.1:9091;
+
+        large_client_header_buffers 4 32k;
 
         location / {
           set                           $backend "https://prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090";
