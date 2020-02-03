@@ -28,11 +28,20 @@ Tests:
     - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.0 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - rm -rf "$(pwd)"/kcov-report
+    - rm -rf testing/kcov-report
+    - chmod -R 0777 testing
+    - |
+      >testing/dummy_dirs
+      for dir in $(find -L testing/global-hooks testing/modules/*/hooks -type d); do
+        echo "$dir" >> testing/dummy_dirs
+        cat > "$dir/dummy" <<"EOF"
+          #!/bin/bash
+      EOF
+      done
     - >
       werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local --
       bash -c "cd /deckhouse/testing/global-hooks/ && ginkgo -vet off -r . && cd /deckhouse/testing/modules/ && ginkgo -vet off -r ."
-    - cat kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
+    - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   variables:
     GIT_SUBMODULE_STRATEGY: normal
   except:
@@ -40,7 +49,7 @@ Tests:
   artifacts:
     when: always
     paths:
-    - kcov-report
+    - testing/kcov-report
     expire_in: 10 days
   tags:
     - build
