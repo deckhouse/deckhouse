@@ -1,13 +1,33 @@
---- a/public/app/plugins/datasource/prometheus/datasource.ts	2018-12-10 17:08:32.000000000 +0300
-+++ b/public/app/plugins/datasource/prometheus/datasource.ts	2018-12-10 19:03:15.791337923 +0300
-@@ -235,6 +235,10 @@
-         ...this.getRangeScopedVars(),
+diff --git a/public/app/plugins/datasource/prometheus/datasource.ts b/public/app/plugins/datasource/prometheus/datasource.ts
+index e6c79faa42..55668ac4f7 100644
+--- a/public/app/plugins/datasource/prometheus/datasource.ts
++++ b/public/app/plugins/datasource/prometheus/datasource.ts
+@@ -356,6 +356,15 @@ export class PrometheusDatasource extends DataSourceApi<PromQuery, PromOptions>
+         ...this.getRangeScopedVars(options.range),
        });
      }
++    const intervalScrapeX3ForOverTimeVectors = Math.max(kbn.interval_to_seconds(this.interval) * 3, interval);
++    const intervalScrapeX4ForRangeVectors = Math.max(kbn.interval_to_seconds(this.interval) * 4, interval);
 +    const intervalForRangeVectors = Math.max(kbn.interval_to_seconds(this.interval) * 2, interval);
 +    scopedVars = Object.assign({}, scopedVars, {
-+    __interval_rv: { text: intervalForRangeVectors + 's', value: intervalForRangeVectors + 's' },
++      __interval_rv: { text: intervalForRangeVectors + 's', value: intervalForRangeVectors + 's'},
++      __interval_sx3: { text: intervalScrapeX3ForOverTimeVectors + 's', value: intervalScrapeX3ForOverTimeVectors + 's'},
++      __interval_sx4: { text: intervalScrapeX4ForRangeVectors + 's', value: intervalScrapeX4ForRangeVectors + 's'},
 +    });
++
      query.step = interval;
-
+ 
      let expr = target.expr;
+diff --git a/public/app/plugins/datasource/prometheus/promql.ts b/public/app/plugins/datasource/prometheus/promql.ts
+index 0bde2da9c2..a63a0ac707 100644
+--- a/public/app/plugins/datasource/prometheus/promql.ts
++++ b/public/app/plugins/datasource/prometheus/promql.ts
+@@ -2,6 +2,8 @@ import { CompletionItem } from '@grafana/ui';
+ 
+ export const RATE_RANGES: CompletionItem[] = [
+   { label: '$__interval', sortText: '$__interval' },
++  { label: '$__interval_sx3', sortText: '$__interval_sx3' },
++  { label: '$__interval_sx4', sortText: '$__interval_sx4' },
+   { label: '1m', sortText: '00:01:00' },
+   { label: '5m', sortText: '00:05:00' },
+   { label: '10m', sortText: '00:10:00' },

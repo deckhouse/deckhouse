@@ -146,7 +146,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\"}[$__interval_rv]))",
+          "expr": "sum(rate(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Rate",
@@ -155,7 +155,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_rv]))",
+          "expr": "sum(rate(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Failed Rate",
@@ -438,7 +438,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component, le))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -448,7 +448,7 @@
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component, le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} ({{component}}) DB fsync",
@@ -628,7 +628,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} ({{component}}) Client Traffic In",
@@ -719,7 +719,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} ({{component}}) Client Traffic Out",
@@ -810,7 +810,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} ({{component}}) Peer Traffic In",
@@ -902,7 +902,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv])) by (node, component)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -993,7 +993,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Failure Rate",
@@ -1011,7 +1011,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Commit Rate",
@@ -1020,7 +1020,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Apply Rate",

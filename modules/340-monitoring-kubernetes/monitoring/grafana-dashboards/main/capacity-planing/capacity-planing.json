@@ -58,7 +58,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(avg_over_time(kube_node_status_allocatable_cpu_cores{node=~\"$node\"}[$__interval]))",
+          "expr": "sum(avg_over_time(kube_node_status_allocatable_cpu_cores{node=~\"$node\"}[$__interval_sx3]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -67,7 +67,7 @@
           "step": 20
         },
         {
-          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval]))",
+          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval_sx3]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Requested CPU Cores",
@@ -75,14 +75,14 @@
           "step": 20
         },
         {
-          "expr": "sum\n(\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\"}[$__interval_rv]))\n    ) > 0\n  )\n)",
+          "expr": "sum\n(\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\"}[$__interval_sx4]))\n    ) > 0\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Over-requested",
           "refId": "C"
         },
         {
-          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\"}[$__interval_rv]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval]))\n      ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\"}[$__interval_rv]))\n    )\n    > 0\n  )",
+          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\"}[$__interval_sx4]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval_sx3]))\n      ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\"}[$__interval_sx4]))\n    )\n    > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Under-requested",
@@ -192,7 +192,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval])) / sum(avg_over_time(kube_node_status_allocatable_cpu_cores{node=~\"$node\"}[$__interval])) * 100",
+          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}[$__interval_sx3])) / sum(avg_over_time(kube_node_status_allocatable_cpu_cores{node=~\"$node\"}[$__interval_sx3])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -251,7 +251,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(avg_over_time(kube_node_status_allocatable_memory_bytes{node=~\"$node\"}[$__interval]))",
+          "expr": "sum(avg_over_time(kube_node_status_allocatable_memory_bytes{node=~\"$node\"}[$__interval_sx3]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -260,7 +260,7 @@
           "step": 20
         },
         {
-          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval]))",
+          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval_sx3]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Requested Memory",
@@ -268,14 +268,14 @@
           "step": 20
         },
         {
-          "expr": "sum\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\"}[$__interval]))\n    ) > 0\n  )",
+          "expr": "sum\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\"}[$__interval_sx3]))\n    ) > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Over-requested",
           "refId": "C"
         },
         {
-          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\"}[$__interval]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\"}[$__interval]))\n    )\n    > 0\n  )",
+          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\"}[$__interval_sx3]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval_sx3]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\"}[$__interval_sx3]))\n    )\n    > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Under-requested",
@@ -385,7 +385,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval])) / sum(avg_over_time(kube_node_status_allocatable_memory_bytes{node=~\"$node\"}[$__interval])) * 100",
+          "expr": "sum(avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}[$__interval_sx3])) / sum(avg_over_time(kube_node_status_allocatable_memory_bytes{node=~\"$node\"}[$__interval_sx3])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -450,7 +450,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval]))",
+          "expr": "sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Maximum capacity of pods",
@@ -560,7 +560,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 - (sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval])) - sum(avg_over_time(kube_pod_info{node=~\"$node\"}[$__interval]))) / sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval])) * 100",
+          "expr": "100 - (sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3])) - sum(avg_over_time(kube_pod_info{node=~\"$node\"}[$__interval_sx3]))) / sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3])) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,

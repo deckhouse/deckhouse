@@ -78,7 +78,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[1m]) + rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])",
+          "expr": "rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[1m]) + rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -86,7 +86,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[1m]) + rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[1m]) + rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -182,7 +182,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_errors{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])",
+          "expr": "rate(kubedns_dnsmasq_errors{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -190,7 +190,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_errors{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(kubedns_dnsmasq_errors{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -368,7 +368,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) / (sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) + sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])))",
+          "expr": "sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) / (sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) + sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -376,7 +376,7 @@
           "refId": "A"
         },
         {
-          "expr": " sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) / (sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) + sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])))",
+          "expr": " sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) / (sum(rate(kubedns_dnsmasq_hits{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) + sum(rate(kubedns_dnsmasq_misses{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -471,7 +471,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_insertions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])",
+          "expr": "rate(kubedns_dnsmasq_insertions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -479,7 +479,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_insertions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(kubedns_dnsmasq_insertions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -574,7 +574,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(kubedns_dnsmasq_evictions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])",
+          "expr": "rate(kubedns_dnsmasq_evictions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -582,7 +582,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kubedns_dnsmasq_evictions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(kubedns_dnsmasq_evictions{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -691,7 +691,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(skydns_skydns_dns_request_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -701,7 +701,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(skydns_skydns_dns_request_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -795,7 +795,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_error_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(skydns_skydns_dns_error_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -805,7 +805,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_error_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(skydns_skydns_dns_error_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -899,7 +899,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) by (pod)",
+          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -909,7 +909,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv]))",
+          "expr": "sum(rate(skydns_skydns_dns_cachemiss_count_total{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1002,7 +1002,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) by (pod) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) by (pod) * 1000000",
+          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) by (pod) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) by (pod) * 1000000",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1012,7 +1012,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_rv])) * 1000000",
+          "expr": "sum(rate(skydns_skydns_dns_request_duration_seconds_sum{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) / sum(rate(skydns_skydns_dns_request_duration_seconds_count{job=\"kube-dns\", pod=~\"$pod\"}[$__interval_sx4])) * 1000000",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

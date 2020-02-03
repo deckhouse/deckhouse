@@ -171,7 +171,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg_over_time(redis_connected_clients{pod=\"$pod\",alias=\"$alias\",namespace=\"$namespace\"}[$__interval])",
+          "expr": "avg_over_time(redis_connected_clients{pod=\"$pod\",alias=\"$alias\",namespace=\"$namespace\"}[$__interval_sx3])",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -261,7 +261,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 \n* \n  (\n    avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\", pod=\"$pod\",alias=\"$alias\"}[$__interval]) \n    / \n    avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])\n  )",
+          "expr": "100 \n* \n  (\n    avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\", pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3]) \n    / \n    avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -325,7 +325,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_commands_processed_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_commands_processed_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -419,7 +419,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_keyspace_hits_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_keyspace_hits_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -431,7 +431,7 @@
           "target": ""
         },
         {
-          "expr": "rate(redis_keyspace_misses_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_keyspace_misses_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -529,7 +529,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])",
+          "expr": "avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "used",
@@ -539,7 +539,7 @@
           "target": ""
         },
         {
-          "expr": "avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])",
+          "expr": "avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -630,7 +630,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_net_input_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_net_input_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ input }}",
@@ -638,7 +638,7 @@
           "step": 2
         },
         {
-          "expr": "rate(redis_net_output_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])",
+          "expr": "rate(redis_net_output_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -731,7 +731,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) by (db)",
+          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) by (db)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -823,7 +823,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) - sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) ",
+          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) - sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -833,7 +833,7 @@
           "target": ""
         },
         {
-          "expr": "sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval])) ",
+          "expr": "sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -932,7 +932,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(redis_expired_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "expr": "sum(rate(redis_expired_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -943,7 +943,7 @@
           "target": ""
         },
         {
-          "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv])) by (addr)",
+          "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1034,7 +1034,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_rv]))",
+          "expr": "topk(5, rate(redis_command_call_duration_seconds_count{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

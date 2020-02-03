@@ -616,7 +616,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_latencies_bucket[$__interval_rv])) by (le)",
+          "expr": "sum(rate(apiserver_request_latencies_bucket[$__interval_sx4])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",
@@ -700,7 +700,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -776,7 +776,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -852,7 +852,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -928,7 +928,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1004,7 +1004,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1080,7 +1080,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1156,7 +1156,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1232,7 +1232,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1308,7 +1308,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1384,7 +1384,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_rv])) by (le)",
+              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{ le }}",
@@ -1558,7 +1558,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by(node) (rate(apiserver_request_count{code!~\"2..\"}[$__interval_rv]))",
+          "expr": "sum by(node) (rate(apiserver_request_count{code!~\"2..\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Error Rate",
@@ -1566,7 +1566,7 @@
           "step": 60
         },
         {
-          "expr": "sum by(node) (rate(apiserver_request_count[$__interval_rv]))",
+          "expr": "sum by(node) (rate(apiserver_request_count[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Request Rate",

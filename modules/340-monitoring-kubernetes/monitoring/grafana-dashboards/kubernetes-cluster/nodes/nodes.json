@@ -283,7 +283,7 @@
           "refId": "C"
         },
         {
-          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__interval_rv])) * 100 )",
+          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__interval_sx4])) * 100 )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -407,7 +407,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__interval_rv])) * 100 )",
+          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__interval_sx4])) * 100 )",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -503,7 +503,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval]))",
+          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval_sx3]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ node }}",
@@ -600,7 +600,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
+          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval_sx3])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ node }}",
@@ -716,7 +716,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -823,7 +823,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -930,7 +930,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1037,7 +1037,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1144,7 +1144,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1251,7 +1251,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1358,7 +1358,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1465,7 +1465,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1572,7 +1572,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1679,7 +1679,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_rv])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1792,7 +1792,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__interval])\n  )",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__interval_sx3])\n  )",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1892,7 +1892,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__interval])\n  )\n/\nsum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval]))\n* 100",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__interval_sx3])\n  )\n/\nsum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval_sx3]))\n* 100",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1903,7 +1903,7 @@
           "step": 10
         },
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
+          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval_sx3])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -2024,21 +2024,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2049,14 +2049,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -2169,21 +2169,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2194,14 +2194,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -2314,21 +2314,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2339,14 +2339,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -2459,21 +2459,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2484,14 +2484,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -2604,21 +2604,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2629,14 +2629,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -2749,21 +2749,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2774,14 +2774,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -2894,21 +2894,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -2919,14 +2919,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -3039,21 +3039,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -3064,14 +3064,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -3184,21 +3184,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -3209,14 +3209,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -3329,21 +3329,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -3354,14 +3354,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -3483,7 +3483,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_read_bytes_total{node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_disk_read_bytes_total{node=~\"$node\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -3593,7 +3593,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=~\"$node\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=~\"$node\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -3716,7 +3716,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -3818,7 +3818,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo\"}[$__interval_rv]))",
+          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
