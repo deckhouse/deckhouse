@@ -28,6 +28,7 @@ Tests:
     - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.0 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - rm -rf "$(pwd)"/kcov-report
     - >
       werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local --
       bash -c "cd /deckhouse/testing/global-hooks/ && ginkgo -vet off -r . && cd /deckhouse/testing/modules/ && ginkgo -vet off -r ."
@@ -44,27 +45,13 @@ Tests:
   tags:
     - build
 
-pages:
-  stage: deploy
-  dependencies:
-  - Tests
-  script:
-  - mv kcov-report/ public/
-  artifacts:
-    paths:
-    - public
-    expire_in: 1 year
-  when: always
-  tags:
-    - build
-
 Matrix Tests:
   stage: testing
   script:
     - pwd
     - type multiwerf && source <(multiwerf use 1.0 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local -- bash -c "cd /deckhouse/testing/; ginkgo -r ./matrix/ --slowSpecThreshold=30s;"
+    - werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local -- bash -c "cd /deckhouse/testing/; ginkgo -vet off -r ./matrix/ --slowSpecThreshold=30s;"
   except:
     - schedules
   tags:
