@@ -8,9 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
+
+	"golang.org/x/sys/unix"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -283,7 +284,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 	sandbox_runner.Run(kcovConfigCmd,
 		sandbox_runner.WithKcovWrapper(globalKcovDir),
-		sandbox_runner.AsUser(500, 500),
+		sandbox_runner.AsUser(999, 998),
 	)
 
 	out := hec.Session.Out.Contents()
@@ -298,34 +299,32 @@ func (hec *HookExecutionConfig) RunHook() {
 
 	Expect(err).ShouldNot(HaveOccurred())
 
-	tmpDir, err = ioutil.TempDir(globalTmpDir, "")
+	tmpDir, err = TempDirWithPerms(globalTmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	ValuesFile, err = ioutil.TempFile(tmpDir, "")
+	ValuesFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "VALUES_PATH="+ValuesFile.Name())
 
-	ConfigValuesFile, err = ioutil.TempFile(tmpDir, "")
+	ConfigValuesFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "CONFIG_VALUES_PATH="+ConfigValuesFile.Name())
 
-	ValuesJsonPatchFile, err = ioutil.TempFile(tmpDir, "")
+	ValuesJsonPatchFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "VALUES_JSON_PATCH_PATH="+ValuesJsonPatchFile.Name())
 
-	ConfigValuesJsonPatchFile, err = ioutil.TempFile(tmpDir, "")
+	ConfigValuesJsonPatchFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "CONFIG_VALUES_JSON_PATCH_PATH="+ConfigValuesJsonPatchFile.Name())
 
-	BindingContextFile, err = ioutil.TempFile(tmpDir, "")
+	BindingContextFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "BINDING_CONTEXT_PATH="+BindingContextFile.Name())
 
-	KubernetesPatchSetFile, err = ioutil.TempFile(tmpDir, "")
+	KubernetesPatchSetFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "D8_KUBERNETES_PATCH_SET_FILE="+KubernetesPatchSetFile.Name())
-
-	_ = chmodR(tmpDir, 0777)
 
 	hookCmd = &exec.Cmd{
 		Path: hec.HookPath,
@@ -339,7 +338,7 @@ func (hec *HookExecutionConfig) RunHook() {
 		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JsonRepr),
 		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContexts.JSON)),
 		sandbox_runner.WithKcovWrapper(globalKcovDir),
-		sandbox_runner.AsUser(500, 500),
+		sandbox_runner.AsUser(999, 998),
 	)
 
 	valuesJsonPatchBytes, err := ioutil.ReadAll(ValuesJsonPatchFile)
@@ -380,29 +379,15 @@ func (hec *HookExecutionConfig) RunHook() {
 }
 
 var _ = BeforeSuite(func() {
-	By("Init temporary directories")
+	By("Initing temporary directories")
 	var err error
-	globalTmpDir, err = ioutil.TempDir("", "")
+	unix.Umask(0o000)
+	globalTmpDir, err = TempDirWithPerms("", "", 0o777)
 	Expect(err).ToNot(HaveOccurred())
-	err = chmodR(globalTmpDir, 0777)
-	Expect(err).ToNot(HaveOccurred())
-	_ = os.Mkdir(globalKcovDir, 0777)
-	_ = chmodR(globalKcovDir, 0777)
-
+	_ = os.Mkdir(globalKcovDir, 0o777)
 })
 
 var _ = AfterSuite(func() {
 	By("Removing temporary directories")
 	Expect(os.RemoveAll(globalTmpDir)).Should(Succeed())
-	_ = chmodR(globalKcovDir, os.FileMode(0777))
 })
-
-func chmodR(path string, mode os.FileMode) error {
-	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
-		if err == nil {
-			err = os.Chmod(name, mode)
-		}
-
-		return err
-	})
-}

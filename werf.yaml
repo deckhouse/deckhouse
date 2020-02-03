@@ -206,7 +206,8 @@ ansible:
   - command: go mod download
     args:
       chdir: /deckhouse/testing
-  - command: adduser -u 500 -D -H -s /bin/bash kcov-runner
+  - command: addgroup -g 998 -S kcov-runner
+  - command: adduser -u 999 -G kcov-runner -D -H -s /bin/bash kcov-runner
 
 docker:
   ENV:
