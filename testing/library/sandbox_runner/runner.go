@@ -81,7 +81,7 @@ func WithKcovWrapper(tmpDir string) SandboxOption {
 		}
 
 		// TODO: do something about path constants
-		newArgs := []string{kcovPath, tmpDir}
+		newArgs := []string{kcovPath, tmpDir, "--exclude-pattern=shell-operator"}
 		newArgs = append(newArgs, conf.cmd.Args...)
 
 		conf.cmd.Path = kcovPath

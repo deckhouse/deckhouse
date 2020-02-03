@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -35,7 +37,7 @@ var (
 )
 
 const (
-	globalKcovDir = "/deckhouse/kcov-report"
+	globalKcovDir = "/deckhouse/testing/kcov-report"
 )
 
 func (hec *HookExecutionConfig) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
@@ -385,6 +387,34 @@ var _ = BeforeSuite(func() {
 	globalTmpDir, err = TempDirWithPerms("", "", 0o777)
 	Expect(err).ToNot(HaveOccurred())
 	_ = os.Mkdir(globalKcovDir, 0o777)
+
+	dummyDirsFile, err := os.Open("/deckhouse/testing/dummy_dirs")
+	if err != nil {
+		panic(err)
+	}
+
+	sc := bufio.NewScanner(dummyDirsFile)
+	for sc.Scan() {
+		dir := string(sc.Text())
+
+		cmd := &exec.Cmd{
+			Path: filepath.Join(dir, "dummy"),
+			Args: []string{filepath.Join(dir, "dummy")},
+			Dir:  "/deckhouse",
+		}
+
+		res := sandbox_runner.Run(cmd,
+			sandbox_runner.WithKcovWrapper(globalKcovDir),
+			sandbox_runner.AsUser(999, 998),
+		)
+
+		if res.ExitCode() != 0 {
+			panic("")
+		}
+	}
+	if err := sc.Err(); err != nil {
+		panic("scan file error: " + err.Error())
+	}
 })
 
 var _ = AfterSuite(func() {
