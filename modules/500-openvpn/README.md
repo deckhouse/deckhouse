@@ -93,3 +93,14 @@ openvpnEnabled: "true"
 openvpn: |
   inlet: LoadBalancer
 ```
+
+Конфиг если публичный IP на внешнем балансировщике
+```
+openvpnEnabled: "true"
+openvpn: |
+  externalHost: 5.4.54.4
+  externalIP: 192.168.0.30 # Внутренний IP, который примет трафик от внешнего балансировщика 
+  inlet: ExternalIP
+  nodeSelector:
+    kubernetes.io/hostname: node
+```
