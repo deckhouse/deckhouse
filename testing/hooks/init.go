@@ -72,7 +72,7 @@ type HookExecutionConfig struct {
 	KubeState                string // yaml string
 	ObjectStore              object_store.ObjectStore
 	BindingContexts          BindingContextsSlice
-	BindingContextController context.BindingContextController
+	BindingContextController *context.BindingContextController
 
 	Session *gexec.Session
 }
@@ -207,7 +207,7 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
 }
 
 func (hec *HookExecutionConfig) RunSchedule(crontab string) string {
-	if &hec.BindingContextController == nil {
+	if hec.BindingContextController == nil {
 		return ScheduleBindingContext("Empty Schedule")
 	}
 	contexts, err := hec.BindingContextController.RunSchedule(crontab)
@@ -276,18 +276,20 @@ func (hec *HookExecutionConfig) RunHook() {
 	hec.Session.Wait(10)
 	Expect(hec.Session.ExitCode()).To(Equal(0))
 
-	// let's re-run --config again, but this time with kcov wrapper
-	// it is required since kcov quitely eats all the stdout
-	kcovConfigCmd := &exec.Cmd{
-		Path: hec.HookPath,
-		Args: []string{hec.HookPath, "--config"},
-		Dir:  "/deckhouse",
-		Env:  append(os.Environ(), hookEnvs...),
+	if os.Getenv("KCOV_DISABLED") != "yes" {
+		// let's re-run --config again, but this time with kcov wrapper
+		// it is required since kcov quitely eats all the stdout
+		kcovConfigCmd := &exec.Cmd{
+			Path: hec.HookPath,
+			Args: []string{hec.HookPath, "--config"},
+			Dir:  "/deckhouse",
+			Env:  append(os.Environ(), hookEnvs...),
+		}
+		sandbox_runner.Run(kcovConfigCmd,
+			sandbox_runner.WithKcovWrapper(globalKcovDir),
+			sandbox_runner.AsUser(999, 998),
+		)
 	}
-	sandbox_runner.Run(kcovConfigCmd,
-		sandbox_runner.WithKcovWrapper(globalKcovDir),
-		sandbox_runner.AsUser(999, 998),
-	)
 
 	out := hec.Session.Out.Contents()
 	By("Parsing config " + string(out))
@@ -335,13 +337,17 @@ func (hec *HookExecutionConfig) RunHook() {
 		Env:  hookEnvs,
 	}
 
-	hec.Session = sandbox_runner.Run(hookCmd,
+	options := []sandbox_runner.SandboxOption{
 		sandbox_runner.WithFile(ValuesFile.Name(), hec.values.JsonRepr),
 		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JsonRepr),
 		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContexts.JSON)),
-		sandbox_runner.WithKcovWrapper(globalKcovDir),
-		sandbox_runner.AsUser(999, 998),
-	)
+	}
+	if os.Getenv("KCOV_DISABLED") != "yes" {
+		options = append(options, sandbox_runner.WithKcovWrapper(globalKcovDir))
+		options = append(options, sandbox_runner.AsUser(999, 998))
+	}
+
+	hec.Session = sandbox_runner.Run(hookCmd, options...)
 
 	valuesJsonPatchBytes, err := ioutil.ReadAll(ValuesJsonPatchFile)
 	Expect(err).ShouldNot(HaveOccurred())
