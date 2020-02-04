@@ -44,7 +44,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: KeepalivedInstance
 metadata:
-  name: front1
+  name: front-1
 spec:
   nodeSelector:
     node-role/frontend: ""
@@ -179,8 +179,8 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 		It("replicas for instance front1 must be one; authPass for front1 must be generated", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("keepalived.instances.front1.replicas").String()).To(Equal("1"))
-			Expect(len(f.ValuesGet("keepalived.instances.front1.authPass").String())).To(Equal(8))
+			Expect(f.ValuesGet("keepalived.instances.front-1.replicas").String()).To(Equal("1"))
+			Expect(len(f.ValuesGet("keepalived.instances.front-1.authPass").String())).To(Equal(8))
 		})
 	})
 
