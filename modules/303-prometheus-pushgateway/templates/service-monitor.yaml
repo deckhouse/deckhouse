@@ -20,3 +20,5 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_service_label_app]
       targetLabel: pushgateway
+    - targetLabel: tier
+      replacement: cluster

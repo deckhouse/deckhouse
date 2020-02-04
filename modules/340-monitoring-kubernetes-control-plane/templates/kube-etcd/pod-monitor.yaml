@@ -37,6 +37,8 @@ spec:
       targetLabel: node
     - targetLabel: component
       replacement: etcd
+    - targetLabel: tier
+      replacement: cluster
 {{- if or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE") }}
   - targetPort: etcd-events
     scheme: https
@@ -57,4 +59,6 @@ spec:
       targetLabel: node
     - targetLabel: component
       replacement: etcd-events
+    - targetLabel: tier
+      replacement: cluster
 {{- end }}

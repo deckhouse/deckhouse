@@ -22,6 +22,8 @@ spec:
       targetLabel: node
     - targetLabel: scrape_endpoint
       replacement: kubelet
+    - targetLabel: tier
+      replacement: cluster
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -37,6 +39,8 @@ spec:
       targetLabel: node
     - targetLabel: scrape_endpoint
       replacement: cadvisor
+    - targetLabel: tier
+      replacement: cluster
     metricRelabelings:
     - sourceLabels: [namespace]
       regex: '^$'

@@ -26,3 +26,5 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
