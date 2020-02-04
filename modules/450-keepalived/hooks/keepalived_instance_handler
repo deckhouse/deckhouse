@@ -38,7 +38,7 @@ function __main__() {
   values::set keepalived.instances "${instances}"
 
   for instanceName in $(jq -r '. | keys[]' <<< ${instances}); do
-    nodeSelector=$(jq -r '.'"${instanceName}".'nodeSelector' <<< "$instances")
+    nodeSelector=$(jq -r ".\"${instanceName}\".nodeSelector" <<< "$instances")
     replicas=$(context::jq -r "[.snapshots.k8s_nodes[] | select(.object.metadata.labels | contains(${nodeSelector}))] | length")
     values::set keepalived.instances."${instanceName}".replicas $replicas
   done
