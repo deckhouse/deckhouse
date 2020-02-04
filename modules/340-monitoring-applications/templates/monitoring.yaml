@@ -1,8 +1,5 @@
-{{- if .Values.global.enabledModules | has "prometheus" }}
-  {{- $context := . }}
-  {{- range $application := (list "elasticsearch" "etcd3" "jmx" "memcached" "mongodb" "nats" "php-fpm" "prometheus" "rabbitmq" "redis" "sidekiq" "uwsgi") }}
-    {{- if or ($context.Values.monitoringApplications.enabledApplications | has $application) ($context.Values.monitoringApplications.discovery.enabledApplications | has $application) }}
-      {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards" (printf "monitoring/grafana-dashboards/applications/%s" $application)) }}
-    {{- end }}
-  {{- end }}
+{{- $context := . }}
+{{- range $application := .Values.monitoringApplications.internal.enabledApplicationsSummary }}
+  {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards" (printf "monitoring/grafana-dashboards/applications/%s" $application)) }}
+  {{- include "helm_lib_prometheus_rules_recursion" (list $context "d8-monitoring" "monitoring/prometheus-rules" (printf "monitoring/prometheus-rules/applications/%s" $application)) }}
 {{- end }}

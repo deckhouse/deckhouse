@@ -1,14 +1,19 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "etcd3" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: prometheus
+  name: etcd3
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: https
+  - port: http-metrics
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
+  - port: https-metrics
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
@@ -21,4 +26,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: prometheus
+      prometheus-target: etcd3
+{{- end }}
