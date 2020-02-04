@@ -30,6 +30,15 @@ spec:
       labels:
         app: vsphere-csi-node
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - operator: NotIn
+                key: node-type.deckhouse.io
+                values:
+                - static
       imagePullSecrets:
       - name: deckhouse-registry
       hostNetwork: true

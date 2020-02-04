@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+{
+  "onKubernetesEvent": [
+    {
+      "kind": "Node",
+      "jqFilter": ".metadata.labels // {} | contains({\"node-type.deckhouse.io\": \"static\"})"
+    }
+  ]
+}
+EOF
+}
+
+function __main__() {
+  node_name=$(hook::context_jq -r '.[0].resourceName')
+  if kubectl get node "$node_name" -o json | jq -re '.metadata.labels // {} | contains({"node-type.deckhouse.io": "static"})' >/dev/null; then
+    if ! stderr=$(kubectl patch node "$node_name" -p '{"spec":{"providerID": "static://"}}' 2>&1 >/dev/null); then
+      echo "$stderr"
+      exit 1
+    fi
+  fi
+
+}
+
+hook::run "$@"
