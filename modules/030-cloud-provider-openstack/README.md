@@ -136,9 +136,19 @@ volumeBindingMode: WaitForFirstConsumer
     * Если нужен `host-gw` режим flannel, следует добавить опцию `allowed_address_pairs` с PodNetwork CIDR к параметрам `instance`.
 5. [Пример](install-kubernetes/openstack/ansible/master.yaml) настройки ОС для master'а через kubeadm.
 
-## Как мне поднять кластер
+## Как мне поднять кластер?
 
 1. [Настройте](#настройка-окружения) облачное окружение. Возможно, [автоматически](#автоматизированная-подготовка-окружения).
 2. [Установите](#включение-модуля) deckhouse с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
 3. [Создайте](#OpenStackInstanceClass-custom-resource) один или несколько `OpenStackInstanceClass`
 4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [cloud-instance-manager](modules/040-cloud-instance-manager).
+
+## Как мне поднять гибридный (вручную заведённые ноды) кластер?
+
+1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`;
+2. [Включить](#Пример-конфигурации) модуль и прописать ему необходимые для работы параметры.
+3. Cloud-controller-manager синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому поддерживается два варианта:
+     * Узел создан в OpenStack и его имя в Kubernetes совпадает с именем виртуальной машины в OpenStack
+         * Ничего делать не нужно
+     * Узел создан НЕ в OpenStack (железные сервер, что угодно другое) или он создан в OpenStack, но имя узла Kubernetes и имя виртуальной машины не совпадают
+         * Необходимо прописать лейбл `node-type.deckhouse.io: "static"` на каждый из этих узлов: `kubectl label node node-name node-type.deckhouse.io=static`.

@@ -186,12 +186,22 @@ data:
 4. На созданный Datacenter **необходимо** "повесить" тэг из категории тэгов, указанный в `regionTagCategory` (по-умолчанию, `k8s-region`). Этот тэг будет обозначать **регион**.
 5. Настроенная(-ые) Kubernetes master ноды. [Пример](install-kubernetes/common/ansible/kubernetes/tasks/master.yml) настройки ОС для master'а через kubeadm. Для созданных vSphere VirtualMachine прописать extraConfig согласно [инструкции](modules/030-cloud-provider-vsphere/docs/csi/disk_uuid.md).
 
-## Как мне поднять кластер
+## Как мне поднять кластер?
 
 1. Настройте инфраструктурное окружение в соответствии с [требованиями](#требования-к-окружениям) к окружению.
 2. [Установите](#включение-модуля) deckhouse с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
 3. [Создайте](#VsphereInstanceClass-custom-resource) один или несколько `VsphereInstanceClass`
 4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [cloud-instance-manager](modules/040-cloud-instance-manager).
+
+## Как мне поднять гибридный (вручную заведённые ноды) кластер?
+
+1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`;
+2. [Включить](#Пример-конфигурации) модуль и прописать ему необходимые для работы параметры.
+3. Cloud-controller-manager синхронизирует состояние между vSphere и Kubernetes, удаляя из Kubernetes те узлы, которых нет в vSphere. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому поддерживается два варианта:
+     * Узел создан в vSphere, его имя в Kubernetes совпадает с именем виртуальной машины в vSphere и он находится в vSphere в директории указанной в параметре vmFolderPath настоящего модуля
+         * Ничего делать не нужно
+     * Узел создан НЕ в vSphere (железные сервер, что угодно другое) или он создан в vSphere, но имя узла Kubernetes и имя виртуальной машины не совпадают или он находится в другой директории
+         * Необходимо прописать лейбл `node-type.deckhouse.io: "static"` на каждый из этих узлов: `kubectl label node node-name node-type.deckhouse.io=static`.
 
 ## Список привилегий для использования модуля
 
