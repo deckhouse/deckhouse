@@ -20,7 +20,9 @@ EOF
 }
 
 function __on_kubernetes::secret::synchronization() {
-  values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$(context::get objects.0.filterResult)"
+  if context::has objects.0; then
+    values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$(context::get objects.0.filterResult)"
+  fi
 }
 
 function __on_kubernetes::secret::added_or_modified() {

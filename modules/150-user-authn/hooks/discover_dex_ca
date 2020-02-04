@@ -35,7 +35,10 @@ function __main__(){
       values::unset userAuthn.internal.controlPlaneConfigurator.oidcCA
     ;;
     FromIngressSecret)
-      oidcCA=$(context::get snapshots.secret.0.filterResult)
+      oidcCA=""
+      if context::has snapshots.secret.0 ; then
+        oidcCA=$(context::get snapshots.secret.0.filterResult)
+      fi
       if [[ "$oidcCA" == "" ]]; then
         >&2 echo "ERROR: Can't get ca.crt or tls.crt from secret 'ingress-tls'."
         return 1
