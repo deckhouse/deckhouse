@@ -5,6 +5,7 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    beforeHelm: 10
     kubernetes:
     - name: services
       includeSnapshotsFrom: ["services"]
@@ -20,6 +21,11 @@ EOF
 function __on_kubernetes::services() {
   enabledApplications="$(context::jq -r '[.snapshots.services[] | .object.metadata.labels."prometheus-target"] | sort | unique')"
   values::set monitoringApplications.discovery.enabledApplications "$enabledApplications"
+}
+
+function __on_before_helm() {
+  enabledApplicationsSummary="$(values::jq -r '.monitoringApplications.discovery.enabledApplications + .monitoringApplications.enabledApplications | unique')"
+  values::set monitoringApplications.internal.enabledApplicationsSummary "${enabledApplicationsSummary}"
 }
 
 hook::run $@

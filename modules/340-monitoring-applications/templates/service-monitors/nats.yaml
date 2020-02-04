@@ -1,13 +1,18 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "nats" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: trickster
+  name: nats
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   endpoints:
+  - port: http-metrics
+    relabelings:
+    - regex: endpoint
+      action: labeldrop
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -21,4 +26,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: trickster
+      prometheus-target: nats
+{{- end }}

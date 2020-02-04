@@ -43,7 +43,7 @@ metadata:
 )
 
 var _ = Describe("Monitoring applications hooks :: discovery ::", func() {
-	f := HookExecutionConfigInit(`{"monitoringApplications":{"discovery":{}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"monitoringApplications":{"discovery":{"enabledApplications": []},"internal":{"enabledApplicationsSummary": []}}}`, `{}`)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -91,4 +91,31 @@ var _ = Describe("Monitoring applications hooks :: discovery ::", func() {
 			})
 		})
 	})
+
+	Context("BeforeHelm — nothing discovered, nothing configured", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(BeforeHelmContext)
+			f.RunHook()
+		})
+
+		It("monitoringApplications.internal.enabledApplicationsSummary must be []", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	Context("BeforeHelm — discovered and configured", func() {
+		BeforeEach(func() {
+			f.ValuesSet("monitoringApplications.enabledApplications", []string{"nats", "redis"})
+			f.ValuesSet("monitoringApplications.discovery.enabledApplications", []string{"winword", "nats"})
+			f.BindingContexts.Set(BeforeHelmContext)
+			f.RunHook()
+		})
+
+		It("monitoringApplications.internal.enabledApplicationsSummary must be unique sum of two lists", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(MatchJSON(`["nats","redis","winword"]`))
+		})
+	})
+
 })

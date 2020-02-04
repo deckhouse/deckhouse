@@ -1,8 +1,9 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "sidekiq" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: fluentd
+  name: sidekiq
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
@@ -25,4 +26,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: fluentd
+      prometheus-target: sidekiq
+{{- end }}

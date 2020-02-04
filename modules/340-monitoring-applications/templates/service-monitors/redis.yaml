@@ -1,8 +1,9 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "redis" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: minio
+  name: redis
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
@@ -25,4 +26,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: minio
+      prometheus-target: redis
+{{- end }}

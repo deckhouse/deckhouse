@@ -1,18 +1,15 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "prometheus" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: mongodb
+  name: prometheus
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: prometheus-target
   endpoints:
-  - port: http-metrics
-    relabelings:
-    - regex: endpoint
-      action: labeldrop
-  - port: https-metrics
+  - port: https
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
@@ -25,4 +22,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: mongodb
+      prometheus-target: prometheus
+{{- end }}

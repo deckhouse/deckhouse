@@ -1,8 +1,9 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "rabbitmq" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: consul
+  name: rabbitmq
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
@@ -25,4 +26,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: consul
+      prometheus-target: rabbitmq
+{{- end }}

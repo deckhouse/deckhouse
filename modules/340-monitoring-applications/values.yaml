@@ -1,4 +1,6 @@
 monitoringApplications:
   discovery:
-    enabledApplications: {}
+    enabledApplications: []
+  internal:
+    enabledApplicationsSummary: []
   enabledApplications: []

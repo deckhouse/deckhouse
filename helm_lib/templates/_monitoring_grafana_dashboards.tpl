@@ -1,5 +1,5 @@
 {{- /* Usage: {{ include "helm_lib_grafana_dashboard_definitions_recursion" (list . <root dir> [current dir]) }} */ -}}
-{{- /* returns dashboard-definintions from <root dir>/ */ -}}
+{{- /* returns all the dashboard-definintions from <root dir>/ */ -}}
 {{- /* current dir is optional — used for recursion but you can use it for partially generating dashboards */ -}}
 {{- define "helm_lib_grafana_dashboard_definitions_recursion" -}}
   {{- $context := index . 0 }}
