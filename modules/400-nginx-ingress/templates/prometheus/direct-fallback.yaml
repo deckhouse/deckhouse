@@ -36,6 +36,8 @@ spec:
       {{- else }}
       replacement: {{ $context.name }}
       {{- end }}
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       app: direct-fallback

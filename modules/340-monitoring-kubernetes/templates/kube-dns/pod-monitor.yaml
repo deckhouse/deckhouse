@@ -21,6 +21,8 @@ spec:
       action: labeldrop
     - targetLabel: scrape_endpoint
       replacement: dnsmasq
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       k8s-app: kube-dns

@@ -17,6 +17,8 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
   namespaceSelector:
     matchNames:
     - d8-operator-prometheus

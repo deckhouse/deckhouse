@@ -14,6 +14,8 @@ spec:
     relabelings:
     - regex: endpoint|namespace|container|pod
       action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}

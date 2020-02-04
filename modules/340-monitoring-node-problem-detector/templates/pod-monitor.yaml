@@ -18,6 +18,8 @@ spec:
     relablings:
     - regex: endpoint|namespace|container
       action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       app: monitoring-node-problem-detector

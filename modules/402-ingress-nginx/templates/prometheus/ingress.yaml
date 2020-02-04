@@ -25,6 +25,8 @@ spec:
       targetLabel: controller
     - targetLabel: scrape_source
       replacement: controller
+    - targetLabel: tier
+      replacement: cluster
     metricRelabelings:
     # remove ingress_class, we have "controller" label
     - regex: ingress_class
@@ -48,6 +50,8 @@ spec:
       targetLabel: app
     - targetLabel: scrape_source
       replacement: statsd
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       app: controller

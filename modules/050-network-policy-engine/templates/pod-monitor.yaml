@@ -13,6 +13,8 @@ spec:
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       app: kube-router

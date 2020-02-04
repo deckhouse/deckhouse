@@ -18,6 +18,8 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
       app: cert-manager

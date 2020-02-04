@@ -29,6 +29,8 @@ spec:
       replacement: kube-controller-manager
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
   selector:
     matchLabels:
 {{- if eq .Values.global.discovery.clusterType "ACS" }}
