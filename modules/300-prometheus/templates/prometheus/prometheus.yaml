@@ -90,6 +90,10 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: 30s
+  externalLabels:
+    prometheus: deckhouse
+  prometheusExternalLabelName: ""
+  replicaExternalLabelName: ""
   serviceAccountName: prometheus
   podMonitorNamespaceSelector:
     matchLabels:
