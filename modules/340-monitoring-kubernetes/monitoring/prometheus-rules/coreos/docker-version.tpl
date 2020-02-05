@@ -10,6 +10,7 @@
     labels:
       impact: negligible
       likelihood: certain
+      tier: cluster
     annotations:
       polk_flant_com_markup_format: markdown
       description: |-
@@ -38,6 +39,7 @@
     labels:
       impact: negligible
       likelihood: certain
+      tier: cluster
     annotations:
       polk_flant_com_markup_format: markdown
       description: |-
@@ -55,6 +57,7 @@
     labels:
       impact: negligible
       likelihood: certain
+      tier: cluster
     annotations:
       polk_flant_com_markup_format: markdown
       description: |-

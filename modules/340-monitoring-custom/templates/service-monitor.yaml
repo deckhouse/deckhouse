@@ -14,8 +14,6 @@ spec:
       targetLabel: job
     - regex: endpoint
       action: labeldrop
-    - targetLabel: tier
-      replacement: application
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -28,8 +26,6 @@ spec:
       targetLabel: job
     - regex: endpoint
       action: labeldrop
-    - targetLabel: tier
-      replacement: application
   namespaceSelector:
     any: true
   selector:
