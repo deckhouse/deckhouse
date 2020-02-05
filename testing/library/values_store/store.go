@@ -22,7 +22,7 @@ type ValuesStore struct {
 }
 
 func NewStoreFromRawYaml(rawYaml []byte) (*ValuesStore, error) {
-	jsonRaw, err := convertYamlToJson(rawYaml)
+	jsonRaw, err := ConvertYamlToJson(rawYaml)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (store *ValuesStore) Get(path string) library.KubeResult {
 }
 
 func (store *ValuesStore) GetAsYaml() []byte {
-	yamlRaw, err := convertJsonToYaml(store.JsonRepr)
+	yamlRaw, err := ConvertJsonToYaml(store.JsonRepr)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	return yamlRaw
@@ -63,7 +63,7 @@ func (store *ValuesStore) SetByPath(path string, value interface{}) {
 }
 
 func (store *ValuesStore) SetByPathFromYaml(path string, yamlRaw []byte) {
-	jsonRaw, err := convertYamlToJson(yamlRaw)
+	jsonRaw, err := ConvertYamlToJson(yamlRaw)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	newValues, err := sjson.SetRawBytes(store.JsonRepr, path, jsonRaw)
@@ -94,7 +94,7 @@ func (store *ValuesStore) DeleteByPath(path string) {
 	store.JsonRepr = newValues
 }
 
-func convertYamlToJson(yamlBytes []byte) ([]byte, error) {
+func ConvertYamlToJson(yamlBytes []byte) ([]byte, error) {
 	var obj interface{}
 
 	err := yaml.Unmarshal(yamlBytes, &obj)
@@ -110,7 +110,7 @@ func convertYamlToJson(yamlBytes []byte) ([]byte, error) {
 	return jsonBytes, nil
 }
 
-func convertJsonToYaml(jsonBytes []byte) ([]byte, error) {
+func ConvertJsonToYaml(jsonBytes []byte) ([]byte, error) {
 	var obj interface{}
 
 	err := json.Unmarshal(jsonBytes, &obj)

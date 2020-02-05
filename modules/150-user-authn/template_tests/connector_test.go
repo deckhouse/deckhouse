@@ -1,10 +1,12 @@
 package template_tests
 
 import (
+	"encoding/base64"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -45,17 +47,24 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			hec.HelmRender()
 		})
 		It("Should add gitlab provider Custom Object", func() {
-			connector := hec.KubernetesResource("Connector", "d8-user-authn", "gitlabID")
+			configmap := hec.KubernetesResource("Secret", "d8-user-authn", "dex")
 
-			Expect(connector.Field("metadata.name").String()).To(Equal("gitlabID"))
-			Expect(connector.Field("type").String()).To(Equal("gitlab"))
-			Expect(connector.Field("name").String()).To(Equal("gitlabName"))
-			Expect(connector.Field("id").String()).To(Equal("gitlabID"))
-			Expect(connector.Field("email.baseURL").String()).To(Equal("https://example.com"))
-			Expect(connector.Field("email.redirectURI").String()).To(Equal("https://dex.example.com/callback"))
-			Expect(connector.Field("email.clientID").String()).To(Equal("clientID"))
-			Expect(connector.Field("email.clientSecret").String()).To(Equal("secret"))
-			Expect(connector.Field("email.groups").String()).To(MatchJSON(`["Admins","Everyone"]`))
+			data, err := base64.StdEncoding.DecodeString(configmap.Field("data.config\\.yaml").String())
+			Expect(err).To(BeNil())
+
+			data, err = ConvertYamlToJson(data)
+			Expect(err).To(BeNil())
+
+			connector := gjson.GetBytes(data, "connectors.0")
+
+			Expect(connector.Get("type").String()).To(Equal("gitlab"))
+			Expect(connector.Get("name").String()).To(Equal("gitlabName"))
+			Expect(connector.Get("id").String()).To(Equal("gitlabID"))
+			Expect(connector.Get("config.baseURL").String()).To(Equal("https://example.com"))
+			Expect(connector.Get("config.redirectURI").String()).To(Equal("https://dex.example.com/callback"))
+			Expect(connector.Get("config.clientID").String()).To(Equal("clientID"))
+			Expect(connector.Get("config.clientSecret").String()).To(Equal("secret"))
+			Expect(connector.Get("config.groups").String()).To(MatchJSON(`["Admins","Everyone"]`))
 		})
 	})
 
@@ -75,16 +84,23 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			hec.HelmRender()
 		})
 		It("Should add crowd provider Custom Object", func() {
-			connector := hec.KubernetesResource("Connector", "d8-user-authn", "crowdID")
+			configmap := hec.KubernetesResource("Secret", "d8-user-authn", "dex")
 
-			Expect(connector.Field("metadata.name").String()).To(Equal("crowdID"))
-			Expect(connector.Field("type").String()).To(Equal("atlassian-crowd"))
-			Expect(connector.Field("name").String()).To(Equal("crowdName"))
-			Expect(connector.Field("id").String()).To(Equal("crowdID"))
-			Expect(connector.Field("email.baseURL").String()).To(Equal("https://example.com"))
-			Expect(connector.Field("email.clientID").String()).To(Equal("clientID"))
-			Expect(connector.Field("email.groups").String()).To(MatchJSON(`["Admins","Everyone"]`))
-			Expect(connector.Field("email.usernamePrompt").String()).To(Equal("Crowd username"))
+			data, err := base64.StdEncoding.DecodeString(configmap.Field("data.config\\.yaml").String())
+			Expect(err).To(BeNil())
+
+			data, err = ConvertYamlToJson(data)
+			Expect(err).To(BeNil())
+
+			connector := gjson.GetBytes(data, "connectors.0")
+
+			Expect(connector.Get("type").String()).To(Equal("atlassian-crowd"))
+			Expect(connector.Get("name").String()).To(Equal("crowdName"))
+			Expect(connector.Get("id").String()).To(Equal("crowdID"))
+			Expect(connector.Get("config.baseURL").String()).To(Equal("https://example.com"))
+			Expect(connector.Get("config.clientID").String()).To(Equal("clientID"))
+			Expect(connector.Get("config.groups").String()).To(MatchJSON(`["Admins","Everyone"]`))
+			Expect(connector.Get("config.usernamePrompt").String()).To(Equal("Crowd username"))
 		})
 	})
 	Context("With Github and OIDC providers in config values", func() {
@@ -120,35 +136,41 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			hec.HelmRender()
 		})
 		It("Should add github and oid providers Custom Object", func() {
-			githubConnector := hec.KubernetesResource("Connector", "d8-user-authn", "githubID")
+			configmap := hec.KubernetesResource("Secret", "d8-user-authn", "dex")
 
-			Expect(githubConnector.Field("metadata.name").String()).To(Equal("githubID"))
-			Expect(githubConnector.Field("type").String()).To(Equal("github"))
-			Expect(githubConnector.Field("name").String()).To(Equal("githubName"))
-			Expect(githubConnector.Field("id").String()).To(Equal("githubID"))
-			Expect(githubConnector.Field("email.redirectURI").String()).To(Equal("https://dex.example.com/callback"))
-			Expect(githubConnector.Field("email.clientID").String()).To(Equal("clientID"))
-			Expect(githubConnector.Field("email.clientSecret").String()).To(Equal("secret"))
-			Expect(githubConnector.Field("email.useLoginAsID").Bool()).To(Equal(true))
-			Expect(githubConnector.Field("email.loadAllGroups").Bool()).To(Equal(false))
-			Expect(githubConnector.Field("email.orgs").String()).To(MatchJSON(
+			data, err := base64.StdEncoding.DecodeString(configmap.Field("data.config\\.yaml").String())
+			Expect(err).To(BeNil())
+
+			data, err = ConvertYamlToJson(data)
+			Expect(err).To(BeNil())
+
+			githubConnector := gjson.GetBytes(data, "connectors.0")
+
+			Expect(githubConnector.Get("type").String()).To(Equal("github"))
+			Expect(githubConnector.Get("name").String()).To(Equal("githubName"))
+			Expect(githubConnector.Get("id").String()).To(Equal("githubID"))
+			Expect(githubConnector.Get("config.redirectURI").String()).To(Equal("https://dex.example.com/callback"))
+			Expect(githubConnector.Get("config.clientID").String()).To(Equal("clientID"))
+			Expect(githubConnector.Get("config.clientSecret").String()).To(Equal("secret"))
+			Expect(githubConnector.Get("config.useLoginAsID").Bool()).To(Equal(true))
+			Expect(githubConnector.Get("config.loadAllGroups").Bool()).To(Equal(false))
+			Expect(githubConnector.Get("config.orgs").String()).To(MatchJSON(
 				`[{"name":"TestOrg1","teams":["Admins","Everyone"]},{"name":"TestOrg2"}]`,
 			))
 
-			oidcConnector := hec.KubernetesResource("Connector", "d8-user-authn", "oidcID")
+			oidcConnector := gjson.GetBytes(data, "connectors.1")
 
-			Expect(oidcConnector.Field("metadata.name").String()).To(Equal("oidcID"))
-			Expect(oidcConnector.Field("type").String()).To(Equal("oidc"))
-			Expect(oidcConnector.Field("name").String()).To(Equal("oidcName"))
-			Expect(oidcConnector.Field("id").String()).To(Equal("oidcID"))
-			Expect(oidcConnector.Field("email.redirectURI").String()).To(Equal("https://dex.example.com/callback"))
-			Expect(oidcConnector.Field("email.clientID").String()).To(Equal("clientID"))
-			Expect(oidcConnector.Field("email.clientSecret").String()).To(Equal("secret"))
-			Expect(oidcConnector.Field("email.userIDKey").String()).To(Equal("uuid"))
-			Expect(oidcConnector.Field("email.userNameKey").String()).To(Equal("username"))
-			Expect(oidcConnector.Field("email.basicAuthUnsupported").Bool()).To(Equal(true))
-			Expect(oidcConnector.Field("email.insecureSkipEmailVerified").Bool()).To(Equal(true))
-			Expect(oidcConnector.Field("email.scopes").String()).To(MatchJSON(`["groups","offline_access"]`))
+			Expect(oidcConnector.Get("type").String()).To(Equal("oidc"))
+			Expect(oidcConnector.Get("name").String()).To(Equal("oidcName"))
+			Expect(oidcConnector.Get("id").String()).To(Equal("oidcID"))
+			Expect(oidcConnector.Get("config.redirectURI").String()).To(Equal("https://dex.example.com/callback"))
+			Expect(oidcConnector.Get("config.clientID").String()).To(Equal("clientID"))
+			Expect(oidcConnector.Get("config.clientSecret").String()).To(Equal("secret"))
+			Expect(oidcConnector.Get("config.userIDKey").String()).To(Equal("uuid"))
+			Expect(oidcConnector.Get("config.userNameKey").String()).To(Equal("username"))
+			Expect(oidcConnector.Get("config.basicAuthUnsupported").Bool()).To(Equal(true))
+			Expect(oidcConnector.Get("config.insecureSkipEmailVerified").Bool()).To(Equal(true))
+			Expect(oidcConnector.Get("config.scopes").String()).To(MatchJSON(`["groups","offline_access"]`))
 		})
 	})
 })
