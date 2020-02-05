@@ -32,6 +32,7 @@ prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 verticalPodAutoscalerEnabled: true
 monitoringApplicationsEnabled: true
+monitoringCustomEnabled: true
 monitoringKubernetesEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
 monitoringNodeProblemDetectorEnabled: true
