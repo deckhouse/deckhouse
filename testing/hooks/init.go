@@ -387,6 +387,9 @@ func (hec *HookExecutionConfig) RunHook() {
 }
 
 var _ = BeforeSuite(func() {
+	if os.Getenv("KCOV_DISABLED") == "yes" {
+		return
+	}
 	By("Initing temporary directories")
 	var err error
 	unix.Umask(0o000)
