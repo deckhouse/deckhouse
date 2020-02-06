@@ -1,31 +1,24 @@
 package helm
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 
-	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
-
-	"github.com/deckhouse/deckhouse/testing/library/values_store"
-
-	"github.com/deckhouse/deckhouse/testing/library"
-
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
-
-	"gopkg.in/yaml.v3"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/onsi/gomega/gexec"
-
+	"github.com/flant/shell-operator/pkg/utils/manifest/releaseutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
+	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/testing/library"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
+	"github.com/deckhouse/deckhouse/testing/library/values_store"
 )
 
 var (
@@ -113,14 +106,9 @@ func (hec *HelmConfig) HelmRender() {
 	)
 	Expect(hec.Session.ExitCode()).To(Equal(0))
 
-	dec := yaml.NewDecoder(bytes.NewReader(hec.Session.Out.Contents()))
-
-	for {
+	for _, doc := range releaseutil.SplitManifests(string(hec.Session.Out.Contents())) {
 		var t interface{}
-		err := dec.Decode(&t)
-		if err == io.EOF {
-			break
-		}
+		err = yaml.Unmarshal([]byte(doc), &t)
 		if t == nil {
 			continue
 		}
@@ -130,9 +118,13 @@ func (hec *HelmConfig) HelmRender() {
 
 		var unstructuredObj unstructured.Unstructured
 		unstructuredObj.SetUnstructuredContent(t.(map[string]interface{}))
-		hec.objectStore.PutObject(unstructuredObj.Object, object_store.NewMetaIndex(unstructuredObj.GetKind(), unstructuredObj.GetNamespace(), unstructuredObj.GetName()))
-	}
 
+		hec.objectStore.PutObject(unstructuredObj.Object, object_store.NewMetaIndex(
+			unstructuredObj.GetKind(),
+			unstructuredObj.GetNamespace(),
+			unstructuredObj.GetName(),
+		))
+	}
 }
 
 var _ = AfterSuite(func() {
