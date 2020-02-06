@@ -1,0 +1,41 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  beforeHelm: 10
+  kubernetes:
+  - name: secret
+    apiVersion: v1
+    kind: Secret
+    watchEvent: ["Added", "Modified"]
+    includeSnapshotsFrom:
+    - secret
+    nameSelector:
+      matchNames: ["selfsigned-ca-key-pair"]
+    namespace:
+      nameSelector:
+        matchNames: ["d8-cert-manager"]
+    jqFilter: |
+      {
+        "cert": ( .data."tls.crt" | @base64d),
+        "key": ( .data."tls.key" | @base64d)
+      }
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.secret.0; then
+    values::set certManager.internal.selfSignedCA.cert "$(context::get snapshots.secret.0.filterResult.cert)"
+    values::set certManager.internal.selfSignedCA.key "$(context::get snapshots.secret.0.filterResult.key)"
+    return 0
+  fi
+
+  ca=$(jo CN=cluster-selfsigned-ca key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
+  values::set certManager.internal.selfSignedCA.cert "$(jq '.cert' <<< ${ca})"
+  values::set certManager.internal.selfSignedCA.key "$(jq '.key' <<< ${ca})"
+}
+
+hook::run "$@"
