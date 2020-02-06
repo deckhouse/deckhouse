@@ -1,8 +1,29 @@
 ---
+### Cluster issuer, который подходит только для создания CA или недоверительных сертификатов
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-no-trust
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+spec:
+  selfSigned: {}
+---
+### Cluster issuer, который использует указанный CA для выпуска сертификатов
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: ClusterIssuer
 metadata:
   name: selfsigned
 {{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
 spec:
-  selfSigned: {}
+  ca:
+    secretName: selfsigned-ca-key-pair
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: selfsigned-ca-key-pair
+  namespace: d8-cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+data:
+  tls.crt: {{ .Values.certManager.internal.selfSignedCA.cert | b64enc }}
+  tls.key: {{ .Values.certManager.internal.selfSignedCA.key | b64enc }}
