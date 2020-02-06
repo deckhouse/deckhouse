@@ -1,34 +1,38 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "MachineDeployment",
-      "namespaceSelector": {
-        "matchNames": [
-          "d8-cloud-instance-manager"
-        ]
-      },
-      "jqFilter": "[.metadata.name, .metadata.labels.\"instance-group\", .spec.replicas]"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: mds
+      queue: /modules/cloud_instance_manager/set_replicas_on_machine_deployment
+      includeSnapshotsFrom: [mds,cigs]
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineDeployment
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: '{"name": .metadata.name, "instanceGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
+    - name: cigs
+      queue: /modules/cloud_instance_manager/set_replicas_on_machine_deployment
+      includeSnapshotsFrom: [mds,cigs]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: CloudInstanceGroup
+      jqFilter: '{"name": .metadata.name, "min": .spec.minInstancesPerZone, "max": .spec.maxInstancesPerZone}'
+EOF
 }
 
 function __main__() {
-  for info in $(kubectl -n d8-cloud-instance-manager get machinedeployments -o json | jq -r '.items[] | "\(.metadata.name):\(.metadata.labels."instance-group"):\(.spec.replicas)"'); do
-    name=$(echo $info | cut -d: -f1)
-    ig_name=$(echo $info | cut -d: -f2)
-    replicas=$(echo $info | cut -d: -f3)
+  for i in $(context::jq -r '.snapshots.mds | keys[]'); do
+    name="$(context::get snapshots.mds.$i.filterResult.name)"
+    ig_name="$(context::get snapshots.mds.$i.filterResult.instanceGroup)"
+    replicas="$(context::get snapshots.mds.$i.filterResult.replicas)"
 
-    ig=$(values::get --required cloudInstanceManager.internal.instanceGroups | jq '.[] | select(.name == "'$ig_name'")')
-    ig_min_instances=$(echo "$ig" | jq .minInstancesPerZone)
-    ig_max_instances=$(echo "$ig" | jq .maxInstancesPerZone)
+    ig_index="$(context::jq -r --arg ig_name "$ig_name" '.snapshots.cigs | to_entries[] | select(.value.filterResult.name == $ig_name) | .key')"
+    ig_min_instances="$(context::get snapshots.cigs.$ig_index.filterResult.min)"
+    ig_max_instances="$(context::get snapshots.cigs.$ig_index.filterResult.max)"
 
     replicas_should_be=""
     if [[ $ig_min_instances -ge $ig_max_instances ]] ; then
@@ -41,24 +45,7 @@ function __main__() {
       replicas_should_be=$ig_max_instances
     fi
 
-    # Making 5 attempts, because machinedeployments change frequently
-    for i in $(seq 1 5) ; do
-      if [[ -n $replicas_should_be ]] && kubectl -n d8-cloud-instance-manager get machinedeployment $name > /dev/null 2> /dev/null ; then
-        if kubectl::jq_patch d8-cloud-instance-manager machinedeployments/$name ".spec.replicas = $replicas_should_be" 2> /dev/null ; then
-          continue 2
-        else
-          # Sleeping for 1 second before retry
-          sleep 1
-        fi
-      else
-        # Continue outer loop
-        continue 2
-      fi
-    done
-
-    # Falling with error. Normally we shouldn't be here because of `continue 2` above
-    >&2 echo "Failed to change replicas from $replicas to $replicas_should_be for machinedeployments/$name"
-    exit 1
+    kubernetes::patch_jq d8-cloud-instance-manager machinedeployment/$name '.spec.replicas = '${replicas_should_be}
   done
 }
 

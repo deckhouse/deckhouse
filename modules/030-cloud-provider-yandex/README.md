@@ -34,6 +34,9 @@
     * [Как получить](https://cloud.yandex.ru/docs/iam/operations/iam-token/create-for-sa#via-cli).
 * `nameservers` — массив nameserver'ов, которые будут использоваться вместо получаемых по DHCP от Yandex.
     * **Внимание!** Эта опция – workaround отсутствия возможности управления DNS в Яндекс. Как только такая возможность появится – опция станет deprectated.
+* `internalSubnet` — subnet CIDR, использующийся для внутренней межнодовой сети. Используется для настройки параметра `--iface-regex` во flannel.
+    * Формат — string. Например, `10.201.0.0/16`.
+    * Опциональный параметр.
 
 #### Пример конфигурации:
 
@@ -69,15 +72,17 @@ cloudProviderYandex: |
 
 Все опции идут в `.spec`.
 
-* `platformID` — тип платформы instances. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms)
+* `platformID` — тип платформы instances. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
     * Формат — строка.
-* `cores` — количество ядер у создаваемых инстансов
+* `cores` — количество ядер у создаваемых инстансов.
     * Формат — integer.
-* `coreFraction` - базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
+* `coreFraction` - базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
     * Формат — integer.
     * По-умолчанию `100`.
     * Допустимые значения `0`, `5`, `20`, `50`, `100`.
-* `memory` — количество оперативной памяти в мебибайтах у создаваемых инстансов
+* `memory` — количество оперативной памяти в мебибайтах у создаваемых инстансов.
+    * Формат — integer.
+* `gpus` — количество графических адаптеров у создаваемых инстансов.
     * Формат — integer.
 * `imageID` — идентификатор образа, который будет установлен в заказанные instance'ы.
     * Формат — строка.
@@ -85,7 +90,7 @@ cloudProviderYandex: |
     * Формат — bool.
     * По-умолчанию `false`.
     * Опциональный параметр.
-* `diskType` — тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types)
+* `diskType` — тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
     * Формат — строка.
     * По-умолчанию `network-ssd`.
     * Опциональный параметр.
@@ -93,12 +98,12 @@ cloudProviderYandex: |
     * Формат — integer. В ГиБ.
     * По-умолчанию `50` ГиБ.
     * Опциональный параметр.
-* `assignPublicIPAddress` - Присваивать ли публичные ip адреса инстансам потерять
+* `assignPublicIPAddress` - Присваивать ли публичные ip адреса инстансам потерять.
     * Формат — bool.
     * По-умолчанию `true`.
     * Опциональный параметр.
 * `mainSubnet` — позволяет переопределить имя основного subnet, к которому будет подключен инстанс, по-умолчанию 
-используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`
+используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
     * Формат — string. 
     * Пример — `e9bnc7g9mu9mper9clk4`
 * `additionalSubnets` — список subnet, которые будут подключены к инстансу.
@@ -116,7 +121,9 @@ cloudProviderYandex: |
     * `version` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/cloud-init-steps).
         * По-умолчанию `ubuntu-18.04-1.0`.
         * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version` и описано в [`README.md`](modules/040-cloud-instance-manager/cloud-init-steps) соответствующих версий. Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/cloud-init-steps/ubuntu-18.04-1.0):
+    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/cloud-init-steps) соответствующих версий.
+        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
+        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/cloud-init-steps/ubuntu-18.04-1.0):
 
         ```yaml
         options:

@@ -1,0 +1,13 @@
+{{- $options := dict -}}
+{{- $_ := set $options "ami" .instanceGroup.instanceClass.ami -}}
+{{- $_ := set $options "instanceType" .instanceGroup.instanceClass.instanceType -}}
+{{- if hasKey .instanceGroup.instanceClass "diskSizeGb" -}}
+  {{- $_ := set $options "diskSizeGb" .instanceGroup.instanceClass.diskSizeGb -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "diskType" -}}
+  {{- $_ := set $options "diskType" .instanceGroup.instanceClass.diskType -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "iops" -}}
+  {{ $_ := set $options "iops" .instanceGroup.instanceClass.iops -}}
+{{- end -}}
+{{- $options | toYaml | sha256sum -}}

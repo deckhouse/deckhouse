@@ -42,7 +42,7 @@ metadata:
 `
 )
 
-var _ = Describe("Monitoring applications hooks :: discovery ::", func() {
+var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", func() {
 	f := HookExecutionConfigInit(`{"monitoringApplications":{"discovery":{"enabledApplications": []},"internal":{"enabledApplicationsSummary": []}}}`, `{}`)
 
 	Context("Empty cluster", func() {

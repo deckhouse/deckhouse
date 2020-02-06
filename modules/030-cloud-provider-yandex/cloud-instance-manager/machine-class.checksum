@@ -1,0 +1,31 @@
+{{- $options := dict -}}
+{{- $_ := set $options "platformID" .instanceGroup.instanceClass.platformID -}}
+{{- $_ := set $options "cores" .instanceGroup.instanceClass.cores -}}
+{{- if hasKey .instanceGroup.instanceClass "coreFraction" -}}
+  {{- $_ := set $options "coreFraction" .instanceGroup.instanceClass.coreFraction -}}
+{{- end -}}
+{{- $_ := set $options "memory" .instanceGroup.instanceClass.memory -}}
+{{- if hasKey .instanceGroup.instanceClass "gpus" -}}
+  {{- $_ := set $options "gpus" .instanceGroup.instanceClass.gpus -}}
+{{- end -}}
+{{- $_ := set $options "diskType" .instanceGroup.instanceClass.diskType -}}
+{{- if hasKey .instanceGroup.instanceClass "diskGB" -}}
+  {{- $_ := set $options "diskGB" .instanceGroup.instanceClass.diskGB -}}
+{{- end -}}
+{{- $_ := set $options "imageID" .instanceGroup.instanceClass.imageID -}}
+{{- if hasKey .instanceGroup.instanceClass "mainSubnet" }}
+  {{- $_ := set $options "mainSubnet" .instanceGroup.instanceClass.mainSubnet -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "assignPublicIPAddress" -}}
+  {{- $_ := set $options "assignPublicIPAddress" .instanceGroup.instanceClass.assignPublicIPAddress -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "additionalSubnets" -}}
+  {{- $_ := set $options "additionalSubnets" .instanceGroup.instanceClass.additionalSubnets -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "preemptible" -}}
+  {{- $_ := set $options "preemptible" .instanceGroup.instanceClass.preemptible -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "labels" -}}
+  {{- $_ := set $options "labels" .instanceGroup.instanceClass.labels -}}
+{{- end -}}
+{{- $options | toYaml | sha256sum -}}

@@ -1,17 +1,15 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "beforeHelm": 20,
-  "schedule": [
-    {
-      "crontab": "53 * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    schedule:
+    - crontab: "53 * * * *"
+      queue: /modules/cloud_provider_aws
+EOF
 }
 
 function __main__() {

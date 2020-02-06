@@ -1,0 +1,19 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 100
+EOF
+}
+
+function __main__() {
+  if values::has cloudProviderYandex.internalSubnet; then
+    subnet_regex="$(rgxg cidr "$(values::get cloudProviderYandex.internalSubnet)")"
+    values::set cloudProviderYandex.internal.internalSubnetRegex "$subnet_regex"
+  fi
+}
+
+hook::run "$@"

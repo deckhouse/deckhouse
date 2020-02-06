@@ -4,26 +4,31 @@ source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-  "onKubernetesEvent": [
-    {
-      "kind": "Node"
-    }
-  ]
-}
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      queue: /modules/cloud_provider_openstack
+      includeSnapshotsFrom: ["nodes"]
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
+          operator: DoesNotExist
+      jqFilter: |
+        {
+          "needPatch": (
+            (.spec.taints // [] | any(.key == "node.cloudprovider.kubernetes.io/uninitialized") | not) and
+            ((.spec.providerID // "") == "")
+          )
+        }
 EOF
 }
 
 function __main__() {
-  node_name=$(hook::context_jq -r '.[0].resourceName')
-  node_json=$(kubectl get node "$node_name" -o json)
-  if jq -re '.spec.taints | any(.key == "node.cloudprovider.kubernetes.io/uninitialized") | not' >/dev/null 2>&1 <<<"$node_json"; then
-    if jq -re '.spec.providerID // "" | length == 0' >/dev/null 2>&1 <<<"$node_json"; then
-      if jq -re '.metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group" | not' >/dev/null 2>&1 <<<"$node_json"; then
-        kubectl patch node "$node_name" -p '{"spec":{"providerID": "static://"}}' >/dev/null 2>&1
-      fi
-    fi
-  fi
+  for node in $(context::jq -r '.snapshots.nodes[] | select(.filterResult.needPatch) | .object.metadata.name'); do
+    kubernetes::patch_jq "" node/${node} '.spec.providerID = "static://"'
+  done
 }
 
 hook::run "$@"

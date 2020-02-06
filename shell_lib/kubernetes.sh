@@ -48,8 +48,7 @@ function kubernetes::_init_patch_set() {
   if [ -n "${D8_KUBERNETES_PATCH_SET_FILE-}" ]; then
     echo "${D8_KUBERNETES_PATCH_SET_FILE}"
   else
-    #mktemp -t "$(module::name)-XXXXXX"
-    mktemp
+    mktemp -t kubernetes-patch-set.XXXXXXXXXX
   fi
 }
 
@@ -87,9 +86,9 @@ function kubernetes::_apply_patch_set() {
 }
 
 function kubernetes::_jq_patch() {
-  local namespace=$1
-  local resource=$2
-  local filter=$3
+  local namespace="$1"
+  local resource="$2"
+  local filter="$3"
 
   local a=$(mktemp)
   local b=$(mktemp)
@@ -99,22 +98,33 @@ function kubernetes::_jq_patch() {
     .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"
   )'
 
-  if ! kubectl -n $namespace get $resource -o json > $tmp ||
-     ! jq "$cleanup_filter" $tmp > $a ||
-     ! jq "$filter" $a > $b ;
-  then
-    echo FILTER: "$filter"
+  success=false
+  for attempt in $(seq 1 5) ; do
+    if ! kubectl -n "$namespace" get "$resource" -o json > $tmp ||
+       ! jq "$cleanup_filter" $tmp > $a ||
+       ! jq "$filter" $a > $b ;
+    then
+      echo FILTER: "$filter"
 
-    echo "Before JQ"
-    cat $a
-    echo "After JQ"
-    cat $b
+      echo "Before JQ"
+      cat $a
+      echo "After JQ"
+      cat $b
 
-    rm $a $b $tmp
+      rm $a $b $tmp
+      return 1
+    fi
+
+    if diff -u $a $b || kubectl replace -f $b; then
+      success=true
+    fi
+  done
+
+  rm $a $b $tmp
+  if [[ "$success" == "true" ]]; then
+    return 0
+  else
+    >&2 echo "ERROR: Couldn't patch kubernetes resource."
     return 1
   fi
-
-  diff -u $a $b || kubectl replace -f $b
-  rm $a $b $tmp
-  return 0
 }

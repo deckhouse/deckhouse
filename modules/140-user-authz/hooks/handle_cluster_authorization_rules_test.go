@@ -94,14 +94,14 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 
 		It("userAuthz.internal.customClusterRoles must be dict of empty arrays and CAR must empty list", func() {
 			ccrExpectation := `
-	{
-	 "user":[],
-	 "privilegedUser":[],
-	 "editor":[],
-	 "admin":[],
-	 "clusterEditor":[],
-	 "clusterAdmin":[]
-	}`
+			{
+			  "user":[],
+			  "privilegedUser":[],
+			  "editor":[],
+			  "admin":[],
+			  "clusterEditor":[],
+			  "clusterAdmin":[]
+			}`
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(ccrExpectation))
 			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[]`))

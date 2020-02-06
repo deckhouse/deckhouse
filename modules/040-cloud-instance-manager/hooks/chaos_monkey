@@ -1,53 +1,97 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "schedule": [
-    {
-      "crontab": "* * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: cigs
+      queue: /modules/cloud_instance_manager
+      apiVersion: deckhouse.io/v1alpha1
+      kind: CloudInstanceGroup
+      jqFilter: |
+        {
+          "isReadyToChaos": (.status.desired > 1 and .status.desired == .status.ready),
+          "spec": .spec,
+          "name": .metadata.name
+        }
+    - name: nodes
+      queue: /modules/cloud_instance_manager
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
+          operator: Exists
+      jqFilter: |
+        {
+          "cloudInstanceGroup": (.metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group" // null),
+          "name": .metadata.name
+        }
+    - name: machines
+      queue: /modules/cloud_instance_manager
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: Machine
+      labelSelector:
+        matchExpressions:
+        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
+          operator: Exists
+      jqFilter: |
+        {
+          "isMonkeyVictim": (.metadata.labels | has("cloud-instance-manager.deckhouse.io/chaos-monkey-victim")),
+          "node": .metadata.labels.node,
+          "name": .metadata.name
+        }
+    schedule:
+    - name: monkey
+      queue: /modules/cloud_instance_manager/chaos_monkey
+      crontab: "* * * * *"
+      includeSnapshotsFrom: [cigs,nodes,machines]
+EOF
 }
 
-function __main__() {
-  if ! values::has cloudInstanceManager.internal.instanceGroups ; then
-    exit 0
+function __on_kubernetes::cigs() {
+  return 0
+}
+
+function __on_kubernetes::nodes() {
+  return 0
+}
+
+function __on_kubernetes::machines() {
+  return 0
+}
+
+function __on_schedule::monkey() {
+  # for testing environment
+  if [ -n "${RANDOM_SEED-}" ]; then
+    RANDOM="${RANDOM_SEED}"
+    tmp=$(mktemp)
+    echo $RANDOM_SEED > $tmp
+    export SHUF_RANDOM_SOURCE="--random-source=$tmp"
+  else
+    export SHUF_RANDOM_SOURCE=""
   fi
 
-  instance_group_names=$(values::get cloudInstanceManager.internal.instanceGroups | jq '.[].name' -r)
+  instance_group_names="$(context::jq -r '.snapshots.cigs[] | select(.filterResult.isReadyToChaos) | .object.metadata.name')"
   for ig_name in $instance_group_names ; do
-    ig_spec=$(values::get cloudInstanceManager.internal.instanceGroups | jq '.[] | select(.name == "'$ig_name'")')
-    # Get chaos mode
-    ig_chaos_mode=$(echo "$ig_spec" | jq -r '.chaos.mode // "DrainAndDelete"')
-    # Get chaos period
-    ig_chaos_period_seconds=$(echo "$ig_spec" | jq -r '.chaos.period // "6h"' | deckhouse-controller helper unit convert --mode duration)
-    ig_chaos_period=$(( $ig_chaos_period_seconds / 60 ))
-    random=$(shuf -i 1-${ig_chaos_period} -n 1)
-    run=$(( $random % ${ig_chaos_period} ))
-    if [[ $run -eq 0 ]] ; then
-      # Если в IG есть уже нода, которая удаляется, то не трогаем больше ноды в данной IG
-      if [[ "$(kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -l cloud-instance-manager.deckhouse.io/chaos-monkey-victim= --no-headers 2>/dev/null | wc -l)" -gt "0" ]] ; then
-        continue
-      fi
-      # Рандомно выберем жертву для chaos в IG
-      victim_node=$(kubectl get nodes -l node-role.kubernetes.io/${ig_name}= --no-headers -o custom-columns=":metadata.name" | shuf -n 1)
-      victim_machine=$(kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -l node=${victim_node} --no-headers -o custom-columns=":metadata.name")
-      if [[ $run -eq 0 ]] ; then
-        if [[ "$ig_chaos_mode" == "DrainAndDelete" ]] ; then
-          kubectl -n d8-cloud-instance-manager label machines.machine.sapcloud.io $victim_machine cloud-instance-manager.deckhouse.io/chaos-monkey-victim=
-          kubectl -n d8-cloud-instance-manager delete machines.machine.sapcloud.io $victim_machine
-        elif [[ "$ig_chaos_mode" == "KillPodsAndDelete" ]] ; then
-          kubectl cordon ${victim_machine}
-          kubectl -n d8-cloud-instance-manager label machines.machine.sapcloud.io $victim_machine cloud-instance-manager.deckhouse.io/chaos-monkey-victim=
-          kubectl get pod --all-namespaces -o wide --no-headers | grep ${victim_machine} | awk '{print $1" "$2}' | while read pod; do
-            kubectl delete pod -n $pod --grace-period=1
-          done
-          kubectl -n d8-cloud-instance-manager delete machines.machine.sapcloud.io  $victim_machine
-        fi
+    if context::jq -e '[.snapshots.machines[] | select(.filterResult.isMonkeyVictim)] | any'; then
+      # If there is node in deleting state then do nothing
+      continue
+    fi
+
+    ig_spec="$(context::jq -r --arg ig_name "$ig_name" '.snapshots.cigs[] | select(.filterResult.name == $ig_name) | .filterResult.spec')"
+    ig_chaos_mode=$(jq -r '.chaos.mode // "DrainAndDelete"' <<< "$ig_spec")
+    ig_chaos_period_seconds=$(jq -r '.chaos.period // "6h"' <<< "$ig_spec" | deckhouse-controller helper unit convert --mode duration)
+
+    run=$(( RANDOM % (ig_chaos_period_seconds / 60) ))
+    if [[ "$run" == "0" ]]; then
+      victim_node="$(context::jq -r --arg ig_name "${ig_name}" '.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ig_name) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
+      victim_machine="$(context::jq -r --arg node "${victim_node}" '.snapshots.machines[] | select(.filterResult.node == $node) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
+      if [[ "$ig_chaos_mode" == "DrainAndDelete" ]] ; then
+        kubernetes::patch_jq "d8-cloud-instance-manager" "machine/$victim_machine" '.metadata.labels."cloud-instance-manager.deckhouse.io/chaos-monkey-victim" = ""'
+        kubernetes::delete "d8-cloud-instance-manager" "machine/$victim_machine"
       fi
     fi
   done

@@ -1,0 +1,16 @@
+{{- $options := dict -}}
+{{- $_ := set $options "numCPUs" .instanceGroup.instanceClass.numCPUs -}}
+{{- $_ := set $options "memory" (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) -}}
+{{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
+{{- $_ := set $options "template" .instanceGroup.instanceClass.template -}}
+{{- $_ := set $options "mainNetwork" .instanceGroup.instanceClass.mainNetwork -}}
+{{- if hasKey .instanceGroup.instanceClass "additionalNetworks" -}}
+  {{- $_ := set $options "additionalNetworks" .instanceGroup.instanceClass.additionalNetworks -}}
+{{- end -}}
+{{- $_ := set $options "datastore" .instanceGroup.instanceClass.datastore -}}
+{{- if hasKey .instanceGroup.instanceClass "runtimeOptions" }}
+  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
+    {{- $_ := set $options "runtimeOptions.nestedHardwareVirtualization" .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization -}}
+  {{- end }}
+{{- end }}
+{{- $options | toYaml | sha256sum -}}

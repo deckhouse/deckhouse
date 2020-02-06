@@ -1,0 +1,13 @@
+{{- $options := dict -}}
+{{- $_ := set $options "machineType" .instanceGroup.instanceClass.machineType -}}
+{{- if hasKey .instanceGroup.instanceClass "diskSizeGb" -}}
+  {{- $_ := set $options "diskSizeGb" .instanceGroup.instanceClass.diskSizeGb -}}
+{{- end -}}
+{{- if hasKey .instanceGroup.instanceClass "diskType" -}}
+  {{- $_ := set $options "diskType" .instanceGroup.instanceClass.diskType -}}
+{{- end -}}
+{{- $_ := set $options "image" .instanceGroup.instanceClass.image -}}
+{{- if hasKey .instanceGroup.instanceClass "preemptible" -}}
+  {{- $_ := set $options "preemptible" .instanceGroup.instanceClass.preemptible -}}
+{{- end -}}
+{{- $options | toYaml | sha256sum -}}

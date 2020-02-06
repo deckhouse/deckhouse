@@ -1,26 +1,36 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-   "onKubernetesEvent": [
-      {
-          "kind": "CSINode"
-      }
-   ]
-}
+    configVersion: v1
+    kubernetes:
+    - name: csinodes
+      queue: /modules/cloud_instance_manager/remove_csi_taints
+      includeSnapshotsFrom: [csinodes,nodes]
+      apiVersion: storage.k8s.io/v1beta1
+      kind: CSINode
+      jqFilter: '{"name": .metadata.name}'
+    - name: nodes
+      queue: /modules/cloud_instance_manager
+      apiVersion: v1
+      kind: Node
+      jqFilter: '{"needPatch": ([(.spec.taints // [])[] | select(.key == "node.flant.com/csi-not-bootstrapped")] | length > 0), "name": .metadata.name}'
 EOF
 }
 
-function __main__() {
-  node_name=$(hook::context_jq -r '.[0].resourceName')
-  if ! stderr=$(kubectl taint node "$node_name" node.flant.com/csi-not-bootstrapped- 2>&1 >/dev/null); then
-    if ! grep -q -P '(taint.*not found|nodes.*not found)' <<< "$stderr"; then
-      exit 1
+function __on_kubernetes::nodes() {
+  return 0
+}
+
+function __on_kubernetes::csinodes() {
+  for csiNodeName in $(context::jq -r '.snapshots.csinodes[] | .filterResult.name'); do
+    if context::jq -er --arg nodeName "$csiNodeName" '.snapshots.nodes[] | select(.filterResult.name == $nodeName and .filterResult.needPatch)' > /dev/null;
+    then
+        kubernetes::patch_jq "" "node/${csiNodeName}" '.spec.taints = [.spec.taints[] | select(.key != "node.flant.com/csi-not-bootstrapped")]'
     fi
-  fi
+  done
 }
 
 hook::run "$@"

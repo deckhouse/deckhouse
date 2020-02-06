@@ -1,48 +1,64 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "beforeHelm": 5,
-  "schedule": [
-    {
-      "crontab": "23 * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: bootstrap_tokens
+      queue: /modules/cloud_instance_manager
+      includeSnapshotsFrom: [bootstrap_tokens]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          heritage: deckhouse
+          module: cloud-instance-manager
+      jqFilter: |
+        {
+          "validFor": (
+            if (.type == "bootstrap.kubernetes.io/token") and (.data | has("expiration"))
+            then
+              .data.expiration | @base64d | (fromdateiso8601 - now)
+            else null end
+          ),
+          "name": .metadata.name,
+          "bootstrapToken": (
+            if (.data | has("token-id")) and (.data | has("token-secret"))
+            then
+              (.data."token-id" | @base64d) + "." + (.data."token-secret" | @base64d)
+            else null end
+          ),
+          "creationTimestamp": .metadata.creationTimestamp
+        }
+    schedule:
+    - queue: /modules/cloud_instance_manager/order_bootstrap_token
+      crontab: "23 * * * *"
+      includeSnapshotsFrom: [bootstrap_tokens]
+EOF
 }
 
 function __main__() {
   # Remove all expired tokens
-  for token_secret in $(kubectl -n kube-system get secret --field-selector type=bootstrap.kubernetes.io/token -l heritage=deckhouse,module=cloud-instance-manager -o name) ; do
-    not_after=$(kubectl -n kube-system get $token_secret -o json | jq '.data.expiration' -r | base64 -d)
-
-    if ! valid_for=$(expr $(date --date="$not_after" +%s 2> /dev/null) - $(date +%s) 2> /dev/null) || [[ $valid_for -lt 0 ]] ; then
-      kubectl -n kube-system delete $token_secret
-    fi
+  expiredTokens="$(context::jq -r '.snapshots.bootstrap_tokens[] | select(.filterResult.validFor != null and .filterResult.validFor <= 0) | .filterResult.name')"
+  for s in $expiredTokens; do
+    kubernetes::delete kube-system secret/$s
   done
 
-  # Find the latest token
-  token_data=$(kubectl -n kube-system get secret --field-selector type=bootstrap.kubernetes.io/token -l heritage=deckhouse,module=cloud-instance-manager --sort-by=metadata.creationTimestamp -o json | jq '.items[-1].data')
-  if [[ $token_data != "null" ]] ; then
-    not_after=$(echo "$token_data" | jq .expiration -r | base64 -d)
-    valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
+  latestToken="$(context::jq -r '[.snapshots.bootstrap_tokens[] | select(.filterResult.validFor != null)] | sort_by(.filterResult.creationTimestamp) | last')"
+  if jq -e '.filterResult.validFor > 10800' <<< "$latestToken" > /dev/null; then
+    # token is valid for more than 3 hours — we can use it
+    values::set cloudInstanceManager.internal.bootstrapToken "$(jq -r '.filterResult.bootstrapToken' <<< "$latestToken")"
+  else
+    # token is not valid for more than 3 hours or doesn't exist — we must generate the new one
+    token_id=$(pwgen -sA 6 1 | tr -d '\n')
+    token_secret=$(pwgen -sA 16 1 | tr -d '\n')
 
-    # If it will be valid for at least 3 hours
-    if [[ $valid_for -gt 10800 ]] ; then
-      token_id=$(echo "$token_data" | jq '."token-id"' -r | base64 -d)
-      token_secret=$(echo "$token_data" | jq '."token-secret"' -r | base64 -d)
-      values::set cloudInstanceManager.internal.bootstrapToken "$token_id.$token_secret"
-      exit 0
-    fi
-  fi
-
-  token_id=$(pwgen -sA 6 1 | tr -d '\n')
-  token_secret=$(pwgen -sA 16 1 | tr -d '\n')
-
-  kubectl create -f - > /dev/null <<END
+    kubernetes::create_yaml <<END
 apiVersion: v1
 kind: Secret
 metadata:
@@ -62,6 +78,7 @@ data:
 END
 
   values::set cloudInstanceManager.internal.bootstrapToken "$token_id.$token_secret"
+  fi
 }
 
 hook::run "$@"
