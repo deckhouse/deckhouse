@@ -29,7 +29,6 @@ metadata:
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
     nginx.ingress.kubernetes.io/affinity: cookie
-    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:

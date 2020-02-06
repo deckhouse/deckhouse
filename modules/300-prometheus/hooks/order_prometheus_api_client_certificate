@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __main__() {
-  common_hooks::certificates::order_certificate::main "d8-monitoring" "prometheus-api-client-tls" "d8-monitoring:prometheus-api-client" "internal.prometheusAPIClientTLS"
+  common_hooks::certificates::order_certificate::main "d8-monitoring" "prometheus-api-client-tls" "d8-monitoring:prometheus-api-client" "internal.prometheusAPIClientTLS" "prometheus:auth"
 }
 
 hook::run "$@"

@@ -1,27 +1,8 @@
-diff --git a/.header b/.header
-deleted file mode 100644
-index 7e8b2fb8..00000000
---- a/.header
-+++ /dev/null
-@@ -1,13 +0,0 @@
--// Copyright 2018 The prometheus-operator Authors
--//
--// Licensed under the Apache License, Version 2.0 (the "License");
--// you may not use this file except in compliance with the License.
--// You may obtain a copy of the License at
--//
--//     http://www.apache.org/licenses/LICENSE-2.0
--//
--// Unless required by applicable law or agreed to in writing, software
--// distributed under the License is distributed on an "AS IS" BASIS,
--// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
--// See the License for the specific language governing permissions and
--// limitations under the License.
 diff --git a/pkg/apis/monitoring/v1/openapi_generated.go b/pkg/apis/monitoring/v1/openapi_generated.go
-index 67830276..b64844af 100644
+index e154992b..02fafa91 100644
 --- a/pkg/apis/monitoring/v1/openapi_generated.go
 +++ b/pkg/apis/monitoring/v1/openapi_generated.go
-@@ -1100,6 +1100,12 @@ func schema_pkg_apis_monitoring_v1_PodMetricsEndpoint(ref common.ReferenceCallba
+@@ -1154,6 +1154,19 @@ func schema_pkg_apis_monitoring_v1_PodMetricsEndpoint(ref common.ReferenceCallba
  							Format:      "",
  						},
  					},
@@ -31,27 +12,36 @@ index 67830276..b64844af 100644
 +							Ref:         ref("github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1.TLSConfig"),
 +						},
 +					},
++					"bearerTokenFile": {
++						SchemaProps: spec.SchemaProps{
++							Description: "File to read bearer token for accessing apiserver.",
++							Type:        []string{"string"},
++							Format:      "",
++						},
++					},
  					"honorLabels": {
  						SchemaProps: spec.SchemaProps{
  							Description: "HonorLabels chooses the metric's labels on collisions with target labels.",
 diff --git a/pkg/apis/monitoring/v1/types.go b/pkg/apis/monitoring/v1/types.go
-index 770d1e6b..3852da10 100644
+index 9b87f83b..c733adde 100644
 --- a/pkg/apis/monitoring/v1/types.go
 +++ b/pkg/apis/monitoring/v1/types.go
-@@ -594,6 +594,8 @@ type PodMetricsEndpoint struct {
+@@ -610,6 +610,10 @@ type PodMetricsEndpoint struct {
  	Interval string `json:"interval,omitempty"`
  	// Timeout after which the scrape is ended
  	ScrapeTimeout string `json:"scrapeTimeout,omitempty"`
 +	// TLS configuration to use when scraping the endpoint
 +	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
++	// File to read bearer token for scraping targets.
++	BearerTokenFile string `json:"bearerTokenFile,omitempty"`
  	// HonorLabels chooses the metric's labels on collisions with target labels.
  	HonorLabels bool `json:"honorLabels,omitempty"`
  	// MetricRelabelConfigs to apply to samples before ingestion.
 diff --git a/pkg/apis/monitoring/v1/zz_generated.deepcopy.go b/pkg/apis/monitoring/v1/zz_generated.deepcopy.go
-index a47cb121..bebe1862 100644
+index a1d173b8..8c400c9a 100644
 --- a/pkg/apis/monitoring/v1/zz_generated.deepcopy.go
 +++ b/pkg/apis/monitoring/v1/zz_generated.deepcopy.go
-@@ -442,6 +442,11 @@ func (in *PodMetricsEndpoint) DeepCopyInto(out *PodMetricsEndpoint) {
+@@ -463,6 +463,11 @@ func (in *PodMetricsEndpoint) DeepCopyInto(out *PodMetricsEndpoint) {
  			}
  		}
  	}
@@ -64,10 +54,21 @@ index a47cb121..bebe1862 100644
  		in, out := &in.ProxyURL, &out.ProxyURL
  		*out = new(string)
 diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
-index 3888e302..a519aa56 100644
+index b5bb1d29..d7c16755 100644
 --- a/pkg/prometheus/promcfg.go
 +++ b/pkg/prometheus/promcfg.go
-@@ -519,7 +519,7 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
+@@ -338,6 +338,10 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
+ 	if ep.Scheme != "" {
+ 		cfg = append(cfg, yaml.MapItem{Key: "scheme", Value: ep.Scheme})
+ 	}
++	if ep.BearerTokenFile != "" {
++		cfg = append(cfg, yaml.MapItem{Key: "bearer_token_file", Value: ep.BearerTokenFile})
++	}
++
+ 
+ 	var (
+ 		relabelings []yaml.MapSlice
+@@ -519,7 +523,7 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
  		}
  		cfg = append(cfg, yaml.MapItem{Key: "metric_relabel_configs", Value: metricRelabelings})
  	}

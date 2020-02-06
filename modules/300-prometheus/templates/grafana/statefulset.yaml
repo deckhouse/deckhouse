@@ -87,8 +87,9 @@ spec:
             cpu: 100m
         readinessProbe:
           httpGet:
-            path: /
-            port: 3500
+            path: /api/health
+            port: 443
+            scheme: HTTPS
           initialDelaySeconds: 10
       - name: dashboard-provisioner
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana-dashboard-provisioner:{{ $.Values.global.modulesImages.tags.prometheus.grafanaDashboardProvisioner }}
@@ -102,15 +103,30 @@ spec:
           requests:
             memory: 100Mi
             cpu: 100m
-      - name: ca-auth-proxy
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=443"
-        - "--location=/"
-        - "--proxy-pass=http://127.0.0.1:3080/"
-        - "--user=nginx-ingress:.*"
-        - "--probe-proxy-pass=http://127.0.0.1:3000/api/health"
-        - "--probe-listen=3500"
+        - "--secure-listen-address=0.0.0.0:443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /api/health
+            upstreams:
+            - upstream: http://127.0.0.1:3080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: monitoring.coreos.com
+                  apiVersion: v1
+                  resource: grafana
+                  subresource: http
+                  name: grafana
         ports:
         - containerPort: 443
           name: https

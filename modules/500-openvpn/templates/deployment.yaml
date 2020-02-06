@@ -86,16 +86,31 @@ spec:
           - mountPath: /mnt/easyrsa
             name: certs
             readOnly: false
-      - name: ca-auth-proxy
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=443"
-        - "--location=/"
-        - "--proxy-pass=http://127.0.0.1:8000/"
-        - "--user=nginx-ingress:.*"
+        - "--secure-listen-address=0.0.0.0:443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
         ports:
         - containerPort: 443
           name: https
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:8000/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: kube-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: {{ .Chart.Name }}
       volumes:
       - name: openvpn
         configMap:

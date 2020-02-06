@@ -14,3 +14,18 @@ subjects:
     name: controller
   - kind: ServiceAccount
     name: speaker
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: kube-rbac-proxy:metallb
+  namespace: d8-{{ .Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kube-rbac-proxy:metallb
+subjects:
+- kind: User
+  name: d8-monitoring:scraper
+{{- end }}

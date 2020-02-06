@@ -1,14 +1,14 @@
 {{- define "additional-scrape-config" }}
 - job_name: kube-state-metrics/main
   honor_labels: true
-  metrics_path: '/metrics'
+  metrics_path: '/main/metrics'
   scheme: https
   tls_config:
+    insecure_skip_verify: true
     cert_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
     key_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
-    insecure_skip_verify: true
   static_configs:
-  - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8443']
+  - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabel_configs:
   - regex: endpoint|namespace|pod|service
     action: labeldrop
@@ -19,14 +19,14 @@
 
 - job_name: kube-state-metrics/self
   honor_labels: true
-  metrics_path: '/metrics'
+  metrics_path: '/self/metrics'
   scheme: https
   tls_config:
+    insecure_skip_verify: true
     cert_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
     key_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
-    insecure_skip_verify: true
   static_configs:
-  - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9443']
+  - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabel_configs:
   - regex: endpoint|namespace|pod|service
     action: labeldrop

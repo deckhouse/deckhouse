@@ -34,6 +34,7 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
+      serviceAccountName: vpa-exporter
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -43,21 +44,44 @@ spec:
           requests:
             cpu: "100m"
             memory: "32Mi"
-        ports:
-        - containerPort: 8080
-          protocol: TCP
-          name: http-metrics
         livenessProbe:
           httpGet:
-            path: /
-            port: 8080
-            scheme: HTTP
+            path: /healthz
+            port: 8081
+            scheme: HTTPS
           initialDelaySeconds: 120
           timeoutSeconds: 20
           periodSeconds: 35
         args:
         - "/app/vpa-exporter.py"
+        - "127.0.0.1"
         env:
         - name: "PYTHONUNBUFFERED"
           value: "1"
-      serviceAccountName: vpa-exporter
+      - name: kube-rbac-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+        - "--secure-listen-address=0.0.0.0:8081"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 8081
+          name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: kube-system
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: vpa-exporter

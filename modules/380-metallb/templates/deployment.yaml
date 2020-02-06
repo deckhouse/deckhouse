@@ -49,22 +49,31 @@ spec:
               drop:
                 - all
             readOnlyRootFilesystem: true
-        - name: ca-auth-proxy
-          image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        - name: kube-rbac-proxy
+          image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
           args:
-            - "--listen=7473"
-            - "--proxy-pass=http://127.0.0.1:7472/metrics"
-            - "--user=d8-monitoring:scraper"
+            - "--secure-listen-address=0.0.0.0:7473"
+            - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+            - "--v=2"
+            - "--logtostderr=true"
+            - "--stale-cache-interval=1h30m"
           ports:
             - containerPort: 7473
               name: https-metrics
-          volumeMounts:
-          - name: ca-auth-proxy-etc-nginx
-            mountPath: /etc/nginx/
-          - name: ca-auth-proxy-var-run
-            mountPath: /var/run/
-          - name: ca-auth-proxy-var-cache-nginx
-            mountPath: /var/cache/nginx/
+          env:
+            - name: KUBE_RBAC_PROXY_CONFIG
+              value: |
+                upstreams:
+                - upstream: http://127.0.0.1:7472/metrics
+                  path: /metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-{{ .Chart.Name }}
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: prometheus-metrics
+                      name: metallb
       nodeSelector:
         beta.kubernetes.io/os: linux
       securityContext:
@@ -72,10 +81,3 @@ spec:
         runAsUser: 65534
       serviceAccountName: controller
       terminationGracePeriodSeconds: 0
-      volumes:
-      - name: ca-auth-proxy-etc-nginx
-        emptyDir: {}
-      - name: ca-auth-proxy-var-run
-        emptyDir: {}
-      - name: ca-auth-proxy-var-cache-nginx
-        emptyDir: {}

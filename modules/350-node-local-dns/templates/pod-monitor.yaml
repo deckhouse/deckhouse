@@ -1,22 +1,22 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+kind: PodMonitor
 metadata:
-  name: oom-killer-exporter
-  namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter" "prometheus" "main")) | indent 2 }}
+  name: node-local-dns
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
+  jobLabel: app
   selector:
     matchLabels:
-      prometheus-target: oom-killer-exporter
+      app: node-local-dns
   namespaceSelector:
     matchNames:
-    - d8-monitoring
-  endpoints:
-  - port: https
+    - d8-system
+  podMetricsEndpoints:
+  - port: https-metrics
     scheme: https
-    scrapeTimeout: 20s
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
@@ -28,3 +28,4 @@ spec:
       targetLabel: node
     - targetLabel: tier
       replacement: cluster
+{{- end }}
