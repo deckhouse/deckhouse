@@ -55,7 +55,22 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 			crb := f.KubernetesResource("ConfigMap", "d8-metallb", "config")
 			Expect(crb.Exists()).To(BeTrue())
 
-			Expect(crb.Field("data.config").String()).To(Equal("\npeers:\n- hold-time: 3s\n  my-asn: 64000\n  peer-address: 1.1.1.1\n  peer-asn: 65000\n- hold-time: 3s\n  my-asn: 64000\n  peer-address: 1.1.1.2\n  peer-asn: 65000\n\naddress-pools:\n- addresses:\n  - 192.168.0.0/24\n  name: mypool\n  protocol: bgp\n"))
+			Expect(crb.Field("data.config").String()).To(MatchYAML(`
+peers:
+- hold-time: 3s
+  my-asn: 64000
+  peer-address: 1.1.1.1
+  peer-asn: 65000
+- hold-time: 3s
+  my-asn: 64000
+  peer-address: 1.1.1.2
+  peer-asn: 65000
+address-pools:
+- addresses:
+  - 192.168.0.0/24
+  name: mypool
+  protocol: bgp
+`))
 		})
 
 	})
