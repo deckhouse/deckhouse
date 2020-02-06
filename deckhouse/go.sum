@@ -77,6 +77,7 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20200129070006-8ac1f2626a42/go.m
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200130072151-849b4ff0222b h1:3CEtHuA9ZvdHtsRcOIjwBLw2ULfl7TOZ8Q+rULcs51k=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200130072151-849b4ff0222b/go.mod h1:cJThM01HBlfTjiv1ZCMqKsob3iEAMuYfsbpfLSDlJvU=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200205182902-b160cac99593/go.mod h1:fo+WJqYWXNAcf0yfLPDso3wiHY6vG6LaAGj2HY8KSLs=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200206103730-a03932f75fbc/go.mod h1:exxP87jbPWKJpWsIQM9Stjfu+FHoGJiDhpdeTyct1UU=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3 h1:2xoWU3Rdo5OU44AmwQz8nlpYlwc+tKQ6EwyT2wDP0Dg=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3/go.mod h1:/BPS5XK5Ak0UPBf4hTu7xHS/D5DeY4qO2Q0KLQPNTRw=
 github.com/flant/libjq-go v1.0.0 h1:UDKaWkytNGx7PsMTydQUFdnwwhs5EzCzPC12t+Eo8Bc=
