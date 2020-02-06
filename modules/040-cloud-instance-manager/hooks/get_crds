@@ -1,67 +1,115 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "beforeHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "CloudInstanceGroup"
-    },
-    {
-      "kind": "'$(cat /tmp/cloud-instance-manager-instance-class-kind)'"
-    }
-  ]
-}'
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    general_instance_class_kind=D8TestInstanceClass
+  else
+    general_instance_class_kind=$(cat /tmp/cloud-instance-manager-instance-class-kind)
+  fi
+
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: cigs
+      queue: /modules/cloud_instance_manager
+      includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: CloudInstanceGroup
+      jqFilter: '{"name": .metadata.name, "spec": .spec}'
+    - name: ics
+      queue: /modules/cloud_instance_manager
+      includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ${general_instance_class_kind}
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "spec": (.spec | .cloudInitSteps //= {} | .cloudInitSteps.options //= {}),
+          "version": .spec.cloudInitSteps.options.version,
+          "meetsKubernetesVersionRequirement": (
+            if (((.spec.cloudInitSteps // {}).options // {}).version // "" | test("^(ubuntu|centos)-.*"))
+            then
+              ((.spec.cloudInitSteps // {}).options // {}) | has("kubernetesVersion") 
+            else true end
+          )
+        }
+    - name: cloud_provider_secret
+      queue: /modules/cloud_instance_manager
+      includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cloud-instance-manager-cloud-provider]
+      jqFilter: |
+        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+        +
+        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
+        | {"zones": .zones}
+EOF
 }
 
 function __main__() {
-  # Get instance classes
-  instance_class_kind=$(values::get cloudInstanceManager.internal.cloudProvider.instanceClassKind)
-  instance_classes="$(kubectl get $instance_class_kind -o json |
-    jq -r 'reduce .items[] as $i ({}; . + {"\($i.metadata.name)": ($i.spec | .cloudInitSteps = (.cloudInitSteps // {}) | .cloudInitSteps.options = (.cloudInitSteps.options // {}))})')"
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    general_instance_class_kind=D8TestInstanceClass
+  else
+    general_instance_class_kind=$(cat /tmp/cloud-instance-manager-instance-class-kind)
+  fi
 
-  # Process instance groups
-  errors=no
-  instance_groups=""
-  instance_group_names=$(kubectl get CloudInstanceGroups -o json | jq -r '.items[].metadata.name')
-  for ig_name in $instance_group_names ; do
-    # Get instance group
-    ig=$(kubectl get CloudInstanceGroups $ig_name -o json | jq '.spec.name = .metadata.name | .spec')
+  instance_classes="$(context::jq -r '
+    [.snapshots.ics[] | select(.filterResult.meetsKubernetesVersionRequirement)] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
+  ')"
 
-    # Fill instanceClass
-    ig_instance_class_kind=$(echo "$ig" | jq '.instanceClassReference.kind' -r)
-    if [[ "x$ig_instance_class_kind" != "x$instance_class_kind" ]] ; then
-      >&2 echo "Bad instanceClassReference in CloudInstanceGroup $ig_name: kind $ig_instance_class_kind is not allowed, the only allowed kind is $instance_class_kind"
-      errors=yes
-      continue
-    fi
-    ig_instance_class_name=$(echo "$ig" | jq '.instanceClassReference.name' -r)
-    if ! echo "$instance_classes" | jq '. | has("'$ig_instance_class_name'")' -e >/dev/null 2>&1; then
-      >&2 echo "Bad instanceClassReference in CloudInstanceGroup $ig_name: there is no $ig_instance_class_name of type $ig_instance_class_kind"
-      errors=yes
-      continue
-    fi
-    ig=$(echo "$ig" | jq --argjson instance_class "$(echo "$instance_classes" | jq '."'$ig_instance_class_name'"')" '.instanceClass = $instance_class')
-
-    # Fill zones
-    if echo "$ig" | jq -e '. | has("zones") | not' >/dev/null 2>&1; then
-      ig=$(echo "$ig" | jq --argjson zones "$(values::get --required cloudInstanceManager.internal.cloudProvider.zones)" '.zones = $zones')
-    fi
-
-    if [[ -n $instance_groups ]] ; then
-      instance_groups="$instance_groups,$ig"
-    else
-      instance_groups="$ig"
-    fi
+  bad_instance_classes_indexes="$(context::jq -r '.snapshots.ics | to_entries[] | select(.value.filterResult.meetsKubernetesVersionRequirement | not) | .key')"
+  for i in ${bad_instance_classes_indexes}; do
+    ic_name="$(context::get snapshots.ics.$i.filterResult.name)"
+    ic_version="$(context::get snapshots.ics.$i.filterResult.version)"
+    >&2 echo "Instance class ${ic_name} is invalid: .spec.cloudInitSteps.options.kubernetesVersion is mandatory for .spec.cloudInitSteps.version ${ic_version}"
   done
 
-  if [[ "x$errors" != "xno" ]] ; then
-    exit 1
+  errors=no
+  final_instance_groups="[]"
+  for i in $(context::jq -r '.snapshots.cigs | keys[]'); do
+    cig_name="$(context::get snapshots.cigs.$i.filterResult.name)"
+    cig="$(context::get snapshots.cigs.$i.filterResult.spec)"
+    cig="$(jq --arg name "${cig_name}" '.name = $name' <<< "$cig")"
+
+    cig_instance_class_kind=$(jq -r '.instanceClassReference.kind' <<< "$cig")
+    if [[ "$cig_instance_class_kind" != "$general_instance_class_kind" ]] ; then
+      >&2 echo "Bad instanceClassReference in CloudInstanceGroup $cig_name: kind $cig_instance_class_kind is not allowed, the only allowed kind is $general_instance_class_kind"
+      errors=yes
+      continue
+    fi
+
+    cig_instance_class_name=$(jq -r '.instanceClassReference.name' <<< "$cig")
+    if jq -e '. | has("'$cig_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
+      >&2 echo "Bad instanceClassReference in CloudInstanceGroup \"$cig_name\": there is no valid instance class \"$cig_instance_class_name\" of type \"$cig_instance_class_kind\""
+      errors=yes
+      continue
+    fi
+
+    cig_instance_class="$(jq --arg name $cig_instance_class_name '.[$name]' <<< "$instance_classes")"
+    cig="$(jq --argjson instance_class "${cig_instance_class}" '.instanceClass = $instance_class' <<< "$cig")"
+
+    if context::has snapshots.cloud_provider_secret.0.filterResult.zones; then
+      default_zones="$(context::get snapshots.cloud_provider_secret.0.filterResult.zones)"
+    else
+      >&2 echo "ERROR: can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
+      return 1
+    fi
+    cig="$(jq --argjson default_zones "$default_zones" '.zones //= $default_zones' <<< "$cig")"
+
+    final_instance_groups="$(jq --argjson cig "$cig" '. + [$cig]' <<< $final_instance_groups)"
+  done
+
+  if [[ "$errors" != "no" ]] ; then
+    return 1
   else
-    values::set cloudInstanceManager.internal.instanceGroups "[$instance_groups]"
+    values::set cloudInstanceManager.internal.instanceGroups "$final_instance_groups"
   fi
 }
 

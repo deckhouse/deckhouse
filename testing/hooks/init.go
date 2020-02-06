@@ -71,8 +71,10 @@ type HookExecutionConfig struct {
 	IsKubeStateInited        bool
 	KubeState                string // yaml string
 	ObjectStore              object_store.ObjectStore
+	KubernetesResourcePatch  KubernetesPatch
 	BindingContexts          BindingContextsSlice
 	BindingContextController *context.BindingContextController
+	extraHookEnvs            []string
 
 	Session *gexec.Session
 }
@@ -112,6 +114,10 @@ func (hec *HookExecutionConfig) ValuesSetFromYaml(path string, value []byte) {
 
 func (hec *HookExecutionConfig) ConfigValuesSetFromYaml(path string, value []byte) {
 	hec.configValues.SetByPathFromYaml(path, value)
+}
+
+func (hec *HookExecutionConfig) AddHookEnv(env string) {
+	hec.extraHookEnvs = append(hec.extraHookEnvs, env)
 }
 
 func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecutionConfig {
@@ -263,6 +269,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes", "PATH="+os.Getenv("PATH"))
+	hookEnvs = append(hookEnvs, hec.extraHookEnvs...)
 
 	hookCmd := &exec.Cmd{
 		Path: hec.HookPath,
@@ -383,6 +390,7 @@ func (hec *HookExecutionConfig) RunHook() {
 		Expect(err).ToNot(HaveOccurred())
 
 		hec.ObjectStore = patchedObjects
+		hec.KubernetesResourcePatch = kubePatch
 	}
 }
 

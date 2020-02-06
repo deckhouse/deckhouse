@@ -34,7 +34,7 @@ spec:
         cloud-init-steps-version: {{ $context.Values.cloudInstanceManager.internal.cloudInitSteps.version | quote }}
   {{- end }}
         checksum/cloud-init-steps-options: {{ $ig.instanceClass.cloudInitSteps.options | toJson | sha256sum | quote }}
-        checksum/machine-class: {{ include "instance_group_machine_class" (list $context $ig $zone_name) | sha256sum | quote }}
+        checksum/machine-class: {{ include "instance_group_machine_class_checksum" (list $context $ig $zone_name) | quote }}
     spec:
       class:
         kind: {{ $context.Values.cloudInstanceManager.internal.cloudProvider.machineClassKind }}

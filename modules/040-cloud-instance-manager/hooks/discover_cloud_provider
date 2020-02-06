@@ -1,34 +1,35 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-   "beforeHelm": 5,
-   "onKubernetesEvent": [
-      {
-         "kind": "Secret",
-         "objectName": "d8-cloud-instance-manager-cloud-provider",
-         "namespaceSelector": {
-            "matchNames": [
-              "kube-system"
-            ]
-         }
-      }
-   ]
-}
+    configVersion: v1
+    kubernetes:
+    - name: cloud_provider_secret
+      queue: /modules/cloud_instance_manager
+      includeSnapshotsFrom: [cloud_provider_secret]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cloud-instance-manager-cloud-provider]
+      jqFilter: |
+        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+        +
+        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
 EOF
 }
 
-function __main__() {
-  cloud_provider_values=$(kubectl -n kube-system get secret d8-cloud-instance-manager-cloud-provider -o json |
-                         jq -r '
-                              (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
-                              +
-                              (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
-                          ')
-  values::set cloudInstanceManager.internal.cloudProvider "$cloud_provider_values"
+function __on_kubernetes::cloud_provider_secret() {
+  if context::has snapshots.cloud_provider_secret.0.filterResult; then
+    values::set cloudInstanceManager.internal.cloudProvider "$(context::get snapshots.cloud_provider_secret.0.filterResult)"
+  else
+    >&2 echo "ERROR: can't find secret kube-system/d8-cloud-instance-manager-cloud-provider, module cloud-provider-xxx didn't run?"
+    return 1
+  fi
 }
 
 hook::run "$@"

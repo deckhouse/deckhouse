@@ -1,16 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "beforeHelm": 100
-}'
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 100
+EOF
 }
 
 function __main__() {
-  if ! values::is_empty "$(values::get cloudProviderVsphere.internalSubnet)"; then
+  if values::has cloudProviderVsphere.internalSubnet; then
     subnet_regex="$(rgxg cidr "$(values::get cloudProviderVsphere.internalSubnet)")"
     values::set cloudProviderVsphere.internal.internalSubnetRegex "$subnet_regex"
   fi

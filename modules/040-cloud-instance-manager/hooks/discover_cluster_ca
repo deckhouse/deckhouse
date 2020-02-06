@@ -1,14 +1,27 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=10
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: extension_api_server_authentication
+      queue: /modules/cloud_instance_manager
+      includeSnapshotsFrom: [extension_api_server_authentication]
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [extension-apiserver-authentication]
+      jqFilter: '.data."client-ca-file"'
+EOF
 }
 
-function __main__() {
-  cluster_ca=$(kubectl -n kube-system get cm extension-apiserver-authentication -o json | jq '.data."client-ca-file"' -r)
-  values::set cloudInstanceManager.internal.clusterCA "${cluster_ca}"
+function __on_kubernetes::extension_api_server_authentication() {
+  values::set cloudInstanceManager.internal.clusterCA "$(context::get snapshots.extension_api_server_authentication.0.filterResult)"
 }
 
 hook::run "$@"
