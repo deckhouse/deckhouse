@@ -37,7 +37,7 @@
       plk_grouped_by: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Под deckhouse отсуствует
       description: |
-        Под deckhouse отсутсвует в кластере
+        Под deckhouse отсутствует в кластере
 
   - alert: DeckhouseIsHung
     expr: max(increase(deckhouse_live_ticks[2m])) < 1
@@ -193,8 +193,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "24h"
-      summary: Deckhouse работет некорректно
+      summary: Deckhouse работает некорректно
       description: |
-        Deckhouse работет некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
+        Deckhouse работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`

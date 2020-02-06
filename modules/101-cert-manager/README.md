@@ -178,7 +178,7 @@ spec:
    }
    ```
 
-   * Заходим на страницу управления пользоватяли: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользоватяли с созданной ранее политикой.
+   * Заходим на страницу управления пользователями: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользователя с созданной ранее политикой.
 
 2. Редактируем ConfigMap Deckhouse, добавляя такую секцию:
 

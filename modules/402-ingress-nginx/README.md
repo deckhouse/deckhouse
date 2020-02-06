@@ -55,14 +55,14 @@ ingressNginxEnabled: "false"
     * По-умолчанию HTTP/2 включен (`false`).
 * `underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers).
     * По-умолчанию `false`.
-* `customErrors` — секция с настройкой кастомизации HTTP ошибок (если секция определена, то все параметры в ней являются обязательными, изменение любого параметра **приводит в перезапуску всех ingress-nginx контроллеров**);
+* `customErrors` — секция с настройкой кастомизации HTTP ошибок (если секция определена, то все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех ingress-nginx контроллеров**);
     * `serviceName` — имя сервиса, который будет использоваться, как custom default backend.
     * `namespace` — имя namespace, в котором будет находится сервис, используемый, как custom default backend.
-    * `codes` — список кодов ответа (массив), при которых запрос будет перенаправлятся на custom default backend.
+    * `codes` — список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
 * `config` — секция настроек ingress controller, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/);
     * **Внимание!** Ошибка в указании опций может привести к отказу в работе ingress controller'а.
     * **Внимание!** Не рекомендуется использовать данную опцию, не гарантируется обратная совместимость или работоспособность ingress controller'а с использованием данной опции.
-* `additionalHeaders` — дополнительные header'ы, которые будут добавлены к каждому запросу. Указываютсяв формате `ключ: значение(строка)`.
+* `additionalHeaders` — дополнительные header'ы, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
 
 
 ### Пример
@@ -152,13 +152,13 @@ spec:
     * `*_bytes_received_{sum,count,bucket}` — histogram размера запроса.
     * `*_bytes_sent_{sum,count,bucket}` — histogram размера ответа.
     * `*_upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream'а (используется сумма времен ответов всех upstream'ов, если их было несколько).
-    * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — тоже самое, что предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile).
+    * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — то же самое, что предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile).
     * `*_upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бекендов, и сумма retry'ев.
 
 * Для уровня overall собираются следующие метрики:
     * `*_geohash_total` — counter количества запросов с определенным geohash (дополнительные лейблы: `geohash`, `place`).
 
 * Для уровня detail_backend собираются следующие метрики:
-    * `*_lowres_upstream_response_seconds` — тоже самое, что аналогичная метрика для overall и detail.
+    * `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail.
     * `*_responses_total` — counter количества ответов (дополнительный лейбл `status_class`, а не просто `status`).
     *  `*_upstream_bytes_received_sum` — counter суммы размеров ответов backend'а.

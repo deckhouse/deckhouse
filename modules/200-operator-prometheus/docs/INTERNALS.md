@@ -39,7 +39,7 @@ Prometheus
     ![](img/targets.png)
 
     * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
-    * **(2)** Механизм Service Discovery взаимодействуе с API Kubernetes (в основном — получает endpoint`ы)
+    * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
     * **(3)** На основании происходящего в Kubernetes механизм Service Discovery обновляет Targets (список *target'ов*)
 * В `scrape_configs` указан список *scrape job'ов* (внутреннее понятие Prometheus), каждый из которых определяется следующим образом:
 

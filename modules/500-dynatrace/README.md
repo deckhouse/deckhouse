@@ -16,8 +16,8 @@ data:
 
 ### Параметры
 
-* `apiURL` — адрес инсталяции Dynatrace;
-    * Пример параметра для PaaS инсталяции: `https://leb77264.live.dynatrace.com/api`.
+* `apiURL` — адрес инсталляции Dynatrace;
+    * Пример параметра для PaaS инсталляции: `https://leb77264.live.dynatrace.com/api`.
 * `skipCertCheck` — если у вас используются самоподписанные сертификаты для api;
     * По-умолчанию `false`.
 * `apiToken` — [токен](https://www.dynatrace.com/support/help/reference/dynatrace-concepts/what-is-an-access-token/) с правами `Access problem and event feed, metrics, and nodes` из раздела `Settings`->`Integration`->`Dynatrace API`;

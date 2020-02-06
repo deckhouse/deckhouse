@@ -18,7 +18,7 @@ search: prometheus
 
 Когда данный модуль установлен на Kubernetes 1.11 и имеет storage class, поддерживающий [автоматическое расширение диска](https://kubernetes.io/blog/2018/07/12/resizing-persistent-volumes-using-kubernetes/), в случае, если в prometheus не будет помещаться данные, то диск будет автоматически расширяться. В ином случае придет алерт о том, что дисковое пространство в Prometheus заканчивается.
 
-Ресурсы cpu и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../302-vertical-pod-autoscaler). Так же, благодаряю кешированию запросов к Prometheus с помощью trickster, потребление памяти Prometheus'ом сильно сокращается.
+Ресурсы cpu и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../302-vertical-pod-autoscaler). Так же, благодаря кешированию запросов к Prometheus с помощью trickster, потребление памяти Prometheus'ом сильно сокращается.
 
 Дополнительная информация
 -------------------------
@@ -63,7 +63,7 @@ search: prometheus
          * Используется если включен параметр `externalAuthentication` и модуль `user-authn`.
     * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить авторизацию в grafana и prometheus.
     * `satisfyAny` — разрешает пройти только одну из аутентификаций. В комбинации с опцией whitelistSourceRanges позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
-* `grafana` - настройки для инсталяции Grafana.
+* `grafana` - настройки для инсталляции Grafana.
     * `storageClass` — имя storageClass'а, который использовать для Grafana.
        * Если не указано — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir.
     * `customPlugins` - список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana. Необходимо указать в качестве значения список имен плагинов из официального репозитория.
