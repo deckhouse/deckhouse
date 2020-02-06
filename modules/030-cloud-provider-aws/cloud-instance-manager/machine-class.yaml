@@ -15,6 +15,7 @@ spec:
   networkInterfaces:
   - subnetID: {{ index .Values.cloudInstanceManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
     associatePublicIPAddress: true
+    deleteOnTermination: true
     securityGroupIDs:
 {{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances }}
   {{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
@@ -23,6 +24,7 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
+  useMachineNameAsNodeName: true
   tags:
     # This is mandatory as the safety controller uses this tag to identify VMs created by by this controller.
     kubernetes.io/cluster/{{ .Values.global.discovery.clusterUUID }}: "1"
