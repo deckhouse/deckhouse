@@ -8,8 +8,9 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   podMetricsEndpoints:
-  - targetPort: controller
+  - targetPort: https-metrics
     scheme: https
+    path: /controller/metrics
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
@@ -31,8 +32,9 @@ spec:
     # remove ingress_class, we have "controller" label
     - regex: ingress_class
       action: labeldrop
-  - targetPort: statsd
+  - targetPort: https-metrics
     scheme: https
+    path: /statsd/metrics
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt

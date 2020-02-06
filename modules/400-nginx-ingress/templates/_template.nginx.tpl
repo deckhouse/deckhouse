@@ -137,20 +137,45 @@ spec:
           readOnly: true
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
-      - name: ca-auth-proxy
-        image: {{ .Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ .Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=$(MY_POD_IP):9103"
-        - "--proxy-pass=http://127.0.0.1:9102/metrics"
-        - "--user=d8-monitoring:scraper"
+        - "--secure-listen-address=$(MY_POD_IP):9103"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 9103
+          name: https-metrics
         env:
         - name: MY_POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-        ports:
-        - containerPort: 9103
-          name: statsd
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:10254/metrics
+              path: /controller/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: {{ include "helper.namespace" . }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-controller-metrics
+                  name: nginx-ingress
+            - upstream: http://127.0.0.1:9102/metrics
+              path: /statsd/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: {{ include "helper.namespace" . }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-statsd-metrics
+                  name: nginx-ingress
         resources:
           requests:
             memory: 20Mi

@@ -73,15 +73,31 @@ spec:
         - name: config
           mountPath: /config
           readOnly: true
-      - name: ca-auth-proxy
-        image: {{ .Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ .Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=443"
-        - "--proxy-pass=http://127.0.0.1:20257/metrics"
-        - "--user=d8-monitoring:scraper"
+        - "--secure-listen-address=0.0.0.0:443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
         ports:
         - containerPort: 443
           name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:20257/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring-node-problem-detector
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: monitoring-node-problem-detector
         resources:
           requests:
             memory: 20Mi
@@ -104,3 +120,4 @@ spec:
             path: kernel-monitor.json
           - key: docker-monitor.json
             path: docker-monitor.json
+

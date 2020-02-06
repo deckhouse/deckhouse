@@ -4,9 +4,8 @@ RUN apt update && apt install -qfy \
 RUN mkdir /coreos && cd /coreos \
   && git clone -b "v0.33.0" --single-branch https://github.com/coreos/prometheus-operator
 WORKDIR /coreos/prometheus-operator
-ADD tls-config.patch .
-ADD scrape_params.patch .
-RUN patch -p1 < tls-config.patch && \
+COPY tls-config-and-bearer-token.patch scrape_params.patch ./
+RUN patch -p1 < tls-config-and-bearer-token.patch && \
     patch -p1 < scrape_params.patch && \
     make operator
 

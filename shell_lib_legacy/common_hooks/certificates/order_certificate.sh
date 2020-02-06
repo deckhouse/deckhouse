@@ -14,13 +14,15 @@ function common_hooks::certificates::order_certificate::config() {
 
 # $1 - имя namespace, для которого надо сгенерировать сертификат
 # $2 - название секрета, куда сложить сгенерированный сертификат
-# $3 - common_name генерируемого сертификата
+# $3 - common_name генерируемого сертификата (или имя пользователя)
 # $4 - путь в values, куда необходимо записать сертификат и ключ
+# $5 - группа пользователя, в которой он состоит
 function common_hooks::certificates::order_certificate::main() {
   namespace=$1
   secret_name=$2
   common_name=$3
   value_name=$4
+  group=${5:-""}
 
   module_name=$(module::name)
 
@@ -31,9 +33,15 @@ function common_hooks::certificates::order_certificate::main() {
     valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
 
     # За десять дней до окончания
-    if [[ $valid_for -lt 864000 ]] ; then
+    if [[ "$valid_for" -lt 864000 ]] ; then
       # Удаляем секрет, будет перезаказан ниже
       kubectl -n ${namespace} delete secret/${secret_name}
+
+    # Миграция, если у сертификата нет нужных групп
+    elif [[ "$group" != "" && $(echo "$cert" | cfssl-certinfo -cert - | jq -rc '.subject.organization') != "$group" ]]; then
+      # Удаляем секрет, будет перезаказан ниже
+      kubectl -n ${namespace} delete secret/${secret_name}
+
     else
       values::set ${module_name}.$value_name "{}"
       values::set ${module_name}.$value_name.certificate "$(echo "$cert")"
@@ -47,8 +55,12 @@ function common_hooks::certificates::order_certificate::main() {
     kubectl delete csr/${common_name}
   fi
 
+  if [[ "$group" != "" ]]; then
+    group=$(jq -rcR '[{"O": . }]' <<< ${group})
+  fi
+
   # Генерируем CSR
-  cfssl_result=$(jo CN=${common_name} key="$(jo algo=ecdsa size=256)" | cfssl genkey -)
+  cfssl_result=$(jo CN=${common_name} names="$group" key="$(jo algo=ecdsa size=256)" | cfssl genkey -)
   cfssl_result_csr=$(echo "$cfssl_result" | jq .csr -r | base64 | tr -d '\n')
   csr=$(cat <<EOF
 apiVersion: certificates.k8s.io/v1beta1

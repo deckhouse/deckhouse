@@ -2,6 +2,8 @@
 
 import kubernetes
 import collections
+import sys
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 kubernetes.config.load_incluster_config()
@@ -12,6 +14,7 @@ batchv1 = kubernetes.client.BatchV1Api()
 extensionsv1beta1 = kubernetes.client.ExtensionsV1beta1Api()
 custom_api = kubernetes.client.CustomObjectsApi()
 
+DEFAULT_SERVER_ADDRESS = "0.0.0.0"
 
 def dict_merge(dct, merge_dct):
     """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
@@ -62,6 +65,10 @@ def convert(resource: str):
 
 class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/healthz":
+           self.send_response(200)
+           self.end_headers()
+           return
         vpas = []
         for namespace in corev1.list_namespace().items:
             for vpa in \
@@ -100,6 +107,10 @@ class GetHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    server = HTTPServer(('0.0.0.0', 8080), GetHandler)
+    server_address = DEFAULT_SERVER_ADDRESS
+    if len(sys.argv) == 2:
+      server_address = sys.argv[1]
+
+    server = HTTPServer((server_address, 8080), GetHandler)
     print('Starting server...')
     server.serve_forever()

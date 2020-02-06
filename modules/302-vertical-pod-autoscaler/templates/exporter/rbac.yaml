@@ -64,3 +64,45 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: vertical-pod-autoscaler:exporter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8-monitoring:vertical-pod-autoscaler:exporter:d8-rbac-proxy
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: vpa-exporter
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: d8-rbac-proxy:vpa-exporter
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter")) | indent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments/prometheus-metrics"]
+  resourceNames: ["vpa-exporter"]
+  verbs: ["get"]
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: d8-rbac-proxy:vpa-exporter
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-exporter")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8-rbac-proxy:vpa-exporter
+subjects:
+- kind: User
+  name: d8-monitoring:scraper
+{{- end }}

@@ -21,22 +21,6 @@ spec:
         memory: 256Mi
 {{- end }}
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: node-local-dns
-  namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "prometheus-target" "node-local-dns")) | indent 2 }}
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: https-metrics
-    port: 9254
-    protocol: TCP
-  selector:
-    app: node-local-dns
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -54,8 +38,7 @@ spec:
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
       hostNetwork: true
-      serviceAccountName: default
-      serviceAccount: default
+      serviceAccountName: node-local-dns
       dnsPolicy: ClusterFirstWithHostNet
       tolerations:
       - operator: Exists
@@ -100,17 +83,32 @@ spec:
           readOnly: false
         - name: coredns-config
           mountPath: /etc/coredns
-      - name: ca-auth-proxy-coredns
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=$(MY_POD_IP):9254"
-        - "--proxy-pass=http://127.0.0.1:9254/metrics"
-        - "--user=d8-monitoring:scraper"
+        - "--secure-listen-address=$(MY_POD_IP):9254"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
         env:
         - name: MY_POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:9254/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-system
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: node-local-dns
         ports:
         - containerPort: 9254
           name: https-metrics

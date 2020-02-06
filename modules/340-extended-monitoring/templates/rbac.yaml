@@ -63,3 +63,45 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8-monitoring:extended-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8-monitoring:extended-monitoring:d8-rbac-proxy
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: extended-monitoring
+  namespace: d8-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: d8-rbac-proxy:extended-monitoring
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments/prometheus-metrics"]
+  resourceNames: ["extended-monitoring"]
+  verbs: ["get"]
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: d8-rbac-proxy:extended-monitoring
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8-rbac-proxy:extended-monitoring
+subjects:
+- kind: User
+  name: d8-monitoring:scraper
+{{- end }}

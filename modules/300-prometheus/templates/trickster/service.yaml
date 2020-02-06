@@ -11,7 +11,5 @@ spec:
   ports:
   - port: 443
     name: https
-  - port: 8443
-    name: https-metrics
   selector:
     app: trickster

@@ -39,6 +39,7 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+      serviceAccountName: extended-monitoring
       containers:
       - name: extended-monitoring
         image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoring }}
@@ -46,22 +47,48 @@ spec:
           requests:
             cpu: "100m"
             memory: "32Mi"
-        ports:
-        - containerPort: 8080
-          protocol: TCP
-          name: http-metrics
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8080
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-            timeoutSeconds: 5
         args:
         - "/app/extended-monitoring.py"
+        - "127.0.0.1"
         env:
         - name: "PYTHONUNBUFFERED"
           value: "1"
-      serviceAccountName: extended-monitoring
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /ready
+            scheme: HTTPS
+            port: 8081
+          timeoutSeconds: 5
+      - name: kube-rbac-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+        - "--secure-listen-address=0.0.0.0:8081"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 8081
+          name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            - /ready
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: extended-monitoring

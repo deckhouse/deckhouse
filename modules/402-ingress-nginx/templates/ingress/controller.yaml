@@ -134,45 +134,45 @@ spec:
         volumeMounts:
         - mountPath: /etc/sockets
           name: unix-sockets
-      - name: ca-auth-proxy-statsd
-        image: {{ $context.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ $context.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=$(MY_POD_IP):9103"
-        - "--proxy-pass=http://127.0.0.1:9102/metrics"
-        - "--user=d8-monitoring:scraper"
+        - "--secure-listen-address=0.0.0.0:10354"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
         env:
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        ports:
-        - containerPort: 9103
-          name: statsd
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
-      - name: ca-auth-proxy-controller
-        image: {{ $context.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
-        args:
-        - "--listen=$(MY_POD_IP):10354"
-        - "--proxy-pass=http://127.0.0.1:10254/metrics"
-        - "--user=d8-monitoring:scraper"
-        env:
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:10254/metrics
+              path: /controller/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-ingress-nginx
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-controller-metrics
+                  name: ingress-nginx
+            - upstream: http://127.0.0.1:9102/metrics
+              path: /statsd/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-ingress-nginx
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-statsd-metrics
+                  name: ingress-nginx
         ports:
         - containerPort: 10354
-          name: controller
+          name: https-metrics
         resources:
           requests:
             memory: 20Mi
             cpu: 10m
-        volumeMounts:
-        - mountPath: /etc/sockets
-          name: unix-sockets
       volumes:
       - name: client-body-temp-path
         emptyDir: {}

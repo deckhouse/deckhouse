@@ -1,16 +1,17 @@
 {{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "trickster" }}
 ---
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+kind: PodMonitor
 metadata:
   name: trickster
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
-  endpoints:
-  - port: https-metrics
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https
     scheme: https
+    path: /metrics
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
@@ -24,5 +25,5 @@ spec:
     any: true
   selector:
     matchLabels:
-      prometheus-target: trickster
+      app: trickster
 {{- end }}

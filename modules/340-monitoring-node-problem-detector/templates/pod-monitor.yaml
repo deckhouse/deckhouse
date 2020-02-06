@@ -18,6 +18,8 @@ spec:
     relablings:
     - regex: endpoint|namespace|container
       action: labeldrop
+    - replacement: node-problem-detector
+      targetLabel: job
     - targetLabel: tier
       replacement: cluster
   selector:

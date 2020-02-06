@@ -19,7 +19,7 @@ spec:
       maxAllowed:
         cpu: 0.1
         memory: 0.1Gi
-    - containerName: ca-auth-proxy
+    - containerName: kube-rbac-proxy
       maxAllowed:
         cpu: 0.01
         memory: 0.02Gi
@@ -44,6 +44,7 @@ spec:
       name: oom-killer-exporter
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
+      serviceAccountName: oom-killer-exporter
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -64,15 +65,31 @@ spec:
           readOnly: true
         - name: docker
           mountPath: /var/run/docker.sock
-      - name: ca-auth-proxy
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=9101"
-        - "--proxy-pass=http://127.0.0.1:9102/metrics"
-        - "--user=d8-monitoring:scraper"
+        - "--secure-listen-address=0.0.0.0:9101"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
         ports:
         - containerPort: 9101
-          name: https
+          name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:9102/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: oom-killer-exporter
       volumes:
       - name: kmsg
         hostPath:

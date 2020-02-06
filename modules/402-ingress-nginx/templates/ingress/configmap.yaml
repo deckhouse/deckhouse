@@ -70,7 +70,7 @@ data:
   #   * If you set use-forwarded-headers to true, it starts respecting proxy-real-ip-cidr (and setups realip module
   #     to read client IP from the header), but at the same time, in LUA, it copies some of the incoming X-Forwarded-*
   #     headers to the proxied request. And it does it not checking source IP.
-  # 
+  #
   # So, this all leads us to only two possible behaviors of nginx-ingress:
   #   *   Either it fully ignores X-Forwarded-* header
   #   *   EIther it respects all X-Forwarded-* header from ANY IP address

@@ -9,13 +9,9 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: https-main
-    port: 8443
-    targetPort: https-main
-    protocol: TCP
-  - name: https-self
-    port: 9443
-    targetPort: https-self
+  - name: https-metrics
+    port: 8080
+    targetPort: https-metrics
     protocol: TCP
   selector:
     app: kube-state-metrics
