@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/testing
 go 1.13
 
 require (
-	github.com/flant/shell-operator v1.0.0-beta.7.0.20200205180330-22622f8aa612 // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.7.0.20200206051355-7ed900348af8 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/imdario/mergo v0.3.8
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826

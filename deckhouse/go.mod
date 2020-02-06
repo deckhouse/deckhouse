@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/flant/addon-operator v1.0.0-beta.5.0.20200205182902-b160cac99593 // branch: master
 	github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f
-	github.com/flant/shell-operator v1.0.0-beta.7.0.20200205180330-22622f8aa612 // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.7.0.20200206051355-7ed900348af8 // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spaolacci/murmur3 v1.1.0
