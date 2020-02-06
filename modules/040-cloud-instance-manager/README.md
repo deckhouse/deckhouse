@@ -15,7 +15,7 @@
 
 Хуки в cloud-instance-manager модуле создают MachineClass'ы, Secret'ы и MachineDeployment'ы, согласно настройкам `cloud-provider-` модуля, а также `CloudInstanceGroup` объекта.
 
-machine-controller-manager, увидев новый MachineDeployment, создаёт MachineSet, а после создаёт Machines. Принцип работы практически идентичен Kubernetes Deployments, но с виртуалками вместов Pod'ов.
+machine-controller-manager, увидев новый MachineDeployment, создаёт MachineSet, а после создаёт Machines. Принцип работы практически идентичен Kubernetes Deployments, но с виртуалками вместо Pod'ов.
 
 cluster-autoscaler манипулирует полем replicas в MachineDeployment.
 

@@ -15,7 +15,7 @@
 
 * Выключить виртуальную машину;
 * Перейти в раздел `EDIT CONFIGURATION...` (как было описано выше);
-* В правом верхнем угла нажать на кнопку `ADD CONFIGURATION PARAMS`;
+* В правом верхнем углу нажать на кнопку `ADD CONFIGURATION PARAMS`;
 
 ![](img/configuration_params.png)
 

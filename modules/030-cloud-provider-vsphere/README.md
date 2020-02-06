@@ -44,7 +44,7 @@
 * `internalSubnet` — subnet CIDR, использующийся для внутренней межнодовой сети. Используется для настройки параметра `--iface-regex` во flannel.
     * Формат — string. Например, `10.201.0.0/16`.
     * Опциональный параметр.
-* `externalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и использумые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
+* `externalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
     * Формат — массив строк. Например,
 
         ```yaml
@@ -54,7 +54,7 @@
         ```
 
     * Опциональный параметр.
-* `internalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и использумые vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
+* `internalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
     * Формат — массив строк. Например,
 
         ```yaml

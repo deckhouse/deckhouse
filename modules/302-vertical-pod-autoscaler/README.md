@@ -7,7 +7,7 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 Как вариант — возможно только получать рекомендации по ресурсам, без из автоматического изменения.
 
 У VPA есть 3 режима работы:
-- `"Auto"` (default) — в данный момент Auto и Recreate режимы работы делают одно и то же. Однако, когда в kubernetes появится [pod inplace resource update](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md#in-place-updates), данный режим будет делать именно его.
+- `"Auto"` (default) — в данный момент Auto и Recreate режимы работы делают одно и то же. Однако когда в kubernetes появится [pod inplace resource update](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md#in-place-updates), данный режим будет делать именно его.
 - `"Recreate"` — данный режим разрешает VPA изменять ресурсы у запущенных подов, т.е. рестартить их при работе. В случае работы одного пода (replicas: 1) — это приведет к недоступности сервиса, на время рестарта. В данном режиме VPA не пересоздает поды, которые были созданы без контроллера.
 - `"Initial"` — VPA изменяет ресурсы подов только при создании подов, но не во время работы.
 - `"Off"` — VPA не изменяет автоматически никакие ресурсы. В данном случае, если есть VPA c таким режимом работы, мы можем посмотреть, какие ресурсы рекомендует поставить VPA (kubectl describe vpa <vpa-name>)

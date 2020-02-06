@@ -148,7 +148,7 @@ kubernetes.io/cluster/kube-prod: shared
 
 1. По subnetwork в каждой зоне с опцией `auto-assign public IPv4 address`. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
 2. Routing table с роутом до IGW. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
-3. Security group, разрещающий всю коммуникацию между instances. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
+3. Security group, разрешающий всю коммуникацию между instances. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
 4. Заказанный и настроенный master instance со следующими параметрами:
 
     1. Сеть включена в subnetwork из шага №1.
@@ -161,7 +161,7 @@ kubernetes.io/cluster/kube-prod: shared
 1. [Terraform](install-kubernetes/aws/tf) для создания облачных ресурсов.
 2. [Ansible playbook](install-kubernetes/aws/playbook.yml) для provision'а master'а с помощью kubeadm.
 
-**Внимание!** Перед использованием готовых скриптов, следует установить два плагин для Terraform и Ansible.
+**Внимание!** Перед использованием готовых скриптов, следует установить два плагина для Terraform и Ansible.
 
 * https://github.com/nbering/terraform-provider-ansible
 * https://github.com/nbering/terraform-inventory
