@@ -12,5 +12,8 @@
   {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
     {{- $_ := set $options "runtimeOptions.nestedHardwareVirtualization" .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization -}}
   {{- end }}
+  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "memoryReservation" }}
+    {{- $_ := set $options "runtimeOptions.memoryReservation" .instanceGroup.instanceClass.runtimeOptions.memoryReservation -}}
+  {{- end }}
 {{- end }}
 {{- $options | toYaml | sha256sum -}}

@@ -118,6 +118,10 @@ cloudProviderVsphere: |
     * `nestedHardwareVirtualization` — включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах
         * Формат — bool.
         * Опциональный параметр.
+    * `memoryReservation` — процент зарезервированный для виртуальной машины памяти в кластере. В процентах относительно `.spec.memory`.
+        * Формат — integer. От 0 до 100.
+        * Опциональный параметр.
+        * По-умолчанию, `80`.
 * `cloudInitSteps` — параметры bootstrap фазы.
     * `version` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/cloud-init-steps).
         * По-умолчанию `ubuntu-18.04-1.0`.
