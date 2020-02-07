@@ -26,12 +26,12 @@ spec:
 {{- range .Values.cloudInstanceManager.internal.cloudProvider.vsphere.sshKeys }}
   - {{ . | quote }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions }}
-  runtimeOptions:
-  {{- if .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization }}
-    nestedHardwareVirtualization: true
-  {{- end }}
+{{- if not .instanceGroup.instanceClass.runtimeOptions }}
+{{ $_ := set .instanceGroup.instanceClass "runtimeOptions" dict }}
 {{- end }}
+  runtimeOptions:
+    nestedHardwareVirtualization: {{ .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization | default true }}
+    memoryReservation: {{ mul (div (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) 100) (.instanceGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
   secretRef:
     namespace: d8-{{ .Chart.Name }}
     name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

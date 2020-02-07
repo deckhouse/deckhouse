@@ -73,6 +73,11 @@ spec:
                 nestedHardwareVirtualization:
                   description: Whether to enable or disable nested hardware virtualization.
                   type: boolean
+                memoryReservation:
+                  description: VM memory reservation in percent.
+                  type: integer
+                  minimum: 0
+                  maximum: 100
             cloudInitSteps:
               type: object
               properties:
