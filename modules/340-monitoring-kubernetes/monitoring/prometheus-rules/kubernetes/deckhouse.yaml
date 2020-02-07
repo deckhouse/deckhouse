@@ -8,7 +8,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "2m"
-      plk_grouped_by: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_availability: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Prometheus не может получить метрики deckhouse
       description: |
         Prometheus не может получить метрики deckhouse
@@ -21,7 +21,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "2m"
-      plk_grouped_by: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_availability: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Deckhouse не работает
       description: |
         Под deckhouse НЕ находится в состоянии Ready
@@ -34,7 +34,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "2m"
-      plk_grouped_by: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_availability: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Под deckhouse отсуствует
       description: |
         Под deckhouse отсутствует в кластере
@@ -46,7 +46,7 @@
       tier: cluster
     annotations:
       plk_protocol_version: "1"
-      plk_grouped_by: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_availability: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Deckhouse не работает
       description: |
         Deckhouse, скорей всего, полностью завис, так как в prometheus более не увеличивается метрика deckhouse_live_ticks (а должна каждые 10 секунд).
@@ -72,7 +72,7 @@
       tier: cluster
     annotations:
       plk_protocol_version: "1"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Deckhouse слишком часто перезагружается
       description: |
         Количество перезапусков за последний час: {{ $value }}.
@@ -88,7 +88,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "1h"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Deckhouse не может подключиться к registry
       description: |
         У deckhouse нет доступа к registry (обычно registry.flant.com), в котором он каждые 15 секунд проверяет наличие нового Docker образа. Пока у deckhouse нет доступа к registry — он не будет автоматически обновляться.
@@ -103,7 +103,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Deckhouse зависла
       description: |
         Deckhouse не может обработать очередь {{ $labels.queue }}, в которой скопилось {{ $value }} заданий.
@@ -116,7 +116,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Глобальный хук Deckhouse падает слишком часто
       descritipion: |
         Глобальный хук {{ $labels.hook }} падает каждые 5 минут
@@ -129,7 +129,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Модульный хук Deckhouse падает слишком часто
       descritipion: |
         Хук {{ $labels.hook }} модуля {{ $labels.module }} падает каждые 5 минут
@@ -142,7 +142,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "3m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
 
   - alert: DeckhouseCouldNotRunModule
     expr: max(increase(deckhouse_module_run_errors[2m])) by (module) > 1
@@ -152,7 +152,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "3m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
 
   - alert: DeckhouseCouldNotDeleteModule
     expr: max(increase(deckhouse_module_delete_errors[2m])) by (module) > 1
@@ -162,7 +162,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "3m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
 
   - alert: DeckhouseCouldNotRunGlobalHook
     expr: max(increase(deckhouse_global_hook_errors[2m])) by (hook) > 1
@@ -172,7 +172,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "3m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
 
   - alert: DeckhouseCouldNotRunModuleHook
     expr: max(increase(deckhouse_module_hook_errors[2m])) by (module, hook) > 1
@@ -182,7 +182,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "3m"
-      plk_grouped_by: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by/deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
 
   - alert: DeckhouseMalfunctioning
     expr: count(ALERTS{alertname=~"DeckhouseCouldNotDiscoverModules|DeckhouseCouldNotRunGlobalHook|DeckhouseCouldNotRunModuleHook|DeckhouseCouldNotRunModule|DeckhouseCouldNotDeleteModule|DeckhouseQueueIsHung|DeckhouseGlobalHookFailsTooOften|DeckhouseModuleHookFailsTooOften"})
