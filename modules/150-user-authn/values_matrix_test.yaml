@@ -5,6 +5,7 @@ global:
       - ["cert-manager", "vertical-pod-autoscaler-crd"]
       - ["cert-manager"]
   modulesImages:
+    registry: registry.flant.com
     registryDockercfg: registry.example.com
     tags:
       userAuthn:
@@ -143,6 +144,7 @@ userAuthn:
             appDexSecret: plainstring
             cookieSecret: plainstring
           name: dex-authenticator
+          encodedName: dex-authenticator
           namespace: dex-authenticator-namespace
           spec:
             applicationDomain: dex-authenticator.example.com
@@ -154,6 +156,7 @@ userAuthn:
             appDexSecret: plainstring
             cookieSecret: plainstring
           name: test
+          encodedName: test
           namespace: test-namespace
           spec:
             applicationDomain: test.example.com
