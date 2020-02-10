@@ -16,7 +16,7 @@ spec:
   bootDiskSpec:
     autoDelete: true
     typeID: {{ .instanceGroup.instanceClass.diskType }}
-    size: {{ mul (.instanceGroup.instanceClass.diskGB | default 50) 1024 1024 1024 }}
+    size: {{ mul (.instanceGroup.instanceClass.diskSizeGB | default 50) 1024 1024 1024 }}
     imageID: {{ .instanceGroup.instanceClass.imageID }}
   networkInterfaceSpecs:
 {{- if .instanceGroup.instanceClass.mainSubnet }}

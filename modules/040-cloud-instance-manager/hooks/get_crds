@@ -24,14 +24,15 @@ function __config__() {
       apiVersion: deckhouse.io/v1alpha1
       kind: ${general_instance_class_kind}
       jqFilter: |
+        .spec.bashible //= .spec.cloudInitSteps | del(.spec.cloudInitSteps) | .spec.bashible.bundle //= .spec.bashible.version | del(.spec.bashible.version) |
         {
           "name": .metadata.name,
-          "spec": (.spec | .cloudInitSteps //= {} | .cloudInitSteps.options //= {}),
-          "version": .spec.cloudInitSteps.options.version,
+          "spec": (.spec | .bashible //= {} | .bashible.options //= {} | .bashible.dynamicOptions //= {}),
+          "bundle": .spec.bashible.bundle,
           "meetsKubernetesVersionRequirement": (
-            if (((.spec.cloudInitSteps // {}).options // {}).version // "" | test("^(ubuntu|centos)-.*"))
+            if ((.spec.bashible // {}).bundle // "" | test("^(ubuntu|centos)-.*"))
             then
-              ((.spec.cloudInitSteps // {}).options // {}) | has("kubernetesVersion") 
+              (((.spec.bashible // {}).options // {}) | has("kubernetesVersion"))
             else true end
           )
         }
@@ -67,8 +68,8 @@ function __main__() {
   bad_instance_classes_indexes="$(context::jq -r '.snapshots.ics | to_entries[] | select(.value.filterResult.meetsKubernetesVersionRequirement | not) | .key')"
   for i in ${bad_instance_classes_indexes}; do
     ic_name="$(context::get snapshots.ics.$i.filterResult.name)"
-    ic_version="$(context::get snapshots.ics.$i.filterResult.version)"
-    >&2 echo "Instance class ${ic_name} is invalid: .spec.cloudInitSteps.options.kubernetesVersion is mandatory for .spec.cloudInitSteps.version ${ic_version}"
+    ic_bundle="$(context::get snapshots.ics.$i.filterResult.bundle)"
+    >&2 echo "Instance class ${ic_name} is invalid: .spec.bashible.options.kubernetesVersion is mandatory for .spec.bashible.bundle ${ic_bundle}"
   done
 
   errors=no
