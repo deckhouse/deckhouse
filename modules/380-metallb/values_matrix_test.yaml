@@ -29,13 +29,14 @@ global:
       - ["vertical-pod-autoscaler-crd"]
       - []
   modulesImages:
+    registry: registry.flant.com
     registryDockercfg: cfg
     tags:
       metallb:
         controller: imagehash
         speaker: imagehash
       common:
-        kubeCaAuthProxy: imagehash
+        kubeRbacProxy: imagehash
 
   discovery:
     d8SpecificNodeCountByRole:

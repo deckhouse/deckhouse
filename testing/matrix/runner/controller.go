@@ -9,7 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v2"
+	"github.com/flant/shell-operator/pkg/utils/manifest/releaseutil"
+	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var (
@@ -25,6 +27,22 @@ type ModuleController struct {
 	ValuesDir string
 	ModuleDir string
 	ChartName string
+}
+
+type GVR struct {
+	Kind      string
+	Name      string
+	Namespace string
+}
+
+type UnstructuredObjectStore map[GVR]unstructured.Unstructured
+
+func (store UnstructuredObjectStore) PutObjectSafely(object unstructured.Unstructured, index GVR) error {
+	if _, ok := store[index]; ok == true {
+		return fmt.Errorf("object %s already exists in the object store", index)
+	}
+	store[index] = object
+	return nil
 }
 
 func NewModuleController(valuesDir, moduleDir string) (ModuleController, error) {
@@ -63,12 +81,45 @@ func (c *ModuleController) Run() error {
 	for index, file := range files {
 		wg.Add(1)
 		go func(index int, file string) {
+			objectStore := UnstructuredObjectStore{}
+			fileContent, _ := ioutil.ReadFile(file)
+
 			defer wg.Done()
 			helmCmd := exec.Command("helm", "template", c.ModuleDir, "--values", file)
 			out, err := helmCmd.CombinedOutput()
 			if err != nil {
-				fileContent, _ := ioutil.ReadFile(file)
 				errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, err, file, string(fileContent), string(out))
+				return
+			}
+			for _, doc := range releaseutil.SplitManifests(string(out)) {
+				var t interface{}
+
+				err = yaml.Unmarshal([]byte(doc), &t)
+				if err != nil {
+					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, err, file, string(fileContent), doc)
+					return
+				}
+				if t == nil {
+					continue
+				}
+
+				var unstructuredObj unstructured.Unstructured
+				unstructuredObj.SetUnstructuredContent(t.(map[string]interface{}))
+
+				err = objectStore.PutObjectSafely(unstructuredObj, GVR{
+					Kind:      unstructuredObj.GetKind(),
+					Namespace: unstructuredObj.GetNamespace(),
+					Name:      unstructuredObj.GetName(),
+				})
+				if err != nil {
+					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, fmt.Errorf("helm output already has object: %v", err), file, string(fileContent), string(out))
+					return
+				}
+				err = ApplyLintRules(objectStore)
+				if err != nil {
+					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, fmt.Errorf("lint rule failed: %v", err), file, string(fileContent), string(out))
+					return
+				}
 			}
 		}(index, file)
 	}

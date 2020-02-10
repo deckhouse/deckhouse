@@ -5,10 +5,11 @@ global:
       - ["cert-manager", "vertical-pod-autoscaler-crd"]
       - ["cert-manager"]
   modulesImages:
+    registry: registry.flant.com
     registryDockercfg: registry.example.com
     tags:
       common:
-        kubeCaAuthProxy: tagstring
+        kubeRbacProxy: tagstring
       ingressNginx:
         controller025: tagstring
         controller026: tagstring

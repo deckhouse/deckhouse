@@ -4,6 +4,7 @@ global:
       - ["vertical-pod-autoscaler-crd"]
       - []
   modulesImages:
+    registry: registry.flant.com
     registryDockercfg: registry.example.com
     tags:
       basicAuth:
