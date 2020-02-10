@@ -78,14 +78,20 @@ spec:
                   type: integer
                   minimum: 0
                   maximum: 100
-            cloudInitSteps:
+            bashible:
               type: object
+              required:
+              - bundle
               properties:
-                version:
-                  description: cloud-init-steps version
+                bundle:
+                  description: The name of one of bashible bundles.
                   example: "ubuntu-18.04-1.0"
                   type: string
                 options:
-                  description: "Options to pass to cloud-init-steps. Vary between different cloud-init-steps versions"
+                  description: "Options to pass to bundle during the bootstrap stage. Vary between different bundles"
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                dynamicOptions:
+                  description: "Options to pass to bundle during the main stage. Vary between different bundles"
                   type: object
                   x-kubernetes-preserve-unknown-fields: true

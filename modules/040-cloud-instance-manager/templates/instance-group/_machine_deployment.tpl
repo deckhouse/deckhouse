@@ -28,12 +28,8 @@ spec:
       labels:
         instance-group: {{ $ig.name }}-{{ $zone_name }}
       annotations:
-  {{- if $ig.instanceClass.cloudInitSteps.version }}
-        cloud-init-steps-version: {{ $ig.instanceClass.cloudInitSteps.version | quote }}
-  {{- else }}
-        cloud-init-steps-version: {{ $context.Values.cloudInstanceManager.internal.cloudInitSteps.version | quote }}
-  {{- end }}
-        checksum/cloud-init-steps-options: {{ $ig.instanceClass.cloudInitSteps.options | toJson | sha256sum | quote }}
+        bashible-bundle: {{ $ig.instanceClass.bashible.bundle | quote }}
+        checksum/bashible-bundles-options: {{ $ig.instanceClass.bashible.options | toJson | sha256sum | quote }}
         checksum/machine-class: {{ include "instance_group_machine_class_checksum" (list $context $ig $zone_name) | quote }}
     spec:
       class:

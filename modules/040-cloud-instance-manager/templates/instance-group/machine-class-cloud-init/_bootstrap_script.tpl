@@ -1,23 +1,40 @@
-{{- define "instance_group_machine_class_cloud_init_bootstrap_script" }}
+{{- define "instance_group_machine_class_bashible_bootstrap_script" }}
   {{- $context := index . 0 }}
   {{- $ig := index . 1 }}
   {{- $zone_name := index . 2 }}
 
-  {{- $cloud_init_steps_version := $ig.instanceClass.cloudInitSteps.version | default $context.Values.cloudInstanceManager.internal.cloudInitSteps.version -}}
+  {{- $bashible_bundle := $ig.instanceClass.bashible.bundle -}}
 #!/bin/bash
 
 set -Eeuom pipefail
 shopt -s failglob
 
-BOOTSTRAP_DIR="/var/lib/machine-bootstrap"
+#Install necessary packages. Not in cloud config cause cloud init do not retry installation and silently fails.
+if echo "{{ $bashible_bundle }}" | grep "centos"; then
+  until yum install epel-release -y; do
+    echo "Error installing epel-release"
+    sleep 10
+  done
+  until yum install jq nc wget -y; do
+    echo "Error installing packages"
+    sleep 10
+  done
+elif echo "{{ $bashible_bundle }}" | grep "ubuntu"; then
+  until apt install jq wget -y; do
+    echo "Error installing packages"
+    sleep 10
+  done
+fi
+
+BOOTSTRAP_DIR="/var/lib/bashible"
 
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
 
 # Execute cloud provider specific bootstrap.
-if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-{{ $cloud_init_steps_version }}.sh ]] ; then
+if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-{{ $bashible_bundle }}.sh ]] ; then
   while true ; do
-    if ! $BOOTSTRAP_DIR/cloud-provider-bootstrap-{{ $cloud_init_steps_version }}.sh ; then
+    if ! $BOOTSTRAP_DIR/cloud-provider-bootstrap-{{ $bashible_bundle }}.sh ; then
       >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
       sleep 10
       continue
@@ -27,120 +44,71 @@ if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-{{ $cloud_init_steps_version }}
   done
 fi
 
-perl_installed=$(type perl || echo '0')
-if [ "$perl_installed" != "0" ]; then
-  # Start output cloud init logs
-  cloud_init_output_log_port=8000
-  export cloud_init_output_log_port=$cloud_init_output_log_port
-  while true; do perl -MIO::Socket::INET -ne 'BEGIN{$l=IO::Socket::INET->new(LocalPort=>$ENV{cloud_init_output_log_port},Proto=>"tcp",Listen=>5,ReuseAddr=>1);$l=$l->accept}print $l $_' < /var/log/cloud-init-output.log; done &
+# Start output bootstrap logs
+output_log_port=8000
+while true; do cat /var/log/cloud-init-output.log | nc -l $output_log_port; done &
 
-  patch_pending=true
-  while [ "$patch_pending" = true ] ; do
-    for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
-      cloud_init_tcp_endpoint=$(ip ro get ${server} | grep -Po '(?<=src )([0-9\.]+)')
-      if curl -s --fail \
-        --max-time 10 \
-        -XPATCH \
-        -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
-        -H "Accept: application/json" \
-        -H "Content-Type: application/json-patch+json" \
-        --cacert "$BOOTSTRAP_DIR/ca.crt" \
-        --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${cloud_init_tcp_endpoint} ${cloud_init_output_log_port}' to get cloud init logs.\", \"tcpEndpoint\": \"${cloud_init_tcp_endpoint}\"} }]" \
-        "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+patch_pending=true
+while [ "$patch_pending" = true ] ; do
+  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
+    tcp_endpoint=$(ip ro get ${server} | grep -Po '(?<=src )([0-9\.]+)')
+    if curl -s --fail \
+      --max-time 10 \
+      -XPATCH \
+      -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/json-patch+json" \
+      --cacert "$BOOTSTRAP_DIR/ca.crt" \
+      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"tcpEndpoint\": \"${tcp_endpoint}\"} }]" \
+      "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
 
-        echo "Successfully patched machine $(hostname) status."
-        patch_pending=false
-        break
-      else
-        >&2 echo "Failed to patch machine $(hostname) status."
-        sleep 10
-        continue
-      fi
-    done
-  done
-fi
-
-# Download and extract cloud init steps
-mkdir -p $BOOTSTRAP_DIR/steps
-for steps_collection in steps-{{ $cloud_init_steps_version }} steps-{{ $cloud_init_steps_version }}-{{ $ig.name }} ; do
-  while true ; do
-    for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
-      if curl -s --fail \
-        --max-time 10 \
-        -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
-        -H "Accept: application/json" \
-        --cacert "$BOOTSTRAP_DIR/ca.crt" \
-        "https://$server:6443/api/v1/namespaces/d8-cloud-instance-manager/secrets/cloud-init-${steps_collection}" | jq .data > $BOOTSTRAP_DIR/${steps_collection}.json ; then
-
-        if [[ -s $BOOTSTRAP_DIR/${steps_collection}.json ]] ; then
-          echo "Successfully downloaded cloud init steps collection "$steps_collection" from https://$server:6443/."
-          break
-        fi
-      else
-        >&2 echo "Failed to download cloud init steps collection "$steps_collection" from https://$server:6443/."
-      fi
-    done
-
-    if [[ ! -s $BOOTSTRAP_DIR/${steps_collection}.json ]] ; then
-      >&2 echo "Failed to download cloud init steps collection "$steps_collection" from all servers. Retry in 10 seconds."
+      echo "Successfully patched machine $(hostname) status."
+      patch_pending=false
+      break
+    else
+      >&2 echo "Failed to patch machine $(hostname) status."
       sleep 10
       continue
     fi
-
-    steps=$(cat $BOOTSTRAP_DIR/${steps_collection}.json | jq '. // {} | keys | .[]' -r)
-    for step in $steps; do
-      cat $BOOTSTRAP_DIR/${steps_collection}.json | jq '."'$step'"' -r | base64 -d > $BOOTSTRAP_DIR/steps/$step
-    done
-
-    break
   done
 done
 
-# Execute cloud init steps
-for step in $(ls -1 $BOOTSTRAP_DIR/steps/ | sort); do
-  while true; do
-    if ! (
-      set -Eeuo pipefail
-      shopt -s failglob
+until /var/lib/bashible/bashible.sh bootstrap; do
+  echo "Error running bashible script. Retry in 10 seconds."
+  sleep 10
+done;
 
-      . $BOOTSTRAP_DIR/steps/$step
-    ) ; then
-      >&2 echo "Failed to execute step "$step". Retry in 10 seconds."
+# Stop output bootstrap logs
+patch_pending=true
+while [ "$patch_pending" = true ] ; do
+  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
+    if curl -s --fail \
+      --max-time 10 \
+      -XPATCH \
+      -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/json-patch+json" \
+      --cacert "$BOOTSTRAP_DIR/ca.crt" \
+      --data "[{\"op\":\"remove\",\"path\":\"/status/bootstrapStatus\"}]" \
+      "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+
+      echo "Successfully patched machine $(hostname) status."
+      patch_pending=false
+      break
+    else
+      >&2 echo "Failed to patch machine $(hostname) status."
       sleep 10
       continue
     fi
-
-    break
   done
 done
 
-if [ "$perl_installed" != "0" ]; then
-  # Stop output cloud init logs
-  patch_pending=true
-  while [ "$patch_pending" = true ] ; do
-    for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
-      if curl -s --fail \
-        --max-time 10 \
-        -XPATCH \
-        -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
-        -H "Accept: application/json" \
-        -H "Content-Type: application/json-patch+json" \
-        --cacert "$BOOTSTRAP_DIR/ca.crt" \
-        --data "[{\"op\":\"remove\",\"path\":\"/status/bootstrapStatus\"}]" \
-        "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+kill -9 %1
 
-        echo "Successfully patched machine $(hostname) status."
-        patch_pending=false
-        break
-      else
-        >&2 echo "Failed to patch machine $(hostname) status."
-        sleep 10
-        continue
-      fi
-    done
-  done
-
-  kill -9 %1
+if [[ -f "/var/lib/bashible/reboot" ]]; then
+  echo "Reboot machine after bootstrap process completed"
+  rm -f /var/lib/bashible/reboot
+  (sleep 5; shutdown -r now) &
 fi
 
 {{ end }}

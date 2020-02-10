@@ -9,8 +9,8 @@
   {{- $_ := set $options "gpus" .instanceGroup.instanceClass.gpus -}}
 {{- end -}}
 {{- $_ := set $options "diskType" .instanceGroup.instanceClass.diskType -}}
-{{- if hasKey .instanceGroup.instanceClass "diskGB" -}}
-  {{- $_ := set $options "diskGB" .instanceGroup.instanceClass.diskGB -}}
+{{- if hasKey .instanceGroup.instanceClass "diskSizeGB" -}}
+  {{- $_ := set $options "diskSizeGB" .instanceGroup.instanceClass.diskSizeGB -}}
 {{- end -}}
 {{- $_ := set $options "imageID" .instanceGroup.instanceClass.imageID -}}
 {{- if hasKey .instanceGroup.instanceClass "mainSubnet" }}

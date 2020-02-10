@@ -1,0 +1,73 @@
+{{- $bashible_bundles := list }}
+{{- range $f, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/*/{base-bootstrap,base,instance-group-bootstrap,instance-group}/*" | join "") }}
+  {{- $bashible_bundles = append $bashible_bundles ($f | dir | dir | base) | uniq }}
+{{- end }}
+
+{{- range $bashible_bundle := $bashible_bundles }}
+  {{- range $ig := $.Values.cloudInstanceManager.internal.instanceGroups }}
+    {{- $tpl_context := dict }}
+    {{- $_ := set $tpl_context "Release" $.Release }}
+    {{- $_ := set $tpl_context "Chart" $.Chart }}
+    {{- $_ := set $tpl_context "Files" $.Files }}
+    {{- $_ := set $tpl_context "Capabilities" $.Capabilities }}
+    {{- $_ := set $tpl_context "Template" $.Template }}
+    {{- $_ := set $tpl_context "Values" $.Values }}
+    {{- $_ := set $tpl_context "instanceGroup" $ig }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-bundle-{{ $bashible_bundle }}-{{ $ig.name }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: Opaque
+data:
+    {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/" $bashible_bundle "/instance-group/*" | join "") }}
+{{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-bundle-{{ $bashible_bundle }}-{{ $ig.name }}-bootstrap
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: Opaque
+data:
+    {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/" $bashible_bundle "/instance-group-bootstrap/*" | join "") }}
+    {{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
+    {{- end }}
+  {{- end }}
+
+  {{- $tpl_context := dict }}
+  {{- $_ := set $tpl_context "Release" $.Release }}
+  {{- $_ := set $tpl_context "Chart" $.Chart }}
+  {{- $_ := set $tpl_context "Files" $.Files }}
+  {{- $_ := set $tpl_context "Capabilities" $.Capabilities }}
+  {{- $_ := set $tpl_context "Template" $.Template }}
+  {{- $_ := set $tpl_context "Values" $.Values }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-bundle-{{ $bashible_bundle }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: Opaque
+data:
+  {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/" $bashible_bundle "/base/*" | join "") }}
+{{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-bundle-{{ $bashible_bundle }}-bootstrap
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: Opaque
+data:
+  {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/" $bashible_bundle "/base-bootstrap/*" | join "") }}
+  {{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
+  {{- end }}
+{{- end }}

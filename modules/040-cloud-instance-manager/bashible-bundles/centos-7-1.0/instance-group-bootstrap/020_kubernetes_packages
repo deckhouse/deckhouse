@@ -1,0 +1,7 @@
+#!/bin/bash
+
+{{- $kubernetes_version := .instanceGroup.instanceClass.bashible.options.kubernetesVersion }}
+
+if ! yum list installed kubelet | grep -F {{ $kubernetes_version }}; then
+  yum install -y "kubelet-{{ $kubernetes_version }}*" "kubectl-{{ $kubernetes_version }}*"
+fi
