@@ -79,6 +79,7 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20200130072151-849b4ff0222b/go.m
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200205182902-b160cac99593/go.mod h1:fo+WJqYWXNAcf0yfLPDso3wiHY6vG6LaAGj2HY8KSLs=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200206103730-a03932f75fbc/go.mod h1:exxP87jbPWKJpWsIQM9Stjfu+FHoGJiDhpdeTyct1UU=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200206175750-8ae5ab7a1088/go.mod h1:JEHv9LiKMwQd9l0W2flkfK0Om0pjFe8znn2pIRBb0VI=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200210102947-75b3a9c415bf/go.mod h1:JEHv9LiKMwQd9l0W2flkfK0Om0pjFe8znn2pIRBb0VI=
 github.com/flant/ginkgo v1.11.1-0.20200206071017-2216da3b016c/go.mod h1:KdEqjYsxC3bj9qNcLCk9yxfJ1FWH5k1KU/xYgdVQkLc=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3 h1:2xoWU3Rdo5OU44AmwQz8nlpYlwc+tKQ6EwyT2wDP0Dg=
 github.com/flant/libjq-go v0.0.0-20191126154400-1afb898d97a3/go.mod h1:/BPS5XK5Ak0UPBf4hTu7xHS/D5DeY4qO2Q0KLQPNTRw=
