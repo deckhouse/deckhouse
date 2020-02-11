@@ -136,6 +136,11 @@ userAuthn:
   internal:
     kubernetesDexClientAppSecret: plainstring
     kubernetesCA: plainstring
+    controlPlaneConfigurator:
+      oidcCA:
+        __ConstantChoices__:
+          - test
+          - __EmptyItem__
     dexAuthenticatorCRDs:
       __ConstantChoices__:
       - __EmptyItem__
