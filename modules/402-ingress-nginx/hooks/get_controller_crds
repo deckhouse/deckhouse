@@ -12,8 +12,8 @@ function __config__() {
       includeSnapshotsFrom:
       - controller
       jqFilter: |
-        .spec.config = (.spec.config // {})
-        | .spec.loadBalancer = (.spec.loadBalancer // {})
+        .spec.config //= {}
+        | .spec.loadBalancer //= {}
         | {"name": .metadata.name, "spec": .spec}
 EOF
 }
@@ -25,9 +25,8 @@ function __main__() {
   fi
 
   default_controller_version=$(values::get ingressNginx.defaultControllerVersion)
-  crds=$(context::jq -rc '.snapshots.controller | .[].filterResult' | while read crd ; do
-    jq -rc ".spec.controllerVersion |= (.spec.controllerVersion // \"${default_controller_version}\")" <<< ${crd}
-  done | jq -s '.')
+  crds=$(context::jq -rc --arg default_controller_version "$default_controller_version" '
+    [ .snapshots.controller[] | .filterResult | .spec.controllerVersion //= $default_controller_version ]')
 
   values::set ingressNginx.internal.ingressControllerCRDs "$crds"
 }
