@@ -110,6 +110,34 @@ EOF
         kubectl -n kube-prometheus delete servicemonitor ${servicemonitor} >/dev/null 2>/dev/null
       fi
     done
+
+  VPAS=$(cat <<-EOF
+grafana
+prometheus-longterm
+prometheus-main
+trickster
+EOF
+)
+    for vpa in ${VPAS} ; do
+      if kubectl -n kube-prometheus get vpa ${vpa} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete vpa ${vpa} >/dev/null 2>/dev/null
+      fi
+    done
+
+  PDBS=$(cat <<-EOF
+grafana
+kube-state-metrics
+prometheus-longterm
+prometheus-main
+trickster
+EOF
+)
+
+    for pdb in ${PDBS} ; do
+      if kubectl -n kube-prometheus get pdb ${pdb} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete pdb ${pdb} >/dev/null 2>/dev/null
+      fi
+    done
   fi
 }
 
