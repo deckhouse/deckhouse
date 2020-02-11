@@ -74,7 +74,7 @@ function __main__() {
   cluster_type="$(context::jq -r '
     [
       (.snapshots.controller_manager_by_k8s_app + .snapshots.controller_manager_by_component)[] | select(.filterResult != null) | .filterResult
-    ] | first |
+    ] | first // "cloud_provider_not_found" |
     {"aws": "AWS", "gce": "GCE", "azure": "ACS"}[.] | if . == null then "Manual" else . end
   ')"
 
