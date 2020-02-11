@@ -109,7 +109,7 @@ spec:
           type: DirectoryOrCreate
       - name: plugin-dir
         hostPath:
-          path: /var/lib/kubelet/plugins_registry/vsphere.csi.vmware.com
+          path: /var/lib/kubelet/plugins/vsphere.csi.vmware.com
           type: DirectoryOrCreate
       - name: pods-mount-dir
         hostPath:
