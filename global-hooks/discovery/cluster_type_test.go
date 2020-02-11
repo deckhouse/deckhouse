@@ -103,6 +103,27 @@ spec:
     - qqq
     - "--aaa --bbb --cloud-provider=azure"
 `
+
+	state_NoCloudProvider = `
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    component: kube-controller-manager
+    tier: control-plane
+  name: kube-controller-manager-sandbox-21-master
+  namespace: kube-system
+spec:
+  containers:
+  - name: kube-controller-manager
+    command:
+    - kube-controller-manager
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --use-service-account-credentials=true
+    args:
+    - qqq
+    - www
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -178,4 +199,23 @@ spec:
 			Expect(f.ValuesGet("global.discovery.clusterType").String()).To(Equal("ACS"))
 		})
 	})
+
+	Context("controller-manager has label 'component:', there is no --cloud-provider= arg", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(state_NoCloudProvider))
+			f.RunHook()
+		})
+
+		It("filterResult must be null; `global.discovery.clusterType` must be 'Manual'", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			// binding: ControllerManagerByComponent
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Value()).To(BeNil())
+			// binding: ControllerManagerByK8SApp
+			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Value()).To(BeNil())
+
+			Expect(f.ValuesGet("global.discovery.clusterType").String()).To(Equal("Manual"))
+		})
+	})
+
 })
