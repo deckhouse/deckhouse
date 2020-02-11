@@ -120,7 +120,9 @@ data:
   custom-http-errors: {{ $crd.spec.customErrors.codes | join "," | quote }}
   {{- end }}
   {{- if $crd.spec.config }}
-{{ $crd.spec.config | toYaml | indent 2 }}
+    {{- range $key, $additionalConfig := $crd.spec.config }}
+  {{ $key }}: {{ $additionalConfig | quote }}
+    {{- end }}
   {{- end }}
 ---
 apiVersion: v1
@@ -132,6 +134,8 @@ metadata:
 data:
   X-Request-Start: "t=${msec}"
   {{- if $crd.spec.additionalHeaders }}
-{{ $crd.spec.additionalHeaders | toYaml | indent 2 }}
+    {{- range $key, $value := $crd.spec.additionalHeaders }}
+  {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 {{- end }}
