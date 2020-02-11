@@ -1,0 +1,12 @@
+{{- if .Values.userAuthn.internal.controlPlaneConfigurator.oidcCA }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-ca
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+data:
+  oidcCA: |
+{{ .Values.userAuthn.internal.controlPlaneConfigurator.oidcCA | indent 4 }}
+{{- end }}
