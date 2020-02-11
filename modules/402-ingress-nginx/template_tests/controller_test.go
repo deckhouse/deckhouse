@@ -37,9 +37,11 @@ key: teststring
 			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllerCRDs", `
 - name: test
   spec:
-    config: {}
+    config:
+      use-proxy-protocol: true
+      load-balance: ewma
     ingressClass: nginx
-    controllerVersion: "0.25"
+    controllerVersion: "0.26"
     inlet: LoadBalancer
     loadBalancer: {}
 `)
@@ -52,6 +54,13 @@ key: teststring
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "test-ingress-nginx-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Exists()).To(BeTrue())
+
+			configMapData := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Field("data")
+
+			// Use the Raw property to check is value quoted correctly
+			Expect(configMapData.Get("use-proxy-protocol").Raw).To(Equal(`"true"`))
+			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
+			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 		})
 	})
 })
