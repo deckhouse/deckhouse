@@ -56,6 +56,7 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	kubeClient := kube.NewKubernetesClient()
 	kubeClient.WithContextName(sh_app.KubeContext)
 	kubeClient.WithConfigPath(sh_app.KubeConfig)
+	kubeClient.WithRateLimiterSettings(app.KubeClientQps, app.KubeClientBurst)
 	err := kubeClient.Init()
 	if err != nil {
 		log.Errorf("MAIN Fatal: initialize kube client: %s\n", err)
