@@ -130,12 +130,33 @@ kube-state-metrics
 prometheus-longterm
 prometheus-main
 trickster
+madison-proxy
 EOF
 )
 
     for pdb in ${PDBS} ; do
       if kubectl -n kube-prometheus get pdb ${pdb} >/dev/null 2>/dev/null ; then
         kubectl -n kube-prometheus delete pdb ${pdb} >/dev/null 2>/dev/null
+      fi
+    done
+
+    if kubectl -n kube-prometheus get dex-authenticators.deckhouse.io grafana >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete dex-authenticators.deckhouse.io grafana >/dev/null 2>/dev/null
+    fi
+
+    SECRETS=$(cat <<-EOF
+deckhouse-registry
+ingress-tls
+prometheus-api-client-tls
+prometheus-longterm
+prometheus-main-additional-configs
+prometheus-scraper-tls
+prometheus-token-dj7kv
+EOF
+)
+    for secret in ${SECRETS} ; do
+      if kubectl -n kube-prometheus get secret ${secret} >/dev/null 2>/dev/null ; then
+        kubectl -n kube-prometheus delete secret ${secret} >/dev/null 2>/dev/null
       fi
     done
   fi
