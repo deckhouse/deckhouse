@@ -3,6 +3,7 @@ package object_store
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/testing/library"
@@ -55,16 +56,16 @@ type MetaIndex struct {
 type ObjectStore map[MetaIndex]KubeObject
 
 func (store ObjectStore) PutObject(object KubeObject, index MetaIndex) {
-	store[lowerCaseMetaIndex(index)] = object
+	store[normalizeMetaIndex(index)] = object
 }
 
 func (store ObjectStore) GetObject(index MetaIndex) (KubeObject, bool) {
-	obj, ok := store[lowerCaseMetaIndex(index)]
+	obj, ok := store[normalizeMetaIndex(index)]
 	return obj, ok
 }
 
 func (store ObjectStore) DeleteObject(index MetaIndex) {
-	delete(store, lowerCaseMetaIndex(index))
+	delete(store, normalizeMetaIndex(index))
 }
 
 func (store ObjectStore) RetrieveObjectByMetaIndex(index MetaIndex) (object KubeObject, exists bool) {
@@ -74,14 +75,14 @@ func (store ObjectStore) RetrieveObjectByMetaIndex(index MetaIndex) (object Kube
 }
 
 func (store ObjectStore) KubernetesGlobalResource(kind, name string) KubeObject {
-	metaIndex := lowerCaseMetaIndex(NewMetaIndex(kind, "", name))
+	metaIndex := normalizeMetaIndex(NewMetaIndex(kind, "", name))
 	obj, _ := store.RetrieveObjectByMetaIndex(metaIndex)
 
 	return obj
 }
 
 func (store ObjectStore) KubernetesResource(kind, namespace, name string) KubeObject {
-	metaIndex := lowerCaseMetaIndex(NewMetaIndex(kind, namespace, name))
+	metaIndex := normalizeMetaIndex(NewMetaIndex(kind, namespace, name))
 	obj, _ := store.RetrieveObjectByMetaIndex(metaIndex)
 
 	return obj
@@ -95,9 +96,11 @@ func NewMetaIndex(kind, namespace, name string) MetaIndex {
 	}
 }
 
-func lowerCaseMetaIndex(index MetaIndex) MetaIndex {
+func normalizeMetaIndex(index MetaIndex) MetaIndex {
+	r := regexp.MustCompile("(es|s)$")
+
 	return MetaIndex{
-		Kind:      strings.ToLower(index.Kind),
+		Kind:      strings.ToLower(r.ReplaceAllString(index.Kind, "")),
 		Namespace: strings.ToLower(index.Namespace),
 		Name:      strings.ToLower(index.Name),
 	}

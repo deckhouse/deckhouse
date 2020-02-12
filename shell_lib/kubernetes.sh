@@ -43,6 +43,23 @@ function kubernetes::delete() {
   jq -nc '{op: "Delete", namespace: "'${1}'", resource: "'${2}'"}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
+# $1 namespace
+# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $3 plural kind (i.e. openstackmachineclasses)
+# $4 resourceName (i.e. some-resource-aabbcc)
+# $5 new status json
+function kubernetes::status::patch() {
+  jq -nc --arg newStatus "${5}" '{op: "StatusPatch", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", resourceName: "'${4}'", newStatus: $newStatus}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+}
+
+# $1 namespace
+# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $3 plural kind (i.e. openstackmachineclasses)
+# $4 resourceName (i.e. some-resource-aabbcc)
+# $5 new status json
+function kubernetes::status::put() {
+  jq -nc --arg newStatus "${5}" '{op: "StatusPut", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", resourceName: "'${4}'", newStatus: $newStatus}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+}
 
 function kubernetes::_init_patch_set() {
   if [ -n "${D8_KUBERNETES_PATCH_SET_FILE-}" ]; then
@@ -79,6 +96,52 @@ function kubernetes::_apply_patch_set() {
       if kubectl -n "${namespace}" get "${resource}" >/dev/null 2>&1; then
         kubectl -n "${namespace}" delete "${resource}" >/dev/null 2>&1
       fi
+    ;;
+    "StatusPatch")
+      namespace="$(jq -r '.namespace' <<< ${line})"
+      apiVersion="$(jq -r '.apiVersion' <<< ${line})"
+      kind="$(jq -r '.kind' <<< ${line})"
+      resourceName="$(jq -r '.resourceName' <<< ${line})"
+      newStatus="$(jq -r '.newStatus' <<< ${line})"
+
+      if [ -n "${namespace}" ]; then
+        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
+      else
+        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/${kind}/${resourceName}/status"
+      fi
+
+      curl -XPATCH \
+        --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
+        -H "Content-Type: application/merge-patch+json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+        "${apiURL}" \
+        --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+        --data "$(jo status="${newStatus}")" \
+      >/dev/null 2>/dev/null
+    ;;
+    "StatusPut")
+      namespace="$(jq -r '.namespace' <<< ${line})"
+      apiVersion="$(jq -r '.apiVersion' <<< ${line})"
+      kind="$(jq -r '.kind' <<< ${line})"
+      resourceName="$(jq -r '.resourceName' <<< ${line})"
+      newStatus="$(jq -r '.newStatus' <<< ${line})"
+
+      if [ -n "${namespace}" ]; then
+        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
+      else
+        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/${kind}/${resourceName}/status"
+      fi
+
+      curl -XPUT \
+        --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
+        -H "Content-Type: application/merge-patch+json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+        "${apiURL}" \
+        --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+        --data "$(jo status="${newStatus}")" \
+      >/dev/null 2>/dev/null
     ;;
     esac
   done < ${D8_KUBERNETES_PATCH_SET_FILE}

@@ -85,7 +85,6 @@ metadata:
   name: node1
   namespace: d8-cloud-instance-manager
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largecig
     node: node1
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
@@ -94,7 +93,6 @@ metadata:
   name: node2
   namespace: d8-cloud-instance-manager
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largecig
     node: node2
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
@@ -103,7 +101,6 @@ metadata:
   name: node3
   namespace: d8-cloud-instance-manager
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largecig
     node: node3
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
@@ -112,7 +109,6 @@ metadata:
   name: smallnode1
   namespace: d8-cloud-instance-manager
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: toosmall
     node: smallnode1
 `
 		stateMachineVictim = `

@@ -43,11 +43,11 @@ function __main__() {
       replicas_should_be=$ig_min_instances
     elif [[ $replicas -gt $ig_max_instances ]] ; then
       replicas_should_be=$ig_max_instances
-    else
-      replicas_should_be=$replicas
     fi
 
-    kubernetes::patch_jq d8-cloud-instance-manager machinedeployment/$name '.spec.replicas = '${replicas_should_be}
+    if [ -n "$replicas_should_be" ]; then
+      kubernetes::patch_jq d8-cloud-instance-manager machinedeployment/$name '.spec.replicas = '${replicas_should_be}
+    fi
   done
 }
 

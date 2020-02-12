@@ -1,92 +1,114 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "CloudInstanceGroup",
-      "event": ["add", "update"],
-      "jqFilter": ".spec"
-    },
-    {
-      "kind": "MachineDeployment",
-      "event": ["add", "update"],
-      "namespaceSelector": {
-        "matchNames": [
-          "d8-cloud-instance-manager"
-        ]
-      },
-      "jqFilter": ".status | del(.conditions) | del(.observedGeneration)"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    kubernetes:
+    - name: cigs
+      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
+      watchEvent: ["Added", "Modified"]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: CloudInstanceGroup
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "maxInstancesPerZone": .spec.maxInstancesPerZone,
+          "minInstancesPerZone": .spec.minInstancesPerZone,
+          "zonesNum": (if (.spec | has("zones")) then (.spec.zones | length) else null end)
+        }
+    - name: cloud_provider_secret
+      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cloud-instance-manager-cloud-provider]
+      jqFilter: |
+        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+        +
+        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
+        | {"zonesNum": (.zones | length)}
+    - name: mds
+      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
+      watchEvent: ["Added", "Modified"]
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineDeployment
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: '{"instanceGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
+    - name: machines
+      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
+      watchEvent: ["Added", "Modified"]
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: Machine
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: '{"instanceGroup": .metadata.labels."instance-group"}'
+    - name: nodes
+      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: "cloud-instance-manager.deckhouse.io/cloud-instance-group"
+          operator: Exists
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "cloudInstanceGroup": .metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group",
+          "isReady": ([.status.conditions[] | select(.type == "Ready")][-1].status == "True")
+        }
+EOF
 }
 
 function __main__() {
-
-  function update_status() {
-    curl -XPATCH \
-      --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
-      -H "Content-Type: application/merge-patch+json" \
-      -H "Accept: application/json" \
-      -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-      "https://kubernetes.default.svc/apis/deckhouse.io/v1alpha1/cloudinstancegroups/$1/status" \
-      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-      --data "$(jo status=$2)" \
-    >/dev/null 2>/dev/null
-  }
-
-  function update_instance_group() {
-    if ! ig_specs=$(kubectl get cig "$1" -o json 2>/dev/null | jq -cr '.spec') ; then
-      # CloudInstanceGroup object was deleted
-      exit 0
-    fi
-    zones=$(values::get --required cloudInstanceManager.internal.cloudProvider.zones | jq 'length')
-    max=$(( $(echo "$ig_specs" | jq -r '.maxInstancesPerZone') * zones ))
-    min=$(( $(echo "$ig_specs" | jq -r '.minInstancesPerZone') * zones ))
-
-    update_status "$1" "$(jo max=$max min=$min)"
-  }
-
-  binding=$(hook::context_jq -r '.[0].binding')
-  if [[ $binding == "afterHelm" ]]; then
-    for cig in $(kubectl get cig -o json | jq -r '.items[].metadata.name') ; do
-      update_instance_group "$cig" || true
-    done
-    exit 0
+  if context::has snapshots.cloud_provider_secret.0; then
+    default_zones_num="$(context::jq -r '.snapshots.cloud_provider_secret[0].filterResult.zonesNum')"
+  else
+    >&2 echo "ERROR: can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
+    return 1
   fi
 
-  name=$(hook::context_jq -r '.[0].resourceName')
-  kind=$(hook::context_jq -r '.[0].resourceKind')
+  for i in $(context::jq -r '.snapshots.cigs | keys[]'); do
+    cig_name="$(context::get snapshots.cigs.$i.filterResult.name)"
 
-  if [[ "$kind" == "CloudInstanceGroup" ]]; then
-    update_instance_group "$name"
-    exit 0
-  fi
+    desired_machines="$(context::jq -r --arg cig_name "${cig_name}" '[.snapshots.mds[] | select(.filterResult.instanceGroup == $cig_name) | .filterResult.replicas] | add // 0')"
+    machines="$(context::jq -r --arg cig_name "${cig_name}" '[.snapshots.machines[] | select(.filterResult.instanceGroup | test("^" + $cig_name + "-.+"))] | length')"
+    nodes="$(context::jq -r --arg cig_name "${cig_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $cig_name)] | length')"
+    ready_nodes="$(context::jq -r --arg cig_name "${cig_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $cig_name and .filterResult.isReady)] | length')"
 
-  if ! ig=$(kubectl -n d8-cloud-instance-manager get machinedeployment "$name" -ojsonpath="{.metadata.labels.instance-group}" 2>/dev/null); then
-    # MachineDeployment object was deleted or has no associated instance-group
-    exit 0
-  fi
-  if ! kubectl get cig "$ig" -o json >/dev/null 2>/dev/null ; then
-    # CloudInstanceGroup object was deleted
-    exit 0
-  fi
-  desired=$(kubectl -n d8-cloud-instance-manager get -l instance-group="$ig" machinedeployment -o json \
-    | jq -r '.items[] | .spec.replicas' | jq -s 'reduce .[] as $num (0; .+$num)')
+    status_patch="$(context::jq -c \
+      --arg i $i \
+      --arg default_zones_num $default_zones_num \
+      --arg desired_machines_num "$desired_machines" \
+      --arg machines_num "$machines" \
+      --arg nodes_num "$nodes" \
+      --arg ready_nodes_num "$ready_nodes" \
+      '.snapshots.cigs[$i | tonumber].filterResult |
+        {
+          "max": (.maxInstancesPerZone * (.zonesNum // ($default_zones_num | tonumber))),
+          "min": (.minInstancesPerZone * (.zonesNum // ($default_zones_num | tonumber))),
+          "desired": ($desired_machines_num | tonumber),
+          "machines": ($machines_num | tonumber),
+          "nodes": ($nodes_num | tonumber),
+          "ready": ($ready_nodes_num | tonumber)
+        }
+    ')"
 
-  machines=$(kubectl -n d8-cloud-instance-manager get machine -o json \
-    | jq "[ .items[] | select(.metadata.labels.\"instance-group\" | test(\"$ig.+\") ) ]" | jq 'length')
-
-  nodes_in_ig=$(kubectl get nodes -l cloud-instance-manager.deckhouse.io/cloud-instance-group="$ig" -o json)
-  nodes=$(echo "$nodes_in_ig" | jq -r '.items | length')
-  ready=$(echo "$nodes_in_ig" | jq -r '[.items[] | select(.status.conditions[-1].type == "Ready")] | length')
-
-  update_status "$ig" "$(jo desired=$desired machines=$machines nodes=$nodes ready=$ready)"
+    kubernetes::status::patch "" "deckhouse.io/v1alpha1" "cloudinstancegroups" "${cig_name}" "${status_patch}"
+  done
 }
 
 hook::run "$@"
