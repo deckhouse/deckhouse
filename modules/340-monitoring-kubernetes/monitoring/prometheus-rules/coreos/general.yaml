@@ -1,13 +1,5 @@
 - name: coreos.general
   rules:
-  - alert: TargetDown
-    expr: up == 0
-    for: 2m
-    labels:
-      severity: critical
-    annotations:
-      description: '{{$labels.job}} target is down.'
-      summary: Target is down
   - alert: DeadMansSwitch
     expr: vector(1)
     labels:

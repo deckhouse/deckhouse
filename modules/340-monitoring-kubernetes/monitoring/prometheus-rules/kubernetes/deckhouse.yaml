@@ -13,6 +13,19 @@
       description: |
         Prometheus не может получить метрики deckhouse
 
+  - alert: TargetDown
+    expr: absent(up{job="deckhouse"}) == 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_pending_until_firing_for: "2m"
+      plk_grouped_by: "DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Prometheus не может получить метрики deckhouse
+      description: |
+        Prometheus не может получить метрики deckhouse
+
   - alert: DeckhouseIsNotReady
     expr: min(kube_pod_status_ready{condition="true", namespace="d8-system", pod=~"deckhouse-.*"}) != 1
     labels:
