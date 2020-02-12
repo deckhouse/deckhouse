@@ -50,6 +50,14 @@ metadata:
 spec:
   maxInstancesPerZone: 4
   minInstancesPerZone: 3 # $replicas -gt $ig_max_instances
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CloudInstanceGroup
+metadata:
+  name: cig5
+spec:
+  maxInstancesPerZone: 10
+  minInstancesPerZone: 1 # $ig_min_instances <= $replicas <= $ig_max_instances
 `
 		stateMDs = `
 ---
@@ -101,6 +109,16 @@ metadata:
     instance-group: cig4
 spec:
   replicas: 7 # $replicas -gt $ig_max_instances
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-cig5
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: cig5
+spec:
+  replicas: 5 # $ig_min_instances <= $replicas <= $ig_max_instances
 `
 	)
 
@@ -133,6 +151,7 @@ spec:
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig21").Field("spec.replicas").String()).To(Equal("3"))
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig3").Field("spec.replicas").String()).To(Equal("6"))
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig4").Field("spec.replicas").String()).To(Equal("4"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig5").Field("spec.replicas").String()).To(Equal("5"))
 		})
 	})
 })
