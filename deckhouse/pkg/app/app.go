@@ -18,6 +18,12 @@ var SkipTlsVerifyRegistry = "no"
 var RegistrySecretPath = "/etc/registrysecret"
 var RegistryErrorsMaxTimeBeforeRestart = time.Hour
 
+// TODO move to shell-operator
+var KubeClientQpsDefault = "20"
+var KubeClientQps float32 = 0.0
+var KubeClientBurstDefault = "40"
+var KubeClientBurst int = 0
+
 func DefineStartCommandFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("pod-name", "Pod name to get image digest.").
 		Envar("DECKHOUSE_POD").
@@ -35,4 +41,16 @@ func DefineStartCommandFlags(cmd *kingpin.CmdClause) {
 		Envar("DECKHOUSE_SKIP_TLS_VERIFY_REGISTRY").
 		Default(SkipTlsVerifyRegistry).
 		StringVar(&SkipTlsVerifyRegistry)
+
+	// TODO move to shell-operator
+	// Rate limit settings for kube client
+	cmd.Flag("kube-client-qps", "QPS for kubeclient rest client").
+		Envar("KUBE_CLIENT_QPS").
+		Default(KubeClientQpsDefault).
+		Float32Var(&KubeClientQps)
+	cmd.Flag("kube-client-burst", "Burst for kubeclient rest client").
+		Envar("KUBE_CLIENT_BURST").
+		Default(KubeClientBurstDefault).
+		IntVar(&KubeClientBurst)
+
 }
