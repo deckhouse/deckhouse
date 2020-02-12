@@ -68,14 +68,22 @@ spec:
           command:
             - /bin/yandex-cloud-controller-manager
             - --cloud-provider=yandex
-            - --v=3
-            - --use-service-account-credentials=true
+            - --cluster-name={{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
+            - --v=4
           resources:
             requests:
               cpu: 200m
           env:
+            - name: YANDEX_CLUSTER_NAME
+              value: a{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
             - name: YANDEX_CLOUD_SERVICE_ACCOUNT_JSON
               valueFrom:
                 secretKeyRef:
                   name: cloud-controller-manager
                   key: service-acount-json
+            - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
+              value: {{ .Values.cloudProviderYandex.defaultLbTargetGroupNetworkId | quote }}
+            - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
+              value: {{ join "," .Values.cloudProviderYandex.internalNetworkIDs | quote }}
+            - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
+              value: {{ join "," .Values.cloudProviderYandex.externalNetworkIDs | quote }}
