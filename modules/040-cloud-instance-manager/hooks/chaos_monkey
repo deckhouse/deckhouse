@@ -33,10 +33,6 @@ function __config__() {
       queue: /modules/cloud_instance_manager
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: Machine
-      labelSelector:
-        matchExpressions:
-        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
-          operator: Exists
       jqFilter: |
         {
           "isMonkeyVictim": (.metadata.labels | has("cloud-instance-manager.deckhouse.io/chaos-monkey-victim")),

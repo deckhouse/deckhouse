@@ -11,6 +11,8 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 )
 
 type KubernetesPatch struct {
@@ -23,6 +25,10 @@ type KubernetesPatchOperation struct {
 	Resource     string `json:"resource,omitempty"`
 	ResourceSpec string `json:"resourceSpec,omitempty"`
 	JQFilter     string `json:"jqFilter,omitempty"`
+	ApiVersion   string `json:"apiVersion,omitempty"`
+	Kind         string `json:"kind,omitempty"`
+	ResourceName string `json:"resourceName,omitempty"`
+	NewStatus    string `json:"newStatus,omitempty"`
 }
 
 func NewKubernetesPatch(kpBytes []byte) (KubernetesPatch, error) {
@@ -155,6 +161,57 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		r := strings.Split(kpo.Resource, "/") // e.g. Ingress/mying
 		kind, name := r[0], r[1]
 		newObjectStore.DeleteObject(object_store.NewMetaIndex(kind, kpo.Namespace, name))
+
+	case "StatusPatch":
+		var objToPatch object_store.KubeObject
+		var originalStatusJSON []byte
+		var modifiedStatusJSON []byte
+		var modifiedStatusObj interface{}
+
+		if obj, ok := newObjectStore.GetObject(object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName)); ok {
+			objToPatch = obj
+			originalStatusJSON, err = json.Marshal(objToPatch["status"])
+			if err != nil {
+				return object_store.ObjectStore{}, fmt.Errorf("failed to marshal object's .status: %s\n\n%+v", err, objToPatch)
+			}
+		} else {
+			return object_store.ObjectStore{}, fmt.Errorf("can't find resource %s/%s/%s to patch status", kpo.Kind, kpo.Namespace, kpo.ResourceName)
+		}
+
+		modifiedStatusJSON, err = jsonpatch.MergePatch(originalStatusJSON, []byte(kpo.NewStatus))
+		if err != nil {
+			return object_store.ObjectStore{}, err
+		}
+
+		err = json.Unmarshal(modifiedStatusJSON, &modifiedStatusObj)
+		if err != nil {
+			return object_store.ObjectStore{}, err
+		}
+
+		objToPatch["status"] = modifiedStatusObj
+		newObjectStore.PutObject(objToPatch, object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName))
+
+	case "StatusPut":
+		var objToPatch object_store.KubeObject
+		var modifiedStatusObj interface{}
+
+		if obj, ok := newObjectStore.GetObject(object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName)); ok {
+			objToPatch = obj
+			if err != nil {
+				return object_store.ObjectStore{}, fmt.Errorf("failed to marshal object's .status: %s\n\n%+v", err, objToPatch)
+			}
+		} else {
+			return object_store.ObjectStore{}, fmt.Errorf("can't find resource %s/%s/%s to patch status", kpo.Kind, kpo.Namespace, kpo.ResourceName)
+		}
+
+		err = json.Unmarshal([]byte(kpo.NewStatus), &modifiedStatusObj)
+		if err != nil {
+			return object_store.ObjectStore{}, err
+		}
+
+		objToPatch["status"] = modifiedStatusObj
+		newObjectStore.PutObject(objToPatch, object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName))
 	}
 	return newObjectStore, nil
+
 }
