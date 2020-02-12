@@ -151,7 +151,6 @@ prometheus-api-client-tls
 prometheus-longterm
 prometheus-main-additional-configs
 prometheus-scraper-tls
-prometheus-token-dj7kv
 EOF
 )
     for secret in ${SECRETS} ; do
@@ -159,6 +158,10 @@ EOF
         kubectl -n kube-prometheus delete secret ${secret} >/dev/null 2>/dev/null
       fi
     done
+
+    if kubectl -n kube-prometheus get serviceaccounts prometheus >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete serviceaccounts prometheus >/dev/null 2>/dev/null
+    fi
   fi
 }
 
