@@ -126,6 +126,7 @@
   - metrics.k8s.io
   resources:
   - pods
+  - nodes
   verbs:
   {{- include "user_authz_verbs" "r" }}
 - apiGroups:
