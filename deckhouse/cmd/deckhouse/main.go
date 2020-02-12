@@ -76,9 +76,11 @@ func main() {
 			return nil
 		})
 	// Set default log type as json
-	sh_app.LogType = "json"
-	ad_app.DefineStartCommandFlags(kpApp, startCmd)
+	sh_app.LogType = app.DeckhouseLogTypeDefault
+	sh_app.KubeClientQpsDefault = app.DeckshouseKubeClientQpsDefault
+	sh_app.KubeClientBurstDefault = app.DeckshouseKubeClientBurstDefault
 	app.DefineStartCommandFlags(startCmd)
+	ad_app.DefineStartCommandFlags(kpApp, startCmd)
 
 	// Add debug commands from shell-operator and addon-operator
 	sh_debug.DefineDebugCommands(kpApp)
