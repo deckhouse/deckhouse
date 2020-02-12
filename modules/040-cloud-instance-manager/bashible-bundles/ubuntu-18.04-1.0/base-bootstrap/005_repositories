@@ -2,8 +2,8 @@
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt dist-upgrade -y
-apt install -qy apt-transport-https
+apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade -y
+apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -qy apt-transport-https
 
 curl -fsSL "https://packages.cloud.google.com/apt/doc/apt-key.gpg" | apt-key add -
 curl -fsSL "https://download.docker.com/linux/ubuntu/gpg" | sudo apt-key add -
