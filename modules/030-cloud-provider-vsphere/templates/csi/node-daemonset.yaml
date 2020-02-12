@@ -60,7 +60,7 @@ spec:
         - name: ADDRESS
           value: "/csi/csi.sock"
         - name: DRIVER_REG_SOCK_PATH
-          value: "/var/lib/kubelet/plugins_registry/vsphere.csi.vmware.com/csi.sock"
+          value: "/var/lib/kubelet/plugins/vsphere.csi.vmware.com/csi.sock"
         securityContext:
           privileged: true
         volumeMounts:
