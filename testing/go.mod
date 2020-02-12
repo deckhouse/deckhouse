@@ -3,6 +3,7 @@ module github.com/deckhouse/deckhouse/testing
 go 1.13
 
 require (
+	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/flant/shell-operator v1.0.0-beta.7.0.20200206175208-7a40246730f7 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/imdario/mergo v0.3.8
