@@ -20,6 +20,7 @@ if echo "{{ $bashible_bundle }}" | grep "centos"; then
     sleep 10
   done
 elif echo "{{ $bashible_bundle }}" | grep "ubuntu"; then
+  export DEBIAN_FRONTEND=noninteractive
   until apt install jq wget -y; do
     echo "Error installing packages"
     sleep 10
@@ -79,30 +80,6 @@ until /var/lib/bashible/bashible.sh bootstrap; do
 done;
 
 # Stop output bootstrap logs
-patch_pending=true
-while [ "$patch_pending" = true ] ; do
-  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
-    if curl -s --fail \
-      --max-time 10 \
-      -XPATCH \
-      -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
-      -H "Accept: application/json" \
-      -H "Content-Type: application/json-patch+json" \
-      --cacert "$BOOTSTRAP_DIR/ca.crt" \
-      --data "[{\"op\":\"remove\",\"path\":\"/status/bootstrapStatus\"}]" \
-      "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
-
-      echo "Successfully patched machine $(hostname) status."
-      patch_pending=false
-      break
-    else
-      >&2 echo "Failed to patch machine $(hostname) status."
-      sleep 10
-      continue
-    fi
-  done
-done
-
 kill -9 %1
 
 if [[ -f "/var/lib/bashible/reboot" ]]; then
