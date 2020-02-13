@@ -35,13 +35,13 @@ func LoadConfiguration(path, prefix, dir string) (FileController, error) {
 
 	configurationFile, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return FileController{}, fmt.Errorf("loading configuration failed: %v", err)
+		return FileController{}, fmt.Errorf("loading matrix tests configuration file failed: %v", err)
 	}
 
 	result := make(map[interface{}]interface{})
 	err = yaml.Unmarshal(configurationFile, result)
 	if err != nil {
-		return FileController{}, fmt.Errorf("configuration unmarshalling error: %v", err)
+		return FileController{}, fmt.Errorf("matrix tests configuration unmarshalling error: %v", err)
 	}
 	filesQueue := deque.Deque{}
 	filesQueue.PushBack(result)
@@ -84,12 +84,14 @@ func findChoice(nodeData interface{}) ([]interface{}, []interface{}) {
 				if key == ConstantChoices || key == RangeChoices {
 					return tempNode.Keys, value.([]interface{})
 				}
-				queue.PushBack(Node{Keys: append(tempNode.Keys, key), Item: value})
+				copiedKeys := deepcopy.Copy(append(tempNode.Keys, key)).([]interface{})
+				queue.PushBack(Node{Keys: copiedKeys, Item: value})
 			}
 		case []interface{}:
 			arrayItem := tempNode.Item.([]interface{})
 			for index, value := range arrayItem {
-				queue.PushBack(Node{Keys: append(tempNode.Keys, index), Item: value})
+				copiedKeys := deepcopy.Copy(append(tempNode.Keys, index)).([]interface{})
+				queue.PushBack(Node{Keys: copiedKeys, Item: value})
 			}
 		}
 	}
@@ -138,7 +140,7 @@ func formatFile(file interface{}, keys []interface{}, resultItem interface{}, co
 		arrayFile := file.([]interface{})
 		if len(keys)-1 == counter {
 			if resultItem == EmptyItem {
-				// Delete element from array
+				// Delete the element from array
 				arrayFile[intKey] = arrayFile[len(arrayFile)-1]
 				arrayFile[len(arrayFile)-1] = ""
 				arrayFile = arrayFile[:len(arrayFile)-1]
