@@ -78,7 +78,7 @@ EOF
   # migrate custom configmap with dashboards
   if ! kubect-n d8-monitoring get configmap grafana-dashboard-definitions-custom >/dev/null 2>/dev/null ; then
     if kubectl -n kube-prometheus get configmap grafana-dashboard-definitions-custom >/dev/null 2>/dev/null ; then
-      kubectl -n kbue-prometheus get configmap grafana-dashboard-definitions-custom -o json | \
+      kubectl -n kube-prometheus get configmap grafana-dashboard-definitions-custom -o json | \
         jq -r "include \"remove_empty\"; .metadata.namespace=\"d8-monitoring\" | remove_empty |
               .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
           | kubectl::replace_or_create
