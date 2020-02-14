@@ -117,7 +117,7 @@
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__deckhouse_malfunctioning: "DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
-      summary: Deckhouse зависла
+      summary: Deckhouse завис
       description: |
         Deckhouse не может обработать очередь {{ $labels.queue }}, в которой скопилось {{ $value }} заданий.
 
