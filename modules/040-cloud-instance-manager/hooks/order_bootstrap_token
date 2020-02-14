@@ -7,10 +7,11 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: bootstrap_tokens
-      queue: /modules/cloud_instance_manager
+      queue: /modules/cloud_instance_manager/order_bootstrap_token
       includeSnapshotsFrom: [bootstrap_tokens]
       apiVersion: v1
       kind: Secret
+      watchEvent: ["Modified","Deleted"]
       namespace:
         nameSelector:
           matchNames: [kube-system]
