@@ -11,6 +11,7 @@ function __config__() {
       includeSnapshotsFrom: [mds,cigs]
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
+      watchEvent: ["Added", "Modified"]
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
@@ -20,6 +21,7 @@ function __config__() {
       includeSnapshotsFrom: [mds,cigs]
       apiVersion: deckhouse.io/v1alpha1
       kind: CloudInstanceGroup
+      watchEvent: ["Added", "Modified"]
       jqFilter: '{"name": .metadata.name, "min": .spec.minInstancesPerZone, "max": .spec.maxInstancesPerZone}'
 EOF
 }
@@ -30,9 +32,13 @@ function __main__() {
     ig_name="$(context::get snapshots.mds.$i.filterResult.instanceGroup)"
     replicas="$(context::get snapshots.mds.$i.filterResult.replicas)"
 
-    ig_index="$(context::jq -r --arg ig_name "$ig_name" '.snapshots.cigs | to_entries[] | select(.value.filterResult.name == $ig_name) | .key')"
-    ig_min_instances="$(context::get snapshots.cigs.$ig_index.filterResult.min)"
-    ig_max_instances="$(context::get snapshots.cigs.$ig_index.filterResult.max)"
+    if ig_index="$(context::jq -er --arg ig_name "$ig_name" '.snapshots.cigs | to_entries[] | select(.value.filterResult.name == $ig_name) | .key')"; then
+      ig_min_instances="$(context::get snapshots.cigs.$ig_index.filterResult.min)"
+      ig_max_instances="$(context::get snapshots.cigs.$ig_index.filterResult.max)"
+    else
+      >&2 echo "WARNING: can't find CloudInstanceGroup $ig_name to get min and max instances per zone."
+      continue
+    fi
 
     replicas_should_be=""
     if [[ $ig_min_instances -ge $ig_max_instances ]] ; then
