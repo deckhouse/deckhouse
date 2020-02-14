@@ -45,7 +45,7 @@ spec:
     - name: test
       image: nginx
 ```
-Подробнее про настроку DNS https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config
+Подробнее про настройку DNS https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config
 
 ## Grafana dashboard
 

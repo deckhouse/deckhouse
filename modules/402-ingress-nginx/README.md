@@ -143,7 +143,7 @@ spec:
 * Все метрики (кроме geo), экспортируемые statsd_exporter'ом, представлены в трех уровнях детализации:
     * `ingress_nginx_overall_*` — "вид с вертолета", у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`.
     * `ingress_nginx_detail_*` — кроме лейблов уровня overall добавляются: `ingress`, `service`, `service_port` и `location`.
-    * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бекендам. У этих метрик, кроме лейблов уровня detail, добавляестя лейбл `pod_ip`.
+    * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бекендам. У этих метрик, кроме лейблов уровня detail, добавляется лейбл `pod_ip`.
 
 * Для уровней overall и detail собираются следующие метрики:
     * `*_requests_total` — counter количества запросов (дополнительные лейблы: `scheme`, `method`).
@@ -221,7 +221,7 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
-Приложение принимает запросы на адресе 127.0.0.1, что ознает, что по незащищенному соединению к нему можно подключиться только изнутри пода.
+Приложение принимает запросы на адресе 127.0.0.1, что означает, что по незащищенному соединению к нему можно подключиться только изнутри пода.
 Прокси же слушает на адресе 0.0.0.0 и перехватывает весь внешний трафик к поду.
 
 ### Минимальные права для Service Account
@@ -274,8 +274,8 @@ data:
           subresource: http
           name: my-app
 ```
-Согласно конфигурации у пользователя должены быть права на доступ к Deployment с именем `my-app` 
-и его допонительному ресурсу `http` в неймспейсе `my-namespace`.
+Согласно конфигурации, у пользователя должны быть права на доступ к Deployment с именем `my-app` 
+и его дополнительному ресурсу `http` в неймспейсе `my-namespace`.
 
 Выглядят такие права в виде RBAC так: 
 ```yaml
@@ -315,4 +315,4 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   proxy_ssl_protocols TLSv1.2;
   proxy_ssl_session_reuse on;
 ```
-Подробнее о том, как работает аутентификаци по сертификатам можно прочитать [по этой ссылке](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).
+Подробнее о том, как работает аутентификация по сертификатам можно прочитать [по этой ссылке](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).

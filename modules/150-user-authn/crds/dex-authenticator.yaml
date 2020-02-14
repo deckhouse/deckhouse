@@ -38,7 +38,7 @@ spec:
               example: 'my-app.domain.com'
             sendAuthorizationHeader:
               type: boolean
-              description: 'Request to application will be sent with "Autorization: Bearer" header when the option is switched to true.'
+              description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
             applicationIngressCertificateSecretName:
               type: string
               description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
@@ -49,7 +49,7 @@ spec:
               example: 'nginx'
             keepUsersLoggedInFor:
               type: string
-              description: 'User session will be keeped for specified amount of time even if user will not log in.'
+              description: 'User session will be kept for specified amount of time even if user will not log in.'
               example: '24h'
             allowedGroups:
               type: array
