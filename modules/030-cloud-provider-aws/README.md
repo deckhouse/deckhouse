@@ -76,13 +76,12 @@ cloudProviderAws: |
     * Формат — integer. В ГиБ.
     * По-умолчанию `20` ГиБ.
     * Опциональный параметр.
-* `cloudInitSteps` — параметры bootstrap фазы.
-    * `version` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/cloud-init-steps).
-        * По-умолчанию `ubuntu-18.04-1.0`.
+* `bashible` — параметры bootstrap фазы.
+    * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
         * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/cloud-init-steps) соответствующих версий.
+    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
         * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`. 
-        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/cloud-init-steps/ubuntu-18.04-1.0):
+        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
 
         ```yaml
         options:
@@ -101,9 +100,10 @@ spec:
   ami: ami-040a1551f9c9d11ad
   diskSizeGb: 15
   diskType:  gp2
-  cloudInitSteps:
+  bashible:
+    bundle: ubuntu-18.04-1.0
     options:
-      kubernetesVersion: 1.15.6
+      kubernetesVersion: 1.15.3
 ```
 
 ### Storage
