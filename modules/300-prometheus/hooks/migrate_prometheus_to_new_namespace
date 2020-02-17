@@ -65,7 +65,7 @@ function __main__() {
         kubectl -n kube-prometheus get pvc $pvc -o yaml | sed 's/kube-prometheus/d8-monitoring/g' | grep -v 'uid:' | kubectl -n d8-monitoring create -f -
       fi
       new_uid=$(kubectl -n d8-monitoring get pvc $pvc -o json | jq '.metadata.uid' -r)
-      pv_name=$(kubectl get pv -o json | jq ".items[] | select(.spec.claimRef.name==\"$pvc\") | .metadata.name" -r)
+      pv_name=$(kubectl get pv -o json | jq ".items[] | select(.spec.claimRef.name==\"$pvc\" and .spec.claimRef.namespace==\"kube-prometheus\" and .status.phase==\"Bound\") | .metadata.name" -r)
       fltr='.'
       fltr=$fltr' | .spec.claimRef.namespace = "d8-monitoring"'
       fltr=$fltr' | .spec.claimRef.uid = '"\"${new_uid}\""
