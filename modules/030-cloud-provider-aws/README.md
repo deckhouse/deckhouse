@@ -14,7 +14,7 @@
 
 ### Включение модуля
 
-Модуль по-умолчанию **выключен**. Для включения:
+Модуль по-умолчанию **выключен**. Работает с версии Kubernetes 1.16.x. Для включения:
 
 1. Корректно [настроить](#настройка-окружения) окружение.
 2. Инициализировать deckhouse, передав параметр install.sh — `--extra-config-map-data base64_encoding_of_custom_config`.
@@ -80,7 +80,7 @@ cloudProviderAws: |
     * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
         * **WIP!** Precooked версия требует специально подготовленного образа.
     * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
-        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`. 
+        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
         * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
 
         ```yaml

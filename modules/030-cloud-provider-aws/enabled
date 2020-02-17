@@ -3,7 +3,7 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
+  enabled::disable_module_in_kubernetes_versions_less_than 1.16.0
 
   self_name=cloud-provider-aws
   if values::get global.enabledModules | jq '.[]' -r | grep -v -E '^'$self_name'$' | grep -E '^cloud-provider-[a-z-]+$' ; then
