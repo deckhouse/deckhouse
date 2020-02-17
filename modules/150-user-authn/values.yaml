@@ -1,6 +1,5 @@
 userAuthn:
   internal:
-    controlPlaneConfigurator: {}
     dexClientCRDs: []
     dexUsersCRDs: []
     dexAuthenticatorCRDs: []

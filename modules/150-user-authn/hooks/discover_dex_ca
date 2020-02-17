@@ -7,12 +7,12 @@ function __config__() {
    configVersion: v1
    beforeHelm: 10
    kubernetes:
-   - name: secret
+   - name: ca_secret
      apiVersion: v1
      kind: Secret
      watchEvent: ["Added", "Modified"]
      includeSnapshotsFrom:
-     - secret
+     - ca_secret
      nameSelector:
        matchNames: ["ingress-tls"]
      namespace:
@@ -22,37 +22,39 @@ function __config__() {
 EOF
 }
 
+
 function __main__(){
   if ! values::is_true userAuthn.controlPlaneConfigurator.enabled ; then
-    values::unset userAuthn.internal.controlPlaneConfigurator.oidcCA
+    values::unset userAuthn.internal.discoveredDexCA
     return 0
   fi
 
   dex_ca_mode=$(values::get userAuthn.controlPlaneConfigurator.dexCAMode)
-  oidcCA=""
+  dex_ca=""
   case ${dex_ca_mode} in
     DoNotNeed)
-      values::unset userAuthn.internal.controlPlaneConfigurator.oidcCA
+      values::unset userAuthn.internal.discoveredDexCA
     ;;
     FromIngressSecret)
-      oidcCA=""
-      if context::has snapshots.secret.0 ; then
-        oidcCA=$(context::get snapshots.secret.0.filterResult)
+      if context::has snapshots.ca_secret.0 ; then
+        dex_ca=$(context::get snapshots.ca_secret.0.filterResult)
       fi
-      if [[ "$oidcCA" == "" ]]; then
-        >&2 echo "ERROR: Can't get ca.crt or tls.crt from secret 'ingress-tls'."
-        return 1
+      if [[ "$dex_ca" == "" ]]; then
+        >&2 echo "WARNING: Can't get ca.crt or tls.crt from secret 'ingress-tls'. This is a common behavior for the first installation with FromIngressSecret control plane configurator CA discovery mode."
+        values::unset userAuthn.internal.discoveredDexCA
+        return 0
       fi
+      values::set userAuthn.internal.discoveredDexCA "${dex_ca}"
     ;;
     Custom)
       if ! values::has userAuthn.controlPlaneConfigurator.dexCustomCA ; then
         >&2 echo "ERROR: userAuthn.controlPlaneConfigurator.dexCustomCA parameter is mandatory with userAuthn.controlPlaneConfigurator.dexCAMode == 'Custom'."
         return 1
       fi
-      oidcCA=$(values::get userAuthn.controlPlaneConfigurator.dexCustomCA)
+      dex_ca=$(values::get userAuthn.controlPlaneConfigurator.dexCustomCA)
+      values::set userAuthn.internal.discoveredDexCA "${dex_ca}"
     ;;
   esac
-  values::set userAuthn.internal.controlPlaneConfigurator.oidcCA "${oidcCA}"
 }
 
 
