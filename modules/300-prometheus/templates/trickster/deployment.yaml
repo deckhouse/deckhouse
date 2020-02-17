@@ -62,12 +62,12 @@ spec:
           subPath: trickster.conf
         livenessProbe:
           httpGet:
-            path: /trickster/ping
+            path: /trickster/trickster/ping
             port: 443
             scheme: HTTPS
         readinessProbe:
           httpGet:
-            path: /trickster/main/health
+            path: /trickster/trickster/health/main
             port: 443
             scheme: HTTPS
         resources:
@@ -89,8 +89,8 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
-            - /trickster/ping
-            - /trickster/main/health
+            - /trickster/trickster/ping
+            - /trickster/trickster/health/main
             upstreams:
             - upstream: http://127.0.0.1:8000/
               path: /trickster/
