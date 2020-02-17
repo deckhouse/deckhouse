@@ -112,12 +112,12 @@ func (c *ModuleController) Run() error {
 					Name:      unstructuredObj.GetName(),
 				})
 				if err != nil {
-					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, fmt.Errorf("helm output already has object: %v", err), file, string(fileContent), string(out))
+					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, fmt.Errorf("helm output already has object: %v", err), file, string(fileContent), string(doc))
 					return
 				}
 				err = ApplyLintRules(objectStore)
 				if err != nil {
-					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, fmt.Errorf("lint rule failed: %v", err), file, string(fileContent), string(out))
+					errorCh <- fmt.Errorf("test #%v failed: %v\n\n----- # %s\n%s\n-----\n%v", index, fmt.Errorf("lint rule failed: %v", err), file, string(fileContent), string(doc))
 					return
 				}
 			}
