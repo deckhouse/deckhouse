@@ -104,7 +104,7 @@ spec:
         topologyKey: kubernetes.io/hostname
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
-  evaluationInterval: 30s
+  evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
     prometheus: deckhouse
   prometheusExternalLabelName: ""
