@@ -32,13 +32,13 @@ function __main__() {
     ig_name="$(context::get snapshots.mds.$i.filterResult.instanceGroup)"
     replicas="$(context::get snapshots.mds.$i.filterResult.replicas)"
 
-    if ig_index="$(context::jq -er --arg ig_name "$ig_name" '.snapshots.cigs | to_entries[] | select(.value.filterResult.name == $ig_name) | .key')"; then
-      ig_min_instances="$(context::get snapshots.cigs.$ig_index.filterResult.min)"
-      ig_max_instances="$(context::get snapshots.cigs.$ig_index.filterResult.max)"
-    else
+    if ! ig_index="$(context::jq -er --arg ig_name "$ig_name" '.snapshots.cigs | to_entries[] | select(.value.filterResult.name == $ig_name) | .key')"; then
       >&2 echo "WARNING: can't find CloudInstanceGroup $ig_name to get min and max instances per zone."
       continue
     fi
+
+    ig_min_instances="$(context::get snapshots.cigs.$ig_index.filterResult.min)"
+    ig_max_instances="$(context::get snapshots.cigs.$ig_index.filterResult.max)"
 
     replicas_should_be=""
     if [[ $ig_min_instances -ge $ig_max_instances ]] ; then
