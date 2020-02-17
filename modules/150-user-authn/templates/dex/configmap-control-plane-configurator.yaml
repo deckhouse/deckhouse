@@ -3,7 +3,7 @@
     not empty string — ready!
   {{- else if not (eq (include "helm_lib_module_https_mode" .) "CertManager") -}}
     not empty string — ready!
-  {{- else if .Values.userAuthn.internal.controlPlaneConfigurator.oidcCA -}}
+  {{- else if .Values.userAuthn.internal.discoveredDexCA -}}
     not empty string — ready!
   {{- end -}}
 {{- end }}
@@ -19,9 +19,9 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "dex" "control-plane-configurator" "")) | indent 2 }}
 data:
   oidcIssuerURL: https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
-    {{- if .Values.userAuthn.internal.controlPlaneConfigurator.oidcCA }}
+    {{- if .Values.userAuthn.internal.discoveredDexCA }}
   oidcCA: |
-{{ .Values.userAuthn.internal.controlPlaneConfigurator.oidcCA | indent 4 }}
+{{ .Values.userAuthn.internal.discoveredDexCA | indent 4 }}
     {{- end }}
   {{- end }}
 {{- end }}

@@ -33,7 +33,7 @@ data:
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-				Expect(f.ValuesGet("userAuthn.internal.controlPlaneConfigurator.oidcCA").String()).To(Equal("test"))
+				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 			})
 		})
 	})
@@ -56,7 +56,7 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("userAuthn.internal.controlPlaneConfigurator.oidcCA").String()).To(Equal("test"))
+			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 		})
 	})
 
@@ -70,7 +70,7 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("userAuthn.internal.controlPlaneConfigurator.oidcCA").String()).To(Equal(""))
+			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal(""))
 		})
 	})
 
@@ -86,7 +86,7 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("userAuthn.internal.controlPlaneConfigurator.oidcCA").String()).To(Equal("testca"))
+			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
 		})
 	})
 })
