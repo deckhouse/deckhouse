@@ -19,8 +19,8 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
       serviceAccountName: ebs-csi-controller
