@@ -2,7 +2,7 @@
   {{- if $crd.spec.additionalRoles }}
     {{- range $additional_role := $crd.spec.additionalRoles }}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:additional-role:{{ $additional_role.name }}
@@ -19,7 +19,7 @@ subjects:
       {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
     {{- end }}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}
@@ -33,7 +33,7 @@ subjects:
 
     {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customClusterRoles | first) }}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}:custom-cluster-role:{{ $customClusterRole }}
@@ -50,7 +50,7 @@ subjects:
   {{- if hasKey $crd.spec "portForwarding" }}
     {{- if ($crd.spec.portForwarding | default false) }}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:port-forward
@@ -67,7 +67,7 @@ subjects:
   {{- if hasKey $crd.spec "allowScale" }}
     {{- if ($crd.spec.allowScale | default "false") }}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:scale

@@ -82,13 +82,27 @@ func applyContainerRules(object unstructured.Unstructured) error {
 }
 
 func applyObjectRules(object unstructured.Unstructured) error {
+	// Check labels
 	labels := object.GetLabels()
 	if _, ok := labels["module"]; !ok {
-		return fmt.Errorf("object %q does not have label \"module\": %v", object.GetName(), labels)
+		return fmt.Errorf("object %s/%s does not have label \"module\": %v", object.GetKind(), object.GetName(), labels)
 	}
 	if _, ok := labels["heritage"]; !ok {
-		return fmt.Errorf("object %q does not have label \"heritage\": %v", object.GetName(), labels)
+		return fmt.Errorf("object %s/%s does not have label \"heritage\": %v", object.GetKind(), object.GetName(), labels)
 	}
+
+	// Check API versions
+	switch object.GetKind() {
+	case "Role", "RoleBinding", "ClusterRole", "ClusterRoleBinding":
+		if object.GetAPIVersion() != "rbac.authorization.k8s.io/v1" {
+			return fmt.Errorf("object %s/%s defined using deprecated api version %q, wanted \"rbac.authorization.k8s.io/v1\"", object.GetKind(), object.GetName(), object.GetAPIVersion())
+		}
+	case "Deployment", "DaemonSet", "StatefulSet":
+		if object.GetAPIVersion() != "apps/v1" {
+			return fmt.Errorf("object %s/%s defined using deprecated api version %q, wanted \"apps/v1\"", object.GetKind(), object.GetName(), object.GetAPIVersion())
+		}
+	}
+
 	return nil
 }
 
