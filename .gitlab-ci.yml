@@ -149,6 +149,7 @@ Cleanup registry:
 Cleanup modules images:
   stage: cleanup_builder
   script:
+    - docker image rm $(docker images -f dangling=true -q)
     - ./modules_images cleanup --registry-user=sample-user --registry-password=$REGISTRY_CLEANER_TOKEN
   only:
     - schedules
