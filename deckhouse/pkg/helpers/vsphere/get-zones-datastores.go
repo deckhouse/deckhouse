@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,7 +23,12 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 )
 
-const slugSeparator = "-"
+const (
+	datastoreTypeDatastore        = "Datastore"
+	datastoreTypeDatastoreCluster = "DatastoreCluster"
+
+	slugSeparator = "-"
+)
 
 type vsphereClient struct {
 	client     *govmomi.Client
@@ -38,6 +44,7 @@ type ZonedDataStore struct {
 	Zones         []string `json:"zones"`
 	InventoryPath string   `json:"path"`
 	Name          string   `json:"name"`
+	DatastoreType string   `json:"datastoreType"`
 }
 
 type Output struct {
@@ -242,14 +249,21 @@ func getZonesInDC(ctx context.Context, client vsphereClient, datacenter *object.
 func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *object.Datacenter, regionTagName, zoneTagCategoryName string) ([]ZonedDataStore, error) {
 	finder := find.NewFinder(client.client.Client, true)
 
-	datastores, err := finder.DatastoreList(ctx, path.Join(datacenter.InventoryPath, "..."))
-	if err != nil {
-		return nil, err
+	datastores, dsNotFoundErr := finder.DatastoreList(ctx, path.Join(datacenter.InventoryPath, "..."))
+
+	datastoreClusters, dscNotFoundErr := finder.DatastoreClusterList(ctx, path.Join(datacenter.InventoryPath, "..."))
+
+	if dsNotFoundErr != nil && dscNotFoundErr != nil {
+		return nil, fmt.Errorf("not a single Datastore or DatastoreCluster found in the cluster:\n%s\n%s", dsNotFoundErr, dscNotFoundErr)
 	}
 
-	var datastoreReferences = make([]mo.Reference, len(datastores))
-	for i := range datastores {
-		datastoreReferences[i] = datastores[i].Reference()
+	var datastoreReferences []mo.Reference
+	for _, ds := range datastores {
+		datastoreReferences = append(datastoreReferences, ds)
+	}
+
+	for _, dsc := range datastoreClusters {
+		datastoreReferences = append(datastoreReferences, dsc)
 	}
 
 	tagsClient := tags.NewManager(client.restClient)
@@ -278,15 +292,26 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 			return nil, err
 		}
 
-		ds, ok := dsObject.(*object.Datastore)
-		if !ok {
-			return nil, fmt.Errorf("\"%s\" is not a Datastore", ds)
+		var (
+			datastoreType string
+			inventoryPath string
+		)
+		switch dsObject.(type) {
+		case *object.Datastore:
+			datastoreType = datastoreTypeDatastore
+			inventoryPath = dsObject.(*object.Datastore).InventoryPath
+		case *object.StoragePod:
+			datastoreType = datastoreTypeDatastoreCluster
+			inventoryPath = dsObject.(*object.StoragePod).InventoryPath
+		default:
+			return nil, fmt.Errorf("\"%s\" is not a Datastore nor a DatastoreCluster", reflect.TypeOf(dsObject))
 		}
 
 		zds = append(zds, ZonedDataStore{
 			Zones:         dsZones,
-			InventoryPath: ds.InventoryPath,
-			Name:          slugKubernetesName(strings.Join(strings.Split(ds.InventoryPath, "/")[3:], "-")),
+			InventoryPath: inventoryPath,
+			Name:          slugKubernetesName(strings.Join(strings.Split(inventoryPath, "/")[3:], "-")),
+			DatastoreType: datastoreType,
 		})
 	}
 

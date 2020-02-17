@@ -156,7 +156,7 @@ spec:
 
 ### Storage
 
-StorageClass будет создан автоматически для каждого Datastore из зон(-ы). Для указания default StorageClass, необходимо в конфигурацию модуля добавить параметр `defaultDataStore`.
+StorageClass будет создан автоматически для каждого Datastore и DatastoreCluster из зон(-ы). Для указания default StorageClass, необходимо в конфигурацию модуля добавить параметр `defaultDataStore`.
 
 #### Важная информация об увеличении размера PVC
 
@@ -172,7 +172,7 @@ data:
 
 Опция в kubelet не подгружается динамически, поэтому нужно на каждой ноде будет сделать `kubeadm upgrade node && systemctl restart kubelet`.
 
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API, перед увеличением PVC нужно заскейлить Deployment или StatefulSet в 0, после этого увеличить PVC, убедившись в успешном увеличении через `kubectl get pvc -o yaml` (в Status размер должен быть равен Spec, и не должно быть никаких conditions).
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API, после увеличения размера PVC, Pod нужно удалить.
 
 ## Требования к окружениям
 

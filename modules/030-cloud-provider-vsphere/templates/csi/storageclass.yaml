@@ -6,7 +6,7 @@ metadata:
   name: {{ $ds.name }}
   namespace: d8-cloud-provider-vsphere
   {{- if $.Values.cloudProviderVsphere.defaultDatastore }}
-    {{- if contains $.Values.cloudProviderVsphere.defaultDatastore $ds.path }}
+    {{- if $ds.path | contains $.Values.cloudProviderVsphere.defaultDatastore  }}
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
     {{- end }}
@@ -15,7 +15,7 @@ metadata:
 provisioner: vsphere.csi.vmware.com
 volumeBindingMode: Immediate
 parameters:
-  parent_type: "Datastore"
+  parent_type: {{ $ds.datastoreType | quote }}
   parent_name: {{ $ds.path | quote }}
 allowedTopologies:
 - matchLabelExpressions:
