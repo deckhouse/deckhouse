@@ -53,7 +53,7 @@ rules:
 - apiGroups: ["monitoring.coreos.com"]
   resources: ["grafana/http"]
   resourceNames: ["grafana"]
-  verbs: ["get"]
+  verbs: ["get", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
