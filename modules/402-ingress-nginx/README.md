@@ -289,7 +289,7 @@ rules:
 - apiGroups: ["apps"]
   resources: ["deployments/http"]
   resourceNames: ["my-app"]
-  verbs: ["get"]
+  verbs: ["get", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

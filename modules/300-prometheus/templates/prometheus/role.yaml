@@ -21,4 +21,4 @@ rules:
 - apiGroups: ["monitoring.coreos.com"]
   resources: ["prometheuses/http"]
   resourceNames: ["main", "longterm"]
-  verbs: ["get"]
+  verbs: ["get", "create", "update", "patch", "delete"]
