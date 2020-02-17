@@ -13,6 +13,32 @@ spec:
     name: {{ .Chart.Name }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: {{ .Chart.Name }}
+      minAllowed:
+        memory: 50Mi
+        cpu: 50m
+      maxAllowed:
+        memory: 300Mi
+        cpu: 350m
+      mode: Auto
+    - containerName: {{ .Chart.Name }}-admin
+      minAllowed:
+        memory: 50Mi
+        cpu: 50m
+      maxAllowed:
+        memory: 512Mi
+        cpu: 350m
+      mode: Auto
+    - containerName: kube-rbac-proxy
+      minAllowed:
+        memory: 20Mi
+        cpu: 20m
+      maxAllowed:
+        memory: 100Mi
+        cpu: 200m
+      mode: Auto
 {{- end }}
 ---
 apiVersion: apps/v1
