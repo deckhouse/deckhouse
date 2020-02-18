@@ -65,6 +65,8 @@ github.com/evanphx/json-patch v4.5.0+incompatible h1:ouOWdg56aJriqS0huScTkVXPC5I
 github.com/evanphx/json-patch v4.5.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200212150523-d9aa873177c6 h1:g5aPb+X7Q7+jcb8su29EyYT+pBozRAxfhaPqbaKdwIY=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200212150523-d9aa873177c6/go.mod h1:LG4WMsWXswPJU9g8Y2vKFt3d+8qRzmL8Oz0zvBeVSkw=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200218172018-89dea585fe31/go.mod h1:LG4WMsWXswPJU9g8Y2vKFt3d+8qRzmL8Oz0zvBeVSkw=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200219111949-445876cda1b8/go.mod h1:LG4WMsWXswPJU9g8Y2vKFt3d+8qRzmL8Oz0zvBeVSkw=
 github.com/flant/ginkgo v1.11.1-0.20200206071017-2216da3b016c/go.mod h1:KdEqjYsxC3bj9qNcLCk9yxfJ1FWH5k1KU/xYgdVQkLc=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f h1:3tmztWJjf61sHfHYLSMi5TDdz5jtmcVqe43PSwsxNvE=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
