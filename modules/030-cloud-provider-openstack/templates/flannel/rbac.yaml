@@ -1,6 +1,6 @@
 ---
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8-cloud-provider-openstack:flannel
 {{ include "helm_lib_module_labels" (list . (dict "app" "flannel")) | indent 2 }}
@@ -26,7 +26,7 @@ rules:
       - patch
 ---
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8-cloud-provider-openstack:flannel
 {{ include "helm_lib_module_labels" (list . (dict "app" "flannel")) | indent 2 }}
