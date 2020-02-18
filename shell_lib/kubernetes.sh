@@ -164,8 +164,8 @@ function kubernetes::_jq_patch() {
   success=false
   for attempt in $(seq 1 5) ; do
     if ! kubectl -n "$namespace" get "$resource" -o json > $tmp ||
-       ! jq "$cleanup_filter" $tmp > $a ||
-       ! jq "$filter" $a > $b ;
+       ! jq -S "$cleanup_filter" $tmp > $a ||
+       ! jq -S "$filter" $a > $b ;
     then
       echo FILTER: "$filter"
 
