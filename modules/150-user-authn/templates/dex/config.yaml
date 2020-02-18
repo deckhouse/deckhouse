@@ -70,6 +70,23 @@
         {{- end }}
       {{- end }}
 
+      {{- if eq $provider.type "BitbucketCloud" }}
+    - type: bitbucket-cloud
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.name | quote }}
+      config:
+        clientID: {{ $provider.bitbucketCloud.clientID | quote }}
+        clientSecret: {{ $provider.bitbucketCloud.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        {{- if $provider.bitbucketCloud.teams }}
+        teams:
+          {{- range $team := $provider.bitbucketCloud.teams }}
+        - {{ $team | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+
+
       {{- if eq $provider.type "LDAP" }}
     - type: ldap
       id: {{ $provider.id | quote }}

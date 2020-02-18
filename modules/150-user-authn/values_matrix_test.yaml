@@ -99,6 +99,15 @@ userAuthn:
           - email
           userIDKey: subsub
           userNameKey: noname
+      - id: bitbucket
+        name: bitbucket
+        type: BitbucketCloud
+        bitbucketCloud:
+          clientID: plainstring
+          clientSecret: plainstring
+          teams:
+          - only
+          - team
       - id: ldap
         type: LDAP
         name: ldap
