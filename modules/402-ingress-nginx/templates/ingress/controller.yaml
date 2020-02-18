@@ -101,6 +101,29 @@ spec:
               command:
                 - /wait-shutdown
   {{- end }}
+        ports:
+        - containerPort: 80
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $crd.spec.hostPort.httpPort }}
+          hostPort: {{ $crd.spec.hostPort.httpPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $crd.spec.hostPortWithProxyProtocol.httpPort }}
+          hostPort: {{ $crd.spec.hostPortWithProxyProtocol.httpPort }}
+    {{- end }}
+  {{- end }}
+        - containerPort: 443
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $crd.spec.hostPort.httpsPort }}
+          hostPort: {{ $crd.spec.hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $crd.spec.hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $crd.spec.hostPortWithProxyProtocol.httpsPort }}
+    {{- end }}
+  {{- end }}
         volumeMounts:
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
@@ -204,6 +227,6 @@ spec:
 
 
 {{- $context := . }}
-{{- range $crd := $context.Values.ingressNginx.internal.ingressControllerCRDs }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{ include "ingress-controller" (list $context $crd $crd.name ) }}
 {{- end }}

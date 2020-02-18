@@ -34,7 +34,11 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 certificate: teststring
 key: teststring
 `)
-			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllerCRDs", `
+			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLStest-next", `
+certificate: teststring
+key: teststring
+`)
+			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", `
 - name: test
   spec:
     config:
@@ -44,6 +48,17 @@ key: teststring
     controllerVersion: "0.26"
     inlet: LoadBalancer
     loadBalancer: {}
+- name: test-next
+  spec:
+    config: {}
+    ingressClass: test
+    controllerVersion: "0.25"
+    inlet: "HostPortWithProxyProtocol"
+    loadBalancer: {}
+    hostPortWithProxyProtocol:
+      httpPort: 80
+      httpsPort: 443
+    hostPort: {}
 `)
 			hec.HelmRender()
 		})
@@ -61,6 +76,13 @@ key: teststring
 			Expect(configMapData.Get("use-proxy-protocol").Raw).To(Equal(`"true"`))
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
+
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-config").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-custom-headers").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "test-next-ingress-nginx-auth-tls").Exists()).To(BeTrue())
+
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-next-load-balancer").Exists()).ToNot(BeTrue())
 		})
 	})
 })

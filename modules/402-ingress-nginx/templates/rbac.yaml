@@ -61,12 +61,12 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps", "pods", "secrets", "namespaces"]
   verbs: ["get"]
-{{- if .Values.ingressNginx.internal.ingressControllerCRDs }}
+{{- if .Values.ingressNginx.internal.ingressControllers }}
 - apiGroups: [""]
   resources: ["configmaps"]
   resourceNames:
 {{ $leaderElectionConfigMapNames := list }}
-  {{- range $crd := .Values.ingressNginx.internal.ingressControllerCRDs }}
+  {{- range $crd := .Values.ingressNginx.internal.ingressControllers }}
     {{ $name := printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
     {{- if not (has $name $leaderElectionConfigMapNames) }}
   - {{ $name }}

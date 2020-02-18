@@ -1,0 +1,53 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: controller
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IngressNginxController
+      includeSnapshotsFrom:
+      - controller
+      jqFilter: |
+        .spec.config //= {}
+        | if .spec.inlet == "LoadBalancer" then .spec.loadBalancer //= {} else .spec.loadBalancer |= {} end
+        | if .spec.inlet == "HostPort" then .spec.hostPort //= {} else .spec.hostPort |= {} end
+        | if .spec.inlet == "HostPortWithProxyProtocol" then .spec.hostPortWithProxyProtocol //= {} else .spec.hostPortWithProxyProtocol |= {} end
+        | {"name": .metadata.name, "spec": .spec}
+EOF
+}
+
+function __main__() {
+  if [[ $(context::jq -rc '.snapshots.controller | length') == "0" ]]; then
+    values::set ingressNginx.internal.ingressControllers '[]'
+    return 0
+  fi
+
+  default_controller_version=$(values::get ingressNginx.defaultControllerVersion)
+  controllers=$(context::jq -rc --arg default_controller_version "$default_controller_version" '
+    [ .snapshots.controller[] | .filterResult | .spec.controllerVersion //= $default_controller_version ]')
+
+  for key in $(jq -rc 'keys[]' <<< "${controllers}"); do
+    controller_spec=$(jq -rc --arg key "$key" '.[$key | tonumber]' <<< "${controllers}")
+    if [[ $(jq -rc '.spec.acceptRequestsFrom' <<< ${controller_spec}) != "null" ]]; then
+      for index in $(jq -rc '.spec.acceptRequestsFrom | keys[]' <<< ${controller_spec}); do
+
+        value=$(jq -rc --arg index "$index" '.spec.acceptRequestsFrom[$index | tonumber]' <<< ${controller_spec})
+        regexp=$(rgxg cidr "$value")
+
+        controllers=$(jq -rc '.[$key | tonumber].spec.acceptRequestsFrom[$index | tonumber] = $regexp' \
+          --arg key "$key" \
+          --arg index "$index" \
+          --arg regexp "~${regexp//\\/$''}" \
+          <<< ${controllers})
+      done
+    fi
+  done
+
+  values::set ingressNginx.internal.ingressControllers "$controllers"
+}
+
+hook::run "$@"

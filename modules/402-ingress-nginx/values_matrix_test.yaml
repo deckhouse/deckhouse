@@ -31,7 +31,7 @@ ingressNginx:
     nginxAuthTLStest:
       certificate: test
       key: test
-    ingressControllerCRDs:
+    ingressControllers:
       __ConstantChoices__:
         - __EmptyItem__
         -

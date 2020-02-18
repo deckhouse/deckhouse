@@ -39,6 +39,10 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+  controllerVersion: "0.26"
+  acceptRequestsFrom:
+  - 127.0.0.1/32
+  - 192.168.0.0/24
 `))
 				f.RunHook()
 			})
@@ -47,14 +51,20 @@ spec:
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-				Expect(f.ValuesGet("ingressNginx.internal.ingressControllerCRDs").String()).To(MatchJSON(`[{
+				Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").String()).To(MatchJSON(`[{
 "name": "test",
 "spec": {
   "config": {},
   "ingressClass": "nginx",
-  "controllerVersion": "0.25",
+  "controllerVersion": "0.26",
   "inlet": "LoadBalancer",
-  "loadBalancer": {}
+  "loadBalancer": {},
+  "hostPortWithProxyProtocol": {},
+  "hostPort": {},
+  "acceptRequestsFrom": [
+    "~127.0.0.1",
+    "~192.168.0.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])"
+  ]
 }
 }]`))
 			})
@@ -72,6 +82,17 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: test-2
+spec:
+  ingressClass: test
+  inlet: HostPortWithProxyProtocol
+  hostPortWithProxyProtocol:
+    httpPort: 80
+    httpsPort: 443
 `))
 			f.RunHook()
 		})
@@ -79,13 +100,31 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("ingressNginx.internal.ingressControllerCRDs.0.name").String()).To(Equal("test"))
-			Expect(f.ValuesGet("ingressNginx.internal.ingressControllerCRDs.0.spec").String()).To(MatchJSON(`{
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(HaveLen(2))
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()).To(Equal("test"))
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "nginx",
 "controllerVersion": "0.25",
 "inlet": "LoadBalancer",
-"loadBalancer": {}
+"loadBalancer": {},
+"hostPortWithProxyProtocol": {},
+"hostPort": {}
+}`))
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.name").String()).To(Equal("test-2"))
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.spec").String()).To(MatchJSON(`{
+"config": {},
+"ingressClass": "test",
+"controllerVersion": "0.25",
+"inlet": "HostPortWithProxyProtocol",
+"loadBalancer": {},
+"hostPortWithProxyProtocol": {
+  "httpPort": 80,
+  "httpsPort": 443
+},
+"hostPort": {}
 }`))
 		})
 	})

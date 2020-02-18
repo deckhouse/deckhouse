@@ -44,7 +44,6 @@ spec:
             inlet:
               type: string
               description: 'The way traffic goes to cluster from the outer network.'
-              enum: ['LoadBalancer']
             controllerVersion:
               type: string
               description: 'One of the supported NGINX Ingress Controller versions.'
@@ -88,6 +87,47 @@ spec:
                   type: string
                   description: 'Sets the header field for identifying the originating IP address of a client.'
                   example: 'CF-Connecting-IP'
+            hostPort:
+              type: object
+              anyOf:
+              - {required: ["httpPort"]}
+              - {required: ["httpsPort"]}
+              properties:
+                httpPort:
+                  type: integer
+                  description: 'Port for HTTP connections.'
+                  example: '80'
+                httpsPort:
+                  type: integer
+                  description: 'Port for HTTPS connections.'
+                  example: '443'
+                behindL7Proxy:
+                  type: boolean
+                  description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
+                realIPHeader:
+                  type: string
+                  description: 'Sets the header field for identifying the originating IP address of a client.'
+                  example: 'CF-Connecting-IP'
+            hostPortWithProxyProtocol:
+              type: object
+              anyOf:
+              - {required: ["httpPort"]}
+              - {required: ["httpsPort"]}
+              properties:
+                httpPort:
+                  type: integer
+                  description: 'Port for HTTP connections.'
+                  example: '80'
+                httpsPort:
+                  type: integer
+                  description: 'Port for HTTPS connections.'
+                  example: '443'
+            acceptRequestsFrom:
+              type: array
+              description: 'IP or CIDR that is allowed to access the ingress controller.'
+              items:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
             hsts:
               type: boolean
               description: 'Enable hsts.'
@@ -124,3 +164,18 @@ spec:
                     type: string
                     name: 'Error code.'
                     pattern: '^[1-5][0-9][0-9]$'
+          oneOf:
+          - properties:
+              inlet:
+                enum: ['LoadBalancer']
+              loadBalancer: {}
+          - properties:
+              inlet:
+                enum: ['HostPort']
+              hostPort: {}
+            required: ['hostPort']
+          - properties:
+              hostPortWithProxyProtocol: {}
+              inlet:
+                enum: ['HostPortWithProxyProtocol']
+            required: ['hostPortWithProxyProtocol']

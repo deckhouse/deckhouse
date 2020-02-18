@@ -92,18 +92,20 @@ func SetupHelmConfig(values string) *HelmConfig {
 func (hec *HelmConfig) HelmRender() {
 	hec.objectStore = make(object_store.ObjectStore)
 
-	hookCmd := exec.Command("helm", "template")
+	helmCmd := exec.Command("helm", "template")
 	tempDir, err := ioutil.TempDir(globalTmpDir, "")
 	Expect(err).ToNot(HaveOccurred())
-	hookCmd.Dir = tempDir
-	hookCmd.Args = append(hookCmd.Args, ".")
+
+	helmCmd.Dir = tempDir
+	helmCmd.Args = append(helmCmd.Args, ".")
 
 	yamlValuesBytes := hec.values.GetAsYaml()
 
-	hec.Session = sandbox_runner.Run(hookCmd,
+	hec.Session = sandbox_runner.Run(helmCmd,
 		sandbox_runner.WithSourceDirectory(hec.modulePath, tempDir),
 		sandbox_runner.WithFile(filepath.Join(tempDir, "values.yaml"), yamlValuesBytes),
 	)
+	Expect(string(hec.Session.Err.Contents())).To(HaveLen(0))
 	Expect(hec.Session.ExitCode()).To(Equal(0))
 
 	for _, doc := range releaseutil.SplitManifests(string(hec.Session.Out.Contents())) {

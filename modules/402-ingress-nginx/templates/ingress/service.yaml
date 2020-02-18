@@ -1,5 +1,5 @@
 {{- $context := . }}
-{{- range $crd := $context.Values.ingressNginx.internal.ingressControllerCRDs }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if eq $crd.spec.inlet "LoadBalancer" }}
 ---
 apiVersion: v1
