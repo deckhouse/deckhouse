@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    kubernetes:
+    - name: pvc
+      includeSnapshotsFrom: ["pvc"]
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+          prometheus: longterm
+      jqFilter: ".spec.storageClassName"
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.pvc.0 ; then
+    values::set prometheus.internal.prometheusLongterm.currentStorageClass "$(context::get snapshots.pvc.0.object.spec.storageClassName)"
+  else
+    values::unset prometheus.internal.prometheusLongterm.currentStorageClass
+  fi
+}
+
+hook::run $@

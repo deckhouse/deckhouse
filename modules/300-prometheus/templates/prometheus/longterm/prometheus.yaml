@@ -112,7 +112,7 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 2 }}
-  {{- $storageClass := .Values.prometheus.longtermStorageClass | default .Values.prometheus.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+  {{- $storageClass := .Values.prometheus.longtermStorageClass | default .Values.prometheus.internal.prometheusLongterm.currentStorageClass | default .Values.prometheus.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
   {{- if $storageClass }}
   storage:
     # TODO: Remove the following 3 lines with empty values after prometheus-operator update

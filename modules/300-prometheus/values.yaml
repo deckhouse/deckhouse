@@ -8,3 +8,6 @@ prometheus:
     updateMode: Initial
   internal:
     vpa: {}
+    prometheusMain: {}
+    prometheusLongterm: {}
+    grafana: {}

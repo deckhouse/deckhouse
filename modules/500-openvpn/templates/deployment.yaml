@@ -145,7 +145,7 @@ spec:
       - name: tmp
         emptyDir: {}
       - name: certs
-{{- $storageClass := .Values.openvpn.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+{{- $storageClass := .Values.openvpn.storageClass | default .Values.openvpn.internal.currentStorageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
 {{- if $storageClass }}
         persistentVolumeClaim:
           claimName: {{ .Chart.Name }}
