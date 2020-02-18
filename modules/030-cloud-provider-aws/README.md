@@ -128,6 +128,20 @@ volumeBindingMode: WaitForFirstConsumer # обязательно!
 
 Список всех возможных `parameters` для EBS CSI драйвера представлен в его [документации](https://github.com/kubernetes-sigs/aws-ebs-csi-driver).
 
+### LoadBalancer
+
+#### Аннотации объекта Service
+
+Поддерживаются следующие параметры в дополнение к существующим в upstream:
+
+1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведёт к созданию **только** Target Group, без какого либо LoadBalanacer.
+2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — используется в связке с `service.beta.kubernetes.io/aws-load-balancer-type: none`.
+   * Возможные значения:
+     * `http`
+     * `https`
+   * По-умолчанию, `http`.
+   * **Внимание!** При изменении поля cloud-controller-manager попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group он не сможет и будет пытаться вечно. Необходимо вручную отсоединить от Target Group NLB или ALB.
+
 ## Настройка окружения
 
 ### Определение cluster ID тэга
