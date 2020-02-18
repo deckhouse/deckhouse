@@ -2,7 +2,6 @@ package runner
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -10,50 +9,44 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func applyContainerRules(object unstructured.Unstructured) error {
 	var containers []v1.Container
+	converter := runtime.DefaultUnstructuredConverter
 
 	switch object.GetKind() {
 	case "Deployment":
-		newObject := appsv1.Deployment{}
-		data, _ := yaml.Marshal(object.Object)
-		_ = yaml.Unmarshal(data, &newObject)
+		deployment := new(appsv1.Deployment)
+		converter.FromUnstructured(object.Object, deployment)
 
-		containers = newObject.Spec.Template.Spec.Containers
+		containers = deployment.Spec.Template.Spec.Containers
 	case "DaemonSet":
-		newObject := appsv1.DaemonSet{}
-		data, _ := yaml.Marshal(object.Object)
-		_ = yaml.Unmarshal(data, &newObject)
+		daemonSet := new(appsv1.DaemonSet)
+		converter.FromUnstructured(object.Object, daemonSet)
 
-		containers = newObject.Spec.Template.Spec.Containers
+		containers = daemonSet.Spec.Template.Spec.Containers
 	case "StatefulSet":
-		newObject := appsv1.StatefulSet{}
-		data, _ := yaml.Marshal(object.Object)
-		_ = yaml.Unmarshal(data, &newObject)
+		statefulSet := new(appsv1.StatefulSet)
+		converter.FromUnstructured(object.Object, statefulSet)
 
-		containers = newObject.Spec.Template.Spec.Containers
+		containers = statefulSet.Spec.Template.Spec.Containers
 	case "Pod":
-		newObject := v1.Pod{}
-		data, _ := yaml.Marshal(object.Object)
-		_ = yaml.Unmarshal(data, &newObject)
+		pod := new(v1.Pod)
+		converter.FromUnstructured(object.Object, pod)
 
-		containers = newObject.Spec.Containers
-
-		containers = newObject.Spec.Containers
+		containers = pod.Spec.Containers
 	case "Job":
-		newObject := batchv1.Job{}
-		data, _ := yaml.Marshal(object.Object)
-		_ = yaml.Unmarshal(data, &newObject)
+		job := new(batchv1.Job)
+		converter.FromUnstructured(object.Object, job)
 
-		containers = newObject.Spec.Template.Spec.Containers
+		containers = job.Spec.Template.Spec.Containers
 	case "CronJob":
-		newObject := batchv1beta1.CronJob{}
-		data, _ := yaml.Marshal(object.Object)
-		_ = yaml.Unmarshal(data, &newObject)
+		cronJob := new(batchv1beta1.CronJob)
+		converter.FromUnstructured(object.Object, cronJob)
 
-		containers = newObject.Spec.JobTemplate.Spec.Template.Spec.Containers
+		containers = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers
 	}
 
 	names := make(map[string]struct{})
@@ -100,6 +93,10 @@ func applyObjectRules(object unstructured.Unstructured) error {
 	case "Deployment", "DaemonSet", "StatefulSet":
 		if object.GetAPIVersion() != "apps/v1" {
 			return fmt.Errorf("object %s/%s defined using deprecated api version %q, wanted \"apps/v1\"", object.GetKind(), object.GetName(), object.GetAPIVersion())
+		}
+	case "Ingress":
+		if object.GetAPIVersion() != "networking.k8s.io/v1beta1" {
+			return fmt.Errorf("object %s/%s defined using deprecated api version %q, wanted \"networking.k8s.io/v1beta1\"", object.GetKind(), object.GetName(), object.GetAPIVersion())
 		}
 	}
 

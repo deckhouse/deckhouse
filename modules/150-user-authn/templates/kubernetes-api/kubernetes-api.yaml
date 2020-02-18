@@ -15,7 +15,7 @@ certmanager.k8s.io/issuer: kubernetes-api
 
 {{- if .Values.userAuthn.publishAPI.enable }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
