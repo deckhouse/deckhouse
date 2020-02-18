@@ -1,5 +1,5 @@
 {{- $context := . }}
-{{- range $crd := $context.Values.ingressNginx.internal.ingressControllerCRDs }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -74,7 +74,7 @@ data:
   # So, this all leads us to only two possible behaviors of nginx-ingress:
   #   *   Either it fully ignores X-Forwarded-* header
   #   *   EIther it respects all X-Forwarded-* header from ANY IP address
-  {{- if $crd.spec.loadBalancer }}
+  {{- if eq $crd.spec.inlet "LoadBalancer" }}
     {{- if $crd.spec.loadBalancer.behindL7Proxy }}
   proxy-real-ip-cidr: "0.0.0.0/0"
   use-forwarded-headers: "true"
@@ -84,12 +84,39 @@ data:
     {{- end }}
   {{- end }}
 
+
+  {{- if eq $crd.spec.inlet "HostPort" }}
+    {{- if $crd.spec.hostPort.behindL7Proxy }}
+  proxy-real-ip-cidr: "0.0.0.0/0"
+  use-forwarded-headers: "true"
+      {{- if $crd.spec.hostPort.realIPHeader }}
+  forwarded-for-header: {{ $crd.spec.hostPort.realIPHeader }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
+  use-proxy-protocol: "true"
+  proxy-real-ip-cidr: "0.0.0.0/0"
+  {{- end }}
+
   log-format-escape-json: "true"
   log-format-upstream: '{
     "time": "$time_iso8601",
     "request_id": "$request_id",
     "user": "$remote_user",
     "address": "$remote_addr",
+  {{- if eq $crd.spec.inlet "LoadBalancer" }}
+    {{- if $crd.spec.loadBalancer.behindL7Proxy }}
+    "connection_from": "$realip_remote_addr",
+    {{- end }}
+  {{- else if eq $crd.spec.inlet "HostPort" }}
+    {{- if $crd.spec.hostPort.behindL7Proxy }}
+    "connection_from": "$realip_remote_addr",
+    {{- end }}
+  {{- else if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
+    "connection_from": "$realip_remote_addr",
+  {{- end }}
     "bytes_received": $request_length,
     "bytes_sent": $bytes_sent,
     "protocol": "$server_protocol",
@@ -116,9 +143,26 @@ data:
     "nginx_upstream_response_time": "$upstream_response_time",
     "nginx_upstream_status": "$upstream_status"
   }'
+
+  # We can't use whitelist-source-range option, because it may be overwritten by annotation of ingress resource.
+  {{- if $crd.spec.acceptRequestsFrom }}
+  http-snippet: |
+    map $realip_remote_addr $d8_ingreess_nginx_access_restricted {
+      default "yes";
+      {{- range $cidr := $crd.spec.acceptRequestsFrom }}
+      {{ $cidr | quote }} "no";
+      {{- end }}
+    }
+  server-snippet: |
+    if ($d8_ingreess_nginx_access_restricted = "yes") {
+      return 444;
+    }
+  {{- end }}
+
   {{- if $crd.spec.customErrors }}
   custom-http-errors: {{ $crd.spec.customErrors.codes | join "," | quote }}
   {{- end }}
+
   {{- if $crd.spec.config }}
     {{- range $key, $additionalConfig := $crd.spec.config }}
   {{ $key }}: {{ $additionalConfig | quote }}
