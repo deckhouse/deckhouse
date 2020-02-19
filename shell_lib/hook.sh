@@ -6,6 +6,7 @@ function hook::run() {
     __config__
     exit 0
   fi
+
   CONTEXT_LENGTH=$(context::global::jq -r 'length')
   for i in `seq 0 $((CONTEXT_LENGTH - 1))`; do
     export BINDING_CONTEXT_CURRENT_INDEX="${i}"
@@ -32,6 +33,5 @@ function hook::run() {
     export D8_KUBERNETES_PATCH_SET_FILE=$(kubernetes::_init_patch_set)
     hook::_run_first_available_handler "${HANDLERS}"
     kubernetes::_apply_patch_set
-
   done
 }
