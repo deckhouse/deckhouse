@@ -172,3 +172,16 @@
         3. Чаще всего trickster становится недоступным из-за проблем с самим Prometheus, так как readinessProbe trickster'а проверяет доступность Prometheus. Поэтому, убедитесь, что prometheus работает: `kubectl -n d8-monitoring describe pod -l app=prometheus,prometheus=main`
       summary: >
         Trickster is down
+  - alert: PrometheusRuleEvaluationFailures
+    expr: increase(prometheus_rule_evaluation_failures_total[5m]) > 0
+    labels:
+      impact: negligible
+      likelihood: certain
+    annotations:
+      polk_flant_com_markup_format: markdown
+      description: |
+        Pod {{$labels.pod}} in namespace {{$labels.namespace}} has failing rule evaluations.
+
+        Please execute `kubectl -n {{$labels.namespace}} logs pod/{{$labels.pod}}` for more info.
+      summary: >
+        Prometheus has failing rule evaluations
