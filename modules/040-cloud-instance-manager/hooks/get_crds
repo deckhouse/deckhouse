@@ -54,12 +54,24 @@ function __config__() {
 EOF
 }
 
+# $1 — CIG name
+# $2 — error message or empty string
+function _set_cig_error_status() {
+  if [ -n "$2" ]; then
+    status_patch="$(jq -n --arg msg "$2" '{"error": $msg}')"
+  else
+    status_patch="$(jq -n '{"error": null}')"
+  fi
+  kubernetes::status::patch "" "deckhouse.io/v1alpha1" "cloudinstancegroups" "${1}" "${status_patch}"
+}
+
 function __main__() {
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
     general_instance_class_kind=D8TestInstanceClass
   else
     general_instance_class_kind=$(cat /tmp/cloud-instance-manager-instance-class-kind)
   fi
+
 
   instance_classes="$(context::jq -r '
     [.snapshots.ics[] | select(.filterResult.meetsKubernetesVersionRequirement)] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
@@ -72,46 +84,77 @@ function __main__() {
     >&2 echo "Instance class ${ic_name} is invalid: .spec.bashible.options.kubernetesVersion is mandatory for .spec.bashible.bundle ${ic_bundle}"
   done
 
-  errors=no
   final_instance_groups="[]"
   for i in $(context::jq -r '.snapshots.cigs | keys[]'); do
     cig_name="$(context::get snapshots.cigs.$i.filterResult.name)"
     cig="$(context::get snapshots.cigs.$i.filterResult.spec)"
     cig="$(jq --arg name "${cig_name}" '.name = $name' <<< "$cig")"
 
+
+    # check #1 — is .spec.instanceClassReference.kind allowed in our cluster
     cig_instance_class_kind=$(jq -r '.instanceClassReference.kind' <<< "$cig")
     if [[ "$cig_instance_class_kind" != "$general_instance_class_kind" ]] ; then
-      >&2 echo "Bad instanceClassReference in CloudInstanceGroup $cig_name: kind $cig_instance_class_kind is not allowed, the only allowed kind is $general_instance_class_kind"
-      errors=yes
+      error_message="Wrong instanceClassReference: Kind $cig_instance_class_kind is not allowed, the only allowed kind is $general_instance_class_kind."
+
+      if
+        values::has cloudInstanceManager.internal.instanceGroups && \
+        earlier_stored_cig="$(values::jq -er --arg cig_name "${cig_name}" '.cloudInstanceManager.internal.instanceGroups[] | select(.name == $cig_name)')"
+      then
+        final_instance_groups="$(jq --argjson cig "$earlier_stored_cig" '. + [$cig]' <<< $final_instance_groups)"
+        error_message="$error_message Earlier stored version of CIG is in use now!"
+      fi
+
+      >&2 echo "ERROR: Bad CloudInstanceGroup $cig_name: $error_message"
+      _set_cig_error_status "${cig_name}" "${error_message}"
       continue
     fi
 
+    # check #2 — is .spec.instanceClassReference valid
     cig_instance_class_name=$(jq -r '.instanceClassReference.name' <<< "$cig")
     if jq -e '. | has("'$cig_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
-      >&2 echo "Bad instanceClassReference in CloudInstanceGroup \"$cig_name\": there is no valid instance class \"$cig_instance_class_name\" of type \"$cig_instance_class_kind\""
-      errors=yes
+      error_message="Wrong instanceClassReference: There is no valid instance class $cig_instance_class_name of type $cig_instance_class_kind."
+
+      if
+        values::has cloudInstanceManager.internal.instanceGroups && \
+        earlier_stored_cig="$(values::jq -er --arg cig_name "${cig_name}" '.cloudInstanceManager.internal.instanceGroups[] | select(.name == $cig_name)')"
+      then
+        final_instance_groups="$(jq --argjson cig "$earlier_stored_cig" '. + [$cig]' <<< $final_instance_groups)"
+        error_message="$error_message Earlier stored version of CIG is in use now!"
+      fi
+
+      >&2 echo "ERROR: Bad CloudInstanceGroup $cig_name: $error_message"
+      _set_cig_error_status "${cig_name}" "${error_message}"
+      continue
+    fi
+
+    # check #3 — is there zones description in cloud-provider secret
+    if context::has snapshots.cloud_provider_secret.0; then
+      default_zones="$(context::get snapshots.cloud_provider_secret.0.filterResult.zones)"
+    else
+      error_message="Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
+      if
+        values::has cloudInstanceManager.internal.instanceGroups && \
+        earlier_stored_cig="$(values::jq -er --arg cig_name "${cig_name}" '.cloudInstanceManager.internal.instanceGroups[] | select(.name == $cig_name)')"
+      then
+        final_instance_groups="$(jq --argjson cig "$earlier_stored_cig" '. + [$cig]' <<< $final_instance_groups)"
+        error_message="$error_message Earlier stored version of CIG is in use now!"
+      fi
+      >&2 echo "ERROR: $error_message"
+      _set_cig_error_status "${cig_name}" "${error_message}"
       continue
     fi
 
     cig_instance_class="$(jq --arg name $cig_instance_class_name '.[$name]' <<< "$instance_classes")"
-    cig="$(jq --argjson instance_class "${cig_instance_class}" '.instanceClass = $instance_class' <<< "$cig")"
+    cig="$(jq \
+      --argjson instance_class "${cig_instance_class}" \
+      --argjson default_zones "$default_zones" \
+      '.instanceClass = $instance_class | .zones //= $default_zones' <<< "$cig")"
 
-    if context::has snapshots.cloud_provider_secret.0.filterResult.zones; then
-      default_zones="$(context::get snapshots.cloud_provider_secret.0.filterResult.zones)"
-    else
-      >&2 echo "ERROR: can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
-      return 1
-    fi
-    cig="$(jq --argjson default_zones "$default_zones" '.zones //= $default_zones' <<< "$cig")"
-
+    _set_cig_error_status "${cig_name}" ""
     final_instance_groups="$(jq --argjson cig "$cig" '. + [$cig]' <<< $final_instance_groups)"
   done
 
-  if [[ "$errors" != "no" ]] ; then
-    return 1
-  else
-    values::set cloudInstanceManager.internal.instanceGroups "$final_instance_groups"
-  fi
+  values::set cloudInstanceManager.internal.instanceGroups "$final_instance_groups"
 }
 
 hook::run "$@"
