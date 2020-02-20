@@ -174,6 +174,9 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 			if err != nil {
 				return object_store.ObjectStore{}, fmt.Errorf("failed to marshal object's .status: %s\n\n%+v", err, objToPatch)
 			}
+			if string(originalStatusJSON) == "null" {
+				originalStatusJSON = []byte("{}")
+			}
 		} else {
 			return object_store.ObjectStore{}, fmt.Errorf("can't find resource %s/%s/%s to patch status", kpo.Kind, kpo.Namespace, kpo.ResourceName)
 		}

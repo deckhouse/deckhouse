@@ -45,6 +45,10 @@ spec:
     type: integer
     description: "Maximum amount of instances in InstanceGroup."
     JSONPath: .status.max
+  - name: Error
+    type: string
+    description: "Error message about possible problems with handling CIG by module d8-cloud-instance-manager."
+    JSONPath: .status.error
   validation:
     openAPIV3Schema:
       type: object
@@ -74,6 +78,9 @@ spec:
             max:
               type: integer
               description: "Maximum amount of instances in InstanceGroup."
+            error:
+              type: string
+              description: "Error message about possible problems with handling CIG by module d8-cloud-instance-manager."
         spec:
           type: object
           required:
