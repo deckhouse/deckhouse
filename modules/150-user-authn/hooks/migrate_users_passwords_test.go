@@ -27,7 +27,9 @@ var _ = Describe("User Authn hooks :: migrate user passwords ::", func() {
 			f.BindingContexts.Set(BeforeHelmContext)
 			f.ConfigValuesSetFromYaml("userAuthn.users", []byte(`
 admin@example.com: randomPass
-user@example.com: randomPass
+user+name@example.com: randomPass
+256@flant.com: password
+name.surename@example.com: testcom
 `))
 			f.RunHook()
 		})
@@ -36,8 +38,10 @@ user@example.com: randomPass
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 			Expect(f.ConfigValuesGet("userAuthn.users").Exists()).ToNot(BeTrue())
-			Expect(f.KubernetesGlobalResource("User", "admin").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("User", "user").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("User", "admin-example-com").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("User", "user-name-example-com").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("User", "256-flant-com").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("User", "name-surename-example-com").Exists()).To(BeTrue())
 		})
 	})
 })
