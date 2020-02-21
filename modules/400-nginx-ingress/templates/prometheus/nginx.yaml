@@ -40,6 +40,9 @@ spec:
       replacement: controller
     - targetLabel: tier
       replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
     metricRelabelings:
     # remove ingress_class, we have "controller" label
     - regex: ingress_class
@@ -70,6 +73,9 @@ spec:
       replacement: statsd
     - targetLabel: tier
       replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
   selector:
     matchExpressions:
     - key: app

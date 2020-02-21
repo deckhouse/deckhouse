@@ -22,5 +22,8 @@ spec:
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+      regex: "true"
+      action: keep
 {{- end }}
 {{- end }} {{- /* if not .Values.istio.disableMixerTelemetry */ -}}

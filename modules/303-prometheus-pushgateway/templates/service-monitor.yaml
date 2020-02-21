@@ -16,9 +16,12 @@ spec:
   endpoints:
   - port: http-metrics
     relabelings:
-    - regex: namespace|job|pod|service|endpoint
+    - regex: namespace|pod|service|endpoint
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_service_label_app]
       targetLabel: pushgateway
     - targetLabel: tier
       replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+      regex: "true"
+      action: keep
