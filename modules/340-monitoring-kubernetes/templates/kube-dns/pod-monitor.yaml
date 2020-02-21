@@ -15,6 +15,9 @@ spec:
       action: labeldrop
     - targetLabel: scrape_endpoint
       replacement: skydns
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
   - targetPort: 10054
     relabelings:
     - regex: endpoint|namespace
@@ -23,6 +26,9 @@ spec:
       replacement: dnsmasq
     - targetLabel: tier
       replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
   selector:
     matchLabels:
       k8s-app: kube-dns

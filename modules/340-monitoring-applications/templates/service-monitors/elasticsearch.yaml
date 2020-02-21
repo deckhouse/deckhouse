@@ -13,6 +13,9 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
+    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+      regex: "true"
+      action: keep
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -22,6 +25,9 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
+    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+      regex: "true"
+      action: keep
   namespaceSelector:
     any: true
   selector:

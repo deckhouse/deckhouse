@@ -20,6 +20,9 @@ spec:
           action: labeldrop
         - targetLabel: tier
           replacement: cluster
+        - sourceLabels: [__meta_kubernetes_pod_ready]
+          regex: "true"
+          action: keep
   selector:
     matchLabels:
       app: controller
@@ -47,6 +50,9 @@ spec:
           action: labeldrop
         - targetLabel: tier
           replacement: cluster
+        - sourceLabels: [__meta_kubernetes_pod_ready]
+          regex: "true"
+          action: keep
   selector:
     matchLabels:
       app: speaker
