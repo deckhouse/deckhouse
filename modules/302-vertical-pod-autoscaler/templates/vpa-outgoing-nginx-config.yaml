@@ -24,7 +24,7 @@ data:
         listen 127.0.0.1:8000;
 
         location / {
-          set                           $backend "https://trickster.d8-system.svc.{{ .Values.global.discovery.clusterDomain }}";
+          set                           $backend "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}/trickster/main${uri}${is_args}${args}";
           proxy_pass                    $backend;
           proxy_ssl_certificate         /etc/nginx/ssl/tls.crt;
           proxy_ssl_certificate_key     /etc/nginx/ssl/tls.key;

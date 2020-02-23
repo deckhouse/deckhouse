@@ -56,6 +56,8 @@ roleRef:
 subjects:
 - kind: Group
   name: ingress-nginx:auth
+- kind: Group
+  name: prometheus:auth
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
