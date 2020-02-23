@@ -47,7 +47,12 @@ key: teststring
     ingressClass: nginx
     controllerVersion: "0.26"
     inlet: LoadBalancer
-    loadBalancer: {}
+    loadBalancer:
+      annotations:
+        my: annotation
+      sourceRanges:
+      - 1.1.1.1
+      - 2.2.2.2
 - name: test-next
   spec:
     config: {}
@@ -69,6 +74,8 @@ key: teststring
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "test-ingress-nginx-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Field("metadata.annotations")).To(MatchJSON(`{"my":"annotation"}`))
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Field("spec.loadBalancerSourceRanges")).To(MatchJSON(`["1.1.1.1","2.2.2.2"]`))
 
 			configMapData := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Field("data")
 

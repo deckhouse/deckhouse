@@ -17,9 +17,7 @@ spec:
   externalTrafficPolicy: Local
     {{- if $crd.spec.loadBalancer.sourceRanges }}
   loadBalancerSourceRanges:
-      {{ range $cidr := $crd.spec.loadBalancer.sourceRanges }}
-  - {{ $cidr }}
-      {{- end }}
+{{ $crd.spec.loadBalancer.sourceRanges | toYaml | indent 4 }}
     {{- end }}
   ports:
   - name: http
