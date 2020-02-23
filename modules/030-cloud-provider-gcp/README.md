@@ -79,8 +79,9 @@ cloudProviderGcp: |
 * `machineType` — тип заказываемых instances. **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
     * GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) не стандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
 * `image` — образ, который поставится во заказанные instance'ы.
-    * Формат — строка, полный путь до образа, пример: `projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911`.
-    * **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04.
+    * Формат — строка, полный путь до образа, пример: `projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20200129a`.
+    * **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04/Centos 7.
+    * Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
 * `preemptible` — Заказывать ли preemptible instance.
     * Формат — bool.
     * По-умолчанию `false`.
