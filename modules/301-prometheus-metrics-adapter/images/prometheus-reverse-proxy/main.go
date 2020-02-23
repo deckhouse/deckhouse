@@ -1,18 +1,20 @@
 package main
 
-import "fmt"
-import "os"
-import "encoding/json"
-import "io"
-import "net/http"
-import "net/http/httputil"
-import "net/url"
-import "net"
-import "crypto/tls"
-import "log"
-import "time"
-import "strings"
-import "regexp"
+import (
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"regexp"
+	"strings"
+	"time"
+)
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
 var PROMETHEUS_URL = os.Getenv("PROMETHEUS_URL")
@@ -103,11 +105,11 @@ func http_handler_healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func http_my_router(w http.ResponseWriter, r *http.Request) {
-        if strings.HasPrefix(r.URL.String(), "/main/api/v1/query?query=custom_metric%3A%3A") {
+	if strings.Contains(r.URL.String(), "/api/v1/query?query=custom_metric%3A%3A") {
 		http_handler_custom_metric(w, r)
-        } else {
+	} else {
 		http_proxy_pass(w, r)
-        }
+	}
 }
 
 func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
@@ -117,8 +119,8 @@ func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
 	if mtime := fStat.ModTime().Unix(); mtime != appliedConfigMtime {
 		appliedConfigMtime = mtime
 		f, _ := os.Open(configPath)
-                defer f.Close()
-                json.NewDecoder(f).Decode(&config)
+		defer f.Close()
+		json.NewDecoder(f).Decode(&config)
 	}
 
 	// query=custom_query::<ObjectType>::<MetricName>::<Selector>::<GroupBy>
@@ -126,8 +128,8 @@ func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
 	metricHandler := &MetricHandler{
 		ObjectType: args[1],
 		MetricName: args[2],
-		Selector: args[3],
-		GroupBy: args[4],
+		Selector:   args[3],
+		GroupBy:    args[4],
 	}
 
 	err := metricHandler.Init()
