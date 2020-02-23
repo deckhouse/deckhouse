@@ -95,6 +95,7 @@ cloudProviderYandex: |
   * Формат — integer.
 * `imageID` — идентификатор образа, который будет установлен в заказанные instance'ы.
   * Формат — строка.
+  * Найти нужный образ можно с помощью команды: `yc compute image list --folder-id standard-images | grep ubuntu-1804-lts`
 * `preemptible` — Заказывать ли preemptible instance.
   * Формат — bool.
   * По-умолчанию `false`.

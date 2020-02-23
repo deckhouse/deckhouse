@@ -66,6 +66,7 @@ cloudProviderAws: |
 * `instanceType` — тип заказываемых instances. **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
 * `ami` — образ, который поставится в заказанные instance'ы.
     * Формат — строка, AMI ID.
+    * Как найти нужный AMI: `aws ec2 --region <REGION> describe-images --filters 'Name=name,Values=buntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | jq '.Images[].ImageId'` (В каждом регионе AMI разные).
 * `diskType` — тип созданного диска.
     * По-умолчанию `gp2`.
     * Опциональный параметр.
