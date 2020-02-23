@@ -57,6 +57,8 @@ spec:
       labels:
         app: dex-authenticator
         name: {{ $crd.name }}
+      annotations:
+        checksum/config: {{ $crd.credentials | toYaml | b64enc | sha256sum }}
     spec:
 {{- include "helm_lib_node_selector" (tuple $context "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $context "system") | indent 6 }}
