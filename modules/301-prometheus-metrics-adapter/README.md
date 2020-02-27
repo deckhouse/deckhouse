@@ -213,7 +213,7 @@ spec:
         value: 42
 ```
 
-### Пример с использованием кастомных метрик типа `Pods`
+### Примеры с использованием кастомных метрик типа `Pods`
 
 Хотим, чтобы среднее количество php-fpm-воркеров в деплойменте "mybackend" было не больше 5.
 
@@ -245,6 +245,38 @@ spec:
       target:
         type: AverageValue # Для метрик с type: Pods можно использовать только AverageValue.
         averageValue: 5   # Если среднее значение метрики у всех подов деплоя myworker больше 5, то скейлимся.
+```
+
+Скейлим deployment по процентному количеству active-воркеров php-fpm.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PodMetric
+metadata:
+  name: php-fpm-active-worker
+spec:
+  query: round(sum by(<<.GroupBy>>) (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) / sum by(<<.GroupBy>>) (phpfpm_processes_total{<<.LabelMatchers>>}) * 100) # Процент active-воркеров в php-fpm. Функция round() для того, чтобы не смущаться от милли-процентов в HPA.
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta2
+metadata:
+  name: {{ .Chart.Name }}-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1beta1
+    kind: Deployment
+    name: {{ .Chart.Name }}
+  minReplicas: 4
+  maxReplicas: 8
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: php-fpm-active-worker
+      target:
+        type: AverageValue
+        averageValue: 80 # Если в среднем по деплойменту 80% воркеров заняты, скейлимся
 ```
 
 ### Скейлинг по внешним метрикам
