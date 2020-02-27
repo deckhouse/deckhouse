@@ -162,6 +162,11 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		kind, name := r[0], r[1]
 		newObjectStore.DeleteObject(object_store.NewMetaIndex(kind, kpo.Namespace, name))
 
+	case "DeleteNonBlocking":
+		r := strings.Split(kpo.Resource, "/") // e.g. Ingress/mying
+		kind, name := r[0], r[1]
+		newObjectStore.DeleteObject(object_store.NewMetaIndex(kind, kpo.Namespace, name))
+
 	case "StatusPatch":
 		var objToPatch object_store.KubeObject
 		var originalStatusJSON []byte

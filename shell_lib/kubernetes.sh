@@ -44,6 +44,12 @@ function kubernetes::delete() {
 }
 
 # $1 namespace
+# $2 resource (pod/mypod-aacc12)
+function kubernetes::delete::non_blocking() {
+  jq -nc '{op: "DeleteNonBlocking", namespace: "'${1}'", resource: "'${2}'"}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+}
+
+# $1 namespace
 # $2 apiVersion (i.e. deckhouse.io/v1alpha1)
 # $3 plural kind (i.e. openstackmachineclasses)
 # $4 resourceName (i.e. some-resource-aabbcc)
@@ -95,6 +101,13 @@ function kubernetes::_apply_patch_set() {
       resource="$(jq -r '.resource' <<< ${line})"
       if kubectl -n "${namespace}" get "${resource}" >/dev/null 2>&1; then
         kubectl -n "${namespace}" delete "${resource}" >/dev/null 2>&1
+      fi
+    ;;
+    "DeleteNonBlocking")
+      namespace="$(jq -r '.namespace' <<< ${line})"
+      resource="$(jq -r '.resource' <<< ${line})"
+      if kubectl -n "${namespace}" get "${resource}" >/dev/null 2>&1; then
+        kubectl -n "${namespace}" delete "${resource}" --wait=false >/dev/null 2>&1
       fi
     ;;
     "StatusPatch")
