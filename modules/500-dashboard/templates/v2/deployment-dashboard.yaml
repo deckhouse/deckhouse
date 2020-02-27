@@ -14,6 +14,13 @@ spec:
     name: dashboard
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dashboard
+      minAllowed:
+        memory: 50Mi
+        cpu: 30m
+      mode: Auto
 {{- end }}
 ---
 kind: Deployment
