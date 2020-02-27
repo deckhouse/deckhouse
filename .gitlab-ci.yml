@@ -14,8 +14,9 @@ Build:
     - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE} dev
     - werf build --stages-storage :local tests
     - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --stages-storage :local --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE} dev; fi
-  variables:
-    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - git submodule sync
+    - git submodule update --init
   except:
     - schedules
   tags:
@@ -42,8 +43,9 @@ Tests:
       werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local --
       bash -c "cd /deckhouse/testing/; go test -vet=off ./modules/... ./global-hooks/..."
     - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
-  variables:
-    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - git submodule sync
+    - git submodule update --init
   except:
     - schedules
   artifacts:
