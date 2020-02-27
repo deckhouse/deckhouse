@@ -20,6 +20,9 @@ spec:
   {{- end }}
 {{- end }}
   datastore: {{ .instanceGroup.instanceClass.datastore | quote }}
+{{- if .instanceGroup.instanceClass.resourcePool }}
+  resourcePool: {{ .instanceGroup.instanceClass.resourcePool | quote }}
+{{- end }}
   clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
   nodeRoleTag: {{ .instanceGroup.name }}-{{ .zoneName }}
   sshKeys:
@@ -31,7 +34,26 @@ spec:
 {{- end }}
   runtimeOptions:
     nestedHardwareVirtualization: {{ .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization | default true }}
-    memoryReservation: {{ mul (div (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) 100) (.instanceGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
+    resourceAllocationInfo:
+{{- if not .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo }}
+{{ $_ := set .instanceGroup.instanceClass.runtimeOptions "resourceAllocationInfo" dict }}
+{{- end }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuShares }}
+      cpuShares: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuShares }}
+{{- end }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuLimit }}
+      cpuLimit: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuLimit }}
+{{- end }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuReservation }}
+      cpuReservation: {{ .instanceGroup.instanceClass.runtimeOptions.cpuReservation }}
+{{- end }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryShares }}
+      memoryShares: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryShares }}
+{{- end }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryLimit }}
+      memoryLimit: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryLimit }}
+{{- end }}
+      memoryReservation: {{ mul (div (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) 100) (.instanceGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
   secretRef:
     namespace: d8-{{ .Chart.Name }}
     name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
