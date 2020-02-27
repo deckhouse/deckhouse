@@ -10,7 +10,6 @@ spec:
     listKind: OAuth2ClientList
     plural: oauth2clients
     singular: oauth2client
-  preserveUnknownFields: true
   scope: Namespaced
   version: v1
 ---
@@ -25,7 +24,6 @@ spec:
     listKind: PasswordList
     plural: passwords
     singular: password
-  preserveUnknownFields: true
   scope: Namespaced
   version: v1
 ---
@@ -40,6 +38,5 @@ spec:
     listKind: ConnectorList
     plural: connectors
     singular: connector
-  preserveUnknownFields: true
   scope: Namespaced
   version: v1
