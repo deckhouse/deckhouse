@@ -3,6 +3,9 @@
 {{- $_ := set $options "memory" (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) -}}
 {{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
 {{- $_ := set $options "template" .instanceGroup.instanceClass.template -}}
+{{- if hasKey .instanceGroup.instanceClass "resourcePool" -}}
+  {{- $_ := set $options "resourcePool" .instanceGroup.instanceClass.resourcePool -}}
+{{- end }}
 {{- $_ := set $options "mainNetwork" .instanceGroup.instanceClass.mainNetwork -}}
 {{- if hasKey .instanceGroup.instanceClass "additionalNetworks" -}}
   {{- $_ := set $options "additionalNetworks" .instanceGroup.instanceClass.additionalNetworks -}}
@@ -12,8 +15,10 @@
   {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
     {{- $_ := set $options "runtimeOptions.nestedHardwareVirtualization" .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "memoryReservation" }}
-    {{- $_ := set $options "runtimeOptions.memoryReservation" .instanceGroup.instanceClass.runtimeOptions.memoryReservation -}}
+  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "resourceAllocationInfo" }}
+    {{- range $k, $v := .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo }}
+      {{- $_ := set $options (list "runtimeOptions.resourceAllocationInfo" $k | join "." ) $v -}}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- $options | toYaml | sha256sum -}}
