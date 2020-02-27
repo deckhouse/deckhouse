@@ -19,11 +19,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/test/hook/context"
 
 	"github.com/deckhouse/deckhouse/testing/library"
@@ -365,7 +365,7 @@ func (hec *HookExecutionConfig) RunHook() {
 
 	// TODO: take a closer look and refactor into a function
 	if len(valuesJsonPatchBytes) != 0 {
-		patch, err := jsonpatch.DecodePatch(valuesJsonPatchBytes)
+		patch, err := addonutils.JsonPatchFromBytes(valuesJsonPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		patchedValuesBytes, err := patch.Apply(hec.values.JsonRepr)
@@ -374,7 +374,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	if len(configValuesJsonPatchBytes) != 0 {
-		patch, err := jsonpatch.DecodePatch(configValuesJsonPatchBytes)
+		patch, err := addonutils.JsonPatchFromBytes(configValuesJsonPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		patchedConfigValuesBytes, err := patch.Apply(hec.configValues.JsonRepr)

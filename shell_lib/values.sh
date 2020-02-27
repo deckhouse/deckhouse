@@ -1,8 +1,5 @@
 #!/bin/bash
 
-config_values_json_patch=()
-values_json_patch=()
-
 function values::jq() {
   local values_path=$VALUES_PATH
 
@@ -172,20 +169,13 @@ function values::get_first_defined() {
 
 function values::_json_patch() {
   set -f
+  patch_path=$VALUES_JSON_PATCH_PATH
   if [[ "$1" == "--config" ]] ; then
     shift
-    config_values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "${3:-""}" \
-                                '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end'))
-
-    echo "${config_values_json_patch[@]}" | \
-      jq -sec '.' > $CONFIG_VALUES_JSON_PATCH_PATH
-  else
-    values_json_patch+=($(jq -nec --arg op "$1" --arg path "$2" --arg value "${3:-""}" \
-                                '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end'))
-
-    echo "${values_json_patch[@]}" | \
-      jq -sec '.' > $VALUES_JSON_PATCH_PATH
+    patch_path=$CONFIG_VALUES_JSON_PATCH_PATH
   fi
+  jq -nec --arg op "$1" --arg path "$2" --arg value "${3:-""}" \
+    '{"op": $op, "path": $path} + if (($value | length) > 0) then {"value": (try ($value | fromjson) catch $value)} else {} end' >> $patch_path
   set +f
 }
 
