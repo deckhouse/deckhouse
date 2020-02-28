@@ -147,8 +147,7 @@ spec:
         configMap:
           name: grafana-dashboard-definitions-custom
           optional: true
-{{- $grafanaStorageClass := false }}{{- if hasKey .Values.prometheus "grafana" }}{{- $grafanaStorageClass = .Values.prometheus.grafana.storageClass }}{{- end }}
-{{- $storageClass := $grafanaStorageClass | default .Values.prometheus.internal.grafana.currentStorageClass | default .Values.prometheus.storageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+{{- $storageClass := .Values.prometheus.internal.grafana.effectiveStorageClass }}
 {{- if not $storageClass }}
       - name: grafana-storage
         emptyDir: {}

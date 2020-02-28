@@ -1,0 +1,85 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    kubernetes:
+    - name: pvc
+      includeSnapshotsFrom: ["pvc", "default_sc"]
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: grafana
+      jqFilter: ".spec.storageClassName"
+    - name: default_sc
+      includeSnapshotsFrom: ["pvc", "default_sc"]
+      apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      jqFilter: |
+        (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
+        (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+EOF
+}
+
+function __main__() {
+  grafana_storage_class=""
+  current_storage_class=""
+  prometheus_main_storage_class=""
+  global_storage_class=""
+  global_discovery_default_storage_class=""
+
+  if values::has --config prometheus.grafana.storageClass; then
+    grafana_storage_class="$(values::get --config prometheus.grafana.storageClass)"
+  fi
+
+  if context::has snapshots.pvc.0 ; then
+    current_storage_class="$(context::get snapshots.pvc.0.object.spec.storageClassName)"
+  fi
+
+  if values::has --config prometheus.storageClass; then
+    prometheus_main_storage_class="$(values::get --config prometheus.storageClass)"
+  fi
+
+  if values::has --config global.storageClass; then
+    global_storage_class="$(values::get --config global.storageClass)"
+  fi
+
+  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
+  if [ "$default_sc" != "null" ]; then
+    global_discovery_default_storage_class="$default_sc"
+  fi
+
+  if [ -n "$grafana_storage_class" ]; then
+    effective_storage_class="$grafana_storage_class"
+  elif [ -n "$current_storage_class" ]; then
+    effective_storage_class="$current_storage_class"
+  elif [ -n "$prometheus_main_storage_class" ]; then
+    effective_storage_class="$prometheus_main_storage_class"
+  elif [ -n "$global_storage_class" ]; then
+    effective_storage_class="$global_storage_class"
+  elif [ -n "$global_discovery_default_storage_class" ]; then
+    effective_storage_class="$global_discovery_default_storage_class"
+  else
+    effective_storage_class="false"
+  fi
+
+  values::set prometheus.internal.grafana.effectiveStorageClass "$effective_storage_class"
+
+  if [ "$current_storage_class" != "$effective_storage_class" ]; then
+    if context::has snapshots.pvc.0 ; then
+      kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/grafana-storage-grafana-0"
+      echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/grafana-storage-grafana-0 !!!"
+    fi
+    kubernetes::delete::non_blocking "d8-monitoring" "statefulset/grafana"
+    echo "!!! NOTICE: storage class changed, deleting statefulset/grafana !!!"
+  fi
+}
+
+hook::run $@
