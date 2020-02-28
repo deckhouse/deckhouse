@@ -45,6 +45,7 @@ function __main__() {
 
   if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")'; then
     prometheus_main_storage_class_current=$(context::jq -r '.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main") | .spec.storageClassName')
+    prometheus_main_storage_class_current=$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main") | .spec.storageClassName] | first')
   fi
   if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "longterm")'; then
     prometheus_longterm_storage_class_current=$(context::jq -r '.snapshots.pvc[].object | select(.metadata.labels.prometheus == "longterm") | .spec.storageClassName')
