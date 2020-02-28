@@ -72,7 +72,7 @@ function __main__() {
 
   values::set prometheus.internal.grafana.effectiveStorageClass "$effective_storage_class"
 
-  if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" ]; then
+  if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
     if context::has snapshots.pvc.0 ; then
       kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/grafana-storage-grafana-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/grafana-storage-grafana-0 !!!"
