@@ -95,6 +95,10 @@ function __main__() {
     if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")'; then
       kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-main-db-prometheus-main-0 !!!"
+      if [ "$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main")] | length')" -gt "1" ]; then
+          kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-1"
+          echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-main-db-prometheus-main-1 !!!"
+      fi
     fi
   fi
 
