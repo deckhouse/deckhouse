@@ -32,6 +32,17 @@ metadata:
     prometheus: main
 spec:
   storageClassName: pvc-sc-main
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-main-db-prometheus-main-1
+  namespace: d8-monitoring
+  labels:
+    app: prometheus
+    prometheus: main
+spec:
+  storageClassName: pvc-sc-main
 `
 		pvcLongterm = `
 ---
@@ -189,6 +200,7 @@ metadata:
 
 		It("StatefullSets prometheus-main and prometheus-longterm and their pvc must be deleted", func() {
 			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-main-db-prometheus-main-0").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-main-db-prometheus-main-1").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-longterm-db-prometheus-longterm-0").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("StatefulSet", "d8-monitoring", "prometheus-main").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("StatefulSet", "d8-monitoring", "prometheus-longterm").Exists()).To(BeFalse())

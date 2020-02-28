@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 1
     kubernetes:
     - name: pvc
-      includeSnapshotsFrom: ["pvc", "pod", "default_sc"]
+      includeSnapshotsFrom: ["pvc", "default_sc"]
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -18,19 +18,8 @@ function __config__() {
         matchLabels:
           app: openvpn
       jqFilter: ".spec.storageClassName"
-    - name: pod
-      includeSnapshotsFrom: ["pvc", "pod", "default_sc"]
-      apiVersion: v1
-      kind: Pod
-      namespace:
-        nameSelector:
-          matchNames: ["kube-openvpn"]
-      labelSelector:
-        matchLabels:
-          app: openvpn
-      jqFilter: ".metadata.namespace"
     - name: default_sc
-      includeSnapshotsFrom: ["pvc", "pod", "default_sc"]
+      includeSnapshotsFrom: ["pvc", "default_sc"]
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
@@ -76,14 +65,13 @@ function __main__ {
 
   values::set openvpn.internal.effectiveStorageClass "$effective_storage_class"
 
-  if [ "$current_storage_class" != "$effective_storage_class" ]; then
+  if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
     if context::has snapshots.pvc.0 ; then
       kubernetes::delete::non_blocking "kube-openvpn" "persistentvolumeclaim/openvpn"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/openvpn !!!"
     fi
-    pod_name="$(context::get snapshots.pod.0.object.metadata.name)"
-    kubernetes::delete::non_blocking "kube-openvpn" "pod/${pod_name}"
-    echo "!!! NOTICE: storage class changed, deleting pod/${pod_name} !!!"
+    kubernetes::delete::non_blocking "kube-openvpn" "deployment/openvpn"
+    echo "!!! NOTICE: storage class changed, deleting deployment/openvpn !!!"
   fi
 
 
