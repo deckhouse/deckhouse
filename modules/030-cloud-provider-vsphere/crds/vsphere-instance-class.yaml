@@ -77,27 +77,24 @@ spec:
                 nestedHardwareVirtualization:
                   description: Whether to enable or disable nested hardware virtualization.
                   type: boolean
-                resourceAllocationInfo:
-                  type: object
-                  properties:
-                    cpuShares:
-                      type: integer
-                    cpuLimit:
-                      description: CPU limit in MHz.
-                      type: integer
-                    cpuReservation:
-                      description: CPU reservation in MHz.
-                      type: integer
-                    memoryShares:
-                      type: integer
-                    memoryLimit:
-                      description: Memory limit in MB.
-                      type: integer
-                    memoryReservation:
-                      description: VM memory reservation in percent.
-                      type: integer
-                      minimum: 0
-                      maximum: 100
+                cpuShares:
+                  type: integer
+                cpuLimit:
+                  description: CPU limit in MHz.
+                  type: integer
+                cpuReservation:
+                  description: CPU reservation in MHz.
+                  type: integer
+                memoryShares:
+                  type: integer
+                memoryLimit:
+                  description: Memory limit in MB.
+                  type: integer
+                memoryReservation:
+                  description: VM memory reservation in percent.
+                  type: integer
+                  minimum: 0
+                  maximum: 100
             bashible:
               type: object
               required:
