@@ -167,7 +167,7 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 2 }}
-{{- $storageClass := .Values.prometheus.storageClass | default .Values.prometheus.internal.prometheusMain.currentStorageClass | default .Values.global.storageClass | default .Values.global.discovery.defaultStorageClass }}
+{{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
 {{- if $storageClass }}
   storage:
     volumeClaimTemplate:
