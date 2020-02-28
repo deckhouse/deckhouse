@@ -560,7 +560,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 - (sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3])) - sum(avg_over_time(kube_pod_info{node=~\"$node\"}[$__interval_sx3]))) / sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3])) * 100",
+          "expr": "100 - (sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3])) - sum(max by (node, pod) (avg_over_time(kube_pod_info{node=~\"$node\"}[$__interval_sx3]) > 0)and on(pod)max by (pod) (kube_pod_status_phase{phase=~\"Running|Pending\"} > 0))) / sum(avg_over_time(kube_node_status_capacity_pods{node=~\"$node\"}[$__interval_sx3])) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
