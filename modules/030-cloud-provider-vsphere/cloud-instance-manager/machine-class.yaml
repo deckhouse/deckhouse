@@ -35,23 +35,20 @@ spec:
   runtimeOptions:
     nestedHardwareVirtualization: {{ .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization | default true }}
     resourceAllocationInfo:
-{{- if not .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo }}
-{{ $_ := set .instanceGroup.instanceClass.runtimeOptions "resourceAllocationInfo" dict }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.cpuShares }}
+      cpuShares: {{ .instanceGroup.instanceClass.runtimeOptions.cpuShares }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuShares }}
-      cpuShares: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuShares }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.cpuLimit }}
+      cpuLimit: {{ .instanceGroup.instanceClass.runtimeOptions.cpuLimit }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuLimit }}
-      cpuLimit: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuLimit }}
-{{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.cpuReservation }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.cpuReservation }}
       cpuReservation: {{ .instanceGroup.instanceClass.runtimeOptions.cpuReservation }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryShares }}
-      memoryShares: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryShares }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.memoryShares }}
+      memoryShares: {{ .instanceGroup.instanceClass.runtimeOptions.memoryShares }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryLimit }}
-      memoryLimit: {{ .instanceGroup.instanceClass.runtimeOptions.resourceAllocationInfo.memoryLimit }}
+{{- if .instanceGroup.instanceClass.runtimeOptions.memoryLimit }}
+      memoryLimit: {{ .instanceGroup.instanceClass.runtimeOptions.memoryLimit }}
 {{- end }}
       memoryReservation: {{ mul (div (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) 100) (.instanceGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
   secretRef:
