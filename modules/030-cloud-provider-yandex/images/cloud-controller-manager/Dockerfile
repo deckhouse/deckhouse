@@ -1,1 +1,1 @@
-FROM flant/yandex-cloud-controller-manager:v0.11.9
+FROM flant/yandex-cloud-controller-manager:v0.11.11
