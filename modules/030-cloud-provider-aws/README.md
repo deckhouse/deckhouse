@@ -138,6 +138,8 @@ volumeBindingMode: WaitForFirstConsumer # обязательно!
 1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведёт к созданию **только** Target Group, без какого либо LoadBalanacer.
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — используется в связке с `service.beta.kubernetes.io/aws-load-balancer-type: none`.
    * Возможные значения:
+     * `tcp`
+     * `tls`
      * `http`
      * `https`
    * По-умолчанию, `http`.
