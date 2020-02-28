@@ -34,7 +34,7 @@ data:
   # Yes, it lacks immediate feedback if something goes awry, but it leverages
   # Nginx Ingress controller load balancing capabilities to its full extent.
   proxy-next-upstream: "error timeout invalid_header http_502 http_503 http_504"
-  hsts: {{ $crd.spec.config.hsts | default false | quote }}
+  hsts: {{ $crd.spec.hsts | default false | quote }}
   hsts-include-subdomains: "false"
   # This is a formula to calculate maximum theoretical amount of accepted connections: worker_processes * worker_connections.
   # By taking default values from upstream nginx-ingress we get this many connections at worst: 16384 * 4 = 65536.
