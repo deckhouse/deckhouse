@@ -1,7 +1,7 @@
 - name: general.target_down
   rules:
   - alert: TargetDown
-    for: 1m
+    for: {{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
     expr: up == 0 unless on (job) ALERTS{alertname="TargetDown"}
     labels:
       severity_level: "7"

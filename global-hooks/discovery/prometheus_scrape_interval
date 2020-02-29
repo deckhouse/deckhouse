@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: prometheus_scrape_interval
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [d8-monitoring]
+      nameSelector:
+        matchNames: [prometheus-scrape-interval]
+      jqFilter: '.data.scrapeInterval'
+EOF
+}
+
+function __on_kubernetes::prometheus_scrape_interval::synchronization() {
+  if context::has objects.0; then
+    values::set global.discovery.prometheusScrapeInterval "$(context::get objects.0.filterResult | deckhouse-controller helper unit convert --mode duration)"
+  else
+    values::unset global.discovery.prometheusScrapeInterval
+  fi
+}
+
+function __on_kubernetes::prometheus_scrape_interval::added_or_modified() {
+  values::set global.discovery.prometheusScrapeInterval "$(context::get filterResult | deckhouse-controller helper unit convert --mode duration)"
+}
+
+function __on_kubernetes::prometheus_scrape_interval::deleted() {
+  values::unset global.discovery.prometheusScrapeInterval
+}
+
+hook::run "$@"
