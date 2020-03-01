@@ -4,16 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/testing/library"
-
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 	"gopkg.in/yaml.v3"
 
-	"github.com/tidwall/sjson"
-
-	"github.com/tidwall/gjson"
+	"github.com/deckhouse/deckhouse/testing/library"
 )
 
 type ValuesStore struct {
