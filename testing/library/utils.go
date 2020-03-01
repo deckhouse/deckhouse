@@ -9,14 +9,12 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/imdario/mergo"
+	"github.com/segmentio/go-camelcase"
 	"github.com/tidwall/gjson"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/testing/library/git"
-
-	"github.com/segmentio/go-camelcase"
-
-	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v3"
 )
 
 func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]interface{}, error) {
