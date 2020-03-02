@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: dex_authenticator_tmp
+      includeSnapshotsFrom: [dex_authenticator_tmp]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: DexAuthenticator
+      namespace:
+        nameSelector:
+          matchNames: [d8-dashboard]
+      nameSelector:
+        matchNames: [dashboard-tmp]
+EOF
+}
+
+function __main__() {
+  # Миграция 2020-02-28: Удаляем временный dex-authenticator.
+  if context::has snapshots.dex_authenticator_tmp.0 ; then
+    kubernetes::delete "d8-dashboard" "dex-authenticator/dashboard-tmp"
+  fi
+}
+
+hook::run "$@"
