@@ -18,8 +18,6 @@ spec:
     relabelings:
     - regex: endpoint
       action: labeldrop
-    - targetLabel: tier
-      replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpoint_ready]
       regex: "true"
       action: keep

@@ -1,0 +1,296 @@
+- name: d8.deckhouse.availability
+  rules:
+  - alert: D8DeckhouseTargetDown
+    expr: max by (job) (up{job="deckhouse"} == 0)
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "2m"
+      plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      plk_ignore_labels: "job"
+      summary: Prometheus не может получить метрики deckhouse
+
+  - alert: D8DeckhouseTargetAbsent
+    expr: absent(up{job="deckhouse"}) == 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "2m"
+      plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: В prometheus отсутствует target с deckhouse
+
+  - alert: D8DeckhousePodIsNotReady
+    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-system", pod=~"deckhouse-.*"}) != 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "2m"
+      plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "pod"
+      summary: Deckhouse под находится в состоянии НЕ Ready
+
+  - alert: D8DeckhousePodIsNotRunning
+    expr: absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"deckhouse-.*"})
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "2m"
+      plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Под deckhouse находится в состоянии НЕ Running
+
+  - alert: D8DeckhouseIsHung
+    expr: max without (container, job) (increase(deckhouse_live_ticks[__SCRAPE_INTERVAL_X_4__])) < 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не работает
+      description: |
+        Deckhouse, скорей всего, полностью завис, так как в prometheus более не увеличивается метрика deckhouse_live_ticks (а должна каждые 10 секунд).
+
+  - alert: D8DeckhouseUnavailable
+    expr: count(ALERTS{alertname=~"D8DeckhouseTargetDown|D8DeckhouseTargetAbsent|D8DeckhousePodIsNotReady|D8DeckhousePodIsNotRunning|D8DeckhouseIsHung",job="deckhouse"})
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "24h"
+      summary: Deckhouse не работает
+      description: |
+        Deckhouse не работает. Что именно с ним не так можно узнать в одном из связанных алертов.
+
+- name: d8.deckhouse.malfunctioning
+  rules:
+  - alert: D8DeckhousePodIsRestartingTooOften
+    expr: max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-system", pod=~"deckhouse-.*"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-system", pod=~"deckhouse-.*"}) > 3
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "pod"
+      summary: Deckhouse слишком часто перезагружается
+      description: |
+        Количество перезапусков за последний час: {{ $value }}.
+
+        Частый перезапуск Deckhouse не является нормальной ситуацией — deckhouse должен быть постоянно запущен и работать.
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseHasNoAccessToRegistry
+    expr: max by (pod, instance) (increase(deckhouse_registry_errors[__SCRAPE_INTERVAL_X_4__])) > 0
+    for: 1h
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "1h"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не может подключиться к registry
+      description: |
+        У deckhouse нет доступа к registry (обычно registry.flant.com), в котором он каждые 15 секунд проверяет наличие нового Docker образа. Пока у deckhouse нет доступа к registry — он не будет автоматически обновляться.
+
+        Обычно этот алерт означает, что у pod'а deckhouse есть какие-то проблемы с доступом в интернет.
+
+  - alert: D8DeckhouseQueueIsHung
+    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length[__SCRAPE_INTERVAL_X_3__])) > 10
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse очередь {{ $labels.queue }} зависла, в ней скопилось {{ $value }} заданий
+      description: |
+        Deckhouse не может обработать очередь {{ $labels.queue }}, в которой скопилось {{ $value }} заданий.
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseGlobalHookFailsTooOften
+    expr: max(increase({job="deckhouse", __name__=~"deckhouse_global_hook.*_errors"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Глобальный хук {{ $labels.hook }} deckhouse падает слишком часто
+      descritipion: |
+        Глобальный хук {{ $labels.hook }} падал в последние __SCRAPE_INTERVAL_X_4__
+
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseModuleHookFailsTooOften
+    expr: max(increase({job="deckhouse", __name__=~"deckhouse_module_hook.*_errors"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Хук deckhouse {{ $labels.module }}/{{ $labels.hook }} падает слишком часто
+      descritipion: |
+        Хук {{ $labels.hook }} модуля {{ $labels.module }} падал в последние __SCRAPE_INTERVAL_X_4__
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseCouldNotDiscoverModules
+    expr: max by (pod, instance) (increase(deckhouse_modules_discover_errors[__SCRAPE_INTERVAL_X_4__])) > 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "3m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не может задискаверить модули
+      descritipion: |
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseCouldNotRunModule
+    expr: max(increase(deckhouse_module_run_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "3m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не может запустить модуль {{ $labels.module }}
+      descritipion: |
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseCouldNotDeleteModule
+    expr: max(increase(deckhouse_module_delete_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "3m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не может удалить модуль {{ $labels.module }}
+      descritipion: |
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseCouldNotRunGlobalHook
+    expr: max(increase(deckhouse_global_hook_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "3m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не может запустить глобальный хук {{ $labels.hook }}
+      descritipion: |
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseCouldNotRunModuleHook
+    expr: max(increase(deckhouse_module_hook_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "3m"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Deckhouse не может запустить модульный хук {{ $labels.module }}/{{ $labels.hook }}
+      descritipion: |
+        Необходимо посмотреть логи:
+        1. `kubectl -n d8-system logs -f -l app=deckhouse`
+
+  - alert: D8DeckhouseMalfunctioning
+    expr: count(ALERTS{alertname=~"D8DeckhousePodIsRestartingTooOften|D8DeckhouseCouldNotDiscoverModules|D8DeckhouseCouldNotRunGlobalHook|D8DeckhouseCouldNotRunModuleHook|D8DeckhouseCouldNotRunModule|D8DeckhouseCouldNotDeleteModule|D8DeckhouseQueueIsHung|D8DeckhouseGlobalHookFailsTooOften|D8DeckhouseModuleHookFailsTooOften"})
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "24h"
+      summary: Deckhouse работает некорректно
+      description: |
+        Deckhouse работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.

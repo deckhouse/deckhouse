@@ -11,7 +11,7 @@ spec:
   podMetricsEndpoints:
   - targetPort: 9650
     relabelings:
-    - regex: endpoint|namespace
+    - regex: endpoint|namespace|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster

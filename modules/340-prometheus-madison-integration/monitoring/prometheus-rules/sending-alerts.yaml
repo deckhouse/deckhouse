@@ -1,0 +1,136 @@
+- name: d8.prometheus-madison-integration.sending-alerts
+  rules:
+    - alert: D8PrometheusMadisonErrorSendingAlertsToBackend
+      expr: |
+        max by (pod, madison_backend) (
+          max by (pod_ip) (
+              label_replace(
+                max by (pod, alertmanager) (
+                  1 - (increase(prometheus_notifications_successfully_sent_total{namespace="d8-monitoring"}[__SCRAPE_INTERVAL_X_4__]) / increase(prometheus_notifications_sent_total{namespace="d8-monitoring"}[__SCRAPE_INTERVAL_X_4__])) > 0),
+                "pod_ip", "$1", "alertmanager", ".*://(.*):.*")
+          )
+          * on (pod_ip) group_right()
+          max by (madison_backend, pod, pod_ip) (
+            max by (pod, pod_ip) (kube_pod_info)
+            * on (pod) group_left(madison_backend)
+            label_replace(
+              kube_pod_labels{namespace="d8-monitoring", label_madison_backend!=""},
+            "madison_backend", "$1", "label_madison_backend", "(.*)")
+          )
+        )
+        * on (pod) group_left(deployment)
+        (
+          label_replace(kube_controller_pod{namespace="d8-monitoring"}, "deployment", "$1", "controller_name", "(.*)")
+        )
+      labels:
+        severity_level: "{{ if lt $value 0.2 }}9{{ else if lt $value 0.7 }}8{{ else }}7{{ end }}"
+        tier: cluster
+        d8_module: prometheus-madison-integration
+        d8_component: madison-proxy
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_pending_until_firing_for: "10m"
+        plk_labels_as_annotations: "pod"
+        plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_caused_by__kubernetes_deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring,deployment={{ $labels.deployment }}"
+        description: |
+          Prometheus не может доставить {{ $value | humanizePercentage }} алертов в madison бекенд {{ $labels.madison_backend }}, через madison-proxy {{ $labels.pod }}
+          Необходимо посмотреть логи madison proxy:
+          1. `kubectl -n d8-monitoring logs -f {{ $labels.pod }}`
+        summary: Prometheus не может доставить {{ $value | humanizePercentage}} алертов в madison бекенд {{ $labels.madison_backend }}, через madison-proxy {{ $labels.pod }}
+
+    - alert: D8PrometheusMadisonErrorSendingAlerts
+      expr: |
+        count(
+          max by (pod, madison_backend) (
+            max by (pod_ip) (
+                label_replace(
+                  max by (pod, alertmanager) (
+                    1 - (increase(prometheus_notifications_successfully_sent_total{namespace="d8-monitoring"}[__SCRAPE_INTERVAL_X_4__]) / increase(prometheus_notifications_sent_total{namespace="d8-monitoring"}[__SCRAPE_INTERVAL_X_4__])) == 1),
+                  "pod_ip", "$1", "alertmanager", ".*://(.*):.*")
+            )
+            * on (pod_ip) group_right()
+            max by (madison_backend, pod, pod_ip) (
+              max by (pod, pod_ip) (kube_pod_info)
+              * on (pod) group_left(madison_backend)
+              label_replace(
+                kube_pod_labels{namespace="d8-monitoring", label_madison_backend!=""},
+              "madison_backend", "$1", "label_madison_backend", "(.*)")
+            )
+          )
+          * on (pod) group_left(deployment)
+          (
+            label_replace(kube_controller_pod{namespace="d8-monitoring"}, "deployment", "$1", "controller_name", "(.*)")
+          )
+        ) > 1
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: prometheus-madison-integration
+        d8_component: madison-proxy
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_pending_until_firing_for: "10m"
+        plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
+        description: |
+          Prometheus не может доставить 100% алертов, более чем, через один из madison-proxy.
+          Необходимо посмотреть логи madison proxy:
+          1. `kubectl -n d8-monitoring logs -f -l app=madison-proxy`
+        summary: Prometheus не может доставить 100% алертов, более чем, через один из madison-proxy
+
+    - alert: D8PrometheusMadisonErrorSendingAlerts
+      expr: |
+        count(
+          max by (pod, madison_backend) (
+            max by (pod_ip) (
+                label_replace(
+                  max by (pod, alertmanager) (
+                    1 - (increase(prometheus_notifications_successfully_sent_total{namespace="d8-monitoring"}[__SCRAPE_INTERVAL_X_4__]) / increase(prometheus_notifications_sent_total{namespace="d8-monitoring"}[__SCRAPE_INTERVAL_X_4__])) == 1),
+                  "pod_ip", "$1", "alertmanager", ".*://(.*):.*")
+            )
+            * on (pod_ip) group_right()
+            max by (madison_backend, pod, pod_ip) (
+              max by (pod, pod_ip) (kube_pod_info)
+              * on (pod) group_left(madison_backend)
+              label_replace(
+                kube_pod_labels{namespace="d8-monitoring", label_madison_backend!=""},
+              "madison_backend", "$1", "label_madison_backend", "(.*)")
+            )
+          )
+          * on (pod) group_left(deployment)
+          (
+            label_replace(kube_controller_pod{namespace="d8-monitoring"}, "deployment", "$1", "controller_name", "(.*)")
+          )
+        ) == count(increase(prometheus_notifications_sent_total{namespace="d8-monitoring", service="prometheus"}[__SCRAPE_INTERVAL_X_4__]) > 0)
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_module: prometheus-madison-integration
+        d8_component: madison-proxy
+      annotations:
+        description: Prometheus не может доставить 100% алертов
+        summary: Prometheus не может доставить 100% алертов
+        plk_protocol_version: "1"
+        plk_labels_as_annotations: "pod"
+        plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
+
+    - alert: D8PrometheusMadisonIntegrationMalfunctioning
+      expr: min by (deployment) (ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts"})
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: prometheus-madison-integration
+        d8_component: madison-proxy
+      annotations:
+        plk_protocol_version: "1"
+        plk_pending_until_firing_for: "24h"
+        plk_markup_format: "markdown"
+        plk_group_for__missing_dead_mans_switch: "MissingDeadMansSwitch"
+        plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring"
+        plk_group_for__kubernetes_deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,prometheus=deckhouse,namespace=d8-monitoring,deployment={{ $labels.deployment }}"
+        plk_ignore_labels: "deployment"
+        summary: Интеграция prometheus с madison работает некорректно
+        description: |
+          Интеграция prometheus с madison работает некорректно. Что именно с ней не так, можно узнать в одном из связанных алертов.
