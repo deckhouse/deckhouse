@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 yum install -y 'docker-ce-18.09*' 'docker-ce-cli-18.09*' containerd.io
+yum versionlock "docker-ce-*"
 
 mkdir -p /etc/docker
 cat << "EOF" > /etc/docker/daemon.json

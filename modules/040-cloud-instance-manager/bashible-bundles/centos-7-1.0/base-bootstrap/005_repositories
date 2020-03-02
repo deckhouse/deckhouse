@@ -4,6 +4,8 @@ yum update -y
 
 yum install -y yum-utils
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install -y yum-plugin-versionlock
+yum remove -y yum-cron
 
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
