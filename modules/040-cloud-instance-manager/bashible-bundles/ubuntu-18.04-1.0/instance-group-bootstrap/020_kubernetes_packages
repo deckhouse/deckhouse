@@ -4,6 +4,6 @@
 
 if ! apt list --installed kubelet | grep -F {{ $kubernetes_version }}; then
   apt-mark unhold "kubelet kubeadm kubectl"
-  apt install -qy "kubelet={{ $kubernetes_version }}*" "kubeadm={{ $kubernetes_version }}*" "kubectl={{ $kubernetes_version }}*"
+  apt install -qy "kubelet={{ $kubernetes_version }}-*" "kubeadm={{ $kubernetes_version }}-*" "kubectl={{ $kubernetes_version }}-*"
   apt-mark hold "kubelet kubeadm kubectl"
 fi
