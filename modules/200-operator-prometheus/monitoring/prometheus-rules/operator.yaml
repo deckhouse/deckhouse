@@ -1,0 +1,103 @@
+- name: d8.operator.prometheus
+  rules:
+  - alert: D8PrometheusOperatorTargetDown
+    expr: max by (job) (up{job="prometheus-operator"} == 0)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: operator-prometheus
+      d8_component: prometheus-operator
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_pending_until_firing_for: "30m"
+      plk_labels_as_annotations: "instance,pod"
+      plk_ignore_labels: "job"
+      plk_grouped_by__main: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      description: |-
+        Под с prometheus-operator недоступен.
+        В кластере не могут примениться новые настройки `Prometheus`, `PrometheusRules`, `ServiceMonitor`, но при этом все уже созданные и сконфигурированные элементы работают корректно.
+        Данная проблема никак не повлияет на работу алертов или мониторинга в переспективах небольшого промежутка времени (нескольких дней).
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`
+      summary: Prometheus не может получить метрики prometheus-operator
+
+  - alert: D8PrometheusOperatorTargetAbsent
+    expr: absent(up{job="prometheus-operator"}) == 1
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: operator-prometheus
+      d8_component: prometheus-operator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "30m"
+      plk_grouped_by__main: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: В prometheus отсутствует target с prometheus-operator
+      description: |
+        В кластере не могут примениться новые настройки `Prometheus`, `PrometheusRules`, `ServiceMonitor`, но при этом все уже созданные и сконфигурированные элементы работают корректно.
+        Данная проблема никак не повлияет на работу алертов или мониторинга в переспективах небольшого промежутка времени (нескольких дней).
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`
+
+  - alert: D8PrometheusOperatorPodIsNotReady
+    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-operator-prometheus", pod=~"prometheus-operator-.*"}) != 1
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: operator-prometheus
+      d8_component: prometheus-operator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "30m"
+      plk_labels_as_annotations: "pod"
+      plk_grouped_by__main: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Под prometheus-operator находится в состоянии НЕ Ready
+      description: |
+        В кластере не могут примениться новые настройки `Prometheus`, `PrometheusRules`, `ServiceMonitor`, но при этом все уже созданные и сконфигурированные элементы работают корректно.
+        Данная проблема никак не повлияет на работу алертов или мониторинга в переспективах небольшого промежутка времени (нескольких дней).
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`
+
+  - alert: D8PrometheusOperatorPodIsNotRunning
+    expr: absent(kube_pod_status_phase{namespace="d8-operator-prometheus",phase="Running",pod=~"prometheus-operator-.*"})
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: operator-prometheus
+      d8_component: prometheus-operator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "30m"
+      plk_grouped_by__main: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Под prometheus-operator находится в состоянии НЕ Running
+      description: |
+        В кластере не могут примениться новые настройки `Prometheus`, `PrometheusRules`, `ServiceMonitor`, но при этом все уже созданные и сконфигурированные элементы работают корректно.
+        Данная проблема никак не повлияет на работу алертов или мониторинга в переспективах небольшого промежутка времени (нескольких дней).
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`
+
+  - alert: D8PrometheusOperatorUnavailable
+    expr: count(ALERTS{alertname=~"D8PrometheusOperatorTargetDown|D8PrometheusOperatorTargetAbsent|D8PrometheusOperatorPodIsNotReady|D8PrometheusOperatorPodIsNotRunning"})
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: operator-prometheus
+      d8_component: prometheus-operator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "24h"
+      summary: prometheus-operator не работает
+      description: |
+        prometheus-operator не работает. Что именно с ним не так можно узнать в одном из связанных алертов.

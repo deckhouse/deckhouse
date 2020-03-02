@@ -1,0 +1,51 @@
+diff --git a/notifier/notifier.go b/notifier/notifier.go
+index b0c1409a..3c9a39f6 100644
+--- a/notifier/notifier.go
++++ b/notifier/notifier.go
+@@ -137,6 +137,7 @@ type alertMetrics struct {
+ 	latency                 *prometheus.SummaryVec
+ 	errors                  *prometheus.CounterVec
+ 	sent                    *prometheus.CounterVec
++	successfully_sent       *prometheus.CounterVec
+ 	dropped                 prometheus.Counter
+ 	queueLength             prometheus.GaugeFunc
+ 	queueCapacity           prometheus.Gauge
+@@ -170,6 +171,14 @@ func newAlertMetrics(r prometheus.Registerer, queueCap int, queueLen, alertmanag
+ 		},
+ 			[]string{alertmanagerLabel},
+ 		),
++		successfully_sent: prometheus.NewCounterVec(prometheus.CounterOpts{
++			Namespace: namespace,
++			Subsystem: subsystem,
++			Name:      "successfully_sent_total",
++			Help:      "Total number of successfully sent alerts.",
++		},
++			[]string{alertmanagerLabel},
++		),
+ 		dropped: prometheus.NewCounter(prometheus.CounterOpts{
+ 			Namespace: namespace,
+ 			Subsystem: subsystem,
+@@ -201,6 +210,7 @@ func newAlertMetrics(r prometheus.Registerer, queueCap int, queueLen, alertmanag
+ 			m.latency,
+ 			m.errors,
+ 			m.sent,
++			m.successfully_sent,
+ 			m.dropped,
+ 			m.queueLength,
+ 			m.queueCapacity,
+@@ -525,6 +535,7 @@ func (n *Manager) sendAll(alerts ...*Alert) bool {
+ 					n.metrics.errors.WithLabelValues(url).Inc()
+ 				} else {
+ 					atomic.AddUint64(&numSuccess, 1)
++					n.metrics.successfully_sent.WithLabelValues(url).Add(float64(len(alerts)))
+ 				}
+ 				n.metrics.latency.WithLabelValues(url).Observe(time.Since(begin).Seconds())
+ 				n.metrics.sent.WithLabelValues(url).Add(float64(len(alerts)))
+@@ -677,6 +688,7 @@ func (s *alertmanagerSet) sync(tgs []*targetgroup.Group) {
+ 		// This will initialize the Counters for the AM to 0.
+ 		s.metrics.sent.WithLabelValues(us)
+ 		s.metrics.errors.WithLabelValues(us)
++		s.metrics.successfully_sent.WithLabelValues(us)
+ 
+ 		seen[us] = struct{}{}
+ 		s.ams = append(s.ams, am)

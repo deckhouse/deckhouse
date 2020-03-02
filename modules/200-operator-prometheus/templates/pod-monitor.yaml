@@ -15,7 +15,7 @@ spec:
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
       keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
     relabelings:
-    - regex: endpoint
+    - regex: endpoint|container|namespace
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
