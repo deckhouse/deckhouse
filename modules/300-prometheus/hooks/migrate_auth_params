@@ -11,7 +11,7 @@ function __config__() {
 }
 
 function __main__() {
-  if ! values::has --config prometheus.externalAuthentication && values::has --config prometheus.password && ! values::has --config prometheus.allowedUserGroups ; then
+  if ! values::has --config prometheus.externalAuthentication && ! values::has --config prometheus.password && ! values::has --config prometheus.allowedUserGroups ; then
     return 0
   fi
 
