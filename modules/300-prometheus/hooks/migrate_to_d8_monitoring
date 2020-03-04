@@ -11,11 +11,20 @@ function __config__() {
 
 function __main__() {
   if kubectl get namespace kube-prometheus >/dev/null 2>/dev/null ; then
+    if kubectl -n kube-prometheus get certificate grafana >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete certificate grafana >/dev/null 2>/dev/null
+    fi
+
+    if kubectl -n kube-prometheus get dex-authenticators.deckhouse.io grafana >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete dex-authenticators.deckhouse.io grafana >/dev/null 2>/dev/null
+    fi
+
     INGRESSES=$(cat <<-EOF
 grafana
 prometheus
 prometheus-longterm
 trickster
+grafana-dex-authenticator
 EOF
 )
     for ingress in ${INGRESSES} ; do
@@ -29,6 +38,9 @@ grafana
 prometheus
 prometheus-longterm
 trickster
+prometheus-affinitive
+prometheus-main-0
+prometheus-main-1
 EOF
 )
     for service in ${SERVICES} ; do
@@ -38,6 +50,9 @@ EOF
     done
     if kubectl -n kube-prometheus get deployments.apps trickster >/dev/null 2>/dev/null ; then
       kubectl -n kube-prometheus delete deployments.apps trickster >/dev/null 2>/dev/null
+    fi
+    if kubectl -n kube-prometheus get deployments.apps grafana-dex-authenticator >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete deployments.apps grafana-dex-authenticator >/dev/null 2>/dev/null
     fi
     PROMETHEUSRULES=$(cat <<-EOF
 applications
@@ -140,10 +155,6 @@ EOF
       fi
     done
 
-    if kubectl -n kube-prometheus get dex-authenticators.deckhouse.io grafana >/dev/null 2>/dev/null ; then
-      kubectl -n kube-prometheus delete dex-authenticators.deckhouse.io grafana >/dev/null 2>/dev/null
-    fi
-
     SECRETS=$(cat <<-EOF
 deckhouse-registry
 ingress-tls
@@ -151,6 +162,8 @@ prometheus-api-client-tls
 prometheus-longterm
 prometheus-main-additional-configs
 prometheus-scraper-tls
+dex-authenticator-grafana
+registry-dex-authenticator
 EOF
 )
     for secret in ${SECRETS} ; do
