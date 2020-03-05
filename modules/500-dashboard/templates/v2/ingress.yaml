@@ -60,8 +60,13 @@ spec:
   - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
   acme:
     config:
+    {{- if has (include "helm_lib_module_https_cert_manager_cluster_issuer_name" .) (list "route53" "cloudflare" "digitalocean") }}
+    - dns01:
+        provider: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    {{- else }}
     - http01:
         ingressClass: {{ include "helm_lib_module_ingress_class" . | quote }}
+    {{- end }}
       domains:
       - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
   issuerRef:
