@@ -127,6 +127,18 @@
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
+  - alert: KubernetesDaemonSetNotUpToDate
+    expr: |
+      max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled - kube_daemonset_updated_number_scheduled) > 0
+    for: 15m
+    labels:
+      severity_level: "9"
+    annotations:
+      summary: |-
+        Daemonset {{ $labels.namespace }}/{{ $labels.daemonset }} имеет {{ .Value }} подов в неактуальном состоянии в течении 15 минут.
+      description: |-
+        Daemonset {{ $labels.namespace }}/{{ $labels.daemonset }} имеет {{ .Value }} подов в неактуальном состоянии в течении 15 минут.
+
   - alert: KubernetesStatefulSetReplicasUnavailable
     expr: |
       (
