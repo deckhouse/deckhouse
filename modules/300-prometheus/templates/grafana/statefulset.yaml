@@ -13,6 +13,40 @@ spec:
     name: grafana
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: grafana
+      minAllowed:
+        memory: 40Mi
+        cpu: 20m
+      maxAllowed:
+        memory: 512Mi
+        cpu: 350m
+      mode: Auto
+    - containerName: dashboard-provisioner
+      minAllowed:
+        memory: 20Mi
+        cpu: 20m
+      maxAllowed:
+        memory: 512Mi
+        cpu: 350m
+      mode: Auto
+    - containerName: nginx-firewall
+      minAllowed:
+        memory: 20Mi
+        cpu: 20m
+      maxAllowed:
+        memory: 100Mi
+        cpu: 200m
+      mode: Auto
+    - containerName: kube-rbac-proxy
+      minAllowed:
+        memory: 20Mi
+        cpu: 20m
+      maxAllowed:
+        memory: 100Mi
+        cpu: 200m
+      mode: Auto
 {{- end }}
 ---
 apiVersion: apps/v1
