@@ -261,6 +261,7 @@ func (hec *HookExecutionConfig) RunHook() {
 		ConfigValuesJsonPatchFile *os.File
 		BindingContextFile        *os.File
 		KubernetesPatchSetFile    *os.File
+		MetricsFile               *os.File
 
 		hookEnvs []string
 	)
@@ -336,6 +337,10 @@ func (hec *HookExecutionConfig) RunHook() {
 	KubernetesPatchSetFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "D8_KUBERNETES_PATCH_SET_FILE="+KubernetesPatchSetFile.Name())
+
+	MetricsFile, err = TempFileWithPerms(tmpDir, "", 0o777)
+	Expect(err).ShouldNot(HaveOccurred())
+	hookEnvs = append(hookEnvs, "METRICS_PATH="+MetricsFile.Name())
 
 	hookCmd = &exec.Cmd{
 		Path: hec.HookPath,
