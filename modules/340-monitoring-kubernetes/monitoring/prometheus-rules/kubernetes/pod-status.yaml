@@ -1,0 +1,59 @@
+- name: kubernetes.pod_status_incorrect
+  rules:
+    - alert: PodStatusIsIncorrect
+      expr: >
+        (count by (node, namespace, pod) (kube_pod_status_ready{condition="true"} == 0) * on (namespace, pod) group_left(node) kube_pod_info)
+        and
+        (
+          (count by (namespace, pod) (kube_pod_container_status_ready==1) * on (namespace, pod) group_left(node) kube_pod_info)
+          unless
+          (count by (namespace, pod) (kube_pod_container_status_ready==0) * on (namespace, pod) group_left(node) kube_pod_info)
+        )
+      labels:
+        severity_level: "7"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_pending_until_firing_fir: "10m"
+        plk_grouped_by__node_have_pods_with_incorrect_status: "NodeHavePodsInIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }}"
+        description: |
+          В кластере есть под {{ $labels.namespace }}/{{ $labels.pod }} на ноде {{ $labels.node }} у которого состояние пода NotReady, но у всех контейнеров данного пода статус Ready.
+          Это может произойти из-за бага в [kubernetes](https://github.com/kubernetes/kubernetes/issues/80968).
+
+          Что нужно сделать:
+          1. Найти поды в таком состоянии: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'`
+          2. Найти все проблемные ноды: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`
+          3. Перезапустить на данной доне `kubelet`: `systemctl restart kubelet`
+        summary: Под {{ $labels.namespace }}/{{ $labels.pod }} на ноде {{ $labels.node }} находится в некорректном состоянии. Необходимо перезагрузить `kubelet`.
+
+    - alert: NodeHavePodsWithIncorrectStatus
+      expr: min by (node) (ALERTS{alertname="PodStatusIsIncorrect"})
+      labels:
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_pending_unitl_firin_for: "24h"
+        plk_grouped_by__cluster_have_nodes_with_incorrect_pod_status: "ClusterHaveNodesWithIncorrectPodStatus,prometheus=deckhouse"
+        description: |
+          В кластере есть нода {{ $labels.node }} на которой есть поды в некорректном статусе.
+          Это может произойти из-за бага в [kubernetes](https://github.com/kubernetes/kubernetes/issues/80968).
+
+          Что нужно сделать:
+          1. Найти поды в таком состоянии: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'`
+          2. Найти все проблемные ноды: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`
+          3. Перезапустить на данной доне `kubelet`: `systemctl restart kubelet`
+        summary: На ноде {{ $labels.node }} есть поды с некорректным статусом. Необходимо перезагрузить `kubelet`.
+
+    - alert: ClusterHaveNodesWithIncorrectPodStatus
+      expr: min(ALERTS{alertname="NodeHavePodsWithIncorrectStatus"})
+      labels:
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_pending_unitl_firin_for: "24h"
+        description: |
+          В кластере есть ноды, на которых есть поды в некорректном статусе. На какой именно ноде проблема, можно узнать из связанного алерта.
+          Это может произойти из-за бага в [kubernetes](https://github.com/kubernetes/kubernetes/issues/80968).
+        summary: В кластере есть нода, на которой необходимо перезапустить kubelet.
