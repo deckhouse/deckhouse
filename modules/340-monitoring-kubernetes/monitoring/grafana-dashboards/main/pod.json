@@ -439,7 +439,7 @@
           "refId": "S"
         },
         {
-          "expr": "sum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", update_policy=\"Off\"}[$__range]))) * 0\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", update_policy=\"Initial\"}[$__range]))) * 0 + 1\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", update_policy=\"Auto\"}[$__range]))) * 0 + 2\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", update_policy=\"Recreate\"}[$__range]))) * 0 + 3\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range])) * 0 + 5",
+          "expr": "sum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Off\"}[$__range]))) * 0\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Initial\"}[$__range]))) * 0 + 1\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Auto\"}[$__range]))) * 0 + 2\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Recreate\"}[$__range]))) * 0 + 3\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range])) * 0 + 5",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -465,7 +465,7 @@
           "refId": "D"
         },
         {
-          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -513,7 +513,7 @@
           "refId": "J"
         },
         {
-          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -1645,7 +1645,7 @@
               "refId": "E"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__interval_sx3])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -1782,7 +1782,7 @@
               "refId": "E"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__interval_sx3])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -1919,7 +1919,7 @@
               "refId": "E"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__interval_sx3])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2958,7 +2958,7 @@
               "refId": "F"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval_sx3])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__interval_sx3])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3139,7 +3139,7 @@
               "refId": "F"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval_sx3])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__interval_sx3])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3320,7 +3320,7 @@
               "refId": "F"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_recommendation{namespace=\"$namespace\", container=~\"$container\", recommendation_type=\"target\", resource_type=\"memory\"}[$__interval_sx3])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__interval_sx3])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
