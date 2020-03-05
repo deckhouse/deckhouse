@@ -78,7 +78,7 @@ function __main__() {
 
   ###
   # Policy #1:
-  # * kube-dns must be primarily scheduled to master nodes 
+  # * kube-dns must be primarily scheduled to master nodes
   # * then kube-dns must be scheduled to specific nodes
 
   if (( (count_system_nodes + count_kube_dns_nodes) > 0 )); then
@@ -120,7 +120,7 @@ function __main__() {
     if (( count_kube_dns_nodes > 0 )); then
       fltr=$fltr' | .spec.replicas = '$((count_master_nodes + count_kube_dns_nodes))
     elif (( count_system_nodes > 0 )); then
-      fltr=$fltr' | .spec.replicas = '$((count_system_nodes + count_kube_dns_nodes))
+      fltr=$fltr' | .spec.replicas = '$((count_master_nodes + count_system_nodes))
     else
       fltr=$fltr' | .spec.replicas |= (
         [
@@ -132,7 +132,7 @@ function __main__() {
   fi
 
   ###
-  # Policy #3: 
+  # Policy #3:
   # * do not run more than one kube-dns on single node except cases with single master and lack of specific nodes
 
   if (( (count_master_nodes + count_kube_dns_nodes + count_system_nodes) > 1 )); then

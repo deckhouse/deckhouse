@@ -181,9 +181,9 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns").Array())).To(Equal(0))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array())).To(Equal(0))
+			Expect(f.BindingContexts.Get("0.snapshots.node_roles").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns").Array()).To(HaveLen(0))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array()).To(HaveLen(0))
 
 			Expect(f.Session.Err).Should(gbytes.Say("WARNING: Can't find kube-dns deployment."))
 		})
@@ -199,9 +199,9 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array())).To(Equal(0))
+			Expect(f.BindingContexts.Get("0.snapshots.node_roles").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array()).To(HaveLen(0))
 
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.replicas").String()).To(Equal("2"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.tolerations").String()).To(MatchJSON(`[{"key":"node-role.kubernetes.io/master"},{"key":"node-role/system"},{"key":"dedicated.flant.com","operator":"Equal","value":"kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"},{"some":"toleration"}]`))
@@ -222,9 +222,9 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(6))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array())).To(Equal(0))
+			Expect(f.BindingContexts.Get("0.snapshots.node_roles").Array()).To(HaveLen(6))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array()).To(HaveLen(0))
 
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.replicas").String()).To(Equal("6"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.tolerations").String()).To(MatchJSON(`[{"key":"node-role.kubernetes.io/master"},{"key":"node-role/system"},{"key":"dedicated.flant.com","operator":"Equal","value":"kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"},{"some":"toleration"}]`))
@@ -241,15 +241,15 @@ metadata:
 			f.RunHook()
 		})
 
-		It("expectations — snapshots: [4,1,0], replicas: 3, tolerations: original + tolerate d8-specific nodes, empty affinity: wipe, nodeAffinity: schedule to system-nodes, podAntiAffinity: fit different nodes", func() {
+		It("expectations — snapshots: [4,1,0], replicas: 4, tolerations: original + tolerate d8-specific nodes, empty affinity: wipe, nodeAffinity: schedule to system-nodes, podAntiAffinity: fit different nodes", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(4))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array())).To(Equal(0))
+			Expect(f.BindingContexts.Get("0.snapshots.node_roles").Array()).To(HaveLen(4))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array()).To(HaveLen(0))
 
-			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.replicas").String()).To(Equal("3"))
+			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.replicas").String()).To(Equal("4"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.tolerations").String()).To(MatchJSON(`[{"key":"node-role.kubernetes.io/master"},{"key":"node-role/system"},{"key":"dedicated.flant.com","operator":"Equal","value":"kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"},{"some":"toleration"}]`))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.affinity.emptyStuff").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution").Exists()).To(BeFalse())
@@ -265,13 +265,13 @@ metadata:
 			f.RunHook()
 		})
 
-		It("expectations — snapshots: [8,1,0], replicas: 4, tolerations: original + tolerate d8-specific nodes, empty affinity: wipe, nodeAffinity: schedule to dns-nodes, podAntiAffinity: fit different nodes", func() {
+		It("expectations — snapshots: [8,1,0], replicas: 5, tolerations: original + tolerate d8-specific nodes, empty affinity: wipe, nodeAffinity: schedule to dns-nodes, podAntiAffinity: fit different nodes", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(8))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array())).To(Equal(0))
+			Expect(f.BindingContexts.Get("0.snapshots.node_roles").Array()).To(HaveLen(8))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array()).To(HaveLen(0))
 
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.replicas").String()).To(Equal("5"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.tolerations").String()).To(MatchJSON(`[{"key":"node-role.kubernetes.io/master"},{"key":"node-role/system"},{"key":"dedicated.flant.com","operator":"Equal","value":"kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"},{"some":"toleration"}]`))
@@ -293,9 +293,9 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(8))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns").Array())).To(Equal(1))
-			Expect(len(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array())).To(Equal(1))
+			Expect(f.BindingContexts.Get("0.snapshots.node_roles").Array()).To(HaveLen(8))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns").Array()).To(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.kube_dns_autoscaler").Array()).To(HaveLen(1))
 
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.replicas").String()).To(Equal("42"))
 			Expect(f.KubernetesResource("Deployment", "kube-system", "my-kube-dns").Field("spec.template.spec.tolerations").String()).To(MatchJSON(`[{"key":"node-role.kubernetes.io/master"},{"key":"node-role/system"},{"key":"dedicated.flant.com","operator":"Equal","value":"kube-dns"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"},{"some":"toleration"}]`))

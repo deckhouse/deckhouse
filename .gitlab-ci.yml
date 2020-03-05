@@ -40,8 +40,8 @@ Tests:
       EOF
       done
     - >
-      werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local --
-      bash -c "cd /deckhouse/testing/; go test -vet=off ./modules/... ./global-hooks/..."
+      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/testing" --stages-storage :local --
+      go test -vet=off ./modules/... ./global-hooks/...
     - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   before_script:
     - git submodule sync
@@ -62,7 +62,10 @@ Matrix Tests:
     - pwd
     - type multiwerf && source <(multiwerf use 1.0 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests --docker-options="-v $(pwd):/deckhouse" --stages-storage :local -- bash -c "cd /deckhouse/testing/; ginkgo -vet off ./matrix/ --slowSpecThreshold=30;"
+    - werf run tests
+        --docker-options="-v $(pwd):/deckhouse -w /deckhouse/testing"
+        --stages-storage :local
+        -- ginkgo -vet=off --slowSpecThreshold=30 ./matrix/
   except:
     - schedules
   tags:
