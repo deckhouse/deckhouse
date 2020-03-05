@@ -350,7 +350,7 @@
           "refId": "A"
         },
         {
-          "expr": "100 * count by (namespace) (\n  sum by (namespace, vpa) (avg_over_time(vpa_recommendation{namespace=~\"$namespace\", container!=\"POD\"}[$__range]))\n) \n/ count by (namespace) (sum by (namespace, controller) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "100 * count by (namespace) (\n  sum by (namespace, verticalpodautoscaler) (avg_over_time(vpa_target_recommendation{namespace=~\"$namespace\", container!=\"POD\"}[$__range]))\n) \n/ count by (namespace) (sum by (namespace, controller) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1450,7 +1450,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -1588,7 +1588,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -1726,7 +1726,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -1864,7 +1864,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2002,7 +2002,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2140,7 +2140,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2278,7 +2278,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2416,7 +2416,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2554,7 +2554,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2692,7 +2692,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2830,7 +2830,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2968,7 +2968,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3106,7 +3106,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3244,7 +3244,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3382,7 +3382,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3520,7 +3520,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3658,7 +3658,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3796,7 +3796,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3934,7 +3934,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4072,7 +4072,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4210,7 +4210,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4348,7 +4348,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4486,7 +4486,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4624,7 +4624,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4762,7 +4762,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -4900,7 +4900,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5038,7 +5038,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5176,7 +5176,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5314,7 +5314,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5452,7 +5452,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5590,7 +5590,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5728,7 +5728,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -5866,7 +5866,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -6004,7 +6004,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(vpa_recommendation{container!=\"POD\", namespace=\"$namespace\", recommendation_type=\"target\", resource_type=\"cpu\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -10990,7 +10990,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -11169,7 +11169,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -11348,7 +11348,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -11527,7 +11527,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -11706,7 +11706,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -11885,7 +11885,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -12064,7 +12064,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -12243,7 +12243,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -12422,7 +12422,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -12601,7 +12601,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -12780,7 +12780,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -12959,7 +12959,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -13138,7 +13138,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -13317,7 +13317,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -13496,7 +13496,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -13675,7 +13675,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -13854,7 +13854,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -14033,7 +14033,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -14212,7 +14212,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -14391,7 +14391,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -14570,7 +14570,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -14749,7 +14749,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -14928,7 +14928,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -15107,7 +15107,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -15286,7 +15286,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -15465,7 +15465,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -15644,7 +15644,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -15823,7 +15823,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -16002,7 +16002,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -16181,7 +16181,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -16360,7 +16360,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -16539,7 +16539,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -16718,7 +16718,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -16897,7 +16897,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by(namespace) (avg_over_time(vpa_recommendation{namespace=\"$namespace\", container!=\"POD\", resource_type=\"memory\", recommendation_type=\"target\"}[$__interval_sx3]))",
+              "expr": "sum by(namespace) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
