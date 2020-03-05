@@ -1,0 +1,24 @@
+- name: d8.nginx_ingress
+  rules:
+  - alert: D8NginxIngressRewriteTargetMigrationEnabled
+    expr: max(d8_nginx_ingress_rewrite_target_migration_enabled) > 0
+    labels:
+      severity_level: "9"
+      d8_module: nginx_ingress
+      d8_component: ingress-conversion-webhook
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration, который создает `rwr` ингрессы.
+
+        Данный параметр был создан для миграции со старых версий Ingress ресурсов на новые.
+        В кластере необходимо отключить данный параметр, для этого нужно:
+        1. Во всех клиентских `Ingress` ресурсах изменить аннотации с вида `ingress.kubernetes.io` на `nginx.ingress.kubernetes.io`
+        2. Если в клиентских `Ingress` ресурсах используется аннотация `nginx.ingress.kubernetes.io/rewrite-target`, то ее формат необходимо модифицировать, так как описано в `Ingress` ресурсе с постфиксом `-rwr` и добавить аннотацию `nginx.ingress.kubernetes.io/use-regex`
+        3. После чего выкатить все обновленные `Ingress` ресурсы
+        4. Согласовать с клиентом время, когда можно перекатить все ingress контроллеры, так как сейчас при отключении данной опции все ingress контроллеры перекатываются разом.
+        5. Если у вас в кластере используется новый модуль `ingress-nginx`, то после переделки всех ресурсов и до отключения данного флага нужно отредактировать custom resource `IngressNginxController` указав там `ingressClass` без `rwr`.
+      summary: |
+        В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration.
+
