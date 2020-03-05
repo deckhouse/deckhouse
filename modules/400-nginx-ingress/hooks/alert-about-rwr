@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    schedule:
+    - crontab: "*/10 * * * *"
+EOF
+}
+
+function __main__() {
+  if values::is_true nginxIngress.rewriteTargetMigration ; then
+    echo '{"name":"d8_nginx_ingress_rewrite_target_migration_enabled", "set": 1}' >> $METRICS_PATH
+  else
+    echo '{"name":"d8_nginx_ingress_rewrite_target_migration_enabled", "set": 0}' >> $METRICS_PATH
+  fi
+}
+
+hook::run "$@"
