@@ -1,0 +1,21 @@
+- name: d8.user_authz
+  rules:
+    - alert: D8DeprecatedClusterAuthorizationRuleFoundInCluster
+      expr: max(d8_deprecated_cluster_authorization_rule) > 0
+      labels:
+        severity_level: "9"
+        d8_module: user-authz
+        d8_component: cluster-authorization-rule
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        description: |
+          В кластере используются кастомные ресурсы `ClusterAuthorizationRule` со старым `accessLevel` (`Master` или `Deploy`).
+
+          В данном случае необходимо сделать:
+          1. Найти все такие `ClusterAuthorizationRule`: `kubectl get clusterauthorizationrules.deckhouse.io -o json | jq '.items[] | select(.spec.accessLevel == "Master" or .spec.accessLevel == "Deploy") | "\(.metadata.name)"' -r`
+          2. Изменить accessLevel (в репозитории, откуда выкатываются или руками в кластере) с `Master` на `PrivilegedUser` и `Deploy` на `Editor`.
+          3. Данный алерт пропадет
+        summary: |
+          В кластере используются кастомные ресурсы `ClusterAuthorizationRule` со старым `accessLevel` (`Master` или `Deploy`).
+

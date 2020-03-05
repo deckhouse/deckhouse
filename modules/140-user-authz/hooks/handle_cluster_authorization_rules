@@ -38,6 +38,12 @@ function __on_kubernetes::ccr() {
 
 function __on_kubernetes::car() {
   values::set userAuthz.internal.crds "$(context::jq -r '[.snapshots.car[] | {"name": .object.metadata.name, "spec": .object.spec}]')"
+  deprecated_cluster_authorization_rule_metric="$(context::jq -r '.snapshots.car[].object | select(.spec.accessLevel == "Master" or .spec.accessLevel == "Deploy")')"
+  if [[ ! -z "${deprecated_cluster_authorization_rule_metric}" ]] ; then
+    echo '{"name":"d8_deprecated_cluster_authorization_rule", "set": 1}' >> $METRICS_PATH
+  else
+    echo '{"name":"d8_deprecated_cluster_authorization_rule", "set": 0}' >> $METRICS_PATH
+  fi
 }
 
 hook::run "$@"
