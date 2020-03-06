@@ -84,11 +84,13 @@ spec:
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
         env:
         - name: GF_AUTH_BASIC_ENABLED
-          value: "true"
+          value: "false"
         - name: GF_AUTH_PROXY_ENABLED
           value: "false"
         - name: GF_AUTH_ANONYMOUS_ENABLED
-          value: "false"
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Admin"
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_USERS_DEFAULT_THEME
@@ -110,11 +112,13 @@ spec:
           mountPath: /var/lib/grafana-storage
         - name: grafana-datasources
           mountPath: /grafana/conf/provisioning/datasources
-        - name: grafana-dashboards-list-custom
+        - name: grafana-dashboards-difinitions
           mountPath: /grafana/conf/provisioning/dashboards/d8-custom.yaml
-          subPath: d8-custom.yaml
+          subPath: grafana-dashboards-difinitions.yaml
         - name: grafana-dashboard-definitions-custom
           mountPath: /grafana-dashboard-definitions-custom
+        - name: shared-dashboards-folder
+          mountPath: /etc/grafana-dashboard-definitions
         resources:
           requests:
             memory: 100Mi
@@ -131,12 +135,9 @@ spec:
           requests:
             memory: 100Mi
             cpu: 100m
-      - name: nginx-firewall
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana-nginx-firewall:{{ $.Values.global.modulesImages.tags.prometheus.grafanaNginxFirewall }}
-        resources:
-          requests:
-            memory: 100Mi
-            cpu: 100m
+        volumeMounts:
+        - name: shared-dashboards-folder
+          mountPath: /tmp/dashboards/
       - name: kube-rbac-proxy
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -151,7 +152,7 @@ spec:
             excludePaths:
             - /api/health
             upstreams:
-            - upstream: http://127.0.0.1:3080/
+            - upstream: http://127.0.0.1:3000/
               path: /
               authorization:
                 resourceAttributes:
@@ -171,12 +172,14 @@ spec:
           tcpSocket:
             port: 443
       volumes:
+      - name: shared-dashboards-folder
+        emptyDir: {}
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
-      - name: grafana-dashboards-list-custom
+      - name: grafana-dashboards-difinitions
         configMap:
-          name: grafana-dashboards-list-custom
+          name: grafana-dashboards-difinitions
       - name: grafana-dashboard-definitions-custom
         configMap:
           name: grafana-dashboard-definitions-custom

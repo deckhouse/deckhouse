@@ -1,0 +1,55 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: service_monitors
+      apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+    - name: pod_monitors
+      apiVersion: monitoring.coreos.com/v1
+      kind: PodMonitor
+      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+    - name: rules
+      apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+    - name: custom_services
+      apiVersion: v1
+      kind: Service
+      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      labelSelector:
+        matchExpressions:
+        - key: prometheus-custom-target
+          operator: Exists
+EOF
+}
+
+
+function __main__() {
+  context::jq -rc ' .snapshots.service_monitors | length | {"name":"d8_monitoring_custom_unknown_service_monitor_total", "set": . }' >> $METRICS_PATH
+  context::jq -rc ' .snapshots.pod_monitors | length | {"name":"d8_monitoring_custom_unknown_pod_monitor_total", "set": . }' >> $METRICS_PATH
+  context::jq -rc ' .snapshots.rules | length | {"name":"d8_monitoring_custom_unknown_prometheus_rules_total", "set": . }' >> $METRICS_PATH
+  context::jq -rc ' .snapshots.custom_services | length | {"name":"d8_monitoring_custom_old_prometheus_custom_targets_total", "set": . }' >> $METRICS_PATH
+}
+
+hook::run "$@"

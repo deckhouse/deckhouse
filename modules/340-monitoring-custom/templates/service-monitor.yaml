@@ -2,33 +2,28 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: custom
+  name: custom-service
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
+  sampleLimit: 1000
   endpoints:
-  - port: http-metrics
+  # HTTP target with samples limited to 1000
+  - relabelings:
+{{ include "label_selector" . | indent 4 }}
+{{ include "keep_targets_for_schema" (list "service" "http") | indent 4}}
+{{ include "endpoint_by_service_port_name" "http" | indent 4 }}
+{{ include "base_relabeling" "service" | indent 4 }}
+
+  # HTTPS target with samples limited to 1000
+  - scheme: https
+{{ include "tls_config" . | indent 4 }}
     relabelings:
-    - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
-      replacement: custom-$1
-      targetLabel: job
-    - regex: endpoint
-      action: labeldrop
-  - port: https-metrics
-    scheme: https
-    tlsConfig:
-      insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
-    relabelings:
-    - sourceLabels: [__meta_kubernetes_service_label_prometheus_custom_target]
-      replacement: custom-$1
-      targetLabel: job
-    - regex: endpoint
-      action: labeldrop
+{{ include "label_selector" . | indent 4 }}
+{{ include "keep_targets_for_schema" (list "service" "https") | indent 4 }}
+{{ include "endpoint_by_service_port_name" "https" | indent 4 }}
+{{ include "base_relabeling" "service" | indent 4 }}
+
+  selector: {}
   namespaceSelector:
     any: true
-  selector:
-    matchExpressions:
-    - key: prometheus-custom-target
-      operator: Exists

@@ -13,8 +13,11 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - &&  \
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "v2.16.0" --single-branch https://github.com/prometheus/prometheus
 WORKDIR /prometheus/prometheus
+COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./
-RUN patch -p1 < successfully_sent_metric.patch && \
+
+RUN patch -p1 < sample_limit_annotation.patch && \
+  patch -p1 < successfully_sent_metric.patch && \
   make build
 
 FROM quay.io/prometheus/busybox-linux-amd64:latest

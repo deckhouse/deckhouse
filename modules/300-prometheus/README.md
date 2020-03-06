@@ -8,7 +8,7 @@ search: prometheus
 ---
 
 Модуль prometheus
-=======
+=================
 
 Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [operator-prometheus](../200-operator-prometheus/)) и полностью его настраивает!
 
@@ -23,10 +23,10 @@ search: prometheus
 Дополнительная информация
 -------------------------
 
+* [Мониторинг приложений в проекте](../../docs/guides/MONITORING.md)
 * [Разработка правил для Prometheus (алертов и recording)](docs/PROMETHEUS_RULES_DEVELOPMENT.md)
 * [Разработка графиков (Dashboard'ов для Grafana)](docs/GRAFANA_DASHBOARD_DEVELOPMENT.md)
 * [Разработка target'ов для Prometheus (целей, которые мониторить)](docs/PROMETHEUS_TARGETS_DEVELOPMENT.md)
-* [Кастомные правила и графики для конкретного проекта](docs/PROJECT_CUSTOMIZATION.md)
 
 Конфигурация
 ------------
@@ -103,9 +103,14 @@ search: prometheus
         * Значение по-умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее [см. хук](hooks/detect_vpa_max).
     * `updateMode` — режим обновления Pod'ов.
         * По-умолчанию `Initial`, но возможно поставить `Auto` или `Off`.
+* `metrics` — тонкие настройки сбора метрик с компопнентов модуля.
+    * `prometheusSampleLimit` — лимит по колличеству допустимых семплов, который можно получить от prometheus.
+      * По-умолчанию `5000`.  
+    * `tricksterSampleLimit` — лимит по колличеству допустимых семплов, который можно получить от trickster.
+      * По-умолчанию `1000`. 
 * `highAvailability` — ручное управление [режимом отказоустойчивости](/FEATURES.md#отказоустойчивость).
 * `scrapeInterval` — с помощью данного параметра можно указать, как часто prometheus будет собирать метрики с таргетов. Evaluation Interval всегда равен scrapeInterval.
-  * По-умолчанию `30s`.
+    * По-умолчанию `30s`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/README.md#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
@@ -126,4 +131,44 @@ prometheus: |
   - key: dedicated
     operator: Equal
     value: example
+```
+### Dashboard'ы для Grafana
+Для хранения dashboard'ов добавлен специальный ресурс - `GrafanaDashboardDefinition`. [Читайте подробнее](./docs/GRAFANA_DASHBOARD_DEVELOPMENT.md) в документации по разработке графиков Grafana.
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaDashboardDefinition
+metadata:
+  name: my-dashboard
+spec:
+  folder: My folder # Папка, в которой в Grafana будет отображаться ваш dashboard
+  definition: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+...
+```
+### Rule'ы для Prometheus
+Для хранения PrometheusRule добавлен специальный ресурс - `CustomPrometheusRules`. [Читайте подробнее](../../docs/guides/MONITORING.md) в документации по добавлению пользовательских алертов.
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomPrometheusRules
+metadata:
+  name: my-rules
+spec:
+  groups:
+  - name: cluster-state-alert.rules
+    rules:
+    - alert: CephClusterErrorState
+      annotations:
+        description: Storage cluster is in error state for more than 10m.
+        summary: Storage cluster is in error state
+        polk_flant_com_markup_format: markdown
+      expr: |
+        ceph_health_status{job="rook-ceph-mgr"} > 1
 ```

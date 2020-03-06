@@ -1,0 +1,26 @@
+global:
+  enabledModules: ["vertical-pod-autoscaler-crd"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+  discovery:
+    clusterControlPlaneIsHighlyAvailable: true
+    d8SpecificNodeCountByRole:
+      system: 1
+    clusterVersion: 1.15.5
+
+monitoringApplications:
+  enabledApplications:
+    __ConstantChoices__:
+    - ["nats", "php-fpm", "prometheus"]
+    - []
+  discovery:
+    enabledApplications:
+      __ConstantChoices__:
+      - ["nats", "php-fpm", "prometheus"]
+      - []
+  internal:
+    enabledApplicationsSummary:
+      __ConstantChoices__:
+      - ["nats", "php-fpm", "prometheus"]
+      - []

@@ -1,0 +1,94 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: rules
+      apiVersion: deckhouse.io/v1alpha1
+      kind: CustomPrometheusRules
+      includeSnapshotsFrom: ["rules", "internal_rules"]
+      jqFilter: '{"name": .metadata.name, "groups": .spec.groups}'
+    - name: internal_rules
+      apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      includeSnapshotsFrom: ["rules", "internal_rules"]
+      labelSelector:
+        matchLabels:
+          module: prometheus
+          heritage: deckhouse
+          app: prometheus
+          prometheus: main
+          component: rules
+      jqFilter: '.metadata.name'
+EOF
+}
+
+
+function create_rule() {
+  name=$1
+  rule=$2
+
+  kubernetes::create_yaml << EOF
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: d8-custom-${name}
+  namespace: d8-monitoring
+  labels:
+    module: prometheus
+    heritage: deckhouse
+    app: prometheus
+    prometheus: main
+    component: rules
+spec:
+  groups:
+$(echo "$rule" | yq r - | sed 's/^/  /')
+EOF
+}
+
+function delete_rule() {
+  name=$1
+  kubernetes::delete d8-monitoring prometheusrules/d8-custom-${name}
+}
+
+function __on_kubernetes::rules::synchronization() {
+  for i in $(context::jq -r '.snapshots.internal_rules | keys[]'); do
+    filterResult=$(context::get snapshots.internal_rules.$i.filterResult)
+    kubernetes::delete d8-monitoring prometheusrules/${filterResult}
+  done
+
+  if ! context::has snapshots.rules.0; then
+    return 0
+  fi
+
+  for i in $(context::jq -r '.snapshots.rules | keys[]'); do
+    filterResult=$(context::get snapshots.rules.$i.filterResult)
+    name=$(jq -rc '.name' <<< ${filterResult})
+
+    internal_rules_names=$(context::jq -rc '.snapshots.rules')
+    create_rule "$name" "$(jq -rc '.groups' <<< ${filterResult})"
+  done
+}
+
+function __on_kubernetes::rules::added_or_modified() {
+  name=$(context::get filterResult.name)
+
+  delete_rule "$name"
+  create_rule "$name" "$(context::get filterResult.groups)"
+}
+
+function __on_kubernetes::rules::deleted() {
+  delete_rule "$(context::get filterResult.name)"
+}
+
+function __main__() {
+  return 0
+}
+
+hook::run "$@"

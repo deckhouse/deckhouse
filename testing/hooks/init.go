@@ -300,7 +300,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	out := hec.Session.Out.Contents()
-	By("Parsing config " + string(out))
+	By("Parsing config\n" + string(out))
 
 	var parsedConfig json.RawMessage
 	Expect(yaml.Unmarshal(out, &parsedConfig)).To(Succeed())

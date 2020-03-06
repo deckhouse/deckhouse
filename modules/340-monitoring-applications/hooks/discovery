@@ -7,24 +7,32 @@ function __config__() {
     configVersion: v1
     beforeHelm: 10
     kubernetes:
-    - name: services
-      includeSnapshotsFrom: ["services"]
+    - name: services_old
+      includeSnapshotsFrom: ["services", "services_old"]
       apiVersion: v1
       kind: Service
       labelSelector:
         matchExpressions:
         - key: prometheus-target
           operator: Exists
+    - name: services
+      includeSnapshotsFrom: ["services", "services_old"]
+      apiVersion: v1
+      kind: Service
+      labelSelector:
+        matchExpressions:
+        - key: prometheus.deckhouse.io/target
+          operator: Exists
 EOF
 }
 
-function __on_kubernetes::services() {
-  enabledApplications="$(context::jq -r '[.snapshots.services[] | .object.metadata.labels."prometheus-target"] | sort | unique')"
+function __main__() {
+  enabledApplications=$(context::jq -r '[.snapshots.services_old[] | .object.metadata.labels."prometheus-target"] + [.snapshots.services[] | .object.metadata.labels."prometheus.deckhouse.io/target"] | sort | unique')
   values::set monitoringApplications.discovery.enabledApplications "$enabledApplications"
 }
 
 function __on_before_helm() {
-  enabledApplicationsSummary="$(values::jq -r '.monitoringApplications.discovery.enabledApplications + .monitoringApplications.enabledApplications | unique')"
+  enabledApplicationsSummary=$(values::jq -r '.monitoringApplications.discovery.enabledApplications + .monitoringApplications.enabledApplications | unique')
   values::set monitoringApplications.internal.enabledApplicationsSummary "${enabledApplicationsSummary}"
 }
 

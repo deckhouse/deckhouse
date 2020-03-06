@@ -14,11 +14,11 @@ search: grafana разработка графиков
 ----------------
 
 1. Для создания dashboard'ов в Графане реализован ресурс [GrafanaDashboardDefinition](#ресурс-grafanadashboarddefinition).
-1. В модулях манифесты dashboard'ов лежат в директории `<module_root>/monitoring/grafana-dashboards/`. Они автоматически преобразуются в ресурсы [GrafanaDashboardDefinition](#ресурс-grafanadashboarddefinition), при этом:
+2. В модулях манифесты dashboard'ов лежат в директории `<module_root>/monitoring/grafana-dashboards/`. Они автоматически преобразуются в ресурсы [GrafanaDashboardDefinition](#ресурс-grafanadashboarddefinition), при этом:
     * каждая поддиректория в этой директории соответствует Folder'у в Grafana,
     * а каждый файл — Dashboard'у в Grafana.
-2. Если нужно добавить новый Folder, то просто создаём папку в каталоге grafana-dashboards/ и добавляем туда хотя бы один json-манифест.
-3. Править Dashboard'ы в файлах не нужно (если только это не какая-то совсем простая правка), вместо этого:
+3. Если нужно добавить новый Folder, то просто создаём папку в каталоге grafana-dashboards/ и добавляем туда хотя бы один json-манифест.
+4. Править Dashboard'ы в файлах не нужно (если только это не какая-то совсем простая правка), вместо этого:
     * Открываем Dashboard в Grafana:
         * если это один из существующих — открываем его и [нажимаем кнопку Make editable](img/grafana_make_editable.jpg);
         * если это новый — его необходимо просто создать (в любом Folder, это не важно, он потом переедет в тот, в который будет положен в репозитарии);
@@ -26,6 +26,7 @@ search: grafana разработка графиков
     * Меняем, меняем, меняем... до тех пор, пока не станем довольны Dasboard'ом. Лучше периодически нажимать на кнопку сохранить в Grafana чтобы, если браузер упадет, не потерять изменения.
     * [Выгружаем Dashboard в JSON](img/grafana_export.jpg) и сохраняем в файл (новый или существующий).
 4. Можно менять название Dashboard'а, название файла, переносить файл между Folder'ами — все подцепится автоматически.
+5. Системные dashboard'ы должны хранится в ресурсах GrafanaDashboardDefinition с префиксом `d8` в имени.
 
 ### Ресурс GrafanaDashboardDefinition
 

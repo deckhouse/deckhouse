@@ -14,22 +14,34 @@
   * Формат — список строк.
   * Поддерживаемые приложения:
 
-| **Application** | **Grafana Dashboard** | **PrometheusRule** | **ServiceMonitor** |
+| **Application** | **Grafana Dashboard** | **PrometheusRule** | **Sample Limit** |
 | ------ |:------:|:------:|:------:|
-| consul        |                    |                    | :white_check_mark: |
-| elasticsearch | :white_check_mark: |                    | :white_check_mark: |
-| etcd3         | :white_check_mark: |                    | :white_check_mark: |
-| fluentd       |                    |                    | :white_check_mark: |
-| jmx           | :white_check_mark: |                    |                    |
-| memcached     | :white_check_mark: |                    | :white_check_mark: |
-| minio         |                    |                    | :white_check_mark: |
-| mongodb       | :white_check_mark: |                    | :white_check_mark: |
-| nats          | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| nginx         |                    |                    | :white_check_mark: |
-| php-fpm       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| prometheus    | :white_check_mark: |                    | :white_check_mark: |
-| rabbitmq      | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| redis         | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| sidekiq       | :white_check_mark: |                    | :white_check_mark: |
-| trickster     |                    |                    | :white_check_mark: |
-| uwsgi         | :white_check_mark: |                    | :white_check_mark: |
+| consul        |                    |                    | 500 |
+| elasticsearch | :white_check_mark: |                    | 5000 |
+| etcd3         | :white_check_mark: |                    | 1000 |
+| fluentd       |                    |                    | 500 |
+| memcached     | :white_check_mark: |                    | 2500 |
+| minio         |                    |                    | 500 |
+| mongodb       | :white_check_mark: |                    | 1000 |
+| nats          | :white_check_mark: | :white_check_mark: | 500 |
+| nginx         |                    |                    | 500 |
+| php-fpm       | :white_check_mark: | :white_check_mark: | 1000 |
+| prometheus    | :white_check_mark: |                    | 5000 |
+| rabbitmq      | :white_check_mark: | :white_check_mark: | 2500 |
+| redis         | :white_check_mark: | :white_check_mark: | 1000 |
+| sidekiq       | :white_check_mark: |                    | 1000 |
+| trickster     |                    |                    | 1000 |
+| uwsgi         | :white_check_mark: |                    | 1000 |
+
+
+### Как собирать метрики с приложения?
+
+1. Необходимо поставить лейбл `prometheus.deckhouse.io/target` на Service, который вы хотите мониторить. В значении указать имя application из списка выше, на который ведет этот Service.
+2. Указать порту, с которого необходимо собирать метрики, имя `http-metrics` и `https-metrics` для подключения по HTTP или HTTPS соответственно.
+Если это не возможно, предлагается воспользоваться двумя аннотациями: `prometheus.deckhouse.io/port: номер_порта` для указания порта и `prometheus.deckhouse.io/tls: "true"`, если сбор метрик будет проходить по HTTPS.
+3. Указать дополнительные аннотации для более тонкой настройки:
+    * `prometheus.deckhouse.io/path` — путь для сбора метрик (по умолчанию: `/metrics`)
+    * `prometheus.deckhouse.io/allow-unready-pod` — разрешает сбор метрик с подов в любом состоянии (по умолчанию метрики собираются только с подов в состоянии Ready).
+    * `prometheus.deckhouse.io/sample-limit` — сколько семплов разрешено собирать с пода (значение лимита по умолчанию можно посмотреть в таблице выше).
+
+Подробнее о том, как мониторить приложения, можно ознакомиться [здесь](../../docs/guides/MONITORING.md).

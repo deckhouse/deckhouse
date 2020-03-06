@@ -39,6 +39,13 @@ metadata:
   name: s2
   labels:
     prometheus-target: winword
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: new
+  labels:
+    prometheus.deckhouse.io/target: test
 `
 )
 
@@ -63,7 +70,8 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 
 			It("enabledApplications must contain single application 'php-fpm'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm"]`))
+				// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
+				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`[null, "php-fpm"]`))
 			})
 		})
 	})
@@ -87,7 +95,8 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 
 			It("enabledApplications must contain single application 'php-fpm' and 'winword'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm","winword"]`))
+				// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
+				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`[null, "php-fpm","test","winword"]`))
 			})
 		})
 	})

@@ -1,0 +1,38 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: customprometheusrules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: prometheus
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: customprometheusrules
+    singular: customprometheusrule
+    kind: CustomPrometheusRules
+  version: v1alpha1
+  additionalPrinterColumns:
+  - JSONPath: .spec.folder
+    name: Folder
+    description: 'Folder in Grafana.'
+    type: string
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'CustomPrometheusRules is an interface to describing additional prometheus rules.'
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required:
+          - groups
+          properties:
+            groups:
+              type: array
+              description: Groups of the prometheus rules.
+              items:
+                type: object

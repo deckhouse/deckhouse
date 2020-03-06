@@ -3,3 +3,4 @@
   {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards" (printf "monitoring/grafana-dashboards/applications/%s" $application)) }}
   {{- include "helm_lib_prometheus_rules_recursion" (list $context "d8-monitoring" "monitoring/prometheus-rules" (printf "monitoring/prometheus-rules/applications/%s" $application)) }}
 {{- end }}
+{{- include "helm_lib_prometheus_rules_recursion" (list $context "d8-monitoring" "monitoring/prometheus-rules" (printf "monitoring/prometheus-rules/warnings" )) }}
