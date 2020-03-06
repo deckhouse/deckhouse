@@ -2,10 +2,12 @@ FROM golang:1.12-buster
 
 WORKDIR /src/
 COPY lua-info.patch /
+COPY reason.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch nginx-0.25.1 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
+    patch -p1 < /reason.patch && \
     make build
 
 
