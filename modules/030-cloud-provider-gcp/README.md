@@ -171,6 +171,13 @@ curl -L https://github.com/nbering/terraform-inventory/releases/download/v2.2.0/
 chmod +x ~/.ansible-terraform-inventory
 ```
 
+**Для развертывания и функционирования кластера необходим сервис-аккаунт со следующими ролями:**
+
+* Compute Instance Admin (v1)
+* Compute Network Admin
+* Service Account Key Admin
+* Service Account User
+
 ## Как мне поднять кластер
 
 1. [Настройте](#настройка-окружения) облачное окружение. Возможно, [автоматически](#автоматизированная-подготовка-окружения).
