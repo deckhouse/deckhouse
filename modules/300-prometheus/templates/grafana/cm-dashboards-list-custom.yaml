@@ -1,15 +1,25 @@
-# TODO: Удалить механизм grafana-dashboard-definitions-custom когда поймём, что им никто не пользуется
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards-list-custom
+  name: grafana-dashboards-difinitions
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
 data:
-  d8-custom.yaml: |+
+  grafana-dashboards-difinitions.yaml: |+
     apiVersion: 1
     providers:
+    - name: GrafanaDashboardDefinition
+      orgid: 1
+      folder: ''
+      type: file
+      disableDelete: false
+      allowUiUpdates: false
+      updateIntervalSeconds: 30
+      options:
+        path: /etc/grafana-dashboard-definitions
+        folderFromFileStructure: true
+    # TODO: Удалить механизм grafana-dashboard-definitions-custom когда поймём, что им никто не пользуется
     - name: custom
       orgId: 1
       folder: Custom

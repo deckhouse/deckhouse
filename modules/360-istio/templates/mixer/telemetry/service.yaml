@@ -7,7 +7,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   annotations:
     networking.istio.io/exportTo: "*"
-{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry" "prometheus-target" "istio-mixer" "prometheus-target-telemetry" "istio-mixer-telemetry")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "mixer-telemetry" "prometheus.deckhouse.io/target" "istio-mixer" "prometheus.deckhouse.io/target" "istio-mixer-telemetry")) | indent 2 }}
 spec:
   ports:
   - name: grpc-mixer

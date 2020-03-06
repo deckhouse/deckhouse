@@ -1,0 +1,20 @@
+- name: d8.monitoring-application.warnings
+  rules:
+  - alert: D8OldPrometheusTargetFormat
+    expr: |
+      d8_monitoring_applications_old_prometheus_target_total{job="deckhouse"} > 0
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      description: |-
+        В кластере используются Service'ы с label'ом `prometheus-target` для сбора метрик.
+
+        Для поиска можно воспользоваться командой: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
+
+        Формат изменился. Необходимо изменить label `prometheus-target` на `prometheus.deckhouse.io/target`.
+        Подробнее [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+      summary: >
+        В кластере используются Service'ы с label'ом `prometheus-target` для сбора метрик.

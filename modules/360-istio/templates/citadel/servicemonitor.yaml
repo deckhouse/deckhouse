@@ -7,10 +7,10 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "citadel" "prometheus" "main")) | indent 2 }}
 spec:
-  jobLabel: prometheus-target
+  jobLabel: prometheus.deckhouse.io/target
   selector:
     matchLabels:
-      prometheus-target: istio-citadel
+      prometheus.deckhouse.io/target: istio-citadel
   namespaceSelector:
     matchNames:
     - d8-{{ $.Chart.Name }}

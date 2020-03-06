@@ -4,7 +4,8 @@ RUN mkdir -p /go/src/github.com/grafana/grafana && \
 WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .
-RUN patch -p1 < ./extra_vars.patch
+COPY ./folder.patch .
+RUN patch -p1 < ./extra_vars.patch && patch -p1 < ./folder.patch
 RUN bash -l -c "go run build.go build package" && \
     mv dist/*.deb /grafana.deb
 

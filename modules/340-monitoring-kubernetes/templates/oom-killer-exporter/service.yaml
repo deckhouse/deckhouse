@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: oom-killer-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter" "prometheus-target" "oom-killer-exporter")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "oom-killer-exporter" "prometheus.deckhouse.io/target" "oom-killer-exporter")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None

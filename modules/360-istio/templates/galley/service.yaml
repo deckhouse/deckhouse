@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: istio-galley
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "galley" "prometheus-target" "istio-galley")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "galley" "prometheus.deckhouse.io/target" "istio-galley")) | indent 2 }}
 spec:
   ports:
   - port: 443

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: services
+      apiVersion: v1
+      kind: Service
+      includeSnapshotsFrom: ["services"]
+      labelSelector:
+        matchExpressions:
+        - key: prometheus-target
+          operator: Exists
+EOF
+}
+
+
+function __main__() {
+  context::jq -rc ' .snapshots.services | length | {"name":"d8_monitoring_applications_old_prometheus_target_total", "set": . }' >> $METRICS_PATH
+}
+
+hook::run "$@"

@@ -4,6 +4,9 @@ prometheus:
   longtermRetentionDays: 1095
   longtermRetentionGigabytes: 30
   auth: {}
+  metrics:
+    prometheusSampleLimit: 5000
+    tricksterSampleLimit: 1000
   vpa:
     updateMode: Initial
   internal:

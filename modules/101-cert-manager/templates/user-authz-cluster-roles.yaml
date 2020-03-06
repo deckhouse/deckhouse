@@ -66,7 +66,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
-  - certmanager.k8s.i
+  - certmanager.k8s.io
   resources:
   - clusterissuers
   verbs:

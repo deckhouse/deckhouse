@@ -1,0 +1,89 @@
+- name: d8.monitoring-custom.warnings
+  rules:
+  - alert: D8CustomServiceMonitorFoundInCluster
+    expr: |
+      d8_monitoring_custom_unknown_service_monitor_total{job="deckhouse"} > 0
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      description: |-
+        В кластере используются ServiceMonitor'ы, которые не были созданы Deckhouse.
+
+        Для поиска можно воспользоваться командой: `kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse`
+
+        Необходимо отказаться от их использования в пользу существующих в Deckhouse решений по кастомизации проекта.
+        Как собирать метрики с приложений в вашем проекте подробно [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+      summary: >
+        В кластере используются ServiceMonitor'ы, которые не были созданы Deckhouse.
+
+  - alert: D8CustomPodMonitorFoundInCluster
+    expr: |
+      d8_monitoring_custom_unknown_pod_monitor_total{job="deckhouse"} > 0
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      description: |-
+        В кластере используются PodMonitor'ы, которые не были созданы Deckhouse.
+
+        Для поиска можно воспользоваться командой: `kubectl get podmonitors --all-namespaces -l heritage!=deckhouse`
+
+        Необходимо отказаться от их использования в пользу существующих в Deckhouse решений по кастомизации проекта.
+        Как собирать метрики с приложений в вашем проекте подробно [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+      summary: >
+        В кластере используются PodMonitor'ы, которые не были созданы Deckhouse.
+
+  - alert: D8CustomPrometheusRuleFoundInCluster
+    expr: |
+      d8_monitoring_custom_unknown_prometheus_rules_total{job="deckhouse"} > 0
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      description: |-
+        В кластере используются PrometheusRule'ы, которые не были созданы Deckhouse.
+
+        Для поиска можно воспользоваться командой: `kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse`
+
+        Необходимо отказаться от их использования в пользу нового объекта - `CustomPrometheusRules`.
+        Как добавить алерты и/или recording правила [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+      summary: >
+        В кластере используются PrometheusRule'ы, которые не были созданы Deckhouse.
+
+  - alert: D8OldPrometheusCustomTargetFormat
+    expr: |
+      d8_monitoring_custom_old_prometheus_custom_targets_total{job="deckhouse"} > 0
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      description: |-
+        В кластере используются Service'ы с label'ом `prometheus-custom-target` для сбора метрик.
+
+        Для поиска можно воспользоваться командой: `kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target`
+
+        Формат изменился. Необходимо изменить label `prometheus-target` на `prometheus.deckhouse.io/custom-target`.
+        Подробнее [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+      summary: >
+        В кластере используются Service'ы с label'ом `prometheus-custom-target` для сбора метрик.
+
+  - alert: D8DeprecatedPrometheusFunctionalityIsUsed
+    expr: count(ALERTS{alertname=~"D8CustomServiceMonitorFoundInCluster|D8CustomPodMonitorFoundInCluster|D8CustomPrometheusRuleFoundInCluster|D8OldPrometheusCustomTargetFormat|D8OldPrometheusTargetFormat"})
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "24h"
+      summary: В кластере используется устаревший функционал deckhouse.
+      description: |
+        В кластере используется устаревший функционал deckhouse. Что именно используется и как переделать можно узнать в одном из связанных алертов.
