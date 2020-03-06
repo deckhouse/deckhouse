@@ -24,7 +24,6 @@ grafana
 prometheus
 prometheus-longterm
 trickster
-grafana-dex-authenticator
 EOF
 )
     for ingress in ${INGRESSES} ; do
@@ -38,9 +37,6 @@ grafana
 prometheus
 prometheus-longterm
 trickster
-prometheus-affinitive
-prometheus-main-0
-prometheus-main-1
 EOF
 )
     for service in ${SERVICES} ; do
@@ -50,9 +46,6 @@ EOF
     done
     if kubectl -n kube-prometheus get deployments.apps trickster >/dev/null 2>/dev/null ; then
       kubectl -n kube-prometheus delete deployments.apps trickster >/dev/null 2>/dev/null
-    fi
-    if kubectl -n kube-prometheus get deployments.apps grafana-dex-authenticator >/dev/null 2>/dev/null ; then
-      kubectl -n kube-prometheus delete deployments.apps grafana-dex-authenticator >/dev/null 2>/dev/null
     fi
     PROMETHEUSRULES=$(cat <<-EOF
 applications
@@ -154,6 +147,10 @@ EOF
         kubectl -n kube-prometheus delete pdb ${pdb} >/dev/null 2>/dev/null
       fi
     done
+
+    if kubectl -n kube-prometheus get dexauthenticators.deckhouse.io grafana >/dev/null 2>/dev/null ; then
+      kubectl -n kube-prometheus delete dexauthenticators.deckhouse.io grafana >/dev/null 2>/dev/null
+    fi
 
     SECRETS=$(cat <<-EOF
 deckhouse-registry

@@ -18,7 +18,7 @@ function __config__() {
          "name": .metadata.name,
          "namespace": .metadata.namespace,
          "spec": .spec,
-         "allowAccessToKubernetes": ( .metadata.annotations."dex-authenticator.deckhouse.io/allow-access-to-kubernetes" // "" )
+         "allowAccessToKubernetes": ( .metadata.annotations."dexauthenticator.deckhouse.io/allow-access-to-kubernetes" // "" )
        }
    - name: credentials
      apiVersion: v1

@@ -29,8 +29,8 @@ spec:
   $allowedGroups
 EOF
   else
-    if kubectl -n kube-openvpn get dex-authenticator openvpn >/dev/null 2>/dev/null ; then
-      kubectl -n kube-openvpn delete dex-authenticator openvpn >/dev/null 2>/dev/null
+    if kubectl -n kube-openvpn get dexauthenticator openvpn >/dev/null 2>/dev/null ; then
+      kubectl -n kube-openvpn delete dexauthenticator openvpn >/dev/null 2>/dev/null
     fi
   fi
 }

@@ -21,7 +21,7 @@ EOF
 function __main__() {
   # Миграция 2020-02-28: Удаляем временный dex-authenticator.
   if context::has snapshots.dex_authenticator_tmp.0 ; then
-    kubernetes::delete "d8-dashboard" "dex-authenticator/dashboard-tmp"
+    kubernetes::delete "d8-dashboard" "dexauthenticator/dashboard-tmp"
   fi
 }
 
