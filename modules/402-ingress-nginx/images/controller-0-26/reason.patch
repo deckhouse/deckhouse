@@ -1,0 +1,30 @@
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index 7939565c30..1b16f13885 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -219,6 +219,8 @@ func quote(input interface{}) string {
+ 		inputStr = input
+ 	case fmt.Stringer:
+ 		inputStr = input.String()
++	case *string:
++		inputStr = *input
+ 	default:
+ 		inputStr = fmt.Sprintf("%v", input)
+ 	}
+diff --git a/internal/ingress/controller/template/template_test.go b/internal/ingress/controller/template/template_test.go
+index f641960ce1..7e32eb188c 100644
+--- a/internal/ingress/controller/template/template_test.go
++++ b/internal/ingress/controller/template/template_test.go
+@@ -256,10 +256,12 @@ func TestFormatIP(t *testing.T) {
+ }
+
+ func TestQuote(t *testing.T) {
++	foo := "foo"
+ 	cases := map[interface{}]string{
+ 		"foo":      `"foo"`,
+ 		"\"foo\"":  `"\"foo\""`,
+ 		"foo\nbar": `"foo\nbar"`,
++		&foo:       `"foo"`,
+ 		10:         `"10"`,
+ 	}
+ 	for input, output := range cases {
