@@ -29,8 +29,8 @@ spec:
   $allowedGroups
 EOF
   else
-    if kubectl -n d8-monitoring get dex-authenticator grafana >/dev/null 2>/dev/null ; then
-      kubectl -n d8-monitoring delete dex-authenticator grafana >/dev/null 2>/dev/null
+    if kubectl -n d8-monitoring get dexauthenticator grafana >/dev/null 2>/dev/null ; then
+      kubectl -n d8-monitoring delete dexauthenticator grafana >/dev/null 2>/dev/null
     fi
   fi
 }

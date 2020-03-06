@@ -55,7 +55,7 @@ metadata:
   name: test
   namespace: test
   annotations:
-    dex-authenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: test
   sendAuthorizationHeader: false
@@ -109,7 +109,7 @@ metadata:
   name: test
   namespace: d8-monitoring
   annotations:
-    dex-authenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: test
   sendAuthorizationHeader: false
@@ -163,7 +163,7 @@ metadata:
   name: test
   namespace: d8-monitoring
   annotations:
-    dex-authenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: test
   sendAuthorizationHeader: false
