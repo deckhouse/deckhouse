@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib_legacy.sh
+
+function __config__() {
+  jo -p beforeHelm=20
+}
+
+function __main__() {
+  if kubectl -n d8-dashboard get dexauthenticator/dashboard-tmp > /dev/null 2> /dev/null ; then
+    kubectl -n d8-dashboard delete dexauthenticator/dashboard-tmp > /dev/null 2> /dev/null
+  fi
+}
+
+hook::run "$@"
