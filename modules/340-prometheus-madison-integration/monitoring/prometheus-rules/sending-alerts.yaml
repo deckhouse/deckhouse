@@ -117,7 +117,7 @@
         plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
 
     - alert: D8PrometheusMadisonIntegrationMalfunctioning
-      expr: min by (deployment) (ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts"})
+      expr: max(ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts"})
       labels:
         severity_level: "9"
         tier: cluster
@@ -129,7 +129,6 @@
         plk_markup_format: "markdown"
         plk_group_for__missing_dead_mans_switch: "MissingDeadMansSwitch"
         plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring"
-        plk_group_for__kubernetes_deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,prometheus=deckhouse,namespace=d8-monitoring,deployment={{ $labels.deployment }}"
         plk_ignore_labels: "deployment"
         summary: Интеграция prometheus с madison работает некорректно
         description: |
