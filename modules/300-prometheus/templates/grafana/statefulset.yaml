@@ -112,9 +112,9 @@ spec:
           mountPath: /var/lib/grafana-storage
         - name: grafana-datasources
           mountPath: /grafana/conf/provisioning/datasources
-        - name: grafana-dashboards-difinitions
+        - name: grafana-dashboard-definitions
           mountPath: /grafana/conf/provisioning/dashboards/d8-custom.yaml
-          subPath: grafana-dashboards-difinitions.yaml
+          subPath: grafana-dashboard-definitions.yaml
         - name: grafana-dashboard-definitions-custom
           mountPath: /grafana-dashboard-definitions-custom
         - name: shared-dashboards-folder
@@ -177,9 +177,9 @@ spec:
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
-      - name: grafana-dashboards-difinitions
+      - name: grafana-dashboard-definitions
         configMap:
-          name: grafana-dashboards-difinitions
+          name: grafana-dashboard-definitions
       - name: grafana-dashboard-definitions-custom
         configMap:
           name: grafana-dashboard-definitions-custom

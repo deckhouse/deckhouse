@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards-difinitions
+  name: grafana-dashboard-definitions
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
 data:
-  grafana-dashboards-difinitions.yaml: |+
+  grafana-dashboard-definitions.yaml: |+
     apiVersion: 1
     providers:
     - name: GrafanaDashboardDefinition
