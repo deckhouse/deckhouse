@@ -31,6 +31,9 @@
       impact: critical
       likelihood: possible
     annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: |-
         SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks
       summary: >
@@ -42,6 +45,9 @@
       impact: critical
       likelihood: certain
     annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: |-
         SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired. https://{{ $labels.host }} version of site doesn't work!
       summary: >

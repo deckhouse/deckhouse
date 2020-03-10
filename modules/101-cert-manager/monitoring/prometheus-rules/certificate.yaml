@@ -6,6 +6,8 @@
     labels:
       severity: warning
     annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
       summary: Certificate expire soon
 
@@ -15,5 +17,7 @@
     labels:
       severity: warning
     annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expires
       summary: Certificate expires

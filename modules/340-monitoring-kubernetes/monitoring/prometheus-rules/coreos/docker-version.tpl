@@ -12,7 +12,9 @@
       likelihood: certain
       tier: cluster
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_incident_initial_status: "todo"
       description: |-
         Unsupported version {{`{{$labels.container_runtime_version}}`}} of Docker installed on {{`{{$labels.node}}`}} node.
         Supported version of Docker for kubernetes {{`{{$labels.kubelet_version}}`}} version:
@@ -41,7 +43,9 @@
       likelihood: certain
       tier: cluster
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_incident_initial_status: "todo"
       description: |-
         kube-apiserver is at version {{ .Values.global.discovery.clusterVersion }}, but cluster component {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} is at version {{`{{$labels.gitVersion}}`}}.
         1. Check it: `kubectl get nodes`
@@ -59,7 +63,9 @@
       likelihood: certain
       tier: cluster
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_incident_initial_status: "todo"
       description: |-
         Unsupported kernel version of ubuntu OS on {{`{{$labels.node}}`}}.
         * For actual supported Ubuntu 16.04 kernel launch: `apt install linux-image-unsigned-4.18.0-20-generic linux-modules-4.18.0-20-generic linux-modules-extra-4.18.0-20-generic linux-headers-4.18.0-20-generic linux-headers-4.18.0-20`
