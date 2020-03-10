@@ -19,14 +19,14 @@ data:
           origin_type = 'prometheus'
           origin_url = 'http://127.0.0.1:9090'
           max_value_age_secs = {{ mul .Values.prometheus.retentionDays 86400 }}
-          fast_forward_disable = true
+          fast_forward_disable = false
           default_step = 30
 
         [origins.longterm]
           origin_type = 'prometheus'
           origin_url = 'http://127.0.0.1:9091'
           max_value_age_secs = {{ mul .Values.prometheus.longtermRetentionDays 86400 }}
-          fast_forward_disable = true
+          fast_forward_disable = false
           default_step = 300
 
       [metrics]
