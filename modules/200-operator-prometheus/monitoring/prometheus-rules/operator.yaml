@@ -90,14 +90,13 @@
   - alert: D8PrometheusOperatorUnavailable
     expr: count(ALERTS{alertname=~"D8PrometheusOperatorTargetDown|D8PrometheusOperatorTargetAbsent|D8PrometheusOperatorPodIsNotReady|D8PrometheusOperatorPodIsNotRunning"})
     labels:
-      severity_level: "9"
       tier: cluster
       d8_module: operator-prometheus
       d8_component: prometheus-operator
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "24h"
+      plk_alert_type: "group"
       summary: prometheus-operator не работает
       description: |
         prometheus-operator не работает. Что именно с ним не так можно узнать в одном из связанных алертов.

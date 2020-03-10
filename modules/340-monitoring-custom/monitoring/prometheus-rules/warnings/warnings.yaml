@@ -78,12 +78,10 @@
 
   - alert: D8DeprecatedPrometheusFunctionalityIsUsed
     expr: count(ALERTS{alertname=~"D8CustomServiceMonitorFoundInCluster|D8CustomPodMonitorFoundInCluster|D8CustomPrometheusRuleFoundInCluster|D8OldPrometheusCustomTargetFormat|D8OldPrometheusTargetFormat"})
-    labels:
-      severity_level: "9"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "24h"
+      plk_alert_type: "group"
       summary: В кластере используется устаревший функционал deckhouse.
       description: |
         В кластере используется устаревший функционал deckhouse. Что именно используется и как переделать можно узнать в одном из связанных алертов.

@@ -78,14 +78,13 @@
   - alert: D8DeckhouseUnavailable
     expr: count(ALERTS{alertname=~"D8DeckhouseTargetDown|D8DeckhouseTargetAbsent|D8DeckhousePodIsNotReady|D8DeckhousePodIsNotRunning|D8DeckhouseIsHung",job="deckhouse"})
     labels:
-      severity_level: "9"
       tier: cluster
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "24h"
+      plk_alert_type: "group"
       summary: Deckhouse не работает
       description: |
         Deckhouse не работает. Что именно с ним не так можно узнать в одном из связанных алертов.
@@ -283,14 +282,13 @@
   - alert: D8DeckhouseMalfunctioning
     expr: count(ALERTS{alertname=~"D8DeckhousePodIsRestartingTooOften|D8DeckhouseCouldNotDiscoverModules|D8DeckhouseCouldNotRunGlobalHook|D8DeckhouseCouldNotRunModuleHook|D8DeckhouseCouldNotRunModule|D8DeckhouseCouldNotDeleteModule|D8DeckhouseQueueIsHung|D8DeckhouseGlobalHookFailsTooOften|D8DeckhouseModuleHookFailsTooOften"})
     labels:
-      severity_level: "9"
       tier: cluster
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "24h"
+      plk_alert_type: "group"
       summary: Deckhouse работает некорректно
       description: |
         Deckhouse работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.

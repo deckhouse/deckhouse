@@ -3,14 +3,13 @@
     - alert: D8MainPrometheusMalfunctioning
       expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus"})
       labels:
-        severity_level: "7"
         tier: cluster
         d8_module: prometheus
         d8_component: prometheus-main
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "24h"
+        plk_alert_type: "group"
         plk_ignore_labels: "pod"
         plk_group_for__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace=d8-monitoring,service=prometheus"
         plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
@@ -21,14 +20,13 @@
     - alert: D8LongtermPrometheusMalfunctioning
       expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus-longterm"})
       labels:
-        severity_level: "9"
         tier: cluster
         d8_module: prometheus
         d8_component: prometheus-longterm
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "24h"
+        plk_alert_type: "group"
         plk_ignore_labels: "pod"
         plk_group_for__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace=d8-monitoring,service=prometheus-longterm"
         plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
@@ -39,13 +37,12 @@
     - alert: D8PrometheusMalfunctioning
       expr: max(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning"})
       labels:
-        severity_level: "9"
         tier: cluster
         d8_module: prometheus
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "24h"
+        plk_alert_type: "group"
         description: |
           Какой-то из deckhouse prometheus работает некорректно. Что именно и с каким именно prometheus не так можно узнать в одном из связанных алертов.
         summary: Какой-то из deckhouse prometheus работает некорректно
