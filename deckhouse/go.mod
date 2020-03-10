@@ -4,8 +4,8 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.15.90
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20200228162442-d81aacf3378a // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.7.0.20200219194616-4b1b7ccd6da4 // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20200310113251-be84a632b2b4 // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.8.0.20200310112724-935a94f1291f // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spaolacci/murmur3 v1.1.0

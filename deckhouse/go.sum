@@ -68,10 +68,15 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20200220100728-c7d28129fab5/go.m
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200221114704-cda4118a8e3e/go.mod h1:HN6j47n7i+cOEcZ5uHjqGslgFpLXpmHHat5wxXHQyOg=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200225114945-e2fc271966e5/go.mod h1:HN6j47n7i+cOEcZ5uHjqGslgFpLXpmHHat5wxXHQyOg=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200228162442-d81aacf3378a/go.mod h1:HN6j47n7i+cOEcZ5uHjqGslgFpLXpmHHat5wxXHQyOg=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200310103742-673967711a86/go.mod h1:HN6j47n7i+cOEcZ5uHjqGslgFpLXpmHHat5wxXHQyOg=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200310111742-c5b7c11c8024/go.mod h1:/tFcTYgvlkZABTyXhjGtcPyl64bjXRG3G+wjM2frOCY=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200310113251-be84a632b2b4/go.mod h1:k9I+6SMUxO8k6rgvqg/gveiFOBx2rpD/KmqKG6ZhfX0=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f h1:3tmztWJjf61sHfHYLSMi5TDdz5jtmcVqe43PSwsxNvE=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/shell-operator v1.0.0-beta.7.0.20200219194616-4b1b7ccd6da4 h1:LRNYv+1oMvhg+JPKFQigF4rUVNu3CDg6YS61aXhNX0M=
 github.com/flant/shell-operator v1.0.0-beta.7.0.20200219194616-4b1b7ccd6da4/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200310111240-2bdaea5e94c3/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200310112724-935a94f1291f/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
