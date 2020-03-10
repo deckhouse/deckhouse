@@ -9,6 +9,7 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: |
         В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration, который создает `rwr` ингрессы.
 
