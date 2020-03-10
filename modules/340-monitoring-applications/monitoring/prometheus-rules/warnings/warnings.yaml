@@ -8,6 +8,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
         В кластере используются Service'ы с label'ом `prometheus-target` для сбора метрик.
