@@ -270,6 +270,19 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 	})
 
 	Context("AWS", func() {
+		Describe("With manual-rollout-id", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerAWS)
+				f.ValuesSet("cloudInstanceManager.internal.instanceGroups.0.manual-rollout-id", "test")
+				f.HelmRender()
+			})
+
+			It("should render correctly", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("ceedac6e4f575da505fda1ec0abb11a60074e803537d4a162bad0200ece1a4b2"))
+			})
+		})
+
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerAWS)
 			f.HelmRender()
@@ -372,6 +385,19 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 	})
 
 	Context("GCP", func() {
+		Describe("With manual-rollout-id", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerGCP)
+				f.ValuesSet("cloudInstanceManager.internal.instanceGroups.0.manual-rollout-id", "test")
+				f.HelmRender()
+			})
+
+			It("should render correctly", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("7d61bcc22c607b55c72744031271598bc8d350add1239912f66893d7e976179d"))
+			})
+		})
+
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerGCP)
 			f.HelmRender()
@@ -475,6 +501,19 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 	})
 
 	Context("Openstack", func() {
+		Describe("With manual-rollout-id", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerOpenstack)
+				f.ValuesSet("cloudInstanceManager.internal.instanceGroups.0.manual-rollout-id", "test")
+				f.HelmRender()
+			})
+
+			It("should render correctly", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("64f2edcc9b5a394fe86fa0ac87b54a23051b9c89c5f36cc902ecbd8fd0caf95f"))
+			})
+		})
+
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerOpenstack)
 			f.HelmRender()
@@ -578,6 +617,19 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 	})
 
 	Context("Vsphere", func() {
+		Describe("With manual-rollout-id", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerVsphere)
+				f.ValuesSet("cloudInstanceManager.internal.instanceGroups.0.manual-rollout-id", "test")
+				f.HelmRender()
+			})
+
+			It("should render correctly", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("7605f2939d00980d80f4f203c3644fb0ef3444087c35af275df51fa5904330e0"))
+			})
+		})
+
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerVsphere)
 			f.HelmRender()
@@ -682,6 +734,19 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 	})
 
 	Context("Yandex", func() {
+		Describe("With manual-rollout-id", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerYandex)
+				f.ValuesSet("cloudInstanceManager.internal.instanceGroups.0.manual-rollout-id", "test")
+				f.HelmRender()
+			})
+
+			It("should render correctly", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a84156b8921dec1023ecbd099f3da1f4da31be01a0bd164f75a86a3bd450f04e"))
+			})
+		})
+
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerYandex)
 			f.HelmRender()

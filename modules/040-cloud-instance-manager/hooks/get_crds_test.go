@@ -33,6 +33,32 @@ spec:
   zones: [a,b]
 
 `
+		stateCIGProperManualRolloutId = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CloudInstanceGroup
+metadata:
+  name: proper1
+  annotations:
+    manual-rollout-id: test
+spec:
+  instanceClassReference:
+    kind: D8TestInstanceClass
+    name: proper1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CloudInstanceGroup
+metadata:
+  name: proper2
+  annotations:
+    manual-rollout-id: test
+spec:
+  instanceClassReference:
+    kind: D8TestInstanceClass
+    name: proper2
+  zones: [a,b]
+
+`
 		stateCIGWrongKind = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -174,6 +200,19 @@ data:
 			Expect(f.KubernetesGlobalResource("CloudInstanceGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider. Earlier stored version of CIG is in use now!`))
 			Expect(f.KubernetesGlobalResource("CloudInstanceGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider. Earlier stored version of CIG is in use now!`))
 		})
+
+	})
+
+	Context("With manual-rollout-id", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateCIGProperManualRolloutId + stateICProper + stateCloudProviderSecret))
+			f.RunHook()
+		})
+
+		It("Hook must not fail and Values should contain an id", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudInstanceManager.internal.instanceGroups.0.manual-rollout-id").String()).To(Equal("test"))
+		})
 	})
 
 	Context("Proper cluster with two pairs of CIG+IC and provider secret", func() {
@@ -193,6 +232,7 @@ data:
 	             "name": "proper1"
 	           },
 	           "name": "proper1",
+               "manual-rollout-id": "",
 	           "instanceClass": {
 	             "bashible": {
 	               "bundle": "centos-7.1.1.1",
@@ -216,6 +256,7 @@ data:
 	             "b"
 	           ],
 	           "name": "proper2",
+               "manual-rollout-id": "",
 	           "instanceClass": {
 	             "bashible": {
 	               "bundle": "slackware-14.1",
@@ -250,6 +291,7 @@ data:
 	             "name": "proper1"
 	           },
 	           "name": "proper1",
+               "manual-rollout-id": "",
 	           "instanceClass": {
 	             "bashible": {
 	               "bundle": "centos-7.1.1.1",
@@ -273,6 +315,7 @@ data:
 	             "b"
 	           ],
 	           "name": "proper2",
+               "manual-rollout-id": "",
 	           "instanceClass": {
 	             "bashible": {
 	               "bundle": "slackware-14.1",
@@ -307,6 +350,7 @@ data:
 	             "name": "proper1"
 	           },
 	           "name": "proper1",
+               "manual-rollout-id": "",
 	           "instanceClass": {
 	             "bashible": {
 	               "bundle": "centos-7.1.1.1",
@@ -330,6 +374,7 @@ data:
 	             "b"
 	           ],
 	           "name": "proper2",
+               "manual-rollout-id": "",
 	           "instanceClass": {
 	             "bashible": {
 	               "bundle": "slackware-14.1",
@@ -366,6 +411,7 @@ data:
 			             "name": "proper1"
 			           },
 			           "name": "proper1",
+                       "manual-rollout-id": "",
 			           "instanceClass": {
 			             "bashible": {
 			               "bundle": "centos-7.1.1.1",
@@ -389,6 +435,7 @@ data:
 			             "b"
 			           ],
 			           "name": "proper2",
+                       "manual-rollout-id": "",
 			           "instanceClass": {
 			             "bashible": {
 			               "bundle": "slackware-14.1",
@@ -441,6 +488,7 @@ data:
 				             "name": "proper1"
 				           },
 				           "name": "proper1",
+                           "manual-rollout-id": "",
 				           "instanceClass": {
 				             "bashible": {
 				               "bundle": "centos-7.1.1.1",
@@ -464,6 +512,7 @@ data:
 				             "b"
 				           ],
 				           "name": "proper2",
+                           "manual-rollout-id": "",
 				           "instanceClass": {
 				             "bashible": {
 				               "bundle": "slackware-14.1",
@@ -501,6 +550,7 @@ data:
 			             "name": "proper1"
 			           },
 			           "name": "proper1",
+                       "manual-rollout-id": "",
 			           "instanceClass": {
 			             "bashible": {
 			               "bundle": "centos-7.1.1.1",
@@ -524,6 +574,7 @@ data:
 			             "b"
 			           ],
 			           "name": "proper2",
+                       "manual-rollout-id": "",
 			           "instanceClass": {
 			             "bashible": {
 			               "bundle": "slackware-14.1",
@@ -576,6 +627,7 @@ data:
 			             "name": "proper1"
 			           },
 			           "name": "proper1",
+                       "manual-rollout-id": "",
 			           "instanceClass": {
 			             "bashible": {
 			               "bundle": "centos-7.1.1.1",
@@ -599,6 +651,7 @@ data:
 			             "b"
 			           ],
 			           "name": "proper2",
+                       "manual-rollout-id": "",
 			           "instanceClass": {
 			             "bashible": {
 			               "bundle": "slackware-14.1",

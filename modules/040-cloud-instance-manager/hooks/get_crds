@@ -17,7 +17,7 @@ function __config__() {
       includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
       apiVersion: deckhouse.io/v1alpha1
       kind: CloudInstanceGroup
-      jqFilter: '{"name": .metadata.name, "spec": .spec}'
+      jqFilter: '{"name": .metadata.name, "spec": (.spec + {"manual-rollout-id": (.metadata.annotations."manual-rollout-id" // "")})}'
     - name: ics
       queue: /modules/cloud_instance_manager
       includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]

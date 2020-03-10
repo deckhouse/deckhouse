@@ -22,6 +22,8 @@
 
 ### Параметры
 
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `AWSInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+
 * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `region` — имя AWS региона, в котором будут заказываться instances.
@@ -38,7 +40,6 @@
         * Формат — массив строк. **Внимание!** Обязательно должен содержать shared tag из [настройки](#настройка-окружения) облачного окружения.
 * `keyName` — имя [SSH ключа](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html), предварительно загруженного в AWS, которое будет использовано для пользователя по-умолчанию.
     * Формат — строка.
-
 
 #### Пример конфигурации:
 
