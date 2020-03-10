@@ -146,7 +146,6 @@ spec:
                   type: string
                   enum:
                   - DrainAndDelete
-                  - KillPodsAndDelete
                   - Disabled
                 period:
                   type: string
