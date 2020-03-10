@@ -108,7 +108,7 @@ spec:
     period: 2h
 ```
 
-## Как мне начать заказывать машины
+## Как мне начать заказывать машины?
 
 1. Настройте один из поддерживаемых `cloud-provider-` модулей:
 
@@ -120,3 +120,9 @@ spec:
 
 2. [Настройте](#параметры) модуль.
 3. Создайте `CloudInstanceGroup` с желаемыми [параметрами](#CloudInstanceGroup-custom-resource) InstanceGroup.
+
+## Как мне перекатить машины с новой конфигурацией?
+
+При изменении конфигурации Deckhouse машины не перекатятся. Перекат происходит только после изменения `InstanceClass` или `CloudInstanceGroup` объектов.
+
+Для того, чтобы форсированно перекатить все Machines, следует добавить/изменить аннотацию `manual-rollout-id` в `CloudInstanceGroup`: `kubectl annotate cloudinstancegroup имя_cig "manual-rollout-id=$(uuidgen)" --overwrite`.

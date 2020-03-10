@@ -10,4 +10,7 @@
 {{- if hasKey .instanceGroup.instanceClass "iops" -}}
   {{ $_ := set $options "iops" .instanceGroup.instanceClass.iops -}}
 {{- end -}}
+{{- if (index .instanceGroup "manual-rollout-id") -}}
+  {{ $_ := set $options "manual-rollout-id" (index .instanceGroup "manual-rollout-id") -}}
+{{- end -}}
 {{- $options | toYaml | sha256sum -}}

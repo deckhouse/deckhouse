@@ -22,6 +22,8 @@
 
 ### Параметры
 
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `GCPInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+
 * `networkName` — имя VPC network в GCP, где будут заказываться instances.
 * `subnetworkName` — имя subnet в VPC netwok `networkName`, где будут заказываться instances.
 * `region` — имя GCP региона, в котором будут заказываться instances.

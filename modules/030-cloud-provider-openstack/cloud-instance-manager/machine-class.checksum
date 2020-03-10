@@ -1,4 +1,7 @@
 {{- $options := dict -}}
 {{- $_ := set $options "flavorName" .instanceGroup.instanceClass.flavorName -}}
 {{- $_ := set $options "imageName" .instanceGroup.instanceClass.imageName -}}
+{{- if (index .instanceGroup "manual-rollout-id") -}}
+  {{ $_ := set $options "manual-rollout-id" (index .instanceGroup "manual-rollout-id") -}}
+{{- end -}}
 {{- $options | toYaml | sha256sum -}}
