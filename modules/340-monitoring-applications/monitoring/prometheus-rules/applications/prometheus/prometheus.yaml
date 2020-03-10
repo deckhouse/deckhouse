@@ -139,12 +139,10 @@
 
   - alert: PrometheusMalfunctioning
     expr: max by (namespace, service) (ALERTS{alertname=~"PrometheusTargetDown|PrometheusConfigReloadFailing|PrometheusNotificationQueueHasMoreTasksThanAlerts|PrometheusNotificationQueueRunningFull|PrometheusNotificationDropping|PrometheusTSDBReloadsFailing|PrometheusTSDBCompactionsFailing|PrometheusRuleEvaluationFailing|PrometheusNotConnectedToAlertmanager"})
-    labels:
-      severity_level: "9"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "24h"
+      plk_alert_type: "group"
       description: |
         Prometheus работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
       summary: Prometheus работает некорректно

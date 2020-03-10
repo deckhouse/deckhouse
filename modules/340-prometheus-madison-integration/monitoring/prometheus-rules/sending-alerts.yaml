@@ -119,13 +119,12 @@
     - alert: D8PrometheusMadisonIntegrationMalfunctioning
       expr: max(ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts"})
       labels:
-        severity_level: "9"
         tier: cluster
         d8_module: prometheus-madison-integration
         d8_component: madison-proxy
       annotations:
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "24h"
+        plk_alert_type: "group"
         plk_markup_format: "markdown"
         plk_group_for__missing_dead_mans_switch: "MissingDeadMansSwitch"
         plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring"
