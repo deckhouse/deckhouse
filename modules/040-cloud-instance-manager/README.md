@@ -80,11 +80,11 @@ cloudInstanceManager: |
           key: ship-class
           value: frigate
         ```
-    * `chaos` — настройки chaos monkey для данной IG:
-      * Опциональный параметр.
-      * `mode` — режим работы chaos monkey, возможные значения: `DrainAndDelete` - при срабатывании drain'ит и удаляет ноду, `KillPodsAndDelete` - удаляет все поды на ноде и удаляет ее, `Disabled` - не трогает данную IG.
+* `chaos` — настройки chaos monkey для данной IG:
+    * Опциональный параметр.
+    * `mode` — режим работы chaos monkey, возможные значения: `DrainAndDelete` — при срабатывании drain'ит и удаляет ноду, `Disabled` — не трогает данную IG.
         * По-умолчанию `DrainAndDelete`.
-      * `period` — в какой интервал времени сработает chaos monkey (указывать можно в [golang формате](https://golang.org/pkg/time/#ParseDuration));
+    * `period` — в какой интервал времени сработает chaos monkey (указывать можно в [golang формате](https://golang.org/pkg/time/#ParseDuration));
         * По-умолчанию `6h`.
 
 #### Пример CloudInstanceGroup
