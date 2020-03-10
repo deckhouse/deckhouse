@@ -94,6 +94,8 @@
     labels:
       severity: warning
     annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: Some clients connect to {{$labels.component}} with Certificate which expiring soon (less than 7 days) on node {{$labels.node}}
       summary: Kubernetes has API clients with soon expiring certificates
   - alert: K8sClientCertificateExpiration
@@ -101,5 +103,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
       description: Some clients connect to {{$labels.component}} with Certificate which expiring soon (less than 1 day) on node {{$labels.component}}
       summary: Kubernetes has API clients with soon expiring certificates
