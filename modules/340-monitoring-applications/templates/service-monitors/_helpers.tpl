@@ -17,19 +17,25 @@
   regex: {{ $schema }}-metrics
   replacement: $1
   targetLabel: endpoint
-  {{ if eq $schema "https" }}
-- sourceLabels: [__meta_kubernetes_endpoint_port_name]
-  regex: "http-metrics"
-  action: drop
-- sourceLabels: [__meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls, __meta_kubernetes_endpoint_port_name]
-  regex: "^true;(.*)|;https-metrics$"
-  action: keep
-  {{ else }}
+  {{ if eq $schema "http" }}
 - sourceLabels: [__meta_kubernetes_endpoint_port_name]
   regex: "https-metrics"
   action: drop
-- sourceLabels: [__meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls, __meta_kubernetes_endpoint_port_name]
-  regex: "^;(.*)|;http-metrics$"
+- sourceLabels:
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
+  - __meta_kubernetes_endpoint_port_name
+  regex: "^true;;(.*)|;;http-metrics$"
+  action: keep
+  {{ else }}
+- sourceLabels: [__meta_kubernetes_endpoint_port_name]
+  regex: "http-metrics"
+  action: drop
+- sourceLabels:
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
+  - __meta_kubernetes_endpoint_port_name
+  regex: "^true;true;(.*)|;;https-metrics$"
   action: keep
   {{ end }}
 - replacement: ${1}:${2}
