@@ -9,12 +9,10 @@
           unless
           (count by (namespace, pod) (kube_pod_container_status_ready==0) * on (namespace, pod) group_left(node) kube_pod_info)
         )
-      labels:
-        severity_level: "7"
+      for: 10m
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        plk_pending_until_firing_fir: "10m"
         plk_grouped_by__node_have_pods_with_incorrect_status: "NodeHavePodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }}"
         description: |
           В кластере есть под {{ $labels.namespace }}/{{ $labels.pod }} на ноде {{ $labels.node }} у которого состояние пода NotReady, но у всех контейнеров данного пода статус Ready.
@@ -28,12 +26,10 @@
 
     - alert: NodeHavePodsWithIncorrectStatus
       expr: min by (node) (ALERTS{alertname="PodStatusIsIncorrect"})
-      labels:
-        severity_level: "9"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        plk_pending_unitl_firin_for: "24h"
+        plk_alert_type: "group"
         plk_grouped_by__cluster_have_nodes_with_incorrect_pod_status: "ClusterHaveNodesWithIncorrectPodStatus,prometheus=deckhouse"
         description: |
           В кластере есть нода {{ $labels.node }} на которой есть поды в некорректном статусе.
@@ -47,12 +43,10 @@
 
     - alert: ClusterHaveNodesWithIncorrectPodStatus
       expr: min(ALERTS{alertname="NodeHavePodsWithIncorrectStatus"})
-      labels:
-        severity_level: "9"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        plk_pending_unitl_firin_for: "24h"
+        plk_alert_type: "group"
         description: |
           В кластере есть ноды, на которых есть поды в некорректном статусе. На какой именно ноде проблема, можно узнать из связанного алерта.
           Это может произойти из-за бага в [kubernetes](https://github.com/kubernetes/kubernetes/issues/80968).
