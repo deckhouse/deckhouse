@@ -23,10 +23,10 @@ function __on_startup() {
          else . end | del(.metadata.annotations."dex-authenticator.deckhouse.io/allow-access-to-kubernetes")
        ]')
     echo "$values" > /tmp/user-authn-dexauthenticator-migration
+    kubectl delete crd dex-authenticators.deckhouse.io
   fi
 
   if ! kubectl get crd dexauthenticators.deckhouse.io > /dev/null 2> /dev/null ; then
-    kubectl delete crd dex-authenticators.deckhouse.io
     kubectl apply -f $(module::path)/crds/
 
     rm -rf ~/.kube/cache
