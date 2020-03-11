@@ -29,7 +29,7 @@
   regex: (.+)
   targetLabel: __sample_limit__
 {{- end }}
--
+
 {{- define "unlimited_samples" }}
   {{- $scrapeType := index . 0 }}
   {{- $action := index . 1 }}
@@ -70,21 +70,27 @@ tlsConfig:
     {{ $label = "__meta_kubernetes_endpoint_port_name" }}
   {{- end }}
 
-  {{- if eq $schema "https" }}
-- sourceLabels: [{{ $label }}]
-  regex: "http-metrics"
-  action: drop
-- sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls, {{ $label }}]
-  regex: "^true;(.*)|;https-metrics$"
-  action: keep
-  {{- else }}
+  {{ if eq $schema "http" }}
 - sourceLabels: [{{ $label }}]
   regex: "https-metrics"
   action: drop
-- sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls, {{ $label }}]
-  regex: "^;(.*)|;http-metrics$"
+- sourceLabels:
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
+  - {{ $label }}
+  regex: "^true;;(.*)|;;http-metrics$"
   action: keep
-  {{- end }}
+  {{ else }}
+- sourceLabels: [{{ $label }}]
+  regex: "http-metrics"
+  action: drop
+- sourceLabels:
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
+  - {{ $label }}
+  regex: "^true;true;(.*)|;;https-metrics$"
+  action: keep
+  {{ end }}
 {{- end }}
 
 {{- define "label_selector" }}
