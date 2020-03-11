@@ -87,11 +87,16 @@ rules:
   - get
   - watch
 - apiGroups:
-  - "coordination.k8s.io"
+  - coordination.k8s.io
   resources:
   - leases
   verbs:
-  - "*"
+  - get
+  - list
+  - create
+  - update
+  - patch
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
