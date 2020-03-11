@@ -28,6 +28,8 @@ github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a h1:idn718Q4B6AGu/h5Sxe66HYVdqdGu2l9Iebqhi/AEoA=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
+github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea h1:NhnqtoeNnEBu36bfeP2CZq/d5bJxzJBtChscvM7v5Cg=
+github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea/go.mod h1:jfBxQAPihPj5l6sipcapjHruLizHrt3RKuppDE97K+g=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
@@ -50,10 +52,17 @@ github.com/evanphx/json-patch v4.5.0+incompatible h1:ouOWdg56aJriqS0huScTkVXPC5I
 github.com/evanphx/json-patch v4.5.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200225114945-e2fc271966e5 h1:SIa+mKNq7uzd39EWkshh3oywjZWX0E5Z2MZRNJGvdR8=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200225114945-e2fc271966e5/go.mod h1:HN6j47n7i+cOEcZ5uHjqGslgFpLXpmHHat5wxXHQyOg=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200311062949-13467bf778ef/go.mod h1:Fqc74TvhJucvULNzN18YJFMvpkU9FENgdU8R8hNR0Q0=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f h1:3tmztWJjf61sHfHYLSMi5TDdz5jtmcVqe43PSwsxNvE=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/shell-operator v1.0.0-beta.7.0.20200219194616-4b1b7ccd6da4 h1:LRNYv+1oMvhg+JPKFQigF4rUVNu3CDg6YS61aXhNX0M=
 github.com/flant/shell-operator v1.0.0-beta.7.0.20200219194616-4b1b7ccd6da4/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200310154405-3d0d69a16885 h1:GICljfK3jCnCD9d9eHv7vi3t85YgkXAoSzdYWFt/Mug=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200310154405-3d0d69a16885/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200310232505-b8a6dc0ec7b7/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200311004609-471a6e2f0db4/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200311060320-9aeea29c9a6c/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200311062449-51fe78fb661c/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622 h1:lxbhOGZ9pU3Kf8P6lFluUcE82yVZn2EqEf4+mWRNPV0=

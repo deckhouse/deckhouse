@@ -27,7 +27,7 @@ EOF
 }
 
 function __main__() {
-  enabledApplications=$(context::jq -r '[.snapshots.services_old[] | .object.metadata.labels."prometheus-target"] + [.snapshots.services[] | .object.metadata.labels."prometheus.deckhouse.io/target"] | sort | unique')
+  enabledApplications=$(context::jq -r '[.snapshots.services_old + .snapshots.services | .[] | (.object.metadata.labels."prometheus-target" // .object.metadata.labels."prometheus.deckhouse.io/target")] | sort | unique')
   values::set monitoringApplications.discovery.enabledApplications "$enabledApplications"
 }
 
@@ -37,3 +37,5 @@ function __on_before_helm() {
 }
 
 hook::run $@
+
+jq -r '[.snapshots.services_old + .snapshots.services | .[] | (.object.metadata.labels."prometheus-target" // .object.metadata.labels."prometheus.deckhouse.io/target")] | sort | unique' <<< '{"binding":"services_old","object":{"apiVersion":"v1","kind":"Service","metadata":{"labels":{"prometheus.deckhouse.io/target":"test"},"name":"new","namespace":"default"}},"snapshots":{"services":[],"services_old":[{"object":{"apiVersion":"v1","kind":"Service","metadata":{"labels":{"prometheus.deckhouse.io/target":"test"},"name":"new","namespace":"default"}}}]},"type":"Event","watchEvent":"Added"}'
