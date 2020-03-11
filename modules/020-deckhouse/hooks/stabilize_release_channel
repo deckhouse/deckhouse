@@ -20,14 +20,20 @@ function __main__() {
 
   # Get desired release channel
   desired_release_channel=$(values::get deckhouse.releaseChannel)
-  if [[ "$desired_release_channel" == "null" ]] || [[ ! ${release_channels_order[$desired_release_channel]+_} ]]; then
-    exit 0
+  if [[ "$desired_release_channel" == "null" ]]; then
+    return 0
+  fi
+
+  if [[ ! ${release_channels_order[$desired_release_channel]+_} ]]; then
+    >&2 echo "ERROR: Desired release channel does not exist. Check 'deckhouse.releaseChannel' section of deckhouse configmap."
+    return 1
   fi
 
   # Get current release channel
   current_release_channel_tag=$(kubectl -n d8-system get deploy/deckhouse -o json | jq -r '.spec.template.spec.containers[0].image' | awk -F ":" '{ print $2 }')
   if [[ ! ${release_channels_tags[$current_release_channel_tag]+_} ]]; then
-    exit 0
+    # Current image tag does not match any release channel, skip stabilization
+    return 0
   fi
   current_release_channel=${release_channels_tags[$current_release_channel_tag]}
 
@@ -36,7 +42,7 @@ function __main__() {
 
   # Nothing to do, if we already on desired channel
   if [[ "$desired_order" -eq "$current_order" ]]; then
-    exit 0
+    return 0
   fi
 
   registry=$(values::get global.modulesImages.registry)
