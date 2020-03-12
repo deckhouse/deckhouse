@@ -42,13 +42,6 @@ spec:
   limitNamespaces:                         # Опция доступна только при enableMultiTenancy
   - review-.*
   - stage
-  additionalRoles:
-  - apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: cluster-write-all
-  - apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: cluster-read-all
 ```
 
 В `spec` возможны такие параметры:
@@ -78,6 +71,16 @@ spec:
     * Опция доступна только с включённым параметром `enableMultiTenancy`.
 * `additionalRoles` — какие дополнительные роли необходимо выдать для заданных `subjects`.
     * Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать `accessLevel`.
+    * Фомат:
+    ```yaml
+    additionalRoles:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-write-all
+    - apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-read-all
+    ```
 
 ## Как создать пользователя?
 
