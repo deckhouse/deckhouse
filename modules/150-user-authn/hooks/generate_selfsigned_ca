@@ -1,0 +1,47 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  beforeHelm: 10
+  kubernetes:
+  - name: secret
+    apiVersion: v1
+    kind: Secret
+    watchEvent: ["Added", "Modified"]
+    includeSnapshotsFrom:
+    - secret
+    nameSelector:
+      matchNames: ["kubernetes-api-ca-key-pair"]
+    namespace:
+      nameSelector:
+        matchNames: ["d8-user-authn"]
+    jqFilter: |
+      {
+        "cert": ( .data."tls.crt" | @base64d),
+        "key": ( .data."tls.key" | @base64d)
+      }
+EOF
+}
+
+function __main__() {
+  if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]] && [[ $(values::get userAuthn.publishAPI.https.mode) != "SelfSigned" ]]; then
+    values::unset userAuthn.internal.selfSignedCA.cert
+    values::unset userAuthn.internal.selfSignedCA.key
+    return 0
+  fi
+
+  if context::has snapshots.secret.0; then
+    values::set userAuthn.internal.selfSignedCA.cert "$(context::get snapshots.secret.0.filterResult.cert)"
+    values::set userAuthn.internal.selfSignedCA.key "$(context::get snapshots.secret.0.filterResult.key)"
+    return 0
+  fi
+
+  ca=$(jo CN=kubernetes-api-selfsigned-ca key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
+  values::set userAuthn.internal.selfSignedCA.cert "$(jq '.cert' <<< ${ca})"
+  values::set userAuthn.internal.selfSignedCA.key "$(jq '.key' <<< ${ca})"
+}
+
+hook::run "$@"

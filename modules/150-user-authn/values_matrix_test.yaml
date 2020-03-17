@@ -142,6 +142,9 @@ userAuthn:
   idTokenTTL:
     __ConstantChoices__: [10000m, __EmptyItem__]
   internal:
+    selfSignedCA:
+      cert: test
+      key: test
     kubernetesDexClientAppSecret: plainstring
     kubernetesCA: plainstring
     discoveredDexCA:

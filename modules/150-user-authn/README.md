@@ -103,10 +103,11 @@ data:
 * `publishAPI` — настройки публикации API-сервера, чeрез ingress:
   * `enable` — если выставить данный параметр в `true`, то в кластере будет создан ingress в namespace d8-user-authn, который выставляет Kubernetes API наружу.
     * По-умолчанию: `false`.
+  * `ingressClass` — ingress-класс, который будет использован для публикации API kubernetes через ingress.
   * `whitelistSourceRanges` — массив CIDR, которым разрешено подключение к API.
     * Если параметр не указан, подключение к API не ограничивается по IP.
   * `https` — режим работы https для ingress'а API-сервера:
-    * `mode` — режим выдачи сертификатов для данного ingress ресурса. Возможные значения `SelfSigned` и `Global`. В случае использования режима `SelfSigned` для ingress ресурса будет выпущен самоподписанный сертификат. В случае использования `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. Т.е. если в глобальной настройке стоит режим `CertManager` с clusterissuer `letsnecrypt`, то для ingress ресурса будет заказан сертификат Lets Encrypt.
+    * `mode` — режим выдачи сертификатов для данного ingress ресурса. Возможные значения `SelfSigned` и `Global`. В случае использования режима `SelfSigned` для ingress ресурса будет выпущен самоподписанный сертификат. В случае использования `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. Т.е. если в глобальной настройке стоит режим `CertManager` с clusterissuer `letsencrypt`, то для ingress ресурса будет заказан сертификат Lets Encrypt.
       * По-умолчанию: `SelfSigned`
     * `global` — дополнительный параметр для режима `Global`;
       * `kubeconfigGeneratorMasterCA` — если у вас перед ingress'ом есть внешний балансер, который терминирует HTTPS трафик, то тут необходимо вставить CA от сертификата на балансировщике, что бы kubectl мог достучаться до API-сервера; 

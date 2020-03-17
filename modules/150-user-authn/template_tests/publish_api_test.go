@@ -1,6 +1,7 @@
 package template_tests
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -13,6 +14,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.clusterVersion", "1.15.6")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+		hec.ValuesSet("global.modules.ingressClass", "nginx")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry", "registry.example.com")
@@ -21,6 +23,8 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.kubernetesCA", "plainstring")
+		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "test")
+		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
 
 		hec.ValuesSet("userAuthn.publishAPI.enable", true)
 	})
@@ -31,19 +35,43 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		})
 		It("Should deploy publish api and kubeconfig generator", func() {
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field("metadata.annotations").Map()).To(HaveKey("certmanager.k8s.io/issuer"))
+			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
+			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("Issuer"))
+			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("kubernetes-api"))
+			Expect(certificate.Field("spec.acme.config.0.http01.ingressClass").String()).To(Equal("nginx"))
 		})
 	})
 
 	Context("With publish API global mode", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
+			hec.ValuesSet("userAuthn.publishAPI.ingressClass", "my-ingress-class")
 			hec.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", "simplecastring")
 			hec.HelmRender()
 		})
 		It("Should use cluster issuer", func() {
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field("metadata.annotations").Map()).To(HaveKey("certmanager.k8s.io/cluster-issuer"))
+			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
+			fmt.Println(certificate.Field("spec").String())
+			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
+			Expect(certificate.Field("spec.acme.config.0.http01.ingressClass").String()).To(Equal("my-ingress-class"))
+		})
+	})
+
+	Context("With publish API global mode and route53 issuer", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
+			hec.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", "simplecastring")
+			hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "route53")
+			hec.HelmRender()
+		})
+		It("Should use cluster issuer and dns challenge", func() {
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
+			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
+			fmt.Println(certificate.Field("spec").String())
+			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
+			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("route53"))
+			Expect(certificate.Field("spec.acme.config.0.dns01.provider").String()).To(Equal("route53"))
 		})
 	})
 

@@ -1,12 +1,8 @@
-{{- define "publish_api_ingress_annotations" }}
-  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
-    {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
-certmanager.k8s.io/cluster-issuer: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
-    {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
-      {{- if .Values.global.enabledModules | has "cert-manager" }}
-certmanager.k8s.io/issuer: kubernetes-api
-      {{- else }}
-{{ fail "cert-manager module must be enabled for publishAPI https SelfSigned mode" }}
+{{- define "cluster_issuer_required_dns_challenge" }}
+  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+    {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+      {{- if (has (include "helm_lib_module_https_cert_manager_cluster_issuer_name" .) (list "route53" "cloudflare" "digitalocean")) }}
+      not empty string
       {{- end }}
     {{- end }}
   {{- end }}
@@ -19,8 +15,7 @@ apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: nginx
-{{ include "publish_api_ingress_annotations" . | indent 4 }}
+    kubernetes.io/ingress.class: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
@@ -35,7 +30,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
 spec:
-  {{- if include "helm_lib_module_https_ingress_tls_enabled" . }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" . ) }}
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "api") }}
@@ -48,6 +43,42 @@ spec:
       - backend:
           serviceName: kubernetes
           servicePort: 443
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: kubernetes-tls
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+spec:
+  secretName: kubernetes-tls
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "api") }}
+  acme:
+    config:
+  {{- if (include "cluster_issuer_required_dns_challenge" . ) }}
+    - dns01:
+        provider: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+  {{- else }}
+    - http01:
+        ingressClass: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
+  {{- end }}
+      domains:
+      - {{ include "helm_lib_module_public_domain" (list . "api") }}
+  issuerRef:
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+    {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+    {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
+      {{- if .Values.global.enabledModules | has "cert-manager" }}
+    name: kubernetes-api
+    kind: Issuer
+      {{- else }}
+    {{ fail "cert-manager module must be enabled for publishAPI https SelfSigned mode" }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: Service
