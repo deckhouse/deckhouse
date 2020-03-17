@@ -15,8 +15,7 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": null,
-  "iteration": 1557835843154,
+  "iteration": 1584119273725,
   "links": [],
   "panels": [
     {
@@ -32,6 +31,7 @@
       },
       "id": 4,
       "links": [],
+      "options": {},
       "pageSize": 50,
       "scroll": true,
       "showHeader": true,
@@ -42,12 +42,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "Namespace",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -68,6 +70,7 @@
         },
         {
           "alias": "VPA %",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -84,6 +87,7 @@
         },
         {
           "alias": "CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -100,6 +104,7 @@
         },
         {
           "alias": "Req CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -116,6 +121,7 @@
         },
         {
           "alias": "Over-req CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -132,6 +138,7 @@
         },
         {
           "alias": "Under-req CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -148,6 +155,7 @@
         },
         {
           "alias": "Throttling cores",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -164,6 +172,7 @@
         },
         {
           "alias": "Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -180,6 +189,7 @@
         },
         {
           "alias": "Req Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -196,6 +206,7 @@
         },
         {
           "alias": "Over-req Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -212,6 +223,7 @@
         },
         {
           "alias": "Under-req Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -228,6 +240,7 @@
         },
         {
           "alias": "RX Network",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -244,6 +257,7 @@
         },
         {
           "alias": "TX Network",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -260,6 +274,7 @@
         },
         {
           "alias": "Read IOPS",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -276,6 +291,7 @@
         },
         {
           "alias": "Write IOPS",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -292,6 +308,7 @@
         },
         {
           "alias": "Pod Restarts",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -307,23 +324,8 @@
           "unit": "short"
         },
         {
-          "alias": "OOM killed",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #Q",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -473,14 +475,6 @@
           "intervalFactor": 1,
           "legendFormat": "Restart count",
           "refId": "P"
-        },
-        {
-          "expr": "sum by (namespace) (increase(klog_pod_oomkill{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
-          "format": "table",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "OOM killed",
-          "refId": "Q"
         }
       ],
       "title": "Average",
@@ -496,12 +490,14 @@
       "decimals": 0,
       "description": "Количество подов в каждом namespace",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 332,
       "legend": {
         "alignAsTable": false,
@@ -522,6 +518,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -603,12 +602,14 @@
       "decimals": 0,
       "description": "Количество рестартов подов",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 564,
       "legend": {
         "alignAsTable": false,
@@ -629,6 +630,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -702,114 +706,8 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "decimals": 0,
-      "description": "Количество OOM Killer срабатываний у подов",
-      "fill": 1,
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 8
-      },
-      "id": 565,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "hideEmpty": true,
-        "hideZero": true,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": false,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": false
-      },
-      "lines": false,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null as zero",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "bars": false,
-          "stack": false
-        }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum by (namespace) (increase(klog_pod_oomkill{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ namespace }}",
-          "refId": "B"
-        },
-        {
-          "expr": "sum (increase(klog_pod_oomkill{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Total",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "OOM Killed Processes",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": 0,
-          "format": "short",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -828,12 +726,14 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
         "y": 13
       },
+      "hiddenSeries": false,
       "id": 6,
       "legend": {
         "alignAsTable": true,
@@ -852,6 +752,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -931,12 +834,14 @@
       "datasource": "$ds_prometheus",
       "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
         "y": 13
       },
+      "hiddenSeries": false,
       "id": 10,
       "legend": {
         "alignAsTable": true,
@@ -955,6 +860,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1049,12 +957,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько CPU следует \"освободить\", сохранив при этом корректную работу сервиса.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
         "y": 22
       },
+      "hiddenSeries": false,
       "id": 333,
       "legend": {
         "alignAsTable": true,
@@ -1073,6 +983,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1152,12 +1065,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU ниже реального потребления CPU. По факту, сколько ещё CPU нужно \"застолбить\", для корректной работы сервиса.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
         "y": 22
       },
+      "hiddenSeries": false,
       "id": 386,
       "legend": {
         "alignAsTable": true,
@@ -1176,6 +1091,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1255,12 +1173,14 @@
       "datasource": "$ds_prometheus",
       "description": "Если на графике нет данных, значит не заданы ресурсы для контейнеров",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 29
       },
+      "hiddenSeries": false,
       "id": 315,
       "legend": {
         "alignAsTable": true,
@@ -1281,6 +1201,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1354,6 +1277,7 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -6058,6 +5982,7 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -10423,6 +10348,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -10441,12 +10367,14 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
         "y": 37
       },
+      "hiddenSeries": false,
       "id": 40,
       "legend": {
         "alignAsTable": false,
@@ -10465,6 +10393,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -10545,12 +10476,14 @@
       "datasource": "$ds_prometheus",
       "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
         "y": 37
       },
+      "hiddenSeries": false,
       "id": 41,
       "legend": {
         "alignAsTable": false,
@@ -10569,6 +10502,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -10691,6 +10627,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -10794,6 +10731,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -10867,6 +10805,7 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -16965,6 +16904,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -17008,6 +16948,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17111,6 +17052,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17184,6 +17126,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -17226,6 +17169,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17328,6 +17272,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17401,6 +17346,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -17444,6 +17390,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17549,6 +17496,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17654,6 +17602,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -17721,7 +17670,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -17831,5 +17780,5 @@
   "timezone": "",
   "title": "Namespaces",
   "uid": "V_WjJ-Pmk",
-  "version": 6
+  "version": 1
 }
