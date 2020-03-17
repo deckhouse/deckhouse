@@ -113,27 +113,6 @@ spec:
     options: {}
     bundle: ubuntu-7.1.1.1
 `
-		stateICDeprecatedProper = `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: D8TestInstanceClass
-metadata:
-  name: proper1
-spec:
-  cloudInitSteps:
-    options:
-      kubernetesVersion: 1.15.4
-    version: centos-7.1.1.1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: D8TestInstanceClass
-metadata:
-  name: proper2
-spec:
-  cloudInitSteps:
-    options: {}
-    version: slackware-14.1
-`
 		stateCloudProviderSecret = `
 ---
 apiVersion: v1
@@ -218,65 +197,6 @@ data:
 	Context("Proper cluster with two pairs of CIG+IC and provider secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateICProper + stateCloudProviderSecret))
-			f.RunHook()
-		})
-
-		It("CIGs must be stored to cloudInstanceManager.internal.instanceGroups", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			expectedJSON := `
-	       [
-	         {
-	           "instanceClassReference": {
-	             "kind": "D8TestInstanceClass",
-	             "name": "proper1"
-	           },
-	           "name": "proper1",
-               "manual-rollout-id": "",
-	           "instanceClass": {
-	             "bashible": {
-	               "bundle": "centos-7.1.1.1",
-	               "dynamicOptions": {},
-	               "options": {
-	                 "kubernetesVersion": "1.15.4"
-	               }
-	             }
-	           },
-	           "zones": [
-	             "nova"
-	           ]
-	         },
-	         {
-	           "instanceClassReference": {
-	             "kind": "D8TestInstanceClass",
-	             "name": "proper2"
-	           },
-	           "zones": [
-	             "a",
-	             "b"
-	           ],
-	           "name": "proper2",
-               "manual-rollout-id": "",
-	           "instanceClass": {
-	             "bashible": {
-	               "bundle": "slackware-14.1",
-	               "dynamicOptions": {},
-	               "options": {}
-	             }
-	           }
-	         }
-	       ]
-	`
-			Expect(f.ValuesGet("cloudInstanceManager.internal.instanceGroups").String()).To(MatchJSON(expectedJSON))
-
-			Expect(f.KubernetesGlobalResource("CloudInstanceGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("CloudInstanceGroup", "proper2").Field("status.error").Value()).To(BeNil())
-		})
-	})
-
-	Context("Proper cluster with two pairs of CIG+IC (deprecated .spec.cloudInitSteps instead of bashible) and provider secret", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateICDeprecatedProper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 

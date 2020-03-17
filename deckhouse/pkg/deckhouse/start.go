@@ -154,16 +154,6 @@ func GetCurrentPodImageInfo(kubeClient kube.KubernetesClient) (imageName string,
 		return "", ""
 	}
 
-	// TODO DELETE THIS AFTER MIGRATION
-	// Temporary fix: container can be named "antiopa"
-	for _, spec := range res.Spec.Containers {
-		if spec.Name == "antiopa" {
-			app.ContainerName = "antiopa"
-			break
-		}
-	}
-	// END DELETE THIS
-
 	for _, spec := range res.Spec.Containers {
 		if spec.Name == app.ContainerName {
 			imageName = spec.Image

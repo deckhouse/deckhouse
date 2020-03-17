@@ -1,4 +1,3 @@
-{{- if not .Values.certManager.internal.oldLEKey }} ### Миграция 2019-09-30 были проблемы с перегенерацией LE-ключа
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
@@ -30,4 +29,3 @@ webhooks:
         name: kubernetes
         namespace: default
         path: /apis/webhook.certmanager.k8s.io/v1beta1/mutations
-{{- end }}

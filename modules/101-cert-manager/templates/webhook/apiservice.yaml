@@ -1,4 +1,3 @@
-{{- if not .Values.certManager.internal.oldLEKey }} ### Миграция 2019-09-30 были проблемы с перегенерацией LE-ключа
 ---
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
@@ -15,4 +14,3 @@ spec:
     name: cert-manager-webhook
     namespace: d8-cert-manager
   version: v1beta1
-{{- end }}

@@ -144,10 +144,6 @@ ansible:
   - name: "Move deckhouse entrypoint to the right location"
     shell: mv /deckhouse/entrypoint.sh /deckhouse/deckhouse
 
-  # Миграция 2019-10-14: Удалить копирование в директорию antiopa после выката версии на все инстансы
-  - name: "Antiopa to Deckhouse migration"
-    shell: mkdir /antiopa/ && ln -s /deckhouse/deckhouse /antiopa/antiopa
-
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules

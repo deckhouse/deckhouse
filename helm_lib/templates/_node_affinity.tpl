@@ -107,9 +107,6 @@ tolerations:
 {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" . }}
 {{- end }}
-{{- /* # Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778 */}}
-- key: node-role/system
-  operator: Exists
     {{- end }}
 
   {{- else if eq $strategy "frontend" }}
@@ -127,9 +124,6 @@ tolerations:
 {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" . }}
 {{- end }}
-{{- /* # Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778 */}}
-- key: node-role/frontend
-  operator: Exists
     {{- end }}
 
   {{- else if eq $strategy "system" }}
@@ -147,9 +141,6 @@ tolerations:
 {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" . }}
 {{- end }}
-{{- /* # Миграция 2019-05-16: https://github.com/deckhouse/deckhouse/merge_requests/778 */}}
-- key: node-role/system
-  operator: Exists
     {{- end }}
   {{- end }}
 {{- end }}
