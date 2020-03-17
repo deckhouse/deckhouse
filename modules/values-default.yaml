@@ -35,7 +35,6 @@ monitoringApplicationsEnabled: true
 monitoringCustomEnabled: true
 monitoringKubernetesEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
-monitoringNodeProblemDetectorEnabled: true
 monitoringPingEnabled: true
 prometheusMadisonIntegrationEnabled: true
 extendedMonitoringEnabled: true

@@ -15,8 +15,7 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": null,
-  "iteration": 1557846990036,
+  "iteration": 1584118017765,
   "links": [],
   "panels": [
     {
@@ -32,6 +31,7 @@
       },
       "id": 2,
       "links": [],
+      "options": {},
       "pageSize": 50,
       "scroll": true,
       "showHeader": true,
@@ -42,12 +42,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "Pod Name",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -68,6 +70,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -84,6 +87,7 @@
         },
         {
           "alias": "Node",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -101,6 +105,7 @@
         },
         {
           "alias": "VPA Type",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -139,6 +144,7 @@
         },
         {
           "alias": "CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -155,6 +161,7 @@
         },
         {
           "alias": "Req CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -171,6 +178,7 @@
         },
         {
           "alias": "VPA CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -187,6 +195,7 @@
         },
         {
           "alias": "Over-req CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -203,6 +212,7 @@
         },
         {
           "alias": "Under-req CPU",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -219,6 +229,7 @@
         },
         {
           "alias": "Throttling cores",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -235,6 +246,7 @@
         },
         {
           "alias": "Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -251,6 +263,7 @@
         },
         {
           "alias": "Req Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -267,6 +280,7 @@
         },
         {
           "alias": "VPA Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -283,6 +297,7 @@
         },
         {
           "alias": "Over-req Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -299,6 +314,7 @@
         },
         {
           "alias": "Under-req Memory",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -315,6 +331,7 @@
         },
         {
           "alias": "RX Network",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -331,6 +348,7 @@
         },
         {
           "alias": "TX Network",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -347,6 +365,7 @@
         },
         {
           "alias": "Read IOPS",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -363,6 +382,7 @@
         },
         {
           "alias": "Write IOPS",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -379,6 +399,7 @@
         },
         {
           "alias": "Pod Restarts",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -394,23 +415,8 @@
           "unit": "short"
         },
         {
-          "alias": "OOM killed",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #T",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -589,14 +595,6 @@
           "intervalFactor": 1,
           "legendFormat": "Pod restart count",
           "refId": "S"
-        },
-        {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (label_replace(increase(klog_pod_oomkill{node=~\"$node\", namespace=\"$namespace\", pod_name=~\"$pod\"}[$__range]), \"pod\", \"$1\", \"pod_name\", \"(.+)\"))\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
-          "format": "table",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "OOM Killed",
-          "refId": "T"
         }
       ],
       "title": "Pods",
@@ -668,6 +666,7 @@
       },
       "links": [],
       "nullPointMode": "as empty",
+      "options": {},
       "targets": [
         {
           "expr": "(\n  min by (pod) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\"}\n    * on (pod) group_right()\n    min_over_time(kube_pod_status_phase{namespace=\"$namespace\", pod=~\"$pod\", phase=\"Running\"}[$__interval_sx4])\n  ) == 1\n) * 0",
@@ -746,12 +745,14 @@
       "decimals": 0,
       "description": "Количество рестартов подов",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 4,
-        "w": 12,
+        "h": 3,
+        "w": 24,
         "x": 0,
         "y": 15
       },
+      "hiddenSeries": false,
       "id": 107,
       "legend": {
         "alignAsTable": false,
@@ -772,6 +773,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -845,118 +849,13 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "description": "Количество OOM Killer срабатываний у подов",
-      "fill": 1,
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 15
-      },
-      "id": 108,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "hideEmpty": true,
-        "hideZero": true,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": false,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": false
-      },
-      "lines": false,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null as zero",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "bars": false,
-          "stack": false
-        }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__interval_sx4])) \n  * on (pod)\n  sum by (pod) (label_replace(increase(klog_pod_oomkill{node=~\"$node\", namespace=\"$namespace\", pod_name=~\"$pod\"}[$__interval_sx4]), \"pod\", \"$1\", \"pod_name\", \"(.+)\"))\n)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ pod }}",
-          "refId": "A"
-        },
-        {
-          "expr": "sum (\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__interval_sx4])) \n  * on (pod)\n  sum by (pod) (label_replace(increase(klog_pod_oomkill{node=~\"$node\", namespace=\"$namespace\", pod_name=~\"$pod\"}[$__interval_sx4]), \"pod\", \"$1\", \"pod_name\", \"(.+)\"))\n)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Total",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "OOM Killed Processes",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": 0,
-          "format": "short",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 18
       },
       "id": 4,
       "panels": [],
@@ -970,12 +869,14 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 19
       },
+      "hiddenSeries": false,
       "id": 6,
       "legend": {
         "alignAsTable": true,
@@ -996,6 +897,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1077,12 +981,14 @@
       "datasource": "$ds_prometheus",
       "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 20
+        "y": 19
       },
+      "hiddenSeries": false,
       "id": 7,
       "legend": {
         "alignAsTable": true,
@@ -1101,6 +1007,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1197,12 +1106,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько CPU следует \"освободить\", сохранив при этом корректную работу сервиса.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 28
       },
+      "hiddenSeries": false,
       "id": 59,
       "legend": {
         "alignAsTable": true,
@@ -1221,6 +1132,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1300,12 +1214,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU ниже реального потребления CPU. По факту, сколько ещё CPU нужно \"застолбить\", для корректной работы сервиса.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 28
       },
+      "hiddenSeries": false,
       "id": 64,
       "legend": {
         "alignAsTable": true,
@@ -1324,6 +1240,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1403,12 +1322,14 @@
       "datasource": "$ds_prometheus",
       "description": "Если на графике нет данных, значит не заданы ресурсы для контейнеров",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 36
       },
+      "hiddenSeries": false,
       "id": 31,
       "legend": {
         "alignAsTable": true,
@@ -1429,6 +1350,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1503,11 +1427,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 41
       },
       "id": 61,
       "panels": [
@@ -4803,11 +4728,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 42
       },
       "id": 9,
       "panels": [
@@ -5323,11 +5249,12 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 43
       },
       "id": 13,
       "panels": [],
@@ -5341,12 +5268,14 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 44
       },
+      "hiddenSeries": false,
       "id": 15,
       "legend": {
         "alignAsTable": false,
@@ -5367,6 +5296,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -5446,12 +5378,14 @@
       "datasource": "$ds_prometheus",
       "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 44
       },
+      "hiddenSeries": false,
       "id": 16,
       "legend": {
         "alignAsTable": false,
@@ -5470,6 +5404,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -5566,12 +5503,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько Memory следует \"освободить\", сохранив при этом корректную работу сервиса.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 53
       },
+      "hiddenSeries": false,
       "id": 63,
       "legend": {
         "alignAsTable": false,
@@ -5590,6 +5529,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -5670,12 +5612,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображается запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 54
+        "y": 53
       },
+      "hiddenSeries": false,
       "id": 75,
       "legend": {
         "alignAsTable": false,
@@ -5694,6 +5638,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -5768,11 +5715,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 62
       },
       "id": 18,
       "panels": [
@@ -6496,11 +6444,12 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 63
       },
       "id": 39,
       "panels": [],
@@ -6515,12 +6464,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображены Network Recieve, за исключением подов в hostNetwork.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 64
       },
+      "hiddenSeries": false,
       "id": 41,
       "legend": {
         "alignAsTable": true,
@@ -6539,6 +6490,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -6618,12 +6572,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображены Network Transmit, за исключением подов в hostNetwork.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 64
       },
+      "hiddenSeries": false,
       "id": 57,
       "legend": {
         "alignAsTable": true,
@@ -6642,6 +6598,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -6715,11 +6674,12 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 73
       },
       "id": 45,
       "panels": [],
@@ -6733,12 +6693,14 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 75
+        "y": 74
       },
+      "hiddenSeries": false,
       "id": 43,
       "legend": {
         "alignAsTable": true,
@@ -6757,6 +6719,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -6835,12 +6800,14 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 75
+        "y": 74
       },
+      "hiddenSeries": false,
       "id": 58,
       "legend": {
         "alignAsTable": true,
@@ -6859,6 +6826,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -6932,11 +6902,12 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 82
       },
       "id": 81,
       "panels": [],
@@ -6951,12 +6922,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике не отображается информация о НЕ localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. ",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 84
+        "y": 83
       },
+      "hiddenSeries": false,
       "id": 82,
       "legend": {
         "alignAsTable": true,
@@ -6975,6 +6948,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -7047,12 +7023,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике не отображается информация о НЕ localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 84
+        "y": 83
       },
+      "hiddenSeries": false,
       "id": 84,
       "legend": {
         "alignAsTable": true,
@@ -7071,6 +7049,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -7143,12 +7124,14 @@
       "datasource": "$ds_prometheus",
       "description": "На данном графике не отображается информация о НЕ localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 90
       },
+      "hiddenSeries": false,
       "id": 83,
       "legend": {
         "alignAsTable": true,
@@ -7167,6 +7150,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -7234,11 +7220,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 98
       },
       "id": 88,
       "panels": [
@@ -7264,12 +7251,14 @@
           "styles": [
             {
               "alias": "Time",
+              "align": "auto",
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "pattern": "Time",
               "type": "hidden"
             },
             {
               "alias": "Name",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7286,6 +7275,7 @@
             },
             {
               "alias": "StorageClass",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7302,6 +7292,7 @@
             },
             {
               "alias": "Requested",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7318,6 +7309,7 @@
             },
             {
               "alias": "Provisioned",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7334,6 +7326,7 @@
             },
             {
               "alias": "Capacity",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7350,6 +7343,7 @@
             },
             {
               "alias": "Used bytes",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7366,6 +7360,7 @@
             },
             {
               "alias": "Used inodes",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7382,6 +7377,7 @@
             },
             {
               "alias": "Used bytes (%)",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7398,6 +7394,7 @@
             },
             {
               "alias": "Used inodes (%)",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7414,6 +7411,7 @@
             },
             {
               "alias": "Used by pod",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7430,6 +7428,7 @@
             },
             {
               "alias": "",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -7651,7 +7650,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -7678,7 +7677,9 @@
         "allValue": ".*",
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kubernetes_build_info, node)",
@@ -7702,9 +7703,8 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "text": "madison-production",
-          "value": "madison-production"
+          "text": "default",
+          "value": "default"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
@@ -7728,8 +7728,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "deploy/madison-sidekiq-cable",
-          "value": "deploy/madison-sidekiq-cable"
+          "text": "deploy/test",
+          "value": "deploy/test"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}, controller)",
@@ -7754,7 +7754,9 @@
         "allValue": ".*",
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\"}, pod)",
@@ -7779,7 +7781,9 @@
         "allValue": ".*",
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$ds_prometheus",
         "definition": "query_result(max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))",
@@ -7803,7 +7807,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
