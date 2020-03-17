@@ -1,17 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "beforeHelm": 0,
-  "schedule": [
-    {
-      "crontab": "*/5 * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    schedule:
+    - name: madison_revoke
+      queue: /modules/prometheus-madison-integration/madison_revoke
+      crontab: "*/5 * * * *"
+      allowFailure: true
+EOF
 }
 
 function __main__() {
