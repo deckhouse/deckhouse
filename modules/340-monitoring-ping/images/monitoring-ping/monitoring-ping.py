@@ -4,7 +4,7 @@ import subprocess
 import prometheus_client
 import re
 import statistics
-import os
+import os, sys
 import json
 import glob
 import better_exchook
@@ -172,21 +172,26 @@ while True:
 
     for dimension in labeled_prom_metrics["cluster_targets"]:
         result = computed[dimension["ip"]]
-        dimension["prom_metrics"]["sent"].inc(computed[dimension["ip"]]["sent"])
-        dimension["prom_metrics"]["received"].inc(computed[dimension["ip"]]["received"])
-        dimension["prom_metrics"]["rtt"].inc(computed[dimension["ip"]]["rtt"])
-        dimension["prom_metrics"]["min"].set(computed[dimension["ip"]]["min"])
-        dimension["prom_metrics"]["max"].set(computed[dimension["ip"]]["max"])
-        dimension["prom_metrics"]["mdev"].set(computed[dimension["ip"]]["mdev"])
+        dimension["prom_metrics"]["sent"].inc(result["sent"])
+        dimension["prom_metrics"]["received"].inc(result["received"])
+        dimension["prom_metrics"]["rtt"].inc(result["rtt"])
+        dimension["prom_metrics"]["min"].set(result["min"])
+        dimension["prom_metrics"]["max"].set(result["max"])
+        dimension["prom_metrics"]["mdev"].set(result["mdev"])
 
     for dimension in labeled_prom_metrics["external_targets"]:
-        result = computed[dimension["host"]]
-        dimension["prom_metrics"]["sent"].inc(computed[dimension["host"]]["sent"])
-        dimension["prom_metrics"]["received"].inc(computed[dimension["host"]]["received"])
-        dimension["prom_metrics"]["rtt"].inc(computed[dimension["host"]]["rtt"])
-        dimension["prom_metrics"]["min"].set(computed[dimension["host"]]["min"])
-        dimension["prom_metrics"]["max"].set(computed[dimension["host"]]["max"])
-        dimension["prom_metrics"]["mdev"].set(computed[dimension["host"]]["mdev"])
+        if dimension["host"] in computed:
+          result = computed[dimension["host"]]
+        else:
+          sys.stderr.write("ERROR: fping hasn't reported results for host '" + dimension["host"] + "'. Possible DNS problems. Skipping host.\n")
+          sys.stderr.flush()
+          continue
+        dimension["prom_metrics"]["sent"].inc(result["sent"])
+        dimension["prom_metrics"]["received"].inc(result["received"])
+        dimension["prom_metrics"]["rtt"].inc(result["rtt"])
+        dimension["prom_metrics"]["min"].set(result["min"])
+        dimension["prom_metrics"]["max"].set(result["max"])
+        dimension["prom_metrics"]["mdev"].set(result["mdev"])
 
     prometheus_client.write_to_textfile(
         envs["PROMETHEUS_TEXTFILE_DIR"] + envs["PROMETHEUS_TEXTFILE_PREFIX"] + envs["MY_NODE_NAME"] + ".prom", registry)
