@@ -6,7 +6,7 @@ metadata:
   name: crowd-basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    kubernetes.io/ingress.class: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}

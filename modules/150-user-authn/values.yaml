@@ -1,5 +1,6 @@
 userAuthn:
   internal:
+    selfSignedCA: {}
     dexClientCRDs: []
     dexUsersCRDs: []
     dexAuthenticatorCRDs: []
