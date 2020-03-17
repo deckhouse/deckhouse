@@ -25,6 +25,9 @@ function hook::run() {
     "afterHelm")
       HANDLERS="__on_after_helm"
     ;;
+    "afterDeleteHelm")
+      HANDLERS="__on_after_delete_helm"
+    ;;
     *)
       HANDLERS=$(hook::_determine_kubernetes_and_scheduler_handlers)
     esac

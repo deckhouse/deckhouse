@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
 # TODO
@@ -17,15 +17,15 @@ function __config__() {
 #      }
 #   ]
 #}'
-  echo '
-{
-   "beforeHelm": 20,
-   "schedule": [
-     {
-       "crontab": "0 0 * * *"
-     }
-   ]
-}'
+
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    schedule:
+    - name: check_labels
+      queue: /modules/systemd-slices-cleaner/check_labels
+      crontab: "0 0 * * *"
+EOF
 }
 
 function __main__() {

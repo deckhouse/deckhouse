@@ -1,9 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=9
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 9
+EOF
 }
 
 function __main__() {

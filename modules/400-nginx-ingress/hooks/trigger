@@ -1,12 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 5
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 5
+EOF
 }
 
 function __main__() {
@@ -18,7 +18,7 @@ function __main__() {
       kubectl delete ing $i
     done
     unset IFS
-    exit 0
+    return 0
   fi
 
 

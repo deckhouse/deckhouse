@@ -1,16 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "afterDeleteHelm": 10
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    afterDeleteHelm: 10
+EOF
 }
 
-function __main__() {
+function __on_after_helm() {
   cluster_version=$(values::get global.discovery.clusterVersion)
   if [[ "$(semver compare $cluster_version 1.13.0)" -ne "-1" ]] ; then
     if kubectl -n kube-system get deploy coredns > /dev/null 2> /dev/null; then
@@ -21,17 +21,30 @@ function __main__() {
       # В ACS (acs-engine) кластерах coredns создается из манифестов на kube-master
       [[ "$cluster_type" == "ACS" ]] && return 0
 
-      if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
-        # Необходимо проставить наивысший priorityClassName coredns
-        fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-      else
-        fltr='. | del(.spec.template.spec.priorityClassName)'
-      fi
+      # Необходимо проставить наивысший priorityClassName coredns
+      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
       # Применяем
-      kubectl::jq_patch kube-system deploy/coredns "$fltr"
+      kubernetes::patch_jq kube-system deployment/coredns "$fltr"
+    fi
+  fi
+}
+
+function __on_after_delete_helm() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [[ "$(semver compare $cluster_version 1.13.0)" -ne "-1" ]] ; then
+    if kubectl -n kube-system get deploy coredns > /dev/null 2> /dev/null; then
+      cluster_type=$(values::get --required global.discovery.clusterType)
+      # Подам coredns необходимо задать максимальный priorityClass, так как без подов coredns
+      # работа всего кластера может быть нарушена
+
+      # В ACS (acs-engine) кластерах coredns создается из манифестов на kube-master
+      [[ "$cluster_type" == "ACS" ]] && return 0
+
+      fltr='. | del(.spec.template.spec.priorityClassName)'
+      # Применяем
+      kubernetes::patch_jq kube-system deployment/coredns "$fltr"
     fi
   fi
 }
 
 hook::run $@
-

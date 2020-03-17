@@ -1,31 +1,34 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=10
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
 }
 
 function __main__() {
   if ! values::has networkGateway.nodeSelector; then
     echo "ERROR: networkGateway.nodeSelector is mandatory."
-    exit 1
+    return 1
   fi
 
   if ! values::has networkGateway.subnet; then
     echo "ERROR: networkGateway.subnet is mandatory."
-    exit 1
+    return 1
   fi
 
   subnet=$(values::get networkGateway.subnet)
   if ! echo "${subnet}" | grep -q -E '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
     echo "ERROR: networkGateway.subnet format is 'IP/Prefix'."
-    exit 1
+    return 1
   fi 
 
   if ! values::has networkGateway.publicAddress; then
     echo "ERROR: networkGateway.publicAddress is mandatory."
-    exit 1
+    return 1
   fi
 }
 

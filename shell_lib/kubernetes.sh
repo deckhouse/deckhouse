@@ -21,13 +21,13 @@ function kubernetes::create_if_not_exists_yaml() {
 }
 
 # stdin resource_spec
-function kubernetes::replace_json() {
-  cat | jq -c '{op: "Replace", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+function kubernetes::replace_or_create_json() {
+  cat | jq -c '{op: "ReplaceOrCreate", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
 # stdin resource_spec
-function kubernetes::replace_yaml() {
-  cat | yq r -j - | jq -c '{op: "Replace", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+function kubernetes::replace_or_create_yaml() {
+  cat | yq r -j - | jq -c '{op: "ReplaceOrCreate", resourceSpec: (. | tojson)}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
 # $1 namespace
@@ -91,6 +91,14 @@ function kubernetes::_apply_patch_set() {
       resourceSpec="$(jq -r '.resourceSpec' <<< ${line})"
       if ! kubectl get -f - <<< "${resourceSpec}" >/dev/null 2>/dev/null; then
         kubectl create -f - <<< "${resourceSpec}" >/dev/null
+      fi
+    ;;
+    "ReplaceOrCreate")
+      resourceSpec="$(jq -r '.resourceSpec' <<< ${line})"
+      if ! kubectl get -f - <<< "${resourceSpec}" >/dev/null 2>/dev/null; then
+        kubectl create -f - <<< "${resourceSpec}" >/dev/null
+      else
+        kubectl replace --force -f - <<< "${resourceSpec}" >/dev/null
       fi
     ;;
     "JQPatch")

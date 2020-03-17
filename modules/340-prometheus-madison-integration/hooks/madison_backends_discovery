@@ -1,11 +1,17 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=0 schedule="$(jo -a \
-    "$(jo allowFailure=true crontab="*/10 * * * *")"
-  )"
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 0
+    schedule:
+    - name: madison_backends_discovery
+      queue: /modules/prometheus-madison-integration/madison_backends_discovery
+      crontab: "*/10 * * * *"
+      allowFailure: true
+EOF
 }
 
 function __main__() {
@@ -13,7 +19,7 @@ function __main__() {
     backends=$(getent ahosts madison.flant.com | grep STREAM | awk {'print $1'} | sort | jo -a)
     values::set prometheusMadisonIntegration.internal.madisonBackends "$backends"
   elif values::has prometheusMadisonIntegration.internal.madisonBackends ; then
-    values::unset prometheusMadisonIntegration.internal..madisonBackends
+    values::unset prometheusMadisonIntegration.internal.madisonBackends
   fi
 }
 

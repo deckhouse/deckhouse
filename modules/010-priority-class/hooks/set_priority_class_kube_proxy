@@ -1,15 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "afterDeleteHelm": 10
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    afterDeleteHelm: 10
+EOF
 }
-function __main__() {
+
+function __on_after_helm() {
   cluster_version=$(values::get global.discovery.clusterVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     cluster_type=$(values::get --required global.discovery.clusterType)
@@ -19,16 +20,27 @@ function __main__() {
     # В AWS и GCE kube-proxy запущены, как static поды
     [[ "$cluster_type" == "AWS" || "$cluster_type" == "GCE" ]] && return 0
 
-    if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
-      # Необходимо проставить наивысший priorityClassName kube-proxy
-      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-    else
-      fltr='. | del(.spec.template.spec.priorityClassName)'
-    fi
+    # Необходимо проставить наивысший priorityClassName kube-proxy
+    fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
     # Применяем
-    kubectl::jq_patch kube-system ds/kube-proxy "$fltr"
+    kubernetes::patch_jq kube-system daemonset/kube-proxy "$fltr"
+  fi
+}
+
+function __on_after_delete_helm() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
+    cluster_type=$(values::get --required global.discovery.clusterType)
+    # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
+    # работа всего кластера может быть нарушена
+
+    # В AWS и GCE kube-proxy запущены, как static поды
+    [[ "$cluster_type" == "AWS" || "$cluster_type" == "GCE" ]] && return 0
+
+    fltr='. | del(.spec.template.spec.priorityClassName)'
+    # Применяем
+    kubernetes::patch_jq kube-system daemonset/kube-proxy "$fltr"
   fi
 }
 
 hook::run $@
-

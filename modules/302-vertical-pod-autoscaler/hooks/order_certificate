@@ -1,17 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "beforeHelm": 5,
-  "schedule": [
-    {
-      "crontab": "13 4 * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 5
+    schedule:
+    - name: order_certificate
+      queue: /modules/vertical-pod-autoscaler/order_certificate
+      crontab: "13 4 * * *"
+EOF
 }
 
 function __main__() {

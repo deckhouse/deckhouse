@@ -1,27 +1,22 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-   "afterHelm": 10,
-   "onKubernetesEvent": [
-      {
-         "kind": "Secret",
-         "namespaceSelector": {
-            "matchNames": [
-               "d8-monitoring"
-            ]
-         },
-         "selector": {
-            "matchLabels": {
-               "additional-configs-for-prometheus": "main"
-            }
-         }
-      }
-   ]
-}
+    configVersion: v1
+    afterHelm: 10
+    kubernetes:
+    - name: secrets
+      queue: /modules/prometheus
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-monitoring]
+      labelSelector:
+        matchLabels:
+          additional-configs-for-prometheus: main
 EOF
 }
 

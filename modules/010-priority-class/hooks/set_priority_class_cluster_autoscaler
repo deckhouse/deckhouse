@@ -1,16 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "afterDeleteHelm": 10
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    afterDeleteHelm: 10
+EOF
 }
 
-function __main__() {
+function __on_after_helm() {
   cluster_version=$(values::get global.discovery.clusterVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     cluster_type=$(values::get --required global.discovery.clusterType)
@@ -22,12 +22,27 @@ function __main__() {
 
     # Убедимся, что не забыли поставить cluster-autoscaler
     if kubectl -n kube-system get deploy cluster-autoscaler > /dev/null 2> /dev/null ; then
-      if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
-        # Необходимо проставить наивысший priorityClassName cluster-autoscaler
-        fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-      else
-        fltr='. | del(.spec.template.spec.priorityClassName)'
-      fi
+      # Необходимо проставить наивысший priorityClassName cluster-autoscaler
+      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+      # Применяем
+      kubernetes::patch_jq kube-system deployment/cluster-autoscaler "$fltr"
+    fi
+  fi
+}
+
+function __on_after_delete_helm() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
+    cluster_type=$(values::get --required global.discovery.clusterType)
+    # Поду cluster-autoscaler необходимо задать максимальный priorityClass, так как без cluster-autoscaler
+    # мы не сможем скейлить кластер
+
+    # В Manual кластерах нет cluster-autoscaler
+    [[ "$cluster_type" == "Manual" ]] && return 0
+
+    # Убедимся, что не забыли поставить cluster-autoscaler
+    if kubectl -n kube-system get deploy cluster-autoscaler > /dev/null 2> /dev/null ; then
+      fltr='. | del(.spec.template.spec.priorityClassName)'
       # Применяем
       kubectl::jq_patch kube-system deploy/cluster-autoscaler "$fltr"
     fi
@@ -35,4 +50,3 @@ function __main__() {
 }
 
 hook::run $@
-

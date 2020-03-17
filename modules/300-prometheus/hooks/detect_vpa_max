@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
 # TODO
@@ -19,15 +19,14 @@ function __config__() {
 #   ]
 #}'
 
-  echo '
-{
-   "beforeHelm": 20,
-   "schedule": [
-      {
-        "crontab": "*/10 * * * *"
-      }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    schedule:
+    - name: detect_vpa_max
+      queue: /modules/prometheus/detect_vpa_max
+      crontab: "*/10 * * * *"
+EOF
 }
 
 function __main__() {

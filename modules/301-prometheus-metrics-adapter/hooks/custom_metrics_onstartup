@@ -1,12 +1,11 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-  "onStartup": 20
-}
+    configVersion: v1
+    onStartup: 20
 EOF
 }
 

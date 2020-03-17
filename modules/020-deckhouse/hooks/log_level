@@ -1,9 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=0
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 0
+EOF
 }
 
 function __main__() {
@@ -14,7 +17,7 @@ function __main__() {
     return 1
   fi
 
-  kubectl::jq_patch d8-system deploy/deckhouse '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
+  kubernetes::patch_jq d8-system deployment/deckhouse '.spec.template.spec.containers[0].env |= (. | map(if .name == "RLOG_LOG_LEVEL" then .value = "'${log_level^^}'" else . end))'
 }
 
 hook::run $@
