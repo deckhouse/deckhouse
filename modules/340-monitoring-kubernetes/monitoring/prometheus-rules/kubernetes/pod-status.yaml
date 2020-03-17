@@ -2,12 +2,12 @@
   rules:
     - alert: PodStatusIsIncorrect
       expr: >
-        (count by (node, namespace, pod) (kube_pod_status_ready{condition="true"} == 0) * on (namespace, pod) group_left(node) kube_pod_info)
+        (count by (node, namespace, pod) (kube_pod_status_ready{condition="true"} == 0) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
         and
         (
-          (count by (namespace, pod) (kube_pod_container_status_ready==1) * on (namespace, pod) group_left(node) kube_pod_info)
+          (count by (namespace, pod) (kube_pod_container_status_ready==1) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
           unless
-          (count by (namespace, pod) (kube_pod_container_status_ready==0) * on (namespace, pod) group_left(node) kube_pod_info)
+          (count by (namespace, pod) (kube_pod_container_status_ready==0) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
         )
       for: 10m
       annotations:
