@@ -18,7 +18,7 @@
         Ingress controller {{ $labels.controller }} in namespace {{ $labels.controller_namespace }} failed config test (nginx -t)
         Consider the following:
         1. Check controllers log:
-        `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c nginx`
+        `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c ingress-nginx-controller`
         2. Find the newest ingress on cluster:
         `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`
         3. Most likely an error in configuration-snippet or server-snippet
