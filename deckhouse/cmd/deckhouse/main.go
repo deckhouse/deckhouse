@@ -26,17 +26,6 @@ var AddonOperatorVersion = "dev"
 var ShellOperatorVersion = "dev"
 
 func main() {
-	// TODO DELETE THIS AFTER MIGRATION
-	// temporary fix to migrate from ANTIOPA_POD to DECKHOUSE_POD
-	antiopaPod := os.Getenv("ANTIOPA_POD")
-	if antiopaPod != "" {
-		err := os.Setenv("DECKHOUSE_POD", antiopaPod)
-		if err != nil {
-			panic(err)
-		}
-	}
-	// END DELETE THIS AFTER MIGRATION
-
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
 

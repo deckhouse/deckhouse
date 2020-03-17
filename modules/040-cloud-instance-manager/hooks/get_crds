@@ -24,7 +24,6 @@ function __config__() {
       apiVersion: deckhouse.io/v1alpha1
       kind: ${general_instance_class_kind}
       jqFilter: |
-        .spec.bashible //= .spec.cloudInitSteps | del(.spec.cloudInitSteps) | .spec.bashible.bundle //= .spec.bashible.version | del(.spec.bashible.version) |
         {
           "name": .metadata.name,
           "spec": (.spec | .bashible //= {} | .bashible.options //= {} | .bashible.dynamicOptions //= {}),

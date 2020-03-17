@@ -4,20 +4,6 @@ source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
-  ### Миграция 2019-10-02: https://github.com/deckhouse/deckhouse/merge_requests/1222
-  # Данный хук можно удалить, после того, как мы выкатим релиз с этим MR
-  # а в следующем релизе будут выпилены настройки связанные с madison в модуле prometheus
-  madison_self_setup_key=$(kubectl -n d8-system get configmap deckhouse -o yaml | yq r - data.prometheus | yq r - madisonSelfSetupKey)
-  if values::array_has global.enabledModules "prometheus" ; then
-    # Этот if тоже надо выпилить, когда сделаем действия описанные выше
-    if [ "${madison_self_setup_key}" == "false" ] ; then
-      echo "false" > $MODULE_ENABLED_RESULT
-    else
-      echo "true" > $MODULE_ENABLED_RESULT
-    fi
-  else
-    echo "false" > $MODULE_ENABLED_RESULT
-  fi
 }
 
 enabled::run "$@"
