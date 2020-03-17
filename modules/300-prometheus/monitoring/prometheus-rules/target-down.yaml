@@ -2,7 +2,7 @@
   rules:
   - alert: TargetDown
     for: __SCRAPE_INTERVAL_X_2__
-    expr: up == 0 unless on (job) ALERTS{alertname=~".*TargetDown"}
+    expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
     labels:
       severity_level: "7"
     annotations:
@@ -13,7 +13,7 @@
       summary: Target is down
 
   - alert: TargetDown
-    expr: up == 0 unless on (job) ALERTS{alertname=~".*TargetDown"}
+    expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
     for: 30m
     labels:
       severity_level: "6"
@@ -24,7 +24,7 @@
       summary: Target is down
 
   - alert: TargetDown
-    expr: up == 0 unless on (job) ALERTS{alertname=~".*TargetDown"}
+    expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
     for: 60m
     labels:
       severity_level: "5"
@@ -33,3 +33,19 @@
       plk_labels_as_annotations: "instance,pod"
       description: '{{ $labels.job }} target is down.'
       summary: Target is down
+
+  - alert: TargetSampleLimitExceeded
+    expr: max by (namespace, pod) (increase(prometheus_target_scrapes_exceeded_sample_limit_total[__SCRAPE_INTERVAL_X_2__])) > 0
+    for: __SCRAPE_INTERVAL_X_2__
+    labels:
+      severity_level: "7"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "namespace,pod"
+      plk_grouped_by__target_down: "TargetDown,prometheus=deckhouse"
+      description: |
+        Targets Down because of a sample limit exceeded.
+
+        To find the targets you should go to the "Status/Targets" menu in Prometheus and search by the `sample limit exceeded` keyword.
+      summary: Scrapes are exceding sample limit
