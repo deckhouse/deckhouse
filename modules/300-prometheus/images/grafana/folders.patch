@@ -1,0 +1,88 @@
+diff --git a/pkg/services/provisioning/dashboards/file_reader.go b/pkg/services/provisioning/dashboards/file_reader.go
+index 698a3587b4..c77f66aea7 100644
+--- a/pkg/services/provisioning/dashboards/file_reader.go
++++ b/pkg/services/provisioning/dashboards/file_reader.go
+@@ -98,6 +98,16 @@ func (fr *fileReader) startWalkingDisk() error {
+
+ 	// save dashboards based on json files
+ 	for path, fileInfo := range filesFoundOnDisk {
++		_, ok := fr.Cfg.Options["folderFromFileStructure"]
++		if ok {
++			fr.Cfg.Folder = filepath.Base(filepath.Dir(path))
++			fr.log.Debug("folder name", "warning", fr.Cfg.Folder)
++
++			folderId, err = getOrCreateFolderId(fr.Cfg, fr.dashboardProvisioningService)
++			if err != nil && err != ErrFolderNameMissing {
++				return err
++			}
++		}
+ 		provisioningMetadata, err := fr.saveDashboard(path, folderId, fileInfo, provisionedDashboardRefs)
+ 		sanityChecker.track(provisioningMetadata)
+ 		if err != nil {
+@@ -166,7 +176,7 @@ func (fr *fileReader) saveDashboard(path string, folderId int64, fileInfo os.Fil
+ 	// keeps track of what uid's and title's we have already provisioned
+ 	dash := jsonFile.dashboard
+ 	provisioningMetadata.uid = dash.Dashboard.Uid
+-	provisioningMetadata.title = dash.Dashboard.Title
++	provisioningMetadata.identity = dashboardIdentity{title: dash.Dashboard.Title, folderId: dash.Dashboard.FolderId}
+
+ 	if upToDate {
+ 		return provisioningMetadata, nil
+@@ -351,29 +361,39 @@ func (fr *fileReader) resolvedPath() string {
+ }
+
+ type provisioningMetadata struct {
+-	uid   string
+-	title string
++	uid      string
++	identity dashboardIdentity
++}
++
++type dashboardIdentity struct {
++	folderId int64
++	title    string
++}
++
++func (d *dashboardIdentity) Exists() bool {
++	return len(d.title) > 0 && d.folderId > 0
+ }
+
+ func newProvisioningSanityChecker(provisioningProvider string) provisioningSanityChecker {
+ 	return provisioningSanityChecker{
+ 		provisioningProvider: provisioningProvider,
+ 		uidUsage:             map[string]uint8{},
+-		titleUsage:           map[string]uint8{}}
++		titleUsage:           map[dashboardIdentity]uint8{},
++	}
+ }
+
+ type provisioningSanityChecker struct {
+ 	provisioningProvider string
+ 	uidUsage             map[string]uint8
+-	titleUsage           map[string]uint8
++	titleUsage           map[dashboardIdentity]uint8
+ }
+
+ func (checker provisioningSanityChecker) track(pm provisioningMetadata) {
+ 	if len(pm.uid) > 0 {
+ 		checker.uidUsage[pm.uid] += 1
+ 	}
+-	if len(pm.title) > 0 {
+-		checker.titleUsage[pm.title] += 1
++	if pm.identity.Exists() {
++		checker.titleUsage[pm.identity] += 1
+ 	}
+ }
+
+@@ -384,9 +404,9 @@ func (checker provisioningSanityChecker) logWarnings(log log.Logger) {
+ 		}
+ 	}
+
+-	for title, times := range checker.titleUsage {
++	for identity, times := range checker.titleUsage {
+ 		if times > 1 {
+-			log.Error("the same 'title' is used more than once", "title", title, "provider", checker.provisioningProvider)
++			log.Error("the same 'title' is used more than once", "title", identity.title, "provider", checker.provisioningProvider)
+ 		}
+ 	}
+ }

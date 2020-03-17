@@ -4,8 +4,8 @@ RUN mkdir -p /go/src/github.com/grafana/grafana && \
 WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .
-COPY ./folder.patch .
-RUN patch -p1 < ./extra_vars.patch && patch -p1 < ./folder.patch
+COPY ./folders.patch .
+RUN patch -p1 < ./extra_vars.patch && patch -p1 < ./folders.patch
 RUN bash -l -c "go run build.go build package" && \
     mv dist/*.deb /grafana.deb
 
@@ -31,7 +31,7 @@ RUN apt-get update && \
     chmod +x /usr/sbin/gosu && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* && \
-    GF_INSTALL_PLUGINS="petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" && \
+    GF_INSTALL_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" && \
     GF_PATHS_PLUGINS="/var/lib/grafana/plugins" && \
     IFS="," && \
     for plugin in ${GF_INSTALL_PLUGINS}; do \
