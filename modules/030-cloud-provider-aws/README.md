@@ -143,7 +143,7 @@ volumeBindingMode: WaitForFirstConsumer # обязательно!
      * `tls`
      * `http`
      * `https`
-   * По-умолчанию, `http`.
+   * По-умолчанию, `tcp`.
    * **Внимание!** При изменении поля cloud-controller-manager попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group он не сможет и будет пытаться вечно. Необходимо вручную отсоединить от Target Group NLB или ALB.
 
 ## Настройка окружения
