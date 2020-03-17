@@ -1,9 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=10
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
 }
 
 function __main__() {
@@ -16,7 +19,7 @@ function __main__() {
   if kubectl -n d8-system get deploy deckhouse -o json | jq -e '.spec.template.spec.containers[0].resources.limits' >/dev/null ; then
     fltr=$fltr' | .spec.template.spec.containers[0].resources.limits = {}'
   fi
-  kubectl::jq_patch d8-system deploy/deckhouse "$fltr"
+  kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
 }
 
 hook::run $@

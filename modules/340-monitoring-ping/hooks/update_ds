@@ -1,21 +1,20 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
 # TODO
 #  jo -p beforeHelm=20 onKubernetesEvent="$(jo -a \
 #    "$(jo kind=node jqFilter=".status.addresses" disableDebug=true)" \
 #  )"
-  echo '
-{
-  "beforeHelm": 20,
-  "schedule": [
-    {
-      "crontab": "* * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    schedule:
+    - name: update_ds
+      queue: /modules/monitoring-ping/update_ds
+      crontab: "* * * * *"
+EOF
 }
 
 function __main__() {

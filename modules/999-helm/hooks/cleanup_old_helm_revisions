@@ -1,11 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p schedule="$(jo -a \
-    "$(jo allowFailure=true crontab="42 */6 * * *")"
-  )"
+  cat << EOF
+    configVersion: v1
+    schedule:
+    - name: cleanup_old_helm_revisions
+      queue: /modules/helm/cleanup_old_helm_revisions
+      crontab: "42 */6 * * *"
+      allowFailure: true
+EOF
 }
 
 function __main__() {

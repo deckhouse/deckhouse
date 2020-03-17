@@ -1,16 +1,15 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "schedule": [
-    {
-      "crontab": "*/10 * * * *"
-    }
-  ]
-}'
+  cat << EOF
+    configVersion: v1
+    schedule:
+    - name: stabilize_release_channel
+      queue: /modules/deckhouse/stabilize_release_channel
+      crontab: "*/10 * * * *"
+EOF
 }
 
 function __main__() {
@@ -77,7 +76,7 @@ function __main__() {
     done
   fi
   if [[ "$result_tag" != "$current_release_channel_tag" ]]; then
-    kubectl::jq_patch d8-system deploy/deckhouse ".spec.template.spec.containers[0].image = \"${registry}:${result_tag}\""
+    kubernetes::patch_jq d8-system deployment/deckhouse ".spec.template.spec.containers[0].image = \"${registry}:${result_tag}\""
   fi
 }
 

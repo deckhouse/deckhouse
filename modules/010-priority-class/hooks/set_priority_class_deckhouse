@@ -1,26 +1,31 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "afterDeleteHelm": 20
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    afterDeleteHelm: 10
+EOF
 }
 
-function __main__() {
+function __on_after_helm() {
   cluster_version=$(values::get global.discovery.clusterVersion)
 
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
-      # Необходимо проставить priorityClassName антиопе
-      fltr='. | .spec.template.spec.priorityClassName = "cluster-medium"'
-    else
-      fltr='. | del(.spec.template.spec.priorityClassName)'
-    fi
-    kubectl::jq_patch d8-system deploy/deckhouse "$fltr"
+    # Необходимо проставить priorityClassName антиопе
+    fltr='. | .spec.template.spec.priorityClassName = "cluster-medium"'
+    kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
+  fi
+}
+
+function __on_after_delete_helm() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
+    fltr='. | del(.spec.template.spec.priorityClassName)'
+    kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
   fi
 }
 

@@ -1,19 +1,17 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 
 function __config__() {
-  echo '
-  {
-    "configVersion": "v1",
-    "beforeHelm": 10,
-    "schedule": [
-      {
-        "crontab": "42 4 * * *"
-      }
-    ]
-  }'
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+    schedule:
+    - name: generate_crowd_basic_auth_proxy_cert
+      queue: /modules/user-authn/generate_crowd_basic_auth_proxy_cert
+      crontab: "42 4 * * *"
+EOF
 }
 
 function __main__() {

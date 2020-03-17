@@ -1,9 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=10
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+EOF
 }
 
 function __main__() {
@@ -16,6 +19,7 @@ function __main__() {
     echo "Waiting for webhook pod in d8-cert-manager namespace"
     sleep 1
   done
+
   if [[ $i -ge 120 ]] ; then
     >&2 echo "Timeout waiting for webhook pod in d8-cert-manager namespace"
     return 1

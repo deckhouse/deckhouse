@@ -4,23 +4,19 @@ source /deckhouse/shell_lib_legacy.sh
 
 function __config__() {
   cat << EOF
-{
-  "beforeHelm": 10,
-  "onKubernetesEvent": [
-    {
-      "kind": "ConfigMap",
-      "namespaceSelector": {
-        "matchNames": ["d8-user-authn", "d8-user-authz"],
-        "any": false
-      },
-      "selector": {
-        "matchLabels": {
-          "control-plane-configurator": ""
-        }
-      }
-    }
-  ]
-}
+    configVersion: v1
+    beforeHelm: 10
+    kubernetes:
+    - name: cm
+      queue: /modules/control-plane-configurator
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [d8-user-authn, d8-user-authz]
+      labelSelector:
+        matchLabels:
+          control-plane-configurator: ""
 EOF
 }
 

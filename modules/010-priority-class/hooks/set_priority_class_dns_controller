@@ -1,16 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  echo '
-{
-  "afterHelm": 10,
-  "afterDeleteHelm": 10
-}'
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    afterDeleteHelm: 10
+EOF
 }
 
-function __main__() {
+function __on_after_helm() {
   cluster_version=$(values::get global.discovery.clusterVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     cluster_type=$(values::get --required global.discovery.clusterType)
@@ -20,16 +20,27 @@ function __main__() {
     # В Manual кластерах нет dns-controller
     [[ "$cluster_type" == "Manual" || "$cluster_type" == "ACS" ]] && return 0
 
-    if hook::context_jq -re 'any(.[]; .binding=="afterHelm")' 2>/dev/null 1>&2; then
-      # Необходимо поставить наивысший priorityClassName dns-controller
-      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-    else
-      fltr='. | del(.spec.template.spec.priorityClassName)'
-    fi
+    # Необходимо поставить наивысший priorityClassName dns-controller
+    fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
     # Применяем
-    kubectl::jq_patch kube-system deploy/dns-controller "$fltr"
+    kubernetes::patch_jq kube-system deployment/dns-controller "$fltr"
+  fi
+}
+
+function __on_after_delete_helm() {
+  cluster_version=$(values::get global.discovery.clusterVersion)
+  if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
+    cluster_type=$(values::get --required global.discovery.clusterType)
+    # dns-controller необходимо задать максимальный priorityClass, так как без dns-controller
+    # мы можем получить нерабочий инструмент kubectl
+
+    # В Manual кластерах нет dns-controller
+    [[ "$cluster_type" == "Manual" || "$cluster_type" == "ACS" ]] && return 0
+
+    fltr='. | del(.spec.template.spec.priorityClassName)'
+    # Применяем
+    kubernetes::patch_jq kube-system deployment/dns-controller "$fltr"
   fi
 }
 
 hook::run $@
-

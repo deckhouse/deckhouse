@@ -103,7 +103,7 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 			newObjectStore.PutObject(newObj.Object, object_store.NewMetaIndex(newObj.GetKind(), newObj.GetNamespace(), newObj.GetName()))
 		}
 
-	case "Replace":
+	case "ReplaceOrCreate":
 		var t interface{}
 		dec := yaml.NewDecoder(strings.NewReader(kpo.ResourceSpec))
 		err = dec.Decode(&t)
@@ -111,7 +111,7 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 			return object_store.ObjectStore{}, fmt.Errorf("operation \"Replace\", faield to decode YAML: %s\n\n%s", err)
 		}
 		if t == nil {
-			return object_store.ObjectStore{}, errors.New("kubernetes Replace operation should contain pure YAML")
+			return object_store.ObjectStore{}, errors.New("kubernetes ReplaceOrRestore operation should contain pure YAML")
 		}
 
 		var newObj unstructured.Unstructured

@@ -1,9 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p afterHelm=10
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+EOF
 }
 
 function __main__() {
@@ -21,10 +24,10 @@ metadata:
  annotations:
    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
-  applicationDomain: "$(common::module_public_domain dashboard)"
+  applicationDomain: "$(module::public_domain dashboard)"
   sendAuthorizationHeader: true
   applicationIngressCertificateSecretName: "ingress-tls"
-  applicationIngressClassName: "$(common::module_ingress_class)"
+  applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else
     if kubectl -n d8-dashboard get dexauthenticator dashboard >/dev/null 2>/dev/null ; then

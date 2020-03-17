@@ -1,31 +1,47 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onKubernetesEvent="$(jo -a "$(jo kind=namespace event='["add"]')")"
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: ns
+      queue: /modules/secret-copier
+      apiVersion: v1
+      kind: Namespace
+      watchEvent: ["Added"]
+EOF
 }
 
-function __main__() {
-  for namespace in $(hook::context_jq -r '.[] | select(.resourceName == "default" | not) | .resourceName');
+# $1 — namespace
+function _handle_ns() {
+  namespace=$1
+
+  if ! $(kubectl get namespace $namespace 2>/dev/null >/dev/null) ; then
+    return 0
+  fi
+
+  if $(kubectl get namespace $namespace -o json | jq 'select(.status.phase != "Active")' -e >/dev/null 2>/dev/null); then
+    return 0
+  fi
+
+  for secret in $(kubectl -n default get secret -l antiopa-secret-copier=yes -o name);
   do
-    if ! $(kubectl get namespace $namespace 2>/dev/null >/dev/null) ; then
-      return 0
-    fi
-
-    if $(kubectl get namespace $namespace -o json | jq 'select(.status.phase != "Active")' -e >/dev/null 2>/dev/null); then
-      return 0
-    fi
-
-
-    for secret in $(kubectl -n default get secret -l antiopa-secret-copier=yes -o name);
-    do
-      kubectl -n default get $secret -o json | \
-        jq -r "include \"remove_empty\"; .metadata.namespace=\"${namespace}\" | remove_empty |
-                .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
-        | kubectl::replace_or_create
-    done
+    kubectl -n default get $secret -o json | \
+      jq -r ".metadata.namespace=\"${namespace}\" |
+              .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
+      | kubernetes::replace_or_create_json
   done
+}
+
+function __on_kubernetes::ns::synchronization() {
+  # При старте сработает синхронизация секретов
+  return 0
+}
+
+function __on_kubernetes::ns::added() {
+  _handle_ns "$(context::get object.metadata.name)"
 }
 
 hook::run $@

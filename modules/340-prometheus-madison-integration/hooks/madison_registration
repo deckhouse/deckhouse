@@ -1,9 +1,12 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=1 #after madison_revoke
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1 #after madison_revoke
+EOF
 }
 
 function madison_api() {
@@ -17,7 +20,6 @@ function madison_api() {
       fi
 
       >&2 echo 'Command: curl -s -H "Content-Type: application/json" -X '$1' -d "'$3'" https://madison.flant.com'$2
-
       return 1
     fi
 
@@ -54,8 +56,8 @@ function __main__() {
     fi
 
     request_data=$(jq -s '.[0] * .[1]' <(echo "$request_data") <(jo \
-      grafana_url="$scheme://$(common::module_public_domain grafana)/" \
-      prometheus_url="$scheme://$(common::module_public_domain grafana)/prometheus/"
+      grafana_url="$scheme://$(module::public_domain grafana)/" \
+      prometheus_url="$scheme://$(module::public_domain grafana)/prometheus/"
     ))
   fi
 
