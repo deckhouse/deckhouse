@@ -36,8 +36,7 @@ func Run(cmd *exec.Cmd, opts ...SandboxOption) *gexec.Session {
 	session, err := gexec.Start(sandboxConf.cmd, nil, ginkgo.GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
 
-	session.Wait(30 * time.Second)
-
+	session.Wait(time.Minute)
 	return session
 }
 
