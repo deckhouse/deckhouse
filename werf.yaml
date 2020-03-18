@@ -256,7 +256,7 @@ artifact: libjq
 from: alpine:3.10
 git:
 - url: https://github.com/flant/libjq-go
-  branch: master
+  tag: v1.6.0
   add: /
   to: /src
   stageDependencies:

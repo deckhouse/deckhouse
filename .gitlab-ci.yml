@@ -9,7 +9,7 @@ Build:
   stage: build
   script:
     - ./modules_images bp --write-tags=modules/images_tags.json
-    - type multiwerf && source <(multiwerf use 1.0 beta)
+    - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE} dev
     - werf build --stages-storage :local tests
@@ -27,7 +27,7 @@ Tests:
   script:
     - pwd
     - ./modules_images bp --write-tags=modules/images_tags.json
-    - type multiwerf && source <(multiwerf use 1.0 beta)
+    - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - rm -rf testing/kcov-report
     - chmod -R 0777 testing
@@ -60,7 +60,7 @@ Matrix Tests:
   stage: testing
   script:
     - pwd
-    - type multiwerf && source <(multiwerf use 1.0 beta)
+    - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf run tests
         --docker-options="-v $(pwd):/deckhouse -w /deckhouse/testing"
