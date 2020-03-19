@@ -44,7 +44,7 @@ function __on_after_delete_helm() {
     if kubectl -n kube-system get deploy cluster-autoscaler > /dev/null 2> /dev/null ; then
       fltr='. | del(.spec.template.spec.priorityClassName)'
       # Применяем
-      kubectl::jq_patch kube-system deploy/cluster-autoscaler "$fltr"
+      kubernetes::patch_jq kube-system deploy/cluster-autoscaler "$fltr"
     fi
   fi
 }
