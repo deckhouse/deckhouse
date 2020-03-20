@@ -119,6 +119,9 @@ cloudProviderVsphere: |
 * `resourcePool` — путь до Resource Pool, в котором будут созданые склонированные виртуальные машины.
     * Пример — `prod`
     * Опциональный параметр.
+* `resourcePoolForNewNodes` — полный аналог опции `resourcePool`, при изменении параметра **не происходит** перекат нод.
+    * Пример — `prod`
+    * Опциональный параметр.
 * `runtimeOptions` — опциональные параметры виртуальных машин.
     * `nestedHardwareVirtualization` — включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах
         * Формат — bool.

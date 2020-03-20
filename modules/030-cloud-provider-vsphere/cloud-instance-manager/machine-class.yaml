@@ -20,8 +20,9 @@ spec:
   {{- end }}
 {{- end }}
   datastore: {{ .instanceGroup.instanceClass.datastore | quote }}
-{{- if .instanceGroup.instanceClass.resourcePool }}
-  resourcePool: {{ .instanceGroup.instanceClass.resourcePool | quote }}
+{{- /* Откатить после окончания ***REMOVED***а */ -}}
+{{- if or .instanceGroup.instanceClass.resourcePool .instanceGroup.instanceClass.resourcePoolForNewNodes }}
+  resourcePool: {{ or .instanceGroup.instanceClass.resourcePool .instanceGroup.instanceClass.resourcePoolForNewNodes | quote }}
 {{- end }}
   clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
   nodeRoleTag: {{ .instanceGroup.name }}-{{ .zoneName }}
