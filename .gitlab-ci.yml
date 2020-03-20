@@ -21,12 +21,16 @@ Build:
     - schedules
   tags:
     - build
+  artifacts:
+    when: always
+    paths:
+    - modules/images_tags.json
+    expire_in: 30 days
 
 Tests:
   stage: testing
   script:
     - pwd
-    - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - rm -rf testing/kcov-report
@@ -52,7 +56,9 @@ Tests:
     when: always
     paths:
     - testing/kcov-report
-    expire_in: 10 days
+    expire_in: 14 days
+  dependencies:
+    - Build
   tags:
     - build
 
@@ -68,6 +74,8 @@ Matrix Tests:
         -- ginkgo -vet=off --slowSpecThreshold=30 ./matrix/
   except:
     - schedules
+  dependencies:
+    - Build
   tags:
     - build
 
@@ -87,6 +95,12 @@ Matrix Tests:
     - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_SHA}
     - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
   when: manual
+  dependencies:
+    - Build
+  needs:
+    - "Matrix Tests"
+    - "Tests"
+    - "Build"
   tags:
     - build
 
@@ -149,6 +163,8 @@ Cleanup registry:
   - schedules
   tags:
     - build
+  dependencies:
+    - Build
   retry: 2
 
 Cleanup modules images:
@@ -161,3 +177,5 @@ Cleanup modules images:
     - schedules
   tags:
     - build
+  dependencies:
+    - Build
