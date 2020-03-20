@@ -13,7 +13,6 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 - `"Off"` — VPA не изменяет автоматически никакие ресурсы. В данном случае, если есть VPA c таким режимом работы, мы можем посмотреть, какие ресурсы рекомендует поставить VPA (kubectl describe vpa <vpa-name>)
 
 Ограничения VPA:
-- VPA не изменяет `resource limits`. Это подразумевает, что рекомендации ограничены `resource limits`. В будущем это может измениться.
 - Обновление ресурсов запущенных подов это экспериментальная фича VPA. Каждый раз, когда VPA обновляет `resource requests` пода, под пересоздается. Соответственно под может быть создан на другой ноде.
 - VPA **не должен использоваться с [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) по cpu и memory** в данный момент. Однако VPA можно использовать с HPA на custom/external metrics.
 - VPA реагирует почти на все `out-of-memory` event, но не гарантирует реакцию (почему так — выяснить из документации не удалось).
@@ -141,3 +140,83 @@ kubectl describe vpa my-app-vpa
 - `Lower Bound` — Минимальное рекомендуемое количество ресурсов для более или менее (но не гарантированно) хорошей работы приложения.
 - `Upper Bound` — Максимальное рекомендуемое количество ресурсов. Скорее всего ресурсы выделенные сверх этого значения идут в мусорку и совсем никогда не нужны приложению.
 - `Uncapped Target` — Рекомендуемое количество ресурсов в самый последний момент, т.е. данное значение считается на основе самых крайних метрик, не смотря на историю ресурсов за весь период.
+
+## Как Vertical Pod Autoscaler работает с лимитами
+
+Теперь Vertical Pod Autoscaler модифицирует лимиты контейнеров. Рассмотрим работу на примерах:
+
+### Пример 1
+
+У нас есть VPA объект:
+
+```yaml
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: test2
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: test2
+  updatePolicy:
+    updateMode: "Initial"
+```
+
+И есть под с такими ресурсами:
+```yaml
+resources:
+  limits:
+    cpu: 2
+  requests:
+    cpu: 1
+```
+
+В данном случае если контейнер будет потреблять, к примеру 1 CPU целиком и VPA порекомендует данному контейнеру 1.168 CPU, то вычисляется ratio между requets и limits. В данном случае он будет равен 100%.
+В этом случае, при пересоздании пода VPA модифицирует под и проставит такие ресурсы:
+```yaml
+resources:
+  limits:
+    cpu: 2336m
+  requests:
+    cpu: 1168m
+```
+
+### Пример 2
+
+У нас есть VPA объект:
+```yaml
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: test2
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: test2
+  updatePolicy:
+    updateMode: "Initial"
+```
+
+И есть под с такими ресурсами:
+```yaml
+resources:
+  limits:
+    cpu: 1
+  requests:
+    cpu: 750m
+```
+
+В данном случае соотношение requests и limits будет равным 25% и если VPA порекомендует для контейнера 1.168 CPU, то VPA изменит ресурсы контейнера таким образом:
+```yaml
+resources:
+  limits:
+    cpu: 1557m
+  requests:
+    cpu: 1168m
+```
+
+Если вам необходимо ограничить максимальное количество ресурсов, которое может быть заданно для limits контейнера, то необходимо использовать в спеке объекта VPA: `maxAllowed` или использовать [Limit Range](https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/) объект Kubernetes.

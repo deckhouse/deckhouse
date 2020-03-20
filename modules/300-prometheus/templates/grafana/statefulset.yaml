@@ -1,53 +1,3 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
----
-apiVersion: autoscaling.k8s.io/v1beta2
-kind: VerticalPodAutoscaler
-metadata:
-  name: grafana
-  namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: StatefulSet
-    name: grafana
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: grafana
-      minAllowed:
-        memory: 40Mi
-        cpu: 20m
-      maxAllowed:
-        memory: 512Mi
-        cpu: 350m
-      mode: Auto
-    - containerName: dashboard-provisioner
-      minAllowed:
-        memory: 20Mi
-        cpu: 20m
-      maxAllowed:
-        memory: 512Mi
-        cpu: 350m
-      mode: Auto
-    - containerName: nginx-firewall
-      minAllowed:
-        memory: 20Mi
-        cpu: 20m
-      maxAllowed:
-        memory: 100Mi
-        cpu: 200m
-      mode: Auto
-    - containerName: kube-rbac-proxy
-      minAllowed:
-        memory: 20Mi
-        cpu: 20m
-      maxAllowed:
-        memory: 100Mi
-        cpu: 200m
-      mode: Auto
-{{- end }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -171,6 +121,10 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 443
+        resources:
+          requests:
+            memory: 50Mi
+            cpu: 25m
       volumes:
       - name: shared-dashboards-folder
         emptyDir: {}
