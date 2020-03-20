@@ -37,7 +37,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 - encodedName: encodedAdmin
   name: adminName
   spec:
-    email: admin@example.com
+    email: adminTest@example.com
     groups:
     - Everyone
     - Admins
@@ -57,7 +57,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 
 			adminPassword := hec.KubernetesResource("Password", "d8-user-authn", "encodedAdmin")
 			Expect(adminPassword.Exists()).To(BeTrue())
-			Expect(adminPassword.Field("email").String()).To(Equal("admin@example.com"))
+			Expect(adminPassword.Field("email").String()).To(Equal("admintest@example.com"))
 			Expect(adminPassword.Field("username").String()).To(Equal("adminName"))
 			Expect(adminPassword.Field("userID").String()).To(Equal("admin"))
 			Expect(adminPassword.Field("hash").String()).To(Equal("YWRtaW5QYXNzd29yZA=="))

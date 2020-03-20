@@ -96,7 +96,7 @@ spec:
     "password": "password",
     "userID": "admin"
   },
-  "encodedName": "mfsg22lojzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji"
+  "encodedName": "mfsg22lonzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji"
 }]`))
 				})
 			})

@@ -18,7 +18,7 @@ EOF
 
 function __main__() {
   crds=$(context::jq -rc '.snapshots.user | .[].filterResult' | while read userCRD ; do
-    email=$(jq -rc '.spec.email' <<< ${userCRD})
+    email=$(jq -rc '.spec.email | ascii_downcase' <<< ${userCRD})
     encodedName=$(deckhouse-controller helper fnv encode "$email")
     jq -rc " .encodedName |= \"$encodedName\"" <<< ${userCRD}
   done | jq -s '.')
