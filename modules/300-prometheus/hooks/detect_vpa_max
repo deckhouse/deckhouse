@@ -24,7 +24,7 @@ function __config__() {
     beforeHelm: 20
     schedule:
     - name: detect_vpa_max
-      queue: /modules/prometheus/detect_vpa_max
+      queue: /modules/$(module::name::kebab_case)/detect_vpa_max
       crontab: "*/10 * * * *"
 EOF
 }

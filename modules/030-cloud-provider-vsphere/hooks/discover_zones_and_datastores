@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 20
     schedule:
     - crontab: "53 * * * *"
-      queue: /modules/cloud_provider_vsphere
+      queue: /modules/$(module::name::kebab_case)
 EOF
 }
 

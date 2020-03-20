@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   jo -p afterHelm=10
@@ -23,9 +23,9 @@ metadata:
     module: grafana
     app: dex-authenticator
 spec:
-  applicationDomain: "$(common::module_public_domain grafana)"
+  applicationDomain: "$(module::public_domain grafana)"
   applicationIngressCertificateSecretName: "ingress-tls"
-  applicationIngressClassName: "$(common::module_ingress_class)"
+  applicationIngressClassName: "$(module::ingress_class)"
   $allowedGroups
 EOF
   else

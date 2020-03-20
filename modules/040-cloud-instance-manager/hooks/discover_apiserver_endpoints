@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: kube_api_ep
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [kube_api_ep]
       apiVersion: v1
       kind: Endpoints

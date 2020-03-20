@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: cloud_provider_secret
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [cloud_provider_secret]
       apiVersion: v1
       kind: Secret

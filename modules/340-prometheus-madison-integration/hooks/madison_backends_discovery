@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 0
     schedule:
     - name: madison_backends_discovery
-      queue: /modules/prometheus-madison-integration/madison_backends_discovery
+      queue: /modules/$(module::name::kebab_case)/madison_backends_discovery
       crontab: "*/10 * * * *"
       allowFailure: true
 EOF

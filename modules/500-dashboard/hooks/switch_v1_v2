@@ -1,10 +1,13 @@
 #!/bin/bash
-# Миграция 2019-11-24 переезд dashboard из ns kube-system в d8-dashboard
+# переезд dashboard из ns kube-system в d8-dashboard и обратно
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=20
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
 }
 
 function __main__() {

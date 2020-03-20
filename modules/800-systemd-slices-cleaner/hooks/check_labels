@@ -23,7 +23,7 @@ function __config__() {
     beforeHelm: 20
     schedule:
     - name: check_labels
-      queue: /modules/systemd-slices-cleaner/check_labels
+      queue: /modules/$(module::name::kebab_case)/check_labels
       crontab: "0 0 * * *"
 EOF
 }

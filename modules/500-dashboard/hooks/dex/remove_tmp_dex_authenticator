@@ -1,9 +1,13 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p beforeHelm=20
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
+
 }
 
 function __main__() {

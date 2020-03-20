@@ -1,29 +1,30 @@
 #!/bin/bash -e
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
-{
-  "onKubernetesEvent": [
-    {
-      "kind": "daemonset",
-      "event": ["update"],
-      "selector": {
-        "matchLabels": {
-          "nginx-ingress-safe-update": ""
-        }
-      },
-      "jqFilter": ".status",
-      "allowFailure": false
-    }
-  ]
-}
+    configVersion: v1
+    kubernetes:
+    - name: ds
+      queue: /modules/$(module::name::kebab_case)/safe-daemonset-update
+      apiVersion: extensions/v1beta1
+      kind: DaemonSet
+      watchEvent: [Modified]
+      labelSelector:
+        matchLabels:
+         nginx-ingress-safe-update: ""
+      jqFilter: .status
 EOF
 }
 
+function __on_kubernetes::ds::synchronization() {
+  # TODO: во время старта d8 хук должен проверить, не надо ли удалить какой-нибудь под
+  return 0
+}
+
 function __main__() {
-  common_hooks::daemonset_pair_safe_update::main nginx direct-fallback
+  legacy::common_hooks::daemonset_pair_safe_update::main nginx direct-fallback
 }
 
 hook::run "$@"

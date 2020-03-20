@@ -1,9 +1,9 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  common_hooks::https::copy_custom_certificate::config
+  legacy::common_hooks::https::copy_custom_certificate::config
 }
 
 function __main__() {
@@ -13,7 +13,7 @@ function __main__() {
 
   if [[ "$(values::get userAuthn.publishAPI.https.mode)" == "Global" ]]; then
     if [[ "$(values::get_first_defined userAuthn.https.mode global.modules.https.mode)" == "CustomCertificate" ]] ; then
-      common_hooks::https::copy_custom_certificate::main "d8-user-authn" "kubernetes-tls"
+      legacy::common_hooks::https::copy_custom_certificate::main "d8-user-authn" "kubernetes-tls"
     fi
   fi
 }

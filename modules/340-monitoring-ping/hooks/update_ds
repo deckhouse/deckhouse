@@ -12,7 +12,7 @@ function __config__() {
     beforeHelm: 20
     schedule:
     - name: update_ds
-      queue: /modules/monitoring-ping/update_ds
+      queue: /modules/$(module::name::kebab_case)/update_ds
       crontab: "* * * * *"
 EOF
 }

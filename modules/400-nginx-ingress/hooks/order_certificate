@@ -1,16 +1,16 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  common_hooks::certificates::order_certificate::config
+  legacy::common_hooks::certificates::order_certificate::config
 }
 
 function __main__() {
-  common_hooks::certificates::order_certificate::main "kube-nginx-ingress" "nginx-auth-tls" "nginx-ingress:main" "internal.nginxAuthTLS" "ingress-nginx:auth"
+  legacy::common_hooks::certificates::order_certificate::main "kube-nginx-ingress" "nginx-auth-tls" "nginx-ingress:main" "internal.nginxAuthTLS" "ingress-nginx:auth"
   if values::has nginxIngress.additionalControllers ; then
     for additional_controller in $(values::get nginxIngress.additionalControllers | jq '.[].name' -r) ; do
-      common_hooks::certificates::order_certificate::main "kube-nginx-ingress-${additional_controller}" "nginx-auth-tls" "nginx-ingress:${additional_controller}" "internal.nginxAuthTLS${additional_controller}" "ingress-nginx:auth"
+      legacy::common_hooks::certificates::order_certificate::main "kube-nginx-ingress-${additional_controller}" "nginx-auth-tls" "nginx-ingress:${additional_controller}" "internal.nginxAuthTLS${additional_controller}" "ingress-nginx:auth"
     done
   fi
 }

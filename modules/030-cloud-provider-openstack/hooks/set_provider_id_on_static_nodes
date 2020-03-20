@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: nodes
-      queue: /modules/cloud_provider_openstack
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: ["nodes"]
       apiVersion: v1
       kind: Node

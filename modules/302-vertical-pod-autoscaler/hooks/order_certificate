@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 5
     schedule:
     - name: order_certificate
-      queue: /modules/vertical-pod-autoscaler/order_certificate
+      queue: /modules/$(module::name::kebab_case)/order_certificate
       crontab: "13 4 * * *"
 EOF
 }

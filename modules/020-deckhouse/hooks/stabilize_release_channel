@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     schedule:
     - name: stabilize_release_channel
-      queue: /modules/deckhouse/stabilize_release_channel
+      queue: /modules/$(module::name::kebab_case)/stabilize_release_channel
       crontab: "*/10 * * * *"
 EOF
 }
