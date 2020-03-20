@@ -71,6 +71,10 @@ spec:
               description: Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
               example: rp-2012
               type: string
+            resourcePoolForNewNodes:
+              description: Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster). Identical to the "resourcePool", but won't rollout new nodes
+              example: rp-2012
+              type: string
             runtimeOptions:
               type: object
               properties:
