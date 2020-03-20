@@ -9,7 +9,6 @@ data:
   outgoing-nginx.conf: |
     user nginx;
     worker_processes 1;
-    error_log /dev/stderr;
 
     events {
       worker_connections 100;
@@ -17,6 +16,7 @@ data:
 
     http {
       access_log off;
+      error_log /dev/stderr;
       resolver {{ .Values.global.discovery.clusterDNSAddress }};
 
       server {

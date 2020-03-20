@@ -58,7 +58,7 @@ spec:
         - --eviction-tolerance=0.5
         - --min-replicas=1
         - --stderrthreshold=0
-        - --updater-interval=1m0s
+        - --updater-interval=5m0s
         - --v=4
         resources:
           requests:

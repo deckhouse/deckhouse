@@ -11,6 +11,7 @@ rules:
   - pods
   - configmaps
   - nodes
+  - limitranges
   verbs:
   - get
   - list
@@ -25,10 +26,28 @@ rules:
   - get
   - list
 - apiGroups:
+  - "poc.autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - "autoscaling.k8s.io"
   resources:
   - verticalpodautoscalers
   verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - create
+  - update
   - get
   - list
   - watch

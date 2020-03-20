@@ -56,12 +56,20 @@ spec:
         - --address=:8942
         - --checkpoints-gc-interval=10m0s
         - --checkpoints-timeout=1m0s
-        - --kube-api-burst=10
-        - --kube-api-qps=5
+        - --kube-api-burst=100
+        - --kube-api-qps=50
         - --min-checkpoints=10
         - --pod-recommendation-min-cpu-millicores=5
         - --pod-recommendation-min-memory-mb=25
         - --prometheus-address=http://127.0.0.1:8000/main/
+        - --prometheus-cadvisor-job-name=kubelet
+        - --container-pod-name-label=pod
+        - --container-name-label=container
+        - --container-namespace-label=namespace
+        - --metric-for-pod-labels=kube_pod_labels{job="kube-state-metrics"}
+        - --pod-label-prefix=label_
+        - --pod-namespace-label=namespace
+        - --history-length=8d
         - --recommendation-margin-fraction=0.15
         - --recommender-interval=1m0s
         - --stderrthreshold=0
