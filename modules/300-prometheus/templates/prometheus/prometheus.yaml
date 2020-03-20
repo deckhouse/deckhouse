@@ -138,6 +138,25 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
+{{- if .Values.prometheus.internal.remoteWrite }}
+  remoteWrite:
+  {{- range .Values.prometheus.internal.remoteWrite }}
+  - url: {{ .spec.url }}
+    {{- if .spec.basicAuth }}
+    basicAuth:
+      username:
+        name: d8-prometheus-remote-write-{{ .name }}
+        key: username
+      password:
+        name: d8-prometheus-remote-write-{{ .name }}
+        key: password
+    {{- end }}
+    {{- if .spec.writeRelabelConfigs }}
+    writeRelabelConfigs:
+{{ .spec.writeRelabelConfigs | toYaml | indent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
   additionalScrapeConfigs:
     name: prometheus-main-additional-configs
     key: scrapes.yaml
