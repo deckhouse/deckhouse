@@ -4,9 +4,11 @@ RUN mkdir -p /src/kube-state-metrics && \
 WORKDIR /src/kube-state-metrics
 ADD kube-persistentvolume-is-local.patch .
 ADD kube-pod-spec-host-network.patch .
+ADD kube-pod-status-reason.patch .
 RUN apk add --no-cache make git
 RUN patch -p1 < kube-persistentvolume-is-local.patch && \
-  patch -p1 < kube-pod-spec-host-network.patch
+  patch -p1 < kube-pod-spec-host-network.patch && \
+  patch -p1 < kube-pod-status-reason.patch
 RUN make build-local
 
 FROM alpine:3.9
