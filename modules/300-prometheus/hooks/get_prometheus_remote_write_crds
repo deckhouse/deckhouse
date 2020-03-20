@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+   configVersion: v1
+   kubernetes:
+   - name: prometheusremotewrite
+     apiVersion: deckhouse.io/v1alpha1
+     kind: PrometheusRemoteWrite
+     includeSnapshotsFrom: [prometheusremotewrite]
+     jqFilter: '{"name": .metadata.name, "spec": .spec}'
+EOF
+}
+
+function  __main__() {
+  values::set prometheus.internal.remoteWrite "$(context::jq -rc '[.snapshots.prometheusremotewrite[].filterResult]')"
+}
+
+hook::run "$@"
