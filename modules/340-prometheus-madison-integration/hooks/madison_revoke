@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     schedule:
     - name: madison_revoke
-      queue: /modules/prometheus-madison-integration/madison_revoke
+      queue: /modules/$(module::name::kebab_case)/madison_revoke
       crontab: "*/5 * * * *"
       allowFailure: true
 EOF

@@ -1,14 +1,14 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  common_hooks::https::copy_custom_certificate::config
+  legacy::common_hooks::https::copy_custom_certificate::config
 }
 
 function __main__() {
-  common_hooks::https::copy_custom_certificate::main "kube-system" "ingress-tls"
-  common_hooks::https::copy_custom_certificate::main "d8-dashboard" "ingress-tls"
+  legacy::common_hooks::https::copy_custom_certificate::main "kube-system" "ingress-tls"
+  legacy::common_hooks::https::copy_custom_certificate::main "d8-dashboard" "ingress-tls"
 }
 
 hook::run "$@"

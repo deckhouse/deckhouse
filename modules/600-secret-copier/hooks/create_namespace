@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: ns
-      queue: /modules/secret-copier
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Namespace
       watchEvent: ["Added"]

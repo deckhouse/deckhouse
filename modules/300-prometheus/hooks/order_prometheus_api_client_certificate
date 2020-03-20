@@ -1,13 +1,13 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  common_hooks::certificates::order_certificate::config
+  legacy::common_hooks::certificates::order_certificate::config
 }
 
 function __main__() {
-  common_hooks::certificates::order_certificate::main "d8-monitoring" "prometheus-api-client-tls" "d8-monitoring:prometheus-api-client" "internal.prometheusAPIClientTLS" "prometheus:auth"
+  legacy::common_hooks::certificates::order_certificate::main "d8-monitoring" "prometheus-api-client-tls" "d8-monitoring:prometheus-api-client" "internal.prometheusAPIClientTLS" "prometheus:auth"
 }
 
 hook::run "$@"

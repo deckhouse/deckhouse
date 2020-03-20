@@ -13,13 +13,13 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: cigs
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
       apiVersion: deckhouse.io/v1alpha1
       kind: CloudInstanceGroup
       jqFilter: '{"name": .metadata.name, "spec": (.spec + {"manual-rollout-id": (.metadata.annotations."manual-rollout-id" // "")})}'
     - name: ics
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
       apiVersion: deckhouse.io/v1alpha1
       kind: ${general_instance_class_kind}
@@ -36,7 +36,7 @@ function __config__() {
           )
         }
     - name: cloud_provider_secret
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
       apiVersion: v1
       kind: Secret

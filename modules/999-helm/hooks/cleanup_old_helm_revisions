@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     schedule:
     - name: cleanup_old_helm_revisions
-      queue: /modules/helm/cleanup_old_helm_revisions
+      queue: /modules/$(module::name::kebab_case)/cleanup_old_helm_revisions
       crontab: "42 */6 * * *"
       allowFailure: true
 EOF

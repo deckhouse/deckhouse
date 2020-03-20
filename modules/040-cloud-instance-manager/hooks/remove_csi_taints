@@ -7,14 +7,14 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: csinodes
-      queue: /modules/cloud_instance_manager/remove_csi_taints
+      queue: /modules/$(module::name::kebab_case)/remove_csi_taints
       includeSnapshotsFrom: [csinodes,nodes]
       apiVersion: storage.k8s.io/v1beta1
       kind: CSINode
       watchEvent: ["Added", "Modified"]
       jqFilter: '{"name": .metadata.name}'
     - name: nodes
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Node
       watchEvent: ["Added", "Modified"]

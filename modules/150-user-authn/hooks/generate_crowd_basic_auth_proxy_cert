@@ -9,7 +9,7 @@ function __config__() {
     beforeHelm: 10
     schedule:
     - name: generate_crowd_basic_auth_proxy_cert
-      queue: /modules/user-authn/generate_crowd_basic_auth_proxy_cert
+      queue: /modules/$(module::name::kebab_case)/generate_crowd_basic_auth_proxy_cert
       crontab: "42 4 * * *"
 EOF
 }

@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: bootstrap_tokens
-      queue: /modules/cloud_instance_manager/order_bootstrap_token
+      queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
       includeSnapshotsFrom: [bootstrap_tokens]
       apiVersion: v1
       kind: Secret
@@ -37,7 +37,7 @@ function __config__() {
           "creationTimestamp": .metadata.creationTimestamp
         }
     schedule:
-    - queue: /modules/cloud_instance_manager/order_bootstrap_token
+    - queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
       crontab: "23 * * * *"
       includeSnapshotsFrom: [bootstrap_tokens]
 EOF

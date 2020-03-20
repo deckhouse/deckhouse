@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
   cat << EOF
@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 10
     kubernetes:
     - name: cm
-      queue: /modules/control-plane-configurator
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: ConfigMap
       namespace:

@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: cigs
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: deckhouse.io/v1alpha1
       kind: CloudInstanceGroup
       jqFilter: |
@@ -17,7 +17,7 @@ function __config__() {
           "name": .metadata.name
         }
     - name: nodes
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Node
       labelSelector:
@@ -30,7 +30,7 @@ function __config__() {
           "name": .metadata.name
         }
     - name: machines
-      queue: /modules/cloud_instance_manager
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: Machine
       jqFilter: |
@@ -41,7 +41,7 @@ function __config__() {
         }
     schedule:
     - name: monkey
-      queue: /modules/cloud_instance_manager/chaos_monkey
+      queue: /modules/$(module::name::kebab_case)/chaos_monkey
       crontab: "* * * * *"
       includeSnapshotsFrom: [cigs,nodes,machines]
 EOF

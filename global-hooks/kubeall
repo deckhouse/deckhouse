@@ -1,9 +1,13 @@
 #!/bin/bash
 
-source /deckhouse/shell_lib_legacy.sh
+source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p onStartup=9999
+  cat << EOF
+    configVersion: v1
+    onStartup: 9999
+EOF
+
 }
 
 function __main__() {

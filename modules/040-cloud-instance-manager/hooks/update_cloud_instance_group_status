@@ -8,7 +8,7 @@ function __config__() {
     afterHelm: 10
     kubernetes:
     - name: cigs
-      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      queue: /modules/$(module::name::kebab_case)/update_cigs_statuses
       includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
       watchEvent: ["Added", "Modified"]
       apiVersion: deckhouse.io/v1alpha1
@@ -21,7 +21,7 @@ function __config__() {
           "zonesNum": (if (.spec | has("zones")) then (.spec.zones | length) else null end)
         }
     - name: cloud_provider_secret
-      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      queue: /modules/$(module::name::kebab_case)/update_cigs_statuses
       includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
       apiVersion: v1
       kind: Secret
@@ -36,7 +36,7 @@ function __config__() {
         (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
         | {"zonesNum": (.zones | length)}
     - name: mds
-      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      queue: /modules/$(module::name::kebab_case)/update_cigs_statuses
       includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
       watchEvent: ["Added", "Modified"]
       apiVersion: machine.sapcloud.io/v1alpha1
@@ -46,7 +46,7 @@ function __config__() {
           matchNames: [d8-cloud-instance-manager]
       jqFilter: '{"instanceGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
     - name: machines
-      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      queue: /modules/$(module::name::kebab_case)/update_cigs_statuses
       includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
       watchEvent: ["Added", "Modified"]
       apiVersion: machine.sapcloud.io/v1alpha1
@@ -56,7 +56,7 @@ function __config__() {
           matchNames: [d8-cloud-instance-manager]
       jqFilter: '{"instanceGroup": .metadata.labels."instance-group"}'
     - name: nodes
-      queue: /modules/cloud_instance_manager/update_cigs_statuses
+      queue: /modules/$(module::name::kebab_case)/update_cigs_statuses
       includeSnapshotsFrom: [cigs,cloud_provider_secret,mds,machines,nodes]
       apiVersion: v1
       kind: Node
