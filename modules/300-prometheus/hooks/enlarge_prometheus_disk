@@ -33,7 +33,7 @@ function __main__() {
     pvcs="$(context::jq -r '[.snapshots.pvc[].object | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
     scs="$(context::jq -r '[.snapshots.sc[].object | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
     for pvc in $(jq -r 'keys[]' <<< "$pvcs"); do
-      pod_name=$(sed -r 's/^prometheus-(\w+)-.*-([0-9]+)$/prometheus-\1-\2/' <<< "$pvc") # prometheus-main-db-prometheus-main-0 -> prometheus-main-0
+      pod_name=$(sed -E 's/^prometheus-(\w+)-.*-([0-9]+)$/prometheus-\1-\2/' <<< "$pvc") # prometheus-main-db-prometheus-main-0 -> prometheus-main-0
       sc_name_from_pvc=$(jq -r --arg pvc "$pvc" '.[$pvc].spec.storageClassName' <<< "$pvcs")
       # Проверим, поддерживает ли storage class expansion PVC.
       # А также проверим, что такой storageclass существует, а значит это не localstorage
