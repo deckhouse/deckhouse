@@ -186,7 +186,7 @@ function values::_normalize_path_for_json_patch() {
   # delete double-quotes
   # switch dots to slashes
   # return original dots from ##DOT##
-  sed -r \
+  sed -E \
     -e 's/^/\//' \
     -e s/\'/\"/g \
     -e ':loop' -e 's/"([^".]+)\.([^"]+)"/"\1##DOT##\2"/g' -e 't loop' \

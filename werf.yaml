@@ -16,6 +16,7 @@
     - unzip
     - coreutils
     - util-linux
+    - sed
 
 # Hooks dependencies (from edge/testing)
 - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes

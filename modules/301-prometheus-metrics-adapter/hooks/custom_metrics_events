@@ -220,7 +220,7 @@ function __on_kubernetes::clusterservicemetric::deleted() {
 function _added_or_modified() {
   RESOURCE_KIND=$(context::get object.kind)
   RESOURCE_NAME=$(context::get object.metadata.name)
-  RESOURCE=$(echo $RESOURCE_KIND | sed -r -e 's/^(Cluster)?(.*)Metric$/\2/')
+  RESOURCE=$(echo $RESOURCE_KIND | sed -E -e 's/^(Cluster)?(.*)Metric$/\2/')
   RESOURCE=${RESOURCE,,} # lowercase
 
   WHOLE_METRIC_PATH=prometheusMetricsAdapter.internal.customMetrics.${RESOURCE}.${RESOURCE_NAME}
@@ -242,7 +242,7 @@ function _added_or_modified() {
 function _deleted() {
   RESOURCE_KIND=$(context::get object.kind)
   RESOURCE_NAME=$(context::get object.metadata.name)
-  RESOURCE=$(echo $RESOURCE_KIND | sed -r -e 's/^(Cluster)?(.*)Metric$/\2/')
+  RESOURCE=$(echo $RESOURCE_KIND | sed -E -e 's/^(Cluster)?(.*)Metric$/\2/')
   RESOURCE=${RESOURCE,,} #lowercase
 
   WHOLE_METRIC_PATH=prometheusMetricsAdapter.internal.customMetrics.${RESOURCE}.${RESOURCE_NAME}
