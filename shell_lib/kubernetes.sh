@@ -75,6 +75,16 @@ function kubernetes::_init_patch_set() {
   fi
 }
 
+function kubernetes::_destroy_patch_set() {
+  if [ -e ${D8_KUBERNETES_PATCH_SET_FILE} ]; then
+    rm ${D8_KUBERNETES_PATCH_SET_FILE}
+  fi
+
+  if [ -z "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    unset D8_KUBERNETES_PATCH_SET_FILE
+  fi
+}
+
 function kubernetes::_apply_patch_set() {
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
     return 0
@@ -166,7 +176,6 @@ function kubernetes::_apply_patch_set() {
     ;;
     esac
   done < ${D8_KUBERNETES_PATCH_SET_FILE}
-  rm ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
 function kubernetes::_jq_patch() {
