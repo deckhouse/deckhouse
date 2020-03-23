@@ -4,8 +4,8 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.15.90
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20200310113251-be84a632b2b4 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.8.0.20200310112724-935a94f1291f // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20200323121222-0934d4c273fe // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.8.0.20200322083644-7ee05962e14e // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spaolacci/murmur3 v1.1.0
@@ -16,6 +16,8 @@ require (
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
 )
+
+//replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.4-0.20200313141509-0c0fba4d39e1 // branch: fix_in_body_0_19_7
 
 //replace github.com/flant/shell-operator => ../../shell-operator
 
