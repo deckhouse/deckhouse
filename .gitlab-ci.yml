@@ -170,8 +170,8 @@ Cleanup registry:
 Cleanup modules images:
   stage: cleanup_builder
   script:
-    - docker rm -v $(docker ps --filter status=exited -q)
-    - docker image rm $(docker images -f dangling=true -q)
+    - docker ps --filter status=exited -q | xargs docker rm -v
+    - docker images -f dangling=true -q | xargs docker image rm
     - ./modules_images cleanup --registry-user=sample-user --registry-password=$REGISTRY_CLEANER_TOKEN
   only:
     - schedules
