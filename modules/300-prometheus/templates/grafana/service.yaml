@@ -4,7 +4,10 @@ kind: Service
 metadata:
   name: grafana
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "grafana" "prometheus.deckhouse.io/target" "grafana")) | indent 2 }}
+  annotations:
+    prometheus.deckhouse.io/port: "443"
+    prometheus.deckhouse.io/tls: "true"
 spec:
   type: ClusterIP
   clusterIP: None

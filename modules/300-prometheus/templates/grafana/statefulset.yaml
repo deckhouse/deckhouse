@@ -51,6 +51,8 @@ spec:
           value: /var/lib/grafana-storage
         - name: GF_SERVER_HTTP_ADDR
           value: "127.0.0.1"
+        - name: GF_METRICS_ENABLED
+          value: "true"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_CUSTOM_PLUGINS
@@ -111,6 +113,16 @@ spec:
                   apiVersion: v1
                   resource: grafana
                   subresource: http
+                  name: grafana
+            - upstream: http://127.0.0.1:3000/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: monitoring.coreos.com
+                  apiVersion: v1
+                  resource: grafana
+                  subresource: metrics
                   name: grafana
         ports:
         - containerPort: 443
