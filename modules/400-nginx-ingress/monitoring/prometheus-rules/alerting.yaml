@@ -23,3 +23,18 @@
       summary: |
         В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration.
 
+  - alert: D8NginxIngressDepricated
+    expr: d8_nginx_ingress_deprecated > 0
+    labels:
+      severity_level: "9"
+      d8_module: nginx_ingress
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_incident_initial_status: "todo"
+      description: |
+        Модуль nginx-ingress объявлен устаревшим и больше не поддерживается.
+        На поддержке временно остался инлет Direct (пока он не будет реализован в новом модуле).
+        Для всех других инлетов необходимо использовать новый модуль ingress-nginx.
+      summary: |
+        В кластере используется устаревший модуль nginx-ingress
