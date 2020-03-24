@@ -8,7 +8,7 @@ function __config__() {
     kubernetes:
     - name: ds
       queue: /modules/$(module::name::kebab_case)/safe-daemonset-update
-      apiVersion: extensions/v1beta1
+      apiVersion: apps/v1
       kind: DaemonSet
       watchEvent: [Modified]
       labelSelector:

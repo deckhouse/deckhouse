@@ -39,7 +39,7 @@ YAML
 
   # Подменяем содержимое релиза
   local release=$(kubectl -n deckhouse get cm/$module.v1 -o json | jq .data.release -r)
-  local updated_release=$(echo $release | base64 -d | zcat | sed -E "s/$stub/$(<$manifests_file sed -E -e 's/[\&/]/\\&/g' -e 's/$/\\n/' | tr -d '\n')/" | gzip -9 | base64 | tr -d '\n')
+  local updated_release=$(echo $release | base64 -d | zcat | sed "s/$stub/$(<$manifests_file sed -e 's/[\&/]/\\&/g' -e 's/$/\\n/' | tr -d '\n')/" | gzip -9 | base64 | tr -d '\n')
   kubectl patch -n d8-system cm/nginx-ingress.v1 -p '{"data":{"release":"'$updated_release'"}}'
 
   # Проверяем, что ничего не поломалось
