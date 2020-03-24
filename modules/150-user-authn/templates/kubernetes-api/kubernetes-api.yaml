@@ -43,6 +43,8 @@ spec:
       - backend:
           serviceName: kubernetes
           servicePort: 443
+
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
@@ -56,17 +58,16 @@ spec:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   acme:
     config:
-  {{- if (include "cluster_issuer_required_dns_challenge" . ) }}
+    {{- if (include "cluster_issuer_required_dns_challenge" . ) }}
     - dns01:
         provider: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
-  {{- else }}
+    {{- else }}
     - http01:
         ingressClass: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
-  {{- end }}
+    {{- end }}
       domains:
       - {{ include "helm_lib_module_public_domain" (list . "api") }}
   issuerRef:
-  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
     {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
