@@ -29,7 +29,7 @@ function common_hooks::certificates::order_certificate::main() {
   if kubectl -n ${namespace} get secret/${secret_name} > /dev/null 2> /dev/null ; then
     # Проверяем срок действия
     cert=$(kubectl -n ${namespace} get secret/${secret_name} -o jsonpath='{.data.tls\.crt}' | base64 -d)
-    not_after=$(echo "$cert" | cfssl-certinfo -cert - | jq .not_after -r | sed -E 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
+    not_after=$(echo "$cert" | cfssl-certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
     valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
 
     # За десять дней до окончания
