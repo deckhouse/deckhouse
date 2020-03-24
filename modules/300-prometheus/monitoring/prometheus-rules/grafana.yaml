@@ -90,7 +90,7 @@
       plk_alert_type: "group"
       plk_group_for__grafana_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,namespace=d8-monitoring,prometheus=deckhouse,statefulset=grafana"
       plk_group_for__grafana_stuck: "KubernetesStatefulSetStuck,namespace=d8-monitoring,prometheus=deckhouse,statefulset=grafana"
-      plk_caused_by__grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Grafana не работает
       description: |
         Grafana не работает. Что именно с ней не так можно узнать в одном из связанных алертов.
@@ -119,7 +119,7 @@
 
   - alert: D8GrafanaMalfunctioning
     expr: |
-      count(ALERTS{alertname=~"D8GrafanaPodIsRestartingTooOften|D8GrafanaUnavailable"}
+      count(ALERTS{alertname=~"D8GrafanaPodIsRestartingTooOften"}
       or
       ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="grafana"})
     labels:
