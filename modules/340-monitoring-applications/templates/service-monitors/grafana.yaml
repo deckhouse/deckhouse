@@ -1,0 +1,3 @@
+{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "grafana" }}
+{{ include "base_application_monitor" (list . "grafana" 1000) }}
+{{- end }}

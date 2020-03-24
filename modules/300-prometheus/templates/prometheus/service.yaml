@@ -8,7 +8,7 @@ metadata:
   annotations:
     prometheus.deckhouse.io/port: "9090"
     prometheus.deckhouse.io/tls: "true"
-    prometheus.deckhouse.io/sample-limit: {{ .Values.prometheus.metrics.prometheusSampleLimit | quote }}
+    prometheus.deckhouse.io/sample-limit: "5000"
 spec:
   type: ClusterIP
   clusterIP: None

@@ -31,6 +31,7 @@
 | redis         | :white_check_mark: | :white_check_mark: | 1000 |
 | sidekiq       | :white_check_mark: |                    | 1000 |
 | trickster     |                    |                    | 1000 |
+| grafana       |                    |                    | 1000 |
 | uwsgi         | :white_check_mark: |                    | 1000 |
 
 

@@ -35,7 +35,12 @@
         summary: Служебный prometheus longterm работает некорректно
 
     - alert: D8PrometheusMalfunctioning
-      expr: max(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning"})
+      expr: |
+        count(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning"}
+        or
+        ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="trickster"}
+        or
+        ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="prometheus"})
       labels:
         tier: cluster
         d8_module: prometheus
@@ -43,6 +48,8 @@
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
         plk_alert_type: "group"
+        plk_group_for__trickster_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=trickster"
+        plk_group_for__prometheus_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=prometheus"
         description: |
           Какой-то из deckhouse prometheus работает некорректно. Что именно и с каким именно prometheus не так можно узнать в одном из связанных алертов.
         summary: Какой-то из deckhouse prometheus работает некорректно

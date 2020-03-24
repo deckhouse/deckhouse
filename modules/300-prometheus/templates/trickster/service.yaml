@@ -8,7 +8,6 @@ metadata:
   annotations:
     prometheus.deckhouse.io/port: "443"
     prometheus.deckhouse.io/tls: "true"
-    prometheus.deckhouse.io/sample-limit: {{ .Values.prometheus.metrics.tricksterSampleLimit | quote }}
 spec:
   type: ClusterIP
   sessionAffinity: ClientIP
