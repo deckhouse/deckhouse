@@ -78,6 +78,7 @@ github.com/flant/addon-operator v1.0.0-beta.5.0.20200310113251-be84a632b2b4/go.m
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200310113251-be84a632b2b4/go.mod h1:k9I+6SMUxO8k6rgvqg/gveiFOBx2rpD/KmqKG6ZhfX0=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200311062949-13467bf778ef/go.mod h1:Fqc74TvhJucvULNzN18YJFMvpkU9FENgdU8R8hNR0Q0=
 github.com/flant/addon-operator v1.0.0-beta.5.0.20200323121222-0934d4c273fe/go.mod h1:Qe5x+VwiVcJRU6J1X3ZDmyuOxlZW7cNJMEGA4WRVvU4=
+github.com/flant/addon-operator v1.0.0-beta.5.0.20200324163211-e42df3db0ba4/go.mod h1:Qe5x+VwiVcJRU6J1X3ZDmyuOxlZW7cNJMEGA4WRVvU4=
 github.com/flant/go-openapi-validate v0.19.4-0.20200313141509-0c0fba4d39e1/go.mod h1:8DJv2CVJQ6kGNpFW6eV9N3JviE1C85nY1c2z52x1Gk4=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f h1:3tmztWJjf61sHfHYLSMi5TDdz5jtmcVqe43PSwsxNvE=
 github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=

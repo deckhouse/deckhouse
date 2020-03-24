@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.15.90
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20200323121222-0934d4c273fe // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20200324163211-e42df3db0ba4 // branch: fix_revert_synchronization_in_queues
 	github.com/flant/shell-operator v1.0.0-beta.8.0.20200322083644-7ee05962e14e // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/sirupsen/logrus v1.4.2
