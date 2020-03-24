@@ -10,7 +10,9 @@ metadata:
 {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | indent 2 }}
     {{- if $crd.spec.loadBalancer.annotations }}
   annotations:
-{{ $crd.spec.loadBalancer.annotations | toYaml | indent 4 }}
+      {{- range $key, $value := $crd.spec.loadBalancer.annotations }}
+    {{ $key }}: {{ $value | quote }}
+      {{- end }}
     {{- end }}
 spec:
   type: LoadBalancer
