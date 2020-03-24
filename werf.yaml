@@ -6,7 +6,6 @@
     name:
     - bash  # All hooks written in bash
     - bash-completion
-    - jq
     - curl
     - pwgen
     - apache2-utils
@@ -111,6 +110,10 @@ import:
   add: /deckhouse/deckhouse
   to: /usr/bin/deckhouse-controller
   before: setup
+- artifact: jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
 ansible:
   beforeInstall:
 {{ include "deckhouse_dependencies" . | indent 2 }}
@@ -178,6 +181,10 @@ import:
 - artifact: kcov
   add: /usr/bin/kcov
   to: /usr/bin/kcov
+  before: setup
+- artifact: jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
   before: setup
 ansible:
   beforeInstall:
@@ -251,6 +258,40 @@ ansible:
   - command: /deckhouse/go-build.sh /libjq
     args:
       chdir: /deckhouse
+
+---
+artifact: jq
+from: alpine:3.10
+git:
+- url: https://github.com/stedolan/jq
+  add: /
+  to: /src
+  commit: ccc79e592cfe1172db5f2def5a24c2f7cfd418bf
+  stageDependencies:
+    install:
+      - "**/*"
+ansible:
+  install:
+  - apk:
+      name:
+      - oniguruma-dev
+      - automake
+      - autoconf
+      - libtool
+      - build-base
+      repository: http://nl.alpinelinux.org/alpine/edge/main/
+      update_cache: yes
+  - shell: |
+      cd /src
+      autoreconf -fi
+      ./configure \
+        --prefix=/usr \
+        --sysconfdir=/etc \
+        --mandir=/usr/share/man \
+        --localstatedir=/var \
+        --disable-docs
+      make LDFLAGS=-all-static
+      make prefix=/usr install
 
 ---
 artifact: libjq
