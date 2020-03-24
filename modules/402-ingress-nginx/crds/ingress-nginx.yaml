@@ -79,6 +79,8 @@ spec:
                 annotations:
                   type: object
                   description: 'Annotations that will be passed to service with type load balancer to configure it.'
+                  additionalProperties:
+                    type: string
                   x-kubernetes-preserve-unknown-fields: true
                 behindL7Proxy:
                   type: boolean
