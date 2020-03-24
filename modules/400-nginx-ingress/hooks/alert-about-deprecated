@@ -1,0 +1,44 @@
+#!/bin/bash
+
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    schedule:
+    - crontab: "*/10 * * * *"
+EOF
+}
+
+function __main__() {
+  if values::has global.discovery.clusterType; then
+    cluster_type="$(values::get global.discovery.clusterType)"
+  fi
+  
+  if values::has --config nginxIngress.additionalControllers; then
+    countNonDirectInletsInAdditionalControllers=$(values::get --config nginxIngress | jq -r --arg cluster_type "$cluster_type" '[.additionalControllers[] | select((.inlet != "Direct" and .inlet != null) or (.inlet == null and $cluster_type != "Manual"))] | length')
+  else
+    countNonDirectInletsInAdditionalControllers="0"
+  fi
+
+  countNonDirectInlets="0"
+  if values::has --config nginxIngress.inlet; then
+    if [ "$(values::get --config nginxIngress.inlet)" != "Direct" ]; then
+      let countNonDirectInlets+=1
+    fi
+  elif [ "$cluster_type" != "Manual" ]; then
+    let countNonDirectInlets+=1
+  fi
+
+  countNonDirectInlets="$(( countNonDirectInlets + countNonDirectInletsInAdditionalControllers ))"
+
+  echo "{\"name\":\"d8_nginx_ingress_deprecated\", \"set\": $countNonDirectInlets }" >> $METRICS_PATH
+
+  if [ -v D8_IS_TESTS_ENVIRONMENT ]; then
+    values::set nginxIngress.internal.countDepricatedInlets "$countNonDirectInlets"
+  fi
+}
+
+hook::run $@
