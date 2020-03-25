@@ -64,9 +64,9 @@ spec:
             sysctl -w net.ipv4.tcp_slow_start_after_idle=0 ; # не нужно в современных сетях, ибо начинает агрессивно снижать TCP cwnd на idle коннектах
             sysctl -w net.ipv4.tcp_tw_reuse=1 ; # безопасная опция, позволяющая переиспользовать TIME-WAIT сокет в исходящем соединении
             sysctl -w net.ipv4.ip_local_port_range="10240 65535" ;
-            sysctl -w net.ipv4.neigh.default.gc_thresh1 = 16384 ; #fix neighbour: arp_cache: neighbor table overflow!
-            sysctl -w net.ipv4.neigh.default.gc_thresh2 = 28672 ;
-            sysctl -w net.ipv4.neigh.default.gc_thresh3 = 32768 ;
+            sysctl -w net.ipv4.neigh.default.gc_thresh1=16384 ; #fix neighbour: arp_cache: neighbor table overflow!
+            sysctl -w net.ipv4.neigh.default.gc_thresh2=28672 ;
+            sysctl -w net.ipv4.neigh.default.gc_thresh3=32768 ;
             sysctl -w vm.dirty_ratio=80 ; # включаем синхронный writeback dirty страниц как можно позже
             sysctl -w vm.dirty_background_ratio=5 ; # включаем параллельный writeback как можно раньше
             sysctl -w vm.dirty_expire_centisecs=12000 ; # через 12 секунд делаем writeback dirty страниц
