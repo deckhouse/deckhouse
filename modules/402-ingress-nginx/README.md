@@ -149,7 +149,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressNginxController
 metadata:
- name: main
+  name: main
 spec:
   ingressClass: "nginx"
   inlet: "LoadBalancer"
