@@ -52,6 +52,9 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 		})
 
 		It("Should create a ConfigMap `config` with our values", func() {
+			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
+			Expect(f.Session.ExitCode()).To(BeZero())
+
 			crb := f.KubernetesResource("ConfigMap", "d8-metallb", "config")
 			Expect(crb.Exists()).To(BeTrue())
 

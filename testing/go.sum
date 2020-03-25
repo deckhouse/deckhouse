@@ -59,6 +59,7 @@ github.com/flant/libjq-go v1.0.1-0.20200205115921-27e93c18c17f/go.mod h1:+SYqi5w
 github.com/flant/shell-operator v1.0.0-beta.8.0.20200311060320-9aeea29c9a6c/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
 github.com/flant/shell-operator v1.0.0-beta.8.0.20200311062449-51fe78fb661c h1:fUipgHNEE3frhHD/fcGz+50shjBGiVVuSzf5j9Lcwoo=
 github.com/flant/shell-operator v1.0.0-beta.8.0.20200311062449-51fe78fb661c/go.mod h1:I+YUGSMKvCng0wwdOZTJ2tcYRAdvFkZ6awDpZ98utw0=
+github.com/flant/shell-operator v1.0.0-beta.8.0.20200322083644-7ee05962e14e h1:nad8pdk/aZ8QidHJ5LrpuRQz/LZCmjWYwWw2J3A2oBw=
 github.com/flant/shell-operator v1.0.0-beta.8.0.20200322083644-7ee05962e14e/go.mod h1:zorYh8bFCs9dUym8XwyD69IkVygzEmqBN7n1kKsygBQ=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=

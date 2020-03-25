@@ -10,7 +10,7 @@ data:
   config.json: |
     { "crds": {{ .Values.userAuthz.internal.crds | toJson}} }
 {{- else }}
-  {{- range $crd := .Values.userAuthz.crds }}
+  {{- range $crd := .Values.userAuthz.internal.crds }}
     {{- if hasKey $crd.spec "allowAccessToSystemNamespaces" }}
       {{- fail "You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources." }}
     {{- end }}

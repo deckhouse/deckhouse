@@ -105,8 +105,6 @@ func (hec *HelmConfig) HelmRender() {
 		sandbox_runner.WithSourceDirectory(hec.modulePath, tempDir),
 		sandbox_runner.WithFile(filepath.Join(tempDir, "values.yaml"), yamlValuesBytes),
 	)
-	Expect(string(hec.Session.Err.Contents())).To(HaveLen(0))
-	Expect(hec.Session.ExitCode()).To(Equal(0))
 
 	for _, doc := range releaseutil.SplitManifests(string(hec.Session.Out.Contents())) {
 		var t interface{}
