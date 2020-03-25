@@ -139,6 +139,15 @@
       description: |-
         Daemonset {{ $labels.namespace }}/{{ $labels.daemonset }} имеет {{ .Value }} подов в неактуальном состоянии в течении 15 минут.
 
+        Необходимо выполнить следующие действия:
+        1. Проверить состояние daemonset'a `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}`
+        2. Получить описание daemonset'a `kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}`
+        3. Если вы видите, что в описании daemonset'a не совпадают значения `Number of Nodes Scheduled with Up-to-date Pods`
+        и `Current Number of Nodes Scheduled`, то необходимо проверить updateStrategy у daemonset'a
+        `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}-o json | jq '.spec.updateStrategy'`
+        4. Если установлена updateStrategy OnDelete, то обновления daemonset'a произойдёт только при удалении подов.
+
+
   - alert: KubernetesStatefulSetReplicasUnavailable
     expr: |
       (
