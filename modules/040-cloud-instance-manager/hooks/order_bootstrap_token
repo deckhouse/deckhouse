@@ -8,7 +8,7 @@ function __config__() {
     kubernetes:
     - name: bootstrap_tokens
       queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
-      includeSnapshotsFrom: [bootstrap_tokens]
+      group: main
       apiVersion: v1
       kind: Secret
       watchEvent: ["Modified","Deleted"]
@@ -38,8 +38,8 @@ function __config__() {
         }
     schedule:
     - queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
+      group: main
       crontab: "23 * * * *"
-      includeSnapshotsFrom: [bootstrap_tokens]
 EOF
 }
 
