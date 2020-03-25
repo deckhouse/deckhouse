@@ -62,7 +62,7 @@
   rules:
 
   - alert: KubeEtcdHighNumberOfLeaderChanges
-    expr: max by (node) (increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[1h]) > 3)
+    expr: max by (node) (increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[10m]) > 3)
     labels:
       severity_level: "5"
       tier: cluster
@@ -71,7 +71,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__main: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
-        Участник etcd кластера на ноде {{ $labels.node }} видел {{ $value }} перевыборов лидера за последний час.
+        Участник etcd кластера на ноде {{ $labels.node }} видел {{ $value }} перевыборов лидера за последние 10 минут.
 
         Возможные причины:
 
@@ -111,7 +111,7 @@
       summary: Лаг между участниками кластера
 
   - alert: KubeEtcdHighNumberOfFailedProposals
-    expr: max by (node) (increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 5)
+    expr: max by (node) (increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[10m]) > 5)
     labels:
       severity_level: "6"
       tier: cluster
@@ -121,7 +121,7 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__main: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
-        Участник etcd кластера не смог закоммитить proposal {{ $value }} раз за последний час.
+        Участник etcd кластера не смог закоммитить proposal {{ $value }} раз за последние 10 минут.
 
         Возможные причины:
 
@@ -166,7 +166,7 @@
 
         1. Высокий latency диска, где находятся данные etcd;
         2. Высокий CPU usage на ноде;
-      summary: an extremely high number of proposals within the kube-etcd3 cluster are failing
+      summary: commit тормозит
 
   - alert: KubeEtcdMalfunctioning
     expr: count(ALERTS{alertname=~"KubeEtcdHighNumberOfLeaderChanges|KubeEtcdInsufficientMembers|KubeEtcdMemberCommunicationSlow|KubeEtcdHighNumberOfFailedProposals|KubeEtcdHighFsyncDurations|KubeEtcdHighCommitDurations"})
