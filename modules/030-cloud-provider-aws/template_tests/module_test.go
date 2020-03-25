@@ -78,6 +78,9 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 		})
 
 		It("Everything must render properly", func() {
+			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
+			Expect(f.Session.ExitCode()).To(BeZero())
+
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-aws")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-aws", "deckhouse-registry")
 
