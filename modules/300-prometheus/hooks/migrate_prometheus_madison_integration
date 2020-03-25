@@ -1,0 +1,17 @@
+#!/bin/bash
+
+### Миграция 25.03.2020: Удалить после выката релиза с данным MR
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p configVersion=v1 onStartup=5
+}
+
+function __on_startup() {
+  if values::is_false prometheus.madisonSelfSetupKey ; then
+    kubernetes::patch_jq "d8-system" "configmap/deckhouse" '.data.prometheusMadisonIntegrationEnabled = "false"'
+    values::unset --config prometheus.madisonSelfSetupKey
+  fi
+}
+
+hook::run $@
