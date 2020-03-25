@@ -1,4 +1,4 @@
-FROM golang:1.12-alpine3.10
+FROM golang:1.13-alpine3.10
 WORKDIR /go/src/github.com/pusher/oauth2_proxy
 
 # Download tools
@@ -7,10 +7,9 @@ RUN wget -O - https://install.goreleaser.com/github.com/golangci/golangci-lint.s
 RUN apk --update add make git build-base curl bash ca-certificates wget \
  && update-ca-certificates
 RUN git clone https://github.com/pusher/oauth2_proxy.git . \
- && git checkout v4.0.0
-ADD rd.patch cookie-refresh.patch /
-RUN patch -p1 < /rd.patch \
-  && patch -p1 < /cookie-refresh.patch \
+ && git checkout v5.0.0
+ADD cookie-refresh.patch /
+RUN patch -p1 < /cookie-refresh.patch \
   && GO111MODULE=on go mod download \
   && ./configure \
   && make build
