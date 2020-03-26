@@ -16,7 +16,7 @@ function __main__() {
   if values::has global.discovery.clusterType; then
     cluster_type="$(values::get global.discovery.clusterType)"
   fi
-  
+
   if values::has --config nginxIngress.additionalControllers; then
     countNonDirectInletsInAdditionalControllers=$(values::get --config nginxIngress | jq -r --arg cluster_type "$cluster_type" '[.additionalControllers[] | select((.inlet != "Direct" and .inlet != null) or (.inlet == null and $cluster_type != "Manual"))] | length')
   else
@@ -37,7 +37,7 @@ function __main__() {
   echo "{\"name\":\"d8_nginx_ingress_deprecated\", \"set\": $countNonDirectInlets }" >> $METRICS_PATH
 
   if [ -v D8_IS_TESTS_ENVIRONMENT ]; then
-    values::set nginxIngress.internal.countDepricatedInlets "$countNonDirectInlets"
+    values::set nginxIngress.internal.countDeprecatedInlets "$countNonDirectInlets"
   fi
 }
 

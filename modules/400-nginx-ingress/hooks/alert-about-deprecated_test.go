@@ -29,9 +29,9 @@ var _ = Describe("Modules :: nginx-ingress :: hooks :: metrics ::", func() {
 			f.RunHook()
 		})
 
-		It("must be executed successfully; countDepricatedInlets must be 4", func() {
+		It("must be executed successfully; countDeprecatedInlets must be 4", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nginxIngress.internal.countDepricatedInlets").String()).To(Equal("4"))
+			Expect(f.ValuesGet("nginxIngress.internal.countDeprecatedInlets").String()).To(Equal("4"))
 		})
 	})
 
