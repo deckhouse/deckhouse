@@ -9,7 +9,7 @@ function legacy::common_hooks::daemonset_pair_safe_update::delete_all_not_update
       .spec.selector.matchLabels | to_entries[] | .key+"="+.value
     ] +
     [
-      "pod-template-generation!=" + (.spec.templateGeneration|tostring)
+      "pod-template-generation!=" + (.metadata.generation|tostring)
     ] | join(",")'
   )
 
@@ -31,7 +31,7 @@ function legacy::common_hooks::daemonset_pair_safe_update::delete_pod_in_ds() {
       .spec.selector.matchLabels | to_entries[] | .key+"="+.value
     ] +
     [
-      "pod-template-generation!=" + (.spec.templateGeneration|tostring)
+      "pod-template-generation!=" + (.metadata.generation|tostring)
     ] | join(",")'
   )
   if pod_to_kill=$(kubectl -n $namespace get pods -l"${selector}" -o json | jq -er '.items[0].metadata.name')
