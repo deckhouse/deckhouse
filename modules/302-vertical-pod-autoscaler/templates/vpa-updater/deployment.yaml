@@ -19,13 +19,6 @@ spec:
         cpu: 100m
         memory: 100Mi
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: vpa-updater
-  namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | indent 2 }}
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

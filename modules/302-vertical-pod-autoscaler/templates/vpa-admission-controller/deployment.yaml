@@ -19,13 +19,6 @@ spec:
         cpu: 100m
         memory: 100Mi
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: vpa-admission-controller
-  namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -52,7 +45,7 @@ spec:
     metadata:
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
-        checksum/certificate: {{ include (print .Template.BasePath "/tls-certs.yaml") . | sha256sum }}
+        checksum/certificate: {{ include (print .Template.BasePath "/vpa-admission-controller/tls-certs.yaml") . | sha256sum }}
       labels:
         app: vpa-admission-controller
     spec:

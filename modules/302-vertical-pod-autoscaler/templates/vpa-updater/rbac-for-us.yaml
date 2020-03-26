@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-updater
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:vertical-pod-autoscaler:vpa-updater:status-reader
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+rules:
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:vpa-updater:status-reader
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:vertical-pod-autoscaler:vpa-updater:status-reader
+subjects:
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:vertical-pod-autoscaler:vpa-updater:evictioner
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+rules:
+- apiGroups:
+  - "apps"
+  - "extensions"
+  resources:
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:vpa-updater:evictioner
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:vertical-pod-autoscaler:vpa-updater:evictioner
+subjects:
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system

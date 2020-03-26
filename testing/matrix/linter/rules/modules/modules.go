@@ -24,7 +24,6 @@ var (
 func skipModuleIfNeeded(name string) bool {
 	switch name {
 	case "helm_lib",
-		"302-vertical-pod-autoscaler",
 		"340-monitoring-kubernetes-control-plane",
 		"360-istio",
 		"400-nginx-ingress",

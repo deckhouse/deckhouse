@@ -1,0 +1,42 @@
+global:
+  highAvailability: [true, false]
+  enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: registry.example.com
+    tags:
+      common:
+        nginx: tagstring
+      verticalPodAutoscaler:
+        recommender: tagstring
+        updater: tagstring
+        admissionController: tagstring
+  discovery:
+    extensionAPIServerAuthenticationRequestheaderClientCA: string
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    d8SpecificNodeCountByRole:
+      system: 2
+    clusterVersion: 1.15.5
+  modules:
+    publicDomainTemplate: "%s.example.com"
+    https:
+      __ConstantChoices__:
+      - certManager:
+          clusterIssuerName: letsencrypt
+        mode: CertManager
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: plainstring
+
+verticalPodAutoscaler:
+  internal:
+    CACert: string
+    CAKey: string
+    prometheusAPIClientTLS:
+      certificate: string
+      key: string
+    serverCert: string
+    serverKey: string
