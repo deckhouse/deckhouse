@@ -4,7 +4,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Editor
-  name: d8-monitoring:user-authz:editor
+  name: d8:user-authz:prometheus:editor
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
@@ -22,7 +22,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: ClusterEditor
-  name: d8-monitoring:user-authz:cluster-editor
+  name: d8:user-authz:prometheus:cluster-editor
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:

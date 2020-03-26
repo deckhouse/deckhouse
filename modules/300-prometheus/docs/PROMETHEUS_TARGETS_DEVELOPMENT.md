@@ -110,7 +110,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8-rbac-proxy
+  name: d8:rbac-proxy
 subjects:
 - kind: ServiceAccount
   name: my-sa

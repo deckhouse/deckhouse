@@ -1,0 +1,25 @@
+global:
+  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      prometheusMetricsAdapter:
+        k8sPrometheusAdapter: tagstring
+        prometheusReverseProxy: tagstring
+  discovery:
+    extensionAPIServerAuthenticationRequestheaderClientCA: string
+    clusterControlPlaneIsHighlyAvailable: true
+    d8SpecificNodeCountByRole:
+      system: 1
+    clusterVersion: 1.15.5
+
+prometheusMetricsAdapter:
+  internal:
+    adapterCA: string
+    adapterKey: string
+    adapterPem: string
+    prometheusAPIClientTLS:
+      certificate: string
+      key: string
+    customMetrics: {}

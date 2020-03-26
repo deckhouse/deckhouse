@@ -1,0 +1,29 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-metallb
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "metallb")) | indent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources: ["daemonsets/prometheus-metrics", "deployments/prometheus-metrics"]
+  resourceNames: ["metallb", "speaker"]
+  verbs: ["get"]
+
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-metallb
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "metallb")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-metallb
+subjects:
+- kind: User
+  name: d8-monitoring:scraper
+{{- end }}

@@ -2,7 +2,6 @@ package object_store
 
 import (
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -17,12 +16,6 @@ type ErrObjectNotFound struct {
 
 func (e *ErrObjectNotFound) Error() string {
 	return e.message
-}
-
-func newErrObjectNotFound(index MetaIndex) *ErrObjectNotFound {
-	return &ErrObjectNotFound{
-		message: fmt.Sprintf("object by index %s/%s/%s not found in store", index.Kind, index.Namespace, index.Name),
-	}
 }
 
 type KubeObject map[string]interface{}

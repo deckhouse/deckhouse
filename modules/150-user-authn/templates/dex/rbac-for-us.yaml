@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authn:dex:crd
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["*"]
+- apiGroups: ["dex.coreos.com"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authn:dex:crd
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authn:dex:crd
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+rules:
+- apiGroups: ["dex.coreos.com"]
+  resources:
+  - authcodes
+  - authrequests
+  - connectors
+  - oauth2clients
+  - offlinesessionses
+  - passwords
+  - refreshtokens
+  - signingkeies
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dex
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: d8-{{ .Chart.Name }}

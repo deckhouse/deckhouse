@@ -1,5 +1,7 @@
 README.md
+USER_STORIES.md
+enabled
 crds
 hooks
 images
-enabled
+template_tests

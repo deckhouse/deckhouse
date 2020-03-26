@@ -1,0 +1,102 @@
+global:
+  highAvailability: [true, false]
+  enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: registry.example.com
+    tags:
+      common:
+        kubeRbacProxy: tagstring
+        nginx: tagstring
+      prometheus:
+        prometheus: tagstring
+        grafana: tagstring
+        trickster: tagstring
+        grafanaDashboardProvisioner: tagstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    d8SpecificNodeCountByRole:
+      system: 2
+    clusterVersion: 1.15.5
+  modules:
+    publicDomainTemplate: "%s.example.com"
+    https:
+      __ConstantChoices__:
+      - certManager:
+          clusterIssuerName: letsencrypt
+        mode: CertManager
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: plainstring
+
+
+prometheus:
+  auth:
+    __ConstantChoices__:
+    - externalAuthentication:
+        authSignInURL: https://$host/dex-authenticator/sign_in
+        authURL: https://grafana-dex-authenticator.d8-monitoring.svc.cluster.local/dex-authenticator/auth
+    - whitelistSourceRanges: ["1.1.1.1/32"]
+  grafana:
+    customPlugins:
+    - grafana-image-renderer
+    storageClass: ceph-ssd
+  internal:
+    alertmanagers:
+      __ConstantChoices__:
+      - {}
+      - alphaprom:
+        - name: mysvc1
+          namespace: myns1
+          pathPrefix: /myprefix/
+          port: 81
+    deployDexAuthenticator: true
+    grafana:
+      effectiveStorageClass: ceph-ssd
+    prometheusAPIClientTLS:
+      certificate: string
+      key: string
+    prometheusLongterm:
+      effectiveStorageClass: false
+    prometheusMain:
+      effectiveStorageClass: false
+    prometheusScraperTLS:
+      certificate: string
+      key: string
+    remoteWrite:
+      __ConstantChoices__:
+      - []
+      -
+        - name: test-remote-write
+          spec:
+            basicAuth:
+              password: password
+              username: username
+          url: https://test-victoriametrics.domain.com/api/v1/write
+          writeRelabelConfigs:
+            action: keep
+            regex: "prometheus_build_.*"
+            sourceLabels": ["__name__"]
+    vpa:
+      longtermMaxCPU: 2.2
+      longtermMaxMemory: 1650.00Mi
+      maxCPU: 6.6
+      maxMemory: 4950.00Mi
+  longtermRetentionDays: 1095
+  longtermRetentionGigabytes: 30
+  madisonSelfSetupKey: false
+  retentionDays: 15
+  retentionGigabytes: 30
+  vpa:
+    __ConstantChoice__:
+    - updateMode: Initial
+    -
+      updateMode: Off
+      longtermMaxCPU: 1
+      longtermMaxMemory: 2Mi
+      maxCPU: 1
+      maxMemory: 2Mi
+

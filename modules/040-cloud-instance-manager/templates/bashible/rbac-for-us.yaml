@@ -1,0 +1,51 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bashible
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resourceNames:
+{{- $bashible_bundles := list }}
+{{- range $f, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/*/{base-bootstrap,base,instance-group-bootstrap,instance-group}/*" | join "") }}
+  {{- $bashible_bundles = append $bashible_bundles ($f | dir | dir | base) | uniq }}
+{{- end }}
+{{- range $bashible_bundle := $bashible_bundles }}
+  - bashible-bundle-{{ $bashible_bundle }}
+  - bashible-bundle-{{ $bashible_bundle }}-bootstrap
+  {{- range $.Values.cloudInstanceManager.internal.instanceGroups }}
+  - bashible-bundle-{{ $bashible_bundle }}-{{ .name }}
+  - bashible-bundle-{{ $bashible_bundle }}-{{ .name }}-bootstrap
+  {{- end}}
+{{- end }}
+  resources:
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  verbs:
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bashible
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible
+subjects:
+- kind: Group
+  name: system:bootstrappers:{{ $.Chart.Name }}:machine-bootstrap
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: system:nodes
+  apiGroup: rbac.authorization.k8s.io

@@ -55,6 +55,6 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
-      serviceAccountName: prometheus-operator
+      serviceAccountName: operator-prometheus
       imagePullSecrets:
       - name: deckhouse-registry

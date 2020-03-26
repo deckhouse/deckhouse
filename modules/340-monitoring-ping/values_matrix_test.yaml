@@ -1,0 +1,24 @@
+global:
+  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      monitoringPing:
+        monitoringPing: tagstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable: true
+    d8SpecificNodeCountByRole:
+      system: 1
+    clusterVersion: 1.15.5
+
+monitoringPing:
+  externalTargets:
+    __ConstantChoices__:
+    - []
+    -
+      - name: google-primary
+        host: 8.8.8.8
+      - name: yaru
+        host: ya.ru
+      - host: youtube.com

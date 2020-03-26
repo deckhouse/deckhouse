@@ -1,0 +1,114 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: vsphere-csi-driver-controller
+  namespace: d8-cloud-provider-vsphere
+{{ include "helm_lib_module_labels" (list . (dict "app" "controller")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: vsphere-csi-driver-controller
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: vsphere-csi-driver-controller
+  namespace: d8-cloud-provider-vsphere
+{{ include "helm_lib_module_labels" (list . (dict "app" "controller")) | indent 2 }}
+spec:
+  serviceName: controller
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vsphere-csi-controller
+  template:
+    metadata:
+      labels:
+        app: vsphere-csi-controller
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+    spec:
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: vsphere-csi.controller
+      containers:
+      - name: controller
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/vsphere-csi:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.vsphereCsi }}
+        env:
+        - name: CSI_ENDPOINT
+          value: "unix:///var/lib/csi/sockets/pluginproxy/csi.sock"
+        - name: X_CSI_MODE
+          value: "controller"
+        - name: X_CSI_SPEC_REQ_VALIDATION
+          value: "false"
+        - name: X_CSI_VSPHERE_CLOUD_CONFIG
+          value: "/etc/cloud/cloud-config"
+        volumeMounts:
+        - mountPath: /etc/cloud
+          name: vsphere-config-volume
+          readOnly: true
+        - mountPath: /var/lib/csi/sockets/pluginproxy/
+          name: socket-dir
+      - name: csi-provisioner
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/provisioner:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.provisioner }}
+        args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        - "--feature-gates=Topology=true"
+        env:
+        - name: ADDRESS
+          value: "/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: attacher
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/attacher:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.attacher }}
+        args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        env:
+        - name: ADDRESS
+          value: "/csi/csi.sock"
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+      - name: liveness-probe
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/livenessprobe:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.livenessprobe }}
+        args:
+        - "--csi-address=$(ADDRESS)"
+        env:
+        - name: ADDRESS
+          value: "/var/lib/csi/sockets/pluginproxy/csi.sock"
+        volumeMounts:
+        - mountPath: /var/lib/csi/sockets/pluginproxy/
+          name: socket-dir
+      - name: external-resizer
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/external-resizer:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.externalResizer }}
+        args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        env:
+        - name: ADDRESS
+          value: "/csi/csi.sock"
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+      volumes:
+      - name: vsphere-config-volume
+        secret:
+          secretName: cloud-controller-manager
+      - name: socket-dir
+        hostPath:
+          path: /var/lib/csi/sockets/pluginproxy/vsphere.csi.vmware.com
+          type: DirectoryOrCreate

@@ -1,0 +1,101 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ebs-csi-controller
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-driver")) | indent 2 }}
+spec:
+  serviceName: ebs-csi-controller
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ebs-csi-controller
+  template:
+    metadata:
+      labels:
+        app: ebs-csi-controller
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      serviceAccountName: ebs-csi.controller
+      containers:
+      - name: csi-provisioner
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiProvisioner }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        - "--feature-gates=Topology=true"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: csi-attacher
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiAttacher }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: csi-resizer
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiResizer }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: csi-snapshotter
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-snapshotter:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiSnapshotter }}
+        args:
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: ebs-csi-controller
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/ebs-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderAws.ebsCsiPlugin }}
+        args:
+        - "--v=5"
+        - "--endpoint=unix:/csi/csi.sock"
+        ports:
+          - name: healthz
+            containerPort: 9808
+            protocol: TCP
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: credentials
+              key: access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: credentials
+              key: secret_key
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          periodSeconds: 10
+          failureThreshold: 5
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - name: liveness-probe
+        image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-liveness-probe:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiLivenessProbe }}
+        args:
+          - --csi-address=/csi/csi.sock
+        volumeMounts:
+          - name: socket-dir
+            mountPath: /csi
+      volumes:
+        - name: socket-dir
+          emptyDir: {}

@@ -1,0 +1,35 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:cloud-provider-gcp:simple-bridge
+{{ include "helm_lib_module_labels" (list $ (dict "app" "simple-bridge")) | indent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - nodes/status
+    verbs:
+      - get
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:cloud-provider-gcp:simple-bridge
+{{ include "helm_lib_module_labels" (list $ (dict "app" "simple-bridge")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-gcp:simple-bridge
+subjects:
+- kind: ServiceAccount
+  name: simple-bridge
+  namespace: d8-cloud-provider-gcp
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: simple-bridge
+{{ include "helm_lib_module_labels" (list $ (dict "app" "simple-bridge")) | indent 2 }}
+  namespace: d8-cloud-provider-gcp

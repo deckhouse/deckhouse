@@ -4,3 +4,5 @@ docs
 hooks
 images
 enabled
+template_tests
+USER_STORIES.md

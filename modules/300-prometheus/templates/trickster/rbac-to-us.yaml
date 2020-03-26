@@ -1,0 +1,54 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-trickster-http
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments/http"]
+  resourceNames: ["trickster"]
+  verbs: ["get", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-trickster-http
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-trickster-http
+subjects:
+- kind: Group
+  name: ingress-nginx:auth
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-trickster-prometheus-metrics
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments/prometheus-metrics"]
+  resourceNames: ["trickster"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-trickster-prometheus-metrics
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "app" "trickster")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-trickster-prometheus-metrics
+subjects:
+- kind: User
+  name: d8-monitoring:scraper

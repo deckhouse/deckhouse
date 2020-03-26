@@ -23,9 +23,9 @@ func ListTreeObjects(path string) ([]TreeObject, error) {
 
 	output, err := cmd.Output()
 
-	switch err.(type) {
+	switch e := err.(type) {
 	case *exec.ExitError:
-		return nil, fmt.Errorf("failed to run \"git\" command: %s\n\n%s", err, err.(*exec.ExitError).Stderr)
+		return nil, fmt.Errorf("failed to run \"git\" command: %s\n\n%s", err, e.Stderr)
 	case *os.PathError:
 		// images directory does not exist in module folder, return an empty images array
 		return []TreeObject{}, nil

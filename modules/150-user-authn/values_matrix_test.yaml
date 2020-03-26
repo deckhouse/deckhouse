@@ -1,9 +1,6 @@
 global:
   highAvailability: [true, false]
-  enabledModules:
-    __ConstantChoices__:
-      - ["cert-manager", "vertical-pod-autoscaler-crd"]
-      - ["cert-manager"]
+  enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: registry.example.com

@@ -8,19 +8,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
-	f := HookExecutionConfigInit(`{
-"userAuthn":{
-  "internal": {}
-},
-"global": {
-  "hack": {
-    "namespaces": {
-      "prometheus": "d8-monitoring",
-      "dashboard": "d8-dashboard",
-      "openvpn": "kube-openvpn"
-    }
-  }
-}}`, "")
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DexAuthenticator", true)
 
 	Context("Fresh cluster", func() {
@@ -95,7 +83,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: dex-authenticator-test
-  namespace: d8-monitoring
+  namespace: d8-dashboard
   labels:
     app: dex-authenticator
     name: credentials
@@ -107,7 +95,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
 metadata:
   name: test
-  namespace: d8-monitoring
+  namespace: d8-dashboard
   annotations:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
@@ -123,16 +111,16 @@ spec:
 
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs").String()).To(MatchJSON(`
 [{
-  "uuid": "test@d8-monitoring",
+  "uuid": "test@d8-dashboard",
   "name": "test",
-  "namespace": "d8-monitoring",
+  "namespace": "d8-dashboard",
   "spec": {
     "applicationDomain": "test",
     "applicationIngressClassName": "nginx",
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": "true",
-  "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
+  "encodedName": "orsxg5bnmq4c2zdbonuge33bojsc2zdfpawwc5lunbsw45djmnqxi33szpzjzzeeeirsk",
   "credentials": {
     "cookieSecret": "testNext",
     "appDexSecret": "test"
@@ -197,7 +185,7 @@ data:
     "applicationIngressClassName": "nginx",
     "sendAuthorizationHeader": false
   },
-  "allowAccessToKubernetes": "true",
+  "allowAccessToKubernetes": "",
   "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
   "credentials": {
     "cookieSecret": "testNext",

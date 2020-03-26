@@ -1,0 +1,51 @@
+global:
+  highAvailability: [true, false]
+  enabledModules: ["vertical-pod-autoscaler-crd", "cert-manager", "prometheus"]
+  modules:
+    publicDomainTemplate: "%s.example.com"
+    https:
+      __ConstantChoices__:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: registry.example.com
+    tags:
+      dynatrace:
+        operator: hashstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    d8SpecificNodeCountByRole:
+      system:
+        __ConstantChoices__: [1, 2, 3]
+    clusterVersion: 1.15.5
+
+dynatrace:
+  apiToken: crM2eyYjvRaqbmz5uC0SRn5
+  paasToken: uuaBV1LsSTCOXqgszgDst0n
+  apiURL: https://leb77264.live.dynatrace.com/api
+  hostGroups:
+    __ConstantChoices__:
+    - []
+    -
+      - name: system
+        nodeSelector:
+          node-role.flant.com/system: ""
+        tolerations:
+        - key: dedicated.flant.com
+          operator: Equal
+          value: system
+      - name: production
+        nodeSelector:
+          node-role/production: ""
+        tolerations:
+        - key: dedicated
+          operator: Equal
+          value: production
