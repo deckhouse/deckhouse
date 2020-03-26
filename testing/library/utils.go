@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/iancoleman/strcase"
 	"github.com/imdario/mergo"
-	"github.com/segmentio/go-camelcase"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 
@@ -69,11 +69,11 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 
 			_, moduleDir := filepath.Split(path)
 			moduleDirClean := string([]byte(moduleDir)[4:])
-			moduleName := camelcase.Camelcase(moduleDirClean)
+			moduleName := strcase.ToCamel(moduleDirClean)
 			moduleImagesValues["global"]["modulesImages"]["tags"][moduleName] = map[string]string{}
 
 			for _, tag := range imageTags {
-				fileName := camelcase.Camelcase(tag.File)
+				fileName := strcase.ToCamel(tag.File)
 				moduleImagesValues["global"]["modulesImages"]["tags"][moduleName][fileName] = tag.Object
 			}
 		}
@@ -136,8 +136,10 @@ type KubeResult struct {
 }
 
 func (kr KubeResult) AsStringSlice() []string {
-	var result []string
-	for _, element := range kr.Array() {
+	array := kr.Array()
+
+	result := make([]string, len(array))
+	for _, element := range array {
 		result = append(result, element.String())
 	}
 

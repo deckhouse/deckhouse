@@ -185,7 +185,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
 	var contexts string
 	var err error
-	if hec.IsKubeStateInited == false {
+	if !hec.IsKubeStateInited {
 		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig, newKubeState)
 		if err != nil {
 			panic(err)

@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-cloud-instance-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, csi-driver, flannel.
+2. There are applications which must be deployed — cloud-controller-manager, yandex-csi, flannel.
 
 */
 
@@ -86,8 +86,8 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
 
-			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:flannel")
-			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:flannel")
+			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:flannel")
+			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:flannel")
 			flannelSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "flannel")
 			flannelDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "flannel")
 			flannelCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "flannel")
@@ -95,31 +95,31 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
 			csiControllerSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-yandex", "csi-controller")
 			csiNodeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "csi-node")
-			csiNodeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "csi-node")
-			csiRegistrarCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:csi-driver-registrar")
-			csiRegistrarCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:csi-driver-registrar")
-			csiControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "csi-controller")
-			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:csi-external-provisioner")
-			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:csi-external-provisioner")
-			csiExternalAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:csi-external-attacher")
-			csiExternalAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:csi-external-attacher")
-			csiExternalResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:csi-external-resizer")
-			csiExternalResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:csi-external-resizer")
-			csiExternalSnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:csi-external-snapshotter")
-			csiExternalSnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:csi-external-snapshotter")
+			csiNodeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "yandex-csi.node")
+			csiRegistrarCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:node")
+			csiRegistrarCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:node")
+			csiControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "yandex-csi.controller")
+			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-provisioner")
+			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-provisioner")
+			csiExternalAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-attacher")
+			csiExternalAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-attacher")
+			csiExternalResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-resizer")
+			csiExternalResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-resizer")
+			csiExternalSnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-snapshotter")
+			csiExternalSnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-snapshotter")
 			csiCredentials := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "csi-credentials")
 			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
 			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
 
 			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "cloud-controller-manager")
-			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:cloud-controller-manager")
-			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8-cloud-provider-yandex:cloud-controller-manager")
+			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:cloud-controller-manager")
+			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:cloud-controller-manager")
 			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-yandex", "cloud-controller-manager")
 			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "cloud-controller-manager")
 
-			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:user-authz:user")
-			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8-cloud-provider-yandex:user-authz:cluster-admin")
+			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-yandex:user")
+			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-yandex:cluster-admin")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())

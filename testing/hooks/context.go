@@ -28,9 +28,7 @@ func (bcs *BindingContextsSlice) Set(contexts ...string) {
 			// TODO: Remove panic here
 			panic(err)
 		}
-		for _, context := range data {
-			rawContexts = append(rawContexts, context)
-		}
+		rawContexts = append(rawContexts, data...)
 	}
 
 	combinedContexts, err := json.Marshal(rawContexts)

@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-local-dns
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-local-dns
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: node-local-dns
+  namespace: d8-system

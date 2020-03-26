@@ -7,12 +7,6 @@ global:
       mode: CertManager
       certManager:
         clusterIssuerName: letsencrypt
-  # Временный хак, который мы используем, пока не отделим enabled хук от дефолтных values.yaml в каждом модуле
-  hack:
-    namespaces:
-      prometheus: d8-monitoring
-      dashboard: d8-dashboard
-      openvpn: kube-openvpn
 
 ##########################################
 # Список включенных по умолчанию модулей #

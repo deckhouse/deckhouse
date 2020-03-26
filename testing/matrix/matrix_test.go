@@ -1,38 +1,15 @@
-package test
+package matrix
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/runner"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
 )
-
-var defaultDeckhouseModulesDir = "/deckhouse/modules"
-
-func getDeckhouseModulesWithValuesMatrixTests() map[string]string {
-	modules := make(map[string]string)
-
-	modulesDir, ok := os.LookupEnv("MODULES_DIR")
-	if !ok {
-		modulesDir = defaultDeckhouseModulesDir
-	}
-
-	_ = filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
-		_, err = os.Stat(path + "/" + runner.ValuesConfigFilename)
-		if err == nil {
-			parts := strings.Split(path, "/")
-			name := parts[len(parts)-1]
-			modules[name] = path
-		}
-		return nil
-	})
-	return modules
-}
 
 func TestMatrix(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -40,15 +17,20 @@ func TestMatrix(t *testing.T) {
 }
 
 var _ = Describe("Matrix tests", func() {
-	modules := getDeckhouseModulesWithValuesMatrixTests()
-	modulesCH := make(chan string, len(modules))
+	modules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
 
-	Context("for module", func() {
-		for name, path := range modules {
-			modulesCH <- path
-			It(name, func() {
-				err := runner.RunLint(<-modulesCH, "")
-				Expect(err).ToNot(HaveOccurred())
+	modulesCH := make(chan types.Module, len(modules))
+	Context("module discovery", func() {
+		It("", func() {
+			Expect(err).ToNot(ErrorOccurred())
+		})
+	})
+
+	Context("run", func() {
+		for _, module := range modules {
+			modulesCH <- module
+			It("for module "+module.Name, func() {
+				Expect(linter.Run("", <-modulesCH)).ToNot(ErrorOccurred())
 			})
 		}
 	})

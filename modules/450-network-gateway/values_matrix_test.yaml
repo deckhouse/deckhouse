@@ -1,0 +1,14 @@
+global:
+  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      networkGateway:
+        dnsmasq: tagstring
+        snat: tagstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable: true
+    d8SpecificNodeCountByRole:
+      system: 1
+    clusterVersion: 1.15.5

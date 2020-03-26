@@ -1,0 +1,170 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ .Chart.Name }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: {{ .Chart.Name }}
+      minAllowed:
+        memory: 50Mi
+        cpu: 50m
+      maxAllowed:
+        memory: 300Mi
+        cpu: 350m
+      mode: Auto
+    - containerName: {{ .Chart.Name }}-admin
+      minAllowed:
+        memory: 50Mi
+        cpu: 50m
+      maxAllowed:
+        memory: 512Mi
+        cpu: 350m
+      mode: Auto
+    - containerName: kube-rbac-proxy
+      minAllowed:
+        memory: 20Mi
+        cpu: 20m
+      maxAllowed:
+        memory: 100Mi
+        cpu: 200m
+      mode: Auto
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/openvpn/config.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      serviceAccountName: openvpn
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn:{{ $.Values.global.modulesImages.tags.openvpn.openvpn }}
+        command: [ '/etc/openvpn/setup/configure.sh' ]
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+        ports:
+        - name: ovpn-tcp
+          containerPort: 1194
+          protocol: TCP
+        volumeMounts:
+          - mountPath: /etc/openvpn/setup
+            name: openvpn
+            readOnly: false
+          - mountPath: /etc/openvpn/certs
+            name: certs
+            readOnly: false
+          - name: tmp
+            mountPath: /tmp
+      - name: {{ .Chart.Name }}-admin
+        image: {{ $.Values.global.modulesImages.registry }}/openvpn/openvpn-web-ui:{{ $.Values.global.modulesImages.tags.openvpn.openvpnWebUi }}
+        command:
+        - /bin/sh
+        - -c
+        - uwsgi --http 127.0.0.1:8000  --processes 1 --master --die-on-term --enable-threads --single-interpreter --vacuum --lazy-apps --wsgi-disable-file-wrapper --harakiri 80 -b 32768 --file app.py --callable app --check-static /app/frontend
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: EASYRSA_PATH
+          value: /mnt/easyrsa
+        - name: EXTERNAL_PORT
+          value: {{ .Values.openvpn.externalPort | default 5416 | quote }}
+        {{- if hasKey .Values.openvpn "externalHost" }}
+        - name: EXTERNAL_HOST
+          value: {{ .Values.openvpn.externalHost }}
+        {{- end }}
+        - name: CLUSTER_TYPE
+          value: {{ .Values.global.discovery.clusterType }}
+        volumeMounts:
+          - mountPath: /mnt/easyrsa
+            name: certs
+            readOnly: false
+      - name: kube-rbac-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+        - "--secure-listen-address=0.0.0.0:443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 443
+          name: https
+        env:
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:8000/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: kube-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: {{ .Chart.Name }}
+      volumes:
+      - name: openvpn
+        configMap:
+          name: {{ .Chart.Name }}
+          defaultMode: 0775
+      - name: tmp
+        emptyDir: {}
+      - name: certs
+{{- $storageClass := .Values.openvpn.internal.effectiveStorageClass }}
+{{- if $storageClass }}
+        persistentVolumeClaim:
+          claimName: {{ .Chart.Name }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 256Mi
+  storageClassName: {{ $storageClass }}
+{{- else }}
+        emptyDir: {}
+{{- end }}

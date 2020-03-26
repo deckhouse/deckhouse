@@ -1,0 +1,291 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-manager
+  namespace: d8-cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:leaderelection
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  # Used for leader election by the controller
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:leaderelection
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:leaderelection
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:issuers
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["issuers", "issuers/status"]
+    verbs: ["update"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["issuers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:issuers
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:issuers
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:clusterissuers
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["clusterissuers", "clusterissuers/status"]
+    verbs: ["update"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["clusterissuers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:clusterissuers
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:clusterissuers
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+# Certificates controller role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:certificates
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["certificates", "certificates/status", "certificaterequests", "certificaterequests/status"]
+    verbs: ["update"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["certificates", "certificaterequests", "clusterissuers", "issuers", "orders"]
+    verbs: ["get", "list", "watch"]
+  # We require these rules to support users with the OwnerReferencesPermissionEnforcement
+  # admission controller enabled:
+  # https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#ownerreferencespermissionenforcement
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["certificates/finalizers"]
+    verbs: ["update"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["orders"]
+    verbs: ["create", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:certificates
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:certificates
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:orders
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["orders", "orders/status"]
+    verbs: ["update"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["orders", "clusterissuers", "issuers", "challenges"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["challenges"]
+    verbs: ["create", "delete"]
+  # We require these rules to support users with the OwnerReferencesPermissionEnforcement
+  # admission controller enabled:
+  # https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#ownerreferencespermissionenforcement
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["orders/finalizers"]
+    verbs: ["update"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:orders
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:orders
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:challenges
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  # Use to update challenge resource status
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["challenges", "challenges/status"]
+    verbs: ["update"]
+  # Used to watch challenges, issuer and clusterissuer resources
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["challenges", "issuers", "clusterissuers"]
+    verbs: ["get", "list", "watch"]
+  # Need to be able to retrieve ACME account private key to complete challenges
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  # Used to create events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # HTTP01 rules
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["extensions"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "delete", "update"]
+  # We require these rules to support users with the OwnerReferencesPermissionEnforcement
+  # admission controller enabled:
+  # https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#ownerreferencespermissionenforcement
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["challenges/finalizers"]
+    verbs: ["update"]
+  # DNS01 rules (duplicated above)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:challenges
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:challenges
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+# ingress-shim controller role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cert-manager:cert-manager:ingress-shim
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+rules:
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["certificates", "certificaterequests"]
+    verbs: ["create", "update", "delete"]
+  - apiGroups: ["certmanager.k8s.io"]
+    resources: ["certificates", "certificaterequests", "issuers", "clusterissuers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+  # We require these rules to support users with the OwnerReferencesPermissionEnforcement
+  # admission controller enabled:
+  # https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#ownerreferencespermissionenforcement
+  - apiGroups: ["extensions"]
+    resources: ["ingresses/finalizers"]
+    verbs: ["update"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:ingress-shim
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cert-manager:cert-manager:ingress-shim
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cert-manager:cert-manager:rbac-proxy
+{{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- name: cert-manager
+  namespace: d8-cert-manager
+  kind: ServiceAccount

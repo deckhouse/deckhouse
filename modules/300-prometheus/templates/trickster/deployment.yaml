@@ -97,9 +97,9 @@ spec:
               authorization:
                 resourceAttributes:
                   namespace: d8-monitoring
-                  apiGroup: monitoring.coreos.com
+                  apiGroup: apps
                   apiVersion: v1
-                  resource: prometheuses
+                  resource: deployments
                   subresource: http
                   name: trickster
             - upstream: http://127.0.0.1:8001/metrics
@@ -107,9 +107,9 @@ spec:
               authorization:
                 resourceAttributes:
                   namespace: d8-monitoring
-                  apiGroup: monitoring.coreos.com
+                  apiGroup: apps
                   apiVersion: v1
-                  resource: prometheuses
+                  resource: deployments
                   subresource: prometheus-metrics
                   name: trickster
       - name: outgoing-nginx

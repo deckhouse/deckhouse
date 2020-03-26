@@ -109,9 +109,9 @@ spec:
               authorization:
                 resourceAttributes:
                   namespace: d8-monitoring
-                  apiGroup: monitoring.coreos.com
+                  apiGroup: apps
                   apiVersion: v1
-                  resource: grafana
+                  resource: statefulsets
                   subresource: http
                   name: grafana
             - upstream: http://127.0.0.1:3000/metrics
@@ -119,10 +119,10 @@ spec:
               authorization:
                 resourceAttributes:
                   namespace: d8-monitoring
-                  apiGroup: monitoring.coreos.com
+                  apiGroup: apps
                   apiVersion: v1
-                  resource: grafana
-                  subresource: metrics
+                  resource: statefulsets
+                  subresource: prometheus-metrics
                   name: grafana
         ports:
         - containerPort: 443

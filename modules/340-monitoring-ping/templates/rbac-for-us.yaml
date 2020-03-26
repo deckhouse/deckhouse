@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring-ping
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:monitoring-ping
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:monitoring-ping
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: monitoring-ping
+  namespace: d8-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:monitoring-ping

@@ -26,7 +26,7 @@ myTemplates:
 global:
   enabledModules:
     __ConstantChoices__:
-      - ["vertical-pod-autoscaler-crd"]
+      - ["vertical-pod-autoscaler-crd", "prometheus"]
       - []
   modulesImages:
     registry: registry.flant.com

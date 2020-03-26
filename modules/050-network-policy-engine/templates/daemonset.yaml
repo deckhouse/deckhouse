@@ -32,7 +32,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: kube-router
+      serviceAccountName: network-policy-engine
       containers:
       - name: kube-router
         image: {{ .Values.global.modulesImages.registry }}/network-policy-engine/kube-router:{{ .Values.global.modulesImages.tags.networkPolicyEngine.kubeRouter }}

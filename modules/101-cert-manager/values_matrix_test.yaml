@@ -1,0 +1,23 @@
+global:
+  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      common:
+        kubeRbacProxy: tagstring
+      certManager:
+        certManagerController: tagstring
+        certManagerWebhook: tagstring
+        certManagerCainjector: tagstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable: true
+    d8SpecificNodeCountByRole:
+      system: 1
+    clusterVersion: 1.15.5
+
+certManager:
+  internal:
+    selfSignedCA:
+      cert: string
+      key: string

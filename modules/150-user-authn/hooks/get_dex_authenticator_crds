@@ -44,7 +44,6 @@ EOF
 }
 
 function  __main__() {
-  allowed_namespaces=( $(values::get global.hack.namespaces | jq ' to_entries[] | .value') )
   credentialsFromSnapshots=$(context::jq -rc '[(.snapshots.credentials // []) | .[].filterResult'])
 
   crds=$(context::jq -rc '(.snapshots.authenticator // []) | .[].filterResult' | while read rawCRD ; do
@@ -52,7 +51,7 @@ function  __main__() {
     namespace=$(jq -rc '.namespace' <<< ${rawCRD})
 
     allowAccessToKubernetes=$(jq -rc '.allowAccessToKubernetes' <<< ${rawCRD})
-    if [[ ! "${allowed_namespaces[@]} " =~ "$namespace" ]]; then
+    if [[ "$namespace" != "d8-dashboard" ]]; then
       allowAccessToKubernetes=""
     fi
 
