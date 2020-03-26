@@ -31,7 +31,7 @@ metadata:
 spec:
   replicas: 1
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
-  retentionSize: {{ .Values.prometheus.longtermRetentionGigabytes }}GB
+  retentionSize: {{ .Values.prometheus.internal.prometheusLongterm.retentionGigabytes }}GB
   image: {{ .Values.global.modulesImages.registry }}/prometheus/prometheus:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}
   version: v2.13.0
   imagePullSecrets:
@@ -125,7 +125,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: {{ .Values.prometheus.longtermDiskSize }}Gi
+            storage: {{ .Values.prometheus.internal.prometheusLongterm.diskSizeGigabytes }}Gi
         storageClassName: {{ $storageClass }}
   {{- end }}
 {{- end }}
