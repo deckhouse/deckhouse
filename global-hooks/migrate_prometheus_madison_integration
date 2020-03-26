@@ -8,8 +8,8 @@ function __config__() {
 }
 
 function __on_startup() {
-  if values::is_false prometheus.madisonSelfSetupKey ; then
-    values::unset --config prometheus.madisonSelfSetupKey
+  if kubectl -n d8-system  get cm deckhouse -o json | jq .data.prometheus -r | grep 'madisonSelfSetupKey: false' 2>/dev/null >/dev/null; then
+    kubernetes::patch_jq "d8-system" "configmap/deckhouse" '.data.prometheusMadisonIntegrationEnabled = "false"'
   fi
 }
 
