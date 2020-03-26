@@ -3,15 +3,9 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 var _ = Describe("Modules :: prometheus :: hooks :: prometheus_storage_class_change ::", func() {
 	const (

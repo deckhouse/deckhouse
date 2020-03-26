@@ -1,0 +1,162 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    schedule:
+    - name: "main"
+      crontab: "*/15 * * * *"
+      allowFailure: true
+      includeSnapshotsFrom: ["pvc", "sc"]
+      queue: /modules/$(module::name::kebab_case)/prometheus_disk
+    kubernetes:
+    - name: pvc
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+      jqFilter: ".spec.resources.requests.storage"
+      includeSnapshotsFrom: ["pvc"]
+      queue: /modules/$(module::name::kebab_case)/prometheus_disk
+    - name: sc
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      jqFilter: ".allowVolumeExpansion"
+      executeHookOnEvent: []
+      # TODO: executeHookOnSynchronization: false
+EOF
+}
+
+# TODO: delete after fix bug with executeHookOnEvent
+function __main__() {
+  return 0
+}
+
+function __on_schedule::main() {
+  discover_disk_usage "main"
+  calculate_disk_size_and_retention "main"
+
+  discover_disk_usage "longterm"
+  calculate_disk_size_and_retention "longterm"
+}
+
+function __on_kubernetes::pvc() {
+  restart_pods_if_required
+}
+
+function __on_before_helm() {
+  calculate_disk_size_and_retention "main"
+  calculate_disk_size_and_retention "longterm"
+}
+
+function discover_disk_usage() {
+  if [ -v D8_IS_TESTS_ENVIRONMENT ]; then
+    return 0
+  fi
+  prometheus_name="$1"
+  disk_usage_max="0"
+  for pod in $(context::jq -r --arg name "$prometheus_name" '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name) | .metadata.name | gsub("prometheus-\($name)-db-";"")'); do
+    if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq '.status.containerStatuses[] | select(.name == "prometheus") | .ready')" != "false" ]; then
+      df_out="$(kubectl -n d8-monitoring exec ${pod} -c prometheus --  df -Ph /prometheus/ | grep -v 'Filesystem' | awk '{print "{\"size\":\""$2"\",\"usage\":\""$5"\"}"}')"
+      disk_usage=$(jq -r '.usage | gsub("%";"")' <<< "$df_out")
+      disk_filesystem_size=$(jq -r '.size | gsub("G";"")' <<< "$df_out" | cut -f1 -d'.')
+      if [ "$disk_usage_max" -lt "$disk_usage" ]; then
+        disk_usage_max="$disk_usage"
+      fi
+    else
+      echo "!!! NOTICE: Conteiner prometheus is not Ready in pod $pod, discover_disk_usage skipped !!!"
+    fi
+  done
+
+  if [ -v disk_usage_max ]; then
+    values::set prometheus.internal.prometheus${prometheus_name^}.diskUsage "$disk_usage_max"
+  else
+    values::unset prometheus.internal.prometheus${prometheus_name^}.diskUsage
+  fi
+
+  if [ -v disk_filesystem_size ]; then
+    values::set prometheus.internal.prometheus${prometheus_name^}.diskFilesystemSize "$disk_filesystem_size"
+  else
+    values::unset prometheus.internal.prometheus${prometheus_name^}.diskFilesystemSize
+  fi
+}
+
+function calculate_disk_size_and_retention() {
+  prometheus_name="$1"
+
+  storage_classes="$(context::jq -r '[.snapshots.sc[].object | {(.metadata.name): .allowVolumeExpansion}] | reduce .[] as $i ({}; . * $i)')"
+  effective_storage_class=$(values::get prometheus.internal.prometheus${prometheus_name^}.effectiveStorageClass)
+  is_sc_allow_expansion=$(jq -r --arg name "$effective_storage_class" '.[$name]' <<< "$storage_classes")
+
+  if [ "$(context::jq -r --arg name $prometheus_name '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name)] | length')" -gt "0" ]; then
+    # If at least one pvc exists
+
+    current_pvc_size="$(context::jq -r --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name) | .status.capacity.storage' | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs 'split("\n")[:-1] | max')"
+
+    # If actual filesystem size is larger than PVC size (someone has manualy resized disk), we use actual filesystem size,
+    # instead of PVC size, in subsequent calculations
+    if values::has prometheus.internal.prometheus${prometheus_name^}.diskFilesystemSize; then
+      disk_filesystem_size="$(values::get prometheus.internal.prometheus${prometheus_name^}.diskFilesystemSize)"
+
+      if (( $current_pvc_size < $disk_filesystem_size )); then
+        current_pvc_size=$(bc <<< "$disk_filesystem_size/1+($disk_filesystem_size%1>0) + 5")
+      fi
+    fi
+
+    retention=$(bc <<< "$current_pvc_size * 0.8" | cut -f1 -d'.')
+    retention_gigabytes=$(bc <<< "$retention / 1024 / 1024 / 1024")
+    pvc_size_gigabytes=$(bc <<< "$current_pvc_size / 1024 / 1024 / 1024")
+
+    if values::has prometheus.internal.prometheus${prometheus_name^}.diskUsage; then
+      disk_usage="$(values::get prometheus.internal.prometheus${prometheus_name^}.diskUsage)"
+
+      if [ "$is_sc_allow_expansion" == "true" ] && (( $disk_usage > 90 )) ; then
+        new_pvc_size_gigabytes=$(( pvc_size_gigabytes + 5 ))
+
+        disk_resize_limit_gigabytes="300"
+        if values::has --config prometheus.${prometheus_name^}MaxDiskSizeGigabytes; then
+          disk_resize_limit_gigabytes="$(values::get --config prometheus.${prometheus_name^}MaxDiskSizeGigabytes)"
+        fi
+
+        if (( $new_pvc_size_gigabytes <= $disk_resize_limit_gigabytes )); then
+          fltr='. | .spec.resources.requests.storage = '"\"${new_pvc_size_gigabytes}Gi\""
+          for pvc in $(context::jq -r --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name) | .metadata.name'); do
+            echo "!!! NOTICE: PersistentVolumeClaim $pvc is going to be resized from $pvc_size_gigabytes to $new_pvc_size_gigabytes !!!"
+            kubernetes::patch_jq "d8-monitoring" "persistentvolumeclaim/$pvc" "$fltr"
+          done
+          pvc_size_gigabytes="$new_pvc_size_gigabytes"
+        fi
+      fi
+    fi
+  elif [ "$effective_storage_class" != "false" ] && [ "$is_sc_allow_expansion" == "true" ]; then
+    # If no pvc exists, but storage class exists and supports expansion
+
+    pvc_size_gigabytes="15"
+    retention_gigabytes="10"
+  else
+    # If no pvc exists, and the storage class does not support expansion
+
+    pvc_size_gigabytes="30"
+    retention_gigabytes="25"
+  fi
+
+  values::set prometheus.internal.prometheus${prometheus_name^}.diskSizeGigabytes "$pvc_size_gigabytes"
+  values::set prometheus.internal.prometheus${prometheus_name^}.retentionGigabytes "$retention_gigabytes"
+}
+
+function restart_pods_if_required() {
+  for pvc in $(context::jq -r '.snapshots.pvc[].object | select(.status.conditions != null) | select(.status.conditions[] | (.type=="Resizing" and .status=="True") or (.type=="FileSystemResizePending" and .status=="True")) | .metadata.name'); do
+    pod=$(sed -r 's/^prometheus-(\w+)-.*-([0-9]+)$/prometheus-\1-\2/' <<< "$pvc")
+    echo "!!! NOTICE: PersistentVolumeClaim $pvc in state FileSystemResizePending, Pod $pod has been deleted !!!"
+    kubernetes::delete::non_blocking "d8-monitoring" "pod/$pod"
+  done
+}
+
+hook::run $@
