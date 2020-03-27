@@ -84,9 +84,9 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
 
 			cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
-			cinderNodePluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi.node")
+			cinderNodePluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi-node")
 			cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-cinder-node-plugin")
-			cinterControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi.controller")
+			cinterControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi-controller")
 			cinderCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-cinder-controller-plugin")
 			cinderNodePluginCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cinder-csi:node")
 			cinderNodePluginCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cinder-csi:node")

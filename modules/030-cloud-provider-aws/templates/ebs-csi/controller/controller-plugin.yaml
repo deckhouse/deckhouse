@@ -23,7 +23,7 @@ spec:
         node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
-      serviceAccountName: ebs-csi.controller
+      serviceAccountName: ebs-csi-controller
       containers:
       - name: csi-provisioner
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderAws.csiProvisioner }}

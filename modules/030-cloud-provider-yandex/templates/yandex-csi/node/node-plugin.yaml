@@ -18,7 +18,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-      serviceAccountName: yandex-csi.node
+      serviceAccountName: yandex-csi-node
       hostNetwork: true
       tolerations:
       - operator: Exists

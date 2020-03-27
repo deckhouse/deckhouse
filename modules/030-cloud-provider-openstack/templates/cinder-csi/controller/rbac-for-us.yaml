@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: cinder-csi.controller
+  name: cinder-csi-controller
   namespace: d8-cloud-provider-openstack
 {{ include "helm_lib_module_labels" (list . (dict "app" "cinder-csi-driver")) | indent 2 }}
 ---
@@ -33,7 +33,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "cinder-csi-driver")) | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: cinder-csi.controller
+    name: cinder-csi-controller
     namespace: d8-cloud-provider-openstack
 roleRef:
   kind: ClusterRole
@@ -81,7 +81,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "cinder-csi-driver")) | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: cinder-csi.controller
+    name: cinder-csi-controller
     namespace: d8-cloud-provider-openstack
 roleRef:
   kind: ClusterRole
@@ -135,7 +135,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "cinder-csi-driver")) | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: cinder-csi.controller
+    name: cinder-csi-controller
     namespace: d8-cloud-provider-openstack
 roleRef:
   kind: ClusterRole
@@ -179,7 +179,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "cinder-csi-driver")) | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: cinder-csi.controller
+    name: cinder-csi-controller
     namespace: d8-cloud-provider-openstack
 roleRef:
   kind: ClusterRole
@@ -205,7 +205,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "cinder-csi-driver")) | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: cinder-csi.controller
+    name: cinder-csi-controller
     namespace: d8-cloud-provider-openstack
 roleRef:
   kind: Role

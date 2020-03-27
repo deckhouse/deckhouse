@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	UserAuthzClusterRolePath = "templates/user-authz-cluster-roles.yaml"
-	RootRBACForUsPath        = "templates/rbac-for-us.yaml"
-	RootRBACToUsPath         = "templates/rbac-to-us.yaml"
+	serviceAccountNameDelimiter = "-"
+	UserAuthzClusterRolePath    = "templates/user-authz-cluster-roles.yaml"
+	RootRBACForUsPath           = "templates/rbac-for-us.yaml"
+	RootRBACToUsPath            = "templates/rbac-to-us.yaml"
 )
 
 func isSystemNamespace(actual string) bool {
@@ -85,7 +86,8 @@ func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObjec
 			string(os.PathSeparator),
 		)
 
-		serviceAccountName := strings.Join(parts, ".")
+		serviceAccountName := strings.Join(parts, serviceAccountNameDelimiter)
+		expectedServiceAccountName := m.Name + serviceAccountNameDelimiter + serviceAccountName
 		if objectName == serviceAccountName {
 			if m.Namespace != namespace {
 				return errors.NewLintRuleError(
@@ -96,7 +98,7 @@ func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObjec
 				)
 			}
 			return errors.EmptyRuleError
-		} else if objectName == m.Name+"."+serviceAccountName {
+		} else if objectName == expectedServiceAccountName {
 			if !isDeckhouseSystemNamespace(namespace) {
 				return errors.NewLintRuleError(
 					"MANIFEST053",
@@ -111,8 +113,8 @@ func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObjec
 			"MANIFEST053",
 			object.Identity(),
 			objectName,
-			"Name of ServiceAccount should be equal to %q or \"%s.%s\"",
-			serviceAccountName, m.Name, serviceAccountName,
+			"Name of ServiceAccount should be equal to %q or %q",
+			serviceAccountName, expectedServiceAccountName,
 		)
 	}
 	return errors.NewLintRuleError(

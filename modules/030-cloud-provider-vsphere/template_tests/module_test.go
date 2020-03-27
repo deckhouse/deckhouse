@@ -95,7 +95,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			flannelCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-vsphere", "flannel")
 
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "vsphere.csi.vmware.com")
-			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "vsphere-csi.controller")
+			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "vsphere-csi-controller")
 			csiCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:vsphere-csi:controller")
 			csiCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:vsphere-csi:controller")
 			csiNodeVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-vsphere", "vsphere-csi-node")
