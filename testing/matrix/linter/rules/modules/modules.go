@@ -155,6 +155,10 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 			return nil
 		}
 
+		if isExistsOnFilesystem(path, "/crds") {
+			lintRuleErrorsList.Merge(crdsModuleRule(moduleName, path+"/crds"))
+		}
+
 		modules = append(modules, types.Module{Name: name, Path: path, Namespace: namespace})
 		return nil
 	})

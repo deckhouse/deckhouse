@@ -50,6 +50,10 @@ func (l *LintRuleErrorsList) Add(e LintRuleError) {
 	l.data = append(l.data, e)
 }
 
+func (l *LintRuleErrorsList) Merge(e LintRuleErrorsList) {
+	l.data = append(l.data, e.data...)
+}
+
 func (l *LintRuleErrorsList) ConvertToError() error {
 	if len(l.data) == 0 {
 		return nil
