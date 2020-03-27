@@ -23,7 +23,7 @@ spec:
         node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
-      serviceAccountName: cinder-csi.controller
+      serviceAccountName: cinder-csi-controller
       containers:
         - name: csi-attacher
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderOpenstack.csiAttacher }}

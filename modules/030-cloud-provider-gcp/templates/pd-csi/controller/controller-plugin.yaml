@@ -23,7 +23,7 @@ spec:
         node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
-      serviceAccountName: pd-csi.controller
+      serviceAccountName: pd-csi-controller
       containers:
       - name: csi-provisioner
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderGcp.csiProvisioner }}

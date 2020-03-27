@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ebs-csi.node
+  name: ebs-csi-node
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-driver")) | indent 2 }}
 ---
@@ -23,7 +23,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-driver")) | indent 2 }}
 subjects:
 - kind: ServiceAccount
-  name: ebs-csi.node
+  name: ebs-csi-node
   namespace: d8-{{ .Chart.Name }}
 roleRef:
   kind: ClusterRole

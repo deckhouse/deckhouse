@@ -26,7 +26,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-      serviceAccountName: cinder-csi.node
+      serviceAccountName: cinder-csi-node
       hostNetwork: true
       tolerations:
       - operator: Exists

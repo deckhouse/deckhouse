@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: pd-csi.controller
+  name: pd-csi-controller
   namespace: d8-cloud-provider-gcp
 {{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
 ---
@@ -44,7 +44,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: pd-csi.controller
+    name: pd-csi-controller
     namespace: d8-cloud-provider-gcp
 roleRef:
   kind: ClusterRole
@@ -77,7 +77,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
 subjects:
 - kind: ServiceAccount
-  name: pd-csi.controller
+  name: pd-csi-controller
   namespace: d8-cloud-provider-gcp
 roleRef:
   kind: ClusterRole
@@ -110,7 +110,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
 subjects:
 - kind: ServiceAccount
-  name: pd-csi.controller
+  name: pd-csi-controller
   namespace: d8-cloud-provider-gcp
 roleRef:
   kind: ClusterRole
@@ -159,7 +159,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "pd-csi-driver")) | indent 2 }}
 subjects:
 - kind: ServiceAccount
-  name: pd-csi.controller
+  name: pd-csi-controller
   namespace: d8-cloud-provider-gcp
 roleRef:
   kind: ClusterRole

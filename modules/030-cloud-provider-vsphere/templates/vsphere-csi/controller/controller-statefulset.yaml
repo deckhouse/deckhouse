@@ -41,7 +41,7 @@ spec:
       - operator: Exists
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: vsphere-csi.controller
+      serviceAccountName: vsphere-csi-controller
       containers:
       - name: controller
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/vsphere-csi:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.vsphereCsi }}
