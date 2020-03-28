@@ -81,7 +81,6 @@ spec:
                   description: 'Annotations that will be passed to service with type load balancer to configure it.'
                   additionalProperties:
                     type: string
-                  x-kubernetes-preserve-unknown-fields: true
                 behindL7Proxy:
                   type: boolean
                   description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
@@ -142,11 +141,11 @@ spec:
             config:
               type: object
               description: 'Another ingress nginx configuration parameters to add to ingress controller configmap.'
-              x-kubernetes-preserve-unknown-fields: true
             additionalHeaders:
               type: object
               description: 'Headers to add to all request.'
-              x-kubernetes-preserve-unknown-fields: true
+              additionalProperties:
+                type: string
             customErrors:
               type: object
               required: ['namespace', 'serviceName', 'codes']
