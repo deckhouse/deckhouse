@@ -5,8 +5,8 @@ go 1.13
 require (
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-beta.5.0.20200323121222-0934d4c273fe // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.8.0.20200322083644-7ee05962e14e // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.5.0.20200326185244-a907cb53635c // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.8.0.20200326182739-9a4c460fefca // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
