@@ -5413,7 +5413,7 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "Wokring set bytes",
+          "alias": "Working set bytes",
           "color": "rgb(0, 0, 0)",
           "dashes": true,
           "fill": 0,
@@ -5450,7 +5450,7 @@
           "expr": "sum (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)\n  sum by (pod) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Wokring set bytes",
+          "legendFormat": "Working set bytes",
           "refId": "D"
         }
       ],
@@ -5771,7 +5771,7 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Wokring set bytes",
+              "alias": "Working set bytes",
               "color": "rgb(0, 0, 0)",
               "dashes": true,
               "fill": 0,
@@ -5835,7 +5835,7 @@
               "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Wokring set bytes",
+              "legendFormat": "Working set bytes",
               "refId": "D"
             },
             {
@@ -5950,7 +5950,7 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Wokring set bytes",
+              "alias": "Working set bytes",
               "color": "rgb(0, 0, 0)",
               "dashes": true,
               "fill": 0,
@@ -6014,7 +6014,7 @@
               "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Wokring set bytes",
+              "legendFormat": "Working set bytes",
               "refId": "D"
             },
             {
@@ -6129,7 +6129,7 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Wokring set bytes",
+              "alias": "Working set bytes",
               "color": "rgb(0, 0, 0)",
               "dashes": true,
               "fill": 0,
@@ -6193,7 +6193,7 @@
               "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Wokring set bytes",
+              "legendFormat": "Working set bytes",
               "refId": "D"
             },
             {
@@ -6308,7 +6308,7 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Wokring set bytes",
+              "alias": "Working set bytes",
               "color": "rgb(0, 0, 0)",
               "dashes": true,
               "fill": 0,
@@ -6372,7 +6372,7 @@
               "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Wokring set bytes",
+              "legendFormat": "Working set bytes",
               "refId": "D"
             },
             {
