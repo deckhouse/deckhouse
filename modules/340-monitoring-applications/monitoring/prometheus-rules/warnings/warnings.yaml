@@ -2,7 +2,7 @@
   rules:
   - alert: D8OldPrometheusTargetFormat
     expr: |
-      d8_monitoring_applications_old_prometheus_target_total{job="deckhouse"} > 0
+      max(d8_monitoring_applications_old_prometheus_target_total{job="deckhouse"} > 0)
     labels:
       severity_level: "9"
     annotations:

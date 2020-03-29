@@ -24,7 +24,7 @@
         В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration.
 
   - alert: D8NginxIngressDeprecated
-    expr: d8_nginx_ingress_deprecated > 0
+    expr: max(d8_nginx_ingress_deprecated > 0)
     labels:
       severity_level: "9"
       d8_module: nginx_ingress
