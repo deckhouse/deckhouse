@@ -69,6 +69,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }}"
       plk_grouped_by__main: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         Участник etcd кластера на ноде {{ $labels.node }} видел {{ $value }} перевыборов лидера за последние 10 минут.
@@ -95,7 +96,7 @@
       summary: В etcd кластере не хватает участников, если ещё хотя бы один участник станет недоступен, кластер упадёт.
 
   - alert: KubeEtcdMemberCommunicationSlow
-    expr: max by (node) (histogram_quantile(0.99, rate(etcd_network_member_round_trip_time_seconds_bucket{job="kube-etcd3"}[5m])) > 0.15)
+    expr: max by (node) (histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket{job="kube-etcd3"}[5m])) > 0.15)
     labels:
       severity_level: "6"
       tier: cluster
@@ -103,6 +104,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "10m"
+      plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }}"
       plk_grouped_by__main: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         Участник etcd кластера на ноде {{ $labels.node }} взаимодействует с {{ $labels.To }} слишком медленно.
@@ -119,6 +121,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "10m"
+      plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }}"
       plk_grouped_by__main: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         Участник etcd кластера не смог закоммитить proposal {{ $value }} раз за последние 10 минут.
