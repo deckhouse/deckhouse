@@ -40,3 +40,27 @@
 * При архивации кластера в Madison срабатывает механизм автоматического отключения алертов. Хук `madison_revoke` регулярно (раз в 5 минут) проверяет статус кластера в Madison и если тот архивирован, то хук делает следующее:
     * выключает механизм саморегистрации, установив `prometheus.madisonSelfSetupKey` = `false`,
     * удаляет ключ `prometheus.madisonAuthKey` из хранилища values.
+
+Как можно посмотреть отправленные алерты в madison
+--------------------------------------------------
+
+Посмотреть логи отправленных алертов можно с помощью команды:
+```shell
+kubectl -n d8-monitoring logs -f -l app=madison-proxy
+```
+
+Если необходимо посмотреть логи отправки определенных алертов, то можно воспользоваться такой командой:
+Найти все отправленные алерты `TargetDown`:
+```shell
+kubectl -n d8-monitoring  logs -f -l app=madison-proxy | grep POST  | jq '.body[] | select(.labels.alertname == "TargetDown")'
+```
+
+Найти все отправленные алерты `TargetDown` с лейблом `job=node-exporter`:
+```shell
+kubectl -n d8-monitoring  logs -f -l app=madison-proxy | grep POST  | jq '.body[] | select(.labels.alertname == "TargetDown" and .labels.job == "node-exporter")'
+```
+
+А вот так можно найти дату отправки и значение определенного лейбла:
+```shell
+kubectl -n d8-monitoring  logs -f -l app=madison-proxy | grep POST  | jq '.time_local + " " + (.body[] | select(.labels.alertname == "TargetDown" and .labels.job == "node-exporter") | .labels.severity_level)'
+```
