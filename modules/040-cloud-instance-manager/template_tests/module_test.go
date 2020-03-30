@@ -32,7 +32,7 @@ discovery:
 const cloudInstanceManagerAWS = `
 instancePrefix: myprefix
 internal:
-  clusterMasterAddresses: ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   bootstrapToken: mysecrettoken
   cloudProvider:
@@ -78,7 +78,7 @@ internal:
 const cloudInstanceManagerGCP = `
 instancePrefix: myprefix
 internal:
-  clusterMasterAddresses: ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   bootstrapToken: mysecrettoken
   cloudProvider:
@@ -119,7 +119,7 @@ internal:
 const cloudInstanceManagerOpenstack = `
 instancePrefix: myprefix
 internal:
-  clusterMasterAddresses: ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   bootstrapToken: mysecrettoken
   cloudProvider:
@@ -162,7 +162,7 @@ internal:
 const cloudInstanceManagerVsphere = `
 instancePrefix: myprefix
 internal:
-  clusterMasterAddresses: ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   bootstrapToken: mysecrettoken
   cloudProvider:
@@ -211,7 +211,7 @@ internal:
 const cloudInstanceManagerYandex = `
 instancePrefix: myprefix
 internal:
-  clusterMasterAddresses: ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   bootstrapToken: mysecrettoken
   cloudProvider:

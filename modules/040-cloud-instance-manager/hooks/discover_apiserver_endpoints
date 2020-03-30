@@ -17,6 +17,7 @@ function __config__() {
       nameSelector:
         matchNames: [kubernetes]
       jqFilter: '[.subsets[].addresses[].ip]'
+      jqFilter: '[.subsets[] | "\(.addresses[].ip):\(.ports[].port)"]'
 EOF
 }
 

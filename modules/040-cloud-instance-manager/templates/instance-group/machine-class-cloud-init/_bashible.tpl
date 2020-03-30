@@ -1,7 +1,6 @@
 {{- define "instance_group_machine_class_bashible_bashible_script" }}
   {{- $context := index . 0 }}
   {{- $ig := index . 1 }}
-  {{- $zone_name := index . 2 }}
 
   {{- $bashible_bundle := $ig.instanceClass.bashible.bundle -}}
 #!/bin/bash
@@ -22,20 +21,25 @@ else
   wget_auth=(--ca-certificate=/etc/kubernetes/pki/ca.crt --certificate=/var/lib/kubelet/pki/kubelet-client-current.pem)
 fi
 mkdir -p "$BOOTSTRAP_DIR/$bundle_dir"
+if [ -f "/etc/kubernetes/kubernetes-api-proxy/nginx.conf" ] ; then
+  servers="kubernetes:6445"
+else
+  servers={{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " | quote }}
+fi
 for bundle_collection in $bundle_collections ; do
   while true ; do
-    for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
+    for server in ${servers} ; do
       if wget -O /dev/stdout -q --timeout=10 \
         "${wget_auth[@]}" \
         --header="Accept: application/json" \
-        "https://$server:6443/api/v1/namespaces/d8-cloud-instance-manager/secrets/bashible-${bundle_collection}" | jq .data > $BOOTSTRAP_DIR/${bundle_collection}.json ; then
+        "https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/bashible-${bundle_collection}" | jq .data > $BOOTSTRAP_DIR/${bundle_collection}.json ; then
 
         if [[ -s $BOOTSTRAP_DIR/${bundle_collection}.json ]] ; then
-          echo "Successfully downloaded bashible collection "$bundle_collection" from https://$server:6443/."
+          echo "Successfully downloaded bashible collection "$bundle_collection" from https://$server/."
           break
         fi
       else
-        >&2 echo "Failed to download bashible collection "$bundle_collection" from https://$server:6443/."
+        >&2 echo "Failed to download bashible collection "$bundle_collection" from https://$server/."
       fi
     done
 

@@ -1,7 +1,6 @@
 {{- define "instance_group_machine_class_bashible_bootstrap_script" }}
   {{- $context := index . 0 }}
   {{- $ig := index . 1 }}
-  {{- $zone_name := index . 2 }}
 
   {{- $bashible_bundle := $ig.instanceClass.bashible.bundle -}}
 #!/bin/bash
@@ -10,22 +9,22 @@ set -Eeuom pipefail
 shopt -s failglob
 
 #Install necessary packages. Not in cloud config cause cloud init do not retry installation and silently fails.
-if echo "{{ $bashible_bundle }}" | grep "centos"; then
-  until yum install epel-release -y; do
-    echo "Error installing epel-release"
-    sleep 10
-  done
-  until yum install jq nc wget -y; do
-    echo "Error installing packages"
-    sleep 10
-  done
-elif echo "{{ $bashible_bundle }}" | grep "ubuntu"; then
-  export DEBIAN_FRONTEND=noninteractive
-  until apt install jq wget -y; do
-    echo "Error installing packages"
-    sleep 10
-  done
-fi
+{{- if hasPrefix "centos" $bashible_bundle }}
+until yum install epel-release -y; do
+  echo "Error installing epel-release"
+  sleep 10
+done
+until yum install jq nc wget -y; do
+  echo "Error installing packages"
+  sleep 10
+done
+{{- else if hasPrefix "ubuntu" $bashible_bundle }}
+export DEBIAN_FRONTEND=noninteractive
+until apt install jq wget -y; do
+  echo "Error installing packages"
+  sleep 10
+done
+{{- end }}
 
 BOOTSTRAP_DIR="/var/lib/bashible"
 
@@ -51,8 +50,9 @@ while true; do cat /var/log/cloud-init-output.log | nc -l $output_log_port; done
 
 patch_pending=true
 while [ "$patch_pending" = true ] ; do
-  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
-    tcp_endpoint=$(ip ro get ${server} | grep -Po '(?<=src )([0-9\.]+)')
+  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " | quote }} ; do
+    server_addr=$(echo $server | cut -f1 -d":")
+    tcp_endpoint=$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')
     if curl -s --fail \
       --max-time 10 \
       -XPATCH \
@@ -61,7 +61,7 @@ while [ "$patch_pending" = true ] ; do
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"tcpEndpoint\": \"${tcp_endpoint}\"} }]" \
-      "https://$server:6443/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+      "https://$server/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
 
       echo "Successfully patched machine $(hostname) status."
       patch_pending=false

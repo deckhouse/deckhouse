@@ -19,7 +19,6 @@ write_files:
   {{- $_ := set $tpl_context "Template" $context.Template }}
   {{- $_ := set $tpl_context "Values" $context.Values }}
   {{- $_ := set $tpl_context "instanceGroup" $ig }}
-  {{- $_ := set $tpl_context "zoneName" $zone_name }}
 - path: '/var/lib/bashible/cloud-provider-bootstrap-{{ $bashible_bundle }}.sh'
   permissions: '0700'
   encoding: b64
@@ -28,11 +27,11 @@ write_files:
 - path: '/var/lib/bashible/bashible.sh'
   permissions: '0700'
   encoding: b64
-  content: {{ include "instance_group_machine_class_bashible_bashible_script" (list $context $ig $zone_name) | b64enc }}
+  content: {{ include "instance_group_machine_class_bashible_bashible_script" (list $context $ig) | b64enc }}
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   encoding: b64
-  content: {{ include "instance_group_machine_class_bashible_bootstrap_script" (list $context $ig $zone_name) | b64enc }}
+  content: {{ include "instance_group_machine_class_bashible_bootstrap_script" (list $context $ig) | b64enc }}
 output: { all: "| tee -a /var/log/cloud-init-output.log" }
 
 runcmd:

@@ -17,6 +17,10 @@ metadata:
 subsets:
 - addresses:
   - ip: 10.0.3.192
+  ports:
+  - name: https
+    port: 6443
+    protocol: TCP
 `
 
 		stateMultipleAddresses = `
@@ -30,6 +34,32 @@ subsets:
   - ip: 10.0.3.192
   - ip: 10.0.3.193
   - ip: 10.0.3.194
+  ports:
+  - name: https
+    port: 6443
+    protocol: TCP
+`
+
+		stateMultupleAddressesWithDifferentPorts = `
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: kubernetes
+  namespace: default
+subsets:
+- addresses:
+  - ip: 10.0.3.192
+  - ip: 10.0.3.193
+  ports:
+  - name: https
+    port: 6443
+    protocol: TCP
+- addresses:
+  - ip: 10.0.3.194
+  ports:
+  - name: https
+    port: 6444
+    protocol: TCP
 `
 	)
 
@@ -41,9 +71,9 @@ subsets:
 			f.RunHook()
 		})
 
-		It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192']", func() {
+		It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192"]`))
+			Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
 		})
 
 		Context("Someone added additional addresses to .subsets[]", func() {
@@ -52,9 +82,21 @@ subsets:
 				f.RunHook()
 			})
 
-			It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192','10.0.3.193','10.0.3.194']", func() {
+			It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192","10.0.3.193","10.0.3.194"]`))
+				Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+			})
+
+			Context("Someone added address with different port", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(stateMultupleAddressesWithDifferentPorts))
+					f.RunHook()
+				})
+
+				It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444']", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`))
+				})
 			})
 		})
 	})
@@ -65,9 +107,9 @@ subsets:
 			f.RunHook()
 		})
 
-		It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192','10.0.3.193','10.0.3.194']", func() {
+		It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192","10.0.3.193","10.0.3.194"]`))
+			Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
 		})
 
 		Context("Someone set number of addresses in .subsets[] to one", func() {
@@ -76,9 +118,9 @@ subsets:
 				f.RunHook()
 			})
 
-			It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192']", func() {
+			It("`cloudInstanceManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192"]`))
+				Expect(f.ValuesGet("cloudInstanceManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
 			})
 		})
 	})
