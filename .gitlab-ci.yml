@@ -131,10 +131,10 @@ beta:
   only:
     - tags
 
-rc:
+early-access:
   <<: *base_deploy
   environment:
-    name: rc
+    name: early-access
   only:
     - tags
 
