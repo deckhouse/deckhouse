@@ -9,7 +9,7 @@ current-context: kubelet-bootstrap@default
 clusters:
 - cluster:
     certificate-authority-data: {{ .Values.cloudInstanceManager.internal.clusterCA | b64enc | quote }}
-    server: https://{{ .Values.cloudInstanceManager.internal.clusterMasterAddresses | first }}:6443/
+    server: https://kubernetes:6445/
   name: default
 contexts:
 - context:
