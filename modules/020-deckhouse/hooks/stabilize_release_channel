@@ -13,9 +13,9 @@ EOF
 }
 
 function __main__() {
-  declare -A release_channels_order; release_channels_order=( ["Alpha"]=0 ["Beta"]=1 ["RC"]=2 ["Stable"]=3 ["RockSolid"]=4 )
-  declare -A release_channels_tags; release_channels_tags=( ["alpha"]="Alpha" ["beta"]="Beta" ["rc"]="RC" ["stable"]="Stable" ["rock-solid"]="RockSolid" )
-  declare -A orders_to_tags; orders_to_tags=( [0]="alpha" [1]="beta" [2]="rc" [3]="stable" [4]="rock-solid" )
+  declare -A release_channels_order; release_channels_order=( ["Alpha"]=0 ["Beta"]=1 ["EarlyAccess"]=2 ["Stable"]=3 ["RockSolid"]=4 )
+  declare -A release_channels_tags; release_channels_tags=( ["alpha"]="Alpha" ["beta"]="Beta" ["early-access"]="EarlyAccess" ["stable"]="Stable" ["rock-solid"]="RockSolid" )
+  declare -A orders_to_tags; orders_to_tags=( [0]="alpha" [1]="beta" [2]="early-access" [3]="stable" [4]="rock-solid" )
 
   # Get desired release channel
   desired_release_channel=$(values::get deckhouse.releaseChannel)
