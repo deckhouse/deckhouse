@@ -88,6 +88,8 @@ spec:
             memory: 100Mi
             cpu: 100m
         volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana-storage
         - name: shared-dashboards-folder
           mountPath: /tmp/dashboards/
       - name: kube-rbac-proxy
