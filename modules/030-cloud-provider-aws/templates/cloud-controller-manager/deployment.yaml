@@ -75,6 +75,17 @@ spec:
           - --bind-address=127.0.0.1
           - --secure-port=10871
           - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          env:
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: cloud-controller-manager
+                key: aws-access-key-id
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: cloud-controller-manager
+                key: aws-secret-access-key
           volumeMounts:
           - mountPath: /etc/kubernetes/pki
             name: k8s-certs
@@ -93,3 +104,6 @@ spec:
       - name: config
         secret:
           secretName: cloud-controller-manager
+          items:
+          - key: cloud-config
+            path: cloud-config
