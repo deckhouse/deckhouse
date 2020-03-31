@@ -108,8 +108,6 @@ spec:
         - name: EXTERNAL_HOST
           value: {{ .Values.openvpn.externalHost }}
         {{- end }}
-        - name: CLUSTER_TYPE
-          value: {{ .Values.global.discovery.clusterType }}
         volumeMounts:
           - mountPath: /mnt/easyrsa
             name: certs

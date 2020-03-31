@@ -7,7 +7,7 @@ RUN python3.6 -m pip install flask uwsgi
 WORKDIR /app
 
 RUN cd /app && \
-    git clone -b 0.0.6 https://github.com/vitaliy-sn/openvpn-easyrsa-web-ui.git . && \
+    git clone -b 0.0.6 https://github.com/flant/openvpn-easyrsa-web-ui.git . && \
     rm /app/frontend/package-lock.json && \
     export NPM_CONFIG_PREFIX=/root/.npm && \
     cd /app/frontend && \
