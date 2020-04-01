@@ -217,8 +217,8 @@ docker:
     DECKHOUSE_POD: tests
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    CGO_CFLAGS: "-I/libjq/build/jq/include"
-    CGO_LDFLAGS: "'-L/libjq/build/onig/lib -L/libjq/build/jq/lib'"
+    CGO_CFLAGS: "-I/libjq/include"
+    CGO_LDFLAGS: "-L/libjq/lib"
 
 ---
 artifact: deckhouse-controller
@@ -264,7 +264,7 @@ git:
 - url: https://github.com/stedolan/jq
   add: /
   to: /src
-  commit: ccc79e592cfe1172db5f2def5a24c2f7cfd418bf
+  commit: b6be13d5de6dd7d8aad5fd871eb6b0b30fc7d7f6
   stageDependencies:
     install:
       - "**/*"
@@ -296,7 +296,8 @@ artifact: libjq
 from: alpine:3.10
 git:
 - url: https://github.com/flant/libjq-go
-  tag: v1.6.0
+  commit: 198670408da175150946b04c3aae5404d97ee29b
+  #tag: v1.6.0
   add: /
   to: /src
   stageDependencies:

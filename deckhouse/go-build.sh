@@ -16,8 +16,8 @@ deckhouseVer=$(git ls-tree @ -- deckhouse | sed -r 's/^[0-9]{6}\s+tree\s+([0-9a-
 
 
 CGO_ENABLED=1 \
-    CGO_CFLAGS="-I${jqRoot}/build/jq/include" \
-    CGO_LDFLAGS="-L${jqRoot}/build/onig/lib -L${jqRoot}/build/jq/lib" \
+    CGO_CFLAGS="-I${jqRoot}/include" \
+    CGO_LDFLAGS="-L${jqRoot}/lib" \
     GOOS=linux \
     go build \
      -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
