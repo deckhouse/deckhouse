@@ -4,8 +4,19 @@ if [ -f "/etc/kubernetes/bootstrap-kubelet.conf" ] ; then
   bash /var/lib/bashible/kubernetes-api-proxy-configurator.sh
   systemctl enable kubernetes-api-proxy && systemctl start kubernetes-api-proxy
   if ! grep "https://kubernetes:6445" /etc/kubernetes/kubelet.conf >/dev/null ; then
-    sed -r  's/server: https:\/\/(\b[0-9]{1,3}\.){3}[0-9]{1,3}:6443/server: https:\/\/kubernetes:6445/' -i /etc/kubernetes/kubelet.conf
-    systemctl restart kubelet
+    # Добавление рандомной задержки для рестарта kubelet'а
+    if [ ! -f /var/lib/bashible/kubelet_restart ] ; then
+      date +%s > /var/lib/bashible/kubelet_restart
+    else
+      file_date=$(cat /var/lib/bashible/kubelet_restart)
+      now_date=$(date +%s)
+      random_time=$(shuf -n 1 -i 1200-3000)
+      delta=$(expr $now_date - $file_date)
+      if [ "$delta" -gt "$random_time" ] ; then
+        sed -r  's/server: https:\/\/(\b[0-9]{1,3}\.){3}[0-9]{1,3}:6443/server: https:\/\/kubernetes:6445/' -i /etc/kubernetes/kubelet.conf
+        systemctl restart kubelet
+      fi
+    fi
   fi
 else
   bash /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .Values.cloudInstanceManager.internal.clusterMasterAddresses | join "," }}
