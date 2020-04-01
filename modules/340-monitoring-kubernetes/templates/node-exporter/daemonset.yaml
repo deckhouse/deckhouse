@@ -88,13 +88,13 @@ spec:
       - name: kube-rbac-proxy
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--secure-listen-address=$(MY_POD_IP):9101"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9101"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
         env:
-        - name: MY_POD_IP
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
             fieldRef:
               fieldPath: status.podIP

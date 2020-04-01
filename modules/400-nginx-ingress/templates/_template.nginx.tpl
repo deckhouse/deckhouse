@@ -140,7 +140,7 @@ spec:
       - name: kube-rbac-proxy
         image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--secure-listen-address=$(MY_POD_IP):9103"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9103"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
@@ -149,7 +149,7 @@ spec:
         - containerPort: 9103
           name: https-metrics
         env:
-        - name: MY_POD_IP
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
