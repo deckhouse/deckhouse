@@ -52,7 +52,7 @@ spec:
         - name: kube-rbac-proxy
           image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
           args:
-            - "--secure-listen-address=0.0.0.0:7473"
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7473"
             - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
             - "--v=2"
             - "--logtostderr=true"
@@ -61,6 +61,8 @@ spec:
             - containerPort: 7473
               name: https-metrics
           env:
+            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+              value: "0.0.0.0"
             - name: KUBE_RBAC_PROXY_CONFIG
               value: |
                 upstreams:
