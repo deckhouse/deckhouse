@@ -4,6 +4,7 @@
   {{- $zone_name := index . 2 -}}
 #cloud-config
 package_update: True
+manage_etc_hosts: localhost
 write_files:
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
