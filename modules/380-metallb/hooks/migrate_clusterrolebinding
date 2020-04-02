@@ -1,0 +1,25 @@
+#!/bin/bash
+
+### Миграция 2020-04-02
+# Удалить хук после выката на все кластера
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+
+function __main__() {
+  if kubectl get clusterrolebindings d8:metallb:controller > /dev/null 2> /dev/null ; then
+    roleRefName=$(kubectl get clusterrolebindings d8:metallb:controller -o json | jq -rc '.roleRef.name')
+
+    if [[ "${roleRefName}" != "d8:metallb:controller" ]]; then
+      kubectl delete clusterrolebindings d8:metallb:controller > /dev/null 2> /dev/null
+    fi
+  fi
+}
+
+hook::run "$@"
