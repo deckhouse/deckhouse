@@ -43,7 +43,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8-{{ .Chart.Name }}:controller
+  name: d8:metallb:controller
 subjects:
   - kind: ServiceAccount
     name: controller
