@@ -1,0 +1,21 @@
+- name: d8.deckhouse.image
+  rules:
+  - alert: D8DeckhouseIsNotOnReleaseChannel
+    expr: max(d8_deckhouse_is_not_on_release_channel) > 0
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      description: |
+        Deckhouse в кластере находится на кастомном бранче, а не на одном из каналов обновлений..
+        Deckhouse должен быть на одном из каналов обновлений: `Alpha`, `Beta`, `Early-Access`, `Stable`, `Rock-Solid`
+        Узнать, на каком канале обновлений сейчас находится deckhouse можно с помощью команды:
+        1. `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
+
+        Вам необходимо переключить кластер на один из каналов обновлений.
+      summary: |
+        Deckhouse в кластере находится не на одном из каналов обновлений.
