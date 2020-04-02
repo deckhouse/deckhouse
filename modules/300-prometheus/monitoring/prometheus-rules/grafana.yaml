@@ -134,3 +134,19 @@
       summary: Grafana работает некорректно
       description: |
         Grafana работает некорректно. Что именно с ней не так можно узнать в одном из связанных алертов.
+
+  - alert: D8GrafanaDeprecatedCustomDashboardDefinition
+    expr: |
+      max(kube_configmap_created{namespace="d8-monitoring",configmap="grafana-dashboard-definitions-custom"}) > 0
+    labels:
+      severity_level: "9"
+      tier: application
+      d8_module: prometheus
+      d8_component: grafana
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Обнаружен устаревший метод регистрации кастомных дашборд в Grafana
+      description: |-
+        В namespace `d8-monitoring` обнаружен CM `grafana-dashboard-definitions-custom`. Это означает, что используется устаревший метод регистрации кастомных дашборд в Графане.
+        Рекомендация — использовать кастомный [ресурс GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/master/modules/300-prometheus/docs/GRAFANA_DASHBOARD_DEVELOPMENT.md#%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81-grafanadashboarddefinition).
