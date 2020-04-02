@@ -89,6 +89,9 @@ cloudProviderOpenstack: |
 * `imageName` — имя образа.
     * **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04.
     * Увидеть список всех доступных образов можно найти командой: `openstack image list`
+* `rootDiskSize` — если параметр присутствует, OpenStack server будет создан на Cinder volume с указанным размером и стандартным для кластера типом.
+    * Опциональный параметр.
+    * Формат — integer. В гигабайтах.
 * `bashible` — параметры bootstrap фазы.
     * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
         * **WIP!** Precooked версия требует специально подготовленного образа.

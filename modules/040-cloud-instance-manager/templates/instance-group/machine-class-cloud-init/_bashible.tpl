@@ -14,7 +14,7 @@ BOOTSTRAP_DIR="/var/lib/bashible"
 if [[ $# -eq 1 && "x$1" == "xbootstrap" ]] ; then
   bundle_dir="bundle-bootstrap"
   bundle_collections="bundle-{{ $bashible_bundle }} bundle-{{ $bashible_bundle }}-bootstrap bundle-{{ $bashible_bundle }}-{{ $ig.name }} bundle-{{ $bashible_bundle }}-{{ $ig.name }}-bootstrap"
-  wget_auth=(--ca-certificate="$BOOTSTRAP_DIR/ca.crt" --header="Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}")
+  wget_auth=(--ca-certificate="$BOOTSTRAP_DIR/ca.crt" --header="Authorization: Bearer $(</var/lib/bashible/bootstrap-token)")
 else
   bundle_dir="bundle"
   bundle_collections="bundle-{{ $bashible_bundle }} bundle-{{ $bashible_bundle }}-{{ $ig.name }}"
