@@ -1,7 +1,7 @@
 - name: d8.prometheus.base
   rules:
     - alert: D8MainPrometheusMalfunctioning
-      expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus"})
+      expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus", alertstate="firing"})
       labels:
         tier: cluster
         d8_module: prometheus
@@ -18,7 +18,7 @@
         summary: Служебный prometheus работает некорректно
 
     - alert: D8LongtermPrometheusMalfunctioning
-      expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus-longterm"})
+      expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus-longterm", alertstate="firing"})
       labels:
         tier: cluster
         d8_module: prometheus
@@ -36,11 +36,11 @@
 
     - alert: D8PrometheusMalfunctioning
       expr: |
-        count(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning"}
-        or
-        ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="trickster"}
-        or
-        ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="prometheus"})
+        (count(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning", alertstate="firing"})
+        +
+        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="trickster", alertstate="firing"})
+        +
+        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="prometheus", alertstate="firing"})) > 1
       labels:
         tier: cluster
         d8_module: prometheus
