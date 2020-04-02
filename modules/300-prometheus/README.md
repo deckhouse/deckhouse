@@ -50,27 +50,27 @@ search: prometheus
     * Если не указано — используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
     * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
-  * По-умолчанию `1095`.
-  * Работает совместно с параметром `longtermRetentionGigabytes`.
+    * По-умолчанию `1095`.
+    * Работает совместно с параметром `longtermRetentionGigabytes`.
 * `longtermRetentionGigabytes` — сколько гигабайт хранить.
     * По-умолчанию `30` гигабайт.
     * Работает совместно с параметром `longtermRetentionDays`.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
-         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
-         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+        * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+        * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
     * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
-         * Используется если не включен параметр `externalAuthentication`.
+        * Используется если не включен параметр `externalAuthentication`.
     * `allowedUserGroups` — массив групп, пользователям которых позволен доступ в grafana и prometheus.
-         * Используется если включен параметр `externalAuthentication` и модуль `user-authn`.
+        * Используется если включен параметр `externalAuthentication` и модуль `user-authn`.
     * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить авторизацию в grafana и prometheus.
     * `satisfyAny` — разрешает пройти только одну из аутентификаций. В комбинации с опцией whitelistSourceRanges позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
 * `grafana` - настройки для инсталляции Grafana.
     * `storageClass` — имя storageClass'а, который использовать для Grafana.
-       * Если не указано — используется StorageClass существующей PVC Grafana, а если PVC пока нет — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
-       * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Grafana будет перезаказан, а все данные удалены.
+        * Если не указано — используется StorageClass существующей PVC Grafana, а если PVC пока нет — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+        * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Grafana будет перезаказан, а все данные удалены.
     * `customPlugins` - список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana. Необходимо указать в качестве значения список имен плагинов из официального репозитория.
-       * Пример добавления plug-in'ов для возможности указания в качестве datasource clickhouse и панели flow-chart:
+        * Пример добавления plug-in'ов для возможности указания в качестве datasource clickhouse и панели flow-chart:
            ```yaml
            grafana:
              customPlugins:

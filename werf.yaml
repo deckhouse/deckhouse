@@ -103,6 +103,13 @@ git:
   excludePaths:
   - modules/*/docs
   - modules/*/README.md
+  - modules/*/USER_STORIES.md
+  - modules/*/DEVELOPMENT.md
+  - modules/*/images
+  - modules/*/hooks/*.go
+  - modules/*/template_tests
+  - modules/*/.namespace
+  - modules/*/values_matrix_test.yaml
 import:
 - artifact: deckhouse-controller
   add: /deckhouse/deckhouse

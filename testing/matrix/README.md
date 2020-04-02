@@ -22,12 +22,12 @@ To create increase your matrix dimensional you should use special functions:
 
 Choices allow splitting values.yaml.
 
-* `__ConstantChoise__` - array of items you split values.yaml with.
+* `__ConstantChoices__` - array of items you split values.yaml with.
 
 Example values_matrix_test.yaml:
 ```yaml
 replicas: 
-  __ConstantChoise__: [1, 2]
+  __ConstantChoices__: [1, 2]
 image: registry.example.com
 environment:
 - test
@@ -55,10 +55,10 @@ You can add additional choice to create more variants:
 Example values_matrix_test.yaml:
 ```yaml
 replicas: 
-  __ConstantChoise__: [1, 2]
+  __ConstantChoices__: [1, 2]
 image: registry.example.com
 environment:
-  __ConstantChoise__:
+  __ConstantChoices__:
   - ["test", "prod"]
   - ["dev", "stage"]
 ```
@@ -104,7 +104,7 @@ Example values_matrix_test.yaml:
 ```yaml
 replicas: 1
 image: 
-  __ConstantChoise__: [registry.example.com, __EmptyItem__]
+  __ConstantChoices__: [registry.example.com, __EmptyItem__]
 ```
 Generated values.yaml:
 ```yaml

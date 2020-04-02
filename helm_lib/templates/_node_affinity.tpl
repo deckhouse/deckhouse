@@ -48,7 +48,7 @@ nodeSelector:
   node-role.flant.com/system: ""
     {{- end }}
 
-  {{- else if eq $strategy "frontend" }}
+  {{- else if or (eq $strategy "frontend") (eq $strategy "system") }}
     {{- if $module_values.nodeSelector }}
 nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}
@@ -60,17 +60,6 @@ nodeSelector:
   node-role.flant.com/{{$strategy}}: ""
     {{- end }}
 
-  {{- else if eq $strategy "system" }}
-    {{- if $module_values.nodeSelector }}
-nodeSelector:
-{{ $module_values.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
-nodeSelector:
-  node-role.flant.com/{{$context.Chart.Name}}: ""
-    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
-nodeSelector:
-  node-role.flant.com/{{$strategy}}: ""
-    {{- end }}
   {{- end }}
 {{- end }}
 
