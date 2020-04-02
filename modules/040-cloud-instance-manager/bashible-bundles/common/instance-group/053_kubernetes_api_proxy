@@ -39,6 +39,11 @@ WantedBy=multi-user.target
 EOF
 fi
 
+if systemctl is-active --quiet nginx ; then
+  systemctl stop nginx
+  systemctl disable nginx
+fi
+
 if [ ! -d "/etc/kubernetes/kubernetes-api-proxy" ] ; then
   mkdir -p /etc/kubernetes/kubernetes-api-proxy
 fi
