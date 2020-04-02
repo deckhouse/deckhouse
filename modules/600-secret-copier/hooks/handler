@@ -1,0 +1,103 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: secrets_antiopa
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Secret
+      labelSelector:
+        matchLabels:
+          antiopa-secret-copier: "yes"
+    - name: secrets_d8
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Secret
+      labelSelector:
+        matchLabels:
+          secret-copier.deckhouse.io/enabled: ""
+    - name: namespaces
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Namespace
+      watchEvent: [Added]
+    schedule:
+    - name: sync_secrets
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      crontab: "0 3 * * *"
+      allowFailure: true
+EOF
+}
+
+function __main__() {
+  secrets_desired="$(context::jq -r '
+    (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
+    .snapshots.namespaces as $namespaces |
+    [
+      [$secrets[] | select(.object.metadata.namespace == "default")] |
+      map(.object.metadata.namespace = ($namespaces[] | select(.object.metadata.name != "default")| .object.metadata.name ))[] |
+      .nsAndName = (.object.metadata.namespace + "/" + .object.metadata.name) |
+      .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
+    ]'
+  )"
+
+  secrets_are="$(context::jq -r '
+    (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
+    [
+      $secrets[] | select(.object.metadata.namespace != "default") |
+      .nsAndName = (.object.metadata.namespace + "/" + .object.metadata.name) |
+      .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
+    ]'
+  )"
+
+  secrets_to_delete="$(context::jq --argjson secrets_desired "$secrets_desired" --argjson secrets_are "$secrets_are" -r '
+    [
+      $secrets_are[] |
+      . as $secret_is |
+      select([$secrets_desired[] | .nsAndName] | index($secret_is.nsAndName) | not)
+    ]'
+  )"
+
+  secrets_to_create="$(context::jq --argjson secrets_desired "$secrets_desired" --argjson secrets_are "$secrets_are" -r '
+    [
+      $secrets_desired[] |
+      . as $secret_desired |
+      select([$secrets_are[] | .nsAndName] | index($secret_desired.nsAndName) | not)
+    ]'
+  )"
+
+  secrets_to_replace="$(context::jq --argjson secrets_desired "$secrets_desired" --argjson secrets_are "$secrets_are" -r '
+    [
+      $secrets_desired[] |
+      . as $secret_desired |
+      select([$secrets_are[] | .nsAndName] | index($secret_desired.nsAndName)) |
+      select([$secrets_are[] | .object] | index($secret_desired.object) | not)
+    ]'
+  )"
+
+  for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_delete"); do
+    ns="$(jq --argjson i $i -r '.[$i].object.metadata.namespace' <<< "$secrets_to_delete")"
+    name="$(jq --argjson i $i -r '.[$i].object.metadata.name' <<< "$secrets_to_delete")"
+    kubernetes::delete $ns secret/$name
+  done
+
+  for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_create"); do
+    object="$(jq --argjson i $i -cr '.[$i].object' <<< "$secrets_to_create")"
+    kubernetes::create_if_not_exists_json <<< "$object"
+  done
+
+  for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_replace"); do
+    object="$(jq --argjson i $i -cr '.[$i].object' <<< "$secrets_to_replace")"
+    kubernetes::replace_or_create_json <<< "$object"
+  done
+}
+
+hook::run $@

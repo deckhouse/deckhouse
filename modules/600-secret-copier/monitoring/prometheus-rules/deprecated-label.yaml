@@ -1,0 +1,16 @@
+- name: d8.secret-copier.deprecations
+  rules:
+  - alert: D8SecretCopierDeprecatedLabels
+    expr: |
+      max(kube_secret_labels{namespace="default",label_antiopa_secret_copier="yes"}) > 0
+    labels:
+      severity_level: "9"
+      tier: application
+      d8_module: secret-copier
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Обнаружен устаревший лейбл `antiopa_secret_copier=yes`
+      description: |-
+        [Модуль для копирования секретов](https://github.com/deckhouse/deckhouse/tree/master/modules/600-secret-copier) поменял служебный лейбл для обозначения оригинальных секретов в namespace `default` — `secret-copier.deckhouse.io/enabled=`.
+        Рекомендация — поменять лейблы у существующих оригинальных секретов в ns `default` на актуальные.
