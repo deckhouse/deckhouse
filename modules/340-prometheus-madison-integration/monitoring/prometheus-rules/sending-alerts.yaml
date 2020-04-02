@@ -117,7 +117,7 @@
         plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
 
     - alert: D8PrometheusMadisonIntegrationMalfunctioning
-      expr: max(ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts"})
+      expr: count(ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts", alertstate="firing"}) > 1
       labels:
         tier: cluster
         d8_module: prometheus-madison-integration
