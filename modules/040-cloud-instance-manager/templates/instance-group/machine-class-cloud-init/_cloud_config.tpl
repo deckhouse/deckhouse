@@ -33,6 +33,9 @@ write_files:
   permissions: '0700'
   encoding: b64
   content: {{ include "instance_group_machine_class_bashible_bootstrap_script" (list $context $ig) | b64enc }}
+- path: /var/lib/bashible/bootstrap-token
+  content: <<BOOTSTRAP_TOKEN>>
+  permissions: '0600'
 output: { all: "| tee -a /var/log/cloud-init-output.log" }
 
 runcmd:

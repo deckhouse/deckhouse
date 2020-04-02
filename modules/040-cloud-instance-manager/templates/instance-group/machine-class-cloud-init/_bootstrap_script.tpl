@@ -56,7 +56,7 @@ while [ "$patch_pending" = true ] ; do
     if curl -s --fail \
       --max-time 10 \
       -XPATCH \
-      -H "Authorization: Bearer {{ $context.Values.cloudInstanceManager.internal.bootstrapToken }}" \
+      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
       -H "Accept: application/json" \
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \

@@ -36,9 +36,13 @@ spec:
               example: m1.medium
               type: string
             imageName:
-              description: Image to use whilst provisioning OpenStack servers.
+              description: Image to use while provisioning OpenStack servers.
               example: ubuntu-18-04-cloud-amd64
               type: string
+            rootDiskSize:
+              description: If present, OpenStack will order a Cinder volume and the server will use if for its root.
+              example: 20
+              type: integer
             bashible:
               type: object
               required:

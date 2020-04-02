@@ -2,7 +2,7 @@
 
 cp /var/lib/bashible/ca.crt /etc/kubernetes/pki/
 
-cat << "EOF" > /etc/kubernetes/bootstrap-kubelet.conf
+cat << EOF > /etc/kubernetes/bootstrap-kubelet.conf
 apiVersion: v1
 kind: Config
 current-context: kubelet-bootstrap@default
@@ -20,7 +20,7 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: {{ .Values.cloudInstanceManager.internal.bootstrapToken }}
+    token: $(</var/lib/bashible/bootstrap-token)
 EOF
 
 chmod 0600 /etc/kubernetes/bootstrap-kubelet.conf

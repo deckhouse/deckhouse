@@ -34,7 +34,6 @@ instancePrefix: myprefix
 internal:
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
-  bootstrapToken: mysecrettoken
   cloudProvider:
     type: aws
     machineClassKind: AWSInstanceClass
@@ -80,7 +79,6 @@ instancePrefix: myprefix
 internal:
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
-  bootstrapToken: mysecrettoken
   cloudProvider:
     type: gcp
     machineClassKind: GCPMachineClass
@@ -121,7 +119,6 @@ instancePrefix: myprefix
 internal:
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
-  bootstrapToken: mysecrettoken
   cloudProvider:
     type: openstack
     machineClassKind: OpenStackMachineClass
@@ -164,7 +161,6 @@ instancePrefix: myprefix
 internal:
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
-  bootstrapToken: mysecrettoken
   cloudProvider:
     type: vsphere
     machineClassKind: VsphereMachineClass
@@ -213,7 +209,6 @@ instancePrefix: myprefix
 internal:
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
-  bootstrapToken: mysecrettoken
   cloudProvider:
     type: yandex
     machineClassKind: YandexMachineClass

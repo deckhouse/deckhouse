@@ -67,8 +67,9 @@ spec:
           args:
           - --namespace=d8-cloud-instance-manager
           - --cloud-provider={{ .Values.cloudInstanceManager.internal.cloudProvider.type | quote }}
-          - --machine-max-evict-retries=120
+          - --machine-max-evict-retries=30
           - --machine-safety-orphan-vms-period=5m
+          - --bootstrap-token-auth-extra-groups=system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:cloud-instance-manager:machine-bootstrap
           - -v=2
           resources:
             requests:

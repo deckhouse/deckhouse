@@ -1,6 +1,9 @@
 {{- $options := dict -}}
 {{- $_ := set $options "flavorName" .instanceGroup.instanceClass.flavorName -}}
 {{- $_ := set $options "imageName" .instanceGroup.instanceClass.imageName -}}
+{{- if .instanceGroup.instanceClass.rootDiskSize }}
+{{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
+{{- end }}
 {{- if (index .instanceGroup "manual-rollout-id") -}}
   {{ $_ := set $options "manual-rollout-id" (index .instanceGroup "manual-rollout-id") -}}
 {{- end -}}

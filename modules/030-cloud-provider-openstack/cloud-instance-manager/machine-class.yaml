@@ -34,6 +34,9 @@ spec:
   - {{ . }}
   {{- end }}
 {{- end }}
+{{- if hasKey .instanceGroup.instanceClass "rootDiskSize" }}
+  rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
+{{- end }}
   tags:
     # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
     kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
