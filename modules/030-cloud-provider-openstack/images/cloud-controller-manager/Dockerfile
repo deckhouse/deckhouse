@@ -1,2 +1,11 @@
-# https://github.com/flant/cloud-provider-openstack/commit/4f8afd7eb4f02966ab9421ec9158edd995938ca0
-FROM flant/openstack-cloud-controller-manager:v1.17.0-flant.2
+FROM golang:1.13-buster
+WORKDIR /src/
+RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
+    wget https://github.com/kubernetes/cloud-provider-openstack/archive/7811bb5c3fca3699be3834c290f30eeeef3bbbc3.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+    make openstack-cloud-controller-manager
+
+# support every standard Linux disk/mount utility so that CSI components won't complain
+FROM debian:buster
+RUN apt-get update && apt-get install -y ca-certificates e2fsprogs mount xfsprogs udev
+COPY --from=0 /src/openstack-cloud-controller-manager-amd64 /bin/openstack-cloud-controller-manager
+ENTRYPOINT [ "/bin/openstack-cloud-controller-manager" ]

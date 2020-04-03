@@ -66,7 +66,6 @@ spec:
         - name: openstack-cloud-controller-manager
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderOpenstack.cloudControllerManager }}
           args:
-            - /bin/openstack-cloud-controller-manager
             - --v=4
             - --leader-elect=true
             - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
