@@ -1,0 +1,27 @@
+diff --git a/pkg/issuer/acme/http/pod.go b/pkg/issuer/acme/http/pod.go
+index 94fe5d9d5..d227700d9 100644
+--- a/pkg/issuer/acme/http/pod.go
++++ b/pkg/issuer/acme/http/pod.go
+@@ -167,6 +167,22 @@ func (s *Solver) buildDefaultPod(ch *v1alpha1.Challenge) *corev1.Pod {
+ 		},
+ 		Spec: corev1.PodSpec{
+ 			RestartPolicy: corev1.RestartPolicyOnFailure,
++			Tolerations: []corev1.Toleration{
++				corev1.Toleration{
++						Effect:			corev1.TaintEffectNoSchedule,
++						Key: 			"node-role.kubernetes.io/master",
++				},
++				corev1.Toleration{
++						Key:               "dedicated.flant.com",
++						Operator:          corev1.TolerationOpEqual,
++						Value:             "system",
++				},
++				corev1.Toleration{
++						Key:			"dedicated.flant.com",
++						Operator:		corev1.TolerationOpEqual,
++						Value:			"cert-manager",
++				},
++			},
+ 			Containers: []corev1.Container{
+ 				{
+ 					Name: "acmesolver",
