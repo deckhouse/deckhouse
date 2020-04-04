@@ -132,6 +132,10 @@ metadata:
   labels:
     app: prometheus
     prometheus: main
+status:
+  conditions:
+  - status: "True"
+    type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -141,6 +145,10 @@ metadata:
   labels:
     app: prometheus
     prometheus: main
+status:
+  conditions:
+  - status: "True"
+    type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -150,6 +158,10 @@ metadata:
   labels:
     app: prometheus
     prometheus: longterm
+status:
+  conditions:
+  - status: "True"
+    type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -159,6 +171,10 @@ metadata:
   labels:
     app: prometheus
     prometheus: longterm
+status:
+  conditions:
+  - status: "True"
+    type: PodScheduled
 `
 	)
 

@@ -23,20 +23,27 @@ function __config__() {
         matchLabels:
           app: prometheus
       jqFilter: ".spec.resources.requests.storage"
-      includeSnapshotsFrom: ["pvc"]
+      includeSnapshotsFrom: ["pvc", "pods"]
       queue: /modules/$(module::name::kebab_case)/prometheus_disk
     - name: sc
       apiVersion: storage.k8s.io/v1
       kind: StorageClass
       jqFilter: ".allowVolumeExpansion"
       executeHookOnEvent: []
-      # TODO: executeHookOnSynchronization: false
+      executeHookOnSynchronization: false
+    - name: pods
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+      jqFilter: ".metadata.name"
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
 EOF
-}
-
-# TODO: delete after fix bug with executeHookOnEvent
-function __main__() {
-  return 0
 }
 
 function __on_schedule::main() {
@@ -63,15 +70,19 @@ function discover_disk_usage() {
   prometheus_name="$1"
   disk_usage_max="0"
   for pod in $(context::jq -r --arg name "$prometheus_name" '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name) | .metadata.name | gsub("prometheus-\($name)-db-";"")'); do
-    if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq '.status.containerStatuses[] | select(.name == "prometheus") | .ready')" != "false" ]; then
-      df_out="$(kubectl -n d8-monitoring exec ${pod} -c prometheus --  df -Ph /prometheus/ | grep -v 'Filesystem' | awk '{print "{\"size\":\""$2"\",\"usage\":\""$5"\"}"}')"
-      disk_usage=$(jq -r '.usage | gsub("%";"")' <<< "$df_out")
-      disk_filesystem_size=$(jq -r '.size | gsub("G";"")' <<< "$df_out" | cut -f1 -d'.')
-      if [ "$disk_usage_max" -lt "$disk_usage" ]; then
-        disk_usage_max="$disk_usage"
+    # If PodScheduled
+    if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq '.status.conditions[] | select(.type == "PodScheduled") | .status')" == "True" ]; then
+      # If container prometheus ready
+      if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq '.status.containerStatuses[] | select(.name == "prometheus") | .ready')" != "false" ]; then
+        df_out="$(kubectl -n d8-monitoring exec ${pod} -c prometheus --  df -Ph /prometheus/ | grep -v 'Filesystem' | awk '{print "{\"size\":\""$2"\",\"usage\":\""$5"\"}"}')"
+        disk_usage=$(jq -r '.usage | gsub("%";"")' <<< "$df_out")
+        disk_filesystem_size=$(jq -r '.size | gsub("G";"")' <<< "$df_out" | cut -f1 -d'.')
+        if [ "$disk_usage_max" -lt "$disk_usage" ]; then
+          disk_usage_max="$disk_usage"
+        fi
+      else
+        echo "!!! NOTICE: Conteiner prometheus is not Ready in pod $pod, discover_disk_usage skipped !!!"
       fi
-    else
-      echo "!!! NOTICE: Conteiner prometheus is not Ready in pod $pod, discover_disk_usage skipped !!!"
     fi
   done
 
@@ -154,8 +165,11 @@ function calculate_disk_size_and_retention() {
 function restart_pods_if_required() {
   for pvc in $(context::jq -r '.snapshots.pvc[].object | select(.status.conditions != null) | select(.status.conditions[] | (.type=="Resizing" and .status=="True") or (.type=="FileSystemResizePending" and .status=="True")) | .metadata.name'); do
     pod=$(sed -r 's/^prometheus-(\w+)-.*-([0-9]+)$/prometheus-\1-\2/' <<< "$pvc")
-    echo "!!! NOTICE: PersistentVolumeClaim $pvc in state FileSystemResizePending, Pod $pod has been deleted !!!"
-    kubernetes::delete::non_blocking "d8-monitoring" "pod/$pod"
+    # If PodScheduled
+    if [ "$(context::jq -r --arg pod $pod '.snapshots.pods[].object | select(.metadata.name == $pod) | .status.conditions[] | select(.type == "PodScheduled") | .status')" == "True" ]; then
+      echo "!!! NOTICE: PersistentVolumeClaim $pvc in state FileSystemResizePending, Pod $pod has been deleted !!!"
+      kubernetes::delete::non_blocking "d8-monitoring" "pod/$pod"
+    fi
   done
 }
 
