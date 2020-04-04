@@ -70,6 +70,8 @@ spec:
           - --machine-max-evict-retries=30
           - --machine-safety-orphan-vms-period=5m
           - --bootstrap-token-auth-extra-groups=system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:cloud-instance-manager:machine-bootstrap
+          - --address=127.0.0.1
+          - --port=10258
           - -v=2
           resources:
             requests:
@@ -79,8 +81,8 @@ spec:
             failureThreshold: 3
             httpGet:
               path: /healthz
-              port: 10258
-              scheme: HTTP
+              port: 443
+              scheme: HTTPS
             initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
@@ -90,3 +92,42 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+        - name: kube-rbac-proxy
+          image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+          args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):443"
+          - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            value: "0.0.0.0"
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /healthz
+              upstreams:
+              - upstream: http://127.0.0.1:10258/
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: machine-controller-manager
+          ports:
+          - containerPort: 443
+            name: https-metrics
+          livenessProbe:
+            tcpSocket:
+              port: 443
+          readinessProbe:
+            tcpSocket:
+              port: 443
+          resources:
+            requests:
+              memory: 50Mi
+              cpu: 25m
