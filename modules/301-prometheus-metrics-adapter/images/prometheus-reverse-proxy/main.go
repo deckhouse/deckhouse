@@ -148,7 +148,7 @@ func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
 	q.Set("query", prometheusQuery)
 	u.RawQuery = q.Encode()
 
-	client := &http.Client{Transport: httpTransport}
+	client := &http.Client{Transport: httpTransport, Timeout: time.Minute}
 	resp, err := client.Get(u.String())
 	defer resp.Body.Close()
 
