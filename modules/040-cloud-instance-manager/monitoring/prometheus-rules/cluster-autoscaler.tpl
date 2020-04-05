@@ -1,3 +1,4 @@
+{{- if include "cluster_autoscaler_enabled" . }}
 - name: d8.cluster-autoscaler.availability
   rules:
   - alert: D8ClusterAutoscalerManagerPodIsNotReady
@@ -13,7 +14,7 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
-      summary: Под {{$labels.pod}} находится в состоянии НЕ Ready
+      summary: Под {{`{{$labels.pod}}`}} находится в состоянии НЕ Ready
 
   - alert: D8ClusterAutoscalerPodIsNotRunning
     expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase!="Running",pod=~"cluster-autoscaler-.*"} > 0)
@@ -30,8 +31,8 @@
       plk_labels_as_annotations: "phase"
       summary: Под cluster-autoscaler находится в состоянии НЕ Running
       description: |-
-        Под {{$labels.pod}} находится в состоянии {{$labels.phase}}. Для проверки статуса пода необходимо выполнить:
-        1. `kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status`
+        Под {{`{{$labels.pod}}`}} находится в состоянии {{`{{$labels.phase}}`}}. Для проверки статуса пода необходимо выполнить:
+        1. `kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status`
 
   - alert: D8ClusterAutoscalerTargetDown
     expr: max by (job) (up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 0)
@@ -111,7 +112,7 @@
       plk_labels_as_annotations: "pod"
       summary: Cluster autoscaler слишком часто перезагружается
       description: |
-        Количество перезапусков за последний час: {{ $value }}.
+        Количество перезапусков за последний час: {{`{{ $value }}`}}.
 
         Частый перезапуск Cluster autoscaler не является нормальной ситуацией, он должен быть постоянно запущена и работать.
         Необходимо посмотреть логи:
@@ -151,3 +152,4 @@
       summary: Cluster autoscaler работает некорректно
       description: |
         Cluster autoscaler работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
+{{- end }}
