@@ -1,44 +1,51 @@
 diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
-index b5bb1d29..eaa870b2 100644
+index a0f5d11a..c4f07568 100644
 --- a/pkg/prometheus/promcfg.go
 +++ b/pkg/prometheus/promcfg.go
-@@ -19,6 +19,7 @@ import (
+@@ -20,6 +20,7 @@ import (
  	"regexp"
  	"sort"
  	"strings"
 +	"time"
- 
+
  	"github.com/blang/semver"
  	"github.com/go-kit/kit/log"
-@@ -206,12 +207,12 @@ func (cg *configGenerator) generateConfig(
- 	var scrapeConfigs []yaml.MapSlice
- 	for _, identifier := range sMonIdentifiers {
- 		for i, ep := range sMons[identifier].Spec.Endpoints {
--			scrapeConfigs = append(scrapeConfigs, cg.generateServiceMonitorConfig(version, sMons[identifier], ep, i, apiserverConfig, basicAuthSecrets))
-+			scrapeConfigs = append(scrapeConfigs, cg.generateServiceMonitorConfig(version, sMons[identifier], ep, i, apiserverConfig, basicAuthSecrets, scrapeInterval))
+@@ -236,7 +237,8 @@ func (cg *configGenerator) generateConfig(
+ 					p.Spec.OverrideHonorLabels,
+ 					p.Spec.OverrideHonorTimestamps,
+ 					p.Spec.IgnoreNamespaceSelectors,
+-					p.Spec.EnforcedNamespaceLabel))
++					p.Spec.EnforcedNamespaceLabel,
++					scrapeInterval))
  		}
  	}
  	for _, identifier := range pMonIdentifiers {
- 		for i, ep := range pMons[identifier].Spec.PodMetricsEndpoints {
--			scrapeConfigs = append(scrapeConfigs, cg.generatePodMonitorConfig(version, pMons[identifier], ep, i, apiserverConfig, basicAuthSecrets))
-+			scrapeConfigs = append(scrapeConfigs, cg.generatePodMonitorConfig(version, pMons[identifier], ep, i, apiserverConfig, basicAuthSecrets, scrapeInterval))
+@@ -250,7 +252,8 @@ func (cg *configGenerator) generateConfig(
+ 					p.Spec.OverrideHonorLabels,
+ 					p.Spec.OverrideHonorTimestamps,
+ 					p.Spec.IgnoreNamespaceSelectors,
+-					p.Spec.EnforcedNamespaceLabel))
++					p.Spec.EnforcedNamespaceLabel,
++					scrapeInterval))
  		}
  	}
- 
-@@ -294,7 +295,7 @@ func (cg *configGenerator) generateConfig(
- 	return yaml.Marshal(cfg)
- }
- 
--func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v1.PodMonitor, ep v1.PodMetricsEndpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials) yaml.MapSlice {
-+func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v1.PodMonitor, ep v1.PodMetricsEndpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials, globalScrapeInterval string) yaml.MapSlice {
+
+@@ -370,7 +373,8 @@ func (cg *configGenerator) generatePodMonitorConfig(
+ 	ignoreHonorLabels bool,
+ 	overrideHonorTimestamps bool,
+ 	ignoreNamespaceSelectors bool,
+-	enforcedNamespaceLabel string) yaml.MapSlice {
++	enforcedNamespaceLabel string,
++	globalScrapeInterval string) yaml.MapSlice {
+
+ 	hl := honorLabels(ep.HonorLabels, ignoreHonorLabels)
  	cfg := yaml.MapSlice{
- 		{
- 			Key:   "job_name",
-@@ -320,11 +321,22 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
- 		cfg = append(cfg, cg.generateK8SSDConfig(getNamespacesFromPodMonitor(m), apiserverConfig, basicAuthSecrets, kubernetesSDRolePod))
+@@ -397,11 +401,23 @@ func (cg *configGenerator) generatePodMonitorConfig(
+ 		cfg = append(cfg, cg.generateK8SSDConfig(selectedNamespaces, apiserverConfig, basicAuthSecrets, kubernetesSDRolePod))
  	}
- 
+
 +	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
++
  	if ep.Interval != "" {
  		cfg = append(cfg, yaml.MapItem{Key: "scrape_interval", Value: ep.Interval})
  	}
@@ -58,19 +65,20 @@ index b5bb1d29..eaa870b2 100644
  	}
  	if ep.Path != "" {
  		cfg = append(cfg, yaml.MapItem{Key: "metrics_path", Value: ep.Path})
-@@ -523,7 +535,7 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
- 	return cfg
- }
- 
--func (cg *configGenerator) generateServiceMonitorConfig(version semver.Version, m *v1.ServiceMonitor, ep v1.Endpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials) yaml.MapSlice {
-+func (cg *configGenerator) generateServiceMonitorConfig(version semver.Version, m *v1.ServiceMonitor, ep v1.Endpoint, i int, apiserverConfig *v1.APIServerConfig, basicAuthSecrets map[string]BasicAuthCredentials, globalScrapeInterval string) yaml.MapSlice {
+@@ -592,7 +612,8 @@ func (cg *configGenerator) generateServiceMonitorConfig(
+ 	overrideHonorLabels bool,
+ 	overrideHonorTimestamps bool,
+ 	ignoreNamespaceSelectors bool,
+-	enforcedNamespaceLabel string) yaml.MapSlice {
++	enforcedNamespaceLabel string,
++	globalScrapeInterval string) yaml.MapSlice {
+
+ 	hl := honorLabels(ep.HonorLabels, overrideHonorLabels)
  	cfg := yaml.MapSlice{
- 		{
- 			Key:   "job_name",
-@@ -549,11 +561,23 @@ func (cg *configGenerator) generateServiceMonitorConfig(version semver.Version,
- 		cfg = append(cfg, cg.generateK8SSDConfig(getNamespacesFromServiceMonitor(m), apiserverConfig, basicAuthSecrets, kubernetesSDRoleEndpoint))
+@@ -619,11 +640,23 @@ func (cg *configGenerator) generateServiceMonitorConfig(
+ 		cfg = append(cfg, cg.generateK8SSDConfig(selectedNamespaces, apiserverConfig, basicAuthSecrets, kubernetesSDRoleEndpoint))
  	}
- 
+
 +	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
 +
  	if ep.Interval != "" {

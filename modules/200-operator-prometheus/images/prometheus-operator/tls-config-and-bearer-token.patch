@@ -1,32 +1,8 @@
-diff --git a/pkg/apis/monitoring/v1/openapi_generated.go b/pkg/apis/monitoring/v1/openapi_generated.go
-index e154992b..02fafa91 100644
---- a/pkg/apis/monitoring/v1/openapi_generated.go
-+++ b/pkg/apis/monitoring/v1/openapi_generated.go
-@@ -1154,6 +1154,19 @@ func schema_pkg_apis_monitoring_v1_PodMetricsEndpoint(ref common.ReferenceCallba
- 							Format:      "",
- 						},
- 					},
-+					"tlsConfig": {
-+						SchemaProps: spec.SchemaProps{
-+							Description: "TLS configuration to use when scraping the endpoint",
-+							Ref:         ref("github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1.TLSConfig"),
-+						},
-+					},
-+					"bearerTokenFile": {
-+						SchemaProps: spec.SchemaProps{
-+							Description: "File to read bearer token for accessing apiserver.",
-+							Type:        []string{"string"},
-+							Format:      "",
-+						},
-+					},
- 					"honorLabels": {
- 						SchemaProps: spec.SchemaProps{
- 							Description: "HonorLabels chooses the metric's labels on collisions with target labels.",
 diff --git a/pkg/apis/monitoring/v1/types.go b/pkg/apis/monitoring/v1/types.go
-index 9b87f83b..c733adde 100644
+index 5f022264..97b9f217 100644
 --- a/pkg/apis/monitoring/v1/types.go
 +++ b/pkg/apis/monitoring/v1/types.go
-@@ -610,6 +610,10 @@ type PodMetricsEndpoint struct {
+@@ -675,6 +675,10 @@ type PodMetricsEndpoint struct {
  	Interval string `json:"interval,omitempty"`
  	// Timeout after which the scrape is ended
  	ScrapeTimeout string `json:"scrapeTimeout,omitempty"`
@@ -36,12 +12,12 @@ index 9b87f83b..c733adde 100644
 +	BearerTokenFile string `json:"bearerTokenFile,omitempty"`
  	// HonorLabels chooses the metric's labels on collisions with target labels.
  	HonorLabels bool `json:"honorLabels,omitempty"`
- 	// MetricRelabelConfigs to apply to samples before ingestion.
+ 	// HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.
 diff --git a/pkg/apis/monitoring/v1/zz_generated.deepcopy.go b/pkg/apis/monitoring/v1/zz_generated.deepcopy.go
-index a1d173b8..8c400c9a 100644
+index 5d67ca7b..4a98a57c 100644
 --- a/pkg/apis/monitoring/v1/zz_generated.deepcopy.go
 +++ b/pkg/apis/monitoring/v1/zz_generated.deepcopy.go
-@@ -463,6 +463,11 @@ func (in *PodMetricsEndpoint) DeepCopyInto(out *PodMetricsEndpoint) {
+@@ -507,6 +507,11 @@ func (in *PodMetricsEndpoint) DeepCopyInto(out *PodMetricsEndpoint) {
  			}
  		}
  	}
@@ -54,26 +30,23 @@ index a1d173b8..8c400c9a 100644
  		in, out := &in.ProxyURL, &out.ProxyURL
  		*out = new(string)
 diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
-index b5bb1d29..d7c16755 100644
+index a0f5d11a..c4f07568 100644
 --- a/pkg/prometheus/promcfg.go
 +++ b/pkg/prometheus/promcfg.go
-@@ -338,6 +338,10 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
+@@ -415,6 +431,9 @@ func (cg *configGenerator) generatePodMonitorConfig(
  	if ep.Scheme != "" {
  		cfg = append(cfg, yaml.MapItem{Key: "scheme", Value: ep.Scheme})
  	}
 +	if ep.BearerTokenFile != "" {
 +		cfg = append(cfg, yaml.MapItem{Key: "bearer_token_file", Value: ep.BearerTokenFile})
 +	}
-+
- 
+
  	var (
  		relabelings []yaml.MapSlice
-@@ -519,7 +523,7 @@ func (cg *configGenerator) generatePodMonitorConfig(version semver.Version, m *v
- 		}
+@@ -578,6 +597,7 @@ func (cg *configGenerator) generatePodMonitorConfig(
  		cfg = append(cfg, yaml.MapItem{Key: "metric_relabel_configs", Value: metricRelabelings})
  	}
--
-+	cfg = addTLStoYaml(cfg, ep.TLSConfig)
+
++	cfg = addTLStoYaml(cfg, "", ep.TLSConfig)
  	return cfg
  }
- 

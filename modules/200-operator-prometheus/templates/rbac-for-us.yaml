@@ -22,12 +22,14 @@ rules:
   - monitoring.coreos.com
   resources:
   - alertmanagers
+  - alertmanagers/finalizers
   - prometheuses
   - prometheuses/finalizers
-  - alertmanagers/finalizers
   - servicemonitors
   - podmonitors
   - prometheusrules
+  - thanosrulers
+  - thanosrulers/finalizers
   verbs:
   - "*"
 - apiGroups:

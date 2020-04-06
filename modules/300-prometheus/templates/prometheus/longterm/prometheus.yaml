@@ -56,9 +56,6 @@ spec:
           fieldPath: status.podIP
     - name: KUBE_RBAC_PROXY_CONFIG
       value: |
-        excludePaths:
-        - /-/healthy
-        - /-/ready
         upstreams:
         - upstream: http://127.0.0.1:9090/
           path: /
@@ -72,28 +69,6 @@ spec:
               name: longterm
     securityContext:
       runAsUser: 0
-  - name: prometheus
-    livenessProbe:
-      failureThreshold: 6
-      httpGet:
-        path: /-/healthy
-        port: probe
-        scheme: HTTPS
-      periodSeconds: 5
-      successThreshold: 1
-      timeotSeconds: 3
-    readinessProbe:
-      failureThreshold: 120
-      httpGet:
-        path: /-/ready
-        port: probe
-        scheme: HTTPS
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-    ports:
-    - name: probe
-      containerPort: 9090
   scrapeInterval: 5m
   evaluationInterval: 5m
 {{- if .Values.global.modules.publicDomainTemplate }}
