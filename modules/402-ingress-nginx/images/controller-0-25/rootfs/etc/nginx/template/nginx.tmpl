@@ -120,6 +120,8 @@ http {
         balancer.init_worker()
 
         plugins.run()
+
+        statsd.init_worker()
     }
 
     {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
