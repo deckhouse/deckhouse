@@ -1,7 +1,8 @@
 /*
 
 User-stories:
-1. If Endpoint default/kubernetes has more than one addresses, someone took care of the cluster failover. Hook must figure out if we need to enable HA-mode for other modules.
+1. Hook must discover number of addresses in Endpoint default/kubernetes and save to global.discovery.clusterMasterCount,
+2. If number of addresses in Endpoint default/kubernetes is more than one — hook must set global.discovery.clusterControlPlaneIsHighlyAvailable to true, else — to false.
 
 */
 
@@ -52,13 +53,17 @@ subsets:
 			f.RunHook()
 		})
 
-		It("filterResult must be false; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false", func() {
+		It("filterResult.isHA must be false;  filterResult.clusterMasterCount must be 1; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false; `global.discovery.clusterMasterCount` must be 1", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Bool()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult.clusterMasterCount").String()).To(Equal("1"))
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult.isHA").Bool()).To(BeFalse())
+
+			Expect(f.ValuesGet("global.discovery.clusterMasterCount").String()).To(Equal("1"))
 			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())
+
 		})
 
 		Context("Someone added additional addresses to .subsets[]", func() {
@@ -67,12 +72,15 @@ subsets:
 				f.RunHook()
 			})
 
-			It("filterResult must be true; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true", func() {
+			It("filterResult.isHA must be true;  filterResult.clusterMasterCount must be 3; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true; `global.discovery.clusterMasterCount` must be 3", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
-				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
+				Expect(f.BindingContexts.Get("0.filterResult.clusterMasterCount").String()).To(Equal("3"))
+				Expect(f.BindingContexts.Get("0.filterResult.isHA").Bool()).To(BeTrue())
+
+				Expect(f.ValuesGet("global.discovery.clusterMasterCount").String()).To(Equal("3"))
 				Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeTrue())
 			})
 		})
@@ -84,12 +92,15 @@ subsets:
 			f.RunHook()
 		})
 
-		It("filterResult must be true; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true", func() {
+		It("filterResult.isHA must be true;  filterResult.clusterMasterCount must be 3; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be true; `global.discovery.clusterMasterCount` must be 3", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 			Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 			Expect(f.BindingContexts.Get("0.type").String()).To(Equal("Synchronization"))
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Bool()).To(BeTrue())
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult.clusterMasterCount").String()).To(Equal("3"))
+			Expect(f.BindingContexts.Get("0.objects.0.filterResult.isHA").Bool()).To(BeTrue())
+
+			Expect(f.ValuesGet("global.discovery.clusterMasterCount").String()).To(Equal("3"))
 			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeTrue())
 		})
 
@@ -99,12 +110,15 @@ subsets:
 				f.RunHook()
 			})
 
-			It("filterResult must be false; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false", func() {
+			It("filterResult.isHA must be false;  filterResult.clusterMasterCount must be 1; `global.discovery.clusterControlPlaneIsHighlyAvailable` must be false; `global.discovery.clusterMasterCount` must be 1", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 				Expect(f.BindingContexts.Get("0.binding").String()).To(Equal("kube_api_ep"))
 				Expect(f.BindingContexts.Get("0.watchEvent").String()).To(Equal("Modified"))
-				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
+				Expect(f.BindingContexts.Get("0.filterResult.clusterMasterCount").String()).To(Equal("1"))
+				Expect(f.BindingContexts.Get("0.filterResult.isHA").Bool()).To(BeFalse())
+
+				Expect(f.ValuesGet("global.discovery.clusterMasterCount").String()).To(Equal("1"))
 				Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())
 			})
 		})
