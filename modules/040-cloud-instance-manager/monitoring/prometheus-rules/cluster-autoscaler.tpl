@@ -152,4 +152,6 @@
       summary: Cluster autoscaler работает некорректно
       description: |
         Cluster autoscaler работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
+{{- else }}
+[]
 {{- end }}
