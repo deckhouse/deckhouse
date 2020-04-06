@@ -152,8 +152,8 @@ spec:
         - "--statsd.listen-udp="
         - "--statsd.listen-unixgram=/etc/sockets/statsd.sock"
         - "--statsd.unixsocket-mode=777"
-        - "--web.listen-address=127.0.0.1:9102"
         - "--statsd.mapping-config=/etc/statsd_mapping.conf"
+        - "--web.listen-address=127.0.0.1:9102"
         volumeMounts:
         - mountPath: /etc/sockets
           name: unix-sockets
