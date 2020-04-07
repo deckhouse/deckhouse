@@ -59,6 +59,7 @@ spec:
   "controllerVersion": "0.26",
   "inlet": "LoadBalancer",
   "loadBalancer": {},
+  "hstsOptions": {},
   "hostPortWithProxyProtocol": {},
   "hostPort": {},
   "acceptRequestsFrom": [
@@ -108,6 +109,7 @@ spec:
 "ingressClass": "nginx",
 "controllerVersion": "0.25",
 "inlet": "LoadBalancer",
+"hstsOptions": {},
 "loadBalancer": {},
 "hostPortWithProxyProtocol": {},
 "hostPort": {}
@@ -119,6 +121,7 @@ spec:
 "ingressClass": "test",
 "controllerVersion": "0.25",
 "inlet": "HostPortWithProxyProtocol",
+"hstsOptions": {},
 "loadBalancer": {},
 "hostPortWithProxyProtocol": {
   "httpPort": 80,

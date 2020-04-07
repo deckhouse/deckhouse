@@ -131,6 +131,20 @@ spec:
             hsts:
               type: boolean
               description: 'Enable hsts.'
+            hstsOptions:
+              type: object
+              description: 'Options for HTTP Strict Transport Security.'
+              properties:
+                maxAge:
+                  type: string
+                  description: 'The time, in seconds, that the browser should remember that a site is only to be accessed using HTTPS.'
+                  pattern: '^([0-9])*([1-9])$'
+                preload:
+                  type: boolean
+                  description: 'Add your site to preload list to enforce to use SSL/TLS connections on your site.'
+                includeSubDomains:
+                  type: boolean
+                  description: 'If this optional parameter is specified, this rule applies to all of subdomains as well.'
             legacySSL:
               type: boolean
               description: 'Enable old TLS protocol versions and legacy cipher suites.'

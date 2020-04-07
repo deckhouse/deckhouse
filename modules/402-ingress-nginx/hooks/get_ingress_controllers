@@ -13,6 +13,7 @@ function __config__() {
       - controller
       jqFilter: |
         .spec.config //= {}
+        | .spec.hstsOptions //= {}
         | if .spec.inlet == "LoadBalancer" then .spec.loadBalancer //= {} else .spec.loadBalancer |= {} end
         | if .spec.inlet == "HostPort" then .spec.hostPort //= {} else .spec.hostPort |= {} end
         | if .spec.inlet == "HostPortWithProxyProtocol" then .spec.hostPortWithProxyProtocol //= {} else .spec.hostPortWithProxyProtocol |= {} end
