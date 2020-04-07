@@ -67,10 +67,10 @@ function __main__ {
 
   if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
     if context::has snapshots.pvc.0 ; then
-      kubernetes::delete::non_blocking "d8-network-gateway" "persistentvolumeclaim/dhcp-data-dhcp-0"
+      kubernetes::delete_if_exists::non_blocking "d8-network-gateway" "persistentvolumeclaim/dhcp-data-dhcp-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/dhcp-data-dhcp-0 !!!"
     fi
-    kubernetes::delete::non_blocking "d8-network-gateway" "pod/dhcp-0"
+    kubernetes::delete_if_exists::non_blocking "d8-network-gateway" "pod/dhcp-0"
     echo "!!! NOTICE: storage class changed, deleting pod/dhcp-0 !!!"
   fi
 

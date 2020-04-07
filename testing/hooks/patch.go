@@ -157,12 +157,12 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		patchedObj.SetUnstructuredContent(t.(map[string]interface{}))
 		newObjectStore.PutObject(patchedObj.Object, object_store.NewMetaIndex(patchedObj.GetKind(), patchedObj.GetNamespace(), patchedObj.GetName()))
 
-	case "Delete":
+	case "DeleteIfExists":
 		r := strings.Split(kpo.Resource, "/") // e.g. Ingress/mying
 		kind, name := r[0], r[1]
 		newObjectStore.DeleteObject(object_store.NewMetaIndex(kind, kpo.Namespace, name))
 
-	case "DeleteNonBlocking":
+	case "DeleteIfExistsNonBlocking":
 		r := strings.Split(kpo.Resource, "/") // e.g. Ingress/mying
 		kind, name := r[0], r[1]
 		newObjectStore.DeleteObject(object_store.NewMetaIndex(kind, kpo.Namespace, name))

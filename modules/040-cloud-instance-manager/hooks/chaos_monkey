@@ -87,7 +87,7 @@ function __on_schedule::monkey() {
       victim_machine="$(context::jq -r --arg node "${victim_node}" '.snapshots.machines[] | select(.filterResult.node == $node) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
       if [[ "$ig_chaos_mode" == "DrainAndDelete" ]] ; then
         kubernetes::patch_jq "d8-cloud-instance-manager" "machine/$victim_machine" '.metadata.labels."cloud-instance-manager.deckhouse.io/chaos-monkey-victim" = ""'
-        kubernetes::delete "d8-cloud-instance-manager" "machine/$victim_machine"
+        kubernetes::delete_if_exists "d8-cloud-instance-manager" "machine/$victim_machine"
       fi
     fi
   done

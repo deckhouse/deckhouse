@@ -90,23 +90,23 @@ function __main__() {
   values::set prometheus.internal.prometheusLongterm.effectiveStorageClass "$effective_storage_class_longterm"
 
   if [ "$prometheus_main_storage_class_current" != "$effective_storage_class_main" ] && [ "$effective_storage_class_main" != "false" ]; then
-    kubernetes::delete::non_blocking "d8-monitoring" "statefulset/prometheus-main"
+    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "statefulset/prometheus-main"
     echo "!!! NOTICE: storage class changed, deleting statefulset/prometheus-main !!!"
     if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")'; then
-      kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-0"
+      kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-main-db-prometheus-main-0 !!!"
       if [ "$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main")] | length')" -gt "1" ]; then
-          kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-1"
+          kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-1"
           echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-main-db-prometheus-main-1 !!!"
       fi
     fi
   fi
 
   if [ "$prometheus_longterm_storage_class_current" != "$effective_storage_class_longterm" ] && [ "$effective_storage_class_longterm" != "false" ]; then
-    kubernetes::delete::non_blocking "d8-monitoring" "statefulset/prometheus-longterm"
+    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "statefulset/prometheus-longterm"
     echo "!!! NOTICE: storage class changed, deleting statefulset/prometheus-longterm !!!"
     if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "longterm")'; then
-      kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-longterm-db-prometheus-longterm-0"
+      kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-longterm-db-prometheus-longterm-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-longterm-db-prometheus-longterm-0 !!!"
     fi
   fi
