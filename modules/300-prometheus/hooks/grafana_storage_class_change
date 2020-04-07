@@ -74,10 +74,10 @@ function __main__() {
 
   if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
     if context::has snapshots.pvc.0 ; then
-      kubernetes::delete::non_blocking "d8-monitoring" "persistentvolumeclaim/grafana-storage-grafana-0"
+      kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/grafana-storage-grafana-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/grafana-storage-grafana-0 !!!"
     fi
-    kubernetes::delete::non_blocking "d8-monitoring" "statefulset/grafana"
+    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "statefulset/grafana"
     echo "!!! NOTICE: storage class changed, deleting statefulset/grafana !!!"
   fi
 }

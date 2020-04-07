@@ -168,7 +168,7 @@ function restart_pods_if_required() {
     # If PodScheduled
     if [ "$(context::jq -r --arg pod $pod '.snapshots.pods[].object | select(.metadata.name == $pod) | .status.conditions[] | select(.type == "PodScheduled") | .status')" == "True" ]; then
       echo "!!! NOTICE: PersistentVolumeClaim $pvc in state FileSystemResizePending, Pod $pod has been deleted !!!"
-      kubernetes::delete::non_blocking "d8-monitoring" "pod/$pod"
+      kubernetes::delete_if_exists::non_blocking "d8-monitoring" "pod/$pod"
     fi
   done
 }

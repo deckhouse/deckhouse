@@ -39,14 +39,14 @@ function kubernetes::patch_jq() {
 
 # $1 namespace
 # $2 resource (pod/mypod-aacc12)
-function kubernetes::delete() {
-  jq -nc '{op: "Delete", namespace: "'${1}'", resource: "'${2}'"}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+function kubernetes::delete_if_exists() {
+  jq -nc '{op: "DeleteIfExists", namespace: "'${1}'", resource: "'${2}'"}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
 # $1 namespace
 # $2 resource (pod/mypod-aacc12)
-function kubernetes::delete::non_blocking() {
-  jq -nc '{op: "DeleteNonBlocking", namespace: "'${1}'", resource: "'${2}'"}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+function kubernetes::delete_if_exists::non_blocking() {
+  jq -nc '{op: "DeleteIfExistsNonBlocking", namespace: "'${1}'", resource: "'${2}'"}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
 # $1 namespace
@@ -114,14 +114,14 @@ function kubernetes::_apply_patch_set() {
     "JQPatch")
       kubernetes::_jq_patch "$(jq -r '.namespace' <<< ${line})" "$(jq -r '.resource' <<< ${line})" "$(jq -r '.jqFilter' <<< ${line})"
     ;;
-    "Delete")
+    "DeleteIfExists")
       namespace="$(jq -r '.namespace' <<< ${line})"
       resource="$(jq -r '.resource' <<< ${line})"
       if kubectl -n "${namespace}" get "${resource}" >/dev/null 2>&1; then
         kubectl -n "${namespace}" delete "${resource}" >/dev/null 2>&1
       fi
     ;;
-    "DeleteNonBlocking")
+    "DeleteIfExistsNonBlocking")
       namespace="$(jq -r '.namespace' <<< ${line})"
       resource="$(jq -r '.resource' <<< ${line})"
       if kubectl -n "${namespace}" get "${resource}" >/dev/null 2>&1; then

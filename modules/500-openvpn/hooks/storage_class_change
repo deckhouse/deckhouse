@@ -67,10 +67,10 @@ function __main__ {
 
   if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
     if context::has snapshots.pvc.0 ; then
-      kubernetes::delete::non_blocking "kube-openvpn" "persistentvolumeclaim/openvpn"
+      kubernetes::delete_if_exists::non_blocking "kube-openvpn" "persistentvolumeclaim/openvpn"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/openvpn !!!"
     fi
-    kubernetes::delete::non_blocking "kube-openvpn" "deployment/openvpn"
+    kubernetes::delete_if_exists::non_blocking "kube-openvpn" "deployment/openvpn"
     echo "!!! NOTICE: storage class changed, deleting deployment/openvpn !!!"
   fi
 

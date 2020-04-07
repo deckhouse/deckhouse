@@ -54,13 +54,13 @@ EOF
 
 function delete_rule() {
   name=$1
-  kubernetes::delete d8-monitoring prometheusrules/d8-custom-${name}
+  kubernetes::delete_if_exists d8-monitoring prometheusrules/d8-custom-${name}
 }
 
 function __on_kubernetes::rules::synchronization() {
   for i in $(context::jq -r '.snapshots.internal_rules | keys[]'); do
     filterResult=$(context::get snapshots.internal_rules.$i.filterResult)
-    kubernetes::delete d8-monitoring prometheusrules/${filterResult}
+    kubernetes::delete_if_exists d8-monitoring prometheusrules/${filterResult}
   done
 
   if ! context::has snapshots.rules.0; then

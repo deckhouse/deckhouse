@@ -86,7 +86,7 @@ function __main__() {
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_delete"); do
     ns="$(jq --argjson i $i -r '.[$i].object.metadata.namespace' <<< "$secrets_to_delete")"
     name="$(jq --argjson i $i -r '.[$i].object.metadata.name' <<< "$secrets_to_delete")"
-    kubernetes::delete $ns secret/$name
+    kubernetes::delete_if_exists $ns secret/$name
   done
 
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_create"); do
