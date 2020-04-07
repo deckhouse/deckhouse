@@ -15,7 +15,7 @@
 
 ![](img/madison.png)
 
-* У модуля есть секретный value `prometheus.madisonBackends`, который заполняется автоматически списком адресов, в которые резолвится madison.flant.com (каждые 10 минут)ю
+* У модуля есть секретный value `prometheus.madisonBackends`, который заполняется автоматически списком адресов, в которые резолвится madison-direct.flant.com (каждые 10 минут)ю
 * Для каждого адреса в `prometheus.madisonBackends` генерируется отдельный deployment с `madison-proxy` (в названии используется sha256sum от IP-адреса), который отправляет все запросы на соответствующий ему бекенд Madison'а (там нет mash, один `madison-proxy` шлет запросы на один бекенд Madison'а)ю
 * `madison-proxy` это Nginx с [простейшим конфигом](../images/madison-proxy/rootfs/etc/nginx/nginx.tmpl), задача которого — эмулировать Alertmanager для Prometheus'а и передавать все пришедшие запросы в Madison. Он использует `prometheus.madisonAuthKey` для аутентификации в Madison.
 * Штатное поведение Prometheus'а — отправлять все алерты всем известным Alertmanager'ам. Так и происходит — каждый экземпляр Prometheus шлет информацию о каждом алерте каждому `madison-proxy`, который, в свою очередь, шлет алерт своему бекенду Madison'а (дедуплицировать алерты — задача Madison).
