@@ -597,7 +597,7 @@
           "refId": "R"
         },
         {
-          "expr": "((max by (job, namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]))) *  on (job, namespace, controller_type, controller_name) group_right(controller)\n(avg_over_time(kube_controller_replicas[$__range]) - avg_over_time(kube_controller_replicas_ready[$__range])))\nor\nmax by (job, namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) * 0",
+          "expr": "max by (job, namespace, controller_type, controller_name, controller) ((max by (job, namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]))) *  on (job, namespace, controller_type, controller_name) group_right(controller)\n(avg_over_time(kube_controller_replicas[$__range]) - avg_over_time(kube_controller_replicas_ready[$__range])))\nor\nmax by (job, namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) * 0",
           "format": "table",
           "hide": false,
           "instant": true,
