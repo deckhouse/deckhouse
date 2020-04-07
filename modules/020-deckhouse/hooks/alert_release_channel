@@ -24,7 +24,7 @@ function __main__() {
   repo="$(values::get global.modulesImages.registry)"
   if context::has snapshots.deckhouse_deployment.0.filterResult ; then
     full_image="$(context::jq -r '.snapshots.deckhouse_deployment[0].filterResult')"
-    actual_image=$(echo $full_image | grep -oP "^$repo/\K.*")
+    actual_image=$(echo $full_image | grep -oP "^$repo[:,/]\K.*")
     if [[ " ${deckhouse_tags[@]} " =~ " ${actual_image} " ]] ; then
       echo '{"name":"d8_deckhouse_is_not_on_release_channel", "set": 0}' >> $METRICS_PATH
     else
