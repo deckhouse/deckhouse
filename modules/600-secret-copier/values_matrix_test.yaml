@@ -1,0 +1,7 @@
+global:
+  discovery:
+    prometheusScrapeInterval: 30s
+  enabledModules:
+    __ConstantChoices__:
+    - []
+    - [prometheus]

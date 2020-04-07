@@ -7,15 +7,15 @@
 
 ### Как работает
 
-Данный модуль следит за изменениями секретов в default namespace с лейблом `antiopa-secret-copier=yes`.
+Данный модуль следит за изменениями секретов в namespace `default` с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+* При создании такого секрета, он будет скопирован во все namespace;
+* При изменении секрета, его новое содержимое будет раскопировано во все namespace;
+* При удалении секрета, он будет удален из всех namespace;
+* При изменении скопированного секрета в прикладном namespace, тот будет перезаписан оригинальным содержимым;
+* При создании любого namespace в него копируются все секреты из default namespace с лейблом `secret-copier.deckhouse.io/enabled: ""`;
 
-Данный модуль позволяет выполнить несколько действий:
-* При создании секрета в default namespace с лейблом `antiopa-secret-copier=yes`, он будет скопирован во все namespace;
-* При изменении секрета в default namespace с лейблом `antiopa-secret-copier=yes`, его новое содержимое будет раскопировано во все namespace;
-* При удалении секрета из default namespace с лейблом `antiopa-secret-copier=yes`, он будет удален из всех namespace;
-* При создании любого namespace в него копируются все секреты из default namespace с лейблом `antiopa-secret-copier=yes`;
-* Каждую ночь секреты будут повторно синхронизированы и приведены к состоянию в default namespace.
+Кроме этого, каждую ночь секреты будут повторно синхронизированы и приведены к состоянию в default namespace.
 
 ### Что нужно настроить?
 
-Для того, чтобы заработало, достаточно создать в "default" namespace секрет с лейблом `antiopa-secret-copier=yes`.
+Для того, чтобы заработало, достаточно создать в "default" namespace секрет с лейблом `secret-copier.deckhouse.io/enabled: ""`.
