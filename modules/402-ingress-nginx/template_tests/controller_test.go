@@ -47,6 +47,9 @@ key: teststring
     ingressClass: nginx
     controllerVersion: "0.26"
     inlet: LoadBalancer
+    hsts: true
+    hstsOptions:
+      maxAge: "123456789123456789"
     loadBalancer:
       annotations:
         my: annotation
@@ -60,6 +63,7 @@ key: teststring
     ingressClass: test
     controllerVersion: "0.25"
     inlet: "HostPortWithProxyProtocol"
+    hstsOptions: {}
     loadBalancer: {}
     hostPortWithProxyProtocol:
       httpPort: 80
@@ -82,6 +86,9 @@ key: teststring
 
 			// Use the Raw property to check is value quoted correctly
 			Expect(configMapData.Get("use-proxy-protocol").Raw).To(Equal(`"true"`))
+			Expect(configMapData.Get("hsts").Raw).To(Equal(`"true"`))
+			Expect(configMapData.Get("hsts-max-age").Raw).To(Equal(`"123456789123456789"`))
+
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
