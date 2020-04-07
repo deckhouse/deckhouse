@@ -53,7 +53,7 @@
       summary: >
         Certificate has expired
   - alert: NginxIngressStatsdMetricsBufferOverflow
-    expr: max by (controller, node) (increase(ingress_nginx_statsd_buffer_overflow_total[5m]))) > 0
+    expr: max by (controller, node) (increase(ingress_nginx_statsd_buffer_overflow_total[5m])) > 0
     for: 10m
     labels:
       severity_level: "6"
