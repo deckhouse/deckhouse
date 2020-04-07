@@ -8,8 +8,19 @@ metadata:
 data:
   prometheus.yaml: |+
     apiVersion: 1
+    deleteDatasources:
+      - name: trickster
+        orgId: 1
+      - name: trickster-longterm
+        orgId: 1
+{{- if (include "helm_lib_ha_enabled" .) }}
+      - name: main-0
+        orgId: 1
+      - name: main-1
+        orgId: 1
+{{- end }}
     datasources:
-     - name: trickster
+     - name: main
        type: prometheus
        access: direct
        orgId: 1
@@ -17,45 +28,31 @@ data:
        version: 1
        isDefault: true
        jsonData:
-         timeInterval: 30s
-{{- if (include "helm_lib_ha_enabled" .) }}
-     - name: main-0
-       type: prometheus
-       access: direct
-       url: /prometheus-main-0
-       version: 1
-       jsonData:
-         timeInterval: 30s
-     - name: main-1
-       type: prometheus
-       access: direct
-       url: /prometheus-main-1
-       version: 1
-       jsonData:
-         timeInterval: 30s
-{{- else }}
-     - name: main
-       type: prometheus
-       access: direct
-       orgId: 1
-       url: /prometheus
-       version: 1
-       jsonData:
-         timeInterval: 30s
-{{- end }}
-     - name: trickster-longterm
+         timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+     - name: longterm
        type: prometheus
        access: direct
        orgId: 1
        url: /trickster/longterm
        version: 1
        jsonData:
-         timeInterval: 300s
-     - name: longterm
+         timeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
+{{- if (include "helm_lib_ha_enabled" .) }}
+     - name: main-uncached-0
        type: prometheus
        access: direct
        orgId: 1
-       url: /prometheus/longterm
+       url: /prometheus-main-0
        version: 1
        jsonData:
-         timeInterval: 300s
+         timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+     - name: main-uncached-1
+       type: prometheus
+       access: direct
+       orgId: 1
+       url: /prometheus-main-1
+       version: 1
+       jsonData:
+         timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+{{- end }}
+

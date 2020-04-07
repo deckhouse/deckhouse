@@ -69,8 +69,8 @@ spec:
               name: longterm
     securityContext:
       runAsUser: 0
-  scrapeInterval: 5m
-  evaluationInterval: 5m
+  scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
+  evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/longterm/
 {{- end }}
