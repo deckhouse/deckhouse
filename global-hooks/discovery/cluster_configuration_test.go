@@ -27,7 +27,7 @@ spec:
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: 24
   serviceSubnetCIDR: 10.222.0.0/16
-  kubernetesVersion: 1.15
+  kubernetesVersion: "1.15"
 `
 		stateA = `
 apiVersion: v1
@@ -49,7 +49,7 @@ spec:
   podSubnetCIDR: 10.122.0.0/16
   podSubnetNodeCIDRPrefix: 26
   serviceSubnetCIDR: 10.213.0.0/16
-  kubernetesVersion: 1.18
+  kubernetesVersion: "1.18"
 `
 		stateB = `
 apiVersion: v1
@@ -61,9 +61,9 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
 	)
 
-	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-
 	Context("Cluster has a d8-cluster-configuration Secret", func() {
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateA))
 			f.RunHook()
@@ -102,6 +102,34 @@ data:
 				Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 			})
+		})
+
+		Context("d8-cluster-configuration Secret got deleted", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.RunHook()
+			})
+
+			It("Should not fail, but should not create any Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
+			})
+		})
+	})
+
+	Context("Cluster doesn't have a d8-cluster-configuration Secret", func() {
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.RunHook()
+		})
+
+		It("Should not fail, but should not create any Values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
 		})
 	})
 })

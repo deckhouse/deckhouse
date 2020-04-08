@@ -16,6 +16,7 @@
     - coreutils
     - util-linux
     - sed
+    - gawk
 
 # Hooks dependencies (from edge/testing)
 - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
@@ -160,7 +161,7 @@ docker:
 
 ---
 artifact: kcov
-from: flant/kcov-alpine:v0.4
+from: flant/kcov-alpine:v0.5
 
 ---
 image: tests
