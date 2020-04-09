@@ -13,7 +13,6 @@ spec:
     listKind: PrometheusRuleList
     plural: prometheusrules
     singular: prometheusrule
-  preserveUnknownFields: false
   scope: Namespaced
   validation:
     openAPIV3Schema:
