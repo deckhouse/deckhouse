@@ -118,7 +118,7 @@
         Необходимо посмотреть логи:
         1. `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c controller`
 
-  - alert: D8ClusterAutoscalerToManyErrors
+  - alert: D8ClusterAutoscalerTooManyErrors
     expr: sum by(instance) (increase(cluster_autoscaler_errors_total[20m]) > 5)
     for: 5m
     labels:
@@ -140,7 +140,7 @@
 
   - alert: D8ClusterAutoscalerMalfunctioning
     expr: |
-      count(ALERTS{alertname=~"D8ClusterAutoscalerPodIsRestartingTooOften|D8ClusterAutoscalerToManyErrors", alertstate="firing"}) > 1
+      count(ALERTS{alertname=~"D8ClusterAutoscalerPodIsRestartingTooOften|D8ClusterAutoscalerTooManyErrors", alertstate="firing"}) > 1
     labels:
       tier: cluster
       d8_module: cloud-instance-manager
