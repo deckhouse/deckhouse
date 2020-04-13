@@ -18,8 +18,8 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: {{ $ig.maxInstancesSurgePerZone | default "1" }}
-      maxUnavailable: {{ $ig.maxInstancesUnavailablePerZone  | default "0" }}
+      maxSurge: {{ $ig.cloudInstances.maxSurgePerZone | default "1" }}
+      maxUnavailable: {{ $ig.cloudInstances.maxUnavailablePerZone | default "0" }}
   selector:
     matchLabels:
       instance-group: {{ $ig.name }}-{{ $zone_name }}
@@ -28,8 +28,8 @@ spec:
       labels:
         instance-group: {{ $ig.name }}-{{ $zone_name }}
       annotations:
-        bashible-bundle: {{ $ig.instanceClass.bashible.bundle | quote }}
-        checksum/bashible-bundles-options: {{ $ig.instanceClass.bashible.options | toJson | sha256sum | quote }}
+        bashible-bundle: {{ $ig.bashible.bundle | quote }}
+        checksum/bashible-bundles-options: {{ $ig.bashible.options | toJson | sha256sum | quote }}
         checksum/machine-class: {{ include "instance_group_machine_class_checksum" (list $context $ig $zone_name) | quote }}
     spec:
       class:

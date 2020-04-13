@@ -9,13 +9,19 @@ rules:
 - apiGroups: [""]
   resourceNames:
 {{- $bashible_bundles := list }}
-{{- range $f, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/*/{base-bootstrap,base,instance-group-bootstrap,instance-group}/*" | join "") }}
+
+{{- $cloud_provider_bashible_bundles_glob_prefix := "" }}
+{{- if hasKey $.Values.cloudInstanceManager.internal "cloudProvider" }}
+  {{- $cloud_provider_bashible_bundles_glob_prefix = list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}" | join "" }}
+{{- end }}
+
+{{- range $f, $_ := $.Files.Glob (list $cloud_provider_bashible_bundles_glob_prefix "bashible-bundles/*/{base-bootstrap,base,instance-group-bootstrap,instance-group}/*" | join "") }}
   {{- $bashible_bundles = append $bashible_bundles ($f | dir | dir | base) | uniq }}
 {{- end }}
 {{- range $bashible_bundle := $bashible_bundles }}
   - bashible-bundle-{{ $bashible_bundle }}
   - bashible-bundle-{{ $bashible_bundle }}-bootstrap
-  {{- range $.Values.cloudInstanceManager.internal.instanceGroups }}
+  {{- range $.Values.cloudInstanceManager.internal.nodeGroups }}
   - bashible-bundle-{{ $bashible_bundle }}-{{ .name }}
   - bashible-bundle-{{ $bashible_bundle }}-{{ .name }}-bootstrap
   {{- end}}

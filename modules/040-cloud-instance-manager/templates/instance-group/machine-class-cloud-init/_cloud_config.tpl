@@ -10,7 +10,7 @@ write_files:
   permissions: '0644'
   encoding: b64
   content: {{ $context.Values.cloudInstanceManager.internal.clusterCA | b64enc }}
-{{- $bashible_bundle := $ig.instanceClass.bashible.bundle }}
+{{- $bashible_bundle := $ig.bashible.bundle }}
 {{- if $file := $context.Files.Get (list "cloud-providers" $context.Values.cloudInstanceManager.internal.cloudProvider.type "bashible-bundles" $bashible_bundle "bootstrap.sh" | join "/") }}
   {{- $tpl_context := dict }}
   {{- $_ := set $tpl_context "Release" $context.Release }}

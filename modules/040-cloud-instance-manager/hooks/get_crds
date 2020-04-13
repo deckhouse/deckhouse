@@ -12,32 +12,32 @@ function __config__() {
   cat << EOF
     configVersion: v1
     kubernetes:
-    - name: cigs
+    - name: ngs
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
+      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
       apiVersion: deckhouse.io/v1alpha1
-      kind: CloudInstanceGroup
-      jqFilter: '{"name": .metadata.name, "spec": (.spec + {"manual-rollout-id": (.metadata.annotations."manual-rollout-id" // "")})}'
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "spec": ((.spec | .bashible //= {} | .bashible.options //= {} | .bashible.dynamicOptions //= {})
+          +
+          {"manual-rollout-id": (.metadata.annotations."manual-rollout-id" // "")})
+        }
     - name: ics
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
+      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
       apiVersion: deckhouse.io/v1alpha1
       kind: ${general_instance_class_kind}
       jqFilter: |
         {
           "name": .metadata.name,
-          "spec": (.spec | .bashible //= {} | .bashible.options //= {} | .bashible.dynamicOptions //= {}),
-          "bundle": .spec.bashible.bundle,
-          "meetsKubernetesVersionRequirement": (
-            if ((.spec.bashible // {}).bundle // "" | test("^(ubuntu|centos)-.*"))
-            then
-              (((.spec.bashible // {}).options // {}) | has("kubernetesVersion"))
-            else true end
-          )
+          "spec": .spec,
+          "bundle": .spec.bashible.bundle
         }
-    - name: cloud_provider_secret
+    - name: cloud_provider_secrets
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [cigs,ics,cloud_provider_secret]
+      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
       apiVersion: v1
       kind: Secret
       namespace:
@@ -55,13 +55,13 @@ EOF
 
 # $1 — CIG name
 # $2 — error message or empty string
-function _set_cig_error_status() {
+function _set_ng_error_status() {
   if [ -n "$2" ]; then
     status_patch="$(jq -n --arg msg "$2" '{"error": $msg}')"
   else
     status_patch="$(jq -n '{"error": null}')"
   fi
-  kubernetes::status::patch "" "deckhouse.io/v1alpha1" "cloudinstancegroups" "${1}" "${status_patch}"
+  kubernetes::status::patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${status_patch}"
 }
 
 function __main__() {
@@ -73,87 +73,80 @@ function __main__() {
 
 
   instance_classes="$(context::jq -r '
-    [.snapshots.ics[] | select(.filterResult.meetsKubernetesVersionRequirement)] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
+    [.snapshots.ics[]] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
   ')"
 
-  bad_instance_classes_indexes="$(context::jq -r '.snapshots.ics | to_entries[] | select(.value.filterResult.meetsKubernetesVersionRequirement | not) | .key')"
-  for i in ${bad_instance_classes_indexes}; do
-    ic_name="$(context::get snapshots.ics.$i.filterResult.name)"
-    ic_bundle="$(context::get snapshots.ics.$i.filterResult.bundle)"
-    >&2 echo "Instance class ${ic_name} is invalid: .spec.bashible.options.kubernetesVersion is mandatory for .spec.bashible.bundle ${ic_bundle}"
-  done
-
-  final_instance_groups="[]"
-  for i in $(context::jq -r '.snapshots.cigs | keys[]'); do
-    cig_name="$(context::get snapshots.cigs.$i.filterResult.name)"
-    cig="$(context::get snapshots.cigs.$i.filterResult.spec)"
-    cig="$(jq --arg name "${cig_name}" '.name = $name' <<< "$cig")"
+  final_node_groups="[]"
+  for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
+    ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
+    ng="$(context::get snapshots.ngs.$i.filterResult.spec)"
+    ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
 
 
-    # check #1 — is .spec.instanceClassReference.kind allowed in our cluster
-    cig_instance_class_kind=$(jq -r '.instanceClassReference.kind' <<< "$cig")
-    if [[ "$cig_instance_class_kind" != "$general_instance_class_kind" ]] ; then
-      error_message="Wrong instanceClassReference: Kind $cig_instance_class_kind is not allowed, the only allowed kind is $general_instance_class_kind."
+    # check #1 — is .spec.cloudInstances.classReference.kind allowed in our cluster
+    ng_instance_class_kind=$(jq -r '.cloudInstances.classReference.kind' <<< "$ng")
+    if [[ "$ng_instance_class_kind" != "$general_instance_class_kind" ]] ; then
+      error_message="Wrong classReference: Kind $ng_instance_class_kind is not allowed, the only allowed kind is $general_instance_class_kind."
 
       if
-        values::has cloudInstanceManager.internal.instanceGroups && \
-        earlier_stored_cig="$(values::jq -er --arg cig_name "${cig_name}" '.cloudInstanceManager.internal.instanceGroups[] | select(.name == $cig_name)')"
+        values::has cloudInstanceManager.internal.nodeGroups && \
+        earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
       then
-        final_instance_groups="$(jq --argjson cig "$earlier_stored_cig" '. + [$cig]' <<< $final_instance_groups)"
-        error_message="$error_message Earlier stored version of CIG is in use now!"
+        final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
+        error_message="$error_message Earlier stored version of NG is in use now!"
       fi
 
-      >&2 echo "ERROR: Bad CloudInstanceGroup $cig_name: $error_message"
-      _set_cig_error_status "${cig_name}" "${error_message}"
+      >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
+      _set_ng_error_status "${ng_name}" "${error_message}"
       continue
     fi
 
-    # check #2 — is .spec.instanceClassReference valid
-    cig_instance_class_name=$(jq -r '.instanceClassReference.name' <<< "$cig")
-    if jq -e '. | has("'$cig_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
-      error_message="Wrong instanceClassReference: There is no valid instance class $cig_instance_class_name of type $cig_instance_class_kind."
+    # check #2 — is .spec.cloudInstances.classReference valid
+    ng_instance_class_name=$(jq -r '.cloudInstances.classReference.name' <<< "$ng")
+    if jq -e '. | has("'$ng_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
+      error_message="Wrong classReference: There is no valid instance class $ng_instance_class_name of type $ng_instance_class_kind."
 
       if
-        values::has cloudInstanceManager.internal.instanceGroups && \
-        earlier_stored_cig="$(values::jq -er --arg cig_name "${cig_name}" '.cloudInstanceManager.internal.instanceGroups[] | select(.name == $cig_name)')"
+        values::has cloudInstanceManager.internal.nodeGroups && \
+        earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
       then
-        final_instance_groups="$(jq --argjson cig "$earlier_stored_cig" '. + [$cig]' <<< $final_instance_groups)"
-        error_message="$error_message Earlier stored version of CIG is in use now!"
+        final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
+        error_message="$error_message Earlier stored version of NG is in use now!"
       fi
 
-      >&2 echo "ERROR: Bad CloudInstanceGroup $cig_name: $error_message"
-      _set_cig_error_status "${cig_name}" "${error_message}"
+      >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
+      _set_ng_error_status "${ng_name}" "${error_message}"
       continue
     fi
 
     # check #3 — is there zones description in cloud-provider secret
-    if context::has snapshots.cloud_provider_secret.0; then
-      default_zones="$(context::get snapshots.cloud_provider_secret.0.filterResult.zones)"
+    if context::has snapshots.cloud_provider_secrets.0; then
+      default_zones="$(context::get snapshots.cloud_provider_secrets.0.filterResult.zones)"
     else
       error_message="Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
       if
-        values::has cloudInstanceManager.internal.instanceGroups && \
-        earlier_stored_cig="$(values::jq -er --arg cig_name "${cig_name}" '.cloudInstanceManager.internal.instanceGroups[] | select(.name == $cig_name)')"
+        values::has cloudInstanceManager.internal.nodeGroups && \
+        earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
       then
-        final_instance_groups="$(jq --argjson cig "$earlier_stored_cig" '. + [$cig]' <<< $final_instance_groups)"
-        error_message="$error_message Earlier stored version of CIG is in use now!"
+        final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
+        error_message="$error_message Earlier stored version of NG is in use now!"
       fi
       >&2 echo "ERROR: $error_message"
-      _set_cig_error_status "${cig_name}" "${error_message}"
+      _set_ng_error_status "${ng_name}" "${error_message}"
       continue
     fi
 
-    cig_instance_class="$(jq --arg name $cig_instance_class_name '.[$name]' <<< "$instance_classes")"
-    cig="$(jq \
-      --argjson instance_class "${cig_instance_class}" \
+    ng_instance_class="$(jq --arg name $ng_instance_class_name '.[$name]' <<< "$instance_classes")"
+    ng="$(jq \
+      --argjson instance_class "${ng_instance_class}" \
       --argjson default_zones "$default_zones" \
-      '.instanceClass = $instance_class | .zones //= $default_zones' <<< "$cig")"
+      '.instanceClass = $instance_class | .cloudInstances.zones //= $default_zones' <<< "$ng")"
 
-    _set_cig_error_status "${cig_name}" ""
-    final_instance_groups="$(jq --argjson cig "$cig" '. + [$cig]' <<< $final_instance_groups)"
+    _set_ng_error_status "${ng_name}" ""
+    final_node_groups="$(jq --argjson ng "$ng" '. + [$ng]' <<< $final_node_groups)"
   done
 
-  values::set cloudInstanceManager.internal.instanceGroups "$final_instance_groups"
+  values::set cloudInstanceManager.internal.nodeGroups "$final_node_groups"
 }
 
 hook::run "$@"

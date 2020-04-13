@@ -1,18 +1,22 @@
 {{- define "cluster_autoscaler_enabled" }}
-  {{- range $ig := .Values.cloudInstanceManager.internal.instanceGroups }}
-    {{- if lt (int $ig.minInstancesPerZone) (int $ig.maxInstancesPerZone) }}
-      1
+  {{- range $ig := .Values.cloudInstanceManager.internal.nodeGroups }}
+    {{- if eq $ig.nodeType "Cloud" }}
+      {{- if lt (int $ig.cloudInstances.minPerZone) (int $ig.cloudInstances.maxPerZone) }}
+        1
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
 
 {{- define "cluster_autoscaler_nodes" }}
-  {{- range $ig := .Values.cloudInstanceManager.internal.instanceGroups }}
-    {{- range $zone_name := $ig.zones }}
-      {{- if $.Values.cloudInstanceManager.instancePrefix }}
-- --nodes={{ $ig.minInstancesPerZone }}:{{ $ig.maxInstancesPerZone }}:d8-cloud-instance-manager.{{ $.Values.cloudInstanceManager.instancePrefix }}-{{ $ig.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
-      {{- else }}
-- --nodes={{ $ig.minInstancesPerZone }}:{{ $ig.maxInstancesPerZone }}:d8-cloud-instance-manager.{{ $ig.name }}-{{ printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+  {{- range $ig := .Values.cloudInstanceManager.internal.nodeGroups }}
+    {{- if eq $ig.nodeType "Cloud" }}
+      {{- range $zone_name := $ig.cloudInstances.zones }}
+        {{- if $.Values.cloudInstanceManager.instancePrefix }}
+- --nodes={{ $ig.cloudInstances.minPerZone }}:{{ $ig.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $.Values.cloudInstanceManager.instancePrefix }}-{{ $ig.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+        {{- else }}
+- --nodes={{ $ig.cloudInstances.minPerZone }}:{{ $ig.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $ig.name }}-{{ printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+        {{- end }}
       {{- end }}
     {{- end }}
   {{- end }}

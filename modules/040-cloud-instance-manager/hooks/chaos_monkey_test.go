@@ -12,7 +12,7 @@ var _ = Describe("Modules :: cloud-instance-manager :: hooks :: chaos_monkey ::"
 		stateCIGSmall = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
   name: toosmall
 spec:
@@ -23,9 +23,9 @@ status:
 		stateCIGLarge = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: largecig
+  name: largeng
 spec:
   chaos:
     period: 5m
@@ -36,9 +36,9 @@ status:
 		stateCIGLargeBroken = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: largecig
+  name: largeng
 spec:
   chaos:
     period: 5m
@@ -54,21 +54,21 @@ kind: Node
 metadata:
   name: node1
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largecig
+    cloud-instance-manager.deckhouse.io/cloud-instance-group: largeng
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: node2
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largecig
+    cloud-instance-manager.deckhouse.io/cloud-instance-group: largeng
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: node3
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largecig
+    cloud-instance-manager.deckhouse.io/cloud-instance-group: largeng
 ---
 apiVersion: v1
 kind: Node
@@ -119,14 +119,14 @@ metadata:
   name: victimnode
   namespace: d8-cloud-instance-manager
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: somecig
+    cloud-instance-manager.deckhouse.io/cloud-instance-group: someng
     cloud-instance-manager.deckhouse.io/chaos-monkey-victim: ""
     node: victimnode
 `
 	)
 
 	f := HookExecutionConfigInit(`{"cloudInstanceManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "CloudInstanceGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("Empty cluster", func() {
@@ -140,7 +140,7 @@ metadata:
 		})
 	})
 
-	Context("Cluster with cigs ready for chaos", func() {
+	Context("Cluster with ngs ready for chaos", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(stateCIGSmall + stateCIGLarge + stateNodes + stateMachines)
 			f.BindingContexts.Set(f.RunSchedule("* * * * *"))
@@ -158,7 +158,7 @@ metadata:
 		})
 	})
 
-	Context("Cluster with broken large cig", func() {
+	Context("Cluster with broken large ng", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(stateCIGSmall + stateCIGLargeBroken + stateNodes + stateMachines)
 			f.BindingContexts.Set(f.RunSchedule("* * * * *"))
@@ -176,7 +176,7 @@ metadata:
 		})
 	})
 
-	Context("Cluster with large ready cig and victim machine", func() {
+	Context("Cluster with large ready ng and victim machine", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(stateCIGSmall + stateCIGLarge + stateNodes + stateMachines + stateMachineVictim)
 			f.BindingContexts.Set(f.RunSchedule("* * * * *"))

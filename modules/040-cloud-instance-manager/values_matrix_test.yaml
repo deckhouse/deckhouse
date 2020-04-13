@@ -51,45 +51,49 @@ cloudInstanceManager:
             zoneToSubnetIdMap:
               zonea: mysubnetida
               zoneb: mysubnetidb
-      instanceGroups:
+      nodeGroups:
         __ConstantChoices__:
         - []
-        - - instanceClass: # maximum
+        - - name: worker
+            instanceClass: # maximum
               ami: myami
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.16.6
               diskSizeGb: 50
               diskType: gp2
               iops: 42
               instanceType: t2.medium
-            instanceClassReference:
-              kind: AWSInstanceClass
-              name: worker
-            maxInstancesPerZone: 5
-            minInstancesPerZone: 3
-            name: worker
-            zones:
-            - zonea
-            - zoneb
-        - - instanceClass: # minimum
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.16.6
+            cloudInstances:
+              classReference:
+                kind: AWSInstanceClass
+                name: worker
+              maxPerZone: 5
+              minPerZone: 3
+              zones:
+              - zonea
+              - zoneb
+        - - name: worker
+            instanceClass: # minimum
               ami: myami
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.16.6
               instanceType: t2.medium
-            instanceClassReference:
-              kind: AWSInstanceClass
-              name: worker
-            maxInstancesPerZone: 1
-            minInstancesPerZone: 1
-            name: worker
-            zones:
-            - zonea
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.16.6
+            cloudInstances:
+              classReference:
+                kind: AWSInstanceClass
+                name: worker
+              maxPerZone: 1
+              minPerZone: 1
+              zones:
+              - zonea
     - <<: *internalDefaults
       cloudProvider:
         type: openstack
@@ -116,26 +120,28 @@ cloudInstanceManager:
             region: myreg
             tenantName: mytname
             username: myuname
-      instanceGroups:
+      nodeGroups:
         __ConstantChoices__:
         - []
-        - - instanceClass: # maximum
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.15.4
+        - - name: worker
+            instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
-            instanceClassReference:
-              kind: OpenStackInstanceClass
-              name: worker
-            maxInstancesPerZone: 4
-            minInstancesPerZone: 2
-            name: worker
-            zones:
-            - zonea
-            - zoneb
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: OpenStackInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
     - <<: *internalDefaults
       cloudProvider:
         type: gcp
@@ -154,47 +160,51 @@ cloudInstanceManager:
             region: myreg
             sshKey: mysshkey
             serviceAccountKey: '{"my":"key"}'
-      instanceGroups:
+      nodeGroups:
         __ConstantChoices__:
         - []
-        - - instanceClass: # maximum
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.15.4
+        - - name: worker
+            instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
               machineType: mymachinetype
               preemptible: true #optional
               diskType: superdisk #optional
               diskSizeGb: 42 #optional
-            instanceClassReference:
-              kind: GCPInstanceClass
-              name: worker
-            maxInstancesPerZone: 4
-            minInstancesPerZone: 2
-            name: worker
-            zones:
-            - zonea
-            - zoneb
-        - - instanceClass: # minimum
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.15.4
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: GCPInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
+        - - name: worker
+            instanceClass: # minimum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
               machineType: mymachinetype
-            instanceClassReference:
-              kind: GCPInstanceClass
-              name: worker
-            maxInstancesPerZone: 2
-            minInstancesPerZone: 2
-            name: worker
-            zones:
-            - zonea
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: GCPInstanceClass
+                name: worker
+              maxPerZone: 2
+              minPerZone: 2
+              zones:
+              - zonea
     - <<: *internalDefaults
       cloudProvider:
         type: vsphere
@@ -215,15 +225,11 @@ cloudInstanceManager:
             password: pAsSwOrd
             region: myreg
             vmFolderPath: dev/test
-      instanceGroups:
+      nodeGroups:
         __ConstantChoices__:
         - []
-        - - instanceClass: # maximum
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.15.4
+        - - name: worker
+            instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
               numCPUs: 3
@@ -236,15 +242,21 @@ cloudInstanceManager:
               runtimeOptions: # optional
                 nestedHardwareVirtualization: true
                 memoryReservation: 42
-            instanceClassReference:
-              kind: VsphereInstanceClass
-              name: worker
-            maxInstancesPerZone: 4
-            minInstancesPerZone: 2
-            name: worker
-            zones:
-            - zonea
-            - zoneb
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: VsphereInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
     - <<: *internalDefaults
       cloudProvider:
         type: yandex
@@ -259,15 +271,11 @@ cloudInstanceManager:
           zoneToSubnetIdMap:
             zonea: subneta
             zoneb: subnetb
-      instanceGroups:
+      nodeGroups:
         __ConstantChoices__:
         - []
-        - - instanceClass: # maximum
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.15.4
+        - - name: worker
+            instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
               platformID: myplaid
@@ -284,21 +292,23 @@ cloudInstanceManager:
               additionalSubnets: [aaa, bbb]
               labels: # optional
                 my: label
-            instanceClassReference:
-              kind: YandexInstanceClass
-              name: worker
-            maxInstancesPerZone: 5
-            minInstancesPerZone: 2
-            name: worker
-            zones:
-            - zonea
-            - zoneb
-        - - instanceClass: # minimum
-              bashible:
-                bundle: ubuntu-18.04-1.0
-                dynamicOptions: {}
-                options:
-                  kubernetesVersion: 1.15.4
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: YandexInstanceClass
+                name: worker
+              maxPerZone: 5
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
+        - - name: worker
+            instanceClass: # minimum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
               platformID: myplaid
@@ -310,12 +320,31 @@ cloudInstanceManager:
               additionalSubnets: [aaa, bbb]
               labels: # optional
                 my: label
-            instanceClassReference:
-              kind: YandexInstanceClass
-              name: worker
-            maxInstancesPerZone: 1
-            minInstancesPerZone: 1
-            name: worker
-            zones:
-            - zonea
-            - zoneb
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: YandexInstanceClass
+                name: worker
+              maxPerZone: 1
+              minPerZone: 1
+              zones:
+              - zonea
+              - zoneb
+    - <<: *internalDefaults
+      cloudProvider:
+        type: static
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            nodeType: Static
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
