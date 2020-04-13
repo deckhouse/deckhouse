@@ -1,3 +1,5 @@
+{{- if include "machine_controller_manager_enabled" . }}
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -188,3 +190,4 @@ subjects:
 - kind: ServiceAccount
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
+{{- end }}

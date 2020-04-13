@@ -2,7 +2,7 @@
   {{- $context := index . 0 }}
   {{- $ig := index . 1 }}
 
-  {{- $bashible_bundle := $ig.instanceClass.bashible.bundle -}}
+  {{- $bashible_bundle := $ig.bashible.bundle -}}
 #!/bin/bash
 
 set -Eeuom pipefail

@@ -1,10 +1,16 @@
 {{- $bashible_bundles := list }}
-{{- range $f, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/*/{base-bootstrap,base,instance-group-bootstrap,instance-group}/*" | join "") }}
+
+{{- $cloud_provider_bashible_bundles_glob_prefix := "" }}
+{{- if hasKey $.Values.cloudInstanceManager.internal "cloudProvider" }}
+  {{- $cloud_provider_bashible_bundles_glob_prefix = list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}" | join "" }}
+{{- end }}
+
+{{- range $f, $_ := $.Files.Glob (list $cloud_provider_bashible_bundles_glob_prefix "bashible-bundles/*/{base-bootstrap,base,instance-group-bootstrap,instance-group}/*" | join "") }}
   {{- $bashible_bundles = append $bashible_bundles ($f | dir | dir | base) | uniq }}
 {{- end }}
 
 {{- range $bashible_bundle := $bashible_bundles }}
-  {{- range $ig := $.Values.cloudInstanceManager.internal.instanceGroups }}
+  {{- range $ig := $.Values.cloudInstanceManager.internal.nodeGroups }}
     {{- $tpl_context := dict }}
     {{- $_ := set $tpl_context "Release" $.Release }}
     {{- $_ := set $tpl_context "Chart" $.Chart }}
@@ -22,7 +28,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 type: Opaque
 data:
-    {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/{" $bashible_bundle ",common}/instance-group/*" | join "") }}
+    {{- range $step_file, $_ := $.Files.Glob (list $cloud_provider_bashible_bundles_glob_prefix "bashible-bundles/{" $bashible_bundle ",common}/instance-group/*" | join "") }}
 {{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
     {{- end }}
 ---
@@ -34,7 +40,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 type: Opaque
 data:
-    {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/{" $bashible_bundle ", common}/instance-group-bootstrap/*" | join "") }}
+    {{- range $step_file, $_ := $.Files.Glob (list $cloud_provider_bashible_bundles_glob_prefix "bashible-bundles/{" $bashible_bundle ", common}/instance-group-bootstrap/*" | join "") }}
     {{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
     {{- end }}
   {{- end }}
@@ -55,7 +61,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 type: Opaque
 data:
-  {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/{" $bashible_bundle ",common}/base/*" | join "") }}
+  {{- range $step_file, $_ := $.Files.Glob (list $cloud_provider_bashible_bundles_glob_prefix "bashible-bundles/{" $bashible_bundle ",common}/base/*" | join "") }}
 {{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
   {{- end }}
 ---
@@ -67,7 +73,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 type: Opaque
 data:
-  {{- range $step_file, $_ := $.Files.Glob (list "{,cloud-providers/" $.Values.cloudInstanceManager.internal.cloudProvider.type "/}bashible-bundles/{" $bashible_bundle ",common}/base-bootstrap/*" | join "") }}
+  {{- range $step_file, $_ := $.Files.Glob (list $cloud_provider_bashible_bundles_glob_prefix "bashible-bundles/{" $bashible_bundle ",common}/base-bootstrap/*" | join "") }}
   {{ base $step_file | indent 2 }}: {{ tpl ($.Files.Get $step_file) $tpl_context | b64enc }}
   {{- end }}
 {{- end }}

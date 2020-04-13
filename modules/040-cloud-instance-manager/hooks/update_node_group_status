@@ -1,0 +1,125 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    kubernetes:
+    - name: ngs
+      queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
+      watchEvent: ["Added", "Modified"]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        .name = .metadata.name |
+        if (.spec.cloudInstances|has("maxPerZone")) then
+          .maxPerZone = .spec.cloudInstances.maxPerZone
+        else . end |
+        if (.spec.cloudInstances|has("minPerZone")) then
+          .minPerZone = .spec.cloudInstances.minPerZone
+        else . end |
+        if (.spec.cloudInstances|has("zones")) then
+          .zonesNum = (.spec.cloudInstances.zones | length)
+        else . end
+    - name: cloud_provider_secrets
+      queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cloud-instance-manager-cloud-provider]
+      jqFilter: |
+        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+        +
+        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
+        | {"zonesNum": (.zones | length)}
+    - name: mds
+      queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
+      watchEvent: ["Added", "Modified"]
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineDeployment
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: '{"instanceGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
+    - name: instances
+      queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
+      watchEvent: ["Added", "Modified"]
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: Machine
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: '{"instanceGroup": .metadata.labels."instance-group"}'
+    - name: nodes
+      queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: "cloud-instance-manager.deckhouse.io/cloud-instance-group"
+          operator: Exists
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "cloudInstanceGroup": .metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group",
+          "isReady": ([.status.conditions[] | select(.type == "Ready")][-1].status == "True")
+        }
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.cloud_provider_secrets.0; then
+    default_zones_num="$(context::jq -r '.snapshots.cloud_provider_secrets[0].filterResult.zonesNum')"
+  else
+    >&2 echo "ERROR: can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
+    return 1
+  fi
+
+  for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
+    ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
+
+    desired_instances="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.mds[] | select(.filterResult.instanceGroup == $ng_name) | .filterResult.replicas] | add // 0')"
+    instances="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.instances[] | select(.filterResult.instanceGroup | test("^" + $ng_name + "-.+"))] | length')"
+    nodes="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name)] | length')"
+    ready_nodes="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name and .filterResult.isReady)] | length')"
+
+    status_patch="$(context::jq -c \
+      --arg i $i \
+      --arg default_zones_num $default_zones_num \
+      --arg desired_instances_num "$desired_instances" \
+      --arg instances_num "$instances" \
+      --arg nodes_num "$nodes" \
+      --arg ready_nodes_num "$ready_nodes" \
+      '.snapshots.ngs[$i | tonumber].filterResult |
+        if .spec.nodeType == "Cloud" then
+        {
+          "max": (.maxPerZone * (.zonesNum // ($default_zones_num | tonumber))),
+          "min": (.minPerZone * (.zonesNum // ($default_zones_num | tonumber))),
+          "desired": ($desired_instances_num | tonumber),
+          "instances": ($instances_num | tonumber),
+          "nodes": ($nodes_num | tonumber),
+          "ready": ($ready_nodes_num | tonumber)
+        }
+        else
+        {
+          "nodes": ($nodes_num | tonumber),
+          "ready": ($ready_nodes_num | tonumber)
+        }
+        end
+    ')"
+
+    kubernetes::status::patch "" "deckhouse.io/v1alpha1" "nodegroups" "${ng_name}" "${status_patch}"
+  done
+}
+
+hook::run "$@"

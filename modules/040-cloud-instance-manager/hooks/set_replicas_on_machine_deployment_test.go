@@ -10,131 +10,146 @@ import (
 
 var _ = Describe("Modules :: cloud-instance-manager :: hooks :: set_replicas_on_machine_deployment ::", func() {
 	const (
-		stateCIGs = `
+		staticNGs = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: cig1
+  name: ng-static-1
 spec:
-  maxInstancesPerZone: 2
-  minInstancesPerZone: 5 # $ig_min_instances -ge $ig_max_instances
+  nodeType: Static
+`
+		stateNGs = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: cig20
+  name: ng1
 spec:
-  maxInstancesPerZone: 4
-  minInstancesPerZone: 3 # "$replicas" == "null"
+  cloudInstances:
+    maxPerZone: 2
+    minPerZone: 5 # $ig_min_instances -ge $ig_max_instances
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: cig21
+  name: ng20
 spec:
-  maxInstancesPerZone: 4
-  minInstancesPerZone: 3 # $replicas -eq 0
+  cloudInstances:
+    maxPerZone: 4
+    minPerZone: 3 # "$replicas" == "null"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: cig3
+  name: ng21
 spec:
-  maxInstancesPerZone: 10
-  minInstancesPerZone: 6 # $replicas -le $ig_min_instances
+  cloudInstances:
+    maxPerZone: 4
+    minPerZone: 3 # $replicas -eq 0
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: cig4
+  name: ng3
 spec:
-  maxInstancesPerZone: 4
-  minInstancesPerZone: 3 # $replicas -gt $ig_max_instances
+  cloudInstances:
+    maxPerZone: 10
+    minPerZone: 6 # $replicas -le $ig_min_instances
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: CloudInstanceGroup
+kind: NodeGroup
 metadata:
-  name: cig5
+  name: ng4
 spec:
-  maxInstancesPerZone: 10
-  minInstancesPerZone: 1 # $ig_min_instances <= $replicas <= $ig_max_instances
+  cloudInstances:
+    maxPerZone: 4
+    minPerZone: 3 # $replicas -gt $ig_max_instances
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: ng5
+spec:
+  cloudInstances:
+    maxPerZone: 10
+    minPerZone: 1 # $ig_min_instances <= $replicas <= $ig_max_instances
 `
 		stateMDs = `
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig1
+  name: md-ng1
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig1
+    instance-group: ng1
 spec:
   replicas: 1 # $ig_min_instances -ge $ig_max_instances
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig20
+  name: md-ng20
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig20
+    instance-group: ng20
 spec: {} # "$replicas" == "null"
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig21
+  name: md-ng21
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig21
+    instance-group: ng21
 spec:
   replicas: 0 # $replicas -eq 0
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig3
+  name: md-ng3
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig3
+    instance-group: ng3
 spec:
   replicas: 2 # $replicas -le $ig_min_instances
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig4
+  name: md-ng4
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig4
+    instance-group: ng4
 spec:
   replicas: 7 # $replicas -gt $ig_max_instances
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig5
+  name: md-ng5
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig5
+    instance-group: ng5
 spec:
   replicas: 5 # $ig_min_instances <= $replicas <= $ig_max_instances
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: md-cig6
+  name: md-ng6
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: cig6 #cig6 is missing
+    instance-group: ng6 #ng6 is missing
 spec:
   replicas: 5
 `
 	)
 
 	f := HookExecutionConfigInit(`{"cloudInstanceManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "CloudInstanceGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
 	Context("Empty cluster", func() {
@@ -148,24 +163,35 @@ spec:
 		})
 	})
 
-	Context("Cluster with set of different pairs of MDs and CIGs", func() {
+	Context("Cluster with static nodes", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGs + stateMDs))
+			f.BindingContexts.Set(f.KubeStateSet(staticNGs))
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Cluster with set of different pairs of MDs and NGs", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGs + stateMDs))
 			f.RunHook()
 		})
 
 		It("", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig1").Field("spec.replicas").String()).To(Equal("2"))
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig20").Field("spec.replicas").String()).To(Equal("3"))
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig21").Field("spec.replicas").String()).To(Equal("3"))
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig3").Field("spec.replicas").String()).To(Equal("6"))
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig4").Field("spec.replicas").String()).To(Equal("4"))
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig5").Field("spec.replicas").String()).To(Equal("5"))
-			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-cig6").Field("spec.replicas").String()).To(Equal("5"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng1").Field("spec.replicas").String()).To(Equal("2"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng20").Field("spec.replicas").String()).To(Equal("3"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng21").Field("spec.replicas").String()).To(Equal("3"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng3").Field("spec.replicas").String()).To(Equal("6"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng4").Field("spec.replicas").String()).To(Equal("4"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng5").Field("spec.replicas").String()).To(Equal("5"))
+			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng6").Field("spec.replicas").String()).To(Equal("5"))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`WARNING: can't find CloudInstanceGroup cig6 to get min and max instances per zone.`))
+			Expect(f.Session.Err).Should(gbytes.Say(`WARNING: can't find NodeGroup ng6 to get min and max instances per zone.`))
 		})
 	})
 })

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-{{ $bashible_bundle := .instanceGroup.instanceClass.bashible.bundle }}
+{{ $bashible_bundle := .instanceGroup.bashible.bundle }}
 
 cat << "EOF" > /var/lib/bashible/kubernetes-api-proxy-configurator.sh
 #!/bin/bash

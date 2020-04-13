@@ -1,6 +1,6 @@
 #!/bin/bash
 
-{{ $bashible_bundle := .instanceGroup.instanceClass.bashible.bundle }}
+{{ $bashible_bundle := .instanceGroup.bashible.bundle }}
 
 {{- if hasPrefix "ubuntu" $bashible_bundle }}
 export DEBIAN_FRONTEND=noninteractive
