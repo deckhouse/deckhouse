@@ -13,7 +13,7 @@ function __config__() {
       jqFilter: '[.status.addresses[]? | select (.type == "InternalIP") | .address]'
 
     - name: pod_subnet_by_component
-      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app"]
+      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app", "cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -29,7 +29,7 @@ function __config__() {
         match( "(^|\\\\s+)--cluster-cidr=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: pod_subnet_by_k8s_app
-      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app"]
+      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app", "cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -44,7 +44,7 @@ function __config__() {
         match( "(^|\\\\s+)--cluster-cidr=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: service_subnet_by_component
-      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app"]
+      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app", "cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -60,7 +60,7 @@ function __config__() {
         match( "(^|\\\\s+)--service-cluster-ip-range=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: service_subnet_by_k8s_app
-      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app"]
+      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app", "cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -74,8 +74,18 @@ function __config__() {
         (.command + .args) | join(" ") |
         match( "(^|\\\\s+)--service-cluster-ip-range=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
+    - name: cluster_configuration
+      apiVersion: v1
+      kind: Secret
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      nameSelector:
+        matchNames: [d8-cluster-configuration]
+      jqFilter: '.data."cluster-configuration.yaml"'
 EOF
-
 
 }
 
@@ -88,6 +98,10 @@ function __on_kubernetes::node_internal_ips() {
 
 ### podSubnet
 function _pod_subnet() {
+  if context::has 'snapshots.cluster_configuration[0].object'; then
+    return 0
+  fi
+
   pod_subnet="$(context::jq -er '(.snapshots.pod_subnet_by_component + .snapshots.pod_subnet_by_k8s_app)[0].filterResult')"
   values::set global.discovery.podSubnet "$pod_subnet"
 }
@@ -103,6 +117,10 @@ function __on_kubernetes::pod_subnet_by_k8s_app() {
 
 ### serviceSubnet
 function _service_subnet() {
+  if context::has 'snapshots.cluster_configuration[0].object'; then
+    return 0
+  fi
+
   service_subnet="$(context::jq -er '(.snapshots.service_subnet_by_component + .snapshots.service_subnet_by_k8s_app)[0].filterResult')"
   values::set global.discovery.serviceSubnet "$service_subnet"
 }
@@ -115,4 +133,4 @@ function __on_kubernetes::service_subnet_by_k8s_app() {
   _service_subnet
 }
 
-hook::run $@
+hook::run "$@"
