@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"encoding/base64"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -13,7 +15,20 @@ var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
 		initConfigValuesString = `{}`
 	)
 
-	const (
+	var (
+		stateAClusterConfiguration = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+spec:
+  clusterType: Static
+  cloud:
+    provider: OpenStack
+    prefix: kube
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: 24
+  serviceSubnetCIDR: 10.222.0.0/16
+  kubernetesVersion: 1.15
+`
 		stateA = `
 apiVersion: v1
 kind: Secret
@@ -21,20 +36,21 @@ metadata:
   name: d8-cluster-configuration
   namespace: d8-system
 data:
-  "cluster-configuration.yaml": |
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ClusterConfiguration
-    spec:
-      clusterType: Static
-      cloud:
-        provider: OpenStack
-        prefix: kube
-      podSubnetCIDR: 10.111.0.0/16
-      podSubnetNodeCIDRPrefix: 24
-      serviceSubnetCIDR: 10.222.0.0/16
-      kubernetesVersion: 1.15
-`
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
 
+		stateBClusterConfiguration = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+spec:
+  clusterType: Cloud
+  cloud:
+    provider: AWS
+    prefix: lube
+  podSubnetCIDR: 10.122.0.0/16
+  podSubnetNodeCIDRPrefix: 26
+  serviceSubnetCIDR: 10.213.0.0/16
+  kubernetesVersion: 1.18
+`
 		stateB = `
 apiVersion: v1
 kind: Secret
@@ -42,19 +58,7 @@ metadata:
   name: d8-cluster-configuration
   namespace: d8-system
 data:
-  "cluster-configuration.yaml": |
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ClusterConfiguration
-    spec:
-      clusterType: Cloud
-      cloud:
-        provider: AWS
-        prefix: lube
-      podSubnetCIDR: 10.122.0.0/16
-      podSubnetNodeCIDRPrefix: 26
-      serviceSubnetCIDR: 10.213.0.0/16
-      kubernetesVersion: 1.18
-`
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)

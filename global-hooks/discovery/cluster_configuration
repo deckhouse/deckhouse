@@ -14,7 +14,7 @@ function __config__() {
           matchNames: [d8-system]
       nameSelector:
         matchNames: [d8-cluster-configuration]
-      jqFilter: '.data."cluster-configuration.yaml"'
+      jqFilter: '.data."cluster-configuration.yaml" | @base64d'
 EOF
 }
 
