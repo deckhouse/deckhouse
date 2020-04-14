@@ -197,13 +197,7 @@ spec:
                   pattern: '^[0-9]+[mh]{1}$'
             bashible:
               type: object
-              required:
-              - bundle
               properties:
-                bundle:
-                  description: The name of one of bashible bundles.
-                  example: "ubuntu-18.04-1.0"
-                  type: string
                 options:
                   description: "Options to pass to bundle during the bootstrap stage. Vary between different bundles"
                   type: object

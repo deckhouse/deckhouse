@@ -1,5 +1,0 @@
-#!/bin/bash
-
-mkdir -p /var/lib/kubelet/manifests
-mkdir -p /etc/systemd/system/kubelet.service.d
-mkdir -p /etc/kubernetes/pki
