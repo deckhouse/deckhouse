@@ -1,0 +1,38 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: cluster_configuration
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      nameSelector:
+        matchNames: [d8-cluster-configuration]
+      jqFilter: '.data."cluster-configuration.yaml"'
+EOF
+}
+
+function set_values_from_cluster_configuration_yaml() {
+  cluster_configuration_json=$(echo "$1" | yq r - spec --tojson)
+
+  values::set global.clusterConfiguration "$cluster_configuration_json"
+
+  values::set global.discovery.podSubnet "$(echo "$cluster_configuration_json" | jq -r '.podSubnetCIDR')"
+  values::set global.discovery.serviceSubnet "$(echo "$cluster_configuration_json" | jq -r '.serviceSubnetCIDR')"
+}
+
+function __on_kubernetes::cluster_configuration::synchronization() {
+  set_values_from_cluster_configuration_yaml "$(context::get objects.0.filterResult)"
+}
+
+function __on_kubernetes::cluster_configuration::added_or_modified() {
+  set_values_from_cluster_configuration_yaml "$(context::get filterResult)"
+}
+
+hook::run "$@"
