@@ -1,3 +1,0 @@
-#!/bin/bash
-
-echo "Some step from provier: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.authURL }}"

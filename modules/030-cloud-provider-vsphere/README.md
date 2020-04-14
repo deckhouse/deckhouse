@@ -147,17 +147,6 @@ cloudProviderVsphere: |
         * Формат — integer. От 0 до 100.
         * Опциональный параметр.
         * По-умолчанию, `80`.
-* `bashible` — параметры bootstrap фазы.
-    * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
-        * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
-        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
-        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
-
-        ```yaml
-        options:
-          kubernetesVersion: "1.15.3"
-        ```
 
 #### Пример VsphereInstanceClass
 
@@ -173,10 +162,6 @@ spec:
   template: dev/golden_image
   network: k8s-msk-178
   datastore: lun-1201
-  bashible:
-    bundle: ubuntu-18.04-1.0
-    options:
-      kubernetesVersion: 1.15.3
 ```
 
 ### Storage

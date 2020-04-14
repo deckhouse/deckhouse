@@ -36,7 +36,6 @@ spec:
   template:
     metadata:
       annotations:
-        bashible-bundle: ubuntu-18.04-1.0
         checksum/bashible-bundles-options: d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09
         checksum/machine-class: 95ad1a35397453b647c1d25d78264bca4605ff522e719e8f605159a9351d8c2a
       creationTimestamp: null

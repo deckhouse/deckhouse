@@ -1,0 +1,79 @@
+#!/bin/bash
+
+cat << "EOF" > /var/lib/bashible/kubernetes-api-proxy-configurator.sh
+#!/bin/bash
+
+function stream_backends() {
+  KUBECONFIG=$(grep -Eo '\--kubeconfig=([a-zA-Z0-9/\.]+)' /etc/systemd/system/kubelet.service.d/cim.conf | cut -f2 -d'=')
+  kubernetes_api_endpoints=$(kubectl --kubeconfig=${KUBECONFIG} -n default get endpoints kubernetes -o json | jq '.subsets[].addresses[].ip' -re)
+  exit_status=$?
+  if [ $exit_status -eq 0 ]; then
+    for ip in ${kubernetes_api_endpoints} ; do
+      echo -e "    server $ip:6443;"
+    done
+  fi
+}
+
+function parse_stream_backends() {
+  IFS="," read -ra ADDR <<< "$1"; for ip in "${ADDR[@]}"; do echo -e "    server $ip;"; done
+}
+
+if [ ! -z "$1" ] ; then
+  backends="$(parse_stream_backends $1)"
+else
+  backends="$(stream_backends)"
+fi
+
+if [ -z "$backends" ] ; then
+  exit 0
+else
+  cat > /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf <<END
+{{- if eq .bashibleBundle "ubuntu-18.04" }}
+user www-data;
+load_module /usr/lib/nginx/modules/ngx_stream_module.so;
+{{- else if eq .bashibleBundle "centos-7" }}
+user nginx;
+include /usr/share/nginx/modules/*.conf;
+{{- end }}
+pid /var/run/kubernetes-api-proxy.pid;
+error_log stderr notice;
+
+worker_processes 2;
+worker_rlimit_nofile 130048;
+worker_shutdown_timeout 10s;
+
+events {
+  multi_accept on;
+  use epoll;
+  worker_connections 16384;
+}
+
+stream {
+  upstream kubernetes_api_servers {
+    least_conn;
+$backends
+  }
+  server {
+    listen 127.0.0.1:6445;
+    proxy_pass kubernetes_api_servers;
+    proxy_timeout 10m;
+    proxy_connect_timeout 1s;
+  }
+}
+END
+
+  if [ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
+    cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
+    systemctl restart kubernetes-api-proxy
+  else
+    old_config=$(sha256sum /etc/kubernetes/kubernetes-api-proxy/nginx.conf | awk '{print $1}')
+    new_config=$(sha256sum /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf | awk '{print $1}')
+    if [ "$old_config" != "$new_config" ] ; then
+      mv /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
+      systemctl restart kubernetes-api-proxy
+    fi
+  fi
+fi
+EOF
+
+chmod +x /var/lib/bashible/kubernetes-api-proxy-configurator.sh

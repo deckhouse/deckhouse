@@ -92,17 +92,6 @@ cloudProviderOpenstack: |
 * `rootDiskSize` — если параметр присутствует, OpenStack server будет создан на Cinder volume с указанным размером и стандартным для кластера типом.
     * Опциональный параметр.
     * Формат — integer. В гигабайтах.
-* `bashible` — параметры bootstrap фазы.
-    * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
-        * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
-        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
-        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
-
-        ```yaml
-        options:
-          kubernetesVersion: "1.15.3"
-        ```
 
 #### Пример OpenStackInstanceClass
 
@@ -114,10 +103,6 @@ metadata:
 spec:
   flavorName: m1.large
   imageName: ubuntu-18-04-cloud-amd64
-  bashible:
-    bundle: ubuntu-18.04-1.0
-    options:
-      kubernetesVersion: 1.15.3
 ```
 
 ### Storage

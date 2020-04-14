@@ -1,31 +1,31 @@
 {{- define "instance_group_machine_class_bashible_bashible_script" }}
   {{- $context := index . 0 }}
-  {{- $ig := index . 1 }}
+  {{- $ng := index . 1 }}
+#!/usr/bin/env bash
 
-  {{- $bashible_bundle := $ig.bashible.bundle -}}
-#!/bin/bash
-
-set -Eeuom pipefail
-shopt -s failglob
+set -Eeom pipefail
 
 BOOTSTRAP_DIR="/var/lib/bashible"
+BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
+mkdir -p "$BUNDLE_STEPS_DIR"
 
-# Download and extract bashible bundle
-if [[ $# -eq 1 && "x$1" == "xbootstrap" ]] ; then
-  bundle_dir="bundle-bootstrap"
-  bundle_collections="bundle-{{ $bashible_bundle }} bundle-{{ $bashible_bundle }}-bootstrap bundle-{{ $bashible_bundle }}-{{ $ig.name }} bundle-{{ $bashible_bundle }}-{{ $ig.name }}-bootstrap"
+BASHIBLE_BUNDLE="$(cat $BOOTSTRAP_DIR/bundle)"
+
+# How to authenticate in kubernetes API
+if [ -f /var/lib/bashible/bootstrap-token ] ; then
   wget_auth=(--ca-certificate="$BOOTSTRAP_DIR/ca.crt" --header="Authorization: Bearer $(</var/lib/bashible/bootstrap-token)")
 else
-  bundle_dir="bundle"
-  bundle_collections="bundle-{{ $bashible_bundle }} bundle-{{ $bashible_bundle }}-{{ $ig.name }}"
   wget_auth=(--ca-certificate=/etc/kubernetes/pki/ca.crt --certificate=/var/lib/kubelet/pki/kubelet-client-current.pem)
 fi
-mkdir -p "$BOOTSTRAP_DIR/$bundle_dir"
+
 if [ -f "/etc/kubernetes/kubernetes-api-proxy/nginx.conf" ] ; then
   servers="kubernetes:6445"
 else
   servers={{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " | quote }}
 fi
+
+# Get bashible steps from Secret resources
+bundle_collections="bundle-${BASHIBLE_BUNDLE} bundle-${BASHIBLE_BUNDLE}-{{ $ng.name }}"
 for bundle_collection in $bundle_collections ; do
   while true ; do
     for server in ${servers} ; do
@@ -51,7 +51,8 @@ for bundle_collection in $bundle_collections ; do
 
     steps=$(cat $BOOTSTRAP_DIR/${bundle_collection}.json | jq '. // {} | keys | .[]' -r)
     for step in $steps; do
-      cat $BOOTSTRAP_DIR/${bundle_collection}.json | jq '."'$step'"' -r | base64 -d > "$BOOTSTRAP_DIR/$bundle_dir/$step"
+      cat $BOOTSTRAP_DIR/${bundle_collection}.json | jq '."'$step'"' -r | base64 -d > "$BUNDLE_STEPS_DIR/$step"
+      chmod +x "$BUNDLE_STEPS_DIR/$step"
     done
 
     break
@@ -59,13 +60,17 @@ for bundle_collection in $bundle_collections ; do
 done
 
 # Execute bashible steps
-for step in $(ls -1 $BOOTSTRAP_DIR/$bundle_dir/ | sort); do
+for step in $BUNDLE_STEPS_DIR/*; do
   while true; do
     if ! (
-      set -Eeuo pipefail
-      shopt -s failglob
+      unset CDPATH
+      cd $BOOTSTRAP_DIR
 
-      . $BOOTSTRAP_DIR/$bundle_dir/$step
+      if [ -f /var/lib/bashible/bashbooster.sh ]; then source /var/lib/bashible/bashbooster.sh; fi
+
+      set -Eeo pipefail
+
+      . $step
     ) ; then
       >&2 echo "Failed to execute step "$step". Retry in 10 seconds."
       sleep 10

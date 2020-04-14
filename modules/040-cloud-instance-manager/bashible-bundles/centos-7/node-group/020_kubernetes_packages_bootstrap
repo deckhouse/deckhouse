@@ -1,0 +1,8 @@
+if bb-flag? is-bootstrapped; then exit 0; fi
+
+{{- $kubernetes_version := .nodeGroup.bashible.options.kubernetesVersion }}
+
+if ! yum list installed kubelet | grep -F {{ $kubernetes_version }}; then
+  yum install -y "kubelet-{{ $kubernetes_version }}-*" "kubectl-{{ $kubernetes_version }}-*"
+  yum versionlock "kubelet-*" "kubectl-*" "kubernetes-cni-*"
+fi

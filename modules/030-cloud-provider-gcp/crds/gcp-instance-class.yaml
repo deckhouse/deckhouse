@@ -53,20 +53,3 @@ spec:
               description: Instance disk size in gigabytes.
               example: 20
               type: integer
-            bashible:
-              type: object
-              required:
-              - bundle
-              properties:
-                bundle:
-                  description: The name of one of bashible bundles.
-                  example: "ubuntu-18.04-1.0"
-                  type: string
-                options:
-                  description: "Options to pass to bundle during the bootstrap stage. Vary between different bundles"
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true
-                dynamicOptions:
-                  description: "Options to pass to bundle during the main stage. Vary between different bundles"
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true

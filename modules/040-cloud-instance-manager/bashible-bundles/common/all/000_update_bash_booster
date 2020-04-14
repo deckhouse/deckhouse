@@ -1,0 +1,7 @@
+{{- $bb_files := list -}}
+{{- range $path, $_ := $.Files.Glob "bash-booster/*" -}}
+  {{- $bb_files = append $bb_files $path -}}
+{{- end -}}
+base64 -d > /var/lib/bashible/bashbooster.sh << EOF
+{{ range $path := ( $bb_files | sortAlpha ) }}{{ $.Files.Get $path | b64enc }}{{ end }}
+EOF

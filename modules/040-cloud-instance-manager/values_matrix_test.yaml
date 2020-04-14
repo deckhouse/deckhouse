@@ -63,7 +63,6 @@ cloudInstanceManager:
               instanceType: t2.medium
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.16.6
@@ -82,7 +81,6 @@ cloudInstanceManager:
               instanceType: t2.medium
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.16.6
@@ -129,7 +127,6 @@ cloudInstanceManager:
               imageName: ubuntu-18-04-cloud-amd64
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
@@ -173,7 +170,6 @@ cloudInstanceManager:
               diskSizeGb: 42 #optional
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
@@ -193,7 +189,6 @@ cloudInstanceManager:
               machineType: mymachinetype
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
@@ -244,7 +239,6 @@ cloudInstanceManager:
                 memoryReservation: 42
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
@@ -294,7 +288,6 @@ cloudInstanceManager:
                 my: label
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
@@ -322,7 +315,6 @@ cloudInstanceManager:
                 my: label
             nodeType: Cloud
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
@@ -344,7 +336,6 @@ cloudInstanceManager:
         - - name: worker
             nodeType: Static
             bashible:
-              bundle: ubuntu-18.04-1.0
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4

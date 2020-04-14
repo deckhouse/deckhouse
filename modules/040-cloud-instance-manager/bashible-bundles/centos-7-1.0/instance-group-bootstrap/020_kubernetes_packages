@@ -1,8 +1,0 @@
-#!/bin/bash
-
-{{- $kubernetes_version := .instanceGroup.bashible.options.kubernetesVersion }}
-
-if ! yum list installed kubelet | grep -F {{ $kubernetes_version }}; then
-  yum install -y "kubelet-{{ $kubernetes_version }}-*" "kubectl-{{ $kubernetes_version }}-*"
-  yum versionlock "kubelet-*" "kubectl-*" "kubernetes-cni-*"
-fi

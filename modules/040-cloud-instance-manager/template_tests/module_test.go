@@ -63,7 +63,6 @@ internal:
       instanceType: t2.medium
     nodeType: Cloud
     bashible:
-      bundle: ubuntu-18.04-1.0
       dynamicOptions: {}
       options:
         kubernetesVersion: 1.16.6
@@ -105,7 +104,6 @@ internal:
       diskSizeGb: 42 #optional
     nodeType: Cloud
     bashible:
-      bundle: ubuntu-18.04-1.0
       dynamicOptions: {}
       options:
         kubernetesVersion: 1.15.4
@@ -149,7 +147,6 @@ internal:
       imageName: ubuntu-18-04-cloud-amd64
     nodeType: Cloud
     bashible:
-      bundle: ubuntu-18.04-1.0
       dynamicOptions: {}
       options:
         kubernetesVersion: 1.15.4
@@ -199,7 +196,6 @@ internal:
         memoryReservation: 42
     nodeType: Cloud
     bashible:
-      bundle: ubuntu-18.04-1.0
       dynamicOptions: {}
       options:
         kubernetesVersion: 1.15.4
@@ -253,7 +249,6 @@ internal:
         my: label
     nodeType: Cloud
     bashible:
-      bundle: ubuntu-18.04-1.0
       dynamicOptions: {}
       options:
         kubernetesVersion: 1.15.4
@@ -277,7 +272,6 @@ internal:
   - name: worker
     nodeType: Static
     bashible:
-      bundle: ubuntu-18.04-1.0
       dynamicOptions: {}
       options:
         kubernetesVersion: 1.15.4
@@ -344,18 +338,10 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0")
-			bashibleBundleCentosBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-bootstrap")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker")
-			bashibleBundleCentosWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker-bootstrap")
-			bashibleBundlePreCooked := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0")
-			bashibleBundlePreCookedBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-bootstrap")
-			bashibleBundlePreCookedWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker")
-			bashibleBundlePreCookedWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker-bootstrap")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0")
-			bashibleBundleUbuntuBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-bootstrap")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker")
-			bashibleBundleUbuntuWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker-bootstrap")
+			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
+			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
+			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -394,17 +380,9 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
 			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorkerBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCooked.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorkerBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorkerBootstrap.Exists()).To(BeTrue())
 		})
 	})
 
@@ -462,18 +440,10 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0")
-			bashibleBundleCentosBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-bootstrap")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker")
-			bashibleBundleCentosWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker-bootstrap")
-			bashibleBundlePreCooked := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0")
-			bashibleBundlePreCookedBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-bootstrap")
-			bashibleBundlePreCookedWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker")
-			bashibleBundlePreCookedWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker-bootstrap")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0")
-			bashibleBundleUbuntuBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-bootstrap")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker")
-			bashibleBundleUbuntuWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker-bootstrap")
+			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
+			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
+			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -513,17 +483,9 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
 			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorkerBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCooked.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorkerBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorkerBootstrap.Exists()).To(BeTrue())
 		})
 	})
 
@@ -581,18 +543,10 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0")
-			bashibleBundleCentosBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-bootstrap")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker")
-			bashibleBundleCentosWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker-bootstrap")
-			bashibleBundlePreCooked := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0")
-			bashibleBundlePreCookedBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-bootstrap")
-			bashibleBundlePreCookedWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker")
-			bashibleBundlePreCookedWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker-bootstrap")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0")
-			bashibleBundleUbuntuBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-bootstrap")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker")
-			bashibleBundleUbuntuWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker-bootstrap")
+			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
+			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
+			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -632,17 +586,9 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
 			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorkerBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCooked.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorkerBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorkerBootstrap.Exists()).To(BeTrue())
 		})
 	})
 
@@ -700,18 +646,10 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0")
-			bashibleBundleCentosBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-bootstrap")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker")
-			bashibleBundleCentosWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker-bootstrap")
-			bashibleBundlePreCooked := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0")
-			bashibleBundlePreCookedBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-bootstrap")
-			bashibleBundlePreCookedWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker")
-			bashibleBundlePreCookedWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker-bootstrap")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0")
-			bashibleBundleUbuntuBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-bootstrap")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker")
-			bashibleBundleUbuntuWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker-bootstrap")
+			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
+			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
+			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -751,17 +689,9 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
 			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorkerBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCooked.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorkerBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorkerBootstrap.Exists()).To(BeTrue())
 		})
 	})
 
@@ -819,18 +749,10 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0")
-			bashibleBundleCentosBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-bootstrap")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker")
-			bashibleBundleCentosWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker-bootstrap")
-			bashibleBundlePreCooked := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0")
-			bashibleBundlePreCookedBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-bootstrap")
-			bashibleBundlePreCookedWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker")
-			bashibleBundlePreCookedWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker-bootstrap")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0")
-			bashibleBundleUbuntuBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-bootstrap")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker")
-			bashibleBundleUbuntuWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker-bootstrap")
+			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
+			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
+			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -870,17 +792,9 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
 			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorkerBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCooked.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorkerBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorkerBootstrap.Exists()).To(BeTrue())
 		})
 	})
 
@@ -925,18 +839,10 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0")
-			bashibleBundleCentosBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-bootstrap")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker")
-			bashibleBundleCentosWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.0-worker-bootstrap")
-			bashibleBundlePreCooked := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0")
-			bashibleBundlePreCookedBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-bootstrap")
-			bashibleBundlePreCookedWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker")
-			bashibleBundlePreCookedWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-pre-cooked-1.0-worker-bootstrap")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0")
-			bashibleBundleUbuntuBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-bootstrap")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker")
-			bashibleBundleUbuntuWorkerBootstrap := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.0-worker-bootstrap")
+			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
+			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
+			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -971,17 +877,9 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
 			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorkerBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCooked.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedBootstrap.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundlePreCookedWorkerBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuBootstrap.Exists()).To(BeTrue())
 			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorkerBootstrap.Exists()).To(BeTrue())
 		})
 	})
 })
