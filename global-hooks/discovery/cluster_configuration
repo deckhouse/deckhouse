@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: cluster_configuration
+      includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Secret
       namespace:
@@ -27,12 +28,12 @@ function set_values_from_cluster_configuration_yaml() {
   values::set global.discovery.serviceSubnet "$(echo "$cluster_configuration_json" | jq -r '.serviceSubnetCIDR')"
 }
 
-function __on_kubernetes::cluster_configuration::synchronization() {
-  set_values_from_cluster_configuration_yaml "$(context::get objects.0.filterResult)"
-}
-
-function __on_kubernetes::cluster_configuration::added_or_modified() {
-  set_values_from_cluster_configuration_yaml "$(context::get filterResult)"
+function __main__() {
+  if context::has snapshots.cluster_configuration.0.filterResult; then
+    set_values_from_cluster_configuration_yaml "$(context::get snapshots.cluster_configuration.0.filterResult)"
+  else
+    values::unset global.clusterConfiguration
+  fi
 }
 
 hook::run "$@"

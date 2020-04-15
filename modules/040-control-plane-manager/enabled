@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  enabled::disable_module_if_cluster_is_not_bootstraped
+
+  if values::has global.clusterConfiguration ; then
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "false" > "$MODULE_ENABLED_RESULT"
+  fi
+}
+
+enabled::run "$@"

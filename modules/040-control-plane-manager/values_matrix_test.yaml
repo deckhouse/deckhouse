@@ -1,0 +1,27 @@
+global:
+  clusterConfiguration:
+    podSubnetNodeCIDRPrefix: 24
+    podSubnetCIDR: 10.244.0.0/16
+    serviceSubnetCIDR: 192.168.0.0/16
+    kubernetesVersion:
+      __ConstantChoices__: ["1.14", "1.15", "1.16"]
+    clusterDomain: test
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: eyJyZWdpc3RyeS5mbGFudC5jb20iOiB7CiAgInVzZXJuYW1lIjogIm9hdXRoMiIsCiAgInBhc3N3b3JkIjogInBhc3N3b3JkIiwKICAiYXV0aCI6ICJhdXRoIiwKICAiZW1haWwiOiAiZmxhbnQtZ2ctMjU2QGZsYW50LmNvbSIKIH0KfQo=
+    tags:
+      controlPlaneManager:
+        controlPlaneManager: tagstring
+        etcd: tagstring
+        kubeApiserver114: tagstring
+        kubeApiserver115: tagstring
+        kubeApiserver116: tagstring
+        kubeScheduler114: tagstring
+        kubeScheduler115: tagstring
+        kubeScheduler116: tagstring
+        kubeControllerManager114: tagstring
+        kubeControllerManager115: tagstring
+        kubeControllerManager116: tagstring
+controlPlaneManager:
+  internal:
+    pkiChecksum: test

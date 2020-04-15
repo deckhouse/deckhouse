@@ -1,0 +1,111 @@
+{{- $kubeImageRepoSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "-" }}
+{{- $kubeImageTagSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "" }}
+
+{{- $kubeApiServerImage := dict }}
+{{- $_ := set $kubeApiServerImage "name" "kube-apiserver" }}
+{{- $_ := set $kubeApiServerImage "env" "KUBE_APISERVER_IMAGE" }}
+{{- $_ := set $kubeApiServerImage "image" (printf "%s/control-plane-manager/kube-apiserver-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "kubeApiserver%s" $kubeImageTagSuffix)) ) }}
+
+{{- $kubeControllerManagerImage := dict }}
+{{- $_ := set $kubeControllerManagerImage "name" "kube-controller-manager" }}
+{{- $_ := set $kubeControllerManagerImage "env" "KUBE_CONTROLLER_MANAGER_IMAGE" }}
+{{- $_ := set $kubeControllerManagerImage "image" (printf "%s/control-plane-manager/kube-controller-manager-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "kubeControllerManager%s" $kubeImageTagSuffix)) ) }}
+
+{{- $kubeSchedulerImage := dict }}
+{{- $_ := set $kubeSchedulerImage "name" "kube-scheduler" }}
+{{- $_ := set $kubeSchedulerImage "env" "KUBE_SCHEDULER_IMAGE" }}
+{{- $_ := set $kubeSchedulerImage "image" (printf "%s/control-plane-manager/kube-scheduler-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "kubeScheduler%s" $kubeImageTagSuffix)) ) }}
+
+{{- $etcdImage := dict }}
+{{- $_ := set $etcdImage "name" "etcd" }}
+{{- $_ := set $etcdImage "env" "ETCD_IMAGE" }}
+{{- $_ := set $etcdImage "image" (printf "%s/control-plane-manager/etcd-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "etcd%s" $kubeImageTagSuffix)) ) }}
+
+{{- $kubeImages := list $kubeApiServerImage $kubeControllerManagerImage $kubeSchedulerImage $etcdImage }}
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: d8-control-plane-manager
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager
+  template:
+    metadata:
+      labels:
+        app: d8-control-plane-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+        checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
+        rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: control-plane-manager
+      containers:
+      - name: control-plane-manager
+        image: {{ .Values.global.modulesImages.registry }}/control-plane-manager/control-plane-manager:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
+        volumeMounts:
+        - mountPath: /var/lib/etcd
+          name: etcd
+          readOnly: true
+        - mountPath: /pki
+          name: pki
+          readOnly: true
+        - mountPath: /config
+          name: config
+          readOnly: true
+        - mountPath: /etc/kubernetes
+          name: etc-kubernetes
+        - mountPath: /root/.kube/
+          name: root-kube
+        env:
+{{- range $kubeImages }}
+        - name: {{ .env }}
+          value: {{ .image }}
+{{- end }}
+        - name: MY_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /ready
+{{- range $kubeImages }}
+      - name: image-holder-{{ .name }}
+        image: {{ .image }}
+        command:
+        - /pause
+{{- end }}
+      hostNetwork: true
+      priorityClassName: system-cluster-critical
+      volumes:
+      - secret:
+          secretName: d8-pki
+        name: pki
+      - secret:
+          secretName: d8-control-plane-manager-config
+        name: config
+      - name: etc-kubernetes
+        hostPath:
+          path: /etc/kubernetes/
+          type: DirectoryOrCreate
+      - name: root-kube
+        hostPath:
+          path: /root/.kube/
+          type: DirectoryOrCreate
+      - name: etcd
+        hostPath:
+          path: /var/lib/etcd
+          type: DirectoryOrCreate

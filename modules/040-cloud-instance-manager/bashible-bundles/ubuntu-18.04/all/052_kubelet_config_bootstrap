@@ -1,5 +1,7 @@
 if bb-flag? is-bootstrapped; then exit 0; fi
 
+mkdir -p /etc/kubernetes/manifests
+
 cat << "EOF" > /etc/systemd/system/kubelet.service.d/cim.conf
 [Service]
 EnvironmentFile=-/etc/default/kubelet
@@ -13,7 +15,7 @@ ExecStart=/usr/bin/kubelet \
     --kubeconfig=/etc/kubernetes/kubelet.conf \
     --network-plugin=cni \
     --cloud-provider=external \
-    --pod-manifest-path=/var/lib/kubelet/manifests \
+    --pod-manifest-path=/etc/kubernetes/manifests \
     --v=2 $KUBELET_EXTRA_ARGS
 EOF
 
