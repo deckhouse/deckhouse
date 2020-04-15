@@ -328,8 +328,6 @@ cloudInstanceManager:
               - zonea
               - zoneb
     - <<: *internalDefaults
-      cloudProvider:
-        type: static
       nodeGroups:
         __ConstantChoices__:
         - []
@@ -339,3 +337,33 @@ cloudInstanceManager:
               dynamicOptions: {}
               options:
                 kubernetesVersion: 1.15.4
+    - <<: *internalDefaults
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            nodeType: Static
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+        - - name: worker
+            instanceClass: # maximum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: OpenStackInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb

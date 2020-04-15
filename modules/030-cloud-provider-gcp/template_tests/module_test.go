@@ -1,7 +1,7 @@
 /*
 
 User-stories:
-1. There are module settings. They must be exported via Secret d8-cloud-instance-manager-cloud-provider.
+1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, pd-csi-driver, simple-bridge.
 
 */
@@ -77,7 +77,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-gcp")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-controller-manager")
 			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-controller-manager")

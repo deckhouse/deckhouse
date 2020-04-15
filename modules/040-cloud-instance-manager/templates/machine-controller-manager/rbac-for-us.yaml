@@ -1,4 +1,5 @@
 {{- if include "machine_controller_manager_enabled" . }}
+  {{- if hasKey $.Values.cloudInstanceManager.internal "cloudProvider" }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -190,4 +191,5 @@ subjects:
 - kind: ServiceAccount
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
+  {{- end }}
 {{- end }}

@@ -1,5 +1,6 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
-{{- if include "cluster_autoscaler_enabled" . }}
+  {{- if include "cluster_autoscaler_enabled" . }}
+    {{- if hasKey $.Values.cloudInstanceManager.internal "cloudProvider" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -30,5 +31,6 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-{{ .Chart.Name }}
-{{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}

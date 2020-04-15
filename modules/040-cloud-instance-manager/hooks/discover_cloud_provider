@@ -15,7 +15,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       nameSelector:
-        matchNames: [d8-cloud-instance-manager-cloud-provider]
+        matchNames: [d8-node-manager-cloud-provider]
       jqFilter: |
         (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
         +
@@ -27,8 +27,7 @@ function __on_kubernetes::cloud_provider_secret() {
   if context::has snapshots.cloud_provider_secret.0.filterResult; then
     values::set cloudInstanceManager.internal.cloudProvider "$(context::get snapshots.cloud_provider_secret.0.filterResult)"
   else
-    >&2 echo "ERROR: can't find secret kube-system/d8-cloud-instance-manager-cloud-provider, module cloud-provider-xxx didn't run?"
-    return 1
+    values::unset cloudInstanceManager.internal.cloudProvider
   fi
 }
 

@@ -1,7 +1,7 @@
 /*
 
 User-stories:
-1. There are module settings. They must be exported via Secret d8-cloud-instance-manager-cloud-provider.
+1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, yandex-csi, flannel.
 
 */
@@ -84,7 +84,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-yandex")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:flannel")
 			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:flannel")

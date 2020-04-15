@@ -33,7 +33,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       nameSelector:
-        matchNames: [d8-cloud-instance-manager-cloud-provider]
+        matchNames: [d8-node-manager-cloud-provider]
       jqFilter: |
         (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
         +
@@ -78,11 +78,9 @@ EOF
 }
 
 function __main__() {
+  default_zones_num="0"
   if context::has snapshots.cloud_provider_secrets.0; then
     default_zones_num="$(context::jq -r '.snapshots.cloud_provider_secrets[0].filterResult.zonesNum')"
-  else
-    >&2 echo "ERROR: can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
-    return 1
   fi
 
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
@@ -101,7 +99,14 @@ function __main__() {
       --arg nodes_num "$nodes" \
       --arg ready_nodes_num "$ready_nodes" \
       '.snapshots.ngs[$i | tonumber].filterResult |
-        if .spec.nodeType == "Cloud" then
+        if .spec.nodeType == "Cloud" and $default_zones_num == "0" then
+        {
+          "desired": ($desired_instances_num | tonumber),
+          "instances": ($instances_num | tonumber),
+          "nodes": ($nodes_num | tonumber),
+          "ready": ($ready_nodes_num | tonumber)
+        }
+        elif .spec.nodeType == "Cloud" then
         {
           "max": (.maxPerZone * (.zonesNum // ($default_zones_num | tonumber))),
           "min": (.minPerZone * (.zonesNum // ($default_zones_num | tonumber))),
