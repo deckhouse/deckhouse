@@ -1,5 +1,5 @@
 {{- if include "machine_controller_manager_enabled" . }}
-{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+  {{- if and (hasKey $.Values.cloudInstanceManager.internal "cloudProvider") (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -30,5 +30,5 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-{{ .Chart.Name }}
-{{- end }}
+  {{- end }}
 {{- end }}

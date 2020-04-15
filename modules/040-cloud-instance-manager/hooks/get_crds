@@ -4,9 +4,12 @@ source /deckhouse/shell_lib.sh
 
 function __config__() {
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-    general_instance_class_kind=D8TestInstanceClass
+    instance_class_kind=D8TestInstanceClass
   else
-    general_instance_class_kind=$(cat /tmp/cloud-instance-manager-instance-class-kind)
+    instance_class_kind="$(kubectl get -n kube-system secret d8-node-manager-cloud-provider -o json 2>/dev/null | jq -r '.data.instanceClassKind' | base64 -d || true)"
+    if [ -n "$instance_class_kind" ]; then
+      echo "$instance_class_kind" > /tmp/node-manager-instance-class-kind
+    fi
   fi
 
   cat << EOF
@@ -14,7 +17,7 @@ function __config__() {
     kubernetes:
     - name: ngs
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
+      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets]
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -24,33 +27,48 @@ function __config__() {
           +
           {"manual-rollout-id": (.metadata.annotations."manual-rollout-id" // "")})
         }
+    $(
+    if [ -n "$instance_class_kind" ]; then
+      echo "
     - name: ics
       queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
       apiVersion: deckhouse.io/v1alpha1
-      kind: ${general_instance_class_kind}
+      kind: ${instance_class_kind}
       jqFilter: |
         {
           "name": .metadata.name,
           "spec": .spec,
           "bundle": .spec.bashible.bundle
         }
+"
+    fi
+    )
     - name: cloud_provider_secrets
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
+      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets]
       apiVersion: v1
       kind: Secret
       namespace:
         nameSelector:
           matchNames: [kube-system]
       nameSelector:
-        matchNames: [d8-cloud-instance-manager-cloud-provider]
+        matchNames: [d8-node-manager-cloud-provider]
       jqFilter: |
         (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
         +
         (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
         | {"zones": .zones}
 EOF
+}
+
+function __on_kubernetes::cloud_provider_secrets() {
+  if [ ! -v D8_IS_TESTS_ENVIRONMENT ] && [ "$(context::jq -r '.snapshots.cloud_provider_secrets | length')" -gt "0" ]; then
+    instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
+    if [ "$instance_class_kind" != "$(context::get snapshots.cloud_provider_secrets.0.object.data.instanceClassKind | base64 -d)" ]; then
+      kill 1
+    fi
+  fi
 }
 
 # $1 — CIG name
@@ -66,15 +84,10 @@ function _set_ng_error_status() {
 
 function __main__() {
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-    general_instance_class_kind=D8TestInstanceClass
+    instance_class_kind=D8TestInstanceClass
   else
-    general_instance_class_kind=$(cat /tmp/cloud-instance-manager-instance-class-kind)
+    instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
   fi
-
-
-  instance_classes="$(context::jq -r '
-    [.snapshots.ics[]] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
-  ')"
 
   final_node_groups="[]"
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
@@ -82,65 +95,71 @@ function __main__() {
     ng="$(context::get snapshots.ngs.$i.filterResult.spec)"
     ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
 
+    # If cloud provider exist
+    if [ -n "$instance_class_kind" ] && [ "$(context::jq '.snapshots.ics | length')" -gt "0" ]; then
+      instance_classes="$(context::jq -r '
+        [.snapshots.ics[]] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
+      ')"
 
-    # check #1 — is .spec.cloudInstances.classReference.kind allowed in our cluster
-    ng_instance_class_kind=$(jq -r '.cloudInstances.classReference.kind' <<< "$ng")
-    if [[ "$ng_instance_class_kind" != "$general_instance_class_kind" ]] ; then
-      error_message="Wrong classReference: Kind $ng_instance_class_kind is not allowed, the only allowed kind is $general_instance_class_kind."
+      # check #1 — is .spec.cloudInstances.classReference.kind allowed in our cluster
+      ng_instance_class_kind=$(jq -r '.cloudInstances.classReference.kind' <<< "$ng")
+      if [[ "$ng_instance_class_kind" != "$instance_class_kind" ]] ; then
+        error_message="Wrong classReference: Kind $ng_instance_class_kind is not allowed, the only allowed kind is $instance_class_kind."
 
-      if
-        values::has cloudInstanceManager.internal.nodeGroups && \
-        earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
-      then
-        final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
-        error_message="$error_message Earlier stored version of NG is in use now!"
+        if
+          values::has cloudInstanceManager.internal.nodeGroups && \
+          earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
+        then
+          final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
+          error_message="$error_message Earlier stored version of NG is in use now!"
+        fi
+
+        >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
+        _set_ng_error_status "${ng_name}" "${error_message}"
+        continue
       fi
 
-      >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
-      _set_ng_error_status "${ng_name}" "${error_message}"
-      continue
-    fi
+      # check #2 — is .spec.cloudInstances.classReference valid
+      ng_instance_class_name=$(jq -r '.cloudInstances.classReference.name' <<< "$ng")
+      if jq -e '. | has("'$ng_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
+        error_message="Wrong classReference: There is no valid instance class $ng_instance_class_name of type $ng_instance_class_kind."
 
-    # check #2 — is .spec.cloudInstances.classReference valid
-    ng_instance_class_name=$(jq -r '.cloudInstances.classReference.name' <<< "$ng")
-    if jq -e '. | has("'$ng_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
-      error_message="Wrong classReference: There is no valid instance class $ng_instance_class_name of type $ng_instance_class_kind."
+        if
+          values::has cloudInstanceManager.internal.nodeGroups && \
+          earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
+        then
+          final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
+          error_message="$error_message Earlier stored version of NG is in use now!"
+        fi
 
-      if
-        values::has cloudInstanceManager.internal.nodeGroups && \
-        earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
-      then
-        final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
-        error_message="$error_message Earlier stored version of NG is in use now!"
+        >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
+        _set_ng_error_status "${ng_name}" "${error_message}"
+        continue
       fi
 
-      >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
-      _set_ng_error_status "${ng_name}" "${error_message}"
-      continue
-    fi
-
-    # check #3 — is there zones description in cloud-provider secret
-    if context::has snapshots.cloud_provider_secrets.0; then
-      default_zones="$(context::get snapshots.cloud_provider_secrets.0.filterResult.zones)"
-    else
-      error_message="Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."
-      if
-        values::has cloudInstanceManager.internal.nodeGroups && \
-        earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
-      then
-        final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
-        error_message="$error_message Earlier stored version of NG is in use now!"
+      # check #3 — is there zones description in cloud-provider secret
+      if context::has snapshots.cloud_provider_secrets.0; then
+        default_zones="$(context::get snapshots.cloud_provider_secrets.0.filterResult.zones)"
+      else
+        error_message="Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider."
+        if
+          values::has cloudInstanceManager.internal.nodeGroups && \
+          earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
+        then
+          final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
+          error_message="$error_message Earlier stored version of NG is in use now!"
+        fi
+        >&2 echo "ERROR: $error_message"
+        _set_ng_error_status "${ng_name}" "${error_message}"
+        continue
       fi
-      >&2 echo "ERROR: $error_message"
-      _set_ng_error_status "${ng_name}" "${error_message}"
-      continue
-    fi
 
-    ng_instance_class="$(jq --arg name $ng_instance_class_name '.[$name]' <<< "$instance_classes")"
-    ng="$(jq \
-      --argjson instance_class "${ng_instance_class}" \
-      --argjson default_zones "$default_zones" \
-      '.instanceClass = $instance_class | .cloudInstances.zones //= $default_zones' <<< "$ng")"
+      ng_instance_class="$(jq --arg name $ng_instance_class_name '.[$name]' <<< "$instance_classes")"
+      ng="$(jq \
+        --argjson instance_class "${ng_instance_class}" \
+        --argjson default_zones "$default_zones" \
+        '.instanceClass = $instance_class | .cloudInstances.zones //= $default_zones' <<< "$ng")"
+    fi
 
     _set_ng_error_status "${ng_name}" ""
     final_node_groups="$(jq --argjson ng "$ng" '. + [$ng]' <<< $final_node_groups)"

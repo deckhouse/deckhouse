@@ -3,7 +3,7 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
+	// "github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -122,7 +122,7 @@ status:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cloud-instance-manager-cloud-provider
+  name: d8-node-manager-cloud-provider
   namespace: kube-system
 data:
   zones: WyJub3ZhIl0= # ["nova"]
@@ -141,8 +141,9 @@ data:
 		})
 
 		It("Hook must not fail", func() {
-			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider.`))
+			Expect(f).To(ExecuteSuccessfully())
+			// Expect(f).To(Not(ExecuteSuccessfully()))
+			// Expect(f.Session.Err).Should(gbytes.Say(`ERROR: can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider.`))
 		})
 	})
 

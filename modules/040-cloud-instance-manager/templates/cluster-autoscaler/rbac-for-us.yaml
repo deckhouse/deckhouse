@@ -1,4 +1,6 @@
-{{- if include "cluster_autoscaler_nodes" . }}
+{{- if include "cluster_autoscaler_enabled" . }}
+  {{- if hasKey $.Values.cloudInstanceManager.internal "cloudProvider" }}
+    {{- if include "cluster_autoscaler_nodes" . }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -109,8 +111,7 @@ subjects:
 - kind: ServiceAccount
   name: cluster-autoscaler
   namespace: d8-cloud-instance-manager
-{{- end }}
-{{- if include "cluster_autoscaler_enabled" . }}
+    {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -125,4 +126,5 @@ subjects:
 - kind: ServiceAccount
   name: cluster-autoscaler
   namespace: d8-cloud-instance-manager
+  {{- end }}
 {{- end }}

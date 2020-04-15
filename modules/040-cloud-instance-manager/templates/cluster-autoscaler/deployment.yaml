@@ -23,6 +23,7 @@
 {{- end }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
+  {{- if hasKey $.Values.cloudInstanceManager.internal "cloudProvider" }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -119,4 +120,5 @@ spec:
           requests:
             memory: 50Mi
             cpu: 25m
+  {{- end }}
 {{- end }}

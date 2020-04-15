@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Modules :: cloud-instance-manager :: hooks :: get_crds ::", func() {
 	const (
-		stateCIGProper = `
+		stateNGProper = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -42,7 +42,7 @@ spec:
     bundle: slackware-14.1
 
 `
-		stateCIGProperManualRolloutId = `
+		stateNGProperManualRolloutId = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -70,7 +70,7 @@ spec:
     zones: [a,b]
 
 `
-		stateCIGWrongKind = `
+		stateNGWrongKind = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -82,7 +82,7 @@ spec:
       kind: ImproperInstanceClass
       name: improper
 `
-		stateCIGWrongRefName = `
+		stateNGWrongRefName = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -122,7 +122,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cloud-instance-manager-cloud-provider
+  name: d8-node-manager-cloud-provider
   namespace: kube-system
 data:
   zones: WyJub3ZhIl0= # ["nova"]
@@ -145,25 +145,77 @@ data:
 		})
 	})
 
+	Context("Cluster with NG", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper))
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectedJSON := `
+				[
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      }
+				    },
+				    "manual-rollout-id": "",
+				    "name": "proper1"
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "manual-rollout-id": "",
+				    "name": "proper2"
+				  }
+				]
+`
+			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
+		})
+	})
+
 	Context("Cluster with two pairs of NG+IC but without provider secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateICProper))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper))
 			f.RunHook()
 		})
 
 		It("Hook must not fail, NG statuses must update", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider."))
+			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider."))
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(Equal("[]"))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider.`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider.`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider.`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider.`))
 		})
 	})
 
 	Context("Cluster with two pairs of NG+IC but without provider secret and previosly stored NGs data", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateICProper))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper))
 			f.ValuesSetFromYaml("cloudInstanceManager.internal.nodeGroups", []byte(`
 -
   name: proper2
@@ -177,19 +229,19 @@ data:
 
 		It("Hook must not fail and old data must be stored", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider. Earlier stored version of NG is in use now!"))
+			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider. Earlier stored version of NG is in use now!"))
 
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(`[{"name": "proper1","some": "data1"},{"name": "proper2","some": "data2"}]`))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider. Earlier stored version of NG is in use now!`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-cloud-instance-manager-cloud-provider. Earlier stored version of NG is in use now!`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider. Earlier stored version of NG is in use now!`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider. Earlier stored version of NG is in use now!`))
 		})
 
 	})
 
 	Context("With manual-rollout-id", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProperManualRolloutId + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProperManualRolloutId + stateICProper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 
@@ -201,57 +253,57 @@ data:
 
 	Context("Proper cluster with two pairs of NG+IC and provider secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 
-		It("CIGs must be stored to cloudInstanceManager.internal.nodeGroups", func() {
+		It("NGs must be stored to cloudInstanceManager.internal.nodeGroups", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			expectedJSON := `
-			      [
-			        {
-								"bashible": {
-									"bundle": "centos-7.1.1.1",
-									"dynamicOptions": {},
-									"options": {
-									"kubernetesVersion": "1.15.4"
-									}
-								},
-			          "cloudInstances": {
-			            "classReference": {
-			              "kind": "D8TestInstanceClass",
-			              "name": "proper1"
-			            },
-									"zones": [
-										"nova"
-									]
-			          },
-								"instanceClass": null,
-								"manual-rollout-id": "",
-								"name": "proper1"
-			        },
-			        {
-								"bashible": {
-									"bundle": "slackware-14.1",
-									"dynamicOptions": {},
-									"options": {}
-								},
-			          "cloudInstances": {
-			            "classReference": {
-			              "kind": "D8TestInstanceClass",
-			              "name": "proper2"
-			            },
-									"zones": [
-										"a",
-										"b"
-									]
-			          },
-								"instanceClass": null,
-								"manual-rollout-id": "",
-								"name": "proper2"
-			        }
-			      ]
+				[
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manual-rollout-id": "",
+				    "name": "proper1"
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manual-rollout-id": "",
+				    "name": "proper2"
+				  }
+				]
 			`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
@@ -262,7 +314,7 @@ data:
 
 	Context("Cluster with two proper pairs of NG+IC, one improper IC and provider secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateICProper + stateICIMroper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateICIMroper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 
@@ -270,49 +322,49 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			expectedJSON := `
-	       [
-	         {
-						 "bashible": {
-							 "bundle": "centos-7.1.1.1",
-							 "dynamicOptions": {},
-							 "options": {
-								 "kubernetesVersion": "1.15.4"
-							 }
-						 },
-						 "cloudInstances": {
-							 "classReference": {
-								 "kind": "D8TestInstanceClass",
-								 "name": "proper1"
-							 },
-							 "zones": [
-								 "nova"
-							 ]
-						 },
-						 "instanceClass": null,
-						 "manual-rollout-id": "",
-						 "name": "proper1"
-	         },
-	         {
-						 "bashible": {
-							 "bundle": "slackware-14.1",
-							 "dynamicOptions": {},
-							 "options": {}
-						 },
-						 "cloudInstances": {
-							 "classReference": {
-								 "kind": "D8TestInstanceClass",
-								 "name": "proper2"
-							 },
-							 "zones": [
-								 "a",
-								 "b"
-							 ]
-						 },
-						 "instanceClass": null,
-						 "manual-rollout-id": "",
-						 "name": "proper2"
-	         }
-	       ]
+				[
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manual-rollout-id": "",
+				    "name": "proper1"
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manual-rollout-id": "",
+				    "name": "proper2"
+				  }
+				]
 	`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 			// Expect(f.Session.Err).Should(gbytes.Say("Instance class improper1 is invalid: .spec.bashible.options.kubernetesVersion is mandatory for .spec.bashible.bundle ubuntu-7.1.1.1"))
@@ -325,7 +377,7 @@ data:
 
 	Context("Two proper pairs of NG+IC and a NG with wrong ref kind", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateCIGWrongKind + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateNGWrongKind + stateICProper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 
@@ -333,49 +385,49 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			expectedJSON := `
-			       [
-			         {
-								 "bashible": {
-									 "bundle": "centos-7.1.1.1",
-									 "dynamicOptions": {},
-									 "options": {
-										 "kubernetesVersion": "1.15.4"
-									 }
-								 },
-								 "cloudInstances": {
-									 "classReference": {
-				             "kind": "D8TestInstanceClass",
-				             "name": "proper1"
-				           },
-				           "zones": [
-				             "nova"
-				           ]
-								 },
-								 "name": "proper1",
-								 "manual-rollout-id": "",
-								 "instanceClass": null
-			         },
-			         {
-								 "bashible": {
-									 "bundle": "slackware-14.1",
-									 "dynamicOptions": {},
-									 "options": {}
-								 },
-								 "cloudInstances": {
-									 "classReference": {
-				             "kind": "D8TestInstanceClass",
-				             "name": "proper2"
-				           },
-				           "zones": [
-				             "a",
-				             "b"
-				           ]
-								 },
-								 "name": "proper2",
-								 "manual-rollout-id": "",
-								 "instanceClass": null
-			         }
-			       ]
+				[
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "name": "proper1",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "name": "proper2",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  }
+				]
 			`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
@@ -389,7 +441,7 @@ data:
 
 	Context("Two proper pairs of NG+IC and a NG with wrong ref kind which was stored earlier", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateCIGWrongKind + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateNGWrongKind + stateICProper + stateCloudProviderSecret))
 			f.ValuesSetFromYaml("cloudInstanceManager.internal.nodeGroups", []byte(`
 -
   name: proper1
@@ -408,53 +460,53 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			expectedJSON := `
-				       [
-									{
-										"name": "improper",
-										"some": "imdata"
-									},
-									{
-									"bashible": {
-										"bundle": "centos-7.1.1.1",
-										"dynamicOptions": {},
-										"options": {
-											"kubernetesVersion": "1.15.4"
-										}
-									},
-									"cloudInstances": {
-										"classReference": {
-											"kind": "D8TestInstanceClass",
-											"name": "proper1"
-										},
-										"zones": [
-											"nova"
-										]
-									},
-									"name": "proper1",
-									"manual-rollout-id": "",
-									"instanceClass": null
-				         },
-				         {
-									 "bashible": {
-										 "bundle": "slackware-14.1",
-										 "dynamicOptions": {},
-										 "options": {}
-									 },
-									 "cloudInstances": {
-										 "classReference": {
-											 "kind": "D8TestInstanceClass",
-											 "name": "proper2"
-										 },
-										 "zones": [
-											 "a",
-											 "b"
-										 ]
-									 },
-									 "name": "proper2",
-									 "manual-rollout-id": "",
-									 "instanceClass": null
-				         }
-	             ]
+				[
+				  {
+				    "name": "improper",
+				    "some": "imdata"
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "name": "proper1",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "name": "proper2",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  }
+				]
 				`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
@@ -468,7 +520,7 @@ data:
 
 	Context("Two proper pairs of NG+IC and a NG with wrong ref name", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateCIGWrongRefName + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateNGWrongRefName + stateICProper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 
@@ -476,49 +528,49 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			expectedJSON := `
-			       [
-			         {
-								 "bashible": {
-									 "bundle": "centos-7.1.1.1",
-									 "dynamicOptions": {},
-									 "options": {
-										 "kubernetesVersion": "1.15.4"
-									 }
-								 },
-								 "cloudInstances": {
-									 "classReference": {
-										 "kind": "D8TestInstanceClass",
-										 "name": "proper1"
-									 },
-									 "zones": [
-										 "nova"
-									 ]
-								 },
-								 "name": "proper1",
-									"manual-rollout-id": "",
-								 "instanceClass": null
-			         },
-			         {
-								 "bashible": {
-									 "bundle": "slackware-14.1",
-									 "dynamicOptions": {},
-									 "options": {}
-								 },
-								 "cloudInstances": {
-									 "classReference": {
-										 "kind": "D8TestInstanceClass",
-										 "name": "proper2"
-									 },
-									 "zones": [
-										 "a",
-										 "b"
-									 ]
-								 },
-								 "name": "proper2",
-									"manual-rollout-id": "",
-								 "instanceClass": null
-			         }
-			       ]
+				[
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "name": "proper1",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "name": "proper2",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  }
+				]
 			`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
@@ -532,7 +584,7 @@ data:
 
 	Context("Two proper pairs of NG+IC and a NG with wrong ref name but stored earlier", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCIGProper + stateCIGWrongRefName + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateNGWrongRefName + stateICProper + stateCloudProviderSecret))
 			f.ValuesSetFromYaml("cloudInstanceManager.internal.nodeGroups", []byte(`
 -
  name: proper1
@@ -551,53 +603,53 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			expectedJSON := `
-			       [
-				     {
-				       "name": "improper",
-	                   "some": "imdata"
-				     },
-			         {
-								 "bashible": {
-									 "bundle": "centos-7.1.1.1",
-									 "dynamicOptions": {},
-									 "options": {
-										 "kubernetesVersion": "1.15.4"
-									 }
-								 },
-								 "cloudInstances": {
-									 "classReference": {
-				             "kind": "D8TestInstanceClass",
-				             "name": "proper1"
-				           },
-				           "zones": [
-				             "nova"
-				           ]
-								 },
-								 "name": "proper1",
-									"manual-rollout-id": "",
-								 "instanceClass": null
-			         },
-			         {
-								 "bashible": {
-									 "bundle": "slackware-14.1",
-									 "dynamicOptions": {},
-									 "options": {}
-								 },
-								 "cloudInstances": {
-									 "classReference": {
-				             "kind": "D8TestInstanceClass",
-				             "name": "proper2"
-				           },
-				           "zones": [
-				             "a",
-				             "b"
-				           ]
-								 },
-								 "name": "proper2",
-									"manual-rollout-id": "",
-								 "instanceClass": null
-			         }
-			       ]
+				[
+				  {
+				    "name": "improper",
+				    "some": "imdata"
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "name": "proper1",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "name": "proper2",
+				    "manual-rollout-id": "",
+				    "instanceClass": null
+				  }
+				]
 			`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 

@@ -11,16 +11,16 @@ EOF
 
 function __main__() {
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-    general_instance_class_kind=D8TestInstanceClass
+    instance_class_kind=D8TestInstanceClass
   else
-    general_instance_class_kind=$(cat /tmp/cloud-instance-manager-instance-class-kind)
+    instance_class_kind=$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)
   fi
 
   sleep 5
 
   if kubectl get crd cloudinstancegroups.deckhouse.io 2>/dev/null; then
     cigs="$(kubectl get cig -o json | jq '[.items[] | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
-    ics="$(kubectl get $general_instance_class_kind -o json | jq '[.items[] | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
+    ics="$(kubectl get $instance_class_kind -o json | jq '[.items[] | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
 
     for cig in $(jq -r 'keys[]' <<< $cigs); do
       ic_name=$(jq -r --arg cig "$cig" '.[$cig].spec.instanceClassReference.name' <<< "$cigs")
@@ -64,9 +64,9 @@ function __main__() {
 
     kubectl delete crd cloudinstancegroups.deckhouse.io
 
-    for ic in $(kubectl get "$general_instance_class_kind" -o json | jq -r '.items[] | select(.spec|has("bashible")) | .metadata.name'); do
-      echo "!!! NOTICE: Remove bashible from ${general_instance_class_kind}/${ic} !!!"
-      kubectl patch "$general_instance_class_kind" $ic --type=json -p='[{"op": "remove", "path": "/spec/bashible"}]'
+    for ic in $(kubectl get "$instance_class_kind" -o json | jq -r '.items[] | select(.spec|has("bashible")) | .metadata.name'); do
+      echo "!!! NOTICE: Remove bashible from ${instance_class_kind}/${ic} !!!"
+      kubectl patch "$instance_class_kind" $ic --type=json -p='[{"op": "remove", "path": "/spec/bashible"}]'
     done
   fi
 }

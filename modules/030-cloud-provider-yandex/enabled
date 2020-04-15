@@ -10,7 +10,6 @@ function __main__() {
     >&2 echo "Unable to enable module $self_name: More than one cloud provider is enabled!"
     exit 1
   else
-    echo "YandexInstanceClass" > /tmp/cloud-instance-manager-instance-class-kind
     echo "true" > "$MODULE_ENABLED_RESULT"
   fi
 }
