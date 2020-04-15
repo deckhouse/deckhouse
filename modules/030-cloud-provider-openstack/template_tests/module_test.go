@@ -43,25 +43,59 @@ const globalValues = `
       worker: 1
     podSubnet: 10.0.1.0/16
     clusterVersion: 1.15.4
+    defaultStorageClass: fastssd
 `
 
 const moduleValues = `
   internal:
     internalSubnetRegex: myregex
-  networkName: mynetname
-  zones: ["zonea", "zoneb"]
-  authURL: http://my.cloud.lalla/123/
-  username: myuser
-  password: myPaSs
-  domainName: mydomain
-  tenantName: mytenantname
-  tenantID: mytenantid
-  caCert: mycacert
-  region: myreg
-  internalNetworkName: myintnetname
-  addPodSubnetToPortWhitelist: true
-  sshKeyPairName: mysshkeypairname
-  securityGroups: ["aaa","bbb"]
+    volumeTypes:
+    - Fast SSD
+    - Slow HDD
+    connection:
+      authURL: http://my.cloud.lalla/123/
+      username: myuser
+      password: myPaSs
+      domainName: mydomain
+      tenantName: mytenantname
+      caCert: mycacert
+      region: myreg
+    internalNetworkNames:
+      - myintnetname
+      - myintnetname2
+    externalNetworkNames:
+      - myextnetname
+      - myextnetname2
+    podNetworkMode: "VXLAN"
+    instances:
+      sshKeyPairName: mysshkeypairname
+      securityGroups: ["aaa","bbb"]
+    zones: ["zonea", "zoneb"]
+`
+
+const badModuleValues = `
+  internal:
+    internalSubnetRegex: myregex
+    connection:
+      authURL: http://my.cloud.lalla/123/
+      username: myuser
+      password: myPaSs
+      domainName: mydomain
+      tenantName: mytenantname
+      tenantID: mytenantid
+      caCert: mycacert
+      region: myreg
+    internalNetworkNames:
+      - myintnetname
+      - myintnetname2
+    externalNetworkNames:
+      - myextnetname
+      - myextnetname2
+    podNetworkMode: "VXLAN"
+    instances:
+      sshKeyPairName: mysshkeypairname
+      securityGroups: ["aaa","bbb"]
+    zones: ["zonea", "zoneb"]
 `
 
 var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
@@ -117,28 +151,34 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:cluster-admin")
 
+			scFast := f.KubernetesGlobalResource("StorageClass", "fastssd")
+			scSlow := f.KubernetesGlobalResource("StorageClass", "slowhdd")
+
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			// user story #1
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
-          "addPodSubnetToPortWhitelist": true,
-          "authURL": "http://my.cloud.lalla/123/",
-          "caCert": "mycacert",
-          "domainName": "mydomain",
-          "internalNetworkName": "myintnetname",
-          "networkName": "mynetname",
-          "password": "myPaSs",
-          "region": "myreg",
-          "securityGroups": [
-            "aaa",
-            "bbb"
-          ],
-          "sshKeyPairName": "mysshkeypairname",
-          "tenantID": "mytenantid",
-          "tenantName": "mytenantname",
-          "username": "myuser"
+          "connection": {
+            "authURL": "http://my.cloud.lalla/123/",
+            "caCert": "mycacert",
+            "domainName": "mydomain",
+            "region": "myreg",
+            "password": "myPaSs",
+            "tenantName": "mytenantname",
+            "username": "myuser"
+          },
+          "internalNetworkNames": ["myintnetname", "myintnetname2"],
+          "externalNetworkNames": ["myextnetname", "myextnetname2"],
+          "instances": {
+            "securityGroups": [
+              "aaa",
+              "bbb"
+            ],
+            "sshKeyPairName": "mysshkeypairname"
+          },
+          "podNetworkMode": "VXLAN"
         }`
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -178,6 +218,25 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+
+			Expect(scFast.Exists()).To(BeTrue())
+			Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(scSlow.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Openstack bad config", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
+			f.HelmRender()
+		})
+
+		It("Test should fail", func() {
+			Expect(string(f.Session.Err.Contents())).NotTo(HaveLen(0))
+			Expect(f.Session.ExitCode()).NotTo(BeZero())
 		})
 	})
 })

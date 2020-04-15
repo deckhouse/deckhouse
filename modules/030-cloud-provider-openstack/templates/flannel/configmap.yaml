@@ -30,10 +30,10 @@ data:
     {
       "Network": "{{ .Values.global.discovery.podSubnet }}",
       "Backend": {
-{{- if hasKey .Values.cloudProviderOpenstack "addPodSubnetToPortWhitelist" }}
-        "Type": "host-gw"
-{{- else }}
+{{- if eq .Values.cloudProviderOpenstack.internal.podNetworkMode "VXLAN" }}
         "Type": "vxlan"
+{{- else }}
+        "Type": "host-gw"
 {{- end }}
       }
     }

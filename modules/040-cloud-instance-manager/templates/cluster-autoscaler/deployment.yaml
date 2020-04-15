@@ -12,8 +12,8 @@
   {{- range $ig := .Values.cloudInstanceManager.internal.nodeGroups }}
     {{- if eq $ig.nodeType "Cloud" }}
       {{- range $zone_name := $ig.cloudInstances.zones }}
-        {{- if $.Values.cloudInstanceManager.instancePrefix }}
-- --nodes={{ $ig.cloudInstances.minPerZone }}:{{ $ig.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $.Values.cloudInstanceManager.instancePrefix }}-{{ $ig.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+        {{- if $.Values.cloudInstanceManager.internal.instancePrefix }}
+- --nodes={{ $ig.cloudInstances.minPerZone }}:{{ $ig.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $.Values.cloudInstanceManager.internal.instancePrefix }}-{{ $ig.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
         {{- else }}
 - --nodes={{ $ig.cloudInstances.minPerZone }}:{{ $ig.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $ig.name }}-{{ printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
         {{- end }}

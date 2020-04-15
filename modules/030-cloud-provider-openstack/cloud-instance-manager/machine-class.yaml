@@ -10,28 +10,29 @@ spec:
   flavorName: {{ .instanceGroup.instanceClass.flavorName }}
   imageName: {{ .instanceGroup.instanceClass.imageName }}
   networks:
-  - name: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.networkName }}
-{{- if not (hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "internalNetworkName") }}
-  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
-    podNetwork: true
+  {{- $networks := list }}
+  {{- if hasKey .instanceGroup.instanceClass "additionalNetworks" }}
+    {{- range $additionalNetwork := .instanceGroup.instanceClass.additionalNetworks }}
+      {{- $networks = append $networks $additionalNetwork }}
+    {{- end }}
   {{- end }}
-{{- end }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "internalNetworkName" }}
-  - name: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.internalNetworkName }}
-  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
+  {{- $networks = prepend $networks .instanceGroup.instanceClass.mainNetwork }}
+  {{- range $networks }}
+  - name: {{ . | quote }}
+    {{- if and (has . $.Values.cloudInstanceManager.internal.cloudProvider.openstack.internalNetworkNames) (eq $.Values.cloudInstanceManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled") }}
     podNetwork: true
+    {{- end }}
   {{- end }}
-{{- end }}
-{{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
   podNetworkCidr: {{ .Values.global.discovery.podSubnet }}
-{{- end }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "sshKeyPairName" }}
-  keyName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.sshKeyPairName }}
-{{- end }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "securityGroups" }}
+{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "instances" }}
+  {{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
+  keyName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.instances.sshKeyPairName }}
+  {{- end }}
+  {{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack.instances "securityGroups" }}
   securityGroups:
-  {{- range .Values.cloudInstanceManager.internal.cloudProvider.openstack.securityGroups }}
+    {{- range .Values.cloudInstanceManager.internal.cloudProvider.openstack.instances.securityGroups }}
   - {{ . }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- if hasKey .instanceGroup.instanceClass "rootDiskSize" }}

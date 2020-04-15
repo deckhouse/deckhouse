@@ -32,8 +32,8 @@ discovery:
 `
 
 const cloudInstanceManagerAWS = `
-instancePrefix: myprefix
 internal:
+  instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   cloudProvider:
@@ -78,8 +78,8 @@ internal:
 `
 
 const cloudInstanceManagerGCP = `
-instancePrefix: myprefix
 internal:
+  instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   cloudProvider:
@@ -119,27 +119,29 @@ internal:
 `
 
 const cloudInstanceManagerOpenstack = `
-instancePrefix: myprefix
 internal:
+  instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   cloudProvider:
     type: openstack
     machineClassKind: OpenStackMachineClass
     openstack:
-      addPodSubnetToPortWhitelist: true
-      authURL: https://mycloud.qqq/3/
-      caCert: mycacert
-      domainName: Default
-      internalNetworkName: mynetwork
-      networkName: shared
-      password: pPaAsS
-      region: myreg
-      securityGroups: [groupa, groupb]
-      sshKeyPairName: mysshkey
+      podNetworkMode: DirectRoutingWithPortSecurityEnabled
+      connection:
+        authURL: https://mycloud.qqq/3/
+        caCert: mycacert
+        domainName: Default
+        password: pPaAsS
+        region: myreg
+        tenantName: mytname
+        username: myuname
+      instances:
+        securityGroups: [groupa, groupb]
+        sshKeyPairName: mysshkey
       internalSubnet: "10.0.0.1/24"
-      tenantName: mytname
-      username: myuname
+      internalNetworkNames: [mynetwork]
+      externalNetworkNames: [shared]
   nodeGroups:
   - name: worker
     instanceClass:
@@ -162,8 +164,8 @@ internal:
 `
 
 const cloudInstanceManagerVsphere = `
-instancePrefix: myprefix
 internal:
+  instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   cloudProvider:
@@ -211,8 +213,8 @@ internal:
 `
 
 const cloudInstanceManagerYandex = `
-instancePrefix: myprefix
 internal:
+  instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   cloudProvider:
@@ -264,8 +266,8 @@ internal:
 `
 
 const cloudInstanceManagerStatic = `
-instancePrefix: myprefix
 internal:
+  instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   clusterCA: myclusterca
   nodeGroups:
@@ -499,7 +501,7 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("64f2edcc9b5a394fe86fa0ac87b54a23051b9c89c5f36cc902ecbd8fd0caf95f"))
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("f4f0e95b9f4efa02425c1d0a77546c4fb48f392016abbad53889b7e0b9792a02"))
 			})
 		})
 
@@ -574,13 +576,13 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("bbfc6f35c09ffb41b71cbb1670803013cd247118a83169d6170bc5699176242f"))
+			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dd5a14b22c4d777fb898e0694970ab6784da32142d4477652c94be3ebf33a583"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("bbfc6f35c09ffb41b71cbb1670803013cd247118a83169d6170bc5699176242f"))
+			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dd5a14b22c4d777fb898e0694970ab6784da32142d4477652c94be3ebf33a583"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())

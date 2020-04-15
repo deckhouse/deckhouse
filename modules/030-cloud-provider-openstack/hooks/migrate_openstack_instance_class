@@ -1,0 +1,43 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+
+### Миграция 2020-04-13
+# Удалить после выката версии на все инстансы
+
+function __config__() {
+  cat << EOF
+   configVersion: v1
+   kubernetes:
+   - name: openstackinstanceclasses
+     includeSnapshotsFrom: [openstackinstanceclasses]
+     apiVersion: deckhouse.io/v1alpha1
+     kind: OpenStackInstanceClass
+     jqFilter: select(.spec | has("mainNetworkName") | not) | .metadata.name
+EOF
+}
+
+function __on_kubernetes::openstackinstanceclasses::synchronization() {
+  if ! values::has --config cloudProviderOpenstack.externalNetworkNames ; then
+    return 0
+  fi
+  if context::has snapshots.openstackinstanceclasses.0; then
+    old_ics=$(context::jq -r '.snapshots.openstackinstanceclasses[] | select(.filterResult != null) | .filterResult')
+    if [[ -z $old_ics ]]; then
+       return 0
+    fi
+    mainNetworkName=$(values::get --config cloudProviderOpenstack.externalNetworkNames | jq '.[0]' -r)
+    for i in $old_ics; do
+      kubernetes::patch_jq "" "openstackinstanceclass/$i" ".spec.mainNetworkName=\"$mainNetworkName\""
+    done
+    if values::has --config cloudProviderOpenstack.internalNetworkNames ; then
+      additionalNetworks=$(values::get --config cloudProviderOpenstack.internalNetworkNames)
+      for i in $old_ics; do
+        kubernetes::patch_jq "" "openstackinstanceclass/$i" ".spec.additionalNetworks=$additionalNetworks"
+      done
+    fi
+  fi
+}
+
+hook::run $@

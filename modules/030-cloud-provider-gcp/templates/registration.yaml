@@ -1,4 +1,3 @@
-{{- if .Values.cloudProviderGcp.networkName }}
 ---
 apiVersion: v1
 kind: Secret
@@ -25,4 +24,3 @@ data:
   {{- $_ := set $gcpValues "extraInstanceTags" .Values.cloudProviderGcp.extraInstanceTags }}
   {{- $_ := set $gcpValues "disableExternalIP" .Values.cloudProviderGcp.disableExternalIP }}
   gcp: {{ $gcpValues | toJson | b64enc | quote }}
-{{- end }}

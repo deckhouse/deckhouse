@@ -29,30 +29,40 @@ cloudProviderOpenstack:
       __ConstantChoices__:
       - super-regex
       - __EmptyItem__
-  networkName:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - mynetname
-  zones: ["zonea", "zoneb"]
-  authURL: http://my.cloud.lalla/123/
-  username: myuser
-  password: myPaSs
-  domainName: mydomain
-  tenantName:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - mytenantname
-  tenantID:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - mytenantid
-  caCert: mycacert
-  region: myreg
-  internalNetworkName: myintnetname
-  addPodSubnetToPortWhitelist:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - true
-    - false
-  sshKeyPairName: mysshkeypairname
-  securityGroups: ["aaa","bbb"]
+    connection:
+      __ConstantChoices__:
+      - authURL: http://my.cloud.lalla/123/
+        username: myuser
+        password: myPaSs
+        domainName: mydomain
+        tenantName:
+          __ConstantChoices__:
+          - __EmptyItem__
+          - mytenantname
+        caCert: mycacert
+        region: myreg
+      - authURL: http://my.cloud.lalla/123/
+        username: myuser
+        password: myPaSs
+        domainName: mydomain
+        tenantID:
+          __ConstantChoices__:
+          - __EmptyItem__
+          - mytenantid
+        caCert: mycacert
+        region: myreg
+    internalNetworkNames:
+      - myintnetname
+      - myintnetname2
+    externalNetworkNames:
+      - myextnetname
+      - myextnetname2
+    podNetworkMode:
+      __ConstantChoices__:
+      - DirectRoutingWithPortSecurityEnabled
+      - DirectRouting
+      - VXLAN
+    instances:
+      sshKeyPairName: mysshkeypairname
+      securityGroups: ["aaa","bbb"]
+    zones: ["zonea", "zoneb"]

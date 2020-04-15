@@ -7,6 +7,7 @@ import (
 
 	"flant/deckhouse/pkg/helpers/aws"
 	"flant/deckhouse/pkg/helpers/fnv"
+	"flant/deckhouse/pkg/helpers/openstack"
 	"flant/deckhouse/pkg/helpers/unit"
 	"flant/deckhouse/pkg/helpers/vsphere"
 )
@@ -32,6 +33,12 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	awsMapZoneToSubnetsCommand := awsCommand.Command("map-zone-to-subnets", "Map zones to subnets.")
 	awsMapZoneToSubnetsCommand.Action(func(c *kingpin.ParseContext) error {
 		return aws.MapZoneToSubnets()
+	})
+
+	openstackCommand := helpersCommand.Command("openstack", "OpenStack helpers.")
+	openstackGetVolumeTypes := openstackCommand.Command("get-volume-types", "Get volume types.")
+	openstackGetVolumeTypes.Action(func(c *kingpin.ParseContext) error {
+		return openstack.GetVolumeTypes()
 	})
 
 	vsphereCommand := helpersCommand.Command("vsphere", "VSphere helpers.")

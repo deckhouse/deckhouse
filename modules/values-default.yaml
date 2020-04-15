@@ -16,6 +16,7 @@ priorityClassEnabled: true
 prometheusCrdEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 deckhouseEnabled: true
+cloudProviderOpenstackEnabled: true
 cloudInstanceManagerEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true

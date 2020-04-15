@@ -1,0 +1,77 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: provider_cluster_configuration
+      includeSnapshotsFrom: [provider_cluster_configuration]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      nameSelector:
+        matchNames: [d8-cluster-configuration]
+      jqFilter: |
+        .data."openstack-cluster-configuration.yaml" //= "" | .data."openstack-cloud-discovery-data.json" //= "" |
+        {
+          "provider_cluster_configuration": (.data."openstack-cluster-configuration.yaml" | @base64d),
+          "provider_discovery_data": (.data."openstack-cloud-discovery-data.json" | @base64d)
+        }
+EOF
+}
+
+function set_values_from_provider_cluster_configuration_yaml() {
+  provider='{}'
+  provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
+  if [[ -n $provider_cluster_configuration_yaml ]]; then
+    provider=$(echo "$provider_cluster_configuration_yaml" | yq r - spec --tojson | jq '.provider //= {} | .provider')
+  fi
+
+  #getting cloudProviderOpenstack with merged connection from cluser configuration provider
+  cloudProviderOpenstack=$(values::jq -r --argjson provider "$provider" '.cloudProviderOpenstack |
+  {
+    "internalNetworkNames": (if .internalNetworkNames==null then [] else .internalNetworkNames end),
+    "externalNetworkNames": (if .externalNetworkNames==null then [] else .externalNetworkNames end),
+    "podNetworkMode": .podNetworkMode,
+    "instances": (if .instances==null then {"securityGroups": []} else .instances end),
+    "connection": (if .connection==null then $provider else $provider * .connection end)
+  }')
+
+  #getting provider discovery data with fall back to default empty values
+  provider_discovery_data=$(echo "$1" | jq -r '
+    if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
+      "zones": [],
+      "instances": {}
+    } end | .provider_discovery_data')
+
+  #preparing internal values
+  internal=$(echo "$provider_discovery_data" | jq --argjson c "$cloudProviderOpenstack" '
+    {
+      "zones": .zones,
+      "internalNetworkNames": (.internalNetworkNames + $c.internalNetworkNames),
+      "externalNetworkNames": (.externalNetworkNames + $c.externalNetworkNames),
+      "podNetworkMode": (if $c.podNetworkMode == "" or $c.podNetworkMode == null then .podNetworkMode else $c.podNetworkMode end),
+      "instances": {
+        "sshKeyPairName": $c.instances.sshKeyPairName,
+        "securityGroups": (.instances.securityGroups + $c.instances.securityGroups)
+      },
+      "connection": $c.connection
+    }
+  ')
+
+  values::set cloudProviderOpenstack.internal "$internal"
+}
+
+function __on_kubernetes::provider_cluster_configuration() {
+  if context::has snapshots.provider_cluster_configuration.0; then
+    set_values_from_provider_cluster_configuration_yaml "$(context::get snapshots.provider_cluster_configuration.0.filterResult)"
+  else
+    set_values_from_provider_cluster_configuration_yaml "{}"
+  fi
+}
+
+hook::run "$@"

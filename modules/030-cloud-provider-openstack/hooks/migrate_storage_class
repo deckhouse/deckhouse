@@ -1,0 +1,40 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+
+### Миграция 2020-04-13
+# Удалить после выката версии на все инстансы
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+    kubernetes:
+    - name: storageclasses
+      includeSnapshotsFrom: [storageclasses]
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+        - key: module
+          operator: NotIn
+          values: ["cloud-provider-openstack"]
+      jqFilter: select(.provisioner=="csi-cinderplugin") | .metadata.name
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.storageclasses.0; then
+    for i in $(context::jq -r '.snapshots.storageclasses[] | select(.filterResult != null) | .filterResult'); do
+      if kubectl get sc "$i" > /dev/null 2> /dev/null; then
+        kubectl delete sc "$i"
+      fi
+    done
+  fi
+}
+
+hook::run $@
