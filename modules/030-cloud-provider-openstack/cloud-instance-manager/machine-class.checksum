@@ -1,8 +1,12 @@
 {{- $options := dict -}}
 {{- $_ := set $options "flavorName" .instanceGroup.instanceClass.flavorName -}}
 {{- $_ := set $options "imageName" .instanceGroup.instanceClass.imageName -}}
+{{- $_ := set $options "mainNetwork" .instanceGroup.instanceClass.mainNetwork -}}
+{{- if .instanceGroup.instanceClass.additionalNetworks }}
+  {{- $_ := set $options "additionalNetworks" .instanceGroup.instanceClass.additionalNetworks -}}
+{{- end }}
 {{- if .instanceGroup.instanceClass.rootDiskSize }}
-{{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
+  {{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
 {{- end }}
 {{- if (index .instanceGroup "manual-rollout-id") -}}
   {{ $_ := set $options "manual-rollout-id" (index .instanceGroup "manual-rollout-id") -}}

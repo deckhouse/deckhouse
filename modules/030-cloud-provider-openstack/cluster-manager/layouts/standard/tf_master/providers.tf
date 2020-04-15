@@ -1,0 +1,1 @@
+../../../tf_common/providers.tf

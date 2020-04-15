@@ -24,11 +24,11 @@ global:
     clusterVersion: 1.15.4
 
 cloudInstanceManager:
-  instancePrefix:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - myprefix
   internal:
+    instancePrefix:
+      __ConstantChoices__:
+      - __EmptyItem__
+      - myprefix
     __ConstantChoices__:
     - <<: *internalDefaults
       cloudProvider:
@@ -98,26 +98,30 @@ cloudInstanceManager:
         machineClassKind: OpenStackMachineClass
         openstack:
           __ConstantChoices__:
-          - addPodSubnetToPortWhitelist: true # maximum
-            authURL: https://mycloud.qqq/3/
-            caCert: mycacert
-            domainName: Default
-            internalNetworkName: mynetwork
-            networkName: shared
-            password: pPaAsS
-            region: myreg
-            securityGroups: [groupa, groupb]
-            sshKeyPairName: mysshkey
+          - connection:
+              authURL: https://mycloud.qqq/3/ # maximum
+              caCert: mycacert
+              domainName: Default
+              tenantName: mytname
+              username: myuname
+              password: pPaAsS
+              region: myreg
+            podNetworkMode: DirectRoutingWithPortSecurityEnabled
+            instances:
+              securityGroups: [groupa, groupb]
+              sshKeyPairName: mysshkey
             internalSubnet: "10.0.0.1/24"
-            tenantName: mytname
-            username: myuname
-          - authURL: https://mycloud.qqq/3/ # minimum
-            domainName: Default
-            networkName: shared
-            password: pPaAsS
-            region: myreg
-            tenantName: mytname
-            username: myuname
+            internalNetworkNames: [mynetwork]
+            externalNetworkNames: [shared]
+          - connection:
+              authURL: https://mycloud.qqq/3/ # minimum
+              domainName: Default
+              networkName: shared
+              password: pPaAsS
+              region: myreg
+              tenantName: mytname
+              username: myuname
+            podNetworkMode: DirectRoutingWithPortSecurityEnabled
       nodeGroups:
         __ConstantChoices__:
         - []

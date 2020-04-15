@@ -1,0 +1,26 @@
+{{- if hasKey .Values.cloudProviderOpenstack.internal "volumeTypes" }}
+  {{- range $index, $volumeType := .Values.cloudProviderOpenstack.internal.volumeTypes }}
+    {{ $name := $volumeType | nospace | lower }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+  name: {{ $name | quote }}
+    {{- if and (eq $index 0) }}
+      {{- if and (hasKey $.Values.global.discovery "defaultStorageClass") ($.Values.global.discovery.defaultStorageClass) }}
+        {{- if eq $.Values.global.discovery.defaultStorageClass $name }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+        {{- end }}
+      {{- else }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+      {{- end }}
+    {{- end }}
+provisioner: csi-cinderplugin
+parameters:
+  type: {{ $volumeType | quote }}
+volumeBindingMode: WaitForFirstConsumer
+  {{- end }}
+{{- end }}

@@ -103,7 +103,7 @@ cloudProviderVsphere: |
     * Формат — integer. В гибибайтах.
 * `template` — путь до VirtualMachine Template, который будет склонирован для создания новой VirtualMachine.
     * Пример — `dev/golden_image`
-* `mainNetwork` — путь до network, которая будет подключена к виртуальной машине.
+* `mainNetwork` — путь до network, которая будет подключена к виртуальной машине, как основная сеть (шлюз по-умолчанию).
     * Пример — `k8s-msk-178`
 * `additionalNetworks` — список путей до networks, которые будут подключены к виртуальной машине.
     * Формат — массив строк.

@@ -6,8 +6,8 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  {{- if $context.Values.cloudInstanceManager.instancePrefix }}
-  name: {{ $context.Values.cloudInstanceManager.instancePrefix}}-{{ $ig.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+  {{- if $context.Values.cloudInstanceManager.internal.instancePrefix }}
+  name: {{ $context.Values.cloudInstanceManager.internal.instancePrefix}}-{{ $ig.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
   {{- else }}
   name: {{ $ig.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
   {{- end }}
