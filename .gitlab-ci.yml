@@ -11,7 +11,7 @@ Build:
     - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE} dev
+    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE} dev install
     - werf build --stages-storage :local tests
     - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --stages-storage :local --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE} dev; fi
   before_script:
