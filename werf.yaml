@@ -113,7 +113,7 @@ git:
   - modules/*/values_matrix_test.yaml
 import:
 - artifact: deckhouse-controller
-  add: /deckhouse/deckhouse
+  add: /deckhouse-controller/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   before: setup
 - artifact: jq
@@ -135,17 +135,17 @@ ansible:
   - name: "Shell comfort: inputrc"
     copy:
       content: |
-{{ .Files.Get "deckhouse/files/inputrc" | indent 8 }}
+{{ .Files.Get "deckhouse-controller/files/inputrc" | indent 8 }}
       dest: /etc/inputrc
   - name: "Shell comfort: bashrc"
     copy:
       content: |
-{{ .Files.Get "deckhouse/files/bashrc" | indent 8 }}
+{{ .Files.Get "deckhouse-controller/files/bashrc" | indent 8 }}
       dest: /root/.bashrc
   - name: "Shell comfort: vimrc"
     copy:
       content: |
-{{ .Files.Get "deckhouse/files/vimrc" | indent 8 }}
+{{ .Files.Get "deckhouse-controller/files/vimrc" | indent 8 }}
       dest: /root/.vimrc
   - name: "Shell comfort: kubectl completion"
     shell: kubectl completion bash > /root/.kubectl_completion.sh
@@ -177,7 +177,7 @@ git:
       - testing/go.sum
 import:
 - artifact: deckhouse-controller
-  add: /deckhouse/deckhouse
+  add: /deckhouse-controller/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   before: setup
 - artifact: libjq
@@ -232,8 +232,8 @@ docker:
 artifact: deckhouse-controller
 from: golang:1.13-alpine3.10
 git:
-- add: /deckhouse
-  to: /deckhouse
+- add: /deckhouse-controller
+  to: /deckhouse-controller
   excludePaths:
   - development
   stageDependencies:
@@ -243,6 +243,16 @@ git:
     setup:
     - "**/*.go"
     - go-build.sh
+- add: /deckhouse-cluster
+  to: /deckhouse-cluster
+  excludePaths:
+  - development
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "pkg/**/*.go"
 import:
 - artifact: libjq
   add: /libjq
@@ -258,13 +268,12 @@ ansible:
   install:
   - shell: go mod download
     args:
-      chdir: /deckhouse
+      chdir: /deckhouse-controller
 
   setup:
-  - command: /deckhouse/go-build.sh /libjq
+  - command: /deckhouse-controller/go-build.sh /libjq
     args:
-      chdir: /deckhouse
-
+      chdir: /deckhouse-controller
 ---
 artifact: jq
 from: alpine:3.10
@@ -318,3 +327,54 @@ ansible:
   - shell: /src/scripts/install-libjq-dependencies-alpine.sh
   setup:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
+---
+image: install
+fromImage: dev
+import:
+- artifact: deckhouse-cluster
+  add: /deckhouse-cluster/deckhouse-cluster
+  to: /usr/bin/deckhouse-cluster
+  before: setup
+ansible:
+  beforeInstall:
+  - name: "Install terraform"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
+      remote_src: yes
+      dest: /bin
+      mode: +x
+  - name: "Install terraform provider openstack"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-openstack/1.26.0/terraform-provider-openstack_1.26.0_linux_amd64.zip
+      remote_src: yes
+      dest: /bin
+      mode: +x
+---
+artifact: deckhouse-cluster
+from: golang:1.13-alpine3.10
+git:
+- add: /deckhouse-cluster
+  to: /deckhouse-cluster
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "**/*.go"
+    - go-build.sh
+ansible:
+  beforeInstall:
+  - apk:
+      name: git,ca-certificates
+      update_cache: yes
+  - command: rm -rf /var/cache/apk/*
+
+  install:
+  - shell: go mod download
+    args:
+      chdir: /deckhouse-cluster
+
+  setup:
+  - command: /deckhouse-cluster/go-build.sh
+    args:
+      chdir: /deckhouse-cluster
