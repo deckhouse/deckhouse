@@ -1,4 +1,3 @@
-{{- if .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -27,7 +26,6 @@ subjects:
   name: ingress-nginx:auth
 - kind: Group
   name: prometheus:auth
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
