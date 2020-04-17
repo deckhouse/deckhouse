@@ -244,7 +244,7 @@ END
 
         generate_kubeadm_config
       fi
-    
+
       kubeadm init phase etcd local --config $CLUSTER_CONFIGURATION_FILE --rootfs "$ROOTFS_DIR" --experimental-kustomize /etc/kubernetes/deckhouse/kustomize/$component
     fi
   else
