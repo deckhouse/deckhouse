@@ -1,5 +1,5 @@
 module "network_security" {
-  source = "../../../tf_common/modules/network_security"
+  source = "../../../terraform_modules/network_security"
   prefix = local.prefix
   remote_ip_prefix = "0.0.0.0/0"
   enabled = local.network_security

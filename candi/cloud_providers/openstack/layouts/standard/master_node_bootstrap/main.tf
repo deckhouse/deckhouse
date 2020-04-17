@@ -5,19 +5,19 @@ locals {
 }
 
 module "keypair" {
-  source = "../../../tf_common/modules/keypair"
+  source = "../../../terraform_modules/keypair"
   prefix = local.prefix
   ssh_public_key = var.clusterConfig.bootstrap.sshPublicKeys[0]
 }
 
 module "network_security_info" {
-  source = "../../../tf_common/modules/network_security_info"
+  source = "../../../terraform_modules//network_security_info"
   prefix = local.prefix
   enabled = local.network_security
 }
 
 module "standard_master" {
-  source = "../../../tf_common/modules/standard_master"
+  source = "../../../terraform_modules//standard_master"
   prefix = local.prefix
   root_disk_size = local.root_disk_size
   image_name = local.image_name
@@ -29,7 +29,7 @@ module "standard_master" {
 }
 
 module "kubernetes_data" {
-  source = "../../../tf_common/modules/kubernetes_data"
+  source = "../../../terraform_modules/kubernetes_data"
   prefix = local.prefix
   master_id = module.standard_master.id
 }

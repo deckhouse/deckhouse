@@ -9,7 +9,7 @@ floating ip.
 
 ```
 apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackClusterConfig
+kind: OpenStackClusterConfiguration
 spec:
   layout: Standard
   standard:
@@ -38,7 +38,7 @@ bootstrap:
 
 ```
 apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackClusterConfig
+kind: OpenStackClusterConfiguration
 spec:
   layout: StandardWithNoRouter
   standardWithNoRouter:
@@ -65,7 +65,7 @@ Ubuntu-18.04-201910, на других образах есть проблемы 
 
 ```
 apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackClusterConfig
+kind: OpenStackClusterConfiguration
 spec:
   layout: MasterAsTheGateway
   masterAsTheGateway:
@@ -93,7 +93,7 @@ Master нода и ноды кластера подключаются к сущ�
 
 ```
 apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackClusterConfig
+kind: OpenStackClusterConfiguration
 spec:
   layout: Simple
   simple:
@@ -121,7 +121,7 @@ Master нода и ноды кластера подключаются к сущ�
 
 ```
 apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackClusterConfig
+kind: OpenStackClusterConfiguration
 spec:
   layout: SimpleWithInternalNetwork
   simpleWithInternalNetwork:

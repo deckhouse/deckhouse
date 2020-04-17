@@ -1,0 +1,142 @@
+kind: OpenStackClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, spec, provider, bootstrap]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [OpenStackClusterConfiguration]
+      spec:
+        type: object
+        additionalProperties: false
+        required: [layout]
+        properties:
+          layout:
+            type: string
+            enum: [Standard, StandardWithNoRouter, MasterAsTheGateway, Simple, SimpleWithInternalNetwork]
+        oneOf:
+        - required: [standard]
+          properties:
+            layout:
+              enum: [Standard]
+            standard:
+              type: object
+              additionalProperties: false
+              required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+              internalNetworkCIDR:
+                type: string
+              internalNetworkDNSServers:
+                type: string
+              internalNetworkSecurity:
+                type: boolean
+                default: true
+              externalNetworkName:
+                type: string
+        - required: [standardWithNoRouter]
+          properties:
+            layout:
+              enum: [StandardWithNoRouter]
+            standard:
+              type: object
+              additionalProperties: false
+              required: [internalNetworkCIDR, externalNetworkName]
+              internalNetworkCIDR:
+                type: string
+              internalNetworkSecurity:
+                type: boolean
+                default: true
+              externalNetworkName:
+                type: string
+        - required: [masterAsTheGateway]
+          properties:
+            layout:
+              enum: [MasterAsTheGateway]
+            standard:
+              type: object
+              additionalProperties: false
+              required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+              internalNetworkCIDR:
+                type: string
+              internalNetworkDNSServers:
+                type: string
+              externalNetworkName:
+                type: string
+        - required: [simple]
+          properties:
+            layout:
+              enum: [Simple]
+            standard:
+              type: object
+              additionalProperties: false
+              required: [externalSubnetName]
+              externalSubnetName:
+                type: string
+              podNetworkMode:
+                type: string
+                enum: [VXLAN, DirectRouting, DirectRoutinWithPortSecurityEnabled]
+                default: VXLAN
+        - required: [simpleWithInternalNetwork]
+          properties:
+            layout:
+              enum: [SimpleWithInternalNetwork]
+            standard:
+              type: object
+              additionalProperties: false
+              required: [internalSubnetName]
+              externalSubnetName:
+                type: string
+              podNetworkMode:
+                type: string
+                enum: [VXLAN, DirectRouting, DirectRoutinWithPortSecurityEnabled]
+                default: DirectRoutinWithPortSecurityEnabled
+      provider:
+        type: object
+        additionalProperties: false
+        properties:
+          authURL:
+            type: string
+          caCert:
+            type: string
+          domainName:
+            type: string
+          tenantName:
+            type: string
+          tenantID:
+            type: string
+          username:
+            type: string
+          password:
+            type: string
+          region:
+            type: string
+        oneOf:
+        - required: [authURL, caCert, domainName, tenantName, username, password, region]
+        - required: [authURL, caCert, domainName, tenantID, username, password, region]
+      bootstrap:
+        type: object
+        additionalProperties: false
+        required: [masterInstanceClass]
+        properties:
+          masterInstanceClass:
+            type: object
+            additionalProperties: false
+            required: [flavorName, imageName, mainNetwork]
+            properties:
+              flavorName:
+                type: string
+              imageName:
+                type: string
+              mainNetwork:
+                type: string
+              rootDiskSize:
+                type: integer
+              additionalNetworks:
+                type: array
+                items:
+                  type: string

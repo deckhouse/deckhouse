@@ -2,6 +2,10 @@ output "master_ip_address" {
   value = module.standard_master.master_ip_address
 }
 
+output "node_ip" {
+  value = module.standard_master.node_ip
+}
+
 output "master_instance_class" {
   value = {
     "apiVersion": "deckhouse.io/v1alpha1"
