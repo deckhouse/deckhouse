@@ -1,3 +1,8 @@
+---
+title: Модуль prometheus-metrics-adapter
+search: autoscaler 
+---
+
 Модуль prometheus-metrics-adapter
 =================================
 
