@@ -15,37 +15,30 @@ apiVersions:
       spec:
         type: object
         additionalProperties: false
-        required: [layout]
         properties:
           layout:
             type: string
-            enum: [Standard, StandardWithNoRouter, MasterAsTheGateway, Simple, SimpleWithInternalNetwork]
-        oneOf:
-        - required: [standard]
-          properties:
-            layout:
-              enum: [Standard]
-            standard:
-              type: object
-              additionalProperties: false
-              required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+          standard:
+            type: object
+            additionalProperties: false
+            required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+            properties:
               internalNetworkCIDR:
                 type: string
               internalNetworkDNSServers:
-                type: string
+                type: array
+                items:
+                  type: string
               internalNetworkSecurity:
                 type: boolean
                 default: true
               externalNetworkName:
                 type: string
-        - required: [standardWithNoRouter]
-          properties:
-            layout:
-              enum: [StandardWithNoRouter]
-            standard:
-              type: object
-              additionalProperties: false
-              required: [internalNetworkCIDR, externalNetworkName]
+          standardWithNoRouter:
+            type: object
+            additionalProperties: false
+            required: [internalNetworkCIDR, externalNetworkName]
+            properties:
               internalNetworkCIDR:
                 type: string
               internalNetworkSecurity:
@@ -53,48 +46,67 @@ apiVersions:
                 default: true
               externalNetworkName:
                 type: string
-        - required: [masterAsTheGateway]
-          properties:
-            layout:
-              enum: [MasterAsTheGateway]
-            standard:
-              type: object
-              additionalProperties: false
-              required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+          masterAsTheGateway:
+            type: object
+            additionalProperties: false
+            required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+            properties:
               internalNetworkCIDR:
                 type: string
               internalNetworkDNSServers:
-                type: string
+                type: array
+                items:
+                  type: string
               externalNetworkName:
                 type: string
-        - required: [simple]
-          properties:
-            layout:
-              enum: [Simple]
-            standard:
-              type: object
-              additionalProperties: false
-              required: [externalSubnetName]
+          simple:
+            type: object
+            additionalProperties: false
+            required: [externalSubnetName]
+            properties:
               externalSubnetName:
                 type: string
               podNetworkMode:
                 type: string
                 enum: [VXLAN, DirectRouting, DirectRoutinWithPortSecurityEnabled]
                 default: VXLAN
-        - required: [simpleWithInternalNetwork]
-          properties:
-            layout:
-              enum: [SimpleWithInternalNetwork]
-            standard:
-              type: object
-              additionalProperties: false
-              required: [internalSubnetName]
-              externalSubnetName:
+          simpleWithInternalNetwork:
+            type: object
+            additionalProperties: false
+            required: [internalSubnetName]
+            properties:
+              internalSubnetName:
                 type: string
               podNetworkMode:
                 type: string
                 enum: [VXLAN, DirectRouting, DirectRoutinWithPortSecurityEnabled]
                 default: DirectRoutinWithPortSecurityEnabled
+        oneOf:
+        - required: [layout, standard]
+          properties:
+            layout:
+              enum: [Standard]
+              type: string
+        - required: [layout, standardWithNoRouter]
+          properties:
+            layout:
+              enum: [StandardWithNoRouter]
+              type: string
+        - required: [layout, masterAsTheGateway]
+          properties:
+            layout:
+              enum: [MasterAsTheGateway]
+              type: string
+        - required: [layout, simple]
+          properties:
+            layout:
+              enum: [Simple]
+              type: string
+        - required: [layout, simpleWithInternalNetwork]
+          properties:
+            layout:
+              enum: [SimpleWithInternalNetwork]
+              type: string
       provider:
         type: object
         additionalProperties: false
@@ -116,8 +128,8 @@ apiVersions:
           region:
             type: string
         oneOf:
-        - required: [authURL, caCert, domainName, tenantName, username, password, region]
-        - required: [authURL, caCert, domainName, tenantID, username, password, region]
+        - required: [authURL, domainName, tenantName, username, password, region]
+        - required: [authURL, domainName, tenantID, username, password, region]
       bootstrap:
         type: object
         additionalProperties: false
@@ -134,7 +146,7 @@ apiVersions:
                 type: string
               mainNetwork:
                 type: string
-              rootDiskSize:
+              rootDiskSizeInGb:
                 type: integer
               additionalNetworks:
                 type: array

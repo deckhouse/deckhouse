@@ -93,6 +93,7 @@ git:
 - add: /
   to: /deckhouse
   includePaths:
+  - candi
   - modules
   - global-hooks
   - shell-operator/frameworks/shell
