@@ -17,7 +17,7 @@ function __config__() {
     kubernetes:
     - name: ngs
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets]
+      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -32,7 +32,7 @@ function __config__() {
       echo "
     - name: ics
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets]
+      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets,machine_deployments]
       apiVersion: deckhouse.io/v1alpha1
       kind: ${instance_class_kind}
       jqFilter: |
@@ -46,7 +46,7 @@ function __config__() {
     )
     - name: cloud_provider_secrets
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets]
+      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
       apiVersion: v1
       kind: Secret
       namespace:
@@ -59,6 +59,23 @@ function __config__() {
         +
         (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
         | {"zones": .zones}
+    - name: machine_deployments
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineDeployment
+      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: In
+          values: ["deckhouse"]
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "zone": .metadata.annotations.zone
+        }
 EOF
 }
 
@@ -88,6 +105,11 @@ function __main__() {
   else
     instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
   fi
+
+  default_zones=$(context::jq -r '.snapshots |
+  (if .machine_deployments[0] | has("object") then [.machine_deployments[].object.metadata.annotations.zone | select(length > 0)] else [] end) as $a |
+  (if .cloud_provider_secrets[0] | has("object") then .cloud_provider_secrets[].filterResult.zones else [] end) as $b |
+  $a + $b | unique')
 
   final_node_groups="[]"
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
@@ -137,28 +159,15 @@ function __main__() {
         continue
       fi
 
-      # check #3 — is there zones description in cloud-provider secret
-      if context::has snapshots.cloud_provider_secrets.0; then
-        default_zones="$(context::get snapshots.cloud_provider_secrets.0.filterResult.zones)"
-      else
-        error_message="Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider."
-        if
-          values::has cloudInstanceManager.internal.nodeGroups && \
-          earlier_stored_ng="$(values::jq -er --arg ng_name "${ng_name}" '.cloudInstanceManager.internal.nodeGroups[] | select(.name == $ng_name)')"
-        then
-          final_node_groups="$(jq --argjson ng "$earlier_stored_ng" '. + [$ng]' <<< $final_node_groups)"
-          error_message="$error_message Earlier stored version of NG is in use now!"
-        fi
-        >&2 echo "ERROR: $error_message"
-        _set_ng_error_status "${ng_name}" "${error_message}"
-        continue
-      fi
-
       ng_instance_class="$(jq --arg name $ng_instance_class_name '.[$name]' <<< "$instance_classes")"
       ng="$(jq \
         --argjson instance_class "${ng_instance_class}" \
         --argjson default_zones "$default_zones" \
         '.instanceClass = $instance_class | .cloudInstances.zones //= $default_zones' <<< "$ng")"
+    fi
+
+    if [ "$default_zones" != "[]" ]; then
+      ng="$(jq --argjson default_zones "$default_zones" '.cloudInstances.zones //= $default_zones' <<< "$ng")"
     fi
 
     _set_ng_error_status "${ng_name}" ""
