@@ -11,6 +11,8 @@ metadata:
   {{- else }}
   name: {{ $ig.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
   {{- end }}
+  annotations:
+    zone: {{ $zone_name }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "instance-group" $ig.name)) | indent 2 }}
 spec:

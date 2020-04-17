@@ -127,12 +127,48 @@ metadata:
 data:
   zones: WyJub3ZhIl0= # ["nova"]
 `
+		machineDeployments = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  annotations:
+    zone: aaa
+  labels:
+    heritage: deckhouse
+  name: proper1-aaa
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  annotations:
+    zone: bbb
+  labels:
+    heritage: deckhouse
+  name: proper2-bbb
+  namespace: d8-cloud-instance-manager
+`
 	)
 
 	f := HookExecutionConfigInit(`{"cloudInstanceManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "CloudInstanceGroup", false)
+	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
+
+	Context("Cluster with NGs, MDs and provider secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + machineDeployments + stateCloudProviderSecret))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; zones must be correct", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups.0.cloudInstances.zones").String()).To(MatchJSON(`["aaa","bbb","nova"]`))
+			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups.1.cloudInstances.zones").String()).To(MatchJSON(`["a","b"]`))
+		})
+	})
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -204,39 +240,52 @@ data:
 		})
 
 		It("Hook must not fail, NG statuses must update", func() {
+			expectedJSON := `
+				[
+				  {
+				    "bashible": {
+				      "bundle": "centos-7.1.1.1",
+				      "dynamicOptions": {},
+				      "options": {
+				        "kubernetesVersion": "1.15.4"
+				      }
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": []
+				    },
+				    "instanceClass": null,
+				    "manual-rollout-id": "",
+				    "name": "proper1"
+				  },
+				  {
+				    "bashible": {
+				      "bundle": "slackware-14.1",
+				      "dynamicOptions": {},
+				      "options": {}
+				    },
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manual-rollout-id": "",
+				    "name": "proper2"
+				  }
+				]
+`
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider."))
-			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(Equal("[]"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider.`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider.`))
+			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 		})
-	})
-
-	Context("Cluster with two pairs of NG+IC but without provider secret and previosly stored NGs data", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper))
-			f.ValuesSetFromYaml("cloudInstanceManager.internal.nodeGroups", []byte(`
--
-  name: proper2
-  some: data2
--
-  name: proper1
-  some: data1
-`))
-			f.RunHook()
-		})
-
-		It("Hook must not fail and old data must be stored", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider. Earlier stored version of NG is in use now!"))
-
-			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(`[{"name": "proper1","some": "data1"},{"name": "proper2","some": "data2"}]`))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider. Earlier stored version of NG is in use now!`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").String()).To(Equal(`Can't find '.data.zones' in secret kube-system/d8-node-manager-cloud-provider. Earlier stored version of NG is in use now!`))
-		})
-
 	})
 
 	Context("With manual-rollout-id", func() {
@@ -367,7 +416,6 @@ data:
 				]
 	`
 			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-			// Expect(f.Session.Err).Should(gbytes.Say("Instance class improper1 is invalid: .spec.bashible.options.kubernetesVersion is mandatory for .spec.bashible.bundle ubuntu-7.1.1.1"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
