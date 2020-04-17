@@ -18,6 +18,7 @@ global:
     d8SpecificNodeCountByRole:
       system: 2
     clusterVersion: 1.15.5
+    prometheusScrapeInterval: 30s
   modules:
     publicDomainTemplate: "%s.example.com"
     https:
