@@ -25,10 +25,6 @@ global:
 
 cloudProviderOpenstack:
   internal:
-    internalSubnetRegex:
-      __ConstantChoices__:
-      - super-regex
-      - __EmptyItem__
     connection:
       __ConstantChoices__:
       - authURL: http://my.cloud.lalla/123/

@@ -28,9 +28,7 @@ global:
 
 cloudProviderYandex:
   __ConstantChoices__:
-  - internal:
-      internalSubnetRegex: myintsubnetregex
-    zones: ["zonea", "zoneb"] # maximum
+  - zones: ["zonea", "zoneb"] # maximum
     zoneToSubnetIdMap:
       zonea: aaa
       zoneb: bbb
@@ -43,7 +41,6 @@ cloudProviderYandex:
     nameservers: ["1.1.1.1", "2.2.2.2"]
     region: myreg
     folderID: myfoldid
-    internalSubnet: 192.0.1.0/16
   - zones: ["zonea", "zoneb"]
     zoneToSubnetIdMap:
       zonea: aaa
