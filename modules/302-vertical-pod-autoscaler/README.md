@@ -1,3 +1,8 @@
+---
+title: Модуль vertical-pod-autoscaler
+search: autoscaler 
+---
+
 Модуль vertical-pod-autoscaler
 ==============================
 
