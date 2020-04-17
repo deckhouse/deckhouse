@@ -48,7 +48,6 @@ const globalValues = `
 
 const moduleValues = `
   internal:
-    internalSubnetRegex: myregex
     volumeTypes:
     - Fast SSD
     - Slow HDD
@@ -75,7 +74,6 @@ const moduleValues = `
 
 const badModuleValues = `
   internal:
-    internalSubnetRegex: myregex
     connection:
       authURL: http://my.cloud.lalla/123/
       username: myuser

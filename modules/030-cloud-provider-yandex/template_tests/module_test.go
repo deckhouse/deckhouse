@@ -49,8 +49,6 @@ const globalValues = `
 `
 
 const moduleValues = `
-    internal:
-      internalSubnetRegex: myintsubnetregex
     zones: ["zonea", "zoneb"]
     zoneToSubnetIdMap:
       zonea: aaa
@@ -64,7 +62,6 @@ const moduleValues = `
     nameservers: ["1.1.1.1", "2.2.2.2"]
     region: myreg
     folderID: myfoldid
-    internalSubnet: 192.0.1.0/16
 `
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {

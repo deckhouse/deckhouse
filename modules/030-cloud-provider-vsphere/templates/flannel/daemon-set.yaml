@@ -45,14 +45,9 @@ spec:
       containers:
       - name: kube-flannel
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/flanneld:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.flanneld }}
-        command:
-        - /opt/bin/flanneld
         args:
         - --ip-masq
         - --kube-subnet-mgr
-{{- if hasKey .Values.cloudProviderVsphere.internal "internalSubnetRegex" }}
-        - --iface-regex={{ .Values.cloudProviderVsphere.internal.internalSubnetRegex }}
-{{- end }}
         resources:
           requests:
             cpu: "100m"
