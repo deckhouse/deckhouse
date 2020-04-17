@@ -1,7 +1,13 @@
 package template_tests
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	"github.com/google/go-cmp/cmp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -365,6 +371,8 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09"))
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
@@ -483,6 +491,8 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
@@ -603,6 +613,8 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("bbfc6f35c09ffb41b71cbb1670803013cd247118a83169d6170bc5699176242f"))
 
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
@@ -671,6 +683,8 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			machineClassB := f.KubernetesResource("VsphereMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
@@ -791,6 +805,8 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
@@ -859,3 +875,30 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 		})
 	})
 })
+
+func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mds ...object_store.KubeObject) error {
+	args := deployment.Field("spec.template.spec.containers.0.args").AsStringSlice()
+
+	var nodesArgs []string
+	for _, arg := range args {
+		if !strings.HasPrefix(arg, "--nodes") {
+			continue
+		}
+
+		nodesArgs = append(nodesArgs, strings.Split(arg, ".")[1])
+	}
+
+	var mdsNames []string
+	for _, md := range mds {
+		mdsNames = append(mdsNames, md.Field("metadata.name").String())
+	}
+
+	sort.Strings(nodesArgs)
+	sort.Strings(mdsNames)
+	equal := cmp.Equal(nodesArgs, mdsNames)
+	if !equal {
+		return fmt.Errorf("cluster-autoscaler args %+v are not equal to a list of MachineDeployment names %+v", nodesArgs, mdsNames)
+	}
+
+	return nil
+}
