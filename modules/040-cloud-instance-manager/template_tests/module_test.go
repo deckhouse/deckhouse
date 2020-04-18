@@ -3,6 +3,8 @@ package template_tests
 import (
 	"testing"
 
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -35,7 +37,7 @@ const cloudInstanceManagerAWS = `
 internal:
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterCA: myclusterca
+  kubernetesCA: myclusterca
   cloudProvider:
     type: aws
     machineClassKind: AWSInstanceClass
@@ -81,7 +83,7 @@ const cloudInstanceManagerGCP = `
 internal:
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterCA: myclusterca
+  kubernetesCA: myclusterca
   cloudProvider:
     type: gcp
     machineClassKind: GCPMachineClass
@@ -122,7 +124,7 @@ const cloudInstanceManagerOpenstack = `
 internal:
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterCA: myclusterca
+  kubernetesCA: myclusterca
   cloudProvider:
     type: openstack
     machineClassKind: OpenStackMachineClass
@@ -167,7 +169,7 @@ const cloudInstanceManagerVsphere = `
 internal:
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterCA: myclusterca
+  kubernetesCA: myclusterca
   cloudProvider:
     type: vsphere
     machineClassKind: VsphereMachineClass
@@ -216,7 +218,7 @@ const cloudInstanceManagerYandex = `
 internal:
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterCA: myclusterca
+  kubernetesCA: myclusterca
   cloudProvider:
     type: yandex
     machineClassKind: YandexMachineClass
@@ -269,7 +271,7 @@ const cloudInstanceManagerStatic = `
 internal:
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  clusterCA: myclusterca
+  kubernetesCA: myclusterca
   nodeGroups:
   - name: worker
     nodeType: Static
@@ -290,13 +292,14 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerAWS)
-				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manual-rollout-id", "test")
+				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("ceedac6e4f575da505fda1ec0abb11a60074e803537d4a162bad0200ece1a4b2"))
+				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("7b787b33650a0f9166b6eacfdaff5d7c1e0cc508d2831d392ca938e47b7460f6"))
 			})
 		})
 
@@ -340,10 +343,18 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
+			bashibleSecrets["bashible-bundle-centos-7-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.15")
+			bashibleSecrets["bashible-bundle-centos-7-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.16")
+			bashibleSecrets["bashible-bundle-centos-7-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.14")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.15")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.16")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
+			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -369,22 +380,33 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineClassA.Exists()).To(BeTrue())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
-			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 		})
 	})
 
@@ -392,13 +414,14 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerGCP)
-				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manual-rollout-id", "test")
+				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("7d61bcc22c607b55c72744031271598bc8d350add1239912f66893d7e976179d"))
+				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("48aa95710a1ea40e5dc26d36a8a0b2d461a85e4fc47953e94a84cef64a4060ca"))
 			})
 		})
 
@@ -442,10 +465,18 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
+			bashibleSecrets["bashible-bundle-centos-7-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.15")
+			bashibleSecrets["bashible-bundle-centos-7-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.16")
+			bashibleSecrets["bashible-bundle-centos-7-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.14")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.15")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.16")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
+			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -472,22 +503,33 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
-			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 		})
 	})
 
@@ -495,13 +537,14 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerOpenstack)
-				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manual-rollout-id", "test")
+				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("f4f0e95b9f4efa02425c1d0a77546c4fb48f392016abbad53889b7e0b9792a02"))
+				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dfbb62138d7c5ce9dfdf5f9a9ab67cbfbfc240fb5b66ed141dd9fa352df91b5a"))
 			})
 		})
 
@@ -545,10 +588,18 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
+			bashibleSecrets["bashible-bundle-centos-7-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.15")
+			bashibleSecrets["bashible-bundle-centos-7-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.16")
+			bashibleSecrets["bashible-bundle-centos-7-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.14")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.15")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.16")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
+			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -575,22 +626,33 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dd5a14b22c4d777fb898e0694970ab6784da32142d4477652c94be3ebf33a583"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dd5a14b22c4d777fb898e0694970ab6784da32142d4477652c94be3ebf33a583"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
-			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 		})
 	})
 
@@ -598,13 +660,14 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerVsphere)
-				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manual-rollout-id", "test")
+				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("7605f2939d00980d80f4f203c3644fb0ef3444087c35af275df51fa5904330e0"))
+				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("72d791f90322f67ea0f42d80fbae93c5e5dacf3b26e2dc0cf03c8bad0a0bb072"))
 			})
 		})
 
@@ -648,10 +711,18 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
+			bashibleSecrets["bashible-bundle-centos-7-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.15")
+			bashibleSecrets["bashible-bundle-centos-7-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.16")
+			bashibleSecrets["bashible-bundle-centos-7-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.14")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.15")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.16")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
+			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -678,22 +749,33 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e54154626facdf7ba3937af03fb11ac3e626cf1ebab8e36fb17c8320ed4ae906"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e54154626facdf7ba3937af03fb11ac3e626cf1ebab8e36fb17c8320ed4ae906"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
-			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 		})
 	})
 
@@ -701,13 +783,14 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("cloudInstanceManager", cloudInstanceManagerYandex)
-				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manual-rollout-id", "test")
+				f.ValuesSet("cloudInstanceManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a84156b8921dec1023ecbd099f3da1f4da31be01a0bd164f75a86a3bd450f04e"))
+				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("f6d76633ca65e16841d11fbdb5838633f1a9dca126d503d479ad38ba1d67efdb"))
 			})
 		})
 
@@ -751,10 +834,18 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
+			bashibleSecrets["bashible-bundle-centos-7-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.15")
+			bashibleSecrets["bashible-bundle-centos-7-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.16")
+			bashibleSecrets["bashible-bundle-centos-7-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.14")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.15")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.16")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
+			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -781,22 +872,33 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("74795e5fe09827e6c1b0a44968e667aa93a9c1ee34e9c6f0bb6994dbdb2bb2fd"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("74795e5fe09827e6c1b0a44968e667aa93a9c1ee34e9c6f0bb6994dbdb2bb2fd"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
-			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 		})
 	})
 
@@ -841,10 +943,18 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			bashibleRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			bashibleRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 
-			bashibleBundleCentos := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7")
-			bashibleBundleCentosWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
-			bashibleBundleUbuntu := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04")
-			bashibleBundleUbuntuWorker := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
+			bashibleSecrets["bashible-bundle-centos-7-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.15")
+			bashibleSecrets["bashible-bundle-centos-7-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.16")
+			bashibleSecrets["bashible-bundle-centos-7-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-worker")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.14")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.15")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-1.16")
+			bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-ubuntu-18.04-worker")
+			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
+			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -878,10 +988,17 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())
 
-			Expect(bashibleBundleCentos.Exists()).To(BeTrue())
-			Expect(bashibleBundleCentosWorker.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntu.Exists()).To(BeTrue())
-			Expect(bashibleBundleUbuntuWorker.Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-centos-7-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.14"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.15"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-1.16"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-bundle-ubuntu-18.04-worker"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
+			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 		})
 	})
 })

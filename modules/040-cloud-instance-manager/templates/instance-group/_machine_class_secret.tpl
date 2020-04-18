@@ -11,7 +11,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list $context) | indent 2 }}
 type: Opaque
 data:
-  userData: {{ include "instance_group_machine_class_cloud_init_cloud_config" (list $context $ig $zone_name) | b64enc }}
+  userData: {{ include "instance_group_machine_class_cloud_init_cloud_config" (list $context $ig) | b64enc }}
 {{- $tpl_context := dict }}
 {{- $_ := set $tpl_context "Release" $context.Release }}
 {{- $_ := set $tpl_context "Chart" $context.Chart }}

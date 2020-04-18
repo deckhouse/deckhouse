@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
@@ -26,6 +28,7 @@ spec:
     options:
       kubernetesVersion: 1.15.4
     bundle: centos-7.1.1.1
+  kubernetesVersion: "1.42"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -151,7 +154,7 @@ metadata:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"cloudInstanceManager":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"clusterVersion": "1.15.5"}},"cloudInstanceManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "CloudInstanceGroup", false)
@@ -194,7 +197,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -205,13 +207,13 @@ metadata:
 				        "name": "proper1"
 				      }
 				    },
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "name": "proper1"
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -224,7 +226,8 @@ metadata:
 				        "b"
 				      ]
 				    },
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "name": "proper2"
 				  }
 				]
@@ -245,7 +248,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -258,13 +260,13 @@ metadata:
 				      "zones": []
 				    },
 				    "instanceClass": null,
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "name": "proper1"
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -278,7 +280,8 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "name": "proper2"
 				  }
 				]
@@ -296,7 +299,8 @@ metadata:
 
 		It("Hook must not fail and Values should contain an id", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups.0.manual-rollout-id").String()).To(Equal("test"))
+			fmt.Println("JOPA", f.ValuesGet("cloudInstanceManager.internal").String())
+			Expect(f.ValuesGet("cloudInstanceManager.internal.nodeGroups.0.manualRolloutID").String()).To(Equal("test"))
 		})
 	})
 
@@ -314,7 +318,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -329,13 +332,13 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "name": "proper1"
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -349,7 +352,8 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "name": "proper2"
 				  }
 				]
@@ -375,7 +379,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -390,13 +393,13 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "name": "proper1"
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -410,7 +413,8 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "name": "proper2"
 				  }
 				]
@@ -437,7 +441,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -452,13 +455,13 @@ metadata:
 				      ]
 				    },
 				    "name": "proper1",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "instanceClass": null
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -472,7 +475,8 @@ metadata:
 				      ]
 				    },
 				    "name": "proper2",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "instanceClass": null
 				  }
 				]
@@ -516,7 +520,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -531,13 +534,13 @@ metadata:
 				      ]
 				    },
 				    "name": "proper1",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "instanceClass": null
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -551,7 +554,8 @@ metadata:
 				      ]
 				    },
 				    "name": "proper2",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "instanceClass": null
 				  }
 				]
@@ -580,7 +584,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -595,13 +598,13 @@ metadata:
 				      ]
 				    },
 				    "name": "proper1",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "instanceClass": null
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -615,7 +618,8 @@ metadata:
 				      ]
 				    },
 				    "name": "proper2",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "instanceClass": null
 				  }
 				]
@@ -659,7 +663,6 @@ metadata:
 				  {
 				    "bashible": {
 				      "bundle": "centos-7.1.1.1",
-				      "dynamicOptions": {},
 				      "options": {
 				        "kubernetesVersion": "1.15.4"
 				      }
@@ -674,13 +677,13 @@ metadata:
 				      ]
 				    },
 				    "name": "proper1",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.42",
 				    "instanceClass": null
 				  },
 				  {
 				    "bashible": {
 				      "bundle": "slackware-14.1",
-				      "dynamicOptions": {},
 				      "options": {}
 				    },
 				    "cloudInstances": {
@@ -694,7 +697,8 @@ metadata:
 				      ]
 				    },
 				    "name": "proper2",
-				    "manual-rollout-id": "",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
 				    "instanceClass": null
 				  }
 				]

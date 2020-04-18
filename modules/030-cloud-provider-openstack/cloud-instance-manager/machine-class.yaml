@@ -5,7 +5,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
-  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.region | quote }}
+  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.connection.region | quote }}
   availabilityZone: {{ .zoneName }}
   flavorName: {{ .instanceGroup.instanceClass.flavorName }}
   imageName: {{ .instanceGroup.instanceClass.imageName }}
@@ -19,8 +19,10 @@ spec:
   {{- $networks = prepend $networks .instanceGroup.instanceClass.mainNetwork }}
   {{- range $networks }}
   - name: {{ . | quote }}
-    {{- if and (has . $.Values.cloudInstanceManager.internal.cloudProvider.openstack.internalNetworkNames) (eq $.Values.cloudInstanceManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled") }}
+    {{- if has . $.Values.cloudInstanceManager.internal.cloudProvider.openstack.internalNetworkNames }}
+      {{- if eq $.Values.cloudInstanceManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled" }}
     podNetwork: true
+      {{- end }}
     {{- end }}
   {{- end }}
   podNetworkCidr: {{ .Values.global.discovery.podSubnet }}
