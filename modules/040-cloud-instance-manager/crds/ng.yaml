@@ -93,6 +93,12 @@ spec:
               - Cloud
               - Static
               - Hybrid
+            kubernetesVersion:
+              type: string
+              enum:
+              - "1.14"
+              - "1.15"
+              - "1.16"
             cloudInstances:
               type: object
               required:
@@ -195,14 +201,3 @@ spec:
                 period:
                   type: string
                   pattern: '^[0-9]+[mh]{1}$'
-            bashible:
-              type: object
-              properties:
-                options:
-                  description: "Options to pass to bundle during the bootstrap stage. Vary between different bundles"
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true
-                dynamicOptions:
-                  description: "Options to pass to bundle during the main stage. Vary between different bundles"
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true

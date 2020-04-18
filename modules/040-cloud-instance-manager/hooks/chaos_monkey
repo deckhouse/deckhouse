@@ -59,6 +59,11 @@ function __on_kubernetes::machines() {
   return 0
 }
 
+function __on_kubernetes::monkey() {
+  # TODO: It's a bug https://flant.slack.com/archives/C78AQG5EY/p1587134804048800
+  return 0
+}
+
 function __on_schedule::monkey() {
   # for testing environment
   if [ -n "${RANDOM_SEED-}" ]; then

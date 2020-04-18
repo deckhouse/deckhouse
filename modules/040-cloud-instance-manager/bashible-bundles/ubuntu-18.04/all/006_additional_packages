@@ -1,8 +1,0 @@
-#!/bin/bash -e
-
-export DEBIAN_FRONTEND=noninteractive
-
-### Миграция 04.03.2020: Удалить после выката на все кластеры https://github.com/deckhouse/deckhouse/merge_requests/1775
-if ! apt -qq list nfs-common 2>/dev/null | grep installed >/dev/null 2>/dev/null; then
-        apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -qy nfs-common
-fi

@@ -28,7 +28,7 @@
 {{- if hasKey .instanceGroup.instanceClass "labels" -}}
   {{- $_ := set $options "labels" .instanceGroup.instanceClass.labels -}}
 {{- end -}}
-{{- if (index .instanceGroup "manual-rollout-id") -}}
-  {{ $_ := set $options "manual-rollout-id" (index .instanceGroup "manual-rollout-id") -}}
+{{- if (index .instanceGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .instanceGroup "manualRolloutID") -}}
 {{- end -}}
 {{- $options | toYaml | sha256sum -}}

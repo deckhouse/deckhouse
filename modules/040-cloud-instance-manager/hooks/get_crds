@@ -23,9 +23,11 @@ function __config__() {
       jqFilter: |
         {
           "name": .metadata.name,
-          "spec": ((.spec | .bashible //= {} | .bashible.options //= {} | .bashible.dynamicOptions //= {})
-          +
-          {"manual-rollout-id": (.metadata.annotations."manual-rollout-id" // "")})
+          "spec": (
+            .spec
+            +
+            {"manualRolloutID": (.metadata.annotations."manual-rollout-id" // "")}
+          )
         }
     $(
     if [ -n "$instance_class_kind" ]; then
@@ -100,12 +102,14 @@ function _set_ng_error_status() {
 }
 
 function __main__() {
+context::jq > /tmp/jq
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
     instance_class_kind=D8TestInstanceClass
   else
     instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
   fi
 
+  cluster_version="$(values::get global.discovery.clusterVersion)"
   default_zones=$(context::jq -r '.snapshots |
   (if .machine_deployments[0] | has("object") then [.machine_deployments[].object.metadata.annotations.zone | select(length > 0)] else [] end) as $a |
   (if .cloud_provider_secrets[0] | has("object") then .cloud_provider_secrets[].filterResult.zones else [] end) as $b |
@@ -115,9 +119,12 @@ function __main__() {
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
     ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
     ng="$(context::get snapshots.ngs.$i.filterResult.spec)"
-    ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
+    ng="$(jq \
+            --arg name "${ng_name}" \
+            --arg default_kubernetes_version "$(semver get major $cluster_version).$(semver get minor $cluster_version)" \
+            '.name = $name | .kubernetesVersion //= $default_kubernetes_version' <<< "$ng")"
 
-    # If cloud provider exist
+    # If cloud provider exists
     if [ -n "$instance_class_kind" ] && [ "$(context::jq '.snapshots.ics | length')" -gt "0" ]; then
       instance_classes="$(context::jq -r '
         [.snapshots.ics[]] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
@@ -162,7 +169,7 @@ function __main__() {
       ng_instance_class="$(jq --arg name $ng_instance_class_name '.[$name]' <<< "$instance_classes")"
       ng="$(jq \
         --argjson instance_class "${ng_instance_class}" \
-        --argjson default_zones "$default_zones" \
+        --argjson default_zones "${default_zones}" \
         '.instanceClass = $instance_class | .cloudInstances.zones //= $default_zones' <<< "$ng")"
     fi
 

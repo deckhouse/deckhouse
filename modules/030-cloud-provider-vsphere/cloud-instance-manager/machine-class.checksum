@@ -34,7 +34,7 @@
     {{- $_ := set $options "runtimeOptions.memoryReservation" .instanceGroup.instanceClass.runtimeOptions.memoryReservation -}}
   {{- end }}
 {{- end }}
-{{- if (index .instanceGroup "manual-rollout-id") -}}
-  {{ $_ := set $options "manual-rollout-id" (index .instanceGroup "manual-rollout-id") -}}
+{{- if (index .instanceGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .instanceGroup "manualRolloutID") -}}
 {{- end -}}
 {{- $options | toYaml | sha256sum -}}
