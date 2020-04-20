@@ -3,7 +3,7 @@ if bb-flag? is-bootstrapped; then exit 0; fi
 echo "Not realized yet!"
 exit 1
 
-{{- /* needs refactoring if .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers */ -}}
+{{- /* TODO needs refactoring if .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers */ -}}
 
 ip_addr_show_output=$(ip -json addr show)
 primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
