@@ -16,6 +16,7 @@ rules:
   - bashible-bundle-{{ $bashible_bundle }}
   - bashible-bundle-{{ $bashible_bundle }}-bootstrap
   {{- range $.Values.cloudInstanceManager.internal.instanceGroups }}
+  - bashible-{{ .name }}-{{ $bashible_bundle | trimSuffix "-1.0" }}
   - bashible-bundle-{{ $bashible_bundle }}-{{ .name }}
   - bashible-bundle-{{ $bashible_bundle }}-{{ .name }}-bootstrap
   {{- end}}
