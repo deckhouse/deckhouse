@@ -14,7 +14,7 @@ function __config__() {
      includeSnapshotsFrom: [openstackinstanceclasses]
      apiVersion: deckhouse.io/v1alpha1
      kind: OpenStackInstanceClass
-     jqFilter: select(.spec | has("mainNetworkName") | not) | .metadata.name
+     jqFilter: select(.spec | has("mainNetwork") | not) | .metadata.name
 EOF
 }
 
@@ -27,9 +27,9 @@ function __on_kubernetes::openstackinstanceclasses::synchronization() {
     if [[ -z $old_ics ]]; then
        return 0
     fi
-    mainNetworkName=$(values::get --config cloudProviderOpenstack.externalNetworkNames | jq '.[0]' -r)
+    mainNetwork=$(values::get --config cloudProviderOpenstack.externalNetworkNames | jq '.[0]' -r)
     for i in $old_ics; do
-      kubernetes::patch_jq "" "openstackinstanceclass/$i" ".spec.mainNetworkName=\"$mainNetworkName\""
+      kubernetes::patch_jq "" "openstackinstanceclass/$i" ".spec.mainNetwork=\"$mainNetwork\""
     done
     if values::has --config cloudProviderOpenstack.internalNetworkNames ; then
       additionalNetworks=$(values::get --config cloudProviderOpenstack.internalNetworkNames)

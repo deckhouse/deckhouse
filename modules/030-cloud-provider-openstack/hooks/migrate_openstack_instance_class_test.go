@@ -40,7 +40,7 @@ spec:
     kubernetesVersion: 1.16.6
   flavorName: m1.medium
   imageName: ubuntu-18-04-cloud-amd64
-  mainNetworkName: public
+  mainNetwork: public
   additionalNetworks:
   - int_net_1
   - int_net_2
@@ -58,7 +58,7 @@ spec:
     kubernetesVersion: 1.16.6
   flavorName: m1.medium
   imageName: ubuntu-18-04-cloud-amd64
-  mainNetworkName: external
+  mainNetwork: external
   additionalNetworks:
   - int_net_1
   - int_net_2
@@ -113,12 +113,12 @@ spec:
 			for _, icName := range []string{"worker", "worker2"} {
 				ic := f.KubernetesGlobalResource("OpenStackInstanceClass", icName)
 				Expect(ic.Exists()).To(BeTrue())
-				Expect(ic.Field("spec.mainNetworkName").String()).To(Equal("public"))
+				Expect(ic.Field("spec.mainNetwork").String()).To(Equal("public"))
 				Expect(ic.Field("spec.additionalNetworks").String()).To(MatchYAML(`[int1, int2]`))
 			}
 			workerNew := f.KubernetesGlobalResource("OpenStackInstanceClass", "worker_new")
 			Expect(workerNew.Exists()).To(BeTrue())
-			Expect(workerNew.Field("spec.mainNetworkName").String()).To(Equal("external"))
+			Expect(workerNew.Field("spec.mainNetwork").String()).To(Equal("external"))
 			Expect(workerNew.Field("spec.additionalNetworks").String()).To(MatchYAML(`[int_net_1, int_net_2]`))
 		})
 	})
