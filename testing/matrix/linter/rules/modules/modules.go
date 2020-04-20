@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	toHelmignore = []string{"hooks", "crds", "enabled", "candi"}
+	toHelmignore = []string{"hooks", "crds", "enabled"}
 )
 
 func skipModuleIfNeeded(name string) bool {

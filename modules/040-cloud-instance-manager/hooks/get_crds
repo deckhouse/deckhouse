@@ -102,7 +102,6 @@ function _set_ng_error_status() {
 }
 
 function __main__() {
-context::jq > /tmp/jq
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
     instance_class_kind=D8TestInstanceClass
   else
