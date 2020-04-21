@@ -142,13 +142,17 @@ internal:
         securityGroups: [groupa, groupb]
         sshKeyPairName: mysshkey
       internalSubnet: "10.0.0.1/24"
-      internalNetworkNames: [mynetwork]
+      internalNetworkNames: [mynetwork, mynetwork2]
       externalNetworkNames: [shared]
   nodeGroups:
   - name: worker
     instanceClass:
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
+      mainNetwork: shared
+      additionalNetworks:
+      - mynetwork
+      - mynetwork2
     nodeType: Cloud
     bashible:
       dynamicOptions: {}
@@ -544,7 +548,7 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
 				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dfbb62138d7c5ce9dfdf5f9a9ab67cbfbfc240fb5b66ed141dd9fa352df91b5a"))
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("9b3c57c4b09792ff626866698884907c89dc3f8d6571b81a5c226e1cae35057d"))
 			})
 		})
 
@@ -623,13 +627,16 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
 			Expect(machineClassA.Exists()).To(BeTrue())
+			Expect(machineClassA.Field("spec.networks").String()).To(MatchYAML(`
+[{name: shared}, {name: mynetwork, podNetwork: true}, {name: mynetwork2, podNetwork: true}]
+`))
+
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
-
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dd5a14b22c4d777fb898e0694970ab6784da32142d4477652c94be3ebf33a583"))
+			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
@@ -637,7 +644,7 @@ var _ = Describe("Module :: cloud-instance-manager :: helm template ::", func() 
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("dd5a14b22c4d777fb898e0694970ab6784da32142d4477652c94be3ebf33a583"))
+			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
 
 			Expect(bashibleRole.Exists()).To(BeTrue())
 			Expect(bashibleRoleBinding.Exists()).To(BeTrue())

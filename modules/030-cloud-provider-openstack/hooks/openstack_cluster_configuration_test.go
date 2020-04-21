@@ -52,13 +52,14 @@ cloudProviderOpenstack:
   "instances": {
     "securityGroups": [
       "default",
-      "ssh-and-ping"
+      "ssh-and-ping",
+      "security_group_1"
     ]
   },
   "internalNetworkNames": [
     "internal"
   ],
-  "podNetworkMode": "DirectRoutinWithPortSecurityEnabled",
+  "podNetworkMode": "DirectRoutingWithPortSecurityEnabled",
   "zones": ["zone1", "zone2"]
 }
 `
@@ -128,14 +129,43 @@ data: {}
 			Expect(f.ValuesGet(internal + "zones").String()).To(MatchYAML(`
 ["zone1", "zone2"]
 `))
-			Expect(f.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRoutinWithPortSecurityEnabled"))
+			Expect(f.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRoutingWithPortSecurityEnabled"))
 			Expect(f.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[default, ssh-and-ping]
+[default, security_group_1, ssh-and-ping]
 `))
 		})
 	})
 
 	b := HookExecutionConfigInit(initValuesStringB, `{}`)
+	Context("BeforeHelm", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(BeforeHelmContext)
+			b.RunHook()
+		})
+
+		It("Should correctly fill the Values store from cloudProviderOpenstack", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderOpenstack.internal").String()).To(MatchYAML(`
+connection:
+  authURL: https://test.tests.com:5000/v3/
+  domainName: default
+  tenantName: default
+  username: jamie
+  password: nein
+  region: HetznerFinland
+externalNetworkNames: [public1, public2]
+internalNetworkNames: [int1, int2]
+podNetworkMode: DirectRouting
+instances:
+  sshKeyPairName: my-ssh-keypair
+  securityGroups:
+  - security_group_1
+  - security_group_2
+zones: []
+`))
+		})
+	})
+
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.KubeStateSet(""))
@@ -181,7 +211,7 @@ data: {}
 				Expect(b.ValuesGet(connection + "region").String()).To(Equal("HetznerFinland"))
 				internal := "cloudProviderOpenstack.internal."
 				Expect(b.ValuesGet(internal + "internalNetworkNames").String()).To(MatchYAML(`
-[internal, int1, int2]
+[int1, int2, internal]
 `))
 				Expect(b.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
 [external, public1, public2]
@@ -191,7 +221,7 @@ data: {}
 `))
 				Expect(b.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
 				Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[default, ssh-and-ping, security_group_1, security_group_2]
+[default, security_group_1, security_group_2, ssh-and-ping]
 `))
 			})
 		})

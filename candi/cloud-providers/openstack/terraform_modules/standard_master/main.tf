@@ -6,6 +6,13 @@ resource "openstack_compute_floatingip_v2" "master" {
   pool = var.external_network_name
 }
 
+resource "openstack_blockstorage_volume_v2" "master" {
+  count = var.root_disk_size == "" ? 0 : 1
+  name = join("-", [var.prefix, "master-root-volume"])
+  size = var.root_disk_size
+  image_id = data.openstack_images_image_v2.master.id
+}
+
 resource "openstack_compute_instance_v2" "master" {
   count = var.root_disk_size == "" ? 1 : 0
   name = join("-", [var.prefix, "master"])
@@ -32,12 +39,11 @@ resource "openstack_compute_instance_v2" "master_with_root_disk" {
   depends_on = [var.internal_subnet]
 
   block_device {
-    uuid                  = data.openstack_images_image_v2.master.id
-    source_type           = "image"
-    destination_type      = "volume"
+    uuid                  = openstack_blockstorage_volume_v2.master[0].id
     boot_index            = 0
+    source_type           = "volume"
+    destination_type      = "volume"
     delete_on_termination = true
-    volume_size           = var.root_disk_size
   }
 }
 

@@ -24,11 +24,12 @@ function __main__() {
     values::unset --config cloudProviderOpenstack.internalNetworkName
   fi
 
-  if ! values::has --config cloudProviderOpenstack.podNetworkMode ; then
-    values::set --config cloudProviderOpenstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"
-  fi
-
-  if values::has --config cloudProviderOpenstack.addPodSubnetToPortWhitelist ; then
+  if values::has --config cloudProviderOpenstack.addPodSubnetToPortWhitelist; then
+    if [[ "x$(values::get --config cloudProviderOpenstack.addPodSubnetToPortWhitelist)" == "xtrue" ]]; then
+      values::set --config cloudProviderOpenstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"
+    else
+      values::set --config cloudProviderOpenstack.podNetworkMode "DirectRouting"
+    fi
     values::unset --config cloudProviderOpenstack.addPodSubnetToPortWhitelist
   fi
 
@@ -43,6 +44,16 @@ function __main__() {
       fi
     done
     values::set --config cloudProviderOpenstack.connection "$connection"
+  fi
+
+  if values::has --config cloudProviderOpenstack.sshKeyPairName ; then
+    values::set --config cloudProviderOpenstack.instances.sshKeyPairName "$(values::get --config cloudProviderOpenstack.sshKeyPairName)"
+    values::unset --config cloudProviderOpenstack.sshKeyPairName
+  fi
+
+  if values::has --config cloudProviderOpenstack.securityGroups ; then
+    values::set --config cloudProviderOpenstack.instances.securityGroups "$(values::get --config cloudProviderOpenstack.securityGroups)"
+    values::unset --config cloudProviderOpenstack.securityGroups
   fi
 }
 

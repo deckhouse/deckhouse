@@ -1,30 +1,40 @@
-#!/bin/bash -e
+#!/bin/bash
 
-# debug for low-probable bug "RTNETLINK answers: Network is unreachable"
-set -x
+{{- if .nodeGroup.instanceClass.additionalNetworks }}
 
-internal_iface_name=$(ip -brief link | grep DOWN | grep -v docker0 | awk '{print $1}')
-if [[ -n "$internal_iface_name" ]]; then
-  ip link set dev "$internal_iface_name" name internal
-elif ! ip -brief link | grep -q internal; then
-  2>&1 echo "FATAL: \"internal\" interface could not be detected"
-  exit 1
-fi
+shopt -s extglob
 
-internal_iface_mac=$(ip -brief link show dev internal | awk '{print $3}')
-if [[ -n "$internal_iface_mac" ]]; then
-  cat << EOF > /etc/netplan/20-internal.yaml
+ip_addr_show_output=$(ip -json addr show)
+primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
+primary_ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$primary_mac" '.[] | select(.address == $mac) | .ifname')"
+
+for i in /sys/class/net/!($primary_ifname); do
+  if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio.*' 1>/dev/null 2>&1; then
+    continue
+  fi
+
+  ifname=$(basename "$i")
+  mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+
+  cat > /etc/netplan/100-cim-"$ifname".yaml <<EOF
 network:
-    version: 2
-    ethernets:
-        internal:
-            dhcp4: true
-            set-name: internal
-            match:
-                macaddress: $internal_iface_mac
+  version: 2
+  ethernets:
+    $ifname:
+      dhcp4: true
+      dhcp4-overrides:
+        use-hostname: false
+        use-routes: false
+        use-dns: false
+        use-ntp: false
+      match:
+        macaddress: $mac
 EOF
-  netplan apply
-else
-  2>&1 echo "FATAL: \"internal\" interface's MAC-address could not be detected"
-  exit 1
-fi
+done
+
+netplan generate
+netplan apply
+
+shopt -u extglob
+
+{{- end }}

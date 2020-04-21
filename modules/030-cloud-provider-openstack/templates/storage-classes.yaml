@@ -1,6 +1,6 @@
 {{- if hasKey .Values.cloudProviderOpenstack.internal "volumeTypes" }}
   {{- range $index, $volumeType := .Values.cloudProviderOpenstack.internal.volumeTypes }}
-    {{ $name := $volumeType | nospace | lower }}
+    {{ $name := $volumeType | nospace | lower | replace "_" "" }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

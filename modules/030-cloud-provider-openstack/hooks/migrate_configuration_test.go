@@ -20,12 +20,12 @@ cloudProviderOpenstack:
   networkName: public
   addPodSubnetToPortWhitelist: true
   internalNetworkName: kube
-  instances:
-    sshKeyPairName: my-ssh-keypair
-    securityGroups:
-    - default
-    - allow-ssh-and-icmp
+  sshKeyPairName: my-ssh-keypair
+  securityGroups:
+  - default
+  - allow-ssh-and-icmp
   internalSubnet: "10.0.201.0/16"
+  instances: {}
 `
 	)
 	f := HookExecutionConfigInit(`{"cloudProviderOpenstack":{"internal":{}}}`, config)
