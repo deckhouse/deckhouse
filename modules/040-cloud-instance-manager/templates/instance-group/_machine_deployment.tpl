@@ -30,8 +30,11 @@ spec:
       labels:
         instance-group: {{ $ig.name }}-{{ $zone_name }}
       annotations:
+  # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible. Оставил чтобы не перекатывались ноды.
+  {{- if hasKey $ig "bashible" }}
         bashible-bundle: {{ $ig.bashible.bundle | quote }}
         checksum/bashible-bundles-options: {{ $ig.bashible.options | toJson | sha256sum | quote }}
+  {{- end }}
         checksum/machine-class: {{ include "instance_group_machine_class_checksum" (list $context $ig $zone_name) | quote }}
     spec:
       class:
