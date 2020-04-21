@@ -6,7 +6,7 @@ kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.y
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
 
 # Upload pki for deckhouse
-kubectl -n kube-system create secret generic d8-pki \
+kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system create secret generic d8-pki \
   --from-file=ca.crt=/etc/kubernetes/pki/ca.crt \
   --from-file=ca.key=/etc/kubernetes/pki/ca.key \
   --from-file=sa.pub=/etc/kubernetes/pki/sa.pub \
