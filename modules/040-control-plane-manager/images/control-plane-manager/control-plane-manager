@@ -1,191 +1,260 @@
 #!/bin/bash
 
+# shellcheck disable=SC2174
+
 set -Eeuo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
-
-set -x
 
 # Base env
 CLUSTER_PKI_DIR=/pki
 CONFIG_DIR=/config
 ROOTFS_DIR=
-BASE_DIR=$ROOTFS_DIR/etc/kubernetes/deckhouse
-CLUSTER_CONFIGURATION_FILE=/etc/kubernetes/deckhouse/kubeadm-config.yaml
-LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM_FILE=$BASE_DIR/last_applied_cluster_configuration_checksum
-LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM=""
-if [[ -f $LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM_FILE ]] ; then
-  LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM=$(cat $LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM_FILE)
+
+# Configuration checksum
+CONFIGURATION_CHECKSUM=$(cat "${BASH_SOURCE[0]}" $CONFIG_DIR/* | sha256sum | cut -d" " -f1)
+BACKUP_DIR=$ROOTFS_DIR/etc/kubernetes/deckhouse/backup/$CONFIGURATION_CHECKSUM
+TMP_ROOTFS_DIR="/tmp/${CONFIGURATION_CHECKSUM}"
+
+# Last applied configuration checksum
+LAST_APPLIED_CONFIGURATION_CHECKSUM=""
+if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksum ]] ; then
+  LAST_APPLIED_CONFIGURATION_CHECKSUM=$(cat $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksum)
 fi
 
-function generate_kubeadm_config() {
-  # Generate cluster config for current node
-  gomplate \
-    -c "clusterConfiguration=file:///${CONFIG_DIR}/cluster-configuration.json" \
-    -c "nodeIP=env:///MY_IP" \
-    -c "extraArgs=env:///KUBEADM_EXTRA_ARGS?type=application/json" \
-    -f "$CONFIG_DIR/kubeadm-config.yaml.tpl" \
-    -o "$ROOTFS_DIR/$CLUSTER_CONFIGURATION_FILE"
+function backup_file_or_folder() {
+  if [[ ! -e "$BACKUP_DIR/$1" ]] ; then
+    if [[ -e "$1" ]] ; then
+      mkdir -m go= -p "$(dirname "$BACKUP_DIR/$1")"
+      echo " * Backup $1 (to $BACKUP_DIR/$1)"
+      cp -a "$1" "$BACKUP_DIR/$1"
+    fi
+  fi
 }
 
-function backup_file_or_folder() {
-  if [[ ! -e $BACKUP_DIR/$1 ]] ; then
-    mkdir -m go= -p $(dirname $BACKUP_DIR/$1)
-    echo " * Backup $ROOTFS_DIR/etc/kubernetes/$1 (to $BACKUP_DIR/$1)"
-    cp -a $ROOTFS_DIR/etc/kubernetes/$1 $BACKUP_DIR/$1
+function remove_file_or_directory_if_exists() {
+  if [[ -f $1 ]] ; then
+    backup_file_or_folder "$1"
+    echo " * Remove $1"
+    rm -rf "$1"
   fi
 }
 
 function install_file_if_changed() {
+  catcmd="cat"
+  if [[ "$1" == "--envsubst" ]] ; then
+    catcmd="envsubst"
+    shift
+  fi
   src=$1; shift
   dst=$1; shift
 
-  if cmp -s $src $ROOTFS_DIR/etc/kubernetes/$dst ; then
-    echo " * File $ROOTFS_DIR/etc/kubernetes/$dst has not changed"
+  if cmp -s <($catcmd < "$src") "$dst" ; then
+    echo " * File $dst has not changed"
   else
-    if [[ -e $ROOTFS_DIR/etc/kubernetes/$dst ]] ; then
-      backup_file_or_folder $dst
+    backup_file_or_folder "$dst"
+
+    echo " * Install $dst"
+    # shellcheck disable=SC2068
+    install $@ <($catcmd < "$src") "$dst"
+  fi
+}
+
+function install_files_if_changed() {
+  install_cmd="install_file_if_changed"
+  if [[ "$1" == "--envsubst" ]] ; then
+    install_cmd="install_file_if_changed --envsubst"
+    shift
+  fi
+  src_prefix=$1; shift
+  dst_dir=$1; shift
+
+  # If there is no source
+  if ! compgen -G "$src_prefix*" > /dev/null ; then
+    echo " * No source files found (no files matching ${src_prefix}*)"
+
+    # Remove destination
+    if compgen -G "$dst_dir/*" > /dev/null ; then
+      remove_file_or_directory_if_exists "$dst_dir"
+      mkdir -p -m go= "$dst_dir"
     fi
 
-    echo " * Install $ROOTFS_DIR/etc/kubernetes/$dst"
-    install $@ $src $ROOTFS_DIR/etc/kubernetes/$dst
+    return 0
   fi
+
+  # create directory, if not exists
+  mkdir -p -m go= "$dst_dir"
+
+  # install src files
+  installed_files=()
+  for file in "$src_prefix"* ; do
+    dst_file_name=${file#"${src_prefix}"}
+    # shellcheck disable=SC2068
+    $install_cmd "$file" "$dst_dir/$dst_file_name" $@
+    installed_files+=( "$dst_file_name" )
+  done
+
+  # remove excess files
+  for file in "$dst_dir/"* ; do
+    found="no"
+    for installed_file in "${installed_files[@]}" ; do
+      if [[ "$installed_file" == "$(basename "$file")" ]] ; then
+        found="yes"
+        break
+      fi
+    done
+
+    if [[ "$found" == "no" ]] ; then
+      remove_file_or_directory_if_exists "$file"
+    fi
+  done
 }
 
 function certificate_valid_for() {
   not_after=$(cfssl-certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
-  expr $(date --date="$not_after" +%s) - $(date +%s)
+  echo $(("$(date --date="$not_after" +%s)" - "$(date +%s)"))
 }
 
 function generate_or_renew_certificate() {
-  certificate=$1
-  file=$1
+  certificate=$ROOTFS_DIR/etc/kubernetes/pki/$1
+  tmp_certificate=$TMP_ROOTFS_DIR/etc/kubernetes/pki/$1
   if [[ $# -gt 1 ]] ; then
-    file=$2
+    certificate=$ROOTFS_DIR/etc/kubernetes/pki/$2
+    tmp_certificate=$TMP_ROOTFS_DIR/etc/kubernetes/pki/$2
   fi
+  kubeadm_cmd="kubeadm init phase certs $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
 
-  echo "Generate or renew certificate $certificate ($file.crt)"
-  if [[ -f $ROOTFS_DIR/etc/kubernetes/pki/$file.crt ]] ; then
-    valid_for=$(cat $ROOTFS_DIR/etc/kubernetes/pki/$file.crt | certificate_valid_for)
-
+  echo "Generate or renew $1 certificate ($certificate.crt)"
+  if [[ -f $certificate.crt ]] ; then
     remove="no"
-    if [[ "$CLUSTER_CONFIGURATION_CHECKSUM" != "$LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM" ]] ; then
-      echo " * Cluster configuration has changed since last certificate generation"
-      remove="yes"
+
+    if [[ "$CONFIGURATION_CHECKSUM" != "$LAST_APPLIED_CONFIGURATION_CHECKSUM" ]] ; then
+      echo " * Configuration has changed since last certificate generation, verifying certificate"
+
+      # Generate tmp certificate and compare
+      $kubeadm_cmd --rootfs "$TMP_ROOTFS_DIR" > /dev/null
+
+      old_cert_json=$(cfssl certinfo -cert "$certificate.crt")
+      new_cert_json=$(cfssl certinfo -cert "$tmp_certificate.crt")
+      is_cert_changed=$(jq -nr --argjson old_cert "$old_cert_json" --argjson new_cert "$new_cert_json" \
+        '$old_cert.subject != $new_cert.subject or $old_cert.sans != $new_cert.sans')
+
+      if [[ "$is_cert_changed" == "true" ]]; then
+        echo " * Certificate subject or sans has been changed"
+        remove="yes"
+      else
+        echo " * Certificate subject and sans are still valid"
+      fi
     fi
 
+    valid_for=$(certificate_valid_for < "$certificate".crt)
     if [[ "$valid_for" -lt 2592000 ]] ; then
       echo " * Certificate is expiring in less than 30 days"
       remove="yes"
     else
-      echo " * Certificate is valid for more than $(expr $valid_for / 86400) days"
+      echo " * Certificate is valid for more than $(("$valid_for" / 86400)) days"
     fi
 
-    if [[ ! -f $ROOTFS_DIR/etc/kubernetes/pki/$file.key ]] ; then
+    if [[ ! -f $certificate.key ]] ; then
       echo " * Certificate exists, but no key found"
       remove="yes"
     fi
 
-    if [[ "x$remove" == "xyes" ]] ; then
-      if [[ -f $ROOTFS_DIR/etc/kubernetes/pki/$file.key ]] ; then
-        backup_file_or_folder pki/$file.key
-        echo " * Remove $ROOTFS_DIR/etc/kubernetes/pki/$file.key"
-        rm -rf $ROOTFS_DIR/etc/kubernetes/pki/$file.key
-      fi
-
-      backup_file_or_folder pki/$file.crt
-      echo " * Remove $ROOTFS_DIR/etc/kubernetes/pki/$file.crt"
-      rm -rf $ROOTFS_DIR/etc/kubernetes/pki/$file.crt
+    if [[ "$remove" == "yes" ]] ; then
+      remove_file_or_directory_if_exists "$certificate.key"
+      remove_file_or_directory_if_exists "$certificate.crt"
     fi
   fi
 
-  if [[ ! -f $ROOTFS_DIR/etc/kubernetes/pki/$file.crt ]] ; then
+  if [[ ! -f $certificate.crt ]] ; then
     echo " * Generate new certificate"
-    kubeadm init phase certs $certificate --config $CLUSTER_CONFIGURATION_FILE --rootfs "$ROOTFS_DIR"
+    $kubeadm_cmd --rootfs "$ROOTFS_DIR" | sed 's/^/   /'
   fi
+
   echo " * Done!"
 }
 
 function generate_or_renew_kubeconfig() {
-  kubeconfig=$1
+  kubeconfig=$ROOTFS_DIR/etc/kubernetes/$1.conf
+  tmp_kubeconfig=$TMP_ROOTFS_DIR/etc/kubernetes/$1.conf
+  kubeadm_cmd="kubeadm init phase kubeconfig $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
 
-  echo "Generate or renew $kubeconfig kubeconfig"
-  if [[ -f $ROOTFS_DIR/etc/kubernetes/$kubeconfig.conf ]] ; then
-    cert="$(kubectl config view -o json --raw | jq '.users[0].user."client-certificate-data"' -r | base64 -d)"
-    valid_for=$(echo "$cert" | certificate_valid_for)
-
+  echo "Generate or renew $kubeconfig"
+  if [[ -f $kubeconfig ]] ; then
     remove="no"
-    if [[ "$CLUSTER_CONFIGURATION_CHECKSUM" != "$LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM" ]] ; then
-      echo " * Cluster configuration has changed since last kubeconfig generation"
-      remove="yes"
+
+    if [[ "$CONFIGURATION_CHECKSUM" != "$LAST_APPLIED_CONFIGURATION_CHECKSUM" ]] ; then
+      echo " * Configuration has changed since last kubeconfig generation, verifying kubeconfig"
+
+      # Generate tmp kubeconfig and compare
+      $kubeadm_cmd --rootfs "$TMP_ROOTFS_DIR" > /dev/null
+      old_ep=$(grep -Po '(?<=server: ).+$' "$kubeconfig")
+      new_ep=$(grep -Po '(?<=server: ).+$' "$tmp_kubeconfig")
+
+      if [[ "$old_ep" != "$new_ep" ]]; then
+        echo ' * KUBECONFIG'\''s address field changed'
+        remove="yes"
+      else
+        echo ' * KUBECONFIG'\''s address field has not changed'
+      fi
     fi
 
+    cert="$(kubectl --kubeconfig "$kubeconfig" config view -o json --raw | jq '.users[0].user."client-certificate-data"' -r | base64 -d)"
+    valid_for=$(echo "$cert" | certificate_valid_for)
     if [[ "$valid_for" -lt 2592000 ]] ; then
       echo " * Certificate is expiring in less than 30 days"
       remove="yes"
     else
-      echo " * Certificate is valid for more than $(expr $valid_for / 86400) days"
+      echo " * Certificate is valid for more than $(("$valid_for" / 86400)) days"
     fi
 
-    if [[ "x$remove" == "xyes" ]] ; then
-      backup_file_or_folder $kubeconfig.conf
-      echo " * Remove $ROOTFS_DIR/etc/kubernetes/$kubeconfig.conf"
-      rm -rf $ROOTFS_DIR/etc/kubernetes/$kubeconfig.conf
+    if [[ "$remove" == "yes" ]] ; then
+      remove_file_or_directory_if_exists "$kubeconfig"
     fi
   fi
 
-  if [[ ! -f $ROOTFS_DIR/etc/kubernetes/$kubeconfig.conf ]] ; then
+  if [[ ! -f $kubeconfig ]] ; then
     echo " * Generate new kubeconfig"
-    kubeadm init phase kubeconfig $kubeconfig --config $CLUSTER_CONFIGURATION_FILE --rootfs "$ROOTFS_DIR"
+    $kubeadm_cmd --rootfs "$ROOTFS_DIR" | sed 's/^/   /'
   fi
 
   echo " * Done!"
 }
 
+
 function converge_component() {
   component=$1
+  manifest=$ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml
+  tmp_manifest=$TMP_ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml
+  checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/kustomize/999-${component}-checksum.yaml
+  if [[ "$component" != "etcd" ]] ; then
+    kubeadm_cmd="kubeadm init phase control-plane ${component#kube-} --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+  else
+    kubeadm_cmd="kubeadm init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+  fi
 
   echo "Converge $component"
 
-  # Update component extra files, if present
-  mkdir -p -m go= $BASE_DIR/${component}-files
-  config_extra_files_checksums=""
-  if [[ "x$(ls -1 $CONFIG_DIR | grep file-${component})" != "x" ]] ; then
-    config_extra_files_checksums="$(sha256sum $CONFIG_DIR/file-${component}-* | cut -d " " -f 1 | sort)"
-  fi
-  actual_extra_files_checksums=""
-  if [[ "x$(ls -1 $BASE_DIR/${component}-files)" != "x" ]] ; then
-    actual_extra_files_checksums="$(sha256sum $BASE_DIR/${component}-files/* | cut -d " " -f 1 | sort)"
-  fi
-  if [[ "x$config_extra_files_checksums" != "x$actual_extra_files_checksums" ]] ; then
-    if [[ "x$actual_extra_files_checksums" != "x" ]] ; then
-      backup_file_or_folder deckhouse/${component}-files
-      echo " * Remove $BASE_DIR/${component}-files/*"
-      rm -f $BASE_DIR/${component}-files/*
-    fi
-
-    if [[ "x$config_extra_files_checksums" != "x" ]] ; then
-      for file in $(cd $CONFIG_DIR; ls -1 file-${component}-*) ; do
-        echo " * Copy $CONFIG_DIR/$file to $BASE_DIR/${component}-files/${file#file-${component}-}"
-        cp $CONFIG_DIR/$file $BASE_DIR/${component}-files/${file#file-${component}-}
-      done
-    fi
-  else
-    echo " * Skip extra files synchronization because they are in sync"
+  # Remove checksum patch, if it was left from previous run
+  if [[ -f "$checksum_patch" ]] ; then
+    rm "$checksum_patch"
   fi
 
-  # Calculate checksum
-  checksum_dependencies="$(find $ROOTFS_DIR/etc/kubernetes/pki/ $ROOTFS_DIR/etc/kubernetes/scheduler.conf $ROOTFS_DIR/etc/kubernetes/controller-manager.conf $ROOTFS_DIR/$CLUSTER_CONFIGURATION_FILE $BASE_DIR/${component}-files -type f)"
-  checksum=$(sha256sum $(echo $checksum_dependencies) | sha256sum | cut -d" " -f1)
+  # Generate tmp manifest and calculate checksum
+  $kubeadm_cmd --rootfs "$TMP_ROOTFS_DIR" > /dev/null
+  manifest_data=$(<"$tmp_manifest")
+  if [[ "$component" != "etcd" ]] ; then
+    # Ignore --initial-cluster and --initial-cluster-state for etcd
+    manifest_data=$(grep -v '\-\-initial-cluster' "$tmp_manifest")
+  fi
+  used_files="$(grep -Po '(?<==)/etc/kubernetes.*' "$tmp_manifest" | uniq | sed "s#^#$ROOTFS_DIR#")"
+  # shellcheck disable=SC2086
+  checksum="$(echo "$manifest_data" "$(sha256sum $used_files | sort)" | sha256sum | cut -d' ' -f 1)"
 
-  if [[ ! -f $ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml ]] || ! grep $checksum $ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml > /dev/null ; then
-    # Generate patches for kustomize
-    if [[ -d $BASE_DIR/kustomize/$component ]] ; then
-      rm -rf $BASE_DIR/kustomize/$component
-    fi
-    mkdir -p $BASE_DIR/kustomize/$component
-    component_image_var_name=$(echo $component | tr '[:lower:]-' '[:upper:]_')_IMAGE
-    cat > $BASE_DIR/kustomize/$component/01_image_and_checksum.yaml <<END
+  if [[ ! -f $manifest ]] || ! grep "$checksum" "$manifest" > /dev/null ; then
+    echo " * Generating new manifest"
+
+    cat > "$checksum_patch" <<END
 apiVersion: v1
 kind: Pod
 metadata:
@@ -193,75 +262,40 @@ metadata:
   namespace: kube-system
   annotations:
     control-plane-manager.deckhouse.io/checksum: "$checksum"
-spec:
-  containers:
-  - name: $component
-    image: ${!component_image_var_name}
 END
-    if [[ "x$config_extra_files_checksums" != "x" ]] ; then
-      cat > $BASE_DIR/kustomize/$component/02_extra_files.yaml <<END
-apiVersion: v1
-kind: Pod
-metadata:
-  name: $component
-  namespace: kube-system
-spec:
-  containers:
-  - name: $component
-    volumeMounts:
-    - mountPath: ${BASE_DIR}/${component}-files/
-      name: deckhouse-files
-      readOnly: true
-  volumes:
-  - hostPath:
-      path: ${BASE_DIR}/${component}-files/
-      type: DirectoryOrCreate
-    name: deckhouse-files
-END
-    fi
 
     # Generate new manifest
-    if [[ -f $ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml ]] ; then
-      backup_file_or_folder manifests/$component.yaml
-    fi
-    if [[ "x$component" != "xetcd" ]] ; then
-      kubeadm init phase control-plane ${component#kube-} --config $CLUSTER_CONFIGURATION_FILE --rootfs "$ROOTFS_DIR" --experimental-kustomize /etc/kubernetes/deckhouse/kustomize/$component
-    else
-      # Process etcd
-      if [[ ! -f /var/lib/etcd/member/snap/db ]] ; then
-        # Bootstrap etcd, if there is no /var/lib/etcd/member/snap/db
-
-        etcd_endpoints=$(timeout 10 kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq '[.items[] | "https://" + .status.podIP + ":2379"] | join(",")' -r)
-        etcd_env=$(ETCDCTL_API=3 etcdctl member add "${HOSTNAME}" --peer-urls="https://${MY_IP}:2380" \
-          --endpoints $etcd_endpoints \
+    backup_file_or_folder "$manifest"
+    if [[ "$component" == "etcd" ]] ; then
+      # Join etcd, if there is no /var/lib/etcd/member/snap/db
+      if [[ ! -f $ROOTFS_DIR/var/lib/etcd/member/snap/db ]] ; then
+        ETCDCTL_API=3 etcdctl member add "${HOSTNAME}" --peer-urls="https://${MY_IP}:2380" \
+          --endpoints "$ETCD_SERVERS" \
           --cacert $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.crt \
           --cert $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.crt \
-          --key $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.key | grep ^ETCD_)
-
-        eval "$etcd_env"
-        KUBEADM_EXTRA_ARGS="{\"etcd\":{\"initial-cluster\": \"$ETCD_INITIAL_CLUSTER\", \"initial-cluster-state\": \"$ETCD_INITIAL_CLUSTER_STATE\"}}"
-        export KUBEADM_EXTRA_ARGS
-
-        generate_kubeadm_config
+          --key $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.key > /dev/null
       fi
-
-      kubeadm init phase etcd local --config $CLUSTER_CONFIGURATION_FILE --rootfs "$ROOTFS_DIR" --experimental-kustomize /etc/kubernetes/deckhouse/kustomize/$component
     fi
+    $kubeadm_cmd --rootfs "$ROOTFS_DIR" | sed 's/^/    /'
+
+    # Remove checksum patch
+    rm "$checksum_patch"
   else
     echo " * Skip manifest generation because component checksum in manifest is up to date"
   fi
 
   # Wait up to 4 mins
   echo " * Wait for pod with new manifest to become ready in apiserver"
+  pod_name="$component-$HOSTNAME"
   n=0
   while true ; do
     if ! timeout 10 kubectl version > /dev/null 2> /dev/null ; then
       echo "    * No access to apiserver"
-    elif pod=$(timeout 10 kubectl -n kube-system get pod $component-$HOSTNAME -o json 2> /dev/null) ; then
+    elif pod=$(timeout 10 kubectl -n kube-system get pod "$pod_name" -o json 2> /dev/null) ; then
       pod_checksum=$(echo "$pod" | jq '.metadata.annotations."control-plane-manager.deckhouse.io/checksum"' -r 2> /dev/null)
 
-      if [[ "x$pod_checksum" != "x$checksum" ]] ; then
-        echo "    * Checksum from kubernetes pod $component-$HOSTNAME ($pod_checksum) does not match expected checksum ($checksum)"
+      if [[ "$pod_checksum" != "$checksum" ]] ; then
+        echo "    * Checksum from kubernetes pod $pod_name ($pod_checksum) does not match expected checksum ($checksum)"
       else
         if echo "$pod" | jq '.status.conditions[] | select(.type == "Ready") | .status == "True"' 2> /dev/null > /dev/null ; then
           echo "    * Pod has matching checksum and is ready"
@@ -271,12 +305,12 @@ END
         fi
       fi
     else
-      echo "    * Failed to get pod $component-$HOSTNAME from apiserver"
+      echo "    * Failed to get pod $pod_name from apiserver"
     fi
 
     n=$((n + 1))
     if [[ $n -gt 240 ]] ; then
-      echo "    * Fatal error: Timeout waiting for pod $component-$HOSTNAME to become ready with expected checksum ($checksum)"
+      echo "    * Fatal error: Timeout waiting for pod $pod_name to become ready with expected checksum ($checksum)"
       exit 1
     fi
 
@@ -287,34 +321,42 @@ END
   echo
 }
 
-# Create base dir
-mkdir -p $BASE_DIR
-
-# Generate config
-if [[ "x$MY_IP" == "x" ]] ; then
+# Generate configuration for kubeadm
+mkdir -p $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm
+if [[ -z "$MY_IP" ]] ; then
   echo "Fatal error: \$MY_IP is empty"
   exit 1
 fi
-KUBEADM_EXTRA_ARGS="{}"
-export KUBEADM_EXTRA_ARGS
-generate_kubeadm_config
-CLUSTER_CONFIGURATION_CHECKSUM=$(cat ${BASH_SOURCE[0]} $ROOTFS_DIR/$CLUSTER_CONFIGURATION_FILE | sha256sum | cut -d" " -f1)
-BACKUP_DIR=$BASE_DIR/backup/$CLUSTER_CONFIGURATION_CHECKSUM
+echo "Install kubeadm configuration"
+install_file_if_changed --envsubst $CONFIG_DIR/kubeadm-config.yaml $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml -o root -g root -m 0644
+install_files_if_changed --envsubst $CONFIG_DIR/kubeadm-kustomize- $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/kustomize
+echo " * Done!"
+echo
 
 # Install base pki into system
 echo "Install base pki files"
-mkdir -p $ROOTFS_DIR/etc/kubernetes/pki
+mkdir -m go= -p $ROOTFS_DIR/etc/kubernetes/pki
 for f in ca.crt front-proxy-ca.crt ; do
-  install_file_if_changed $CLUSTER_PKI_DIR/$f pki/$f -o root -g root -m 0644
+  install_file_if_changed $CLUSTER_PKI_DIR/$f $ROOTFS_DIR/etc/kubernetes/pki/$f -o root -g root -m 0644
 done
 for f in ca.key sa.pub sa.key front-proxy-ca.key ; do
-  install_file_if_changed $CLUSTER_PKI_DIR/$f pki/$f -o root -g root -m 0600
+  install_file_if_changed $CLUSTER_PKI_DIR/$f $ROOTFS_DIR/etc/kubernetes/pki/$f -o root -g root -m 0600
 done
-mkdir -p $ROOTFS_DIR/etc/kubernetes/pki/etcd
-install_file_if_changed $CLUSTER_PKI_DIR/etcd-ca.crt pki/etcd/ca.crt -o root -g root -m 0644
-install_file_if_changed $CLUSTER_PKI_DIR/etcd-ca.key pki/etcd/ca.key -o root -g root -m 0600
+mkdir -m go= -p $ROOTFS_DIR/etc/kubernetes/pki/etcd
+install_file_if_changed $CLUSTER_PKI_DIR/etcd-ca.crt $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.crt -o root -g root -m 0644
+install_file_if_changed $CLUSTER_PKI_DIR/etcd-ca.key $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.key -o root -g root -m 0600
 echo " * Done!"
 echo
+
+# Create tmp rootfs
+if [[ -d "$TMP_ROOTFS_DIR" ]] ; then
+  rm -rf "$TMP_ROOTFS_DIR"
+fi
+mkdir -m go= -p "$TMP_ROOTFS_DIR/etc/kubernetes/pki/etcd/"
+for f in {front-proxy-ca,ca,etcd/ca}.{crt,key} ; do
+  cp "$ROOTFS_DIR/etc/kubernetes/pki/$f" "$TMP_ROOTFS_DIR/etc/kubernetes/pki/$f"
+done
+cp -a "$ROOTFS_DIR/etc/kubernetes/deckhouse" "$TMP_ROOTFS_DIR/etc/kubernetes/deckhouse"
 
 # Process all certificates
 generate_or_renew_certificate apiserver
@@ -326,20 +368,31 @@ generate_or_renew_certificate etcd-peer etcd/peer
 generate_or_renew_certificate etcd-healthcheck-client etcd/healthcheck-client
 echo
 
-# Process all kubeconfig's
+# Process all kubeconfigs
 generate_or_renew_kubeconfig admin
 generate_or_renew_kubeconfig controller-manager
 generate_or_renew_kubeconfig scheduler
 echo
 
 # Update root kubeconfig
-echo "Update root user kubeconfig (/root/.kube/config)"
-if [[ ! -f /root/.kube/config ]] || ! cmp -s $ROOTFS_DIR/root/.kube/config $ROOTFS_DIR/etc/kubernetes/admin.conf ; then
-  echo " * Create symlink from $ROOTFS_DIR/etc/kubernetes/admin.conf to $ROOTFS_DIR/root/.kube/config"
-  ln -fs $ROOTFS_DIR/etc/kubernetes/admin.conf $ROOTFS_DIR/root/.kube/config
-else
-  echo " * Root kubeconfig is up to date"
+if [[ -d $ROOTFS_DIR/root ]] ; then
+  echo "Update root user kubeconfig ($ROOTFS_DIR/root/.kube/config)"
+  if [[ ! -f $ROOTFS_DIR/root/.kube/config ]] || ! cmp -s $ROOTFS_DIR/root/.kube/config $ROOTFS_DIR/etc/kubernetes/admin.conf ; then
+    if [[ ! -d $ROOTFS_DIR/root/.kube/ ]] ; then
+      mkdir $ROOTFS_DIR/root/.kube/
+    fi
+    echo " * Create symlink from $ROOTFS_DIR/etc/kubernetes/admin.conf to $ROOTFS_DIR/root/.kube/config"
+    ln -fs $ROOTFS_DIR/etc/kubernetes/admin.conf $ROOTFS_DIR/root/.kube/config
+  else
+    echo " * Root kubeconfig is up to date"
+  fi
+  echo " * Done!"
+  echo
 fi
+
+# Process components
+echo "Install extra files"
+install_files_if_changed $CONFIG_DIR/extra-file- $ROOTFS_DIR/etc/kubernetes/deckhouse/extra-files
 echo " * Done!"
 echo
 
@@ -348,14 +401,18 @@ converge_component etcd
 converge_component kube-apiserver
 converge_component kube-controller-manager
 converge_component kube-scheduler
+echo
 
-# Save last applied cluster configuration checksum
-echo "$CLUSTER_CONFIGURATION_CHECKSUM" > $LAST_APPLIED_CLUSTER_CONFIGURATION_CHECKSUM_FILE
+# Save last applied config checksum
+echo "$CONFIGURATION_CHECKSUM" > $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksum
+
+# Remove tmp rootfs
+rm -rf "$TMP_ROOTFS_DIR"
 
 # Remove backup
 echo "Remove backup"
-if [[ -d $BACKUP_DIR ]] ; then
-  rm -rf $BACKUP_DIR
+if [[ -d "$BACKUP_DIR" ]] ; then
+  rm -rf "$BACKUP_DIR"
 fi
 echo " * Done!"
 echo

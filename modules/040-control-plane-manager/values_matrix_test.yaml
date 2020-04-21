@@ -4,8 +4,10 @@ global:
     podSubnetCIDR: 10.244.0.0/16
     serviceSubnetCIDR: 192.168.0.0/16
     kubernetesVersion:
-      __ConstantChoices__: ["1.14", "1.15", "1.16"]
+      __ConstantChoices__: ["1.15", "1.16"]
     clusterDomain: test
+    clusterType:
+      __ConstantChoices__: ["Cloud", "Static"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: eyJyZWdpc3RyeS5mbGFudC5jb20iOiB7CiAgInVzZXJuYW1lIjogIm9hdXRoMiIsCiAgInBhc3N3b3JkIjogInBhc3N3b3JkIiwKICAiYXV0aCI6ICJhdXRoIiwKICAiZW1haWwiOiAiZmxhbnQtZ2ctMjU2QGZsYW50LmNvbSIKIH0KfQo=
@@ -23,5 +25,34 @@ global:
         kubeControllerManager115: tagstring
         kubeControllerManager116: tagstring
 controlPlaneManager:
+  apiserver:
+    __ConstantChoices__:
+    - bindToWildcard:
+        __ConstantChoices__: [true, false, __EmptyItem__]
+    - certSANs:
+        __ConstantChoices__:
+        - []
+        - ["api.example.com"]
+        - ["api.example.com", "api2.example.com"]
+        - __EmptyItem__
+    - loadBalancer:
+        __ConstantChoices__:
+        - {}
+        - annotations:
+            __ConstantChoices__:
+            - service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+            - __EmptyItem__
+          sourceRanges:
+            __ConstantChoices__:
+            - [192.168.0.0/24]
+            - __EmptyItem__
+        - __EmptyItem__
+    - __EmptyItem__
   internal:
     pkiChecksum: test
+    effectiveKubernetesVersion:
+      __ConstantChoices__: ["1.15", "1.16"]
+    etcdServers:
+    - 1.2.3.4
+    - 4.3.2.1
+    rolloutEpoch: 100500

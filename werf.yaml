@@ -38,6 +38,16 @@
     mode: +x
 
 # TODO: checksum
+- name: "Install etcdctl"
+  unarchive:
+    extra_opts:
+    - etcd-v3.3.10-linux-amd64/etcdctl
+    - --strip-components=1
+    src: https://github.com/etcd-io/etcd/releases/download/v3.3.10/etcd-v3.3.10-linux-amd64.tar.gz
+    remote_src: yes
+    dest: /usr/local/bin
+
+# TODO: checksum
 - name: "Install semver"
   unarchive:
     extra_opts:

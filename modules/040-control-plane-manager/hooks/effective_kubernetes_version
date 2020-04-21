@@ -1,0 +1,117 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: control_plane_versions
+      group: versions
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Pod
+      labelSelector:
+        matchExpressions:
+        - key: component
+          operator: In
+          values:
+          - kube-apiserver
+          - kube-controller-manager
+          - kube-scheduler
+        - key: tier
+          operator: In
+          values: [control-plane]
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      jqFilter: '.metadata.annotations."control-plane-manager.deckhouse.io/kubernetes-version"'
+
+    - name: node_versions
+      group: versions
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Node
+      jqFilter: '.status.nodeInfo.kubeletVersion[1:] | split(".")[:-1] | join(".")'
+
+    - name: max_used_control_plane_version
+      group: versions
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Secret
+      nameSelector:
+        matchNames: [d8-cluster-configuration]
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      jqFilter: '.data.maxUsedControlPlaneKubernetesVersion | if . then . | @base64d else "" end'
+EOF
+}
+
+function patch_max_used() {
+  kubernetes::patch_jq d8-system secret/d8-cluster-configuration '. | .data.maxUsedControlPlaneKubernetesVersion = ('"$1"' | @base64)'
+}
+
+function unbump_version() {
+  minor_part=$(semver get minor "$1")
+  new_minor_part=$(( minor_part - 1 ))
+
+  echo "${1/$minor_part/$new_minor_part}"
+}
+
+function __main__() {
+  config_version="$(values::get --required global.clusterConfiguration.kubernetesVersion)".0
+  readarray -t -d $'\n' control_plane_versions < <(context::jq -r '.snapshots.control_plane_versions[].filterResult + ".0"')
+  max_used_control_plane_version="$(context::get snapshots.max_used_control_plane_version.0.filterResult)".0
+  readarray -t -d $'\n' node_versions < <(context::jq -r '.snapshots.node_versions[].filterResult + ".0"')
+
+  if [[ "${#control_plane_versions[@]}" == "0" || "${control_plane_versions[0]}" == ".0" ]]; then
+    >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version"
+    control_plane_versions=("$(kubectl version -o json | jq -r '.serverVersion.gitVersion[1:] | split(".")[:-1] | join(".")').0")
+  fi
+
+  if [[ "$max_used_control_plane_version" == ".0" ]]; then
+    >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version"
+    max_used_control_plane_version="${control_plane_versions[0]}"
+  fi
+
+  # validations
+  semver::assert "$config_version" "config_version"
+  for i in "${control_plane_versions[@]}"; do
+    semver::assert "$i" "control_plane_version"
+  done
+  semver::assert "$max_used_control_plane_version" "max_used_control_plane_version"
+  for i in "${node_versions[@]}"; do
+    semver::assert "$i" "node_version"
+  done
+
+  max_node_version="$(semver::get_max "${node_versions[@]}")"
+  min_node_version="$(semver::get_min "${node_versions[@]}")"
+
+  max_control_plane_version="$(semver::get_max "${control_plane_versions[@]}")"
+  min_control_plane_version="$(semver::get_min "${control_plane_versions[@]}")"
+
+  if semver::gt "$config_version" "$max_node_version" ; then
+    if semver::ge "$min_node_version" "$min_control_plane_version"; then
+      bumped="$(semver bump minor "$min_control_plane_version")"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${bumped%.*}\""
+    else
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${min_control_plane_version%.*}\""
+    fi
+  elif semver::lt "$config_version" "$max_node_version"; then
+    if semver::lt "$max_node_version" "$max_control_plane_version" && semver::eq "$max_control_plane_version" "$max_used_control_plane_version"; then
+      unbumped="$(unbump_version "$max_control_plane_version")"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${unbumped%.*}\""
+    else
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${max_control_plane_version%.*}\""
+    fi
+  else
+    values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${config_version%.*}\""
+  fi
+
+  if semver::ge "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)".0 "$max_used_control_plane_version"; then
+    patch_max_used "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)"
+  fi
+}
+
+hook::run "$@"

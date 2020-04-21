@@ -1,28 +1,47 @@
 {{- $kubeImageRepoSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "-" }}
 {{- $kubeImageTagSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "" }}
 
-{{- $kubeApiServerImage := dict }}
-{{- $_ := set $kubeApiServerImage "name" "kube-apiserver" }}
-{{- $_ := set $kubeApiServerImage "env" "KUBE_APISERVER_IMAGE" }}
-{{- $_ := set $kubeApiServerImage "image" (printf "%s/control-plane-manager/kube-apiserver-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "kubeApiserver%s" $kubeImageTagSuffix)) ) }}
+{{- $images := dict }}
+{{- range $component := list (list "kubeApiserver" "kube-apiserver") (list "kubeControllerManager" "kube-controller-manager") (list "kubeScheduler" "kube-scheduler") }}
+  {{- $_ := set $images (index $component 1) (printf "%s/control-plane-manager/%s-%s:%s" $.Values.global.modulesImages.registry (index $component 1) $kubeImageRepoSuffix (index $.Values.global.modulesImages.tags.controlPlaneManager (printf "%s%s" (index $component 0) $kubeImageTagSuffix)) ) }}
+{{- end }}
+{{- $_ := set $images "etcd" (printf "%s/control-plane-manager/etcd:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
 
-{{- $kubeControllerManagerImage := dict }}
-{{- $_ := set $kubeControllerManagerImage "name" "kube-controller-manager" }}
-{{- $_ := set $kubeControllerManagerImage "env" "KUBE_CONTROLLER_MANAGER_IMAGE" }}
-{{- $_ := set $kubeControllerManagerImage "image" (printf "%s/control-plane-manager/kube-controller-manager-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "kubeControllerManager%s" $kubeImageTagSuffix)) ) }}
+{{- $tpl_context := dict }}
+{{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
+{{- $_ := set $tpl_context "images" $images }}
+{{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
+{{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
+{{- $_ := set $tpl_context "apiserver" dict }}
+{{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
+{{- if hasKey .Values.controlPlaneManager "apiserver" }}
+  {{- if .Values.controlPlaneManager.bindToWildcard }}
+    {{ $_ := set $tpl_context.apiserver "bindToWildcard" true }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager "certSANs" }}
+    {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.certSANs }}
+  {{- end }}
+{{- end }}
+{{- $_ := set $tpl_context "Template" $.Template }}
 
-{{- $kubeSchedulerImage := dict }}
-{{- $_ := set $kubeSchedulerImage "name" "kube-scheduler" }}
-{{- $_ := set $kubeSchedulerImage "env" "KUBE_SCHEDULER_IMAGE" }}
-{{- $_ := set $kubeSchedulerImage "image" (printf "%s/control-plane-manager/kube-scheduler-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "kubeScheduler%s" $kubeImageTagSuffix)) ) }}
-
-{{- $etcdImage := dict }}
-{{- $_ := set $etcdImage "name" "etcd" }}
-{{- $_ := set $etcdImage "env" "ETCD_IMAGE" }}
-{{- $_ := set $etcdImage "image" (printf "%s/control-plane-manager/etcd-%s:%s" .Values.global.modulesImages.registry $kubeImageRepoSuffix (index .Values.global.modulesImages.tags.controlPlaneManager (printf "etcd%s" $kubeImageTagSuffix)) ) }}
-
-{{- $kubeImages := list $kubeApiServerImage $kubeControllerManagerImage $kubeSchedulerImage $etcdImage }}
-
+{{- define "control_plane_config" }}
+  {{- $context := index . 0 }}
+  {{- $tpl_context := index . 1 }}
+kubeadm-config.yaml: {{ tpl ($context.Files.Get "kubeadm/config.yaml.tpl") $tpl_context | b64enc }}
+  {{- range $kustomize_file, $_ := $context.Files.Glob "kubeadm/kustomize/*" }}
+kubeadm-kustomize-{{ base $kustomize_file }}: {{ tpl ($context.Files.Get $kustomize_file) $tpl_context | b64enc }}
+  {{- end }}
+extra-file-aaa.txt: {{ "Hello world!" | b64enc }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-control-plane-manager-config
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+data:
+{{ include "control_plane_config" (list . $tpl_context) | indent 2 }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -39,7 +58,7 @@ spec:
       labels:
         app: d8-control-plane-manager
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+        checksum/config: {{ include "control_plane_config" (list . $tpl_context) | sha256sum }}
         checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
         rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
@@ -69,22 +88,20 @@ spec:
         - mountPath: /root/.kube/
           name: root-kube
         env:
-{{- range $kubeImages }}
-        - name: {{ .env }}
-          value: {{ .image }}
-{{- end }}
         - name: MY_IP
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: ETCD_SERVERS
+          value: {{ .Values.controlPlaneManager.internal.etcdServers | join "," | quote }}
         readinessProbe:
           exec:
             command:
             - cat
             - /ready
-{{- range $kubeImages }}
-      - name: image-holder-{{ .name }}
-        image: {{ .image }}
+{{- range $name, $image := $images }}
+      - name: image-holder-{{ $name | kebabcase }}
+        image: {{ $image }}
         command:
         - /pause
 {{- end }}
