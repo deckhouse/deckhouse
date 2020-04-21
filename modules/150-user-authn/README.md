@@ -1,3 +1,8 @@
+---
+title: "Модуль user-authn" 
+search: kube config generator
+---
+
 Модуль user-authn
 =================
 
