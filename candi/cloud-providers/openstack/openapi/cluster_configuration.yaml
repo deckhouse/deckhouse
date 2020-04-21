@@ -68,7 +68,7 @@ apiVersions:
                 type: string
               podNetworkMode:
                 type: string
-                enum: [VXLAN, DirectRouting, DirectRoutinWithPortSecurityEnabled]
+                enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
                 default: VXLAN
           simpleWithInternalNetwork:
             type: object
@@ -79,8 +79,8 @@ apiVersions:
                 type: string
               podNetworkMode:
                 type: string
-                enum: [VXLAN, DirectRouting, DirectRoutinWithPortSecurityEnabled]
-                default: DirectRoutinWithPortSecurityEnabled
+                enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+                default: DirectRoutingWithPortSecurityEnabled
         oneOf:
         - required: [layout, standard]
           properties:

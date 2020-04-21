@@ -5,6 +5,7 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    beforeHelm: 20
     kubernetes:
     - name: provider_cluster_configuration
       includeSnapshotsFrom: [provider_cluster_configuration]
@@ -25,48 +26,52 @@ EOF
 }
 
 function set_values_from_provider_cluster_configuration_yaml() {
+  values::unset cloudProviderOpenstack.internal.connection
   provider='{}'
   provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
   if [[ -n $provider_cluster_configuration_yaml ]]; then
     provider=$(echo "$provider_cluster_configuration_yaml" | yq r - spec --tojson | jq '.provider //= {} | .provider')
   fi
 
-  #getting cloudProviderOpenstack with merged connection from cluser configuration provider
-  cloudProviderOpenstack=$(values::jq -r --argjson provider "$provider" '.cloudProviderOpenstack |
-  {
-    "internalNetworkNames": (if .internalNetworkNames==null then [] else .internalNetworkNames end),
-    "externalNetworkNames": (if .externalNetworkNames==null then [] else .externalNetworkNames end),
-    "podNetworkMode": .podNetworkMode,
-    "instances": (if .instances==null then {"securityGroups": []} else .instances end),
-    "connection": (if .connection==null then $provider else $provider * .connection end)
-  }')
-
-  #getting provider discovery data with fall back to default empty values
+  #TODO merge configs framework
   provider_discovery_data=$(echo "$1" | jq -r '
     if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
-      "zones": [],
       "instances": {}
     } end | .provider_discovery_data')
+  #getting provider discovery data with fall back to default empty values
+  cloudProviderOpenstack=$(values::get cloudProviderOpenstack)
+  connection=$(echo "$cloudProviderOpenstack" | jq -r --argjson provider "$provider" '.connection //= {} | $provider * .connection')
+  values::set cloudProviderOpenstack.internal.connection "$connection"
 
-  #preparing internal values
-  internal=$(echo "$provider_discovery_data" | jq --argjson c "$cloudProviderOpenstack" '
-    {
-      "zones": .zones,
-      "internalNetworkNames": (.internalNetworkNames + $c.internalNetworkNames),
-      "externalNetworkNames": (.externalNetworkNames + $c.externalNetworkNames),
-      "podNetworkMode": (if $c.podNetworkMode == "" or $c.podNetworkMode == null then .podNetworkMode else $c.podNetworkMode end),
-      "instances": {
-        "sshKeyPairName": $c.instances.sshKeyPairName,
-        "securityGroups": (.instances.securityGroups + $c.instances.securityGroups)
-      },
-      "connection": $c.connection
-    }
-  ')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.internalNetworkNames //= [] | $data.internalNetworkNames + .internalNetworkNames | unique')
+  values::set cloudProviderOpenstack.internal.internalNetworkNames "$i"
 
-  values::set cloudProviderOpenstack.internal "$internal"
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= [] | $data.externalNetworkNames + .externalNetworkNames | unique')
+  values::set cloudProviderOpenstack.internal.externalNetworkNames "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.instances.securityGroups //= [] | $data.instances.securityGroups + .instances.securityGroups | unique')
+  values::set cloudProviderOpenstack.internal.instances.securityGroups "$i"
+
+  #TODO remove after pivot merged
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= [] | $data.zones + .zones | unique')
+  values::set cloudProviderOpenstack.internal.zones "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then "" else .instances.sshKeyPairName end')
+  if [[ -n $i ]]; then
+    values::set cloudProviderOpenstack.internal.instances.sshKeyPairName "$i"
+  else
+    values::unset cloudProviderOpenstack.internal.instances.sshKeyPairName
+  fi
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
+  if [[ -n $i ]]; then
+    values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
+  else
+    values::unset cloudProviderOpenstack.internal.podNetworkMode
+  fi
 }
 
-function __on_kubernetes::provider_cluster_configuration() {
+function __main__() {
   if context::has snapshots.provider_cluster_configuration.0; then
     set_values_from_provider_cluster_configuration_yaml "$(context::get snapshots.provider_cluster_configuration.0.filterResult)"
   else

@@ -2,4 +2,4 @@ cloudProviderOpenstack:
   internal:
     instances: {}
     zones: []
-  podNetworkMode: "DirectRoutingWithPortSecurityEnabled"
+  instances: {}

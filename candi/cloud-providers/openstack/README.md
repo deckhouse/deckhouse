@@ -98,7 +98,7 @@ spec:
   layout: Simple
   simple:
     externalSubnetName: name-from-openstack                 # required
-    podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutinWithPortSecurityEnabled
+    podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
 provider:
   ...
 bootstrap:
@@ -126,7 +126,7 @@ spec:
   layout: SimpleWithInternalNetwork
   simpleWithInternalNetwork:
     internalSubnetName: name-from-openstack                 # required
-    podNetworkMode: DirectRoutinWithPortSecurityEnabled     # optional, by default DirectRoutinWithPortSecurityEnabled, may also be DirectRouting or VXLAN
+    podNetworkMode: DirectRoutingWithPortSecurityEnabled     # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
 provider:
   ...
 bootstrap:
