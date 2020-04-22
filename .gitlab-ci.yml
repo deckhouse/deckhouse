@@ -156,7 +156,7 @@ Cleanup registry:
   stage: cleanup_registry
   script:
     - set -x
-    - type multiwerf && source <(multiwerf use 1.0 alpha)
+    - type multiwerf && source <(multiwerf use 1.1 beta)
     - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
     - werf cleanup --stages-storage :local --images-repo ${CI_REGISTRY_IMAGE}
   only:
