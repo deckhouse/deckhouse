@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ "$1" == "--config" ]] ; then
+if [[ "$1" == "--local" ]] ; then
   is_local="yes"
   shift
 fi
@@ -13,6 +13,7 @@ function get_secret() {
       >&2 echo "failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
+{{ if eq .runType "Normal" }}
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
@@ -25,6 +26,7 @@ function get_secret() {
       done
       sleep 10
     done
+{{ end }}
   else
     >&2 echo "failead to get secret $secret: can't find kubelet.conf or bootstrap-token"
     exit 1

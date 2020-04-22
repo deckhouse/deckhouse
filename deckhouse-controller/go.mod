@@ -3,7 +3,7 @@ module flant/deckhouse-controller
 go 1.12
 
 require (
-	flant/deckhouse-cluster v0.0.0 // use non-existent version for replace
+	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/flant/addon-operator v1.0.0-beta.6 // branch: master
 	github.com/flant/shell-operator v1.0.0-beta.9.0.20200414173230-b8966f9d8851 // branch: master
@@ -25,4 +25,4 @@ require (
 
 //replace github.com/flant/addon-operator => ../../addon-operator
 
-replace flant/deckhouse-cluster => ../deckhouse-cluster
+replace flant/deckhouse-candi => ../deckhouse-candi

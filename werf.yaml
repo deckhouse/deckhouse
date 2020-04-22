@@ -131,10 +131,6 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- artifact: helm-release-renamer
-  add: /helm-release-renamer/helm-release-renamer
-  to: /helm-release-renamer
-  after: setup
 ansible:
   beforeInstall:
 {{ include "deckhouse_dependencies" . | indent 2 }}
@@ -258,8 +254,8 @@ git:
     setup:
     - "**/*.go"
     - go-build.sh
-- add: /deckhouse-cluster
-  to: /deckhouse-cluster
+- add: /deckhouse-candi
+  to: /deckhouse-candi
   excludePaths:
   - development
   stageDependencies:
@@ -346,12 +342,15 @@ ansible:
 image: install
 fromImage: dev
 import:
-- artifact: deckhouse-cluster
-  add: /deckhouse-cluster/deckhouse-cluster
-  to: /usr/bin/deckhouse-cluster
+- artifact: deckhouse-candi
+  add: /deckhouse-candi/deckhouse-candi
+  to: /usr/bin/deckhouse-candi
   before: setup
 ansible:
   beforeInstall:
+  - name: "Install dependencies"
+    apk:
+      name: [openssh-client]
   - name: "Install terraform"
     unarchive:
       src: https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
@@ -365,11 +364,11 @@ ansible:
       dest: /bin
       mode: +x
 ---
-artifact: deckhouse-cluster
+artifact: deckhouse-candi
 from: golang:1.13-alpine3.10
 git:
-- add: /deckhouse-cluster
-  to: /deckhouse-cluster
+- add: /deckhouse-candi
+  to: /deckhouse-candi
   stageDependencies:
     install:
     - go.mod
@@ -387,24 +386,9 @@ ansible:
   install:
   - shell: go mod download
     args:
-      chdir: /deckhouse-cluster
+      chdir: /deckhouse-candi
 
   setup:
-  - command: /deckhouse-cluster/go-build.sh
+  - command: /deckhouse-candi/go-build.sh
     args:
-      chdir: /deckhouse-cluster
----
-artifact: helm-release-renamer
-from: golang:1.14-alpine3.11
-git:
-- add: /tools/helm-release-renamer
-  to: /helm-release-renamer
-ansible:
-  beforeInstall:
-  install:
-  - shell: go mod download
-    args:
-      chdir: /helm-release-renamer
-  - shell: |
-      cd /helm-release-renamer
-      go build -o helm-release-renamer .
+      chdir: /deckhouse-candi

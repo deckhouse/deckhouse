@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, spec, provider, bootstrap]
+    required: [apiVersion, kind, layout, provider]
     properties:
       apiVersion:
         type: string
@@ -12,101 +12,71 @@ apiVersions:
       kind:
         type: string
         enum: [OpenStackClusterConfiguration]
-      spec:
+      layout:
+        type: string
+      standard:
         type: object
         additionalProperties: false
+        required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
         properties:
-          layout:
+          internalNetworkCIDR:
             type: string
-          standard:
-            type: object
-            additionalProperties: false
-            required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
-            properties:
-              internalNetworkCIDR:
-                type: string
-              internalNetworkDNSServers:
-                type: array
-                items:
-                  type: string
-              internalNetworkSecurity:
-                type: boolean
-                default: true
-              externalNetworkName:
-                type: string
-          standardWithNoRouter:
-            type: object
-            additionalProperties: false
-            required: [internalNetworkCIDR, externalNetworkName]
-            properties:
-              internalNetworkCIDR:
-                type: string
-              internalNetworkSecurity:
-                type: boolean
-                default: true
-              externalNetworkName:
-                type: string
-          masterAsTheGateway:
-            type: object
-            additionalProperties: false
-            required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
-            properties:
-              internalNetworkCIDR:
-                type: string
-              internalNetworkDNSServers:
-                type: array
-                items:
-                  type: string
-              externalNetworkName:
-                type: string
-          simple:
-            type: object
-            additionalProperties: false
-            required: [externalSubnetName]
-            properties:
-              externalSubnetName:
-                type: string
-              podNetworkMode:
-                type: string
-                enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
-                default: VXLAN
-          simpleWithInternalNetwork:
-            type: object
-            additionalProperties: false
-            required: [internalSubnetName]
-            properties:
-              internalSubnetName:
-                type: string
-              podNetworkMode:
-                type: string
-                enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
-                default: DirectRoutingWithPortSecurityEnabled
-        oneOf:
-        - required: [layout, standard]
-          properties:
-            layout:
-              enum: [Standard]
+          internalNetworkDNSServers:
+            type: array
+            items:
               type: string
-        - required: [layout, standardWithNoRouter]
-          properties:
-            layout:
-              enum: [StandardWithNoRouter]
+          internalNetworkSecurity:
+            type: boolean
+            default: true
+          externalNetworkName:
+            type: string
+      standardWithNoRouter:
+        type: object
+        additionalProperties: false
+        required: [internalNetworkCIDR, externalNetworkName]
+        properties:
+          internalNetworkCIDR:
+            type: string
+          internalNetworkSecurity:
+            type: boolean
+            default: true
+          externalNetworkName:
+            type: string
+      masterAsTheGateway:
+        type: object
+        additionalProperties: false
+        required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+        properties:
+          internalNetworkCIDR:
+            type: string
+          internalNetworkDNSServers:
+            type: array
+            items:
               type: string
-        - required: [layout, masterAsTheGateway]
-          properties:
-            layout:
-              enum: [MasterAsTheGateway]
-              type: string
-        - required: [layout, simple]
-          properties:
-            layout:
-              enum: [Simple]
-              type: string
-        - required: [layout, simpleWithInternalNetwork]
-          properties:
-            layout:
-              enum: [SimpleWithInternalNetwork]
-              type: string
+          externalNetworkName:
+            type: string
+      simple:
+        type: object
+        additionalProperties: false
+        required: [externalSubnetName]
+        properties:
+          externalSubnetName:
+            type: string
+          podNetworkMode:
+            type: string
+            enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+            default: VXLAN
+      simpleWithInternalNetwork:
+        type: object
+        additionalProperties: false
+        required: [internalSubnetName]
+        properties:
+          internalSubnetName:
+            type: string
+          podNetworkMode:
+            type: string
+            enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+            default: DirectRoutingWithPortSecurityEnabled
       provider:
         type: object
         additionalProperties: false
@@ -130,25 +100,29 @@ apiVersions:
         oneOf:
         - required: [authURL, domainName, tenantName, username, password, region]
         - required: [authURL, domainName, tenantID, username, password, region]
-      bootstrap:
-        type: object
-        additionalProperties: false
-        required: [masterInstanceClass]
-        properties:
-          masterInstanceClass:
-            type: object
-            additionalProperties: false
-            required: [flavorName, imageName, mainNetwork]
-            properties:
-              flavorName:
-                type: string
-              imageName:
-                type: string
-              mainNetwork:
-                type: string
-              rootDiskSizeInGb:
-                type: integer
-              additionalNetworks:
-                type: array
-                items:
-                  type: string
+    oneOf:
+    - required: [layout, standard]
+      properties:
+        layout:
+          enum: [Standard]
+          type: string
+    - required: [layout, standardWithNoRouter]
+      properties:
+        layout:
+          enum: [StandardWithNoRouter]
+          type: string
+    - required: [layout, masterAsTheGateway]
+      properties:
+        layout:
+          enum: [MasterAsTheGateway]
+          type: string
+    - required: [layout, simple]
+      properties:
+        layout:
+          enum: [Simple]
+          type: string
+    - required: [layout, simpleWithInternalNetwork]
+      properties:
+        layout:
+          enum: [SimpleWithInternalNetwork]
+          type: string

@@ -4,6 +4,7 @@ kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml -k 
 kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml -k /var/lib/bashible/kubeadm/kustomize
 # TODO возможно здесь понадобиться дождаться, пока control-plane поднимется
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
+kubeadm init phase addon all --config /var/lib/bashible/kubeadm/config.yaml
 
 # Upload pki for deckhouse
 kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system create secret generic d8-pki \

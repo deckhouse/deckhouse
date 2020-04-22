@@ -1,0 +1,55 @@
+kind: InitConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, sshPublicKeys, masterNodeGroup, deckhouse]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [InitConfiguration]
+      sshPublicKeys:
+        type: array
+        items:
+          type: string
+      masterNodeGroup:
+        type: object
+        required: [maxPerZone, minPerZone, zones]
+        properties:
+           maxPerZone:
+             type: integer
+           minPerZone:
+             type: integer
+           zones:
+             type: array
+             items:
+               type: string
+      deckhouse:
+        type: object
+        oneOf:
+        - required: [imagesRepo, devBranch, configOverrides]
+        - required: [imagesRepo, releaseChannel, configOverrides]
+        properties:
+          imagesRepo:
+            type: string
+          registryDockerCfg:
+            type: string
+          releaseChannel:
+            type: string
+            enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
+          devBranch:
+            type: string
+          bundle:
+            type: string
+            enum: [Minimal, Default]
+            default: Default
+          logLevel:
+            type: string
+            enum: [Debug, Info, Error]
+            default: Info
+          configOverrides:
+            type: object

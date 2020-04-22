@@ -27,7 +27,7 @@ resource "openstack_networking_subnet_v2" "internal" {
     start = cidrhost(local.internal_network_cidr, 2)
     end = cidrhost(local.internal_network_cidr, 254)
   }
-  dns_nameservers = var.clusterProviderConfig.spec.standard.internalNetworkDNSServers
+  dns_nameservers = var.providerClusterConfig.standard.internalNetworkDNSServers
 }
 
 resource "openstack_networking_router_v2" "router" {
