@@ -131,6 +131,10 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
+- artifact: helm-release-renamer
+  add: /helm-release-renamer/helm-release-renamer
+  to: /helm-release-renamer
+  after: setup
 ansible:
   beforeInstall:
 {{ include "deckhouse_dependencies" . | indent 2 }}
@@ -389,3 +393,18 @@ ansible:
   - command: /deckhouse-cluster/go-build.sh
     args:
       chdir: /deckhouse-cluster
+---
+artifact: helm-release-renamer
+from: golang:1.14-alpine3.11
+git:
+- add: /tools/helm-release-renamer
+  to: /helm-release-renamer
+ansible:
+  beforeInstall:
+  install:
+  - shell: go mod download
+    args:
+      chdir: /helm-release-renamer
+  - shell: |
+      cd /helm-release-renamer
+      go build -o helm-release-renamer .

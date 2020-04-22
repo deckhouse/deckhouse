@@ -1,9 +1,0 @@
-{{- range $ig := .Values.cloudInstanceManager.internal.nodeGroups }}
-  {{- if and (eq  $ig.nodeType "Cloud") (hasKey $.Values.cloudInstanceManager.internal "cloudProvider") }}
-    {{- range $zone_name := $ig.cloudInstances.zones }}
-      {{- include "instance_group_machine_class" (list $ $ig $zone_name) }}
-      {{- include "instance_group_machine_class_secret" (list $ $ig $zone_name) }}
-      {{- include "instance_group_machine_deployment" (list $ $ig $zone_name) }}
-    {{- end }}
-  {{- end }}
-{{- end }}

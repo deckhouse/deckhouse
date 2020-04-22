@@ -17,7 +17,7 @@ prometheusCrdEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 deckhouseEnabled: true
 cloudProviderOpenstackEnabled: true
-cloudInstanceManagerEnabled: true
+nodeManagerEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true
 controlPlaneConfiguratorEnabled: true

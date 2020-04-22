@@ -1,14 +1,14 @@
 {{- $options := dict -}}
-{{- $_ := set $options "flavorName" .instanceGroup.instanceClass.flavorName -}}
-{{- $_ := set $options "imageName" .instanceGroup.instanceClass.imageName -}}
-{{- $_ := set $options "mainNetwork" .instanceGroup.instanceClass.mainNetwork -}}
-{{- if .instanceGroup.instanceClass.additionalNetworks }}
-  {{- $_ := set $options "additionalNetworks" .instanceGroup.instanceClass.additionalNetworks -}}
+{{- $_ := set $options "flavorName" .nodeGroup.instanceClass.flavorName -}}
+{{- $_ := set $options "imageName" .nodeGroup.instanceClass.imageName -}}
+{{- $_ := set $options "mainNetwork" .nodeGroup.instanceClass.mainNetwork -}}
+{{- if .nodeGroup.instanceClass.additionalNetworks }}
+  {{- $_ := set $options "additionalNetworks" .nodeGroup.instanceClass.additionalNetworks -}}
 {{- end }}
-{{- if .instanceGroup.instanceClass.rootDiskSize }}
-  {{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
+{{- if .nodeGroup.instanceClass.rootDiskSize }}
+  {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
 {{- end }}
-{{- if (index .instanceGroup "manualRolloutID") -}}
-  {{ $_ := set $options "manualRolloutID" (index .instanceGroup "manualRolloutID") -}}
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}
 {{- $options | toYaml | sha256sum -}}

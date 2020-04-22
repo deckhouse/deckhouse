@@ -1,40 +1,40 @@
 {{- $options := dict -}}
-{{- $_ := set $options "numCPUs" .instanceGroup.instanceClass.numCPUs -}}
-{{- $_ := set $options "memory" (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) -}}
-{{- $_ := set $options "rootDiskSize" .instanceGroup.instanceClass.rootDiskSize -}}
-{{- $_ := set $options "template" .instanceGroup.instanceClass.template -}}
-{{- if hasKey .instanceGroup.instanceClass "resourcePool" -}}
-  {{- $_ := set $options "resourcePool" .instanceGroup.instanceClass.resourcePool -}}
+{{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
+{{- $_ := set $options "memory" (add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4)) -}}
+{{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
+{{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
+{{- if hasKey .nodeGroup.instanceClass "resourcePool" -}}
+  {{- $_ := set $options "resourcePool" .nodeGroup.instanceClass.resourcePool -}}
 {{- end }}
-{{- $_ := set $options "mainNetwork" .instanceGroup.instanceClass.mainNetwork -}}
-{{- if hasKey .instanceGroup.instanceClass "additionalNetworks" -}}
-  {{- $_ := set $options "additionalNetworks" .instanceGroup.instanceClass.additionalNetworks -}}
+{{- $_ := set $options "mainNetwork" .nodeGroup.instanceClass.mainNetwork -}}
+{{- if hasKey .nodeGroup.instanceClass "additionalNetworks" -}}
+  {{- $_ := set $options "additionalNetworks" .nodeGroup.instanceClass.additionalNetworks -}}
 {{- end -}}
-{{- $_ := set $options "datastore" .instanceGroup.instanceClass.datastore -}}
-{{- if hasKey .instanceGroup.instanceClass "runtimeOptions" }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
-    {{- $_ := set $options "runtimeOptions.nestedHardwareVirtualization" .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization -}}
+{{- $_ := set $options "datastore" .nodeGroup.instanceClass.datastore -}}
+{{- if hasKey .nodeGroup.instanceClass "runtimeOptions" }}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
+    {{- $_ := set $options "runtimeOptions.nestedHardwareVirtualization" .nodeGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "cpuShares" }}
-    {{- $_ := set $options "runtimeOptions.cpuShares" .instanceGroup.instanceClass.runtimeOptions.cpuShares -}}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "cpuShares" }}
+    {{- $_ := set $options "runtimeOptions.cpuShares" .nodeGroup.instanceClass.runtimeOptions.cpuShares -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "cpuLimit" }}
-    {{- $_ := set $options "runtimeOptions.cpuLimit" .instanceGroup.instanceClass.runtimeOptions.cpuLimit -}}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "cpuLimit" }}
+    {{- $_ := set $options "runtimeOptions.cpuLimit" .nodeGroup.instanceClass.runtimeOptions.cpuLimit -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "cpuReservation" }}
-    {{- $_ := set $options "runtimeOptions.cpuReservation" .instanceGroup.instanceClass.runtimeOptions.cpuReservation -}}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "cpuReservation" }}
+    {{- $_ := set $options "runtimeOptions.cpuReservation" .nodeGroup.instanceClass.runtimeOptions.cpuReservation -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "memoryShares" }}
-    {{- $_ := set $options "runtimeOptions.memoryShares" .instanceGroup.instanceClass.runtimeOptions.memoryShares -}}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "memoryShares" }}
+    {{- $_ := set $options "runtimeOptions.memoryShares" .nodeGroup.instanceClass.runtimeOptions.memoryShares -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "memoryLimit" }}
-    {{- $_ := set $options "runtimeOptions.memoryLimit" .instanceGroup.instanceClass.runtimeOptions.memoryLimit -}}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "memoryLimit" }}
+    {{- $_ := set $options "runtimeOptions.memoryLimit" .nodeGroup.instanceClass.runtimeOptions.memoryLimit -}}
   {{- end }}
-  {{- if hasKey .instanceGroup.instanceClass.runtimeOptions "memoryReservation" }}
-    {{- $_ := set $options "runtimeOptions.memoryReservation" .instanceGroup.instanceClass.runtimeOptions.memoryReservation -}}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "memoryReservation" }}
+    {{- $_ := set $options "runtimeOptions.memoryReservation" .nodeGroup.instanceClass.runtimeOptions.memoryReservation -}}
   {{- end }}
 {{- end }}
-{{- if (index .instanceGroup "manualRolloutID") -}}
-  {{ $_ := set $options "manualRolloutID" (index .instanceGroup "manualRolloutID") -}}
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}
 {{- $options | toYaml | sha256sum -}}

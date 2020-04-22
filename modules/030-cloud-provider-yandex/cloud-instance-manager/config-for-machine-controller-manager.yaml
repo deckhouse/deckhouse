@@ -1,2 +1,2 @@
-folderID: {{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.folderID | b64enc }}
-serviceAccountJSON: {{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.serviceAccountJSON | b64enc }}
+folderID: {{ .Values.nodeManager.internal.cloudProvider.yandex.folderID | b64enc }}
+serviceAccountJSON: {{ .Values.nodeManager.internal.cloudProvider.yandex.serviceAccountJSON | b64enc }}

@@ -1,0 +1,58 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bashible
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resourceNames:
+  - bashible-bashbooster
+
+{{- range $.Values.nodeManager.internal.nodeGroups }}
+  - bashible-{{ .name }}
+{{- end}}
+
+{{- range $bundle := list "ubuntu-18.04" "centos-7" }}
+  {{- range $kubernetes_version := list "1.14" "1.15" "1.16" }}
+  - bashible-bundle-{{ $bundle }}-{{ $kubernetes_version }}
+  {{- end }}
+{{- end }}
+
+{{- range $bundle := list "ubuntu-18.04" "centos-7" }}
+  {{- range $.Values.nodeManager.internal.nodeGroups }}
+  - bashible-{{ .name }}-{{ $bundle }}
+  - bashible-bundle-{{ $bundle }}-{{ .name }}
+  {{- end }}
+{{- end }}
+
+  resources:
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  verbs:
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bashible
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible
+subjects:
+- kind: Group
+  name: system:bootstrappers:node-manager:machine-bootstrap
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: system:nodes
+  apiGroup: rbac.authorization.k8s.io

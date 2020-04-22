@@ -1,16 +1,16 @@
 {{- $options := dict -}}
-{{- $_ := set $options "ami" .instanceGroup.instanceClass.ami -}}
-{{- $_ := set $options "instanceType" .instanceGroup.instanceClass.instanceType -}}
-{{- if hasKey .instanceGroup.instanceClass "diskSizeGb" -}}
-  {{- $_ := set $options "diskSizeGb" .instanceGroup.instanceClass.diskSizeGb -}}
+{{- $_ := set $options "ami" .nodeGroup.instanceClass.ami -}}
+{{- $_ := set $options "instanceType" .nodeGroup.instanceClass.instanceType -}}
+{{- if hasKey .nodeGroup.instanceClass "diskSizeGb" -}}
+  {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSizeGb -}}
 {{- end -}}
-{{- if hasKey .instanceGroup.instanceClass "diskType" -}}
-  {{- $_ := set $options "diskType" .instanceGroup.instanceClass.diskType -}}
+{{- if hasKey .nodeGroup.instanceClass "diskType" -}}
+  {{- $_ := set $options "diskType" .nodeGroup.instanceClass.diskType -}}
 {{- end -}}
-{{- if hasKey .instanceGroup.instanceClass "iops" -}}
-  {{ $_ := set $options "iops" .instanceGroup.instanceClass.iops -}}
+{{- if hasKey .nodeGroup.instanceClass "iops" -}}
+  {{ $_ := set $options "iops" .nodeGroup.instanceClass.iops -}}
 {{- end -}}
-{{- if (index .instanceGroup "manualRolloutID") -}}
-  {{ $_ := set $options "manualRolloutID" (index .instanceGroup "manualRolloutID") -}}
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}
 {{- $options | toYaml | sha256sum -}}

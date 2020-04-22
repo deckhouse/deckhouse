@@ -1,0 +1,373 @@
+matrixTestDefaults:
+  internal: &internalDefaults
+    clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+    kubernetesCA: myclusterca
+
+global:
+  enabledModules:
+    __ConstantChoices__:
+      - ["vertical-pod-autoscaler-crd"]
+      - []
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      nodeManager:
+        clusterAutoscaler: imagehash
+        machineControllerManager: imagehash
+      common:
+        kubeRbacProxy: imagehash
+  discovery:
+    clusterMasterCount:
+      __ConstantChoices__: ["1", "3"]
+    clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
+    clusterVersion: 1.15.4
+
+nodeManager:
+  internal:
+    instancePrefix:
+      __ConstantChoices__:
+      - __EmptyItem__
+      - myprefix
+    __ConstantChoices__:
+    - <<: *internalDefaults
+      cloudProvider:
+        type: aws
+        machineClassKind: AWSInstanceClass
+        aws:
+          providerAccessKeyId: myprovaccesskeyid
+          providerSecretAccessKey: myprovsecretaccesskey
+          region: myregion
+          loadBalancerSecurityGroupID: mylbsecuritygroupid
+          keyName: mykeyname
+          instances:
+            iamProfileName: myiamprofilename
+            securityGroupIDs:
+              __ConstantChoices__:
+              - __EmptyItem__
+              - ["mysecgroupid1", "mysecgroupid2"]
+            extraTags: ["extratag1", "extratag2"]
+          internal:
+            zoneToSubnetIdMap:
+              zonea: mysubnetida
+              zoneb: mysubnetidb
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            instanceClass: # maximum
+              ami: myami
+              diskSizeGb: 50
+              diskType: gp2
+              iops: 42
+              instanceType: t2.medium
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.16.6
+            cloudInstances:
+              classReference:
+                kind: AWSInstanceClass
+                name: worker
+              maxPerZone: 5
+              minPerZone: 3
+              zones:
+              - zonea
+              - zoneb
+        - - name: worker
+            instanceClass: # minimum
+              ami: myami
+              instanceType: t2.medium
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.16.6
+            cloudInstances:
+              classReference:
+                kind: AWSInstanceClass
+                name: worker
+              maxPerZone: 1
+              minPerZone: 1
+              zones:
+              - zonea
+    - <<: *internalDefaults
+      cloudProvider:
+        type: openstack
+        machineClassKind: OpenStackMachineClass
+        openstack:
+          __ConstantChoices__:
+          - connection:
+              authURL: https://mycloud.qqq/3/ # maximum
+              caCert: mycacert
+              domainName: Default
+              tenantName: mytname
+              username: myuname
+              password: pPaAsS
+              region: myreg
+            podNetworkMode: DirectRoutingWithPortSecurityEnabled
+            instances:
+              securityGroups: [groupa, groupb]
+              sshKeyPairName: mysshkey
+            internalSubnet: "10.0.0.1/24"
+            internalNetworkNames: [mynetwork]
+            externalNetworkNames: [shared]
+          - connection:
+              authURL: https://mycloud.qqq/3/ # minimum
+              domainName: Default
+              networkName: shared
+              password: pPaAsS
+              region: myreg
+              tenantName: mytname
+              username: myuname
+            podNetworkMode: DirectRoutingWithPortSecurityEnabled
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            instanceClass: # maximum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: OpenStackInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
+    - <<: *internalDefaults
+      cloudProvider:
+        type: gcp
+        machineClassKind: GCPMachineClass
+        gcp:
+          __ConstantChoices__:
+          - networkName: mynetwork # maximum
+            subnetworkName: mysubnet
+            region: myreg
+            extraInstanceTags: [aaa,bbb]
+            sshKey: mysshkey
+            serviceAccountKey: '{"my":"key"}'
+            disableExternalIP: true
+          - networkName: mynetwork # minimum
+            subnetworkName: mysubnet
+            region: myreg
+            sshKey: mysshkey
+            serviceAccountKey: '{"my":"key"}'
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            instanceClass: # maximum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+              machineType: mymachinetype
+              preemptible: true #optional
+              diskType: superdisk #optional
+              diskSizeGb: 42 #optional
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: GCPInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
+        - - name: worker
+            instanceClass: # minimum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+              machineType: mymachinetype
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: GCPInstanceClass
+                name: worker
+              maxPerZone: 2
+              minPerZone: 2
+              zones:
+              - zonea
+    - <<: *internalDefaults
+      cloudProvider:
+        type: vsphere
+        machineClassKind: VsphereMachineClass
+        vsphere:
+          __ConstantChoices__:
+          - host: myhost.qqq # maximum
+            username: myname
+            password: pAsSwOrd
+            insecure: true # optional
+            regionTagCategory: myregtagcat # optional
+            zoneTagCategory: myzonetagcateg # optional
+            region: myreg
+            sshKeys: [key1, key2] # optional
+            vmFolderPath: dev/test
+          - host: myhost.qqq # minimum
+            username: myname
+            password: pAsSwOrd
+            region: myreg
+            vmFolderPath: dev/test
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            instanceClass: # maximum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+              numCPUs: 3
+              memory: 3
+              rootDiskSize: 42
+              template: dev/test
+              mainNetwork: mymainnetwork
+              additionalNetworks: [aaa, bbb]
+              datastore: lun-111
+              runtimeOptions: # optional
+                nestedHardwareVirtualization: true
+                memoryReservation: 42
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: VsphereInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
+    - <<: *internalDefaults
+      cloudProvider:
+        type: yandex
+        machineClassKind: YandexMachineClass
+        yandex:
+          serviceAccountJSON: '{"my":"svcacc"}'
+          region: myreg
+          folderID: myfolder
+          sshKey: mysshkey
+          sshUser: mysshuser
+          nameservers: ["4.2.2.2"]
+          zoneToSubnetIdMap:
+            zonea: subneta
+            zoneb: subnetb
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            instanceClass: # maximum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+              platformID: myplaid
+              cores: 42
+              coreFraction: 50 #optional
+              memory: 42
+              gpus: 2
+              imageID: myimageid
+              preemptible: true #optional
+              diskType: ssd #optional
+              diskSizeGB: 42 #optional
+              assignPublicIPAddress: true #optional
+              mainSubnet: mymainsubnet
+              additionalSubnets: [aaa, bbb]
+              labels: # optional
+                my: label
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: YandexInstanceClass
+                name: worker
+              maxPerZone: 5
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb
+        - - name: worker
+            instanceClass: # minimum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+              platformID: myplaid
+              cores: 42
+              memory: 42
+              gpus: 2
+              imageID: myimageid
+              mainSubnet: mymainsubnet
+              additionalSubnets: [aaa, bbb]
+              labels: # optional
+                my: label
+            nodeType: Cloud
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: YandexInstanceClass
+                name: worker
+              maxPerZone: 1
+              minPerZone: 1
+              zones:
+              - zonea
+              - zoneb
+    - <<: *internalDefaults
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            nodeType: Static
+            bashible:
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+    - <<: *internalDefaults
+      nodeGroups:
+        __ConstantChoices__:
+        - []
+        - - name: worker
+            nodeType: Static
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+        - - name: worker
+            instanceClass: # maximum
+              flavorName: m1.large
+              imageName: ubuntu-18-04-cloud-amd64
+            nodeType: Cloud
+            bashible:
+              bundle: ubuntu-18.04-1.0
+              dynamicOptions: {}
+              options:
+                kubernetesVersion: 1.15.4
+            cloudInstances:
+              classReference:
+                kind: OpenStackInstanceClass
+                name: worker
+              maxPerZone: 4
+              minPerZone: 2
+              zones:
+              - zonea
+              - zoneb

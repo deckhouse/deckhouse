@@ -3,7 +3,7 @@ if bb-flag? is-bootstrapped; then exit 0; fi
 echo "Not realized yet!"
 exit 1
 
-{{- /* TODO needs refactoring if .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers */ -}}
+{{- /* TODO needs refactoring if .Values.nodeManager.internal.cloudProvider.yandex.nameservers */ -}}
 
 ip_addr_show_output=$(ip -json addr show)
 primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
@@ -15,7 +15,7 @@ network:
     ethernets:
         ${primary_ifname}:
             nameservers:
-                addresses: [{{- /*  .Values.cloudInstanceManager.internal.cloudProvider.yandex.nameservers | join ", " */ -}}]
+                addresses: [{{- /*  .Values.nodeManager.internal.cloudProvider.yandex.nameservers | join ", " */ -}}]
             dhcp4-overrides:
               use-dns: false
 END
