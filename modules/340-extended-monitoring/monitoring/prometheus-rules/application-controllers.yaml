@@ -9,11 +9,12 @@
         + on (namespace, deployment)
         kube_deployment_spec_strategy_rollingupdate_max_unavailable
       )
-    for: 1m
     labels:
-      impact: critical
-      likelihood: certain
+      severity_level: "6"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
       description: |-
@@ -32,37 +33,16 @@
       (
         max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
       )
-    for: 1m
     labels:
-      impact: catastrophic
-      likelihood: certain
+      severity_level: "5"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m" 
       summary: |-
         Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
       description: |-
         Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
-
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-
-
-  - alert: KubernetesDeploymentStuck
-    expr: |
-      (
-        kube_deployment_status_replicas_unavailable
-        * on (namespace, deployment)
-        (max by (namespace, name) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"}) ^ 0)
-      )
-      > 0
-    for: 15m
-    labels:
-      impact: negligible
-      likelihood: certain
-    annotations:
-      summary: |-
-        One or more replicas is not Ready in Deployment {{$labels.namespace}}/{{$labels.deployment}} for more than 15 minutes.
-      description: |-
-        One or more replicas is not Ready in Deployment {{$labels.namespace}}/{{$labels.deployment}} for more than 15 minutes.
-        Currently at: {{ .Value }} unavailable replica(s)
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
@@ -73,11 +53,12 @@
       (
         max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
       )
-    for: 1m
     labels:
-      impact: critical
-      likelihood: certain
+      severity_level: "6"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
       description: |-
@@ -94,36 +75,16 @@
       (
         max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
       )
-    for: 1m
     labels:
-      impact: catastrophic
-      likelihood: certain
+      severity_level: "5"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
       description: |-
         Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
-
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-
-  - alert: KubernetesDaemonSetStuck
-    expr: |
-      (
-        kube_daemonset_status_number_unavailable
-        * on (namespace, daemonset)
-        (max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"}) ^ 0)
-      )
-      > 0
-    for: 15m
-    labels:
-      impact: critical
-      likelihood: certain
-    annotations:
-      summary: |-
-        One or more replicas is not Ready in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} for more than 15 minutes.
-      description: |-
-        One or more replicas is not Ready in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} for more than 15 minutes.
-        Currently at: {{ .Value }} unavailable replica(s)
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
@@ -134,6 +95,9 @@
     labels:
       severity_level: "9"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Daemonset {{ $labels.namespace }}/{{ $labels.daemonset }} имеет {{ .Value }} подов в неактуальном состоянии в течении 15 минут.
       description: |-
@@ -157,11 +121,12 @@
       (
         max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
       )
-    for: 1m
     labels:
-      impact: critical
-      likelihood: certain
+      severity_level: "6"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
       description: |-
@@ -180,38 +145,15 @@
       (
         max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
       )
-    for: 1m
     labels:
-      impact: catastrophic
-      likelihood: certain
+      severity_level: "5"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
       description: |-
         Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-
-
-  - alert: KubernetesStatefulSetStuck
-    expr: |
-      (
-        kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
-      )
-      * on (namespace, statefulset)
-      (
-        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
-      ) ^ 0
-      > 0
-    for: 15m
-    labels:
-      impact: marginal
-      likelihood: certain
-    annotations:
-      summary: |-
-        One or more replicas is not Ready in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} for more than 15 minutes.
-      description: |-
-        One or more replicas is not Ready in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} for more than 15 minutes.
-        Currently at: {{ .Value }} unavailable replica(s)
-
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.statefulset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
