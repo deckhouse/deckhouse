@@ -25,7 +25,7 @@
         ) > 0
       )
     labels:
-      severity: critical
+      severity_level: "5"
     annotations:
       summary: Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
 
@@ -40,10 +40,12 @@
           (extended_monitoring_cronjob_enabled == 1)
         )
       )
-    for: 3m
     labels:
-      severity: warning
+      severity_level: "6"
     annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
       summary: CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
       description: |
         CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
