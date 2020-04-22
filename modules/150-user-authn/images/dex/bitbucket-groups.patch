@@ -1,0 +1,212 @@
+diff --git a/Documentation/connectors/bitbucketcloud.md b/Documentation/connectors/bitbucketcloud.md
+index 58bfa3af..ce5ccf4e 100644
+--- a/Documentation/connectors/bitbucketcloud.md
++++ b/Documentation/connectors/bitbucketcloud.md
+@@ -31,4 +31,8 @@ connectors:
+     # If `teams` is provided, this acts as a whitelist - only the user's Bitbucket teams that are in the configured `teams` below will go into the groups claim.  Conversely, if the user is not in any of the configured `teams`, the user will not be authenticated.
+     teams:
+     - my-team
++    # Optional parameter to include team groups.
++    # If enabled, the groups claim of dex id_token will looks like this:
++    # ["my_team", "my_team/administrators", "my_team/members"]
++    includeTeamGroups: true
+ ```
+diff --git a/connector/bitbucketcloud/bitbucketcloud.go b/connector/bitbucketcloud/bitbucketcloud.go
+index d8ccf2e5..08183551 100644
+--- a/connector/bitbucketcloud/bitbucketcloud.go
++++ b/connector/bitbucketcloud/bitbucketcloud.go
+@@ -21,7 +21,8 @@ import (
+
+ const (
+ 	apiURL = "https://api.bitbucket.org/2.0"
+-
++	// Switch to API v2.0 when the Atlassian platform services are fully available in Bitbucket
++	legacyAPIURL = "https://api.bitbucket.org/1.0"
+ 	// Bitbucket requires this scope to access '/user' API endpoints.
+ 	scopeAccount = "account"
+ 	// Bitbucket requires this scope to access '/user/emails' API endpoints.
+@@ -33,21 +34,24 @@ const (
+
+ // Config holds configuration options for Bitbucket logins.
+ type Config struct {
+-	ClientID     string   `json:"clientID"`
+-	ClientSecret string   `json:"clientSecret"`
+-	RedirectURI  string   `json:"redirectURI"`
+-	Teams        []string `json:"teams"`
++	ClientID          string   `json:"clientID"`
++	ClientSecret      string   `json:"clientSecret"`
++	RedirectURI       string   `json:"redirectURI"`
++	Teams             []string `json:"teams"`
++	IncludeTeamGroups bool     `json:"includeTeamGroups,omitempty"`
+ }
+
+ // Open returns a strategy for logging in through Bitbucket.
+-func (c *Config) Open(id string, logger log.Logger) (connector.Connector, error) {
++func (c *Config) Open(_ string, logger log.Logger) (connector.Connector, error) {
+ 	b := bitbucketConnector{
+-		redirectURI:  c.RedirectURI,
+-		teams:        c.Teams,
+-		clientID:     c.ClientID,
+-		clientSecret: c.ClientSecret,
+-		apiURL:       apiURL,
+-		logger:       logger,
++		redirectURI:       c.RedirectURI,
++		teams:             c.Teams,
++		clientID:          c.ClientID,
++		clientSecret:      c.ClientSecret,
++		includeTeamGroups: c.IncludeTeamGroups,
++		apiURL:            apiURL,
++		legacyAPIURL:      legacyAPIURL,
++		logger:            logger,
+ 	}
+
+ 	return &b, nil
+@@ -71,10 +75,13 @@ type bitbucketConnector struct {
+ 	clientSecret string
+ 	logger       log.Logger
+ 	apiURL       string
++	legacyAPIURL string
+
+ 	// the following are used only for tests
+ 	hostName   string
+ 	httpClient *http.Client
++
++	includeTeamGroups bool
+ }
+
+ // groupsRequired returns whether dex requires Bitbucket's 'team' scope.
+@@ -344,7 +351,7 @@ func (b *bitbucketConnector) userEmail(ctx context.Context, client *http.Client)
+
+ // getGroups retrieves Bitbucket teams a user is in, if any.
+ func (b *bitbucketConnector) getGroups(ctx context.Context, client *http.Client, groupScope bool, userLogin string) ([]string, error) {
+-	bitbucketTeams, err := b.userTeams(ctx, client)
++	bitbucketTeams, err := b.userTeams(ctx, client, userLogin)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -371,7 +378,7 @@ type userTeamsResponse struct {
+ 	Values []team
+ }
+
+-func (b *bitbucketConnector) userTeams(ctx context.Context, client *http.Client) ([]string, error) {
++func (b *bitbucketConnector) userTeams(ctx context.Context, client *http.Client, userLogin string) ([]string, error) {
+ 	var teams []string
+ 	apiURL := b.apiURL + "/teams?role=member"
+
+@@ -392,9 +399,49 @@ func (b *bitbucketConnector) userTeams(ctx context.Context, client *http.Client)
+ 		}
+ 	}
+
++	if b.includeTeamGroups {
++		for _, team := range teams {
++			teamGroups, err := b.userTeamGroups(ctx, client, team, userLogin)
++			if err != nil {
++				return nil, fmt.Errorf("bitbucket: %v", err)
++			}
++			teams = append(teams, teamGroups...)
++		}
++	}
++
+ 	return teams, nil
+ }
+
++type group struct {
++	Slug    string   `json:"slug"`
++	Members []member `json:"members"`
++}
++
++type member struct {
++	Nickname string `json:"nickname"`
++}
++
++func (b *bitbucketConnector) userTeamGroups(ctx context.Context, client *http.Client, teamName, userLogin string) ([]string, error) {
++	var teamGroups []string
++	apiURL := b.legacyAPIURL + "/groups/" + teamName
++
++	var response []group
++	if err := get(ctx, client, apiURL, &response); err != nil {
++		return nil, fmt.Errorf("get user team %q groups: %v", teamName, err)
++	}
++
++	for _, group := range response {
++		for _, member := range group.Members {
++			if member.Nickname == userLogin {
++				teamGroups = append(teamGroups, teamName+"/"+group.Slug)
++				break
++			}
++		}
++	}
++
++	return teamGroups, nil
++}
++
+ // get creates a "GET `apiURL`" request with context, sends the request using
+ // the client, and decodes the resulting response body into v.
+ // Any errors encountered when building requests, sending requests, and
+diff --git a/connector/bitbucketcloud/bitbucketcloud_test.go b/connector/bitbucketcloud/bitbucketcloud_test.go
+index 488c7886..515482cd 100644
+--- a/connector/bitbucketcloud/bitbucketcloud_test.go
++++ b/connector/bitbucketcloud/bitbucketcloud_test.go
+@@ -27,18 +27,51 @@ func TestUserGroups(t *testing.T) {
+ 		},
+ 	}
+
++	groupsResponse := []group{
++		{Slug: "administrators", Members: []member{{Nickname: "some-login"}}},
++		{Slug: "members", Members: []member{{Nickname: "another-login"}}},
++	}
++
+ 	s := newTestServer(map[string]interface{}{
+ 		"/teams?role=member": teamsResponse,
++		"/groups/team-1":     groupsResponse,
++		"/groups/team-2":     groupsResponse,
++		"/groups/team-3":     groupsResponse,
+ 	})
+
+-	connector := bitbucketConnector{apiURL: s.URL}
+-	groups, err := connector.userTeams(context.Background(), newClient())
++	connector := bitbucketConnector{apiURL: s.URL, legacyAPIURL: s.URL}
++	groups, err := connector.userTeams(context.Background(), newClient(), "some-login")
++
++	expectNil(t, err)
++	expectEquals(t, groups, []string{
++		"team-1",
++		"team-2",
++		"team-3",
++	})
++
++	connector.includeTeamGroups = true
++	groups, err = connector.userTeams(context.Background(), newClient(), "some-login")
++
++	expectNil(t, err)
++	expectEquals(t, groups, []string{
++		"team-1",
++		"team-2",
++		"team-3",
++		"team-1/administrators",
++		"team-2/administrators",
++		"team-3/administrators",
++	})
++
++	groups, err = connector.userTeams(context.Background(), newClient(), "another-login")
+
+ 	expectNil(t, err)
+ 	expectEquals(t, groups, []string{
+ 		"team-1",
+ 		"team-2",
+ 		"team-3",
++		"team-1/members",
++		"team-2/members",
++		"team-3/members",
+ 	})
+
+ 	s.Close()
+@@ -50,7 +83,7 @@ func TestUserWithoutTeams(t *testing.T) {
+ 	})
+
+ 	connector := bitbucketConnector{apiURL: s.URL}
+-	groups, err := connector.userTeams(context.Background(), newClient())
++	groups, err := connector.userTeams(context.Background(), newClient(), "some-login")
+
+ 	expectNil(t, err)
+ 	expectEquals(t, len(groups), 0)

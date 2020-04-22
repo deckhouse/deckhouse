@@ -78,6 +78,7 @@
         clientID: {{ $provider.bitbucketCloud.clientID | quote }}
         clientSecret: {{ $provider.bitbucketCloud.clientSecret | quote }}
         redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        includeTeamGroups: {{ $provider.bitbucketCloud.includeTeamGroups | default false }}
         {{- if $provider.bitbucketCloud.teams }}
         teams:
           {{- range $team := $provider.bitbucketCloud.teams }}
@@ -126,6 +127,7 @@
         {{- if $provider.oidc.insecureSkipEmailVerified }}
         insecureSkipEmailVerified: true
         {{- end }}
+        insecureEnableGroups: true
         {{- if $provider.oidc.getUserInfo }}
         getUserInfo: true
         {{- end }}
