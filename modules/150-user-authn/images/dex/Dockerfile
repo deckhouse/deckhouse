@@ -1,15 +1,16 @@
-FROM golang:1.12-alpine3.9
+FROM golang:1.13-alpine3.10
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make
 WORKDIR /dex
-COPY crowd.patch login-error.patch client-groups.patch obsolete.patch static-user-groups.patch /
-RUN wget https://github.com/dexidp/dex/archive/v2.18.0.tar.gz -O - | tar -xz --strip-components=1 \
-  && patch -p1 < /crowd.patch \
-  && patch -p1 < /login-error.patch \
+COPY bitbucket-groups.patch client-groups.patch obsolete.patch static-user-groups.patch fix-relative-url.patch oidc-icon.patch /
+RUN wget https://github.com/dexidp/dex/archive/v2.23.0.tar.gz -O - | tar -xz --strip-components=1 \
+  && patch -p1 < /bitbucket-groups.patch \
   && patch -p1 < /client-groups.patch \
   && patch -p1 < /obsolete.patch \
-  && patch -p1 < /static-user-groups.patch
+  && patch -p1 < /static-user-groups.patch \
+  && patch -p1 < /fix-relative-url.patch \
+  && patch -p1 < /oidc-icon.patch
 RUN go build ./cmd/dex
 
-FROM quay.io/dexidp/dex:v2.18.0
+FROM quay.io/dexidp/dex:v2.23.0
 COPY --from=0 /dex/dex /usr/local/bin
 COPY --from=0 /dex/web /web
