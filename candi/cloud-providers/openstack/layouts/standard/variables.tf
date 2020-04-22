@@ -2,13 +2,21 @@ variable "clusterConfig" {
   type = any
 }
 
-variable "clusterProviderConfig" {
+variable "providerClusterConfig" {
+  type = any
+}
+
+variable "initConfig" {
+  type = any
+}
+
+variable "providerInitConfig" {
   type = any
 }
 
 locals {
-  prefix = var.clusterConfig.spec.cloud.prefix
-  internal_network_cidr = var.clusterProviderConfig.spec.standard.internalNetworkCIDR
-  external_network_name = var.clusterProviderConfig.spec.standard.externalNetworkName
-  network_security = var.clusterProviderConfig.spec.standard.internalNetworkSecurity
+  prefix = var.clusterConfig.cloud.prefix
+  internal_network_cidr = var.providerClusterConfig.standard.internalNetworkCIDR
+  external_network_name = var.providerClusterConfig.standard.externalNetworkName
+  network_security = var.providerClusterConfig.standard.internalNetworkSecurity
 }

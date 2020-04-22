@@ -13,14 +13,14 @@ function __config__() {
       kind: Secret
       namespace:
         nameSelector:
-          matchNames: [d8-system]
+          matchNames: [kube-system]
       nameSelector:
-        matchNames: [d8-cluster-configuration]
+        matchNames: [d8-provider-cluster-configuration]
       jqFilter: |
-        .data."openstack-cluster-configuration.yaml" //= "" | .data."openstack-cloud-discovery-data.json" //= "" |
+        .data."cloud-provider-cluster-configuration.yaml" //= "" | .data."cloud-provider-discovery-data.json" //= "" |
         {
-          "provider_cluster_configuration": (.data."openstack-cluster-configuration.yaml" | @base64d),
-          "provider_discovery_data": (.data."openstack-cloud-discovery-data.json" | @base64d)
+          "provider_cluster_configuration": (.data."cloud-provider-cluster-configuration.yaml" | @base64d),
+          "provider_discovery_data": (.data."cloud-provider-discovery-data.json" | @base64d)
         }
 EOF
 }
@@ -30,7 +30,7 @@ function set_values_from_provider_cluster_configuration_yaml() {
   provider='{}'
   provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
   if [[ -n $provider_cluster_configuration_yaml ]]; then
-    provider=$(echo "$provider_cluster_configuration_yaml" | yq r - spec --tojson | jq '.provider //= {} | .provider')
+    provider=$(echo "$provider_cluster_configuration_yaml" | yq r - --tojson | jq '.provider //= {} | .provider')
   fi
 
   #TODO merge configs framework

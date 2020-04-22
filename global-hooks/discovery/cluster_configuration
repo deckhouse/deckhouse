@@ -12,7 +12,7 @@ function __config__() {
       kind: Secret
       namespace:
         nameSelector:
-          matchNames: [d8-system]
+          matchNames: [kube-system]
       nameSelector:
         matchNames: [d8-cluster-configuration]
       jqFilter: '.data."cluster-configuration.yaml" | @base64d'
@@ -20,7 +20,7 @@ EOF
 }
 
 function set_values_from_cluster_configuration_yaml() {
-  cluster_configuration_json=$(echo "$1" | yq r - spec --tojson)
+  cluster_configuration_json=$(echo "$1" | yq r - --tojson)
 
   values::set global.clusterConfiguration "$cluster_configuration_json"
 
@@ -29,7 +29,7 @@ function set_values_from_cluster_configuration_yaml() {
 }
 
 function __main__() {
-  if context::has snapshots.cluster_configuration.0.filterResult; then
+  if context::has snapshots.cluster_configuration.0; then
     set_values_from_cluster_configuration_yaml "$(context::get snapshots.cluster_configuration.0.filterResult)"
   else
     values::unset global.clusterConfiguration

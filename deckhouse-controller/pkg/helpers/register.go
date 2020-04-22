@@ -3,7 +3,7 @@ package helpers
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	clusterapp "flant/deckhouse-cluster/pkg/app"
+	candiapp "flant/deckhouse-candi/pkg/app"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 
 	"flant/deckhouse-controller/pkg/helpers/aws"
@@ -56,6 +56,6 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		return helm.ReleaseRename(*helmReleaseRenameInput)
 	})
 
-	// deckhouse-cluster parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	clusterapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
+	// deckhouse-candi parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
+	candiapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
 }

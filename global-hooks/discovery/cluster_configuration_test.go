@@ -19,44 +19,42 @@ var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
 		stateAClusterConfiguration = `
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
-spec:
-  clusterType: Static
-  cloud:
-    provider: OpenStack
-    prefix: kube
-  podSubnetCIDR: 10.111.0.0/16
-  podSubnetNodeCIDRPrefix: 24
-  serviceSubnetCIDR: 10.222.0.0/16
-  kubernetesVersion: "1.15"
+clusterType: Static
+cloud:
+  provider: OpenStack
+  prefix: kube
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: 24
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.15"
 `
 		stateA = `
 apiVersion: v1
 kind: Secret
 metadata:
   name: d8-cluster-configuration
-  namespace: d8-system
+  namespace: kube-system
 data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
 
 		stateBClusterConfiguration = `
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
-spec:
-  clusterType: Cloud
-  cloud:
-    provider: AWS
-    prefix: lube
-  podSubnetCIDR: 10.122.0.0/16
-  podSubnetNodeCIDRPrefix: 26
-  serviceSubnetCIDR: 10.213.0.0/16
-  kubernetesVersion: "1.18"
+clusterType: Cloud
+cloud:
+  provider: AWS
+  prefix: lube
+podSubnetCIDR: 10.122.0.0/16
+podSubnetNodeCIDRPrefix: 26
+serviceSubnetCIDR: 10.213.0.0/16
+kubernetesVersion: "1.18"
 `
 		stateB = `
 apiVersion: v1
 kind: Secret
 metadata:
   name: d8-cluster-configuration
-  namespace: d8-system
+  namespace: kube-system
 data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
 	)

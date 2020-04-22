@@ -3,6 +3,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -66,38 +67,37 @@ cloudProviderOpenstack:
 		stateAClusterConfiguration = `
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
-spec:
-  layout: Standard
-  standard:
-    internalNetworkCIDR: 192.168.199.0/24
-    internalNetworkDNSServers: ["8.8.8.8"]
-    internalNetworkSecurity: true
-    externalNetworkName: public
-  provider:
-    authURL: https://cloud.flant.com/v3/
-    domainName: Default
-    tenantName: tenant-name
-    username: user-name
-    password: pa$$word
-    region: HetznerFinland
+layout: Standard
+standard:
+  internalNetworkCIDR: 192.168.199.0/24
+  internalNetworkDNSServers: ["8.8.8.8"]
+  internalNetworkSecurity: true
+  externalNetworkName: public
+provider:
+  authURL: https://cloud.flant.com/v3/
+  domainName: Default
+  tenantName: tenant-name
+  username: user-name
+  password: pa$$word
+  region: HetznerFinland
 `
 		stateA = fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
 metadata:
   name: d8-cluster-configuration
-  namespace: d8-system
+  namespace: kube-system
 data:
-  "openstack-cluster-configuration.yaml": %s
-  "openstack-cloud-discovery-data.json": %s
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
 		stateB = `
 apiVersion: v1
 kind: Secret
 metadata:
- name: d8-cluster-configuration
- namespace: d8-system
+ name: d8-provider-cluster-configuration
+ namespace: kube-system
 data: {}
 `
 	)

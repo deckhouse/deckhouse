@@ -1,13 +1,13 @@
 locals {
-  root_disk_size = var.clusterProviderConfig.bootstrap.masterInstanceClass.rootDiskSizeInGb
-  image_name = var.clusterProviderConfig.bootstrap.masterInstanceClass.imageName
-  flavor_name = var.clusterProviderConfig.bootstrap.masterInstanceClass.flavorName
+  root_disk_size = var.providerInitConfig.masterInstanceClass.rootDiskSizeInGb
+  image_name = var.providerInitConfig.masterInstanceClass.imageName
+  flavor_name = var.providerInitConfig.masterInstanceClass.flavorName
 }
 
 module "keypair" {
   source = "../../../terraform_modules/keypair"
   prefix = local.prefix
-  ssh_public_key = var.clusterConfig.bootstrap.sshPublicKeys[0]
+  ssh_public_key = var.initConfig.sshPublicKeys[0]
 }
 
 module "network_security_info" {

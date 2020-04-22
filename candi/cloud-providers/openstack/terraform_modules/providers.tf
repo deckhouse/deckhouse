@@ -1,10 +1,10 @@
 provider "openstack" {
-  auth_url = var.clusterProviderConfig.provider.authURL
-  default_domain = var.clusterProviderConfig.provider.domainName
-  cacert_file = lookup(var.clusterProviderConfig.provider, "caCert", "")
-  tenant_name = lookup(var.clusterProviderConfig.provider, "tenantName", "")
-  tenant_id = lookup(var.clusterProviderConfig.provider, "tenantID", "")
-  user_name = var.clusterProviderConfig.provider.username
-  password = var.clusterProviderConfig.provider.password
-  region = var.clusterProviderConfig.provider.region
+  auth_url = var.providerClusterConfig.provider.authURL
+  domain_name = var.providerClusterConfig.provider.domainName
+  cacert_file = lookup(var.providerClusterConfig.provider, "caCert", "")
+  tenant_name = lookup(var.providerClusterConfig.provider, "tenantName", "")
+  tenant_id = lookup(var.providerClusterConfig.provider, "tenantID", "")
+  user_name = var.providerClusterConfig.provider.username
+  password = var.providerClusterConfig.provider.password
+  region = var.providerClusterConfig.provider.region
 }
