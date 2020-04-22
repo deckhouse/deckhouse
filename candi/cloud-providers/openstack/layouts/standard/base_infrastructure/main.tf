@@ -5,6 +5,12 @@ module "network_security" {
   enabled = local.network_security
 }
 
+module "keypair" {
+  source = "../../../terraform_modules/keypair"
+  prefix = local.prefix
+  ssh_public_key = var.initConfig.sshPublicKeys[0]
+}
+
 data "openstack_compute_availability_zones_v2" "zones" {}
 
 data "openstack_networking_network_v2" "external" {

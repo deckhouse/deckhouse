@@ -56,7 +56,7 @@ function set_values_from_provider_cluster_configuration_yaml() {
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= [] | $data.zones + .zones | unique')
   values::set cloudProviderOpenstack.internal.zones "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then "" else .instances.sshKeyPairName end')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then $data.instances.sshKeyPairName else .instances.sshKeyPairName end')
   if [[ -n $i ]]; then
     values::set cloudProviderOpenstack.internal.instances.sshKeyPairName "$i"
   else

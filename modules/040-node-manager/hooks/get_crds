@@ -11,7 +11,7 @@ function __config__() {
     elif kubectl get -n kube-system secret d8-cloud-instance-manager-cloud-provider >/dev/null 2>/dev/null; then
       instance_class_kind="$(kubectl get -n kube-system secret d8-cloud-instance-manager-cloud-provider -o json 2>/dev/null | jq -r '.data.instanceClassKind' | base64 -d || true)"
     fi
-    if [ -n "$instance_class_kind" ]; then
+    if [ -v instance_class_kind ]; then
       echo "$instance_class_kind" > /tmp/node-manager-instance-class-kind
     fi
   fi
@@ -21,7 +21,7 @@ function __config__() {
     kubernetes:
     - name: ngs
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      includeSnapshotsFrom: [ngs,$([ -v instance_class_kind ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -52,7 +52,7 @@ function __config__() {
     )
     - name: cloud_provider_secrets
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      includeSnapshotsFrom: [ngs,$([ -v instance_class_kind ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
       apiVersion: v1
       kind: Secret
       namespace:
@@ -68,7 +68,7 @@ function __config__() {
     - name: machine_deployments
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
-      includeSnapshotsFrom: [ngs,$([ -n "$instance_class_kind" ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      includeSnapshotsFrom: [ngs,$([ -v instance_class_kind ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
