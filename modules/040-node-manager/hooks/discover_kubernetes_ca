@@ -1,0 +1,16 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  values::set nodeManager.internal.kubernetesCA "$(cat /run/secrets/kubernetes.io/serviceaccount/ca.crt)"
+}
+
+hook::run "$@"

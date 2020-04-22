@@ -1,57 +1,57 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: VsphereMachineClass
 metadata:
-  name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
-  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.region | quote }}
+  region: {{ .Values.nodeManager.internal.cloudProvider.vsphere.region | quote }}
   zone:  {{ .zoneName | quote }}
-  numCPUs: {{ .instanceGroup.instanceClass.numCPUs }}
-  memory: {{ add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4) }}
-  rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
-  template: {{ .instanceGroup.instanceClass.template | quote }}
-  virtualMachineFolder: {{ .Values.cloudInstanceManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
-  mainNetwork: {{ .instanceGroup.instanceClass.mainNetwork | quote }}
-{{- if .instanceGroup.instanceClass.additionalNetworks }}
+  numCPUs: {{ .nodeGroup.instanceClass.numCPUs }}
+  memory: {{ add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4) }}
+  rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
+  template: {{ .nodeGroup.instanceClass.template | quote }}
+  virtualMachineFolder: {{ .Values.nodeManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
+  mainNetwork: {{ .nodeGroup.instanceClass.mainNetwork | quote }}
+{{- if .nodeGroup.instanceClass.additionalNetworks }}
   additionalNetworks:
-  {{- range .instanceGroup.instanceClass.additionalNetworks }}
+  {{- range .nodeGroup.instanceClass.additionalNetworks }}
   - {{ . | quote }}
   {{- end }}
 {{- end }}
-  datastore: {{ .instanceGroup.instanceClass.datastore | quote }}
+  datastore: {{ .nodeGroup.instanceClass.datastore | quote }}
 {{- /* Откатить после окончания ***REMOVED***а */ -}}
-{{- if or .instanceGroup.instanceClass.resourcePool .instanceGroup.instanceClass.resourcePoolForNewNodes }}
-  resourcePool: {{ or .instanceGroup.instanceClass.resourcePool .instanceGroup.instanceClass.resourcePoolForNewNodes | quote }}
+{{- if or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes }}
+  resourcePool: {{ or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes | quote }}
 {{- end }}
   clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
-  nodeRoleTag: {{ .instanceGroup.name }}-{{ .zoneName }}
+  nodeRoleTag: {{ .nodeGroup.name }}-{{ .zoneName }}
   sshKeys:
-{{- range .Values.cloudInstanceManager.internal.cloudProvider.vsphere.sshKeys }}
+{{- range .Values.nodeManager.internal.cloudProvider.vsphere.sshKeys }}
   - {{ . | quote }}
 {{- end }}
-{{- if not .instanceGroup.instanceClass.runtimeOptions }}
-{{ $_ := set .instanceGroup.instanceClass "runtimeOptions" dict }}
+{{- if not .nodeGroup.instanceClass.runtimeOptions }}
+{{ $_ := set .nodeGroup.instanceClass "runtimeOptions" dict }}
 {{- end }}
   runtimeOptions:
-    nestedHardwareVirtualization: {{ .instanceGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization | default true }}
+    nestedHardwareVirtualization: {{ .nodeGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization | default true }}
     resourceAllocationInfo:
-{{- if .instanceGroup.instanceClass.runtimeOptions.cpuShares }}
-      cpuShares: {{ .instanceGroup.instanceClass.runtimeOptions.cpuShares }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.cpuShares }}
+      cpuShares: {{ .nodeGroup.instanceClass.runtimeOptions.cpuShares }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.cpuLimit }}
-      cpuLimit: {{ .instanceGroup.instanceClass.runtimeOptions.cpuLimit }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.cpuLimit }}
+      cpuLimit: {{ .nodeGroup.instanceClass.runtimeOptions.cpuLimit }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.cpuReservation }}
-      cpuReservation: {{ .instanceGroup.instanceClass.runtimeOptions.cpuReservation }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.cpuReservation }}
+      cpuReservation: {{ .nodeGroup.instanceClass.runtimeOptions.cpuReservation }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.memoryShares }}
-      memoryShares: {{ .instanceGroup.instanceClass.runtimeOptions.memoryShares }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.memoryShares }}
+      memoryShares: {{ .nodeGroup.instanceClass.runtimeOptions.memoryShares }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.runtimeOptions.memoryLimit }}
-      memoryLimit: {{ .instanceGroup.instanceClass.runtimeOptions.memoryLimit }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.memoryLimit }}
+      memoryLimit: {{ .nodeGroup.instanceClass.runtimeOptions.memoryLimit }}
 {{- end }}
-      memoryReservation: {{ mul (div (add .instanceGroup.instanceClass.memory (mod .instanceGroup.instanceClass.memory 4)) 100) (.instanceGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
+      memoryReservation: {{ mul (div (add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4)) 100) (.nodeGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
   secretRef:
-    namespace: d8-{{ .Chart.Name }}
-    name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

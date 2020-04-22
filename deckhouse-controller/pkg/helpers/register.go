@@ -8,6 +8,7 @@ import (
 
 	"flant/deckhouse-controller/pkg/helpers/aws"
 	"flant/deckhouse-controller/pkg/helpers/fnv"
+	"flant/deckhouse-controller/pkg/helpers/helm"
 	"flant/deckhouse-controller/pkg/helpers/openstack"
 	"flant/deckhouse-controller/pkg/helpers/unit"
 	"flant/deckhouse-controller/pkg/helpers/vsphere"
@@ -46,6 +47,13 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	vsphereGetZonesDatastores := vsphereCommand.Command("get-zones-datastores", "Get zones datastores.")
 	vsphereGetZonesDatastores.Action(func(c *kingpin.ParseContext) error {
 		return vsphere.GetZonesDatastores()
+	})
+
+	helmCommand := helpersCommand.Command("helm", "Helm helpers.")
+	helmReleaseRenameCommand := helmCommand.Command("set-release-name", "Update release name in stored structure.")
+	helmReleaseRenameInput := helmReleaseRenameCommand.Arg("input", "String").Required().String()
+	helmReleaseRenameCommand.Action(func(c *kingpin.ParseContext) error {
+		return helm.ReleaseRename(*helmReleaseRenameInput)
 	})
 
 	// deckhouse-cluster parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets

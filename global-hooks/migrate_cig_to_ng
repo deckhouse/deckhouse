@@ -1,0 +1,81 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+EOF
+}
+
+function __main__() {
+  kubectl apply -f /deckhouse/candi/openapi/node_group.yaml
+  sleep 5
+
+  instance_class_kind="$(kubectl get -n kube-system secret d8-cloud-instance-manager-cloud-provider -o json 2>/dev/null | jq -r '.data.instanceClassKind' | base64 -d || true)"
+  if [ -n "$instance_class_kind" ]; then
+    echo "$instance_class_kind" > /tmp/node-manager-instance-class-kind
+  fi
+
+  if kubectl -n d8-system get cm deckhouse -o json | jq -e '.data.cloudInstanceManager != null' > /dev/null; then
+    kubectl -n d8-system get cm deckhouse -o json | jq '.data.nodeManager = .data.cloudInstanceManager' | kubectl replace -f -
+  fi
+
+  if kubectl get crd cloudinstancegroups.deckhouse.io 2>/dev/null; then
+    cigs="$(kubectl get cig -o json | jq '[.items[] | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
+    ics="$(kubectl get $instance_class_kind -o json | jq '[.items[] | {(.metadata.name): .}] | reduce .[] as $i ({}; . * $i)')"
+
+    for cig in $(jq -r 'keys[]' <<< $cigs); do
+      ic_name=$(jq -r --arg cig "$cig" '.[$cig].spec.instanceClassReference.name' <<< "$cigs")
+      ic="$(jq -r --arg name "$ic_name" '.[$name]' <<< "$ics")"
+
+      tmp_ng_path="/tmp/ng-${cig}"
+
+      echo "$cigs" | jq --argjson ic "$ic" --arg cig "$cig" '
+      .[$cig] |
+      .metadata = {"name": .metadata.name} |
+      .kind = "NodeGroup" |
+      .spec.nodeType = "Cloud" |
+      if (.spec|has("instanceClassReference")) then
+        .spec.cloudInstances //= {"classReference": .spec.instanceClassReference}
+      else . end |
+      if (.spec|has("minInstancesPerZone")) then
+        .spec.cloudInstances.minPerZone //= .spec.minInstancesPerZone
+      else . end |
+      if (.spec|has("maxInstancesPerZone")) then
+        .spec.cloudInstances.maxPerZone //= .spec.maxInstancesPerZone
+      else . end |
+      if (.spec|has("maxInstancesUnavailablePerZone")) then
+        .spec.cloudInstances.maxUnavailablePerZone //= .spec.maxInstancesUnavailablePerZone
+      else . end |
+      if (.spec|has("maxInstancesSurgePerZone")) then
+        .spec.cloudInstances.maxSurgePerZone //= .spec.maxInstancesSurgePerZone
+      else . end |
+      if (.spec|has("zones")) then
+        .spec.cloudInstances.zones //= .spec.zones
+      else . end |
+      if ($ic.spec|has("bashible")) then
+        .spec.bashible //= $ic.spec.bashible
+      else . end |
+      del(.spec.instanceClassReference) |
+      del(.spec.minInstancesPerZone) |
+      del(.spec.maxInstancesPerZone) |
+      del(.spec.maxInstancesUnavailablePerZone) |
+      del(.spec.maxInstancesSurgePerZone) |
+      del(.spec.zones)
+      ' > "$tmp_ng_path"
+      echo "!!! NOTICE: Migrate CloudInstanceGroup ($cig) to NodeGroup !!!"
+      kubectl create -f "$tmp_ng_path" || true
+    done
+
+    kubectl delete crd cloudinstancegroups.deckhouse.io
+
+    for ic in $(kubectl get "$instance_class_kind" -o json | jq -r '.items[] | select(.spec|has("bashible")) | .metadata.name'); do
+      echo "!!! NOTICE: Remove bashible from ${instance_class_kind}/${ic} !!!"
+      kubectl patch "$instance_class_kind" $ic --type=json -p='[{"op": "remove", "path": "/spec/bashible"}]'
+    done
+  fi
+}
+
+hook::run "$@"

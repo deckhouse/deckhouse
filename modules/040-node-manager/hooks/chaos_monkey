@@ -1,0 +1,101 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: ngs
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "isReadyToChaos": (.status.desired > 1 and .status.desired == .status.ready),
+          "spec": .spec,
+          "name": .metadata.name
+        }
+    - name: nodes
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
+          operator: Exists
+      jqFilter: |
+        {
+          "nodeGroup": (.metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group" // null),
+          "name": .metadata.name
+        }
+    - name: machines
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: Machine
+      jqFilter: |
+        {
+          "isMonkeyVictim": (.metadata.labels | has("cloud-instance-manager.deckhouse.io/chaos-monkey-victim")),
+          "node": .metadata.labels.node,
+          "name": .metadata.name
+        }
+    schedule:
+    - name: monkey
+      queue: /modules/$(module::name::kebab_case)/chaos_monkey
+      crontab: "* * * * *"
+      includeSnapshotsFrom: [ngs,nodes,machines]
+EOF
+}
+
+function __on_kubernetes::ngs() {
+  return 0
+}
+
+function __on_kubernetes::nodes() {
+  return 0
+}
+
+function __on_kubernetes::machines() {
+  return 0
+}
+
+function __on_kubernetes::monkey() {
+  # TODO: It's a bug https://flant.slack.com/archives/C78AQG5EY/p1587134804048800
+  return 0
+}
+
+function __on_schedule::monkey() {
+  # for testing environment
+  if [ -n "${RANDOM_SEED-}" ]; then
+    RANDOM="${RANDOM_SEED}"
+    tmp=$(mktemp)
+    echo $RANDOM_SEED > $tmp
+    export SHUF_RANDOM_SOURCE="--random-source=$tmp"
+  else
+    export SHUF_RANDOM_SOURCE=""
+  fi
+
+  node_group_names="$(context::jq -r '.snapshots.ngs[] | select(.filterResult.isReadyToChaos) | .object.metadata.name')"
+  for ng_name in $node_group_names ; do
+    if context::jq -e '[.snapshots.machines[] | select(.filterResult.isMonkeyVictim)] | any'; then
+      # If there is node in deleting state then do nothing
+      continue
+    fi
+
+    ng_spec="$(context::jq -r --arg ng_name "$ng_name" '.snapshots.ngs[] | select(.filterResult.name == $ng_name) | .filterResult.spec')"
+    ng_chaos_mode=$(jq -r '.chaos.mode // "DrainAndDelete"' <<< "$ng_spec")
+    ng_chaos_period_seconds=$(jq -r '.chaos.period // "6h"' <<< "$ng_spec" | deckhouse-controller helper unit convert --mode duration)
+
+    run=$(( RANDOM % (ng_chaos_period_seconds / 60) ))
+    if [[ "$run" == "0" ]]; then
+      victim_node="$(context::jq -r --arg ng_name "${ng_name}" '.snapshots.nodes[] | select(.filterResult.nodeGroup == $ng_name) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
+      victim_machine="$(context::jq -r --arg node "${victim_node}" '.snapshots.machines[] | select(.filterResult.node == $node) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
+      if [[ "$ng_chaos_mode" == "DrainAndDelete" ]] ; then
+        kubernetes::patch_jq "d8-cloud-instance-manager" "machine/$victim_machine" '.metadata.labels."cloud-instance-manager.deckhouse.io/chaos-monkey-victim" = ""'
+        kubernetes::delete_if_exists "d8-cloud-instance-manager" "machine/$victim_machine"
+      fi
+    fi
+  done
+}
+
+hook::run "$@"
