@@ -4,12 +4,6 @@ locals {
   flavor_name = var.providerInitConfig.masterInstanceClass.flavorName
 }
 
-module "keypair" {
-  source = "../../../terraform_modules/keypair"
-  prefix = local.prefix
-  ssh_public_key = var.initConfig.sshPublicKeys[0]
-}
-
 module "network_security_info" {
   source = "../../../terraform_modules//network_security_info"
   prefix = local.prefix
@@ -22,7 +16,7 @@ module "standard_master" {
   root_disk_size = local.root_disk_size
   image_name = local.image_name
   flavor_name = local.flavor_name
-  keypair_ssh_name = module.keypair.ssh_name
+  keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
   master_internal_port_id = local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id
   external_network_name = data.openstack_networking_network_v2.external.name
   internal_subnet = data.openstack_networking_subnet_v2.internal
@@ -32,6 +26,10 @@ module "kubernetes_data" {
   source = "../../../terraform_modules/kubernetes_data"
   prefix = local.prefix
   master_id = module.standard_master.id
+}
+
+data "openstack_compute_keypair_v2" "ssh" {
+  name = local.prefix
 }
 
 data "openstack_networking_network_v2" "external" {
