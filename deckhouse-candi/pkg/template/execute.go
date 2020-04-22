@@ -31,7 +31,7 @@ func formatDir(dir string) string {
 	return strings.TrimSuffix(dir, "/") + "/"
 }
 
-func RenderTemplate(templatesDir string, data interface{}) ([]RenderedTemplate, error) {
+func RenderTemplate(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
 	templatesDir = formatDir(templatesDir)
 
 	files, err := ioutil.ReadDir(templatesDir)
@@ -98,7 +98,7 @@ func NewTemplateController(tmpDir string) *TemplateController {
 	return &TemplateController{TmpDir: tmpDir}
 }
 
-func (t *TemplateController) RenderAndSaveTemplates(fromDir, toDir string, data interface{}) error {
+func (t *TemplateController) RenderAndSaveTemplates(fromDir, toDir string, data map[string]interface{}) error {
 	templates, err := RenderTemplate(fromDir, data)
 	if err != nil {
 		return fmt.Errorf("render templates: %v", err)

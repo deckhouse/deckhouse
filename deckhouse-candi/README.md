@@ -52,13 +52,13 @@ standard:
   - 8.8.8.8
   - 4.2.2.2
   internalNetworkSecurity: true
-  externalNetworkName: shared
+  externalNetworkName: public
 provider:
   authURL: https://cloud.flant.com/v3/
   domainName: Default
-  tenantName: nabokikh
-  username: nabokikh
-  password: MKbY2aB8jjLo4iXQ
+  tenantName: xxx
+  username: xxx
+  password: xxx
   region: HetznerFinland
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -67,7 +67,7 @@ masterInstanceClass:
   flavorName: m1.large
   imageName: ubuntu-18-04-cloud-amd64
   rootDiskSizeInGb: 20
-  mainNetwork: shared
+  mainNetwork: pivot
 ```
 Запуск werf:
 ```yaml
