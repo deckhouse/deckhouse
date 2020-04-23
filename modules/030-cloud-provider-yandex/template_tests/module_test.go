@@ -59,7 +59,9 @@ const moduleValues = `
     sshKey: mysshkey
     sshUser: mysshuser
     serviceAccountJSON: '{"my": "json"}'
-    nameservers: ["1.1.1.1", "2.2.2.2"]
+    dns:
+      nameservers: ["1.1.1.1", "2.2.2.2"]
+      search: ["example.com"]
     region: myreg
     folderID: myfoldid
 `
@@ -127,10 +129,15 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
           "folderID": "myfoldid",
-          "nameservers": [
-            "1.1.1.1",
-            "2.2.2.2"
-          ],
+          "dns": {
+            "nameservers": [
+              "1.1.1.1",
+              "2.2.2.2"
+            ],
+            "search": [
+              "example.com"
+            ]
+          },
           "region": "myreg",
           "serviceAccountJSON": "{\"my\": \"json\"}",
           "sshKey": "mysshkey",
