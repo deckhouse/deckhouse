@@ -1,16 +1,29 @@
-bb-var BB_APT_UPDATED false
-
 bb-apt?() {
     bb-exe? apt-get
 }
 
 bb-apt-repo?() {
-    local REPO=$1
-    cat /etc/apt/sources.list /etc/apt/sources.list.d/* 2> /dev/null | grep -v '^#' | grep -qw "$REPO"
+    local REPO_PART=$1
+    cat /etc/apt/sources.list /etc/apt/sources.list.d/* 2> /dev/null | grep -v '^#' | grep -qw "$REPO_PART"
+}
+
+bb-apt-key-add() {
+    apt-key add -
+}
+
+bb-apt-repo-add() {
+    local REPO_HASH="$(sed -E -e 's/[ \t]+/;;/g' <<< "${@}")"
+    local REPO_DOMAIN="$(sed -E -e 's/.*http(s)?:\/\/([^/ \t]+)\/.*/\2/' <<< $2)"
+
+    if ! cat /etc/apt/sources.list /etc/apt/sources.list.d/* 2> /dev/null | sed -E -e 's/#.*//g' -e 's/[ \t]+/;;/g' | grep -q $REPO_HASH
+    then
+        echo "${@}" >> "/etc/apt/sources.list.d/${REPO_DOMAIN}.list"
+        bb-flag-unset apt-updated
+    fi
 }
 
 bb-apt-package?() {
-    local PACKAGE="$(cut -d= -f1 <<<  $1)"
+    local PACKAGE="$(cut -d= -f1 <<< $1)"
     local VERSION_DESIRED="$(cut -d= -f2 <<<  $1)"
 
     if [ -z "$VERSION_DESIRED" ]; then
@@ -24,21 +37,30 @@ bb-apt-package?() {
 }
 
 bb-apt-update() {
-    $BB_APT_UPDATED && return 0
+    export DEBIAN_FRONTEND=noninteractive
+    bb-flag? apt-updated && return 0
     bb-log-info 'Updating apt cache'
     apt-get update
-    BB_APT_UPDATED=true
+    bb-flag-set apt-updated
+}
+
+bb-apt-dist-upgrade() {
+    export DEBIAN_FRONTEND=noninteractive
+    bb-apt-update
+    bb-log-info 'Processing dist-upgrade'
+    apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade -y
 }
 
 bb-apt-install() {
+    export DEBIAN_FRONTEND=noninteractive
     for PACKAGE in "$@"
     do
         if ! bb-apt-package? "$PACKAGE"
         then
             bb-apt-update
             bb-log-info "Installing package '$PACKAGE'"
-            bb-apt-unhold $PACKAGE
             apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -y "$PACKAGE"
+            bb-apt-hold $PACKAGE
             bb-exit-on-error "Failed to install package '$PACKAGE'"
             bb-event-fire "bb-package-installed" "$PACKAGE"
         fi
@@ -46,17 +68,27 @@ bb-apt-install() {
 }
 
 bb-apt-remove() {
+    export DEBIAN_FRONTEND=noninteractive
     for PACKAGE in "$@"
     do
         if bb-apt-package? "$PACKAGE"
         then
-            bb-apt-update
             bb-log-info "Removing package '$PACKAGE'"
             apt-get remove -y "$PACKAGE"
             bb-exit-on-error "Failed to remove package '$PACKAGE'"
             bb-event-fire "bb-package-removed" "$PACKAGE"
         fi
     done
+}
+
+bb-apt-autoremove() {
+    export DEBIAN_FRONTEND=noninteractive
+    bb-log-info 'Autoremoving unused packages'
+    apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --purge -y autoremove
+}
+
+bb-apt-hold?() {
+    dpkg -s "$1" 2> /dev/null | grep -q '^Status:.\+installed'
 }
 
 bb-apt-hold() {
@@ -74,6 +106,7 @@ bb-apt-unhold() {
 }
 
 bb-apt-package-upgrade?() {
+    export DEBIAN_FRONTEND=noninteractive
     bb-apt-update
 
     local PACKAGE=$1
@@ -93,6 +126,7 @@ bb-apt-package-upgrade?() {
 }
 
 bb-apt-upgrade() {
+    export DEBIAN_FRONTEND=noninteractive
     for PACKAGE in "$@"
     do
         if bb-apt-package-upgrade? "$PACKAGE"

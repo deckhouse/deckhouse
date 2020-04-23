@@ -1,2 +1,2 @@
 rm -rf /var/lib/bashible/kubeadm
-apt purge -y kubeadm
+bb-apt-remove kubeadm

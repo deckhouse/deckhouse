@@ -1,6 +1,9 @@
-kubernetes_version=$(cat /var/lib/bashible/kubernetes-version)
+{{ if eq .kubernetesVersion "1.15" }}
+  kubernetes_version="1.16.8-00"
+{{ else if eq .kubernetesVersion "1.16" }}
+  kubernetes_version="1.16.8-00"
+{{ else }}
+  {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
+{{ end }}
 
-if ! apt list --installed kubeadm | grep -F $kubernetes_version; then
-  apt-mark unhold kubeadm
-  apt install -qy "kubeadm=$kubernetes_version"
-fi
+bb-apt-install "kubeadm=$kubernetes_version"

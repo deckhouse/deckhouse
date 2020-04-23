@@ -1,4 +1,9 @@
-if bb-flag? is-bootstrapped; then exit 0; fi
+bb-event-on 'bb-package-installed' 'post-install'
+post-install() {
+  systemctl enable docker.service
+{{ if ne .runType "ImageBuilding" -}}
+  systemctl restart docker.service
+{{- end }}
+}
 
-apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -qy "docker.io=18.09.*"
-apt-mark hold docker.io
+bb-apt-install "docker.io=18.09.7-0ubuntu1~18.04.4"

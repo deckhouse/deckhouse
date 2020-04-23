@@ -5,6 +5,12 @@ bb-sync-file() {
 
     local DST_FILE_CHANGED=false
 
+    if [[ "$SRC_FILE" == "-" ]]
+    then
+        SRC_FILE="$(bb-tmp-file)"
+        cat > "$SRC_FILE"
+    fi
+
     if [[ ! -f "$DST_FILE" ]]
     then
         touch "$DST_FILE"

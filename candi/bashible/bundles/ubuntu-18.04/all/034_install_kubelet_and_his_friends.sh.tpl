@@ -1,13 +1,15 @@
-if bb-flag? is-bootstrapped; then exit 0; fi
-
-kubernetes_version="$(cat /var/lib/bashible/kubernetes-version)"
+{{ if eq .kubernetesVersion "1.14" }}
+kubernetes_version="1.14.10-00"
+{{ else if eq .kubernetesVersion "1.15" }}
+kubernetes_version="1.15.11-00"
+{{ else if eq .kubernetesVersion "1.16" }}
+kubernetes_version="1.16.8-00"
+{{ else }}
+  {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
+{{ end }}
 cni_version=0.7.5-00
 
-if ! apt list --installed kubelet | grep -F $kubernetes_version; then
-  apt-mark unhold kubelet kubectl kubernetes-cni
-  apt install -qy "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" "kubernetes-cni=${cni_version}"
-  apt-mark hold kubelet kubectl kubernetes-cni
-fi
+bb-apt-install "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" "kubernetes-cni=${cni_version}"
 
 mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/systemd/system/kubelet.service.d
