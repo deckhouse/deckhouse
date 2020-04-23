@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/flant/logboek"
+
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/ssh/session"
 )
@@ -28,7 +30,7 @@ func (c *Check) AwaitAvailability() error {
 	attempts := 0
 	for {
 		attempts++
-		fmt.Printf("--- Wait for connection. Attempt #%d of %d. ---\n", attempts, ConnectionAttemptsCount)
+		logboek.LogInfoF("--- Wait for connection. Attempt #%d of %d. ---\n", attempts, ConnectionAttemptsCount)
 		err = c.ExpectAvailable()
 		if err == nil {
 			return nil
@@ -36,7 +38,7 @@ func (c *Check) AwaitAvailability() error {
 		if attempts == ConnectionAttemptsCount {
 			return fmt.Errorf("host '%s' is not available", app.SshHost)
 		}
-		fmt.Printf("next attempt in %s\n", ConnectionAttemptDelay.String())
+		logboek.LogInfoF("next attempt in %s\n", ConnectionAttemptDelay.String())
 		time.Sleep(ConnectionAttemptDelay)
 	}
 

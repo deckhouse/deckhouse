@@ -36,13 +36,13 @@ func main() {
 
 	// plumbing commands:
 	{
+		app.DefineCommandParseClusterConfiguration(kpApp, helperCmd)
+
 		commands.DefineRunBaseTerraformCommand(helperCmd)
 
 		commands.DefineRunMasterTerraformCommand(helperCmd)
 
 		commands.DefineRunDestroyAllTerraformCommand(helperCmd)
-
-		app.DefineCommandParseClusterConfiguration(kpApp, helperCmd)
 
 		commands.DefineTestSshConnectionCommand(helperCmd)
 

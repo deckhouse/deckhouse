@@ -1,82 +1,96 @@
 package template
 
 import (
+	"flant/deckhouse-candi/pkg/log"
 	"fmt"
-	"gopkg.in/yaml.v2"
+	"path/filepath"
 
 	"github.com/flant/logboek"
+	"gopkg.in/yaml.v2"
 
 	"flant/deckhouse-candi/pkg/config"
 )
 
-func PrepareBundle(templateController *TemplateController, nodeIP, bundleName string, metaConfig *config.MetaConfig) error {
+const (
+	candiDir         = "/deckhouse/candi"
+	bashibleDir      = "/var/lib/bashible"
+	candiBashibleDir = candiDir + "/bashible"
+	stepsDir         = bashibleDir + "/bundle_steps"
+)
+
+type saveFromTo struct {
+	from string
+	to   string
+	data map[string]interface{}
+}
+
+func logTemplatesData(name string, data map[string]interface{}) {
+	formattedData, _ := yaml.Marshal(data)
+	_ = logboek.LogProcess(fmt.Sprintf("%s data", name), log.BoldOptions(), func() error {
+		logboek.LogInfoF("\n%s\n", string(formattedData))
+		return nil
+	})
+}
+
+func PrepareBundle(templateController *Controller, nodeIP, bundleName string, metaConfig *config.MetaConfig) error {
 	kubeadmData := metaConfig.MarshalConfigForKubeadmTemplates(nodeIP)
-	kubeadmDataFormatted, _ := yaml.Marshal(kubeadmData)
-
-	logboek.LogInfoF("Kubeadm data:\n---\n%s\n\n", kubeadmDataFormatted)
-	if err := templateController.RenderAndSaveTemplates(
-		"/deckhouse/candi/control-plane-kubeadm/",
-		"/var/lib/bashible/kubeadm/",
-		kubeadmData,
-	); err != nil {
-		return err
-	}
-
-	if err := templateController.RenderAndSaveTemplates(
-		"/deckhouse/candi/control-plane-kubeadm/kustomize",
-		"/var/lib/bashible/kubeadm/kustomize/",
-		kubeadmData,
-	); err != nil {
-		return err
-	}
+	logTemplatesData("kubeadm", kubeadmData)
 
 	bashibleData := metaConfig.MarshalConfigForBashibleBundleTemplate(bundleName, nodeIP)
-	bashibleDataFormatted, _ := yaml.Marshal(bashibleData)
+	logTemplatesData("bashible", bashibleData)
 
-	logboek.LogInfoF("Bashible data:\n---\n%s\n\n", bashibleDataFormatted)
-
-	if err := templateController.RenderAndSaveTemplates(
-		"/deckhouse/candi/bashible",
-		"/var/lib/bashible/",
-		bashibleData,
-	); err != nil {
-		return err
-	}
-
-	if err := templateController.RenderAndSaveTemplates(
-		"/deckhouse/candi/bashible/common-steps/all/",
-		"/var/lib/bashible/bundle_steps/",
-		bashibleData,
-	); err != nil {
-		return err
+	saveInfo := []saveFromTo{
+		{
+			from: filepath.Join(candiDir, "control-plane-kubeadm"),
+			to:   filepath.Join(bashibleDir, "kubeadm"),
+			data: kubeadmData,
+		},
+		{
+			from: filepath.Join(candiDir, "control-plane-kubeadm", "kustomize"),
+			to:   filepath.Join(bashibleDir, "kubeadm", "kustomize"),
+			data: kubeadmData,
+		},
+		{
+			from: candiBashibleDir,
+			to:   bashibleDir,
+			data: bashibleData,
+		},
 	}
 
 	for _, steps := range []string{"all", "cluster-bootstrap", "node-group"} {
-		if err := templateController.RenderAndSaveTemplates(
-			fmt.Sprintf("/deckhouse/candi/bashible/bundles/%s/%s/", bundleName, steps),
-			"/var/lib/bashible/bundle_steps/",
-			bashibleData,
-		); err != nil {
-			return err
-		}
+		saveInfo = append(saveInfo, saveFromTo{
+			from: filepath.Join(candiBashibleDir, "common-steps", steps),
+			to:   stepsDir,
+			data: bashibleData,
+		})
+	}
+
+	for _, steps := range []string{"all", "cluster-bootstrap", "node-group"} {
+		saveInfo = append(saveInfo, saveFromTo{
+			from: filepath.Join(candiBashibleDir, "bundles", bundleName, steps),
+			to:   stepsDir,
+			data: bashibleData,
+		})
 	}
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
-		if err := templateController.RenderAndSaveTemplates(
-			fmt.Sprintf("/deckhouse/candi/cloud-providers/%s/bashible-bundles/%s/%s/", metaConfig.ProviderName, bundleName, steps),
-			"/var/lib/bashible/bundle_steps/",
-			bashibleData,
-		); err != nil {
+		saveInfo = append(saveInfo, saveFromTo{
+			from: filepath.Join(candiDir, "cloud-providers", metaConfig.ProviderName, "bashible", "bundles", bundleName, steps),
+			to:   stepsDir,
+			data: bashibleData,
+		})
+	}
+
+	for _, info := range saveInfo {
+		logboek.LogInfoF("Rendering bundle templates from %q to %q\n", info.from, info.to)
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
 			return err
 		}
 	}
 
-	if err := templateController.RenderBashBooster(
-		"/deckhouse/candi/bashible/bashbooster",
-		"/var/lib/bashible/",
-	); err != nil {
+	logboek.LogInfoF("Rendering bashbooster\n")
+	if err := templateController.RenderBashBooster(filepath.Join(candiBashibleDir, "bashbooster"), bashibleDir); err != nil { //nolint:lll
 		return err
 	}
-
 	return nil
 }

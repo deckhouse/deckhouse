@@ -9,6 +9,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
+	github.com/fatih/color v1.9.0
 	github.com/flant/logboek v0.3.4
 	github.com/flant/shell-operator v1.0.0-beta.9.0.20200414173230-b8966f9d8851 // branch: +feat_kube_server
 	github.com/go-openapi/spec v0.19.3

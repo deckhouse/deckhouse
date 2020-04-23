@@ -7,14 +7,14 @@ import (
 )
 
 func SaveTemplatesToDir(templates []RenderedTemplate, dirToSave string) error {
-	err := os.MkdirAll(dirToSave, os.ModePerm)
-	if err != nil {
-		return err
+	if err := os.MkdirAll(dirToSave, os.ModePerm); err != nil {
+		return fmt.Errorf("creating templates dir: %v", err)
 	}
 
 	for _, tpl := range templates {
-		if err := ioutil.WriteFile(formatDir(dirToSave)+tpl.FileName, tpl.Content.Bytes(), 0755); err != nil {
-			return fmt.Errorf("saving file %s: %v", tpl.FileName, err)
+		err := ioutil.WriteFile(formatDir(dirToSave)+tpl.FileName, tpl.Content.Bytes(), bundlePermissions)
+		if err != nil {
+			return fmt.Errorf("saving template file %s: %v", tpl.FileName, err)
 		}
 	}
 	return nil

@@ -53,7 +53,7 @@ func (r *Runner) Init(bootstrap bool) ([]byte, error) {
 		return nil, fmt.Errorf("terraform saving cluster config error: %v", err)
 	}
 
-	logboek.LogInfoLn("cluster-config.auto.tfvars.json saved")
+	logboek.LogInfoF("Var File %q saved\n", varFilePath)
 
 	return exec.Command("terraform",
 		"init",
