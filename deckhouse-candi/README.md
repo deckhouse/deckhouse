@@ -77,6 +77,8 @@ werf run install \
   --stages-storage :local -- bash
 ```
 
+Вместо сборки можно взять готовый образ `registry.flant.com/sys/antiopa/install` тегом `имя_вашей_ветки`.
+
 
 Установка кластера:
 ```yaml

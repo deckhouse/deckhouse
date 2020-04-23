@@ -4,6 +4,7 @@ import (
 	"github.com/flant/logboek"
 
 	"flant/deckhouse-candi/pkg/config"
+	"flant/deckhouse-candi/pkg/log"
 )
 
 type Pipeline struct {
@@ -37,15 +38,16 @@ func (p *Pipeline) runTerraform() error {
 }
 
 func (p *Pipeline) Run() (map[string][]byte, error) {
-	logboek.LogProcessStart("Run terraform pipeline "+p.Step,
-		logboek.LogProcessStartOptions{LevelLogProcessStartOptions: logboek.LevelLogProcessStartOptions{Style: logboek.HighlightStyle()}})
-	defer logboek.LogProcessEnd(logboek.LogProcessEndOptions{LevelLogProcessEndOptions: logboek.LevelLogProcessEndOptions{Style: logboek.HighlightStyle()}})
-
-	err := p.runTerraform()
-	if err != nil {
-		return nil, err
-	}
-	return p.GetResult(p)
+	var result map[string][]byte
+	err := logboek.LogProcess("Run terraform pipeline "+p.Step, log.BoldOptions(), func() error {
+		err := p.runTerraform()
+		if err != nil {
+			return err
+		}
+		result, err = p.GetResult(p)
+		return err
+	})
+	return result, err
 }
 
 func GetBasePipelineResult(p *Pipeline) (map[string][]byte, error) {

@@ -8,14 +8,14 @@ import (
 )
 
 func RenderBashBooster(templatesDir string) (string, error) {
-	templatesDir = strings.TrimSuffix(templatesDir, "/") + "/"
+	templatesDir = formatDir(templatesDir)
 
 	files, err := ioutil.ReadDir(templatesDir)
 	if err != nil {
-		return "", fmt.Errorf("read dir: %v", err)
+		return "", fmt.Errorf("bashbooster read dir: %v", err)
 	}
 
-	filesContent := make([]string, 0, len(files))
+	builder := strings.Builder{}
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -23,13 +23,15 @@ func RenderBashBooster(templatesDir string) (string, error) {
 
 		filePath := filepath.Join(templatesDir, file.Name())
 
-		data, err := ioutil.ReadFile(filePath)
+		fileContent, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return "", fmt.Errorf("read file %q error: %v", filePath, err)
+			return "", fmt.Errorf("bashbooster read file %q: %v", filePath, err)
 		}
 
-		filesContent = append(filesContent, fmt.Sprintf("# %s\n\n%s\n", filePath, strings.TrimSuffix(string(data), "\n")))
+		// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
+		bashBoosterScriptContent := strings.TrimSuffix(string(fileContent), "\n")
+		builder.WriteString(fmt.Sprintf("# %s\n\n%s\n", filePath, bashBoosterScriptContent))
 	}
 
-	return strings.Join(filesContent, "\n"), nil
+	return builder.String(), nil
 }

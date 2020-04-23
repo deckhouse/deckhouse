@@ -164,6 +164,17 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 		counter++
 	}
 
+	providerConfig := make(map[string]interface{}, len(m.ProviderClusterConfig))
+	for key, value := range m.ProviderClusterConfig {
+		if key == "provider" {
+			continue
+		}
+
+		var t interface{}
+		_ = json.Unmarshal(value, &t)
+		providerConfig[key] = t
+	}
+
 	return map[string]interface{}{
 		"runType":           "ClusterBootstrap",
 		"bundle":            bundle,
@@ -174,6 +185,7 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 			"nodeIP":            nodeIP,
 			"clusterDNSAddress": clusterDNS,
 		},
+		"cloudProviderClusterConfiguration": providerConfig,
 	}
 }
 

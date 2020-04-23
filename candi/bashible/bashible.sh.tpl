@@ -74,6 +74,9 @@ function main() {
     do
       >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
       sleep 10
+      echo ===
+      echo === Step: $step
+      echo ===
     done
   done
 }

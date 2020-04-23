@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"github.com/flant/logboek"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
@@ -106,7 +107,7 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 	}
 
 	success = true
-	fmt.Printf("Proxy started on port %s\n", port)
+	logboek.LogInfoF("Proxy started on port %s\n", port)
 
 	return port, nil
 }

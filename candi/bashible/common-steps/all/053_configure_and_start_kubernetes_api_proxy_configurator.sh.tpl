@@ -1,7 +1,7 @@
 bb-event-on 'bb-sync-file-changed' '_on_kubernetes_api_proxy_service_changed'
 _on_kubernetes_api_proxy_service_changed() {
-  systemctl enable kubernetes-api-proxy-configurator.timer
   systemctl enable kubernetes-api-proxy-configurator
+  systemctl enable kubernetes-api-proxy-configurator.timer
   {{- if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
   systemctl restart kubernetes-api-proxy-configurator.timer

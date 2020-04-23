@@ -3,16 +3,18 @@ package frontend
 import (
 	"bufio"
 	"bytes"
-	"flant/deckhouse-candi/pkg/ssh/cmd"
-	"flant/deckhouse-candi/pkg/ssh/session"
-	"flant/deckhouse-candi/pkg/ssh/util"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/flant/logboek"
+
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/ssh/cmd"
+	"flant/deckhouse-candi/pkg/ssh/session"
+	"flant/deckhouse-candi/pkg/ssh/util"
 )
 
 type Command struct {
@@ -89,7 +91,7 @@ func (c *Command) Sudo() *Command {
 				passSent = true
 			} else {
 				// Second prompt is error!
-				fmt.Printf("Bad sudo password, exiting. TODO handle this correctly.")
+				logboek.LogErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
 				os.Exit(1)
 			}
 			return "reset"
