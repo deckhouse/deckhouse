@@ -11,7 +11,7 @@ bb-flag-set() {
     local FLAG="$1"
     if [[ ! -d "$BB_FLAG_DIR" ]]
     then
-        bb-log-debug "Creating flag directory at '$BB_DOWNLOAD_DIR'"
+        bb-log-debug "Creating flag directory at '$BB_FLAG_DIR'"
         mkdir "$BB_FLAG_DIR"
     fi
     touch "$BB_FLAG_DIR/$FLAG"

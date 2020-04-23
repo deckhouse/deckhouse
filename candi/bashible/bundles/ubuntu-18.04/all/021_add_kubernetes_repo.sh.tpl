@@ -1,6 +1,8 @@
-if bb-flag? is-bootstrapped; then exit 0; fi
+if bb-apt-repo? http://apt.kubernetes.io/; then
+  exit 0
+fi
 
-apt-key add - << END
+bb-apt-key-add <<END
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQENBFrBaNsBCADrF18KCbsZlo4NjAvVecTBCnp6WcBQJ5oSh7+E98jX9YznUCrN
@@ -21,4 +23,4 @@ lgIf+4SlkBAdfl/MTuXu/aOhAWQih444igB+rvFaDYIhYosVhCxP4EUAfGZk+qfo
 -----END PGP PUBLIC KEY BLOCK-----
 END
 
-echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+bb-apt-repo-add deb http://apt.kubernetes.io/ kubernetes-xenial main

@@ -1,6 +1,8 @@
-if bb-flag? is-bootstrapped; then exit 0; fi
+if bb-apt-repo? https://download.docker.com/linux/ubuntu; then
+  exit 0
+fi
 
-apt-key add - <<END
+bb-apt-key-add <<END
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQINBFit2ioBEADhWpZ8/wvZ6hUTiXOwQHXMAlaFHcPH9hAtr4F1y2+OYdbtMuth
@@ -65,4 +67,4 @@ YT90qFF93M3v01BbxP+EIY2/9tiIPbrd
 -----END PGP PUBLIC KEY BLOCK-----
 END
 
-echo "deb https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+bb-apt-repo-add deb https://download.docker.com/linux/ubuntu "$(lsb_release -cs)" stable

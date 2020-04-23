@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ "$1" == "--local" ]] ; then
-  is_local="yes"
-  shift
-fi
+set -Eeo pipefail
 
 function get_secret() {
   secret="$1"
@@ -33,50 +30,75 @@ function get_secret() {
   fi
 }
 
-set -Eeo pipefail
+function main() {
+  export BOOTSTRAP_DIR="/var/lib/bashible"
+  export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
+  export BUNDLE={{ .bundle }}
 
-export BOOTSTRAP_DIR="/var/lib/bashible"
-export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
-export BUNDLE={{ .bundle }}
+  mkdir -p "$BUNDLE_STEPS_DIR"
 
-mkdir -p "$BUNDLE_STEPS_DIR"
+  # update bashible.sh itself
+  if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
+    get_secret bashible-{{ .nodeGroup.name }}-${BUNDLE} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible-new.sh
+    chmod +x $BOOTSTRAP_DIR/bashible-new.sh
+    export BASHIBLE_SKIP_UPDATE=yes
+    $BOOTSTRAP_DIR/bashible-new.sh --no-lock
 
-# update bashible.sh itself
-if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-  get_secret bashible-{{ .nodeGroup.name }}-${BUNDLE} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible-new.sh
-  chmod +x $BOOTSTRAP_DIR/bashible-new.sh
-  export BASHIBLE_SKIP_UPDATE=yes
-  $BOOTSTRAP_DIR/bashible-new.sh
+    # At this step we already know that new version is functional
+    mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sha
+    exit 0
+  fi
 
-  # At this step we already know that new version is functional
-  mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sh
-  exit 0
-fi
+  if [ -z "${is_local-}" ]; then
+    # update bashbooster library for idempotent scripting
+    get_secret bashible-bashbooster -o json | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
 
-if [ -z "${is_local-}" ]; then
-  # update bashbooster library for idempotent scripting
-  get_secret bashible-bashbooster -o json | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
+    # get steps from bundle secrets
+    rm -rf $BUNDLE_STEPS_DIR/*
+    bundle_collections="bashible-bundle-${BUNDLE}-{{ .kubernetesVersion }} bashible-bundle-${BUNDLE}-{{ .nodeGroup.name }}"
+    for bundle_collection in $bundle_collections; do
+      collection_data="$(get_secret $bundle_collection | jq -r '.data')"
+      for step in $(jq -r 'to_entries[] | .key' <<< "$collection_data"); do
+        jq -r --arg step "$step" '.[$step]' <<< "$collection_data" | base64 -d > "$BUNDLE_STEPS_DIR/$step"
+      done
+    done
+  fi
 
-  # get steps from bundle secrets
-  rm -rf $BUNDLE_STEPS_DIR/*
-  bundle_collections="bashible-bundle-${BUNDLE}-{{ .kubernetesVersion }} bashible-bundle-${BUNDLE}-{{ .nodeGroup.name }}"
-  for bundle_collection in $bundle_collections; do
-    collection_data="$(get_secret $bundle_collection | jq -r '.data')"
-    for step in $(jq -r 'to_entries[] | .key' <<< "$collection_data"); do
-      jq -r --arg step "$step" '.[$step]' <<< "$collection_data" | base64 -d > "$BUNDLE_STEPS_DIR/$step"
+  # Execute bashible steps
+  rm -rf $BOOTSTRAP_DIR/.bb-workspace
+  for step in $BUNDLE_STEPS_DIR/*; do
+  echo ===
+  echo === Step: $step
+  echo ===
+    until /bin/bash -eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
+    do
+      >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
+      sleep 10
     done
   done
-fi
+}
 
-
-# Execute bashible steps
-for step in $BUNDLE_STEPS_DIR/*; do
-echo ===
-echo === Step: $step
-echo ===
-  until /bin/bash -eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
-  do
-    >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
-    sleep 10
-  done
+while true ; do
+  case ${1:-} in
+    --local)
+      export is_local=yes
+      shift
+      ;;
+    "--no-lock")
+      export no_lock=yes
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
 done
+
+if [ -n "${no_lock-}" ]; then
+  main
+else
+  (
+    flock -n 200
+    main
+  ) 200>/var/lock/bashible
+fi

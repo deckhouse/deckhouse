@@ -149,6 +149,16 @@ spec:
                       - YandexInstanceClass
                     name:
                       type: string
+            static:
+              type: object
+              properties:
+                internalNetworkCIDRs:
+                  type: array
+                  items:
+                    type: string
+                    description: List of subnets to search interfaces in
+                    example: '192.168.42.0/24'
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
             nodeTemplate:
               description: Specification of some of the fields that will be maintained in all nodes of the group.
               example: |

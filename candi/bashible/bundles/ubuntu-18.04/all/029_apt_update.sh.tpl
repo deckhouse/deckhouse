@@ -1,2 +1,0 @@
-export DEBIAN_FRONTEND=noninteractive
-apt update

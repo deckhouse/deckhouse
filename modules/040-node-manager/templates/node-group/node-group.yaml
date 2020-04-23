@@ -1,0 +1,11 @@
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- if and (eq  $ng.nodeType "Cloud") (hasKey $.Values.nodeManager.internal "cloudProvider") }}
+    {{- range $zone_name := $ng.cloudInstances.zones }}
+      {{- include "node_group_machine_class" (list $ $ng $zone_name) }}
+      {{- include "node_group_machine_class_secret" (list $ $ng $zone_name) }}
+      {{- include "node_group_machine_deployment" (list $ $ng $zone_name) }}
+    {{- end }}
+  {{- else }}
+    {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
+  {{- end }}
+{{- end }}

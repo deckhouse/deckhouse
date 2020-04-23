@@ -1,4 +1,4 @@
-cat << "EOF" > /var/lib/bashible/kubernetes-api-proxy-configurator.sh
+bb-sync-file /var/lib/bashible/kubernetes-api-proxy-configurator.sh - << "EOF"
 #!/bin/bash
 
 # Read from command args
@@ -87,7 +87,7 @@ else
   new_config=$(sha256sum /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf | awk '{print $1}')
   if [ "$old_config" != "$new_config" ] ; then
     mv /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
-    systemctl restart kubernetes-api-proxy
+    systemctl reload kubernetes-api-proxy
   fi
 fi
 EOF

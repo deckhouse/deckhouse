@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if ! type jq || ! type curl; then
+if ! type jq 2>/dev/null || ! type curl 2>/dev/null; then
   apt update
   export DEBIAN_FRONTEND=noninteractive
   until apt install jq curl -y; do

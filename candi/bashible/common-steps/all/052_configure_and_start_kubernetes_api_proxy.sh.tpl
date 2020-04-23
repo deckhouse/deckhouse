@@ -1,12 +1,6 @@
-#!/bin/bash
-
 {{- if eq .bundle "ubuntu-18.04" }}
-export DEBIAN_FRONTEND=noninteractive
+bb-apt-install "nginx=1.14.0-0ubuntu1.7" "libnginx-mod-stream=1.14.0-0ubuntu1.7"
 
-if ! apt -qq list nginx >/dev/null | grep installed >/dev/null 2>/dev/null ; then
-  apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -qy "nginx=1.14.0-*" "libnginx-mod-stream=1.14.0-*"
-  apt-mark hold nginx libnginx-mod-stream
-fi
 {{- else if eq .bundle "centos-7" }}
 if ! rpm -q nginx >/dev/null >/dev/null ; then
   yum install -y "nginx-1:1.16.1-*" "nginx-mod-stream-1:1.16.1-*"
@@ -14,8 +8,37 @@ if ! rpm -q nginx >/dev/null >/dev/null ; then
 fi
 {{- end }}
 
-if [ ! -f "/etc/systemd/system/kubernetes-api-proxy.service" ] ; then
-  cat << "EOF" > /etc/systemd/system/kubernetes-api-proxy.service
+bb-event-on 'bb-sync-file-changed' '_on_kubernetes_api_proxy_service_changed'
+_on_kubernetes_api_proxy_service_changed() {
+  if systemctl is-active --quiet nginx ; then
+  {{- if ne .runType "ImageBuilding" }}
+    systemctl stop nginx
+  {{- end }}
+    systemctl disable nginx
+  fi
+
+  if [ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
+    mkdir -p /etc/kubernetes/kubernetes-api-proxy
+
+{{- if eq .runType "ClusterBootstrap" }}
+  {{- if ne .nodeGroup.nodeType "Static" }}
+    /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.nodeIP }}:6443
+  {{- else }}
+    /var/lib/bashible/kubernetes-api-proxy-configurator.sh $(cat /var/lib/bashible/discovered-node-ip):6443
+  {{- end }}
+{{- else }}
+    /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .normal.apiserverEndpoints | join " " }}
+{{- end }}
+  fi
+
+  systemctl enable kubernetes-api-proxy
+{{- if ne .runType "ImageBuilding" }}
+  systemctl daemon-reload
+  systemctl restart kubernetes-api-proxy
+{{- end }}
+}
+
+bb-sync-file /etc/systemd/system/kubernetes-api-proxy.service - << "EOF"
 [Unit]
 Description=nginx TCP stream proxy for kubernetes-api-servers
 After=network.target
@@ -33,64 +56,7 @@ KillMode=mixed
 [Install]
 WantedBy=multi-user.target
 EOF
-fi
-
-if systemctl is-active --quiet nginx ; then
-  systemctl stop nginx
-  systemctl disable nginx
-fi
-
-if [ ! -d "/etc/kubernetes/kubernetes-api-proxy" ] ; then
-  mkdir -p /etc/kubernetes/kubernetes-api-proxy
-fi
 
 if [ ! -n "$(grep -P '^127.0.0.1 kubernetes$' /etc/hosts)" ] ; then
   echo '127.0.0.1 kubernetes' >> /etc/hosts
 fi
-
-if [ ! -f "/etc/systemd/system/kubernetes-api-proxy-configurator.timer" ] ; then
-  cat << "EOF" > /etc/systemd/system/kubernetes-api-proxy-configurator.timer
-[Unit]
-Description=kubernetes api proxy timer
-
-[Timer]
-OnBootSec=1m
-OnUnitActiveSec=1m
-
-[Install]
-WantedBy=multi-user.target
-EOF
-fi
-
-if [ ! -f "/etc/systemd/system/kubernetes-api-proxy-configurator.service" ] ; then
-  cat << "EOF" > /etc/systemd/system/kubernetes-api-proxy-configurator.service
-[Unit]
-Description=kubernetes api proxy
-
-[Service]
-EnvironmentFile=/etc/environment
-ExecStart=/var/lib/bashible/kubernetes-api-proxy-configurator.sh
-
-[Install]
-WantedBy=multi-user.target
-EOF
-fi
-
-{{- if ne .runType "ImageBuilding" }}
-systemctl daemon-reload
-
-{{- if eq .runType "ClusterBootstrap" }}
-  {{- if ne .nodeGroup.nodeType "Static" }}
-/var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.nodeIP }}:6443
-  {{- else }}
-/var/lib/bashible/kubernetes-api-proxy-configurator.sh $(cat /var/lib/bashible/discovered-node-ip):6443
-  {{- end }}
-{{- else }}
-/var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .normal.apiserverEndpoints | join " " }}
-{{- end }}
-
-units="kubernetes-api-proxy-configurator.timer kubernetes-api-proxy-configurator kubernetes-api-proxy"
-for unit in $units; do
-  systemctl enable "$unit" && systemctl start "$unit"
-done
-{{- end }}

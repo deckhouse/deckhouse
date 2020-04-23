@@ -5,7 +5,8 @@
 {{- $patterns_steps_os_related = append $patterns_steps_os_related "candi/bashible/bundles/%s/%s/*.sh.tpl" }}
 
 {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-  {{- $patterns_steps_os_related = append $patterns_steps_os_related (list "candi/cloud-providers/" $.Values.nodeManager.internal.cloudProvider.type "/bashible-bundles/%s/%s/*.sh.tpl" | join "") }}
+  {{- $patterns_steps_os_related = append $patterns_steps_os_related (list "candi/cloud-providers/" $.Values.nodeManager.internal.cloudProvider.type "/bashible/%s/%s/*.sh.tpl" | join "") }}
+  {{- $patterns_steps_common = append $patterns_steps_common (list "candi/cloud-providers/" $.Values.nodeManager.internal.cloudProvider.type "/bashible/common-steps/%s/*.sh.tpl" | join "") }}
 {{- end }}
 
 {{- range $bundle := list "ubuntu-18.04" "centos-7" }}

@@ -30,8 +30,34 @@ bb-yum-install() {
             bb-yum-update
             bb-log-info "Installing package '$PACKAGE'"
             yum install -y "$PACKAGE"
+            bb-yum-versionlock "$PACKAGE"
             bb-exit-on-error "Failed to install package '$PACKAGE'"
             bb-event-fire "bb-package-installed" "$PACKAGE"
+        fi
+    done
+}
+
+bb-yum-remove() {
+    for PACKAGE in "$@"
+    do
+        if ! bb-yum-package? "$PACKAGE"
+        then
+            bb-yum-update
+            bb-log-info "Removing package '$PACKAGE'"
+            yum remove -y "$PACKAGE"
+            bb-exit-on-error "Failed to remove package '$PACKAGE'"
+        fi
+    done
+}
+
+bb-yum-versionlock() {
+    for PACKAGE in "$@"
+    do
+        if ! bb-yum-package? "$PACKAGE"
+        then
+            bb-log-info "Locking package version of '$PACKAGE'"
+            yum versionlock "$PACKAGE"
+            bb-exit-on-error "Failed to lock package vetsion of '$PACKAGE'"
         fi
     done
 }
