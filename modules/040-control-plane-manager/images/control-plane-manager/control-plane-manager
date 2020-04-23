@@ -397,10 +397,10 @@ echo " * Done!"
 echo
 
 # Process components
-converge_component etcd
 converge_component kube-apiserver
 converge_component kube-controller-manager
 converge_component kube-scheduler
+converge_component etcd
 echo
 
 # Save last applied config checksum

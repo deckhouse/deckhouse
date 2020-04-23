@@ -94,7 +94,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: d8-cluster-configuration
-  namespace: d8-system
+  namespace: kube-system
 data:
   maxUsedControlPlaneKubernetesVersion: "<<PLACEHOLDER_B64>>"
 `
@@ -263,7 +263,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: get_pki_checksu
 			It("", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				d8ClusterConfigSecret := f.KubernetesResource("Secret", "d8-system", "d8-cluster-configuration")
+				d8ClusterConfigSecret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
 				decodedMaxUsedKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.maxUsedControlPlaneKubernetesVersion").String())
 				Expect(err).To(BeNil())
 				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(testCase.output.maxUsedControlPlaneVersion))

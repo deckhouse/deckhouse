@@ -1,8 +1,6 @@
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
-{{- if eq .clusterConfiguration.kubernetesVersion "1.14" }}
-kubernetesVersion: 1.14.10
-{{- else if eq .clusterConfiguration.kubernetesVersion "1.15" }}
+{{- if eq .clusterConfiguration.kubernetesVersion "1.15" }}
 kubernetesVersion: 1.15.11
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.16" }}
 kubernetesVersion: 1.16.8
