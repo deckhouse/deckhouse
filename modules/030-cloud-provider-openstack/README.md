@@ -130,6 +130,29 @@ spec:
   imageName: ubuntu-18-04-cloud-amd64
 ```
 
+#### LoadBalancer
+**Внимание!!! На данный момент в openstack при заказе loadbalancer не определяется правильный клиентский IP.**  
+
+##### Пример IngressNginxController
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  controllerVersion: "0.26"
+  ingressClass: nginx
+  inlet: LoadBalancer
+  nodeSelector:
+    node-role.flant.com/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.flant.com
+    operator: Equal
+    value: frontend
+```
+
 ## Как мне поднять гибридный (вручную заведённые ноды) кластер?
 
 1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`;
