@@ -43,13 +43,13 @@ function __config__() {
         matchNames: [d8-cluster-configuration]
       namespace:
         nameSelector:
-          matchNames: [d8-system]
+          matchNames: [kube-system]
       jqFilter: '.data.maxUsedControlPlaneKubernetesVersion | if . then . | @base64d else "" end'
 EOF
 }
 
 function patch_max_used() {
-  kubernetes::patch_jq d8-system secret/d8-cluster-configuration '. | .data.maxUsedControlPlaneKubernetesVersion = ('"$1"' | @base64)'
+  kubernetes::patch_jq kube-system secret/d8-cluster-configuration '. | .data.maxUsedControlPlaneKubernetesVersion = ('"$1"' | @base64)'
 }
 
 function unbump_version() {

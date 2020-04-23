@@ -15,7 +15,7 @@
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
 {{- if hasKey .Values.controlPlaneManager "apiserver" }}
-  {{- if .Values.controlPlaneManager.bindToWildcard }}
+  {{- if .Values.controlPlaneManager.apiserver.bindToWildcard }}
     {{ $_ := set $tpl_context.apiserver "bindToWildcard" true }}
   {{- end }}
   {{- if hasKey .Values.controlPlaneManager "certSANs" }}
