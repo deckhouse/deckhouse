@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -136,7 +137,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 
 			bundleName = strings.Trim(string(stdout), "\n ")
-			logboek.LogInfoF("\nDetected bundle: %s\n\n", bundleName)
+			logboek.LogInfoF("Detected bundle: %s\n", bundleName)
 
 			return nil
 		})
@@ -146,25 +147,27 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		// Generate bootstrap scripts
 		templateController := template.NewTemplateController("")
-		logboek.LogInfoF("\nTemplates Dir: %q\n\n", templateController.TmpDir)
+		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
 		err = logboek.LogProcess("🔨 Run Master Bootstrap 🔨", log.TaskOptions(), func() error {
 			err = template.PrepareBootstrap(templateController, nodeIP, bundleName, metaConfig)
 			for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
-				logboek.LogInfoF("Execute bootstrap %s", bootstrapScript)
+				logboek.LogInfoF("Execute bootstrap/%s ... ", bootstrapScript)
 
 				cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).Sudo()
 
 				stdout, err := cmd.Execute()
 				if err != nil {
+					logboek.LogInfoLn("ERROR!")
+					if len(stdout) > 0 {
+						logboek.LogInfoF("bootstrap/%s stdout: %v\n", bootstrapScript, string(stdout))
+					}
 					if ee, ok := err.(*exec.ExitError); ok {
 						return fmt.Errorf("script 'bootstrap/%s' error: %v\nstderr: %s", bootstrapScript, err, string(ee.Stderr))
 					}
 					return fmt.Errorf("script 'bootstrap/%s' error: %v", bootstrapScript, err)
-				}
-
-				if len(stdout) > 0 {
-					logboek.LogInfoF("bootstrap/%s stdout: %v\n", bootstrapScript, string(stdout))
+				} else {
+					logboek.LogInfoLn("OK!")
 				}
 			}
 			return nil
@@ -194,6 +197,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 
 		err = logboek.LogProcess("🛥️ Install Deckhouse 🛥️", log.TaskOptions(), func() error {
 			kubeCl := kube.NewKubernetesClient().WithSshClient(sshClient)
@@ -229,8 +235,14 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		fmt.Print(banner)
-		return logboek.LogProcess("🚀 Start Deckhouse CandI bootstrap 🚀",
+		err = logboek.LogProcess("🚀 Start Deckhouse CandI bootstrap 🚀",
 			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
+
+		if err != nil {
+			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			os.Exit(1)
+		}
+		return nil
 	})
 
 	return cmd

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/flant/logboek"
 	"os"
 	"regexp"
 	"strings"
@@ -47,12 +48,11 @@ func (k *KubeProxy) Start() (port string, err error) {
 	portReady := make(chan struct{}, 1)
 	portRe := regexp.MustCompile(`Starting to serve on .*?:(\d+)`)
 
-	k.proxy.EnableLive()
 	k.proxy.WithStdoutHandler(func(line string) {
 		m := portRe.FindStringSubmatch(line)
 		if len(m) == 2 && m[1] != "" {
 			port = m[1]
-			app.Debugf("Got proxy port = %s\n", port)
+			logboek.LogInfoF("Got proxy port = %s\n", port)
 			portReady <- struct{}{}
 		}
 	})

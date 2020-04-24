@@ -1,16 +1,17 @@
 package frontend
 
 import (
-	"flant/deckhouse-candi/pkg/ssh/cmd"
-	"flant/deckhouse-candi/pkg/ssh/session"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/flant/logboek"
 	uuid "gopkg.in/satori/go.uuid.v1"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/ssh/cmd"
+	"flant/deckhouse-candi/pkg/ssh/session"
 )
 
 type File struct {
@@ -31,12 +32,13 @@ func (f *File) Upload(srcPath string, remotePath string) error {
 		scp.WithRecursive(true)
 	}
 	scpCmd := scp.WithSrc(srcPath).WithRemoteDst(remotePath).Cmd()
-	app.Debugf("run scp: %s\n", scpCmd.String())
-	//app.Debugf("run scp: %#v\n", scpCmd)
+	// app.Debugf("run scp: %s\n", scpCmd.String())
+	// app.Debugf("run scp: %#v\n", scpCmd)
 	err = scpCmd.Run()
 	if err != nil {
 		return fmt.Errorf("upload file '%s': %v", srcPath, err)
 	}
+
 	return nil
 }
 
@@ -49,7 +51,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 	defer func() {
 		err := os.Remove(srcPath)
 		if err != nil {
-			fmt.Printf("Error: cannot remove tmp file '%s': %v\n", srcPath, err)
+			logboek.LogErrorF("Error: cannot remove tmp file '%s': %v\n", srcPath, err)
 		}
 	}()
 
@@ -62,11 +64,14 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 	scpCmd := scp.WithSrc(srcPath).WithRemoteDst(remotePath).Cmd()
 	app.Debugf("run scp: %s\n", scpCmd.String())
 	//app.Debugf("run scp: %#v\n", scpCmd)
-	err = scpCmd.Run()
+	stdout, err := scpCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("upload file '%s': %v", remotePath, err)
 	}
 
+	if len(stdout) > 0 {
+		logboek.LogInfoF("Upload file: %s", string(stdout))
+	}
 	return nil
 }
 
@@ -76,9 +81,13 @@ func (f *File) Download(remotePath string, dstPath string) error {
 	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Cmd()
 	app.Debugf("run scp: %s\n", scpCmd.String())
 	//app.Debugf("run scp: %#v\n", scpCmd)
-	err := scpCmd.Run()
+	stdout, err := scpCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("download file '%s': %v", remotePath, err)
+	}
+
+	if len(stdout) > 0 {
+		logboek.LogInfoF("Download file: %s", string(stdout))
 	}
 	return nil
 }
@@ -100,9 +109,13 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Cmd()
 	app.Debugf("run scp: %s\n", scpCmd.String())
 	//app.Debugf("run scp: %#v\n", scpCmd)
-	err = scpCmd.Run()
+	stdout, err := scpCmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("download file '%s': %v", remotePath, err)
+	}
+
+	if len(stdout) > 0 {
+		logboek.LogInfoF("Download file: %s", string(stdout))
 	}
 
 	data, err := ioutil.ReadFile(dstPath)

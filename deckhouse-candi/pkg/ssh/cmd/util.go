@@ -152,8 +152,8 @@ func (e *Executor) StdoutBytes() []byte {
 }
 
 func (e *Executor) SetupStreamHandlers() (err error) {
-	// stderr goes to console
-	e.Cmd.Stderr = os.Stderr
+	// stderr goes to console (commented because ssh writes only "Connection closed" messages to stderr)
+	// e.Cmd.Stderr = os.Stderr
 	// connect console's stdin
 	//e.Cmd.Stdin = os.Stdin
 

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/flant/logboek"
 	"os/exec"
 	"path"
 	"strings"
@@ -187,8 +188,8 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				return fmt.Errorf("script '%s' error: %v\n", ScriptPath, err)
 			}
 		}
-		fmt.Printf("stdout: %s\n", strings.Trim(string(stdout), "\n "))
-		fmt.Printf("Got %d symbols\n", len(stdout))
+		logboek.LogInfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
+		logboek.LogInfoF("Got %d symbols\n", len(stdout))
 		return nil
 	})
 
@@ -232,7 +233,7 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				return fmt.Errorf("bundle '%s' error: %v\n", bundleDir, err)
 			}
 		}
-		fmt.Printf("Got %d symbols\n", len(stdout))
+		logboek.LogInfoF("Got %d symbols\n", len(stdout))
 		return nil
 	})
 

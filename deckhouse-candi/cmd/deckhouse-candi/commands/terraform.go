@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"github.com/flant/logboek"
-	"gopkg.in/alecthomas/kingpin.v2"
-
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/terraform"
+	"github.com/flant/logboek"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {

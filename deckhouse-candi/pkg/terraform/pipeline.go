@@ -23,14 +23,14 @@ func (p *Pipeline) runTerraform() error {
 	bootstrap := p.Step != "base_infrastructure"
 
 	out, err := p.TerraformRunner.Init(bootstrap)
-	logboek.LogInfoLn(string(out))
 	if err != nil {
+		logboek.LogInfoLn(string(out))
 		return err
 	}
 
 	out, err = p.TerraformRunner.Apply()
-	logboek.LogInfoLn(string(out))
 	if err != nil {
+		logboek.LogInfoLn(string(out))
 		return err
 	}
 
