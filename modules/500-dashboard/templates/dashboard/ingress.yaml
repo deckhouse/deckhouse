@@ -1,4 +1,3 @@
-{{- if eq .Values.dashboard.version "1" -}}
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: extensions/v1beta1
@@ -15,6 +14,7 @@ metadata:
  {{- end }}
     nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
 {{- else }}
+
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
@@ -28,7 +28,7 @@ metadata:
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.dashboard.auth.whitelistSourceRanges | join "," }}
 {{- end }}
   name: dashboard
-  namespace: kube-system
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
   rules:
@@ -51,7 +51,7 @@ apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
   name: dashboard
-  namespace: kube-system
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
   secretName: ingress-tls
@@ -72,5 +72,4 @@ spec:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
   {{- end }}
-{{- end }}
 {{- end }}

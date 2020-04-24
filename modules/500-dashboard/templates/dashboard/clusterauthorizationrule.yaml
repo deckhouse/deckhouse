@@ -1,4 +1,3 @@
-{{- if eq .Values.dashboard.version "2" -}}
 {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
   {{- if and (eq (include "helm_lib_module_https_mode" .) "Disabled") (ne .Values.dashboard.accessLevel "User") }}
     {{- cat "On https.mode Disabled the only allowed accessLevel is User" | fail }}
@@ -19,5 +18,4 @@ spec:
   {{- if .Values.dashboard.auth.allowScale }}
   allowScale: true
   {{- end }}
-{{- end }}
 {{- end }}
