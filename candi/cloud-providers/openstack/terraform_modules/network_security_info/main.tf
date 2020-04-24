@@ -3,7 +3,7 @@ data "openstack_networking_secgroup_v2" "default" {
   name = "default"
 }
 
-data "openstack_networking_secgroup_v2" "ssh_and_ping" {
+data "openstack_networking_secgroup_v2" "kube" {
   count = var.enabled ? 1 : 0
-  name = join("-", [var.prefix, "ssh-and-ping"])
+  name = var.prefix
 }
