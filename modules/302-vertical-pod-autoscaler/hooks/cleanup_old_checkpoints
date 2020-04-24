@@ -1,0 +1,27 @@
+#!/bin/bash
+
+### Миграция 2020-04-22
+# Этот хук скейлит vpa-recommender в 0
+# удаляет старые объекты verticalpodautoscalercheckpoints.autoscaling.k8s.io
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  if kubectl -n kube-system get deploy vpa-recommender >/dev/null 2>/dev/null ; then
+    if kubectl get verticalpodautoscalercheckpoints.autoscaling.k8s.io --all-namespaces --no-headers -o json | jq '.items[] | select(.status.firstSampleStart == null) ' -re >/dev/null ; then
+      kubectl -n kube-system scale deploy vpa-recommender --replicas=0
+      kubectl get verticalpodautoscalercheckpoints.autoscaling.k8s.io --all-namespaces --no-headers -o json | jq '.items[] | select(.status.firstSampleStart == null) | "\(.metadata.namespace) verticalpodautoscalercheckpoints.autoscaling.k8s.io \(.metadata.name)"' -r | while read checkpoint; do
+        kubectl delete -n $checkpoint
+      done
+    fi
+  fi
+}
+
+hook::run $@

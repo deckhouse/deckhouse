@@ -1,5 +1,5 @@
 {{- define "helm_lib_internal_check_node_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system")) }}
+  {{ if not (has . (list "frontend" "monitoring" "system" "master")) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -58,6 +58,21 @@ nodeSelector:
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
   node-role.flant.com/{{$strategy}}: ""
+    {{- end }}
+
+  {{- else if eq $strategy "master" }}
+    {{- if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
+nodeSelector:
+  node-role.kubernetes.io/master: ""
+    {{- else if $module_values.nodeSelector }}
+nodeSelector:
+{{ $module_values.nodeSelector | toYaml | indent 2 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
+nodeSelector:
+  node-role.flant.com/{{$context.Chart.Name}}: ""
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
+nodeSelector:
+  node-role.flant.com/system: ""
     {{- end }}
 
   {{- end }}
@@ -130,6 +145,15 @@ tolerations:
 {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" . }}
 {{- end }}
+    {{- end }}
+
+  {{- else if eq $strategy "master" }}
+    {{- if $module_values.tolerations }}
+tolerations:
+{{ $module_values.tolerations | toYaml }}
+    {{- else }}
+tolerations:
+- operator: Exists
     {{- end }}
   {{- end }}
 {{- end }}

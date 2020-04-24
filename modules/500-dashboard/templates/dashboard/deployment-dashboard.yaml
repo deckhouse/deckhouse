@@ -1,0 +1,109 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: dashboard
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: dashboard
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dashboard
+      minAllowed:
+        memory: 50Mi
+        cpu: 30m
+      mode: Auto
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: dashboard
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dashboard")) | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: dashboard
+        image: {{ $.Values.global.modulesImages.registry }}/dashboard/dashboard:{{ $.Values.global.modulesImages.tags.dashboard.dashboard }}
+        args:
+        - --port=8443
+        - --insecure-port=8080
+        - --insecure-bind-address=127.0.0.1
+        - --logtostderr
+        - --namespace=d8-{{ .Chart.Name }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
+        - --auto-generate-certificates
+        - --bind-address=0.0.0.0
+    {{- else }}
+        - --bind-address=127.0.0.1
+    {{- end }}
+        livenessProbe:
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+          httpGet:
+            path: /
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
+            port: 8443
+            scheme: HTTPS
+    {{- else }}
+            port: 3500
+    {{- end }}
+        ports:
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
+        - containerPort: 8443
+    {{- end }}
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 1001
+          runAsGroup: 2001
+    {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+      - name: ca-auth-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+        args:
+        - "--listen=8443"
+        - "--location=/"
+        - "--proxy-pass=http://127.0.0.1:8080/"
+        - "--user=nginx-ingress:.*"
+        - "--probe-proxy-pass=http://127.0.0.1:8080/"
+        - "--probe-listen=3500"
+        ports:
+        - containerPort: 8443
+          name: https
+        livenessProbe:
+          tcpSocket:
+            port: 8443
+        readinessProbe:
+          tcpSocket:
+            port: 8443
+    {{- end }}
+      serviceAccountName: dashboard
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}

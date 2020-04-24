@@ -12,7 +12,7 @@
       plk_incident_initial_status: "todo"
       description: |
         Deckhouse в кластере находится на кастомном бранче, а не на одном из каналов обновлений..
-        Deckhouse должен быть на одном из каналов обновлений: `Alpha`, `Beta`, `Early-Access`, `Stable`, `Rock-Solid`
+        Deckhouse должен быть на одном из каналов обновлений: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`
         Узнать, на каком канале обновлений сейчас находится deckhouse можно с помощью команды:
         1. `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
 

@@ -14,7 +14,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: "admission-controller"
+    - containerName: "recommender"
       maxAllowed:
         cpu: 100m
         memory: 300Mi
@@ -47,26 +47,12 @@ spec:
         command:
         - /recommender
         - --address=:8942
-        - --checkpoints-gc-interval=10m0s
-        - --checkpoints-timeout=1m0s
         - --kube-api-burst=100
         - --kube-api-qps=50
-        - --min-checkpoints=10
-        - --pod-recommendation-min-cpu-millicores=5
-        - --pod-recommendation-min-memory-mb=25
-        - --prometheus-address=http://127.0.0.1:8000/main/
-        - --prometheus-cadvisor-job-name=kubelet
-        - --container-pod-name-label=pod
-        - --container-name-label=container
-        - --container-namespace-label=namespace
-        - --metric-for-pod-labels=kube_pod_labels{job="kube-state-metrics"}
-        - --pod-label-prefix=label_
-        - --pod-namespace-label=namespace
-        - --history-length=8d
-        - --recommendation-margin-fraction=0.15
-        - --recommender-interval=1m0s
+        - --pod-recommendation-min-cpu-millicores=25
+        - --pod-recommendation-min-memory-mb=50
+        - --recommender-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --stderrthreshold=0
-        - --storage=prometheus
         - --v=4
         resources:
           requests:
@@ -74,19 +60,3 @@ spec:
             memory: 200Mi
         ports:
         - containerPort: 8080
-      - name: outgoing-nginx
-        image: {{ $.Values.global.modulesImages.registry }}/common/nginx:{{ $.Values.global.modulesImages.tags.common.nginx }}
-        volumeMounts:
-        - mountPath: /etc/nginx/nginx.conf
-          name: vpa-outgoing-nginx-config
-          subPath: outgoing-nginx.conf
-        - mountPath: /etc/nginx/ssl/
-          name: vpa-prometheus-api-client-tls
-          readOnly: true
-      volumes:
-      - name: vpa-outgoing-nginx-config
-        configMap:
-          name: vpa-outgoing-nginx-config
-      - name: vpa-prometheus-api-client-tls
-        secret:
-          secretName: vpa-prometheus-api-client-tls

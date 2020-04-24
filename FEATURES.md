@@ -30,9 +30,8 @@ Antiopa features list
 - [priority-class](/modules/010-priority-class/README.md)
 - [vertical-pod-autoscaler](/modules/302-vertical-pod-autoscaler/README.md)
 - [prometheus-metrics-adapter](/modules/301-prometheus-metrics-adapter/README.md)
-- [heapster](/modules/200-heapster/README.md)
 
-`Heapster` нужен для работы HPA **только** в кластерах версии ниже 1.9 и скоро будет удален. В кластерах с версии 1.9 для работы HPA используется `prometheus-metrics-adapter` (нужен включенный `prometheus`).
+В кластерах с версии 1.9 для работы HPA используется `prometheus-metrics-adapter` (нужен включенный `prometheus`).
 
 HPA ([Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)) — встроенный функционала kubernetes, позволяет увеличивать количество экземпляров подов в зависимости от указанных значений метрик. Модуль `prometheus-metrics-adapter` добавляет к стандартным метрикам автоскейлинга по `cpu` и `memory` еще больше метрик, по которым можно настраивать автоскейлинг (в итоге автоскейлить можно по любой метрике, если [завести issue](https://github.com/deckhouse/deckhouse/issues/new?issue) в Antiopa).
 
@@ -94,7 +93,6 @@ Statusmap (второй блок сверху на всех досках, кро
 | 101-cert-manager                | Да |
 | 140-user-authz                  | DaemonSet |
 | 150-user-authn                  | Да |
-| 200-heapster                    | Не требуется |
 | 200-operator-prometheus         | [Не требуется](https://github.com/coreos/prometheus-operator/issues/2491) |
 | 230-vsphere-csi-driver          | Не требуется |
 | 300-prometheus                  | Да |

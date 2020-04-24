@@ -116,3 +116,23 @@
         * [Подстроить лимит коннтраков под проект].(https://github.com/deckhouse/deckhouse/tree/master/modules/700-sysctl-tuner#%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D1%8F)
       summary: >
         Таблица коннтраков переполнена.
+
+  - alert: NodeUnschedulable
+    expr: max by (node) (kube_node_spec_unschedulable) == 1
+    labels:
+      severity_level: "8"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_pending_until_firing_for: "20m"
+      summary: >
+        Нода {{ $labels.node }} закордонена, т.е. новые поды не могут зашедулиться на данную ноду.
+      description: |-
+        Нода {{ $labels.node }} закордонена, т.е. новые поды не могут зашедулиться на данную ноду.
+
+        Это означает, что кто-то выполнил одну из команд на данной ноде:
+        1. `kubectl cordon {{ $labels.node }}`
+        2. `kubectl drain {{ $labels.node }}`, которая выполняется более 20 минут
+
+        Скорее всего это было сделано для проведения работ с данной нодой.

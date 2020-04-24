@@ -11,9 +11,8 @@
       (
         max by (namespace, ingress) (extended_monitoring_ingress_threshold{threshold="5xx-warning"})
       )
-    for: 10s
     labels:
-      severity: warning
+      severity_level: "5"
     annotations:
       description: |-
         URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
@@ -33,9 +32,8 @@
       (
         max by (namespace, ingress) (extended_monitoring_ingress_threshold{threshold="5xx-critical"})
       )
-    for: 10s
     labels:
-      severity: critical
+      severity_level: "4"
     annotations:
       description: |-
         URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
