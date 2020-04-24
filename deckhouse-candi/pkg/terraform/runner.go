@@ -41,7 +41,7 @@ func NewRunner(step string, metaConfig *config.MetaConfig) *Runner {
 }
 
 func (r *Runner) Init(bootstrap bool) ([]byte, error) {
-	logboek.LogInfoLn("Start init process")
+	logboek.LogInfoF("Init terraform ... ")
 
 	clusterConfigJSON, err := r.MetaConfig.MarshalConfig(bootstrap)
 	if err != nil {
@@ -53,9 +53,7 @@ func (r *Runner) Init(bootstrap bool) ([]byte, error) {
 		return nil, fmt.Errorf("terraform saving cluster config error: %v", err)
 	}
 
-	logboek.LogInfoF("Var File %q saved\n", varFilePath)
-
-	return exec.Command("terraform",
+	output, err := exec.Command("terraform",
 		"init",
 		"-get-plugins=false",
 		"-no-color",
@@ -63,9 +61,17 @@ func (r *Runner) Init(bootstrap bool) ([]byte, error) {
 		fmt.Sprintf("-var-file=%s", varFilePath),
 		r.WorkingDir,
 	).CombinedOutput() // #nosec
+
+	if err == nil {
+		logboek.LogInfoLn("OK!")
+	} else {
+		logboek.LogInfoLn("ERROR!")
+	}
+	return output, err
 }
 
 func (r *Runner) Apply() ([]byte, error) {
+	logboek.LogInfoF("Apply terraform ... ")
 	state := filepath.Join(r.WorkingDir, deckhouseClusterStatePrefix)
 	args := []string{
 		"apply",
@@ -80,6 +86,9 @@ func (r *Runner) Apply() ([]byte, error) {
 	data, err := exec.Command("terraform", args...).CombinedOutput() // #nosec
 	if err == nil {
 		r.State = state
+		logboek.LogInfoLn("OK!")
+	} else {
+		logboek.LogInfoLn("ERROR!")
 	}
 	return data, err
 }

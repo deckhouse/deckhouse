@@ -70,7 +70,7 @@ func (k *KubernetesClient) Init(configSrc string) error {
 	// Initialize kube client for kube events hooks.
 	err := kubeClient.Init()
 	if err != nil {
-		return fmt.Errorf("initialize kube client: %s\n", err)
+		return fmt.Errorf("initialize kube client: %s", err)
 	}
 	k.KubernetesClient = kubeClient
 	return nil

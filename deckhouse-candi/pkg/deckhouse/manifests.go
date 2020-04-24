@@ -2,7 +2,7 @@ package deckhouse
 
 import (
 	"encoding/base64"
-	"fmt"
+	"github.com/flant/logboek"
 	"strconv"
 	"strings"
 	"time"
@@ -247,7 +247,7 @@ func generateDeckhouseRegistrySecret(dockerCfg string) *apiv1.Secret {
 	}
 }
 
-func generateDeckhouseConfigMap(deckhouseConfig map[string]interface{}) (*apiv1.ConfigMap, error) {
+func generateDeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap {
 	configMap := apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "deckhouse",
@@ -262,7 +262,7 @@ func generateDeckhouseConfigMap(deckhouseConfig map[string]interface{}) (*apiv1.
 		if strings.HasSuffix(setting, "Enabled") {
 			boolData, ok := data.(bool)
 			if !ok {
-				return nil, fmt.Errorf("deckhouse config map: %q must be bool", setting)
+				logboek.LogWarnF("deckhouse config map: %q must be boo\n", setting)
 			}
 			configMapData[setting] = strconv.FormatBool(boolData)
 
@@ -270,13 +270,13 @@ func generateDeckhouseConfigMap(deckhouseConfig map[string]interface{}) (*apiv1.
 		}
 		convertedData, err := yaml.Marshal(data)
 		if err != nil {
-			return nil, fmt.Errorf("preparing deckhouse config map error: %v", err)
+			logboek.LogWarnF("preparing deckhouse config map error (probably validation bug): %v", err)
+			continue
 		}
 		configMapData[setting] = string(convertedData)
 	}
 	configMap.Data = configMapData
-
-	return &configMap, nil
+	return &configMap
 }
 
 func generateSecret(name, namespace string, data map[string][]byte) *apiv1.Secret {

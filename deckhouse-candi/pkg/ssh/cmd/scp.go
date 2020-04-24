@@ -134,8 +134,8 @@ func (s *Scp) Cmd() *exec.Cmd {
 
 	scpCmd := exec.Command("scp", args...)
 	scpCmd.Env = env
-	scpCmd.Stdout = os.Stdout
-	scpCmd.Stderr = os.Stderr
+	// scpCmd.Stdout = os.Stdout
+	// scpCmd.Stderr = os.Stderr
 
 	return scpCmd
 }
