@@ -56,7 +56,7 @@ fi
 patch_pending=true
 output_log_port=8000
 while [ "$patch_pending" = true ] ; do
-  for server in {{ .normal.apiserverEndpoints | join " " | quote }} ; do
+  for server in {{ .normal.apiserverEndpoints | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
     until tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
       echo "The network is not ready for connecting to apiserver yet, waiting..."
