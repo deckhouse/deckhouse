@@ -2,7 +2,7 @@
 FROM golang:1.14-alpine3.11
 WORKDIR /src/
 RUN apk add --no-cache git mercurial patch && \
-    wget https://github.com/flant/autoscaler/archive/a3d278bb93a0acc141dd530b2527aee97806f9cd.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+    wget https://github.com/flant/autoscaler/archive/57b2ef8134552093cc6ac07ce97d28a29dd1674e.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
     cd vertical-pod-autoscaler/ && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o recommender pkg/recommender/main.go
 
