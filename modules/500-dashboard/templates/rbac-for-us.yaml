@@ -1,0 +1,33 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8-{{ .Chart.Name }}:dashboard
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
+rules:
+# Allow Metrics Scraper to get metrics from the Metrics server
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dashboard
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+{{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
+metadata:
+  name: d8-{{ .Chart.Name }}:dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8-{{ .Chart.Name }}:dashboard
+subjects:
+- kind: ServiceAccount
+  name: dashboard
+  namespace: d8-{{ .Chart.Name }}

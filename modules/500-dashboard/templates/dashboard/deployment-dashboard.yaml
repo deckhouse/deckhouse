@@ -1,4 +1,3 @@
-{{- if eq .Values.dashboard.version "2" -}}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -30,14 +29,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
-  {{- if (include "helm_lib_ha_enabled" .) }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-  {{- end }}
+{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -50,20 +42,12 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-      {{- if (include "helm_lib_ha_enabled" .) }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app: dashboard
-            topologyKey: kubernetes.io/hostname
-      {{- end }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dashboard")) | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: dashboard
-        image: {{ $.Values.global.modulesImages.registry }}/dashboard/dashboard-v2:{{ $.Values.global.modulesImages.tags.dashboard.dashboardV2 }}
+        image: {{ $.Values.global.modulesImages.registry }}/dashboard/dashboard:{{ $.Values.global.modulesImages.tags.dashboard.dashboard }}
         args:
         - --port=8443
         - --insecure-port=8080
@@ -123,4 +107,3 @@ spec:
       volumes:
       - name: tmp-volume
         emptyDir: {}
-{{- end }}

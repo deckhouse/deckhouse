@@ -1,4 +1,3 @@
-{{- if eq .Values.dashboard.version "2" -}}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -29,4 +28,3 @@ spec:
   selector:
     matchLabels:
       app: metrics-scraper
-{{- end }}
