@@ -29,7 +29,7 @@
 | deployment-machinery    | Компоненты кластера с помощью которых происходит деплой/билд в кластер (helm, werf).<br>`kube-system/tiller-deploy`                                                                                 | 5000       |
 | production-low          | Приложения в production окружении (кроны, админки, batch-процессинг, ...), без которых можно прожить некоторое время. Если batch или крон никак нельзя прерывать, то он должен быть в production-medium, а не здесь.                                          | 4000       |
 | staging                 | Staging окружения для приложений.                                                                                                                                    | 3000       |
-| cluster-low             | Компоненты кластера, без которых возможна эксплуатация кластера, но которые желательны. <br>`prometheus-operator`, `node-ping`, `okmeter`, `dashboard`, `dashboard-oauth2-proxy`, `cert-manager`, `heapster`, `prometheus-longterm`                                                                              | 2000       |
+| cluster-low             | Компоненты кластера, без которых возможна эксплуатация кластера, но которые желательны. <br>`prometheus-operator`, `node-ping`, `okmeter`, `dashboard`, `dashboard-oauth2-proxy`, `cert-manager`, `prometheus-longterm`                                                                              | 2000       |
 | develop (default)       | Develop окружения для приложений. Класс по умолчанию, если не проставлены иные классы.                                                                               | 1000       |
 
 ### Что такое priority class

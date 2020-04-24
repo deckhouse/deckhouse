@@ -8697,7 +8697,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о НЕ localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. ",
+      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. ",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -8809,7 +8809,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о НЕ localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -8914,7 +8914,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о НЕ localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
       "fill": 1,
       "gridPos": {
         "h": 7,

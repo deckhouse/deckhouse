@@ -49,7 +49,7 @@ func ObjectRBACPlacement(m types.Module, object storage.StoreObject) errors.Lint
 				"MANIFEST053",
 				object.Identity(),
 				nil,
-				"kind %s not allowed in %q", shortPath,
+				"kind %s not allowed in %q", objectKind, shortPath,
 			)
 		}
 	}
