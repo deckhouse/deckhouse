@@ -158,7 +158,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:node-manager:static0"))
+			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager:common-bootstrap,system:bootstrappers:d8-node-manager:node-group-static0-bootstrap"))
 
 			usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -212,7 +212,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:node-manager:static0"))
+			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager:common-bootstrap,system:bootstrappers:d8-node-manager:node-group-static0-bootstrap"))
 
 			usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -270,7 +270,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:node-manager:static0"))
+			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager:common-bootstrap,system:bootstrappers:d8-node-manager:node-group-static0-bootstrap"))
 
 			usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
 			Expect(err).ShouldNot(HaveOccurred())

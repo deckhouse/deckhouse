@@ -94,7 +94,7 @@ data:
   expiration: $(date +"%Y-%m-%dT%H:%M:%SZ" -d @$(expr "$(date +'%s')" + 14400) | tr -d '\n' | base64 -w0)
   token-id: $(echo -n $token_id | base64 -w0)
   token-secret: $(echo -n $token_secret | base64 -w0)
-  auth-extra-groups: $(echo -n system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:node-manager:${ng_name} | base64 -w0)
+  auth-extra-groups: $(echo -n system:bootstrappers:d8-node-manager:common-bootstrap,system:bootstrappers:d8-node-manager:node-group-${ng_name}-bootstrap | base64 -w0)
   usage-bootstrap-authentication: $(echo -n true | base64 -w0)
   usage-bootstrap-signing: $(echo -n true | base64 -w0)
 END

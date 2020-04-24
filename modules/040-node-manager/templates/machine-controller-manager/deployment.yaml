@@ -79,7 +79,7 @@ spec:
           - --cloud-provider={{ .Values.nodeManager.internal.cloudProvider.type | quote }}
           - --machine-max-evict-retries=30
           - --machine-safety-orphan-vms-period=5m
-          - --bootstrap-token-auth-extra-groups=system:bootstrappers:kubeadm:default-node-token,system:bootstrappers:node-manager:machine-bootstrap
+          - --bootstrap-token-auth-extra-groups=system:bootstrappers:d8-node-manager:common-bootstrap,system:bootstrappers:d8-node-manager:cloud-bootstrap
           - --address=127.0.0.1
           - --port=10258
           - -v=2

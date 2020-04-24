@@ -73,11 +73,11 @@ roleRef:
 subjects:
   {{- if or (eq .nodeType "Cloud") }}
 - kind: Group
-  name: system:bootstrappers:node-manager:machine-bootstrap
+  name: system:bootstrappers:d8-node-manager:cloud-bootstrap
   apiGroup: rbac.authorization.k8s.io
   {{- else }}
 - kind: Group
-  name: system:bootstrappers:node-manager:{{ .name }}
+  name: system:bootstrappers:d8-node-manager:node-group-{{ .name }}-bootstrap
   apiGroup: rbac.authorization.k8s.io
   {{- end }}
 {{- end }}
@@ -95,7 +95,7 @@ roleRef:
   name: bashible-cloud-nodes
 subjects:
 - kind: Group
-  name: system:bootstrappers:node-manager:machine-bootstrap
+  name: system:bootstrappers:d8-node-manager:cloud-bootstrap
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -110,13 +110,8 @@ roleRef:
   kind: Role
   name: bashible-all-node-groups
 subjects:
-{{- range $.Values.nodeManager.internal.nodeGroups }}
 - kind: Group
-  name: system:bootstrappers:node-manager:{{ .name }}
-  apiGroup: rbac.authorization.k8s.io
-{{- end}}
-- kind: Group
-  name: system:bootstrappers:node-manager:machine-bootstrap
+  name: system:bootstrappers:d8-node-manager:common-bootstrap
   apiGroup: rbac.authorization.k8s.io
 - kind: Group
   name: system:nodes
