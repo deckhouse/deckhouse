@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cat > /var/lib/bashible/bashible.sh <<"END"
+{{ include "instance_group_machine_class_bashible_bashible_script" (list . .instanceGroup) }}
+END
