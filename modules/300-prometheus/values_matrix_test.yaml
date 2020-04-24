@@ -18,7 +18,7 @@ global:
       __ConstantChoices__: [true, false]
     d8SpecificNodeCountByRole:
       system: 2
-    clusterVersion: 1.15.5
+    kubernetesVersion: 1.15.5
   modules:
     publicDomainTemplate: "%s.example.com"
     https:

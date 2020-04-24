@@ -1,7 +1,22 @@
 #!/bin/bash
 
+# IMPORTANT!!! Because we widely use two-component versioning, instead of
+# full semver, we support two-component versions as the first class citizens.
+
+function semver::normalize() {
+  if [ -z "$(echo $1 | cut -d. -f3-)" ] ; then
+    echo "${1}.0"
+  else
+    echo "$1"
+  fi
+}
+
+function semver::majmin() {
+  echo "$(echo $1 | cut -d. -f1,2)"
+}
+
 function semver::eq() {
-  ret="$(semver compare "$1" "$2")"
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
   if [[ "$ret" == "0" ]]; then
     return 0
   fi
@@ -9,7 +24,7 @@ function semver::eq() {
 }
 
 function semver::gt() {
-  ret="$(semver compare "$1" "$2")"
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
   if [[ "$ret" == "1" ]]; then
     return 0
   fi
@@ -17,7 +32,7 @@ function semver::gt() {
 }
 
 function semver::lt() {
-  ret="$(semver compare "$1" "$2")"
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
   if [[ "$ret" == "-1" ]]; then
     return 0
   fi
@@ -25,7 +40,7 @@ function semver::lt() {
 }
 
 function semver::ge() {
-  ret="$(semver compare "$1" "$2")"
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
   if [[ "$ret" == "1" || "$ret" == "0" ]]; then
     return 0
   fi
@@ -33,11 +48,35 @@ function semver::ge() {
 }
 
 function semver::le() {
-  ret="$(semver compare "$1" "$2")"
+  ret="$(semver compare "$(semver::normalize "$1")" "$(semver::normalize "$2")")"
   if [[ "$ret" == "-1" || "$ret" == "0" ]]; then
     return 0
   fi
   return 1
+}
+
+function semver::bump_minor() {
+  minor_part=$(echo $1 | cut -d. -f2)
+  new_minor_part=$(( minor_part + 1 ))
+
+  r="$(echo $1 | cut -d. -f1).$new_minor_part"
+  if [ -n "$(echo $1 | cut -d. -f3-)" ] ; then
+    r="$r$(echo $1 | cut -d. -f3-)"
+  fi
+  
+  echo "$r"
+}
+
+function semver::unbump_minor() {
+  minor_part=$(echo $1 | cut -d. -f2)
+  new_minor_part=$(( minor_part - 1 ))
+
+  r="$(echo $1 | cut -d. -f1).$new_minor_part"
+  if [ -n "$(echo $1 | cut -d. -f3-)" ] ; then
+    r="$r$(echo $1 | cut -d. -f3-)"
+  fi
+  
+  echo "$r"
 }
 
 function semver::get_max() {
@@ -83,7 +122,7 @@ function semver::get_min() {
 }
 
 function semver::assert() {
-  if ! semver get major "$1" >/dev/null; then
+  if ! semver get major "$(semver::normalize "$1")" >/dev/null; then
     >&2 echo "ERROR: not SemVer in \"$2\": $1"
     return 1
   fi

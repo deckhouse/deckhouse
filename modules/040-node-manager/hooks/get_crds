@@ -112,7 +112,15 @@ function __main__() {
     instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
   fi
 
-  cluster_version="$(values::get global.discovery.clusterVersion)"
+  # Read kubernetes version either from clusterConfiguration or from discovery
+  global_target_kubernetes_version="$(semver::majmin "$(values::get global.discovery.kubernetesVersion)")"
+  if values::has global.clusterConfiguration.kubernetesVersion ; then
+    global_target_kubernetes_version="$(values::get global.clusterConfiguration.kubernetesVersion)"
+  fi
+  control_plane_kubernetes_versions="$(values::jq -r '.global.discovery.kubernetesVersions[]')"
+  control_plane_min_kubernetes_version="$(semver::majmin "$(semver::get_min "$control_plane_kubernetes_versions")")"
+  control_plane_max_kubernetes_version="$(semver::majmin "$(semver::get_max "$control_plane_kubernetes_versions")")"
+
   default_zones=$(context::jq -r '.snapshots |
   (if .machine_deployments[0] | has("object") then [.machine_deployments[].object.metadata.annotations.zone | select(length > 0)] else [] end) as $a |
   (if .cloud_provider_secrets[0] | has("object") then .cloud_provider_secrets[].filterResult.zones else [] end) as $b |
@@ -122,10 +130,7 @@ function __main__() {
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
     ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
     ng="$(context::get snapshots.ngs.$i.filterResult.spec)"
-    ng="$(jq \
-            --arg name "${ng_name}" \
-            --arg default_kubernetes_version "$(semver get major $cluster_version).$(semver get minor $cluster_version)" \
-            '.name = $name | .kubernetesVersion //= $default_kubernetes_version' <<< "$ng")"
+    ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
 
     # If nodeType is "Cloud" and cloud provider exists
     if (jq -e '.nodeType == "Cloud"' <<< "$ng") && [ -n "$instance_class_kind" ]; then
@@ -174,11 +179,34 @@ function __main__() {
         --argjson instance_class "${ng_instance_class}" \
         --argjson default_zones "${default_zones}" \
         '.instanceClass = $instance_class | .cloudInstances.zones //= $default_zones' <<< "$ng")"
+
+      if [ "$default_zones" != "[]" ]; then
+        ng="$(jq --argjson default_zones "$default_zones" '.cloudInstances.zones //= $default_zones' <<< "$ng")"
+      fi
     fi
 
-    if [ "$default_zones" != "[]" ]; then
-      ng="$(jq --argjson default_zones "$default_zones" '.cloudInstances.zones //= $default_zones' <<< "$ng")"
+    # Calculate effective version
+    effective_kubernetes_version="$global_target_kubernetes_version"
+    if jq -e '.kubernetesVersion != null' <<< "$ng" ; then
+      effective_kubernetes_version="$(jq -r '.kubernetesVersion' <<< "$ng")"
+      
+      # If kubernetesVersion IS specified in NodeGroup, we don't allow Nodes
+      # to be more than 2 version befind control plane
+      if semver::lt "$effective_kubernetes_version" "$(semver::unbump_minor "$(semver::unbump_minor "$control_plane_max_kubernetes_version")")" ; then
+        effective_kubernetes_version="$(semver::unbump_minor "$(semver::unbump_minor "$control_plane_max_kubernetes_version")")"
+      fi
+    else
+      # If kubernetesVersion is NOT specified in NodeGroup, we don't allow Nodes
+      # to be more than 1 version befind control plane
+      if semver::lt "$effective_kubernetes_version" "$(semver::unbump_minor "$control_plane_max_kubernetes_version")" ; then
+        effective_kubernetes_version="$(semver::unbump_minor "$control_plane_max_kubernetes_version")"
+      fi
     fi
+    if semver::gt "$effective_kubernetes_version" "$control_plane_min_kubernetes_version" ; then
+      # Nodes should not be above control plane
+      effective_kubernetes_version="$control_plane_min_kubernetes_version"
+    fi
+    ng="$(jq --arg effective_kubernetes_version "$effective_kubernetes_version" '.kubernetesVersion = $effective_kubernetes_version' <<< "$ng")"
 
     _set_ng_error_status "${ng_name}" ""
     final_node_groups="$(jq --argjson ng "$ng" '. + [$ng]' <<< $final_node_groups)"

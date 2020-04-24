@@ -21,6 +21,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       jqFilter: '.spec.containers[].image'
+      includeSnapshotsFrom: [endpoints]
     - apiVersion: v1
       kind: pod
       watchEvent: [Added, Modified]
@@ -31,14 +32,38 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       jqFilter: '.spec.containers[].image'
+      includeSnapshotsFrom: [endpoints]
+    - name: endpoints
+      apiVersion: v1
+      kind: Endpoints
+      nameSelector:
+        matchNames: [kubernetes]
+      namespace:
+        nameSelector:
+          matchNames: [default]
+      jqFilter: '[.subsets[] | "\(.addresses[].ip):\(.ports[].port)"]'
+      includeSnapshotsFrom: [endpoints]
 EOF
 }
 
 function __main__() {
-  cluster_version=$(kubectl version -o json | jq -er '.serverVersion.gitVersion[1:]')
+  endpoints="$(context::jq -r '.snapshots.endpoints[].filterResult"
 
-  if [ -n "$cluster_version" ]; then
-    values::set global.discovery.clusterVersion "$cluster_version"
+  kubernetes_versions=( )
+  for e in $endpoints; do
+    v=$(curl -sk -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://${e}/version?timeout=32s" |
+      jq -er '.gitVersion[1:]')
+    kubernetes_versions+=( "$v" )
+  done
+
+  if [ -n "$kubernetes_versions" ]; then
+    kubernetes_version_min="$(semver::get_min "${kubernetes_versions[@]}")"
+
+    if [ -n "$kubernetes_version_min" ]; then
+      values::set global.discovery.kubernetesVersion "$kubernetes_version_min"
+    fi
+
+    values::set global.discovery.kubernetesVersions "$(echo -e "${kubernetes_versions[@]}" | jq -rRs '[split(" ")[] | select(length > 0)]')"
   fi
 }
 

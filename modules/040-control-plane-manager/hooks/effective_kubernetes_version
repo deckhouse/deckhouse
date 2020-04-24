@@ -52,25 +52,18 @@ function patch_max_used() {
   kubernetes::patch_jq kube-system secret/d8-cluster-configuration '. | .data.maxUsedControlPlaneKubernetesVersion = ('"$1"' | @base64)'
 }
 
-function unbump_version() {
-  minor_part=$(semver get minor "$1")
-  new_minor_part=$(( minor_part - 1 ))
-
-  echo "${1/$minor_part/$new_minor_part}"
-}
-
 function __main__() {
-  config_version="$(values::get --required global.clusterConfiguration.kubernetesVersion)".0
-  readarray -t -d $'\n' control_plane_versions < <(context::jq -r '.snapshots.control_plane_versions[].filterResult + ".0"')
-  max_used_control_plane_version="$(context::get snapshots.max_used_control_plane_version.0.filterResult)".0
-  readarray -t -d $'\n' node_versions < <(context::jq -r '.snapshots.node_versions[].filterResult + ".0"')
+  config_version="$(values::get --required global.clusterConfiguration.kubernetesVersion)"
+  readarray -t -d $'\n' control_plane_versions < <(context::jq -r '.snapshots.control_plane_versions[].filterResult')
+  max_used_control_plane_version="$(context::get snapshots.max_used_control_plane_version.0.filterResult)"
+  readarray -t -d $'\n' node_versions < <(context::jq -r '.snapshots.node_versions[].filterResult')
 
-  if [[ "${#control_plane_versions[@]}" == "0" || "${control_plane_versions[0]}" == ".0" ]]; then
+  if ! context::has snapshots.control_plane_versions ; then
     >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version"
     control_plane_versions=("$(kubectl version -o json | jq -r '.serverVersion.gitVersion[1:] | split(".")[:-1] | join(".")').0")
   fi
 
-  if [[ "$max_used_control_plane_version" == ".0" ]]; then
+  if ! context::has snapshots.max_used_control_plane_version.0 ; then
     >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version"
     max_used_control_plane_version="${control_plane_versions[0]}"
   fi
@@ -93,23 +86,23 @@ function __main__() {
 
   if semver::gt "$config_version" "$max_node_version" ; then
     if semver::ge "$min_node_version" "$min_control_plane_version"; then
-      bumped="$(semver bump minor "$min_control_plane_version")"
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${bumped%.*}\""
+      bumped="$(semver::bump_minor "$min_control_plane_version")"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${bumped}"
     else
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${min_control_plane_version%.*}\""
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${min_control_plane_version}"
     fi
   elif semver::lt "$config_version" "$max_node_version"; then
     if semver::lt "$max_node_version" "$max_control_plane_version" && semver::eq "$max_control_plane_version" "$max_used_control_plane_version"; then
-      unbumped="$(unbump_version "$max_control_plane_version")"
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${unbumped%.*}\""
+      unbumped="$(semver::unbump_minor "$max_control_plane_version")"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${unbumped}"
     else
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${max_control_plane_version%.*}\""
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${max_control_plane_version}"
     fi
   else
-    values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${config_version%.*}\""
+    values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${config_version}"
   fi
 
-  if semver::ge "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)".0 "$max_used_control_plane_version"; then
+  if semver::ge "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)" "$max_used_control_plane_version"; then
     patch_max_used "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)"
   fi
 }

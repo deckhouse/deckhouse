@@ -28,6 +28,6 @@ global:
     d8SpecificNodeCountByRole:
       system:
         __ConstantChoices__: [1, 2, 3]
-    clusterVersion: 1.15.5
+    kubernetesVersion: 1.15.5
 
 openvpn: {}
