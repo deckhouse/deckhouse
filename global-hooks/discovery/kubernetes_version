@@ -41,13 +41,13 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [default]
-      jqFilter: '[.subsets[] | "\(.addresses[].ip):\(.ports[].port)"]'
+      jqFilter: '.subsets[] | "\(.addresses[].ip):\(.ports[].port)"'
       includeSnapshotsFrom: [endpoints]
 EOF
 }
 
 function __main__() {
-  endpoints="$(context::jq -r '.snapshots.endpoints[].filterResult"
+  endpoints="$(context::jq -r '.snapshots.endpoints[].filterResult')"
 
   kubernetes_versions=( )
   for e in $endpoints; do
@@ -63,7 +63,7 @@ function __main__() {
       values::set global.discovery.kubernetesVersion "$kubernetes_version_min"
     fi
 
-    values::set global.discovery.kubernetesVersions "$(echo -e "${kubernetes_versions[@]}" | jq -rRs '[split(" ")[] | select(length > 0)]')"
+    values::set global.discovery.kubernetesVersions "$(echo -ne "${kubernetes_versions[@]}" | jq -rRs '[split(" ")[] | select(length > 0)]')"
   fi
 }
 
