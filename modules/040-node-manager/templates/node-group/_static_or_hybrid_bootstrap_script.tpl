@@ -1,8 +1,11 @@
-{{- define "node_group_static_or_hybrid_bootstrap_script" }}
+{{- define "node_group_static_or_hybrid_bootstrap_script" -}}
+  {{- $context := index . 0 -}}
+  {{- $ng := index . 1 -}}
+  {{- $bootstrap_token := index . 2 -}}
 #!/bin/bash
-  {{- $context := index . 0 }}
-  {{- $ng := index . 1 }}
-  {{- $bootstrap_token := index . 2 }}
+
+mkdir -p /var/lib/bashible
+
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- $bootstrap_scripts_from_bundles := list }}
     {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}

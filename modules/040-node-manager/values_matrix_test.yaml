@@ -332,6 +332,8 @@ nodeManager:
               - zonea
               - zoneb
     - <<: *internalDefaults
+      bootstrapTokens:
+        worker: mytoken
       nodeGroups:
         __ConstantChoices__:
         - []
@@ -342,6 +344,8 @@ nodeManager:
               options:
                 kubernetesVersion: 1.15.4
     - <<: *internalDefaults
+      bootstrapTokens:
+        worker: mytoken
       nodeGroups:
         __ConstantChoices__:
         - []

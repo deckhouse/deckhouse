@@ -1,5 +1,5 @@
 {{- define "node_group_bashible_bootstrap_script" -}}
-{{- $context := . -}}
+  {{- $context := . -}}
 #!/bin/bash
 
 function get_secret() {
@@ -22,11 +22,11 @@ function detect_bundle() {
 {{ tpl ($context.Files.Get "candi/bashible/detect_bundle.sh") $context | indent 2 }}
 }
 
-{{ range $bundle := list "ubuntu-18.04" "centos-7" }}
+  {{ range $bundle := list "ubuntu-18.04" "centos-7" }}
 function basic_bootstrap_{{ $bundle }} {
 {{ tpl ($context.Files.Get (printf "candi/bashible/bundles/%s/bootstrap.sh.tpl" $bundle)) $context | indent 2 }}
 }
-{{ end }}
+  {{ end }}
 
 set -Eeuo pipefail
 shopt -s failglob
@@ -51,12 +51,10 @@ if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
   done
 fi
 
-# Start output bootstrap logs
-output_log_port=8000
-while true; do cat /var/log/cloud-init-output.log | nc -l $output_log_port; done &
-
+  {{- if eq .nodeGroup.nodeType "Cloud" }}
 # Put bootstrap log information to Machine resource status
 patch_pending=true
+output_log_port=8000
 while [ "$patch_pending" = true ] ; do
   for server in {{ .normal.apiserverEndpoints | join " " | quote }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
@@ -64,6 +62,7 @@ while [ "$patch_pending" = true ] ; do
       echo "The network is not ready for connecting to apiserver yet, waiting..."
       sleep 1
     done
+
     if curl -s --fail \
       --max-time 10 \
       -XPATCH \
@@ -76,6 +75,7 @@ while [ "$patch_pending" = true ] ; do
 
       echo "Successfully patched machine $(hostname) status."
       patch_pending=false
+
       break
     else
       >&2 echo "Failed to patch machine $(hostname) status."
@@ -84,6 +84,10 @@ while [ "$patch_pending" = true ] ; do
     fi
   done
 done
+
+# Start output bootstrap logs
+while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
+  {{- end }}
 
 # Get bashible script from secret
 get_secret bashible-{{ .nodeGroup.name }}-${BUNDLE} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible.sh
@@ -97,4 +101,4 @@ done;
 
 # Stop output bootstrap logs
 kill -9 %1
-{{ end }}
+{{- end }}
