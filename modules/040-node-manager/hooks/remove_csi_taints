@@ -18,7 +18,7 @@ function __config__() {
       apiVersion: v1
       kind: Node
       watchEvent: ["Added", "Modified"]
-      jqFilter: '{"needPatch": ([(.spec.taints // [])[] | select(.key == "node.flant.com/csi-not-bootstrapped")] | length > 0), "name": .metadata.name}'
+      jqFilter: '{"needPatch": ([(.spec.taints // [])[] | select(.key == "node.deckhouse.io/csi-not-bootstrapped")] | length > 0), "name": .metadata.name}'
 EOF
 }
 
@@ -32,7 +32,7 @@ function __on_kubernetes::csinodes() {
     then
       kubernetes::patch_jq "" "node/${csiNodeName}" '
         .spec.taints = [(.spec.taints // [])[] |
-        select(.key != "node.flant.com/csi-not-bootstrapped")] |
+        select(.key != "node.deckhouse.io/csi-not-bootstrapped")] |
         if (.spec.taints | length == 0) then del(.spec.taints) else . end'
     fi
   done

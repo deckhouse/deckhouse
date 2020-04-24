@@ -19,7 +19,7 @@ spec:
   taints:
   - key: somekey-1
   - effect: NoSchedule
-    key: node.flant.com/csi-not-bootstrapped
+    key: node.deckhouse.io/csi-not-bootstrapped
     value: ""
 ---
 apiVersion: v1
@@ -30,7 +30,7 @@ spec:
   taints:
   - key: somekey-2
   - effect: NoSchedule
-    key: node.flant.com/csi-not-bootstrapped
+    key: node.deckhouse.io/csi-not-bootstrapped
     value: ""
 ---
 apiVersion: v1
@@ -95,10 +95,10 @@ metadata:
 			f.RunHook()
 		})
 
-		It("node-1 must lose taint 'node.flant.com/csi-not-bootstrapped'", func() {
+		It("node-1 must lose taint 'node.deckhouse.io/csi-not-bootstrapped'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-1"}]`))
-			Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-2"},{"effect":"NoSchedule","key":"node.flant.com/csi-not-bootstrapped","value":""}]`))
+			Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-2"},{"effect":"NoSchedule","key":"node.deckhouse.io/csi-not-bootstrapped","value":""}]`))
 			Expect(f.KubernetesResource("Node", "", "node-3").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-3"}]`))
 		})
 
@@ -108,7 +108,7 @@ metadata:
 				f.RunHook()
 			})
 
-			It("node-2 must lose taint 'node.flant.com/csi-not-bootstrapped'", func() {
+			It("node-2 must lose taint 'node.deckhouse.io/csi-not-bootstrapped'", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-1"}]`))
 				Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-2"}]`))
@@ -125,7 +125,7 @@ metadata:
 			It("node-4 must not get spec.taints", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-1"}]`))
-				Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"key": "somekey-2"},{"effect": "NoSchedule","key": "node.flant.com/csi-not-bootstrapped","value": ""}]`))
+				Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"key": "somekey-2"},{"effect": "NoSchedule","key": "node.deckhouse.io/csi-not-bootstrapped","value": ""}]`))
 				Expect(f.KubernetesResource("Node", "", "node-3").Field("spec.taints").String()).To(MatchJSON(`[{"key":"somekey-3"}]`))
 				Expect(f.KubernetesResource("Node", "", "node-4").Field("spec.taints").Exists()).To(BeFalse())
 
