@@ -10,7 +10,7 @@ global:
       __ConstantChoices__: ["cluster.local", "cluster-hz1.local"]
     clusterDNSAddress:
       __ConstantChoices__: ["192.168.0.10", "142.15.0.10"]
-    clusterVersion: 1.15.6
+    kubernetesVersion: 1.15.6
   modulesImages:
     registry: registry.flant.com
     tags:

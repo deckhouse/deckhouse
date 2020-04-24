@@ -12,7 +12,7 @@ data:
     logo_uri: "https://kubernetes.io/images/favicon.png"
     web_path_prefix: /
     debug: false
-    kubectl_version: "v{{ .Values.global.discovery.clusterVersion }}"
+    kubectl_version: "v{{ .Values.global.discovery.kubernetesVersion }}"
     clusters:
   {{- if .Values.userAuthn.publishAPI.enable }}
     - client_id: "kubeconfig-generator"

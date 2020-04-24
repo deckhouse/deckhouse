@@ -11,7 +11,7 @@ EOF
 }
 
 function __on_after_helm() {
-  cluster_version=$(values::get global.discovery.clusterVersion)
+  cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     cluster_type=$(values::get --required global.discovery.clusterType)
     # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
@@ -28,7 +28,7 @@ function __on_after_helm() {
 }
 
 function __on_after_delete_helm() {
-  cluster_version=$(values::get global.discovery.clusterVersion)
+  cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     cluster_type=$(values::get --required global.discovery.clusterType)
     # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy

@@ -10,7 +10,7 @@ global:
     clusterControlPlaneIsHighlyAvailable: true
     d8SpecificNodeCountByRole:
       system: 1
-    clusterVersion: 1.15.5
+    kubernetesVersion: 1.15.5
 
 okmeter:
   apiKey: 5ff9z2a3-9127-1sh4-2192-06a3fc6e13e3

@@ -78,7 +78,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	BeforeEach(func() {
 		// TODO: move to some common function???
-		f.ValuesSet("global.discovery.clusterVersion", "1.15.6")
+		f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 		f.ValuesSet("global.modulesImages.registry", "registryAddr")
 	})
 
