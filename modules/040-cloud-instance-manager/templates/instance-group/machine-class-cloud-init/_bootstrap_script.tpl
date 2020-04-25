@@ -50,7 +50,7 @@ while true; do cat /var/log/cloud-init-output.log | nc -l $output_log_port; done
 
 patch_pending=true
 while [ "$patch_pending" = true ] ; do
-  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " | quote }} ; do
+  for server in {{ $context.Values.cloudInstanceManager.internal.clusterMasterAddresses | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
     tcp_endpoint=$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')
     if curl -s --fail \
