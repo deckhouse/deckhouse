@@ -32,13 +32,13 @@ func (c *Check) AwaitAvailability() error {
 			logboek.LogLn("Connected successfully")
 			return nil
 		}
-		logboek.LogInfoF("Wait for connection. Attempt #%d of %d.\n", attempts, ConnectionAttemptsCount)
-		logboek.LogInfoLn(string(output))
+		logboek.LogF("[Attempt #%d of %d] Wait for connection.\n", attempts, ConnectionAttemptsCount)
+		logboek.LogWarnF(string(output))
 
 		if attempts == ConnectionAttemptsCount {
 			return fmt.Errorf("host '%s' is not available", app.SshHost)
 		}
-		logboek.LogInfoF("next attempt in %s\n\n", ConnectionAttemptDelay.String())
+		logboek.LogF("Next attempt in %s\n\n", ConnectionAttemptDelay.String())
 		time.Sleep(ConnectionAttemptDelay)
 	}
 }

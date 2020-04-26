@@ -114,6 +114,8 @@ func (r *Runner) Destroy(detectState bool) ([]byte, error) {
 		}
 		r.State = filepath.Join(r.WorkingDir, deckhouseClusterStatePrefix)
 	}
+
+	logboek.LogInfoF("Destroy terraform ... ")
 	args := []string{
 		"destroy",
 		"-no-color",
@@ -122,7 +124,14 @@ func (r *Runner) Destroy(detectState bool) ([]byte, error) {
 		fmt.Sprintf("-state=%s", r.State),
 		r.WorkingDir,
 	}
-	return exec.Command("terraform", args...).CombinedOutput()
+
+	output, err := exec.Command("terraform", args...).CombinedOutput()
+	if err == nil {
+		logboek.LogInfoLn("OK!")
+	} else {
+		logboek.LogInfoLn("ERROR!")
+	}
+	return output, err
 }
 
 func (r *Runner) getState() ([]byte, error) {

@@ -20,7 +20,7 @@ func NewPipeline(step string, metaConfig *config.MetaConfig, getResult func(*Pip
 }
 
 func (p *Pipeline) runTerraform() error {
-	bootstrap := p.Step != "base_infrastructure"
+	bootstrap := p.Step != "base-infrastructure"
 
 	out, err := p.TerraformRunner.Init(bootstrap)
 	if err != nil {

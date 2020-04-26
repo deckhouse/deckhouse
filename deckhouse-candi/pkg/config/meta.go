@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 )
@@ -33,7 +34,7 @@ func (m *MetaConfig) Prepare() {
 		// Validated by openapi schema
 		_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
 		_ = json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout)
-		m.Layout = strings.ToLower(m.Layout)
+		m.Layout = strcase.ToKebab(m.Layout)
 
 		m.ProviderName = strings.ToLower(cloud.Provider)
 		m.providerNameCamelCase = cloud.Provider
@@ -124,22 +125,28 @@ func (m *MetaConfig) MarshalConfigForKubeadmTemplates(nodeIP string) map[string]
 
 func (m *MetaConfig) prepareNodeGroup() map[string]interface{} {
 	var data map[string]interface{}
-
 	_ = json.Unmarshal(m.InitClusterConfig["masterNodeGroup"], &data)
 
-	return map[string]interface{}{
-		"name":     "master",
-		"nodeType": "Cloud",
+	var instanceClassData map[string]interface{}
+	_ = json.Unmarshal(m.InitProviderClusterConfig["masterInstanceClass"], &instanceClassData)
+
+	preparedNodeGroup := map[string]interface{}{
+		"name":          "master",
+		"nodeType":      "Cloud",
+		"instanceClass": instanceClassData,
 		"cloudInstances": map[string]interface{}{
 			"classReference": map[string]string{
 				"name": "master",
 				"kind": m.providerNameCamelCase + "InstanceClass",
 			},
 		},
-		"maxPerZone": data["maxPerZone"],
-		"minPerZone": data["minPerZone"],
-		"zones":      data["zones"],
 	}
+
+	for key, value := range data {
+		preparedNodeGroup[key] = value
+	}
+
+	return preparedNodeGroup
 }
 
 func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP string) map[string]interface{} {
@@ -151,7 +158,10 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 		data[key] = t
 	}
 
-	ip, ipnet, _ := net.ParseCIDR(data["serviceSubnetCIDR"].(string))
+	ip, ipnet, err := net.ParseCIDR(data["serviceSubnetCIDR"].(string))
+	if err != nil {
+		panic("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+	}
 
 	clusterDNS := ""
 	counter := 0
@@ -164,17 +174,6 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 		counter++
 	}
 
-	providerConfig := make(map[string]interface{}, len(m.ProviderClusterConfig))
-	for key, value := range m.ProviderClusterConfig {
-		if key == "provider" {
-			continue
-		}
-
-		var t interface{}
-		_ = json.Unmarshal(value, &t)
-		providerConfig[key] = t
-	}
-
 	return map[string]interface{}{
 		"runType":           "ClusterBootstrap",
 		"bundle":            bundle,
@@ -185,7 +184,6 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 			"nodeIP":            nodeIP,
 			"clusterDNSAddress": clusterDNS,
 		},
-		"cloudProviderClusterConfiguration": providerConfig,
 	}
 }
 
