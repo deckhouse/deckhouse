@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind]
+    required: [apiVersion, kind, masterInstanceClass]
     properties:
       apiVersion:
         type: string

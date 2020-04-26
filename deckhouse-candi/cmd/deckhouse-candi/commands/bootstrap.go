@@ -69,10 +69,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var nodeIP string
+		var masterInstanceClass []byte
 		err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
 			if metaConfig.ClusterType == "Cloud" {
 				basePipelineResult, err := terraform.NewPipeline(
-					"base_infrastructure",
+					"base-infrastructure",
 					metaConfig,
 					terraform.GetBasePipelineResult,
 				).Run()
@@ -81,7 +82,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				}
 
 				masterPipelineResult, err := terraform.NewPipeline(
-					"master_node_bootstrap",
+					"master-node-bootstrap",
 					metaConfig,
 					terraform.GetMasterPipelineResult,
 				).Run()
@@ -98,6 +99,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 				_ = json.Unmarshal(masterPipelineResult["masterIP"], &app.SshHost)
 				_ = json.Unmarshal(masterPipelineResult["nodeIP"], &nodeIP)
+				masterInstanceClass = masterPipelineResult["masterInstanceClass"]
 
 				sshClient.Session.Host = app.SshHost
 
@@ -150,25 +152,36 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
 		err = logboek.LogProcess("🔨 Run Master Bootstrap 🔨", log.TaskOptions(), func() error {
-			err = template.PrepareBootstrap(templateController, nodeIP, bundleName, metaConfig)
-			for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
-				logboek.LogInfoF("Execute bootstrap/%s ... ", bootstrapScript)
+			err = logboek.LogProcess("Prepare Bootstrap", log.BoldOptions(), func() error {
+				return template.PrepareBootstrap(templateController, nodeIP, bundleName, metaConfig)
+			})
+			if err != nil {
+				return fmt.Errorf("prepare bootstrap: %v", err)
+			}
+			err = logboek.LogProcess("Run Bootstrap", log.BoldOptions(), func() error {
+				for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
+					logboek.LogInfoF("Execute bootstrap/%s ... ", bootstrapScript)
 
-				cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).Sudo()
+					cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).Sudo()
 
-				stdout, err := cmd.Execute()
-				if err != nil {
-					logboek.LogInfoLn("ERROR!")
-					if len(stdout) > 0 {
-						logboek.LogInfoF("bootstrap/%s stdout: %v\n", bootstrapScript, string(stdout))
+					stdout, err := cmd.Execute()
+					if err != nil {
+						logboek.LogInfoLn("ERROR!")
+						if len(stdout) > 0 {
+							logboek.LogInfoF("bootstrap/%s stdout: %v\n", bootstrapScript, string(stdout))
+						}
+						if ee, ok := err.(*exec.ExitError); ok {
+							return fmt.Errorf("script 'bootstrap/%s' error: %v\nstderr: %s", bootstrapScript, err, string(ee.Stderr))
+						}
+						return fmt.Errorf("script 'bootstrap/%s' error: %v", bootstrapScript, err)
+					} else {
+						logboek.LogInfoLn("OK!")
 					}
-					if ee, ok := err.(*exec.ExitError); ok {
-						return fmt.Errorf("script 'bootstrap/%s' error: %v\nstderr: %s", bootstrapScript, err, string(ee.Stderr))
-					}
-					return fmt.Errorf("script 'bootstrap/%s' error: %v", bootstrapScript, err)
-				} else {
-					logboek.LogInfoLn("OK!")
 				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("run bootstrap: %v", err)
 			}
 			return nil
 		})
