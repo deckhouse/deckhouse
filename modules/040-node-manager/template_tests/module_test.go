@@ -233,6 +233,9 @@ internal:
       sshKey: mysshkey
       sshUser: mysshuser
       nameservers: ["4.2.2.2"]
+      dns:
+        search: ["qwe"]
+        nameservers: ["1.2.3.4","3.4.5.6"]
       zoneToSubnetIdMap:
         zonea: subneta
         zoneb: subnetb

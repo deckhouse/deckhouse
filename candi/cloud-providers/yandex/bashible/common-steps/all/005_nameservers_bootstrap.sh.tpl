@@ -1,5 +1,5 @@
-{{- if hasKey . "cloudProviderClusterConfiguration" }}
-  {{- if hasKey .cloudProviderClusterConfiguration "nameservers" }}
+{{- if hasKey . "cloudProvider" }}
+  {{- if hasKey .cloudProvider.yandex "dns" }}
 
 bb-event-on 'bb-sync-file-changed' '_on_netplan_config_changed'
 _on_netplan_config_changed() {
@@ -16,10 +16,23 @@ network:
     version: 2
     ethernets:
         ${primary_ifname}:
+  {{- if hasKey .cloudProvider.yandex.dns "nameservers" }}
+    {{- if .cloudProvider.yandex.dns.nameservers }}
             nameservers:
-                addresses: [{{- .cloudProviderClusterConfiguration.nameservers | join ", " -}}]
+                addresses: [{{- .cloudProvider.yandex.dns.nameservers | join ", " -}}]
+    {{- end }}
+  {{- end }}
+  {{- if hasKey .cloudProvider.yandex.dns "search" }}
+    {{- if .cloudProvider.yandex.dns.search }}
+            nameservers:
+                search: [{{- .cloudProvider.yandex.dns.search | join ", " -}}]
+    {{- end }}
+  {{- end }}
             dhcp4-overrides:
               use-dns: false
+  {{- if hasKey .cloudProvider.yandex.dns "search" }}
+              use-domains: false
+  {{- end }}
 END
   {{- end -}}
 {{- end -}}
