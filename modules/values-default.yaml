@@ -18,6 +18,7 @@ verticalPodAutoscalerCrdEnabled: true
 deckhouseEnabled: true
 cloudProviderOpenstackEnabled: true
 nodeManagerEnabled: true
+controlPlaneManagerEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true
 controlPlaneConfiguratorEnabled: true

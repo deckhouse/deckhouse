@@ -27,6 +27,17 @@ apiServer:
   {{- if .apiserver.bindToWildcard }}
     bind-address: "0.0.0.0"
   {{- end }}
+  {{- if .apiserver.oidcIssuerURL }}
+    oidc-ca-file: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
+    oidc-client-id: kubernetes
+    oidc-groups-claim: groups
+    oidc-username-claim: email
+    oidc-issuer-url: {{ .apiserver.oidcIssuerURL }}
+  {{- end }}
+  {{ if .apiserver.webhookURL }}
+    authorization-mode: Node,Webhook,RBAC
+    authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+  {{- end -}}
   {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}

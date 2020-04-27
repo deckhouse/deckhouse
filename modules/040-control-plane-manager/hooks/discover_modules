@@ -1,0 +1,62 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: authn-cm
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [d8-user-authn]
+      labelSelector:
+        matchLabels:
+          control-plane-configurator: ""
+      jqFilter: ".data"
+    - name: authz-cm
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [d8-user-authz]
+      labelSelector:
+        matchLabels:
+          control-plane-configurator: ""
+      jqFilter: ".data"
+EOF
+}
+
+function __main__() {
+  if ! values::has --config controlPlaneManager.apiserver.authnz.webhookURL && ! values::has --config controlPlaneManager.apiserver.authz.webhookCA; then
+    # nothing was configured by hand
+    if cm_data="$(context::get --required snapshots.authz-cm.0.filterResult)"; then
+      values::set controlPlaneManager.apiserver.authz.webhookURL "$(jq -rn --argjson data "${cm_data}" '$data | .url')"
+      values::set controlPlaneManager.apiserver.authz.webhookCA  "$(jq -rn --argjson data "${cm_data}" '$data | .ca')"
+    else
+      values::unset controlPlaneManager.apiserver.authz.webhookURL
+      values::unset controlPlaneManager.apiserver.authz.webhookCA
+    fi
+  fi
+
+  if ! values::has --config controlPlaneManager.apiserver.authn.oidcIssuerURL && ! values::has --config controlPlaneManager.apiserver.authnn.oidcCA; then
+    # nothing was configured by hand
+    if cm_data="$(context::get --required snapshots.authn-cm.0.filterResult)"; then
+      values::set controlPlaneManager.apiserver.authn.oidcIssuerURL "$(jq -rn --argjson data "${cm_data}" '$data | .oidcIssuerURL')"
+      if ca=$(jq -ren --argjson data "${cm_data}" '$data | .oidcCA'); then
+        values::set controlPlaneManager.apiserver.authn.oidcCA "${ca}"
+      fi
+    else
+      values::unset controlPlaneManager.apiserver.authn.oidcIssuerURL
+      values::unset controlPlaneManager.apiserver.authn.oidcCA
+    fi
+  fi
+}
+
+hook::run "$@"
