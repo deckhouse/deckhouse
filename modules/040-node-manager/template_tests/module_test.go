@@ -1,9 +1,13 @@
 package template_tests
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	"github.com/google/go-cmp/cmp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -349,6 +353,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
 			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
@@ -482,6 +488,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassB := f.KubernetesResource("GCPMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -617,6 +625,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassB := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -756,6 +766,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
 			bashibleSecrets["bashible-bundle-centos-7-1.14"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bundle-centos-7-1.14")
@@ -890,6 +902,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassB := f.KubernetesResource("YandexMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -1092,3 +1106,30 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		})
 	})
 })
+
+func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mds ...object_store.KubeObject) error {
+	args := deployment.Field("spec.template.spec.containers.0.args").AsStringSlice()
+
+	var nodesArgs []string
+	for _, arg := range args {
+		if !strings.HasPrefix(arg, "--nodes") {
+			continue
+		}
+
+		nodesArgs = append(nodesArgs, strings.Split(arg, ".")[1])
+	}
+
+	var mdsNames []string
+	for _, md := range mds {
+		mdsNames = append(mdsNames, md.Field("metadata.name").String())
+	}
+
+	sort.Strings(nodesArgs)
+	sort.Strings(mdsNames)
+	equal := cmp.Equal(nodesArgs, mdsNames)
+	if !equal {
+		return fmt.Errorf("cluster-autoscaler args %+v are not equal to a list of MachineDeployment names %+v", nodesArgs, mdsNames)
+	}
+
+	return nil
+}
