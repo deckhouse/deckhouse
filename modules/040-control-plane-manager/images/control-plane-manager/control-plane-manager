@@ -111,7 +111,7 @@ function install_files_if_changed() {
 }
 
 function certificate_valid_for() {
-  not_after=$(cfssl-certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
+  not_after=$(cfssl certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
   echo $(("$(date --date="$not_after" +%s)" - "$(date +%s)"))
 }
 

@@ -87,19 +87,19 @@ function __main__() {
   if semver::gt "$config_version" "$max_node_version" ; then
     if semver::ge "$min_node_version" "$min_control_plane_version"; then
       bumped="$(semver::bump_minor "$min_control_plane_version")"
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${bumped}"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${bumped}\""
     else
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${min_control_plane_version}"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${min_control_plane_version}\""
     fi
   elif semver::lt "$config_version" "$max_node_version"; then
     if semver::lt "$max_node_version" "$max_control_plane_version" && semver::eq "$max_control_plane_version" "$max_used_control_plane_version"; then
       unbumped="$(semver::unbump_minor "$max_control_plane_version")"
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${unbumped}"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${unbumped}\""
     else
-      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${max_control_plane_version}"
+      values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${max_control_plane_version}\""
     fi
   else
-    values::set controlPlaneManager.internal.effectiveKubernetesVersion  "${config_version}"
+    values::set controlPlaneManager.internal.effectiveKubernetesVersion  "\"${config_version}\""
   fi
 
   if semver::ge "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)" "$max_used_control_plane_version"; then

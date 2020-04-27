@@ -18,8 +18,24 @@
   {{- if .Values.controlPlaneManager.apiserver.bindToWildcard }}
     {{ $_ := set $tpl_context.apiserver "bindToWildcard" true }}
   {{- end }}
-  {{- if hasKey .Values.controlPlaneManager "certSANs" }}
-    {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.certSANs }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "authn" }}
+    {{- if .Values.controlPlaneManager.apiserver.authn.oidcIssuerURL }}
+      {{ $_ := set $tpl_context.apiserver "oidcIssuerURL" .Values.controlPlaneManager.apiserver.authn.oidcIssuerURL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.apiserver.authn.oidcCA }}
+      {{ $_ := set $tpl_context.apiserver "oidcCA" .Values.controlPlaneManager.apiserver.authn.oidcCA }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "authz" }}
+    {{- if .Values.controlPlaneManager.apiserver.authz.webhookURL }}
+      {{ $_ := set $tpl_context.apiserver "webhookURL" .Values.controlPlaneManager.apiserver.authz.webhookURL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.apiserver.authz.webhookCA }}
+      {{ $_ := set $tpl_context.apiserver "webhookCA" .Values.controlPlaneManager.apiserver.authz.webhookCA }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "certSANs" }}
+    {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.apiserver.certSANs }}
   {{- end }}
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
@@ -31,7 +47,12 @@ kubeadm-config.yaml: {{ tpl ($context.Files.Get "kubeadm/config.yaml.tpl") $tpl_
   {{- range $kustomize_file, $_ := $context.Files.Glob "kubeadm/kustomize/*" }}
 kubeadm-kustomize-{{ base $kustomize_file }}: {{ tpl ($context.Files.Get $kustomize_file) $tpl_context | b64enc }}
   {{- end }}
-extra-file-aaa.txt: {{ "Hello world!" | b64enc }}
+  {{- if $tpl_context.apiserver.oidcCA }}
+extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
+  {{- end }}
+  {{- if $tpl_context.apiserver.webhookCA }}
+extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- end }}
 {{- end }}
 ---
 apiVersion: v1
