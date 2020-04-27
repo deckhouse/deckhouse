@@ -1,31 +1,40 @@
-{{- range $.Values.nodeManager.internal.nodeGroups }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: bashible-{{ .name }}
+  name: bashible
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list $ ) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
 rules:
 - apiGroups: [""]
   resourceNames:
-    {{- range $bundle := list "ubuntu-18.04" "centos-7" }}
-      {{- range $.Values.nodeManager.internal.nodeGroups }}
+  - bashible-bashbooster
+
+{{- range $bundle := list "ubuntu-18.04" "centos-7" }}
+  {{- range $kubernetes_version := list "1.14" "1.15" "1.16" }}
+  - bashible-bundle-{{ $bundle }}-{{ $kubernetes_version }}
+  {{- end }}
+{{- end }}
+
+{{- range $.Values.nodeManager.internal.nodeGroups }}
+  {{- range $bundle := list "ubuntu-18.04" "centos-7" }}
+    {{- range $.Values.nodeManager.internal.nodeGroups }}
   - bashible-{{ .name }}-{{ $bundle }}
   - bashible-bundle-{{ $bundle }}-{{ .name }}
-      {{- end }}
     {{- end }}
+  {{- end }}
+{{- end }}
+
   resources:
   - secrets
   verbs:
   - get
-{{- end }}
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: bashible-cloud-nodes
+  name: bashible-mcm-bootstrapped-nodes
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list . ) | indent 2 }}
 rules:
@@ -39,80 +48,35 @@ rules:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: bashible-all-node-groups
-  namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
-rules:
-- apiGroups: [""]
-  resourceNames:
-  - bashible-bashbooster
-{{- range $bundle := list "ubuntu-18.04" "centos-7" }}
-  {{- range $kubernetes_version := list "1.14" "1.15" "1.16" }}
-  - bashible-bundle-{{ $bundle }}-{{ $kubernetes_version }}
-  {{- end }}
-{{- end }}
-  resources:
-  - secrets
-  verbs:
-  - get
-
-{{- range $.Values.nodeManager.internal.nodeGroups }}
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: bashible-{{ .name }}
-  namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list $ ) | indent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: bashible-{{ .name }}
-subjects:
-  {{- if or (eq .nodeType "Cloud") }}
-- kind: Group
-  name: system:bootstrappers:d8-node-manager:cloud-bootstrap
-  apiGroup: rbac.authorization.k8s.io
-  {{- else }}
-- kind: Group
-  name: system:bootstrappers:d8-node-manager:node-group-{{ .name }}-bootstrap
-  apiGroup: rbac.authorization.k8s.io
-  {{- end }}
-{{- end }}
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: bashible-cloud-nodes
+  name: bashible
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list . ) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: bashible-cloud-nodes
+  name: bashible
 subjects:
 - kind: Group
-  name: system:bootstrappers:d8-node-manager:cloud-bootstrap
-  apiGroup: rbac.authorization.k8s.io
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: bashible-all-node-groups
-  namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: bashible-all-node-groups
-subjects:
-- kind: Group
-  name: system:bootstrappers:d8-node-manager:common-bootstrap
+  name: system:bootstrappers:d8-node-manager
   apiGroup: rbac.authorization.k8s.io
 - kind: Group
   name: system:nodes
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bashible-mcm-bootstrapped-nodes
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible-mcm-bootstrapped-nodes
+subjects:
+- kind: Group
+  name: system:bootstrappers:d8-node-manager
   apiGroup: rbac.authorization.k8s.io

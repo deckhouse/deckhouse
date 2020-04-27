@@ -101,7 +101,7 @@ if [ -n "${no_lock-}" ]; then
   main
 else
   (
-    flock -n 200
+    flock -n 200 || { >&2 echo "Can't acquire lockfile /var/lock/bashible."; exit 1; }
     main
   ) 200>/var/lock/bashible
 fi
