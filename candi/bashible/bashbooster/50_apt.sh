@@ -59,7 +59,7 @@ bb-apt-install() {
         then
             bb-apt-update
             bb-log-info "Installing package '$PACKAGE'"
-            apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -y "$PACKAGE"
+            apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages -y "$PACKAGE"
             bb-apt-hold $PACKAGE
             bb-exit-on-error "Failed to install package '$PACKAGE'"
             bb-event-fire "bb-package-installed" "$PACKAGE"
