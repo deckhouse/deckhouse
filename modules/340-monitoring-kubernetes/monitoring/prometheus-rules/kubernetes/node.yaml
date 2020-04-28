@@ -42,22 +42,6 @@
         Node's {{$labels.node}} time is out of sync from Prometheus node by {{ $value }} seconds
       summary: Node's {{$labels.node}} clock is drifting
 
-  - alert: NodePingPacketLoss
-    expr: >-
-      (
-        sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))
-        -
-        sum by (destination_node) (increase(kube_node_ping_packets_received_total[5m]))
-      )
-      /
-      sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))  > 0.05
-    for: 5m
-    labels:
-      severity: critical
-    annotations:
-      description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
-      summary: Ping loss more than 5%
-
   - alert: CPUStealHigh
     expr: max by (node) (irate(node_cpu_seconds_total{mode="steal"}[30m]) * 100) > 10
     for: 30m

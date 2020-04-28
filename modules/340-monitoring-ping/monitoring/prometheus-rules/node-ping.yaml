@@ -1,0 +1,18 @@
+- name: d8.monitoring_ping
+  rules:
+  - alert: NodePingPacketLoss
+    expr: >-
+      (
+        sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))
+        -
+        sum by (destination_node) (increase(kube_node_ping_packets_received_total[5m]))
+      )
+      /
+      sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))  > 0.05
+    for: 5m
+    labels:
+      severity_level: "4"
+    annotations:
+      description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
+      summary: Ping loss more than 5%
+
