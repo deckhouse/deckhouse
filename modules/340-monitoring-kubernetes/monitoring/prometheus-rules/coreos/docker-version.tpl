@@ -36,7 +36,7 @@
 - name: kubernetes.version
   rules:
   - alert: ControlPlaneAndKubeletVersionsDiffer
-    expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{gitVersion!="v{{ .Values.global.discovery.kubernetesVersion }}", job!~"kube-dns|coredns"})
+    expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{gitVersion!~"v{{ .Values.global.discovery.kubernetesVersion | trunc 4 }}.+", job!~"kube-dns|coredns"})
     for: 20m
     labels:
       impact: negligible
