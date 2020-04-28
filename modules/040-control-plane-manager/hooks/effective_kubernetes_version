@@ -44,7 +44,7 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [kube-system]
-      jqFilter: '.data.maxUsedControlPlaneKubernetesVersion | if . then . | @base64d else "" end'
+      jqFilter: '.data.maxUsedControlPlaneKubernetesVersion | if . then . | @base64d else null end'
 EOF
 }
 
@@ -58,12 +58,12 @@ function __main__() {
   max_used_control_plane_version="$(context::get snapshots.max_used_control_plane_version.0.filterResult)"
   readarray -t -d $'\n' node_versions < <(context::jq -r '.snapshots.node_versions[].filterResult')
 
-  if ! context::has snapshots.control_plane_versions ; then
+  if ! context::jq -e '.snapshots.control_plane_versions[] | select(.object.metadata.name | contains("kube-apiserver")) | .filterResult' >/dev/null; then
     >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version"
-    control_plane_versions=("$(kubectl version -o json | jq -r '.serverVersion.gitVersion[1:] | split(".")[:-1] | join(".")').0")
+    control_plane_versions=("$(kubectl version -o json | jq -re '.serverVersion.gitVersion[1:] | split(".")[:-1] | join(".")').0")
   fi
 
-  if ! context::has snapshots.max_used_control_plane_version.0 ; then
+  if ! context::jq -e '.snapshots.max_used_control_plane_version[0].filterResult' ; then
     >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version"
     max_used_control_plane_version="${control_plane_versions[0]}"
   fi
