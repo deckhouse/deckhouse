@@ -24,8 +24,11 @@ bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 ExecStart=
 ExecStart=/usr/bin/kubelet \\
 {{- if not (eq .nodeGroup.nodeType "Static") }}
-    --register-with-taints=node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
+    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
+{{- else }}
+    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule \\
 {{- end }}
+    --node-labels=node.deckhouse.io/group:{{ .nodeGroup.name }},node-role.kubernetes.io/{{ .nodeGroup.name }}:
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
     --cni-bin-dir=/opt/cni/bin/ \\
