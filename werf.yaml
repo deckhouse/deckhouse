@@ -216,12 +216,16 @@ ansible:
       - curl
       - bash
       - libcurl
+      - bash-completion
   - apk:
       name:
       - binutils
       - binutils-dev
       - elfutils-dev
       repository: http://nl.alpinelinux.org/alpine/edge/main/
+  - shell: |
+      sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
+      sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
   - command: go get github.com/onsi/ginkgo/ginkgo
   install:
   - command: go mod download

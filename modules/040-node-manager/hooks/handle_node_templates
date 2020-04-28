@@ -1,0 +1,148 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: ngs
+      queue: /modules/$(module::name::kebab_case)/handle_node_templates
+      group: main
+      watchEvent: ["Added", "Modified"]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "desired": {
+            "annotations": ((.spec.nodeTemplate // {}).annotations // {}),
+            "labels":      ((.spec.nodeTemplate // {}).labels // {}),
+            "taints":      ((.spec.nodeTemplate // {}).taints // [])
+          },
+         "nodeType": .spec.nodeType
+        }
+    - name: nodes
+      queue: /modules/$(module::name::kebab_case)/handle_node_templates
+      group: main
+      watchEvent: ["Added", "Modified"]
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        .l = ((.metadata.annotations."node-manager.deckhouse.io/last-applied-node-template" // "{}") | fromjson) |
+        {
+          "lastApplied": {
+            "annotations": (.l.annotations // {}),
+            "labels": (.l.labels // {}),
+            "taints": (.l.taints // [])
+          },
+          "actual": {
+            "annotations": (.metadata.annotations // {}),
+            "labels":      (.metadata.labels // {}),
+            "taints":      (.spec.taints // [])
+          },
+          "nodeGroup": (.metadata.labels."node.deckhouse.io/group" // "")
+        }
+EOF
+}
+
+function __main__() {
+  patches='{}'
+  for ng_index in $(context::jq -r '.snapshots.ngs | to_entries[] | .key'); do
+    ng_name="$(context::jq -r --argjson ng_index "$ng_index" '.snapshots.ngs[$ng_index].object.metadata.name')"
+    ng_data="$(context::jq -rc --argjson ng_index "$ng_index" '.snapshots.ngs.[$ng_index].filterResult')"
+
+    nodes_in_group="$(context::jq -rc --arg ng_name "$ng_name" '[.snapshots.nodes[] | select(.filterResult.nodeGroup == $ng_name)]')"
+    for node_index in $(jq -r '. | to_entries[] | .key' <<< "$nodes_in_group"); do
+      node_name="$(jq -r --argjson node_index "$node_index" '.[$node_index].object.metadata.name' <<< "$nodes_in_group")"
+      node_data="$(jq -rc --argjson node_index "$node_index" '.[$node_index].filterResult'         <<< "$nodes_in_group")"
+
+      # If all template settings are applied — delete "node.deckhouse.io/uninitialized" taint
+      if jq -ne --argjson ng_data "$ng_data" --argjson node_data "$node_data" '
+        if ($ng_data.desired.annotations | length > 0) and ($node_data.actual.annotations | length > 0) then
+          ($node_data.actual.annotations | contains($ng_data.desired.annotations) | not)
+        else true end or
+        if ($ng_data.desired.labels | length > 0) and ($node_data.actual.labels | length > 0) then
+          ($node_data.actual.labels | contains($ng_data.desired.labels) | not)
+        else true end or
+        if ($ng_data.desired.taints | length > 0) and ($node_data.actual.taints | length > 0) then
+          ($node_data.actual.taints | contains($ng_data.desired.taints) | not)
+        else true end
+      '
+      then
+        to_delete_uninitialized='{"taints": [{"key": "node.deckhouse.io/uninitialized", "effect": "NoSchedule"}]}'
+      fi
+
+      if jq -e '.nodeType != "Cloud"' <<< "$ng_data"; then
+        # .nodeType == "Static" or "Hybrid"
+        # delete items (earlier added by us) which are not more needed
+        to_delete="$(jq -nrc --argjson ng_data "$ng_data" --argjson node_data "$node_data" --argjson to_delete_uninitialized "$to_delete_uninitialized" '
+          {
+            "annotations": ([$node_data.lastApplied.annotations | to_entries[] | .key] - [$ng_data.desired.annotations | to_entries[] | .key]),
+            "labels": ([$node_data.lastApplied.labels | to_entries[] | .key] - [$ng_data.desired.labels | to_entries[] | .key]),
+            "taints": ($node_data.lastApplied.taints - $ng_data.desired.taints + ($to_delete_uninitialized.taints // []))
+          }
+        ')"
+
+        # if there is something to delete
+        if jq -e '(.annotations + .labels + .taints) | length > 0' <<< "$to_delete"; then
+          patches="$(jq -rnc --arg node_name "$node_name" --argjson to_delete "$to_delete" '.[$node_name].delete = $to_delete' <<< "$patches")"
+        fi
+
+        # if there is something to update
+        if jq -ne --argjson ng_data "$ng_data" --argjson node_data "$node_data" '
+          if ($ng_data.desired.annotations | length > 0) and ($node_data.actual.annotations | length > 0) then
+            ($node_data.actual.annotations | contains($ng_data.desired.annotations) | not)
+          else true end or
+          if ($ng_data.desired.labels | length > 0) and ($node_data.actual.labels | length > 0) then
+            ($node_data.actual.labels | contains($ng_data.desired.labels) | not)
+          else true end or
+          if ($ng_data.desired.taints | length > 0) and ($node_data.actual.taints | length > 0) then
+            ($node_data.actual.taints | contains($ng_data.desired.taints) | not)
+          else true end
+        '
+        then
+          patches="$(jq -rc --arg node_name "$node_name" --argjson ng_data "$ng_data" '.[$node_name].lastapplied_set = $ng_data.desired' <<< "$patches")"
+          ng_data="$(jq -rc --arg node_name "$node_name" '.desired.labels += {("node-role.kubernetes.io/" + $node_name): ""}' <<< "$ng_data")"
+          patches="$(jq -rc --arg node_name "$node_name" --argjson ng_data "$ng_data" '.[$node_name].set = $ng_data.desired' <<< "$patches")"
+        fi
+      fi
+    done
+  done
+
+  for node_name in $(jq -r '. | to_entries[] | .key' <<< "$patches"); do
+    fltr='.'
+    node_patches="$(jq -rc --arg node_name "$node_name" '.[$node_name]' <<< "$patches")"
+
+    if jq -e '. | has("delete")' <<< "$node_patches"; then
+      to_delete_annotations="$(jq -r '"\"\(.delete.annotations[])\""' <<< "$node_patches")"
+      for a in $to_delete_annotations; do
+        fltr="$fltr | del(.metadata.annotations.${a})"
+      done
+
+      to_delete_labels="$(jq -r '"\"\(.delete.labels[])\""' <<< "$node_patches")"
+      for l in $to_delete_labels; do
+        fltr="$fltr | del(.metadata.labels.${l})"
+      done
+
+      to_delete_taints="$(jq -rc '.delete.taints' <<< "$node_patches")"
+      fltr="$fltr"' | .spec.taints = ((.spec.taints // []) - '"$to_delete_taints"')'
+    fi
+
+    if jq -e '. | has("set")' <<< "$node_patches"; then
+      to_update_annotations="$(jq -rc '.set.annotations' <<< "$node_patches")"
+      to_update_labels="$(jq -rc '.set.labels' <<< "$node_patches")"
+      to_update_taints="$(jq -rc '.set.taints' <<< "$node_patches")"
+      fltr="$fltr"' |
+        .metadata.annotations += '"$to_update_annotations"' |
+        .metadata.labels += '"$to_update_labels"' |
+        .spec.taints = ((.spec.taints // []) - '"$to_update_taints"') + '"$to_update_taints"
+      fltr="$fltr"' | .metadata.annotations."node-manager.deckhouse.io/last-applied-node-template" = ('"$(jq -rc '.lastapplied_set' <<< $node_patches)"' | tojson)'
+    fi
+
+    fltr="$fltr | if (.spec.taints // []) == [] then del(.spec.taints) else . end"
+
+    kubernetes::patch_jq "" "node/${node_name}" "$fltr"
+  done
+}
+
+hook::run "$@"
