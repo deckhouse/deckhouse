@@ -14,8 +14,8 @@ if [ -f /etc/kubernetes/kubelet.conf ] ; then
 fi
 {{- end }}
 
-{{- if eq .nodeGroup.nodeType "Static" }}
-  {{- if not (hasKey .nodeGroup "internalNetworkCIDRs") }}
+{{- if and (eq .nodeGroup.nodeType "Static") (hasKey .nodeGroup "static") }}
+  {{- if not (hasKey .nodeGroup.static "internalNetworkCIDRs") }}
 # No .nodeGroup.static.internalNetworkCIDRs in Static node
 echo "" > /var/lib/bashible/discovered-node-ip
   {{- else }}

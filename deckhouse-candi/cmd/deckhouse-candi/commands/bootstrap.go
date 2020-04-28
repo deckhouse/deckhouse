@@ -70,8 +70,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		var nodeIP string
 		var masterInstanceClass []byte
-		err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
-			if metaConfig.ClusterType == "Cloud" {
+		if metaConfig.ClusterType == "Cloud" {
+			err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
 				basePipelineResult, err := terraform.NewPipeline(
 					"base-infrastructure",
 					metaConfig,
@@ -104,18 +104,23 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				sshClient.Session.Host = app.SshHost
 
 				logboek.LogInfoF("Master IP: %s", masterPipelineResult["masterIP"])
-			} else {
-				installConfig.DeckhouseConfig = metaConfig.MergeDeckhouseConfig()
+				return nil
+			})
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-		if err != nil {
-			return err
+		} else {
+			installConfig.DeckhouseConfig = metaConfig.MergeDeckhouseConfig()
+
+			var static struct {
+				NodeIP string `json:"nodeIP"`
+			}
+			_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
+			nodeIP = static.NodeIP
 		}
-		// Generate bashible bundle
 
 		// wait for ssh connection to master
-		err = logboek.LogProcess("🚝 Establish SSH connection 🚝", log.TaskOptions(), func() error {
+		err = logboek.LogProcess("🚝 Wait for SSH on master become ready 🚝", log.TaskOptions(), func() error {
 			err = sshClient.Check().AwaitAvailability()
 			if err != nil {
 				return fmt.Errorf("await master available: %v", err)
@@ -152,21 +157,23 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
 		err = logboek.LogProcess("🔨 Run Master Bootstrap 🔨", log.TaskOptions(), func() error {
-			err = logboek.LogProcess("Prepare Bootstrap", log.BoldOptions(), func() error {
-				return template.PrepareBootstrap(templateController, nodeIP, bundleName, metaConfig)
-			})
-			if err != nil {
+			if err = template.PrepareBootstrap(templateController, nodeIP, bundleName, metaConfig); err != nil {
 				return fmt.Errorf("prepare bootstrap: %v", err)
 			}
 			err = logboek.LogProcess("Run Bootstrap", log.BoldOptions(), func() error {
-				for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
+				bootstrapScripts := []string{"bootstrap.sh"}
+				if metaConfig.ClusterType == "Cloud" {
+					bootstrapScripts = append(bootstrapScripts, "bootstrap-networks.sh")
+				}
+
+				for _, bootstrapScript := range bootstrapScripts {
 					logboek.LogInfoF("Execute bootstrap/%s ... ", bootstrapScript)
 
 					cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).Sudo()
 
 					stdout, err := cmd.Execute()
 					if err != nil {
-						logboek.LogInfoLn("ERROR!")
+						logboek.LogWarnLn("ERROR!")
 						if len(stdout) > 0 {
 							logboek.LogInfoF("bootstrap/%s stdout: %v\n", bootstrapScript, string(stdout))
 						}
@@ -185,6 +192,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 		// defer templateController.Close()
 
 		err = logboek.LogProcess("📦 Prepare Bashible Bundle 📦", log.TaskOptions(), func() error {
@@ -215,15 +225,32 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		err = logboek.LogProcess("🛥️ Install Deckhouse 🛥️", log.TaskOptions(), func() error {
-			kubeCl := kube.NewKubernetesClient().WithSshClient(sshClient)
-			if err := kubeCl.Init(""); err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
+			var kubeCl *kube.KubernetesClient
+			err := logboek.LogProcess("Start Proxy", log.BoldOptions(), func() error {
+				kubeCl = kube.NewKubernetesClient().WithSshClient(sshClient)
+				if err := kubeCl.Init(""); err != nil {
+					return fmt.Errorf("open kubernetes connection: %v", err)
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("deckhouse install: %v", err)
 			}
 			defer kubeCl.Stop()
 
 			err = deckhouse.CreateDeckhouseManifests(kubeCl, &installConfig)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
+			}
+
+			err = deckhouse.WaitForReadiness(kubeCl, &installConfig)
+			if err != nil {
+				return fmt.Errorf("deckhouse install: %v", err)
+			}
+
+			err = deckhouse.CreateNodeGroup(kubeCl, metaConfig.MergeNodeGroupConfig())
+			if err != nil {
+				return err
 			}
 
 			return nil

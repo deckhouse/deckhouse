@@ -348,6 +348,9 @@ import:
   before: setup
 ansible:
   beforeInstall:
+  - name: "Add deckhouse-candi completion"
+    shell: |
+      echo 'eval "$(deckhouse-candi --completion-script-bash)"' >> /root/.bashrc
   - name: "Install dependencies"
     apk:
       name: [openssh-client]

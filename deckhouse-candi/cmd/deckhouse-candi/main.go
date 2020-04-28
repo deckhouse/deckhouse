@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	logboek.Init()
 	logboek.SetLevel(logboek.Info)
 
 	// kubectl compatibility
@@ -32,31 +33,37 @@ func main() {
 	// konverge
 	commands.DefineKonvergeCommand(kpApp)
 
-	helperCmd := kpApp.Command("helper", "Plumbing commands.")
-
 	// plumbing commands:
+	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
 	{
-		app.DefineCommandParseClusterConfiguration(kpApp, helperCmd)
-
-		commands.DefineRunBaseTerraformCommand(helperCmd)
-
-		commands.DefineRunMasterTerraformCommand(helperCmd)
-
-		commands.DefineRunDestroyAllTerraformCommand(helperCmd)
-
-		commands.DefineTestSshConnectionCommand(helperCmd)
-
-		commands.DefineTestKubernetesAPIConnectionCommand(helperCmd)
-
-		commands.DefineTestScpCommand(helperCmd)
-
-		commands.DefineTestUploadExecCommand(helperCmd)
-
-		commands.DefineTestBundle(helperCmd)
-
-		helperCmd.Command("generate-master-nodes-manifests", "Not implemented yet.")
-		helperCmd.Command("generate-bashible-bundle", "Not implemented yet.")
+		commands.DefineRunBaseTerraformCommand(terraformCmd)
+		commands.DefineRunMasterTerraformCommand(terraformCmd)
+		commands.DefineRunDestroyAllTerraformCommand(terraformCmd)
 	}
 
+	renderCmd := kpApp.Command("render", "Parse, validate and render bundles.")
+	{
+		app.DefineCommandParseClusterConfiguration(kpApp, renderCmd)
+		commands.DefineRenderBashibleBundle(renderCmd)
+		commands.DefineRenderKubeadmConfig(renderCmd)
+	}
+
+	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap process.")
+	{
+		commands.DefineTestSshConnectionCommand(testCmd)
+		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
+		commands.DefineWaitDeploymentReadyCommand(testCmd)
+		commands.DefineTestScpCommand(testCmd)
+		commands.DefineTestUploadExecCommand(testCmd)
+		commands.DefineTestBundle(testCmd)
+	}
+
+	deckhouseCmd := kpApp.Command("deckhouse", "Install and uninstall deckhouse.")
+	{
+		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
+		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
+	}
+
+	kpApp.Version("v0.1.0").Author("Flant")
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
 }

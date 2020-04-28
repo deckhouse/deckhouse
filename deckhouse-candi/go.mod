@@ -5,11 +5,12 @@ go 1.13
 require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/fatih/color v1.9.0
+	github.com/flant/kubedog v0.3.4
 	github.com/flant/logboek v0.3.4
 	github.com/flant/shell-operator v1.0.0-beta.9.0.20200414173230-b8966f9d8851 // branch: +feat_kube_server
 	github.com/go-openapi/spec v0.19.3
@@ -30,6 +31,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
+	k8s.io/client-go v0.17.0
 	k8s.io/helm v2.16.6+incompatible // indirect
 	sigs.k8s.io/yaml v1.1.1-0.20191128155103-745ef44e09d6
 )

@@ -10,7 +10,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -22,113 +21,95 @@ const (
 
 //nolint:funlen
 func generateDeckhouseDeployment(registry, logLevel, bundle string, isSecureRegistry bool) *appsv1.Deployment {
-	deployment := appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deckhouse",
-			Namespace: "d8-system",
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(1), //nolint:gomnd
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RecreateDeploymentStrategyType,
-			},
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "deckhouse",
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "deckhouse",
-					},
-				},
-				Spec: apiv1.PodSpec{
-					HostNetwork:        true,
-					DNSPolicy:          apiv1.DNSDefault,
-					ServiceAccountName: "deckhouse",
-					NodeSelector: map[string]string{
-						"node-role.kubernetes.io/master": "",
-					},
-					Tolerations: []apiv1.Toleration{
-						{Operator: apiv1.TolerationOpExists},
-					},
-					Containers: []apiv1.Container{
-						{
-							Name:            "deckhouse",
-							Image:           registry,
-							Command:         []string{"/deckhouse/deckhouse"},
-							ImagePullPolicy: apiv1.PullAlways,
-							Ports: []apiv1.ContainerPort{
-								{
-									ContainerPort: 9650,
-								},
-							},
-							Resources: apiv1.ResourceRequirements{
-								Requests: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    resource.MustParse("50m"),
-									apiv1.ResourceMemory: resource.MustParse("512Mi"),
-								},
-							},
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "RLOG_LOG_LEVEL",
-									Value: logLevel,
-								},
-								{
-									Name:  "DECKHOUSE_BUNDLE",
-									Value: bundle,
-								},
-								{
-									Name: "DECKHOUSE_POD",
-									ValueFrom: &apiv1.EnvVarSource{
-										FieldRef: &apiv1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
-										},
-									},
-								},
-								{
-									Name:  "HELM_HOST",
-									Value: "127.0.0.1:44434",
-								},
-								{
-									Name:  "ADDON_OPERATOR_CONFIG_MAP",
-									Value: "deckhouse",
-								},
-								{
-									Name:  "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX",
-									Value: "deckhouse_",
-								},
-								{
-									Name: "ADDON_OPERATOR_NAMESPACE",
-									ValueFrom: &apiv1.EnvVarSource{
-										FieldRef: &apiv1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
-								},
-								{
-									Name: "ADDON_OPERATOR_LISTEN_ADDRESS",
-									ValueFrom: &apiv1.EnvVarSource{
-										FieldRef: &apiv1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
-										},
-									},
-								},
-								{
-									Name:  "KUBERNETES_DEPLOYED",
-									Value: time.Unix(0, time.Now().Unix()).String(),
-								},
-							},
-							WorkingDir: "/deckhouse",
-						},
-					},
-				},
-			},
-		},
+	var deckhouseDeployment = `
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  labels:
+    heritage: deckhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deckhouse
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: deckhouse
+    spec:
+      containers:
+      - name: deckhouse
+        image: PLACEHOLDER
+        command:
+        - /deckhouse/deckhouse
+        imagePullPolicy: Always
+        env:
+        - name: LOG_LEVEL
+          value: PLACEHOLDER
+        - name: DECKHOUSE_BUNDLE
+          value: PLACEHOLDER
+        - name: DECKHOUSE_POD
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: HELM_HOST
+          value: "127.0.0.1:44434"
+        - name: ADDON_OPERATOR_CONFIG_MAP
+          value: deckhouse
+        - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
+          value: deckhouse_
+        - name: ADDON_OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ADDON_OPERATOR_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBERNETES_DEPLOYED
+          value: PLACEHOLDER
+        ports:
+        - containerPort: 9650
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 9650
+          initialDelaySeconds: 5
+          # fail after 10 minutes
+          periodSeconds: 5
+          failureThreshold: 120
+        resources:
+          requests:
+            cpu: 50m
+            memory: 512Mi
+        workingDir: /deckhouse
+      hostNetwork: true
+      dnsPolicy: Default
+      serviceAccountName: deckhouse
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+`
+
+	var deployment appsv1.Deployment
+	_ = yaml.Unmarshal([]byte(deckhouseDeployment), &deployment)
+
+	deployment.Spec.Template.Spec.Containers[0].Image = registry
+
+	for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+		switch env.Name {
+		case "LOG_LEVEL":
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = logLevel
+		case "DECKHOUSE_BUNDLE":
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = bundle
+		case "KUBERNETES_DEPLOYED":
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = time.Unix(0, time.Now().Unix()).String()
+		}
 	}
 
 	if isSecureRegistry {
@@ -153,6 +134,7 @@ func generateDeckhouseDeployment(registry, logLevel, bundle string, isSecureRegi
 			},
 		}
 	}
+
 	return &deployment
 }
 

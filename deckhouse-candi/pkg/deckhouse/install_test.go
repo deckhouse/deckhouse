@@ -38,7 +38,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With docker cfg",
 			func() error {
-				err := CreateDeckhouseManifests(fakeClient, &Config{DockerCfg: "anything"})
+				err := CreateDeckhouseManifests(fakeClient, &Config{DockerCfg: "YW55dGhpbmc="})
 				if err != nil {
 					return err
 				}
@@ -47,8 +47,8 @@ func TestDeckhouseInstall(t *testing.T) {
 					return err
 				}
 
-				dockercfg := s.StringData[".dockercfg"]
-				if dockercfg != "anything" {
+				dockercfg := s.Data[".dockercfg"]
+				if string(dockercfg) != "anything" {
 					return fmt.Errorf(".dockercfg data: %s", dockercfg)
 				}
 				return nil

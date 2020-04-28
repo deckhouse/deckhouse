@@ -65,7 +65,7 @@ func (r *Runner) Init(bootstrap bool) ([]byte, error) {
 	if err == nil {
 		logboek.LogInfoLn("OK!")
 	} else {
-		logboek.LogInfoLn("ERROR!")
+		logboek.LogWarnLn("ERROR!")
 	}
 	return output, err
 }
@@ -88,7 +88,7 @@ func (r *Runner) Apply() ([]byte, error) {
 		r.State = state
 		logboek.LogInfoLn("OK!")
 	} else {
-		logboek.LogInfoLn("ERROR!")
+		logboek.LogWarnLn("ERROR!")
 	}
 	return data, err
 }
@@ -129,7 +129,7 @@ func (r *Runner) Destroy(detectState bool) ([]byte, error) {
 	if err == nil {
 		logboek.LogInfoLn("OK!")
 	} else {
-		logboek.LogInfoLn("ERROR!")
+		logboek.LogWarnLn("ERROR!")
 	}
 	return output, err
 }

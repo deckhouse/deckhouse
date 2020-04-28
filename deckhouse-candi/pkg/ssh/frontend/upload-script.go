@@ -103,7 +103,7 @@ func bundleOutputHandler(buffer *[]string, lastStep *string) func(string) {
 			match := stepHeaderRegexp.FindStringSubmatch(l)
 
 			if *lastStep == match[1] {
-				logboek.LogInfoLn("ERROR!")
+				logboek.LogWarnLn("ERROR!")
 				logboek.LogErrorLn(strings.Join(*buffer, "\n"))
 				logboek.LogInfoF("[Retry] ")
 			} else if *lastStep != "" {

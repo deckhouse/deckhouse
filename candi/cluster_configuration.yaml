@@ -21,6 +21,8 @@ apiVersions:
         properties:
           provider:
             type: string
+          prefix:
+            type: string
       podSubnetCIDR:
         type: string
       podSubnetNodeCIDRPrefix:
@@ -30,6 +32,7 @@ apiVersions:
         type: string
       clusterDomain:
         type: string
+        default: "cluster.local"
       kubernetesVersion:
         type: string
     oneOf:

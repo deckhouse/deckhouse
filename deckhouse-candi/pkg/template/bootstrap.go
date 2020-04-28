@@ -1,6 +1,7 @@
 package template
 
 import (
+	"flant/deckhouse-candi/pkg/log"
 	"path/filepath"
 
 	"github.com/flant/logboek"
@@ -31,12 +32,13 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 		},
 	}
 
-	for _, info := range saveInfo {
-		logboek.LogInfoF("Rendering bootstrap templates from %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
-			return err
+	return logboek.LogProcess("Render bootstrap templates", log.BoldOptions(), func() error {
+		for _, info := range saveInfo {
+			logboek.LogInfoF("From %q to %q\n", info.from, info.to)
+			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+				return err
+			}
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
