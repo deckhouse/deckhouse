@@ -40,20 +40,3 @@ type DeckhouseClusterConfig struct {
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"`
 }
-
-type NodeGroup struct {
-	Kind       string        `json:"kind"`
-	APIVersion string        `json:"apiVersion"`
-	Spec       NodeGroupSpec `json:"spec"`
-}
-
-type NodeGroupSpec struct {
-	NodeType       string                 `json:"nodeType"`
-	CloudInstances map[string]interface{} `json:"cloudInstances"`
-	Bashible       interface{}            `json:"bashible"`
-}
-
-type ClassReference struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
-}

@@ -21,7 +21,7 @@ func prettyPrintJSON(jsonData []byte) string {
 }
 
 func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("run-base-terraform", "Run base terraform and save the state.")
+	cmd := parent.Command("base-infrastructure", "Run base terraform and save the state.")
 	app.DefineConfigFlags(cmd)
 
 	runFunc := func() error {
@@ -60,7 +60,7 @@ func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause
 }
 
 func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("run-master-terraform", " Run master terraform and return the result.")
+	cmd := parent.Command("master-node-bootstrap", " Run master terraform and return the result.")
 	app.DefineConfigFlags(cmd)
 
 	runFunc := func() error {
@@ -100,7 +100,7 @@ func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 }
 
 func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("run-terraform-destroy-all", " Destroy all terraform environment.")
+	cmd := parent.Command("destroy-all", " Destroy all terraform environment.")
 	app.DefineConfigFlags(cmd)
 
 	runFunc := func() error {

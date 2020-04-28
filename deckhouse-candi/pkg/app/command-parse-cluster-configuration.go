@@ -15,7 +15,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 	if parentCmd == nil {
 		parseCmd = kpApp.Command("parse-cluster-configuration", "Parse configuration for bootstrap and konverge.")
 	} else {
-		parseCmd = parentCmd.Command("parse-cluster-configuration", "Parse configuration for bootstrap and konverge.")
+		parseCmd = parentCmd.Command("cluster-configuration", "Parse configuration for bootstrap and konverge.")
 	}
 
 	var ParseInputFile string

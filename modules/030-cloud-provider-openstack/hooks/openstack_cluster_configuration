@@ -29,8 +29,8 @@ function set_values_from_provider_cluster_configuration_yaml() {
   values::unset cloudProviderOpenstack.internal.connection
   provider='{}'
   provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
-  if [[ -n $provider_cluster_configuration_yaml ]]; then
-    provider=$(echo "$provider_cluster_configuration_yaml" | yq r - --tojson | jq '.provider //= {} | .provider')
+  if [[ "$provider_cluster_configuration_yaml" != "null" ]]; then
+    provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfig.provider | . //= {}')
   fi
 
   #TODO merge configs framework

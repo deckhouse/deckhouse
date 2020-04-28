@@ -2,8 +2,8 @@ package kube
 
 import (
 	"fmt"
-	"github.com/flant/logboek"
 
+	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
 

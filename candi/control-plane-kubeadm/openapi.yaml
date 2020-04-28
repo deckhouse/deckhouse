@@ -1,0 +1,42 @@
+kind: KubeadmConfigTemplateData
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, clusterConfiguration, nodeIP]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [BashibleTemplateData]
+      nodeIP:
+        type: string
+      extraArgs:
+        type: object
+      clusterConfiguration:
+        type: object
+        properties:
+          serviceSubnetCIDR:
+            type: string
+          podSubnetCIDR:
+            type: string
+          kubernetesVersion:
+            type: string
+          podSubnetNodeCIDRPrefix:
+            type: string
+            default: "24"
+          clusterDomain:
+            type: string
+          clusterType:
+            type: string
+            enum: [Cloud, Static]
+          cloud:
+            type: object
+            properties:
+              prefix:
+                type: string
+              provider:
+                type: string

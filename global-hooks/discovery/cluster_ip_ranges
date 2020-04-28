@@ -102,7 +102,13 @@ function _pod_subnet() {
     return 0
   fi
 
-  pod_subnet="$(context::jq -er '(.snapshots.pod_subnet_by_component + .snapshots.pod_subnet_by_k8s_app)[0].filterResult')"
+  pod_subnet_candidates=$(context::jq -er '.snapshots.pod_subnet_by_component + .snapshots.pod_subnet_by_k8s_app')
+  if [[ "$pod_subnet_candidates" == "[]" ]]; then
+    >&2 echo "ERROR: can't discover pod subnet"
+    return 1
+  fi
+
+  pod_subnet="$(jq -rc '.[0].filterResult' <<< ${pod_subnet_candidates})"
   values::set global.discovery.podSubnet "$pod_subnet"
 }
 
@@ -121,7 +127,13 @@ function _service_subnet() {
     return 0
   fi
 
-  service_subnet="$(context::jq -er '(.snapshots.service_subnet_by_component + .snapshots.service_subnet_by_k8s_app)[0].filterResult')"
+  service_subnet_candidates=$(context::jq -er '.snapshots.service_subnet_by_component + .snapshots.service_subnet_by_k8s_app')
+  if [[ "$service_subnet_candidates" == "[]" ]]; then
+    >&2 echo "ERROR: can't discover service subnet"
+    return 1
+  fi
+
+  service_subnet="$(jq -rc '.[0].filterResult' <<< ${service_subnet_candidates})"
   values::set global.discovery.serviceSubnet "$service_subnet"
 }
 

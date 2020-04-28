@@ -11,10 +11,10 @@ import (
 )
 
 type MetaConfig struct {
-	ClusterType           string `json:"-"`
-	ProviderName          string `json:"-"`
-	providerNameCamelCase string `json:"-"`
-	Layout                string `json:"-"`
+	ClusterType          string `json:"-"`
+	Layout               string `json:"-"`
+	ProviderName         string `json:"-"`
+	OriginalProviderName string `json:"-"`
 
 	DeckhouseConfig DeckhouseClusterConfig `json:"-"`
 
@@ -37,7 +37,7 @@ func (m *MetaConfig) Prepare() {
 		m.Layout = strcase.ToKebab(m.Layout)
 
 		m.ProviderName = strings.ToLower(cloud.Provider)
-		m.providerNameCamelCase = cloud.Provider
+		m.OriginalProviderName = cloud.Provider
 	}
 
 	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
@@ -56,7 +56,7 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 	baseDeckhouseConfig := map[string]interface{}{"deckhouse": deckhouseModuleConfig}
 
 	if len(configs) == 0 {
-		return baseDeckhouseConfig
+		return mergemap.Merge(baseDeckhouseConfig, m.DeckhouseConfig.ConfigOverrides)
 	}
 
 	var firstConfig map[string]interface{}
@@ -75,26 +75,45 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 	return firstConfig
 }
 
-func (m *MetaConfig) MergeNodeGroupConfig(instanceClass []byte) ([]byte, error) {
-	var doc map[string]json.RawMessage
+func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string]interface{} {
+	// We can't create NodeGroup with nodeType Cloud for now because the adoption mechanism is not ready yet
 
-	err := json.Unmarshal(instanceClass, &doc)
-	if err != nil {
-		return nil, err
+	/*
+		var doc map[string]json.RawMessage
+
+		err := json.Unmarshal(instanceClass, &doc)
+		if err != nil {
+			return nil, err
+		}
+
+		var metadata struct{ Name string }
+		err = json.Unmarshal(doc["metadata"], &metadata)
+		if err != nil {
+			return nil, err
+		}
+	*/
+
+	return map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]interface{}{
+			"name": "master",
+		},
+		"spec": map[string]interface{}{
+			"nodeType": "Hybrid",
+			/*
+				"cloudInstances": map[string]interface{}{
+					"classReference": map[string]interface{}{
+						"kind": string(doc["kind"]),
+						"name": metadata.Name,
+					},
+				},
+			*/
+		},
 	}
-
-	var metadata struct{ Name string }
-	err = json.Unmarshal(doc["metadata"], &metadata)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeGroup := NodeGroup{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1beta1", Spec: NodeGroupSpec{NodeType: "Cloud"}}
-	nodeGroup.Spec.CloudInstances["classReference"] = ClassReference{Kind: string(doc["kind"]), Name: metadata.Name}
-
-	return json.Marshal(nodeGroup)
 }
 
+// TODO: remove _
 func (m *MetaConfig) MarshalConfig(_ bool) ([]byte, error) {
 	return json.Marshal(m)
 }
@@ -116,11 +135,14 @@ func (m *MetaConfig) MarshalConfigForKubeadmTemplates(nodeIP string) map[string]
 		data[key] = t
 	}
 
-	return map[string]interface{}{
-		"nodeIP":               nodeIP,
+	result := map[string]interface{}{
 		"extraArgs":            make(map[string]interface{}),
 		"clusterConfiguration": data,
 	}
+	if nodeIP != "" {
+		result["nodeIP"] = nodeIP
+	}
+	return result
 }
 
 func (m *MetaConfig) prepareNodeGroup() map[string]interface{} {
@@ -132,12 +154,12 @@ func (m *MetaConfig) prepareNodeGroup() map[string]interface{} {
 
 	preparedNodeGroup := map[string]interface{}{
 		"name":          "master",
-		"nodeType":      "Cloud",
+		"nodeType":      m.ClusterType,
 		"instanceClass": instanceClassData,
 		"cloudInstances": map[string]interface{}{
 			"classReference": map[string]string{
 				"name": "master",
-				"kind": m.providerNameCamelCase + "InstanceClass",
+				"kind": m.OriginalProviderName + "InstanceClass",
 			},
 		},
 	}
@@ -174,16 +196,20 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 		counter++
 	}
 
+	clusterBootstrap := map[string]interface{}{
+		"clusterDomain":     data["clusterDomain"],
+		"clusterDNSAddress": clusterDNS,
+	}
+	if nodeIP != "" {
+		clusterBootstrap["nodeIP"] = nodeIP
+	}
+
 	return map[string]interface{}{
 		"runType":           "ClusterBootstrap",
 		"bundle":            bundle,
 		"kubernetesVersion": data["kubernetesVersion"],
 		"nodeGroup":         m.prepareNodeGroup(),
-		"clusterBootstrap": map[string]interface{}{
-			"clusterDomain":     data["clusterDomain"],
-			"nodeIP":            nodeIP,
-			"clusterDNSAddress": clusterDNS,
-		},
+		"clusterBootstrap":  clusterBootstrap,
 	}
 }
 
