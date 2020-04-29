@@ -4,7 +4,8 @@ ENV USER=root
 RUN apk add --no-cache make git patch curl && \
     git clone -b "v0.12.2" --single-branch https://github.com/prometheus/statsd_exporter.git
 WORKDIR /go/src/github.com/prometheus/statsd_exporter
-RUN make common-build
+COPY histogram-buckets.patch /
+RUN patch -p1 < /histogram-buckets.patch && make common-build
 
 FROM k8s.gcr.io/debian-base:v2.0.0
 COPY --from=0 /go/src/github.com/prometheus/statsd_exporter/statsd_exporter /bin/
