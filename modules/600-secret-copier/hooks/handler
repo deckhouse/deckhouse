@@ -38,7 +38,8 @@ EOF
 }
 
 function __main__() {
-  secrets_desired="$(context::jq -r '
+  secrets_desired_file=$(mktemp)
+  context::jq -r '
     (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
     .snapshots.namespaces as $namespaces |
     [
@@ -46,19 +47,18 @@ function __main__() {
       map(.object.metadata.namespace = ($namespaces[] | select(.object.metadata.name != "default")| .object.metadata.name ))[] |
       .nsAndName = (.object.metadata.namespace + "/" + .object.metadata.name) |
       .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
-    ]'
-  )"
+    ]' > $secrets_desired_file
 
-  secrets_are="$(context::jq -r '
+  secrets_are_file=$(mktemp)
+  context::jq -r '
     (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
     [
       $secrets[] | select(.object.metadata.namespace != "default") |
       .nsAndName = (.object.metadata.namespace + "/" + .object.metadata.name) |
       .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
-    ]'
-  )"
+    ]' > $secrets_are_file
 
-  secrets_to_delete="$(context::jq --argjson secrets_desired "$secrets_desired" --argjson secrets_are "$secrets_are" -r '
+  secrets_to_delete="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -r '
     [
       $secrets_are[] |
       . as $secret_is |
@@ -66,7 +66,7 @@ function __main__() {
     ]'
   )"
 
-  secrets_to_create="$(context::jq --argjson secrets_desired "$secrets_desired" --argjson secrets_are "$secrets_are" -r '
+  secrets_to_create="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -r '
     [
       $secrets_desired[] |
       . as $secret_desired |
@@ -74,7 +74,7 @@ function __main__() {
     ]'
   )"
 
-  secrets_to_replace="$(context::jq --argjson secrets_desired "$secrets_desired" --argjson secrets_are "$secrets_are" -r '
+  secrets_to_replace="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -r '
     [
       $secrets_desired[] |
       . as $secret_desired |
@@ -98,6 +98,8 @@ function __main__() {
     object="$(jq --argjson i $i -cr '.[$i].object' <<< "$secrets_to_replace")"
     kubernetes::replace_or_create_json <<< "$object"
   done
+
+  rm -f $secrets_desired_file $secrets_are_file
 }
 
 hook::run $@
