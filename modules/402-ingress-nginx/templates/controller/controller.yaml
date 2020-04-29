@@ -143,20 +143,14 @@ spec:
           name: secret-nginx-auth-tls-key
           subPath: client.key
           readOnly: true
-        - mountPath: /etc/sockets
-          name: unix-sockets
       - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/statsd-exporter:{{ $context.Values.global.modulesImages.tags.ingressNginx.statsdExporter }}
         name: statsd-exporter
         args:
-        - "--statsd.listen-tcp="
+        - "--statsd.listen-tcp=127.0.0.1:4333"
         - "--statsd.listen-udp="
-        - "--statsd.listen-unixgram=/etc/sockets/statsd.sock"
-        - "--statsd.unixsocket-mode=777"
+        - "--statsd.listen-unixgram="
         - "--statsd.mapping-config=/etc/statsd_mapping.conf"
         - "--web.listen-address=127.0.0.1:9102"
-        volumeMounts:
-        - mountPath: /etc/sockets
-          name: unix-sockets
       - name: kube-rbac-proxy
         image: {{ $context.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -209,10 +203,6 @@ spec:
         emptyDir: {}
       - name: uwsgi-temp-path
         emptyDir: {}
-      # https://github.com/kubernetes/kubernetes/issues/53423
-      - name: unix-sockets
-        emptyDir:
-          medium: "Memory"
       - name: secret-nginx-auth-tls-crt
         secret:
           secretName: {{ $crd.name }}-ingress-nginx-auth-tls

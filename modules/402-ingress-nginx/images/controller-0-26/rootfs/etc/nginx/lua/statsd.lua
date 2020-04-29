@@ -1,4 +1,4 @@
-local socket = ngx.socket.udp
+local socket = ngx.socket.tcp
 local parse_http_time = ngx.parse_http_time
 local timer_at = ngx.timer.at
 local timer_every = ngx.timer.every
@@ -27,13 +27,26 @@ GeoHash.precision(2)
 local geohash_encode = GeoHash.encode
 
 local buffer = new_tab(200000, 0)
+local buffer_size = 0
 
--- _add() adds value to metric
+local max_buffer_size = 2012324 -- # ~2mb
+local max_value_size = 4 -- # expected that single nginx worker can't receive more than 10k request/sec
+local buffer_count_additional_chars = 4 -- 4 is ":" and "|c" and "\n" bytes count
+
+
+-- _add() adds value to the metric
 local function _add(metric, value)
-  buffer[metric] = (buffer[metric] or 0) + value
+  local data = buffer[metric]
+  if data then
+    buffer[metric] = data + value
+    return
+  end
+
+  buffer[metric] = value
+  buffer_size = buffer_size + metric:len() + max_value_size + buffer_count_additional_chars
 end
 
--- _increment() adds one to metric
+-- _increment() adds one to the metric
 local function _increment(metric)
   _add(metric, 1)
 end
@@ -44,79 +57,79 @@ end
 local function _time_observe(metric, value)
   _add("s" .. metric, value)
   _increment("c" .. metric)
-  _increment(metric .. "#" .. "+Inf")
 
-  if value <= 0.001 then _increment(metric .. "#0.001") end
-  if value <= 0.002 then _increment(metric .. "#0.002") end
-  if value <= 0.003 then _increment(metric .. "#0.003") end
-  if value <= 0.004 then _increment(metric .. "#0.004") end
-  if value <= 0.005 then _increment(metric .. "#0.005") end
-  if value <= 0.01 then _increment(metric .. "#0.01") end
-  if value <= 0.015 then _increment(metric .. "#0.015") end
-  if value <= 0.02 then _increment(metric .. "#0.02") end
-  if value <= 0.025 then _increment(metric .. "#0.025") end
-  if value <= 0.03 then _increment(metric .. "#0.03") end
-  if value <= 0.035 then _increment(metric .. "#0.035") end
-  if value <= 0.04 then _increment(metric .. "#0.04") end
-  if value <= 0.045 then _increment(metric .. "#0.045") end
-  if value <= 0.05 then _increment(metric .. "#0.05") end
-  if value <= 0.06 then _increment(metric .. "#0.06") end
-  if value <= 0.07 then _increment(metric .. "#0.07") end
-  if value <= 0.08 then _increment(metric .. "#0.08") end
-  if value <= 0.09 then _increment(metric .. "#0.09") end
-  if value <= 0.1 then _increment(metric .. "#0.1") end
-  if value <= 0.15 then _increment(metric .. "#0.15") end
-  if value <= 0.2 then _increment(metric .. "#0.2") end
-  if value <= 0.25 then _increment(metric .. "#0.25") end
-  if value <= 0.3 then _increment(metric .. "#0.3") end
-  if value <= 0.35 then _increment(metric .. "#0.35") end
-  if value <= 0.4 then _increment(metric .. "#0.4") end
-  if value <= 0.45 then _increment(metric .. "#0.45") end
-  if value <= 0.5 then _increment(metric .. "#0.5") end
-  if value <= 0.6 then _increment(metric .. "#0.6") end
-  if value <= 0.7 then _increment(metric .. "#0.7") end
-  if value <= 0.8 then _increment(metric .. "#0.8") end
-  if value <= 0.9 then _increment(metric .. "#0.9") end
-  if value <= 1 then _increment(metric .. "#1") end
-  if value <= 1.5 then _increment(metric .. "#1.5") end
-  if value <= 2 then _increment(metric .. "#2") end
-  if value <= 2.5 then _increment(metric .. "#2.5") end
-  if value <= 3 then _increment(metric .. "#3") end
-  if value <= 3.5 then _increment(metric .. "#3.5") end
-  if value <= 4 then _increment(metric .. "#4") end
-  if value <= 4.5 then _increment(metric .. "#4.5") end
-  if value <= 5 then _increment(metric .. "#5") end
-  if value <= 6 then _increment(metric .. "#6") end
-  if value <= 7 then _increment(metric .. "#7") end
-  if value <= 8 then _increment(metric .. "#8") end
-  if value <= 9 then _increment(metric .. "#9") end
-  if value <= 10 then _increment(metric .. "#10") end
-  if value <= 15 then _increment(metric .. "#15") end
-  if value <= 20 then _increment(metric .. "#20") end
-  if value <= 25 then _increment(metric .. "#25") end
-  if value <= 30 then _increment(metric .. "#30") end
-  if value <= 35 then _increment(metric .. "#35") end
-  if value <= 40 then _increment(metric .. "#40") end
-  if value <= 45 then _increment(metric .. "#45") end
-  if value <= 50 then _increment(metric .. "#50") end
-  if value <= 55 then _increment(metric .. "#55") end
-  if value <= 60 then _increment(metric .. "#60") end
-  if value <= 90 then _increment(metric .. "#90") end
-  if value <= 120 then _increment(metric .. "#120") end
-  if value <= 180 then _increment(metric .. "#180") end
-  if value <= 240 then _increment(metric .. "#240") end
-  if value <= 270 then _increment(metric .. "#270") end
-  if value <= 300 then _increment(metric .. "#300") end
-  if value <= 360 then _increment(metric .. "#360") end
-  if value <= 420 then _increment(metric .. "#420") end
-  if value <= 480 then _increment(metric .. "#480") end
-  if value <= 540 then _increment(metric .. "#540") end
-  if value <= 600 then _increment(metric .. "#600") end
-  if value <= 900 then _increment(metric .. "#900") end
-  if value <= 1200 then _increment(metric .. "#1200") end
-  if value <= 1500 then _increment(metric .. "#1500") end
-  if value <= 1800 then _increment(metric .. "#1800") end
-  if value <= 3600 then _increment(metric .. "#3600") end
+  if value <= 0.001 then _increment(metric .. "#0.001") return end
+  if value <= 0.002 then _increment(metric .. "#0.002") return end
+  if value <= 0.003 then _increment(metric .. "#0.003") return end
+  if value <= 0.004 then _increment(metric .. "#0.004") return end
+  if value <= 0.005 then _increment(metric .. "#0.005") return end
+  if value <= 0.01 then _increment(metric .. "#0.01") return end
+  if value <= 0.015 then _increment(metric .. "#0.015") return end
+  if value <= 0.02 then _increment(metric .. "#0.02") return end
+  if value <= 0.025 then _increment(metric .. "#0.025") return end
+  if value <= 0.03 then _increment(metric .. "#0.03") return end
+  if value <= 0.035 then _increment(metric .. "#0.035") return end
+  if value <= 0.04 then _increment(metric .. "#0.04") return end
+  if value <= 0.045 then _increment(metric .. "#0.045") return end
+  if value <= 0.05 then _increment(metric .. "#0.05") return end
+  if value <= 0.06 then _increment(metric .. "#0.06") return end
+  if value <= 0.07 then _increment(metric .. "#0.07") return end
+  if value <= 0.08 then _increment(metric .. "#0.08") return end
+  if value <= 0.09 then _increment(metric .. "#0.09") return end
+  if value <= 0.1 then _increment(metric .. "#0.1") return end
+  if value <= 0.15 then _increment(metric .. "#0.15") return end
+  if value <= 0.2 then _increment(metric .. "#0.2") return end
+  if value <= 0.25 then _increment(metric .. "#0.25") return end
+  if value <= 0.3 then _increment(metric .. "#0.3") return end
+  if value <= 0.35 then _increment(metric .. "#0.35") return end
+  if value <= 0.4 then _increment(metric .. "#0.4") return end
+  if value <= 0.45 then _increment(metric .. "#0.45") return end
+  if value <= 0.5 then _increment(metric .. "#0.5") return end
+  if value <= 0.6 then _increment(metric .. "#0.6") return end
+  if value <= 0.7 then _increment(metric .. "#0.7") return end
+  if value <= 0.8 then _increment(metric .. "#0.8") return end
+  if value <= 0.9 then _increment(metric .. "#0.9") return end
+  if value <= 1 then _increment(metric .. "#1") return end
+  if value <= 1.5 then _increment(metric .. "#1.5") return end
+  if value <= 2 then _increment(metric .. "#2") return end
+  if value <= 2.5 then _increment(metric .. "#2.5") return end
+  if value <= 3 then _increment(metric .. "#3") return end
+  if value <= 3.5 then _increment(metric .. "#3.5") return end
+  if value <= 4 then _increment(metric .. "#4") return end
+  if value <= 4.5 then _increment(metric .. "#4.5") return end
+  if value <= 5 then _increment(metric .. "#5") return end
+  if value <= 6 then _increment(metric .. "#6") return end
+  if value <= 7 then _increment(metric .. "#7") return end
+  if value <= 8 then _increment(metric .. "#8") return end
+  if value <= 9 then _increment(metric .. "#9") return end
+  if value <= 10 then _increment(metric .. "#10") return end
+  if value <= 15 then _increment(metric .. "#15") return end
+  if value <= 20 then _increment(metric .. "#20") return end
+  if value <= 25 then _increment(metric .. "#25") return end
+  if value <= 30 then _increment(metric .. "#30") return end
+  if value <= 35 then _increment(metric .. "#35") return end
+  if value <= 40 then _increment(metric .. "#40") return end
+  if value <= 45 then _increment(metric .. "#45") return end
+  if value <= 50 then _increment(metric .. "#50") return end
+  if value <= 55 then _increment(metric .. "#55") return end
+  if value <= 60 then _increment(metric .. "#60") return end
+  if value <= 90 then _increment(metric .. "#90") return end
+  if value <= 120 then _increment(metric .. "#120") return end
+  if value <= 180 then _increment(metric .. "#180") return end
+  if value <= 240 then _increment(metric .. "#240") return end
+  if value <= 270 then _increment(metric .. "#270") return end
+  if value <= 300 then _increment(metric .. "#300") return end
+  if value <= 360 then _increment(metric .. "#360") return end
+  if value <= 420 then _increment(metric .. "#420") return end
+  if value <= 480 then _increment(metric .. "#480") return end
+  if value <= 540 then _increment(metric .. "#540") return end
+  if value <= 600 then _increment(metric .. "#600") return end
+  if value <= 900 then _increment(metric .. "#900") return end
+  if value <= 1200 then _increment(metric .. "#1200") return end
+  if value <= 1500 then _increment(metric .. "#1500") return end
+  if value <= 1800 then _increment(metric .. "#1800") return end
+  if value <= 3600 then _increment(metric .. "#3600") return end
+  _increment(metric .. "#" .. "+Inf")
 end
 
 -- _bytes_observe() prepares histogram metrics for bytes buckets
@@ -125,63 +138,63 @@ local function _bytes_observe(metric, value)
 
   _add("s" .. metric, value)
   _increment("c" .. metric)
-  _increment(metric .. "#" .. "+Inf")
 
-  if value <= 64 then _increment(metric .. "#64") end
-  if value <= 128 then _increment(metric .. "#128") end
-  if value <= 256 then _increment(metric .. "#256") end
-  if value <= 512 then _increment(metric .. "#512") end
-  if value <= 1024 then _increment(metric .. "#1024") end
-  if value <= 2048 then _increment(metric .. "#2048") end
-  if value <= 4096 then _increment(metric .. "#4096") end
-  if value <= 8192 then _increment(metric .. "#8192") end
-  if value <= 16384 then _increment(metric .. "#16384") end
-  if value <= 32768 then _increment(metric .. "#32768") end
-  if value <= 65536 then _increment(metric .. "#65536") end
-  if value <= 131072 then _increment(metric .. "#131072") end
-  if value <= 262144 then _increment(metric .. "#262144") end
-  if value <= 524288 then _increment(metric .. "#524288") end
-  if value <= 1048576 then _increment(metric .. "#1048576") end
-  if value <= 2097152 then _increment(metric .. "#2097152") end
-  if value <= 4194304 then _increment(metric .. "#4194304") end
-  if value <= 8388608 then _increment(metric .. "#8388608") end
-  if value <= 16777216 then _increment(metric .. "#16777216") end
-  if value <= 33554432 then _increment(metric .. "#33554432") end
-  if value <= 67108864 then _increment(metric .. "#67108864") end
-  if value <= 134217728 then _increment(metric .. "#134217728") end
-  if value <= 268435456 then _increment(metric .. "#268435456") end
-  if value <= 536870912 then _increment(metric .. "#536870912") end
-  if value <= 1073741824 then _increment(metric .. "#1073741824") end
-  if value <= 2147483648 then _increment(metric .. "#2147483648") end
-  if value <= 4294967296 then _increment(metric .. "#4294967296") end
+  if value <= 64 then _increment(metric .. "#64") return end
+  if value <= 128 then _increment(metric .. "#128") return end
+  if value <= 256 then _increment(metric .. "#256") return end
+  if value <= 512 then _increment(metric .. "#512") return end
+  if value <= 1024 then _increment(metric .. "#1024") return end
+  if value <= 2048 then _increment(metric .. "#2048") return end
+  if value <= 4096 then _increment(metric .. "#4096") return end
+  if value <= 8192 then _increment(metric .. "#8192") return end
+  if value <= 16384 then _increment(metric .. "#16384") return end
+  if value <= 32768 then _increment(metric .. "#32768") return end
+  if value <= 65536 then _increment(metric .. "#65536") return end
+  if value <= 131072 then _increment(metric .. "#131072") return end
+  if value <= 262144 then _increment(metric .. "#262144") return end
+  if value <= 524288 then _increment(metric .. "#524288") return end
+  if value <= 1048576 then _increment(metric .. "#1048576") return end
+  if value <= 2097152 then _increment(metric .. "#2097152") return end
+  if value <= 4194304 then _increment(metric .. "#4194304") return end
+  if value <= 8388608 then _increment(metric .. "#8388608") return end
+  if value <= 16777216 then _increment(metric .. "#16777216") return end
+  if value <= 33554432 then _increment(metric .. "#33554432") return end
+  if value <= 67108864 then _increment(metric .. "#67108864") return end
+  if value <= 134217728 then _increment(metric .. "#134217728") return end
+  if value <= 268435456 then _increment(metric .. "#268435456") return end
+  if value <= 536870912 then _increment(metric .. "#536870912") return end
+  if value <= 1073741824 then _increment(metric .. "#1073741824") return end
+  if value <= 2147483648 then _increment(metric .. "#2147483648") return end
+  if value <= 4294967296 then _increment(metric .. "#4294967296") return end
+  _increment(metric .. "#" .. "+Inf")
 end
 
 -- _lowres_observe() prepares histogram metrics for lowres time buckets
 local function _lowres_observe(metric, value)
   _add("s" .. metric, value)
   _increment("c" .. metric)
-  _increment(metric .. "#" .. "+Inf")
 
-  if value <= 0.005 then _increment(metric .. "#0.005") end
-  if value <= 0.01 then _increment(metric .. "#0.01") end
-  if value <= 0.02 then _increment(metric .. "#0.02") end
-  if value <= 0.03 then _increment(metric .. "#0.03") end
-  if value <= 0.04 then _increment(metric .. "#0.04") end
-  if value <= 0.05 then _increment(metric .. "#0.05") end
-  if value <= 0.075 then _increment(metric .. "#0.075") end
-  if value <= 0.1 then _increment(metric .. "#0.1") end
-  if value <= 0.2 then _increment(metric .. "#0.2") end
-  if value <= 0.3 then _increment(metric .. "#0.3") end
-  if value <= 0.4 then _increment(metric .. "#0.4") end
-  if value <= 0.5 then _increment(metric .. "#0.5") end
-  if value <= 0.75 then _increment(metric .. "#0.75") end
-  if value <= 1 then _increment(metric .. "#1") end
-  if value <= 1.5 then _increment(metric .. "#1.5") end
-  if value <= 2 then _increment(metric .. "#2") end
-  if value <= 3 then _increment(metric .. "#3") end
-  if value <= 4 then _increment(metric .. "#4") end
-  if value <= 5 then _increment(metric .. "#5") end
-  if value <= 10 then _increment(metric .. "#10") end
+  if value <= 0.005 then _increment(metric .. "#0.005") return end
+  if value <= 0.01 then _increment(metric .. "#0.01") return end
+  if value <= 0.02 then _increment(metric .. "#0.02") return end
+  if value <= 0.03 then _increment(metric .. "#0.03") return end
+  if value <= 0.04 then _increment(metric .. "#0.04") return end
+  if value <= 0.05 then _increment(metric .. "#0.05") return end
+  if value <= 0.075 then _increment(metric .. "#0.075") return end
+  if value <= 0.1 then _increment(metric .. "#0.1") return end
+  if value <= 0.2 then _increment(metric .. "#0.2") return end
+  if value <= 0.3 then _increment(metric .. "#0.3") return end
+  if value <= 0.4 then _increment(metric .. "#0.4") return end
+  if value <= 0.5 then _increment(metric .. "#0.5") return end
+  if value <= 0.75 then _increment(metric .. "#0.75") return end
+  if value <= 1 then _increment(metric .. "#1") return end
+  if value <= 1.5 then _increment(metric .. "#1.5") return end
+  if value <= 2 then _increment(metric .. "#2") return end
+  if value <= 3 then _increment(metric .. "#3") return end
+  if value <= 4 then _increment(metric .. "#4") return end
+  if value <= 5 then _increment(metric .. "#5") return end
+  if value <= 10 then _increment(metric .. "#10") return end
+  _increment(metric .. "#" .. "+Inf")
 end
 
 -- fill_statsd_buffer() prepares statsd data metrics
@@ -367,22 +380,18 @@ local function send(premature)
     return
   end
 
-  local current_buffer = clone_tab(buffer)
-  clear_tab(buffer)
-
-  local buffer_size = nkeys(current_buffer)
   if buffer_size == 0 then
     return
   end
 
-  local sock = socket()
-  local ok, err = sock:setpeername("unix:/etc/sockets/statsd.sock")
-  if not ok then
-    log(ERROR, format("failed to connect to the datagram unix domain socket: %s", tostring(err)))
-    return
-  end
+  -- DEBUG LOG
+  -- log(WARNING, format("--------- Buffer size: %s bytes ---------\n", tostring(buffer_size)))
 
-  local lines_to_send = new_tab(buffer_size + 2, 0)
+  local current_buffer = clone_tab(buffer)
+  clear_tab(buffer)
+  buffer_size = 0
+
+  local lines_to_send = new_tab(nkeys(current_buffer) + 2, 0)
   for k, v in pairs(current_buffer) do
     insert_tab(lines_to_send, k .. ":" .. v .. "|c\n")
   end
@@ -394,9 +403,17 @@ local function send(premature)
   -- DEBUG LOG
   -- log(WARNING, format("Data: \n%s\n", concat_tab(lines_to_send)))
 
+  local sock = socket()
+  local ok, err = sock:connect("127.0.0.1", "4333")
+  if not ok then
+    log(ERROR, format("failed to connect to the tcp socket: %s", tostring(err)))
+    return
+  end
+  sock:settimeout(60000) -- 1 min timeout
+
   ok, err = sock:send(lines_to_send)
   if not ok then
-    log(ERROR, format("error while sending statsd data via unixgram socket: %s", tostring(err)))
+    log(ERROR, format("error while sending statsd data via tcp socket: %s", tostring(err)))
   end
   sock:close()
 end
@@ -413,8 +430,7 @@ end
 
 -- call() used at log_by_lua stage to save request data to the buffer
 function _M.call()
-  local buffer_size = nkeys(buffer)
-  if buffer_size >= 199900 then
+  if buffer_size >= max_buffer_size then
     log(WARNING, "statsd buffer is full!")
     _increment("m#")
 
