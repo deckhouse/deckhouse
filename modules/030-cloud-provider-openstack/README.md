@@ -66,6 +66,13 @@
     * `securityGroups` — Список securityGroups, которые нужно прикрепить к заказанным instances. Используется для задания firewall правил по отношению к заказываемым instances.
         * Опциональный параметр.
         * Формат — массив строк.
+* `loadBalancer` - параметры Load Balancer
+    * `subnetID` - ID Neutron subnet, в котором создать load balancer virtual IP.
+        * Формат — строка.
+        * Опциональный параметр.
+    * `floatingNetworkID` - ID external network, который будет использоваться для заказа floating ip
+        * Формат — строка.
+        * Опциональный параметр.
 
 #### Пример конфигурации
 
@@ -93,11 +100,11 @@ cloudProviderOpenstack: |
 
 ### Заказ нод в кластере
 
-Управляйте количеством и процессом заказа машин в облаке с помощью модуля [cloud-instance-manager](modules/040-cloud-instance-manager).
+Управляйте количеством и процессом заказа машин в облаке с помощью модуля [node-manager](modules/040-node-manager).
 
 #### OpenStackInstanceClass custom resource
 
-Ресурс описывает параметры группы OpenStack servers, которые будет использовать machine-controller-manager из модуля [cloud-instance-manager](modules/040-cloud-instance-manager). На этот ресурс ссылается ресурс `CloudInstanceClass` из вышеупомянутого модуля.
+Ресурс описывает параметры группы OpenStack servers, которые будет использовать machine-controller-manager из модуля [node-manager](modules/040-node-manager). На этот ресурс ссылается ресурс `CloudInstanceClass` из вышеупомянутого модуля.
 
 Все опции идут в `.spec`.
 
@@ -117,6 +124,14 @@ cloudProviderOpenstack: |
     - enp6t4snovl2ko4p15em
     - enp34dkcinm1nr5999lu
     ```
+* `securityGroups` — Список securityGroups, которые необходимо прикрепить к instances OpenStackInstanceClass в дополнение к указанным в конфигурации cloud провайдера. Используется для задания firewall правил по отношению к заказываемым instances.
+    * Опциональный параметр.
+    * Формат — массив строк.
+    * Пример:
+    ```yaml
+    - sec_group_1
+    - sec_group_2
+    ```
 
 ##### Пример OpenStackInstanceClass
 
@@ -128,6 +143,7 @@ metadata:
 spec:
   flavorName: m1.large
   imageName: ubuntu-18-04-cloud-amd64
+  mainNetwork: kube
 ```
 
 #### LoadBalancer

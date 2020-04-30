@@ -10,7 +10,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
+var _ = Describe("Modules :: cloud-provider-openstack :: hooks :: openstack_cluster_configuration ::", func() {
 	const (
 		initValuesStringA = `
 global:
@@ -41,6 +41,8 @@ cloudProviderOpenstack:
     - security_group_1
     - security_group_2
   internalSubnet: "10.0.201.0/16"
+  loadBalancer:
+    subnetID: overrideSubnetID
 `
 	)
 
@@ -61,7 +63,11 @@ cloudProviderOpenstack:
     "internal"
   ],
   "podNetworkMode": "DirectRoutingWithPortSecurityEnabled",
-  "zones": ["zone1", "zone2"]
+  "zones": ["zone1", "zone2"],
+  "loadBalancer": {
+    "subnetID": "subnetID",
+    "floatingNetworkID": "floatingNetworkID"
+  }
 }
 `
 		stateAClusterConfiguration = `
@@ -104,13 +110,13 @@ data: {}
 
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
 
-	Context("Cluster without cloudProviderOpenstack config", func() {
+	Context("Cluster has empty cloudProviderOpenstack and discovery data", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateA))
 			f.RunHook()
 		})
 
-		It("Should correctly fill the Values store from it", func() {
+		It("Should fill values from discovery data", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			connection := "cloudProviderOpenstack.internal.connection."
 			Expect(f.ValuesGet(connection + "authURL").String()).To(Equal("https://cloud.flant.com/v3/"))
@@ -133,6 +139,10 @@ data: {}
 			Expect(f.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
 [default, security_group_1, ssh-and-ping]
 `))
+			Expect(f.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
+subnetID: "subnetID"
+floatingNetworkID: "floatingNetworkID"
+`))
 		})
 	})
 
@@ -143,7 +153,7 @@ data: {}
 			b.RunHook()
 		})
 
-		It("Should correctly fill the Values store from cloudProviderOpenstack", func() {
+		It("Should fill values from cloudProviderOpenstack", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderOpenstack.internal").String()).To(MatchYAML(`
 connection:
@@ -162,6 +172,8 @@ instances:
   - security_group_1
   - security_group_2
 zones: []
+loadBalancer:
+  subnetID: overrideSubnetID
 `))
 		})
 	})
@@ -171,7 +183,7 @@ zones: []
 			b.BindingContexts.Set(b.KubeStateSet(""))
 			b.RunHook()
 		})
-		It("Should correctly fill the Values store from cloudProviderOpenstack", func() {
+		It("Should fill values from cloudProviderOpenstack", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			connection := "cloudProviderOpenstack.internal.connection."
 			Expect(b.ValuesGet(connection + "authURL").String()).To(Equal("https://test.tests.com:5000/v3/"))
@@ -192,15 +204,18 @@ zones: []
 			Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
 [security_group_1, security_group_2]
 `))
+			Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
+subnetID: overrideSubnetID
+`))
 		})
 
-		Context("Cluster has cloudProviderOpenstack", func() {
+		Context("Cluster has cloudProviderOpenstack and discovery data", func() {
 			BeforeEach(func() {
 				b.BindingContexts.Set(b.KubeStateSet(stateA))
 				b.RunHook()
 			})
 
-			It("Should correctly fill the Values store from it", func() {
+			It("Should merge values from cloudProviderOpenstack and discovery data", func() {
 				Expect(b).To(ExecuteSuccessfully())
 				connection := "cloudProviderOpenstack.internal.connection."
 				Expect(b.ValuesGet(connection + "authURL").String()).To(Equal("https://test.tests.com:5000/v3/"))
@@ -223,17 +238,21 @@ zones: []
 				Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
 [default, security_group_1, security_group_2, ssh-and-ping]
 `))
+				Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
+subnetID: overrideSubnetID
+floatingNetworkID: floatingNetworkID
+`))
 			})
 		})
 	})
 
-	Context("Cluster has cloudProviderOpenstack with empty secret", func() {
+	Context("Cluster has cloudProviderOpenstack and empty discovery data", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.KubeStateSet(stateB))
 			b.RunHook()
 		})
 
-		It("Should correctly fill the Values store from it", func() {
+		It("Should fill values from cloudProviderOpenstack", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			connection := "cloudProviderOpenstack.internal.connection."
 			Expect(b.ValuesGet(connection + "authURL").String()).To(Equal("https://test.tests.com:5000/v3/"))
@@ -252,6 +271,9 @@ zones: []
 			Expect(b.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
 			Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
 [security_group_1, security_group_2]
+`))
+			Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
+subnetID: overrideSubnetID
 `))
 		})
 	})

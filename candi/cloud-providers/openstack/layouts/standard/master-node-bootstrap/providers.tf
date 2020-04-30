@@ -1,1 +1,1 @@
-../../../terraform_modules/providers.tf
+../../../terraform-modules/providers.tf

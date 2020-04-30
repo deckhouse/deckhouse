@@ -29,3 +29,7 @@ apiVersions:
             type: array
             items:
               type: string
+          securityGroups:
+            type: array
+            items:
+              type: string

@@ -32,8 +32,11 @@ function __main__() {
     fi
     values::unset --config cloudProviderOpenstack.addPodSubnetToPortWhitelist
   else
-    if ! values::has --config cloudProviderOpenstack.podNetworkMode; then
-      values::set --config cloudProviderOpenstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"
+    #Config wasn't migrated, checking if we need to set default podNetworkMode
+    if values::has --config cloudProviderOpenstack.authURL ; then
+      if ! values::has --config cloudProviderOpenstack.podNetworkMode; then
+        values::set --config cloudProviderOpenstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"
+      fi
     fi
   fi
 
@@ -47,7 +50,9 @@ function __main__() {
         values::unset --config "cloudProviderOpenstack.$option"
       fi
     done
-    values::set --config cloudProviderOpenstack.connection "$connection"
+    if [[ $connection != '{}' ]]; then
+      values::set --config cloudProviderOpenstack.connection "$connection"
+    fi
   fi
 
   if values::has --config cloudProviderOpenstack.sshKeyPairName ; then

@@ -21,17 +21,28 @@ spec:
     externalNetworkName: shared                             # required
 provider:
   ...
-bootstrap:
-  masterInstanceClass:
-    flavorName: m1.large                                    # required
-    imageName: ubuntu-18.04-cloud-amd64                     # required
-    rootDiskSizeInGb: 50                                    # optional, ephemeral disks are use if not specified
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OpenStackInitConfiguration
+masterInstanceClass:
+  flavorName: m1.large                                      # required
+  imageName: ubuntu-18.04-cloud-amd64                       # required
+  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
+  mainNetwork: kube                                         # required
+  securityGroups:                                           # optional
+  - sec_group_1
+  - sec_group_2
 ```
 
 ### StandardWithNoRouter
 Создаётся внутренняя сеть кластера без доступа в публичную сеть. Все ноды, включая мастер, созаются с двумя интерфейсами:
 один в публичную сеть, другой во внутреннюю сеть. Данная схема размещения должна использоваться, если необходимо, чтобы
 все ноды кластера были доступны напрямую.
+
+**Внимание**
+В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в openstack нельзя заказать floating ip для
+сети без роутера, поэтому нельзя заказать балансировщих с floating ip. Если заказывать internal loadbalancer, у которого
+virtual ip создаётся в публичной сети, то он всё равно доступен только с нод кластера.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vR9Vlk22tZKpHgjOeQO2l-P0hyAZiwxU6NYGaLUsnv-OH0so8UXNnvrkNNiAROMHVI9iBsaZpfkY-kh/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
@@ -43,50 +54,35 @@ spec:
   layout: StandardWithNoRouter
   standardWithNoRouter:
     internalNetworkCIDR: 192.168.199.0/24                   # required
-    externalNetworkName: shared                             # required
+    externalNetworkName: ext-net                            # required
+    externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)   
     internalNetworkSecurity: true|false                     # optional, default true
 provider:
   ...
-bootstrap:
-  masterInstanceClass:
-    flavorName: m1.large                                    # required
-    imageName: ubuntu-18.04-cloud-amd64                     # required
-    rootDiskSizeInGb: 50                                    # optional, ephemeral disks are use if not specified
-```
-
-### MasterAsTheGateway
-
-Весь входящий и исходящий трафик проходит через master ноду. Использование данной схемы размещения подразумевается в основном
-для кластеров LM. Если разворачиваете в облаке mcs, то рекомендуем использовать только зону доступности DP1 и image для нод
-Ubuntu-18.04-201910, на других образах есть проблемы с cloud-init.
-
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vTtCTRm6qKmy35_smoIwnIou635Zv3zexV_leiyKE1L_4BXDljdtjv6AOXQ7T6JQVjUe4nK_hbpLtPw/pub?w=960&h=720)
-<!--- Исходник: https://docs.google.com/drawings/d/1blV6gIgTLYab2XZwNObNBjKeLGQefCnEq6hMLLTI0Ik/edit --->
-
-```
+---
 apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackClusterConfiguration
-spec:
-  layout: MasterAsTheGateway
-  masterAsTheGateway:
-    internalNetworkCIDR: 192.168.199.0/24                   # required
-    internalNetworkDNSServers:                              # required
-    - 8.8.8.8
-    - 4.2.2.2
-    externalNetworkName: shared                             # required
-provider:
-  ...
-bootstrap:
-  masterInstanceClass:
-    flavorName: m1.large                                    # required
-    imageName: ubuntu-18.04-cloud-amd64                     # required
-    rootDiskSizeInGb: 50                                    # optional, ephemeral disks are use if not specified
+kind: OpenStackInitConfiguration
+masterInstanceClass:
+  flavorName: m1.large                                      # required
+  imageName: ubuntu-18.04-cloud-amd64                       # required
+  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
+  mainNetwork: ext-net                                      # required
+  additionalNetworks:                                       # required
+  - kube
+  securityGroups:                                           # optional
+  - sec_group_1
+  - sec_group_2
 ```
 
 ### Simple
 
 Master нода и ноды кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер кубернетес с уже имеющимися виртуальными машинами.
+
+**Внимание**
+В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в openstack нельзя заказать floating ip для
+сети без роутера, поэтому нельзя заказать балансировщих с floating ip. Если заказывать internal loadbalancer, у которого
+virtual ip создаётся в публичной сети, то он всё равно доступен только с нод кластера.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTZbaJg7oIvoh2hkEW-DKbqeujhOiJtv_JSvfvDfXE9-mX_p6uggoY1Z9N2EAJ79c7IMfQC9ttQAmaP/pub?w=960&h=720) 
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
@@ -97,15 +93,22 @@ kind: OpenStackClusterConfiguration
 spec:
   layout: Simple
   simple:
-    externalSubnetName: name-from-openstack                 # required
+    externalNetworkName: ext-net                            # required
+    externalNetworkDHCP: false                              # optional, default true   
     podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
 provider:
   ...
-bootstrap:
-  masterInstanceClass:
-    flavorName: m1.large                                    # required
-    imageName: ubuntu-18.04-cloud-amd64                     # required
-    rootDiskSizeInGb: 50                                    # optional, ephemeral disks are use if not specified
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OpenStackInitConfiguration
+masterInstanceClass:
+  flavorName: m1.large                                      # required
+  imageName: ubuntu-18.04-cloud-amd64                       # required
+  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
+  mainNetwork: public                                       # required
+  securityGroups:                                           # optional
+  - sec_group_1
+  - sec_group_2
 ```
 
 ### SimpleWithInternalNetwork
@@ -125,14 +128,21 @@ kind: OpenStackClusterConfiguration
 spec:
   layout: SimpleWithInternalNetwork
   simpleWithInternalNetwork:
-    internalSubnetName: name-from-openstack                 # required
-    podNetworkMode: DirectRoutingWithPortSecurityEnabled     # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
+    internalSubnetName: pivot-standard                      # required, all cluster nodes have to be in the same subnet
+    podNetworkMode: DirectRoutingWithPortSecurityEnabled    # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
+    externalNetworkName: ext-net                            # optional, if set will be used for ordering load balancer floating ip
 provider:
   ...
-bootstrap:
-  masterInstanceClass:
-    flavorName: m1.large                                    # required
-    imageName: ubuntu-18.04-cloud-amd64                     # required
-    rootDiskSizeInGb: 50                                    # optional, ephemeral disks are use if not specified
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OpenStackInitConfiguration
+masterInstanceClass:
+  flavorName: m1.large                                      # required
+  imageName: ubuntu-18.04-cloud-amd64                       # required
+  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
+  mainNetwork: kube                                         # required
+  securityGroups:                                           # optional
+  - sec_group_1
+  - sec_group_2
 ```
 

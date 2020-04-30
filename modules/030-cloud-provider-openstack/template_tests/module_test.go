@@ -70,6 +70,9 @@ const moduleValues = `
       sshKeyPairName: mysshkeypairname
       securityGroups: ["aaa","bbb"]
     zones: ["zonea", "zoneb"]
+    loadBalancer:
+      subnetID: my-subnet-id
+      floatingNetworkID: my-floating-network-id
 `
 
 const badModuleValues = `
@@ -213,6 +216,27 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			Expect(ccmVPA.Exists()).To(BeTrue())
 			Expect(ccmDeploy.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
+			ccmExpectedConfig := `
+[Global]
+auth-url = "http://my.cloud.lalla/123/"
+domain-name = "mydomain"
+tenant-name = "mytenantname"
+username = "myuser"
+password = "myPaSs"
+region = "myreg"
+ca-file = /etc/cloud-contoller-manager-config/ca.crt
+[Networking]
+public-network-name = "myextnetname"
+public-network-name = "myextnetname2"
+internal-network-name = "myintnetname"
+internal-network-name = "myintnetname2"
+[LoadBalancer]
+create-monitor = "true"
+subnet-id = "my-subnet-id"
+floating-network-id = "my-floating-network-id"`
+			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())

@@ -1,12 +1,12 @@
 module "network_security" {
-  source = "../../../terraform_modules/network_security"
+  source = "../../../terraform-modules/network-security"
   prefix = local.prefix
   remote_ip_prefix = "0.0.0.0/0"
   enabled = local.network_security
 }
 
 module "keypair" {
-  source = "../../../terraform_modules/keypair"
+  source = "../../../terraform-modules/keypair"
   prefix = local.prefix
   ssh_public_key = var.initConfig.sshPublicKeys[0]
 }
