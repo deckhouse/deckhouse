@@ -1,5 +1,5 @@
+# controller artifact
 FROM golang:1.12-buster
-
 WORKDIR /src/
 COPY lua-info.patch /
 COPY reason.patch /
@@ -10,11 +10,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /reason.patch && \
     make build
 
-
+# luarocks assets for luajit artifact
 FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.25.1
+USER root
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends patch gcc build-essential \
+  && luarocks install lua-protobuf 0.3.2-0 \
+  && luarocks install lua-iconv 7-3
 
+# IngressNginxController docker image
+FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.25.1
 COPY --from=0 /src/bin/amd64/nginx-ingress-controller /src/bin/amd64/dbg /
-
+COPY --from=1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY balancer-lua.patch /
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends patch && \

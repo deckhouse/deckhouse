@@ -14,6 +14,7 @@ global:
         controller025: tagstring
         controller026: tagstring
         statsdExporter: tagstring
+        protobufExporter: tagstring
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]

@@ -202,9 +202,9 @@ spec:
 ### Основные принципы сбора статистики
 
 1. На каждый запрос, на стадии `log_by_lua_block`, вызывается наш модуль, который рассчитывает необходимые данные и складывает их в буфер (у каждого nginx worker'а свой буфер).
-2. На стадии `init_by_lua_block` для каждого nginx worker'а запускается процесс, который раз в секунду асинхронно отправляет данные в формате `statsd` через [datagram socket](https://en.wikipedia.org/wiki/Network_socket#Datagram_socket) в `statsd`. 
-3. Вместо обычного `statsd` у нас в pod'е с ingress-controller'ом запущен sidecar-контейнер с [statsd_exporter'ом](https://github.com/prometheus/statsd_exporter), который принимает данные в формате `statsd`, разбирает, агрегирует их по установленным нами правилам и экспортирует в формате для Prometheus.
-4. Prometheus каждые 30 секунд scrape'ает как сам ingress-controller (там есть небольшое количество нужных нам метрик), так и statsd_exporter, и на основании этих данных все и работает!
+2. На стадии `init_by_lua_block` для каждого nginx worker'а запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через tcp socket в `protobuf_exporter` (наша собственная разработка). 
+3. `protobuf_exporter` запущен sidecar-контейнером в pod'е с ingress-controller'ом, принимает сообщения в формате protobuf, разбирает, агрегирует их по установленным нами правилам и экспортирует в формате для Prometheus.
+4. Prometheus каждые 30 секунд scrape'ает как сам ingress-controller (там есть небольшое количество нужных нам метрик), так и protobuf_exporter, и на основании этих данных все и работает!
 
 ### Какую статистику мы собираем и как она представлена?
 

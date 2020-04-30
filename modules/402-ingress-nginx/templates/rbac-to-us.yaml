@@ -9,7 +9,7 @@ rules:
 - apiGroups: ["apps"]
   resources:
   - "daemonsets/prometheus-controller-metrics"
-  - "daemonsets/prometheus-statsd-metrics"
+  - "daemonsets/prometheus-protobuf-metrics"
   resourceNames: ["ingress-nginx"]
   verbs: ["get"]
 {{- if (.Values.global.enabledModules | has "prometheus") }}
