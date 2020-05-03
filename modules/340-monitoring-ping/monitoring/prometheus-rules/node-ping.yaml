@@ -13,6 +13,7 @@
     labels:
       severity_level: "4"
     annotations:
+      plk_protocol_version: "1"
       description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
       summary: Ping loss more than 5%
 

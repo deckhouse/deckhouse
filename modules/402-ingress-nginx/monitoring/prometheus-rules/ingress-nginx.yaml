@@ -13,7 +13,8 @@
       impact: marginal
       likelihood: certain
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         Ingress controller {{ $labels.controller }} in namespace {{ $labels.controller_namespace }} failed config test (nginx -t)
         Consider the following:

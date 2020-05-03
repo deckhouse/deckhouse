@@ -99,7 +99,8 @@ spec:
         description: |-
           Prometheus не может достучаться до exporter-а метрик на протяжении 2 минут.
           Оповестите клиента команду и клиента.
-        polk_flant_com_markup_format: markdown
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
         summary: Не поступают метрики от Sentry
       expr: absent(up{job="custom-sentry"} == 1)
       for: 2m

@@ -23,6 +23,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: Prometheus could not scrape a node-exporter for more than 10m,
         or node-exporters have disappeared from discovery
       summary: Prometheus could not scrape a node-exporter
