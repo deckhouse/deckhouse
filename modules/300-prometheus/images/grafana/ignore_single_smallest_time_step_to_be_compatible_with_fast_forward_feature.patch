@@ -1,0 +1,29 @@
+diff --git a/public/app/core/time_series2.ts b/public/app/core/time_series2.ts
+index e09c59ee06..ee7875a6a2 100644
+--- a/public/app/core/time_series2.ts
++++ b/public/app/core/time_series2.ts
+@@ -245,6 +245,7 @@ export default class TimeSeries {
+     let previousTime;
+     let previousValue = 0;
+     let previousDeltaUp = true;
++    let previousTimeStep;
+ 
+     for (let i = 0; i < this.datapoints.length; i++) {
+       currentValue = this.datapoints[i][0];
+@@ -254,8 +255,15 @@ export default class TimeSeries {
+       // so we have to find the minimum one (could occur with aggregators such as ZimSum)
+       if (previousTime !== undefined) {
+         const timeStep = currentTime - previousTime;
+-        if (timeStep < this.stats.timeStep) {
++        // Ignore single smallest timeStep to be compatible with fast forward feature.
++        if (previousTimeStep === undefined) {
++          previousTimeStep = timeStep;
+           this.stats.timeStep = timeStep;
++        } else {
++          if (timeStep <= previousTimeStep) {
++            this.stats.timeStep = previousTimeStep;
++            previousTimeStep = timeStep;
++          }
+         }
+       }
+       previousTime = currentTime;
