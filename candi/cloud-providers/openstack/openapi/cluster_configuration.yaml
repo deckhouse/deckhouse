@@ -42,26 +42,19 @@ apiVersions:
             default: true
           externalNetworkName:
             type: string
-      masterAsTheGateway:
-        type: object
-        additionalProperties: false
-        required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
-        properties:
-          internalNetworkCIDR:
-            type: string
-          internalNetworkDNSServers:
-            type: array
-            items:
-              type: string
-          externalNetworkName:
-            type: string
+          externalNetworkDHCP:
+            type: boolean
+            default: true
       simple:
         type: object
         additionalProperties: false
-        required: [externalSubnetName]
+        required: [externalNetworkName]
         properties:
-          externalSubnetName:
+          externalNetworkName:
             type: string
+          externalNetworkDHCP:
+            type: boolean
+            default: true
           podNetworkMode:
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
@@ -77,6 +70,8 @@ apiVersions:
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
             default: DirectRoutingWithPortSecurityEnabled
+          externalNetworkName:
+            type: string
       provider:
         type: object
         additionalProperties: false
@@ -110,11 +105,6 @@ apiVersions:
       properties:
         layout:
           enum: [StandardWithNoRouter]
-          type: string
-    - required: [layout, masterAsTheGateway]
-      properties:
-        layout:
-          enum: [MasterAsTheGateway]
           type: string
     - required: [layout, simple]
       properties:

@@ -157,6 +157,9 @@ internal:
       additionalNetworks:
       - mynetwork
       - mynetwork2
+      securityGroups:
+      - ic-groupa
+      - ic-groupb
     nodeType: Cloud
     bashible:
       dynamicOptions: {}
@@ -665,6 +668,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassA.Exists()).To(BeTrue())
 			Expect(machineClassA.Field("spec.networks").String()).To(MatchYAML(`
 [{name: shared}, {name: mynetwork, podNetwork: true}, {name: mynetwork2, podNetwork: true}]
+`))
+			Expect(machineClassA.Field("spec.securityGroups").String()).To(MatchYAML(`
+[groupa, groupb, ic-groupa, ic-groupb]
 `))
 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())

@@ -16,7 +16,8 @@ variable "providerInitConfig" {
 
 locals {
   prefix = var.clusterConfig.cloud.prefix
+  pod_subnet_cidr = var.clusterConfig.podSubnetCIDR
   internal_network_cidr = var.providerClusterConfig.standard.internalNetworkCIDR
   external_network_name = var.providerClusterConfig.standard.externalNetworkName
-  network_security = var.providerClusterConfig.standard.internalNetworkSecurity
+  network_security = lookup(var.providerClusterConfig.standard, "internalNetworkSecurity", true)
 }

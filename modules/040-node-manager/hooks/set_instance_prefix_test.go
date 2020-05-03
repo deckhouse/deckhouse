@@ -19,7 +19,7 @@ nodeManager:
 
 	Context("BeforeHelm — nodeManager.instancePrefix isn't set", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.clusterConfiguration.spec.cloud.prefix", "global")
+			f.ValuesSet("global.clusterConfiguration.cloud.prefix", "global")
 			f.BindingContexts.Set(BeforeHelmContext)
 			f.RunHook()
 		})

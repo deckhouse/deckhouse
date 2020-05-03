@@ -30,6 +30,7 @@ spec:
           required:
           - flavorName
           - imageName
+          - mainNetwork
           properties:
             flavorName:
               description: Flavor of OpenStack servers.
@@ -52,6 +53,14 @@ spec:
               example:
                 - "BGP-network-VLAN-3894"
                 - "External-VLAN-3699"
+              type: array
+              items:
+                type: string
+            securityGroups:
+              description: Security groups that will be applied to VM's network ports
+              example:
+              - "security-group-1"
+              - "security-group-2"
               type: array
               items:
                 type: string

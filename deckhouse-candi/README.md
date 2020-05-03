@@ -67,7 +67,6 @@ masterInstanceClass:
   flavorName: m1.large
   imageName: ubuntu-18-04-cloud-amd64
   rootDiskSizeInGb: 20
-  mainNetwork: pivot
 ```
 Запуск werf:
 ```yaml

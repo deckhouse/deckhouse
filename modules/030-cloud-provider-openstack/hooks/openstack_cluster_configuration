@@ -36,7 +36,8 @@ function set_values_from_provider_cluster_configuration_yaml() {
   #TODO merge configs framework
   provider_discovery_data=$(echo "$1" | jq -r '
     if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
-      "instances": {}
+      "instances": {},
+      "loadBalancer": {}
     } end | .provider_discovery_data')
   #getting provider discovery data with fall back to default empty values
   cloudProviderOpenstack=$(values::get cloudProviderOpenstack)
@@ -57,18 +58,13 @@ function set_values_from_provider_cluster_configuration_yaml() {
   values::set cloudProviderOpenstack.internal.zones "$i"
 
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then $data.instances.sshKeyPairName else .instances.sshKeyPairName end')
-  if [[ -n $i ]]; then
-    values::set cloudProviderOpenstack.internal.instances.sshKeyPairName "$i"
-  else
-    values::unset cloudProviderOpenstack.internal.instances.sshKeyPairName
-  fi
+  values::set cloudProviderOpenstack.internal.instances.sshKeyPairName "$i"
 
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
-  if [[ -n $i ]]; then
-    values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
-  else
-    values::unset cloudProviderOpenstack.internal.podNetworkMode
-  fi
+  values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.loadBalancer //= {} | $data.loadBalancer * .loadBalancer')
+  values::set cloudProviderOpenstack.internal.loadBalancer "$i"
 }
 
 function __main__() {

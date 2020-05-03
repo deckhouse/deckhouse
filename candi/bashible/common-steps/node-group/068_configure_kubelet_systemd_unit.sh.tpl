@@ -28,7 +28,7 @@ ExecStart=/usr/bin/kubelet \\
 {{- else }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule \\
 {{- end }}
-    --node-labels=node.deckhouse.io/group:{{ .nodeGroup.name }},node-role.kubernetes.io/{{ .nodeGroup.name }}:
+    --node-labels=node.deckhouse.io/group={{ .nodeGroup.name }} \\
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
     --cni-bin-dir=/opt/cni/bin/ \\
