@@ -88,7 +88,7 @@
         2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`
 
   - alert: D8PrometheusOperatorUnavailable
-    expr: count(ALERTS{alertname=~"D8PrometheusOperatorTargetDown|D8PrometheusOperatorTargetAbsent|D8PrometheusOperatorPodIsNotReady|D8PrometheusOperatorPodIsNotRunning", alertstate="firing"}) > 1
+    expr: count(ALERTS{alertname=~"D8PrometheusOperatorTargetDown|D8PrometheusOperatorTargetAbsent|D8PrometheusOperatorPodIsNotReady|D8PrometheusOperatorPodIsNotRunning", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: operator-prometheus

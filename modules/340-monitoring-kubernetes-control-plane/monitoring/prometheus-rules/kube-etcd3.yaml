@@ -47,7 +47,7 @@
       summary: Участник etcd кластера на ноде {{ $labels.node }} потерял лидера.
 
   - alert: KubeEtcdUnavailable
-    expr: count(ALERTS{alertname=~"KubeEtcdTargetDown|KubeEtcdTargetAbsent|KubeEtcdNoLeader", alertstate="firing"}) > 1
+    expr: count(ALERTS{alertname=~"KubeEtcdTargetDown|KubeEtcdTargetAbsent|KubeEtcdNoLeader", alertstate="firing"}) > 0
     labels:
       tier: cluster
     annotations:
@@ -172,7 +172,7 @@
       summary: commit тормозит
 
   - alert: KubeEtcdMalfunctioning
-    expr: count(ALERTS{alertname=~"KubeEtcdHighNumberOfLeaderChanges|KubeEtcdInsufficientMembers|KubeEtcdMemberCommunicationSlow|KubeEtcdHighNumberOfFailedProposals|KubeEtcdHighFsyncDurations|KubeEtcdHighCommitDurations", alertstate="firing"}) > 1
+    expr: count(ALERTS{alertname=~"KubeEtcdHighNumberOfLeaderChanges|KubeEtcdInsufficientMembers|KubeEtcdMemberCommunicationSlow|KubeEtcdHighNumberOfFailedProposals|KubeEtcdHighFsyncDurations|KubeEtcdHighCommitDurations", alertstate="firing"}) > 0
     labels:
       tier: cluster
     annotations:

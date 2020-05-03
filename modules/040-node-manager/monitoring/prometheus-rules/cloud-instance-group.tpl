@@ -79,7 +79,7 @@
 {{- template "todo_list" }}
 
   - alert: ClusterHasCloudInstanceGroupsWithUnavailableReplicas
-    expr: count(max by (node_group) (ALERTS{alertname="CloudInstanceGroupReplicasUnavailable", alertstate="firing"})) > 1
+    expr: count(max by (node_group) (ALERTS{alertname="CloudInstanceGroupReplicasUnavailable", alertstate="firing"})) > 0
     labels:
       tier: cluster
     annotations:
