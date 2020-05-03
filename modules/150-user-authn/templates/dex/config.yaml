@@ -133,9 +133,15 @@
         {{- end }}
         userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
         userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
-        {{- if $provider.oidc.scopes }}
         scopes:
+        {{- if $provider.oidc.scopes }}
 {{ $provider.oidc.scopes | toYaml | indent 8 }}
+        {{- else }}
+        - openid
+        - profile
+        - email
+        - groups
+        - offline_access
         {{- end }}
         usernamePrompt: "OIDC username"
       {{- end }}
