@@ -5,7 +5,9 @@ WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .
 COPY ./folders.patch .
+COPY ./ignore_single_smallest_time_step_to_be_compatible_with_fast_forward_feature.patch .
 RUN patch -p1 < ./extra_vars.patch && patch -p1 < ./folders.patch
+RUN patch -p1 < ./ignore_single_smallest_time_step_to_be_compatible_with_fast_forward_feature.patch
 RUN bash -l -c "go run build.go build package" && \
     mv dist/*.deb /grafana.deb
 
