@@ -5,6 +5,7 @@
     labels:
       severity: none
     annotations:
+      plk_protocol_version: "1"
       description: This is a DeadMansSwitch meant to ensure that the entire Alerting
         pipeline is functional.
       summary: Alerting DeadMansSwitch
@@ -16,6 +17,7 @@
     labels:
       severity: warning
     annotations:
+      plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance
         will exhaust in file/socket descriptors within the next 4 hours'
       summary: file descriptors soon exhausted
@@ -25,6 +27,7 @@
     labels:
       severity: warning
     annotations:
+      plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.instance }} instance
         will exhaust in file/socket descriptors within the next 4 hours'
       summary: file descriptors soon exhausted
@@ -34,6 +37,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance
         will exhaust in file/socket descriptors within the next hour'
       summary: file descriptors soon exhausted
@@ -43,6 +47,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.instance }} instance
         will exhaust in file/socket descriptors within the next hour'
       summary: file descriptors soon exhausted

@@ -6,6 +6,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: The Kubelet on {{ $labels.node }} has not checked in with the API,
         or has set itself to NotReady, for more than an hour
       summary: Node status is NotReady
@@ -17,6 +18,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: '{{ $value }}% of Kubernetes nodes are not ready'
       summary: Too many nodes are not ready
   - alert: K8SKubeletDown
@@ -25,6 +27,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: Prometheus failed to scrape {{ $value }}% of kubelets.
       summary: Prometheus failed to scrape
   - alert: K8SKubeletDown
@@ -35,6 +38,7 @@
       impact: critical
       likelihood: certain
     annotations:
+      plk_protocol_version: "1"
       description: Prometheus failed to scrape {{ $value }}% of kubelets, or all Kubelets
         have disappeared from service discovery.
       summary: Many Kubelets cannot be scraped
@@ -44,6 +48,7 @@
     labels:
       severity: critical
     annotations:
+      plk_protocol_version: "1"
       description: Kubelet {{ $labels.node }} is running {{$value}} pods, close
         to the limit of {{ print "kube_node_status_capacity_pods{node='" $labels.node "'}" | query | first | value }}
       summary: Kubelet is close to pod limit

@@ -8,7 +8,8 @@
     labels:
       severity: critical
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       summary: Not enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}
       description: |-
         There aren't enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}

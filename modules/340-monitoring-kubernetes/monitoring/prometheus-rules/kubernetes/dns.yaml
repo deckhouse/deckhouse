@@ -7,7 +7,8 @@
       impact: critical
       likelihood: certain
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         Нет ни одного работающего пода kube-dns или coredns. DNS внутри кластера не работает! Приложения не могут разыменовать внутренние сервисы и внешние домены.
         Что делать:
@@ -21,7 +22,8 @@
       impact: marginal
       likelihood: possible
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         Данный алерт говорит о том, что у CoreDNS в поде {{$labels.pod}} произошла как минимум одна критическая ошибка.
 

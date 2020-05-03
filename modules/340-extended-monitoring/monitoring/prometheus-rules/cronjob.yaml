@@ -27,6 +27,7 @@
     labels:
       severity_level: "5"
     annotations:
+      plk_protocol_version: "1"
       summary: Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
 
   - alert: CronJobSchedulingError
