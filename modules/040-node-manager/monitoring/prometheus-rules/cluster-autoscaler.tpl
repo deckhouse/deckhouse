@@ -136,7 +136,7 @@
         Cluster autoscaler получил ошибку от cloud provider при попытке скейлинга в кластере.
 
         Необходимо посмотреть логи:
-        1. `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c controller`
+        1. `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`
 
   - alert: D8ClusterAutoscalerMalfunctioning
     expr: |

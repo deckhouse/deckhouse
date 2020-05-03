@@ -7,7 +7,8 @@
       impact: critical
       likelihood: likely
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         Под с extended-monitoring недоступен.
         Множество системных параметров остались без присмотра:

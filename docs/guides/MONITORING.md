@@ -150,7 +150,7 @@ spec:
       annotations:
         description: Storage cluster is in error state for more than 10m.
         summary: Storage cluster is in error state
-        polk_flant_com_markup_format: markdown
+        plk_markup_format: markdown
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```

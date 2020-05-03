@@ -38,7 +38,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m" 
+      plk_pending_until_firing_for: "5m"
       summary: |-
         Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
       description: |-

@@ -1,6 +1,6 @@
 FROM grafana/build-container:1.2.13
 RUN mkdir -p /go/src/github.com/grafana/grafana && \
-    curl -LSs https://github.com/grafana/grafana/archive/v6.6.1.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
+    curl -LSs https://github.com/grafana/grafana/archive/v6.6.2.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
 WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .
@@ -9,15 +9,11 @@ RUN patch -p1 < ./extra_vars.patch && patch -p1 < ./folders.patch
 RUN bash -l -c "go run build.go build package" && \
     mv dist/*.deb /grafana.deb
 
-FROM node:9.11-alpine
+FROM alpine:3.10
 WORKDIR /plugin
-RUN apk add --no-cache git ruby ruby-dev libffi-dev build-base && \
-    gem install sass --no-document && \
-    npm install --global grunt-cli && \
+RUN apk add --no-cache git && \
     cd /plugin && \
-    git clone --branch v0.2.0 https://github.com/flant/grafana-statusmap.git . && \
-    npm install && \
-    grunt
+    git clone --branch v0.2.0 https://github.com/flant/grafana-statusmap.git .
 
 FROM debian:9
 COPY --from=0 /grafana.deb /

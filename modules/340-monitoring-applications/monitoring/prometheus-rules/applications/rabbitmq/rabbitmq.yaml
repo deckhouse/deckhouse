@@ -6,7 +6,8 @@
     labels:
       severity: warning
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         RabbitMQ Node {{$labels.node}} is using more than 85% of memory limit.
         Consider the following:
@@ -25,7 +26,8 @@
     labels:
       severity: critical
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         RabbitMQ Node {{$labels.node}} is using more than 85% of memory limit.
         Consider the following:

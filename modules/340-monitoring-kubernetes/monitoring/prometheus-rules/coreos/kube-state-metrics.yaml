@@ -6,6 +6,7 @@
     labels:
       severity: warning
     annotations:
+      plk_protocol_version: "1"
       description: Observed deployment generation does not match expected one for
         deployment {{$labels.namespace}}/{{$labels.deployment}}
       summary: Deployment is outdated
@@ -16,7 +17,8 @@
       impact: deadly
       likelihood: certain
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |-
         Нет запущенных подов kube-state-metrics.
         При отсутствии корректно работающих подов kube-state-metrics большая часть графиков и алертов перестает работать.

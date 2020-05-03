@@ -6,7 +6,8 @@
     labels:
       severity: warning
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
       description: |-
         Number of php-fpm idle processes is below 10% in pod {{$labels.namespace}}/{{$labels.pod}}
         Consider the following:

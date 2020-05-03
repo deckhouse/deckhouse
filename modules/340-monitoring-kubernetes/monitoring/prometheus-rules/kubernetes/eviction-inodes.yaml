@@ -29,7 +29,8 @@
       impact: critical
       likelihood: rare
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Close to soft eviction threshold of nodefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"} or kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint $labels.node $labels.mountpoint | query | first | value }}%
@@ -47,7 +48,8 @@
       impact: critical
       likelihood: unlikely
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Soft eviction of nodefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
         Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -66,7 +68,8 @@
       impact: critical
       likelihood: possible
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Close to hard eviction threshold of nodefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -84,7 +87,8 @@
       impact: critical
       likelihood: likely
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Hard eviction of nodefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
         Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -104,7 +108,8 @@
       impact: critical
       likelihood: certain
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       summary: >
         No more free inodes on nodefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
 
@@ -120,7 +125,8 @@
       impact: critical
       likelihood: rare
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Close to soft eviction threshold of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -138,7 +144,8 @@
       impact: critical
       likelihood: unlikely
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Soft eviction of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
         Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -157,7 +164,8 @@
       impact: critical
       likelihood: possible
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Close to hard eviction threshold of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -175,7 +183,8 @@
       impact: critical
       likelihood: likely
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       description: |
         Hard eviction of imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}} is in progress.
         Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
@@ -196,6 +205,7 @@
       impact: critical
       likelihood: certain
     annotations:
-      polk_flant_com_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
       summary: >
         No more free inodes on imagefs on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.

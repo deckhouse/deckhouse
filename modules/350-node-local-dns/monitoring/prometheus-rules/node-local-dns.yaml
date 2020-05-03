@@ -10,6 +10,7 @@
       likelihood: certain
       impact: marginal
     annotations:
+      plk_protocol_version: "1"
       summary: node-local-dns Pod cannot schedule on Node {{ $labels.node }}
       description: |
         node-local-dns Pod cannot schedule on Node {{ $labels.node }}.
