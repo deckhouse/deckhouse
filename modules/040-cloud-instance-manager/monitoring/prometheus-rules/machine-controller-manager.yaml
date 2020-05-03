@@ -78,7 +78,7 @@
       +
       count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"})
       +
-      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"})) > 1
+      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"})) > 0
     labels:
       tier: cluster
       d8_module: cloud-instance-manager
@@ -118,7 +118,7 @@
 
   - alert: D8MachineControllerManagerMalfunctioning
     expr: |
-      count(ALERTS{alertname=~"D8MachineControllerManagerPodIsRestartingTooOften", alertstate="firing"}) > 1
+      count(ALERTS{alertname=~"D8MachineControllerManagerPodIsRestartingTooOften", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: cloud-instance-manager
