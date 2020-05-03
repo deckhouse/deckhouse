@@ -81,7 +81,7 @@
         В кластере используются Service'ы с label'ом `prometheus-custom-target` для сбора метрик.
 
   - alert: D8DeprecatedPrometheusFunctionalityIsUsed
-    expr: count(ALERTS{alertname=~"D8CustomServiceMonitorFoundInCluster|D8CustomPodMonitorFoundInCluster|D8CustomPrometheusRuleFoundInCluster|D8OldPrometheusCustomTargetFormat|D8OldPrometheusTargetFormat", alertstate="firing"}) > 1
+    expr: count(ALERTS{alertname=~"D8CustomServiceMonitorFoundInCluster|D8CustomPodMonitorFoundInCluster|D8CustomPrometheusRuleFoundInCluster|D8OldPrometheusCustomTargetFormat|D8OldPrometheusTargetFormat", alertstate="firing"}) > 0
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"

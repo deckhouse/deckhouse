@@ -25,7 +25,7 @@
         summary: Под {{ $labels.namespace }}/{{ $labels.pod }} на ноде {{ $labels.node }} находится в некорректном состоянии. Необходимо перезагрузить `kubelet`.
 
     - alert: NodeHavePodsWithIncorrectStatus
-      expr: count by (node) (ALERTS{alertname="PodStatusIsIncorrect", alertstate="firing"}) > 1
+      expr: count by (node) (ALERTS{alertname="PodStatusIsIncorrect", alertstate="firing"}) > 0
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
@@ -42,7 +42,7 @@
         summary: На ноде {{ $labels.node }} есть поды с некорректным статусом. Необходимо перезагрузить `kubelet`.
 
     - alert: ClusterHaveNodesWithIncorrectPodStatus
-      expr: count(ALERTS{alertname="NodeHavePodsWithIncorrectStatus", alertstate="firing"}) > 1
+      expr: count(ALERTS{alertname="NodeHavePodsWithIncorrectStatus", alertstate="firing"}) > 0
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"

@@ -76,7 +76,7 @@
         Deckhouse, скорей всего, полностью завис, так как в prometheus более не увеличивается метрика deckhouse_live_ticks (а должна каждые 10 секунд).
 
   - alert: D8DeckhouseUnavailable
-    expr: count(ALERTS{alertname=~"D8DeckhouseTargetDown|D8DeckhouseTargetAbsent|D8DeckhousePodIsNotReady|D8DeckhousePodIsNotRunning|D8DeckhouseIsHung",job="deckhouse", alertstate="firing"}) > 1
+    expr: count(ALERTS{alertname=~"D8DeckhouseTargetDown|D8DeckhouseTargetAbsent|D8DeckhousePodIsNotReady|D8DeckhousePodIsNotRunning|D8DeckhouseIsHung",job="deckhouse", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: deckhouse
@@ -280,7 +280,7 @@
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
 
   - alert: D8DeckhouseMalfunctioning
-    expr: count(ALERTS{alertname=~"D8DeckhousePodIsRestartingTooOften|D8DeckhouseCouldNotDiscoverModules|D8DeckhouseCouldNotRunGlobalHook|D8DeckhouseCouldNotRunModuleHook|D8DeckhouseCouldNotRunModule|D8DeckhouseCouldNotDeleteModule|D8DeckhouseQueueIsHung|D8DeckhouseGlobalHookFailsTooOften|D8DeckhouseModuleHookFailsTooOften", alertstate="firing"}) > 1
+    expr: count(ALERTS{alertname=~"D8DeckhousePodIsRestartingTooOften|D8DeckhouseCouldNotDiscoverModules|D8DeckhouseCouldNotRunGlobalHook|D8DeckhouseCouldNotRunModuleHook|D8DeckhouseCouldNotRunModule|D8DeckhouseCouldNotDeleteModule|D8DeckhouseQueueIsHung|D8DeckhouseGlobalHookFailsTooOften|D8DeckhouseModuleHookFailsTooOften", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: deckhouse

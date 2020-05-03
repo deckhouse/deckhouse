@@ -138,7 +138,7 @@
       summary: Prometheus is not connected to Alertmanager
 
   - alert: PrometheusMalfunctioning
-    expr: count by (namespace, service) (ALERTS{alertname=~"PrometheusTargetDown|PrometheusConfigReloadFailing|PrometheusNotificationQueueHasMoreTasksThanAlerts|PrometheusNotificationQueueRunningFull|PrometheusNotificationDropping|PrometheusTSDBReloadsFailing|PrometheusTSDBCompactionsFailing|PrometheusRuleEvaluationFailing|PrometheusNotConnectedToAlertmanager", alertstate="firing"}) > 1
+    expr: count by (namespace, service) (ALERTS{alertname=~"PrometheusTargetDown|PrometheusConfigReloadFailing|PrometheusNotificationQueueHasMoreTasksThanAlerts|PrometheusNotificationQueueRunningFull|PrometheusNotificationDropping|PrometheusTSDBReloadsFailing|PrometheusTSDBCompactionsFailing|PrometheusRuleEvaluationFailing|PrometheusNotConnectedToAlertmanager", alertstate="firing"}) > 0
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
