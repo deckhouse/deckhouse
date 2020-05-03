@@ -15,20 +15,14 @@ apiVersions:
       masterInstanceClass:
         type: object
         additionalProperties: false
-        required: [flavorName, imageName, mainNetwork]
+        required: [flavorName, imageName]
         properties:
           flavorName:
             type: string
           imageName:
             type: string
-          mainNetwork:
-            type: string
           rootDiskSizeInGb:
             type: integer
-          additionalNetworks:
-            type: array
-            items:
-              type: string
           securityGroups:
             type: array
             items:

@@ -28,7 +28,6 @@ masterInstanceClass:
   flavorName: m1.large                                      # required
   imageName: ubuntu-18.04-cloud-amd64                       # required
   rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  mainNetwork: kube                                         # required
   securityGroups:                                           # optional
   - sec_group_1
   - sec_group_2
@@ -66,9 +65,6 @@ masterInstanceClass:
   flavorName: m1.large                                      # required
   imageName: ubuntu-18.04-cloud-amd64                       # required
   rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  mainNetwork: ext-net                                      # required
-  additionalNetworks:                                       # required
-  - kube
   securityGroups:                                           # optional
   - sec_group_1
   - sec_group_2
@@ -105,7 +101,6 @@ masterInstanceClass:
   flavorName: m1.large                                      # required
   imageName: ubuntu-18.04-cloud-amd64                       # required
   rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  mainNetwork: public                                       # required
   securityGroups:                                           # optional
   - sec_group_1
   - sec_group_2
@@ -140,7 +135,6 @@ masterInstanceClass:
   flavorName: m1.large                                      # required
   imageName: ubuntu-18.04-cloud-amd64                       # required
   rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  mainNetwork: kube                                         # required
   securityGroups:                                           # optional
   - sec_group_1
   - sec_group_2
