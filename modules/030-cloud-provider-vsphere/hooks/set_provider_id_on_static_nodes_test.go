@@ -22,7 +22,7 @@ kind: Node
 metadata:
   name: node-2
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: worker
+    node.deckhouse.io/group: worker
 ---
 apiVersion: v1
 kind: Node

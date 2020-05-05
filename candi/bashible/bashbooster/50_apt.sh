@@ -23,8 +23,9 @@ bb-apt-repo-add() {
 }
 
 bb-apt-package?() {
-    local PACKAGE="$(cut -d= -f1 <<< $1)"
-    local VERSION_DESIRED="$(cut -d= -f2 <<<  $1)"
+    IFS='=' read -ra PACKAGE_ARRAY <<< "$1"
+    local PACKAGE="${PACKAGE_ARRAY[0]}"
+    local VERSION_DESIRED="${PACKAGE_ARRAY[1]-}"
 
     if [ -z "$VERSION_DESIRED" ]; then
         dpkg -s "$PACKAGE" 2> /dev/null | grep -q '^Status:.\+installed'
@@ -74,7 +75,7 @@ bb-apt-remove() {
         if bb-apt-package? "$PACKAGE"
         then
             bb-log-info "Removing package '$PACKAGE'"
-            apt-get remove -y "$PACKAGE"
+            apt-get remove -y --allow-change-held-packages "$PACKAGE"
             bb-exit-on-error "Failed to remove package '$PACKAGE'"
             bb-event-fire "bb-package-removed" "$PACKAGE"
         fi

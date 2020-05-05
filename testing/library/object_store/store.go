@@ -2,6 +2,7 @@ package object_store
 
 import (
 	"encoding/json"
+	yaml "gopkg.in/yaml.v2"
 	"regexp"
 	"strings"
 
@@ -34,6 +35,12 @@ func (obj KubeObject) Parse() library.KubeResult {
 	result := gjson.ParseBytes(jsonBytes)
 
 	return library.KubeResult{Result: result}
+}
+
+func (obj KubeObject) ToYaml() string {
+	yamlBytes, _ := yaml.Marshal(obj)
+
+	return string(yamlBytes)
 }
 
 func (obj KubeObject) Exists() bool {
@@ -79,6 +86,16 @@ func (store ObjectStore) KubernetesResource(kind, namespace, name string) KubeOb
 	obj, _ := store.RetrieveObjectByMetaIndex(metaIndex)
 
 	return obj
+}
+
+func (store ObjectStore) ToYaml() string {
+	var buf strings.Builder
+	for _, object := range store {
+		buf.WriteString("---\n")
+		buf.WriteString(object.ToYaml())
+	}
+
+	return buf.String()
 }
 
 func NewMetaIndex(kind, namespace, name string) MetaIndex {

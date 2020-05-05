@@ -1,7 +1,8 @@
 package hooks
 
 import (
-	"fmt"
+	"os/exec"
+	"strings"
 
 	"github.com/onsi/gomega/gbytes"
 
@@ -10,6 +11,15 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+func calculateEpoch(ng_name string, clusterUUID string) string {
+	epochCmd := exec.Command(`/bin/bash`, `-c`, `awk -v seed="`+clusterUUID+ng_name+`" -v timestamp="$(date +%s)" 'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'`)
+	epochOut, err := epochCmd.Output()
+	if err != nil {
+		panic(err)
+	}
+	return strings.TrimSpace(string(epochOut))
+}
 
 var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
 	const (
@@ -175,7 +185,7 @@ metadata:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.15.5", "kubernetesVersions":["1.15.5"]}},"nodeManager":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.15.5", "kubernetesVersions":["1.15.5"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "CloudInstanceGroup", false)
@@ -233,7 +243,8 @@ metadata:
                     "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper1"
+				    "name": "proper1",
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "nodeType": "Cloud",
@@ -254,11 +265,11 @@ metadata:
                     "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper2"
+				    "name": "proper2",
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 `
-			fmt.Printf("EEE: %v\n", f.ValuesGet("nodeManager").String())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 		})
 	})
@@ -290,7 +301,8 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper1"
+				    "name": "proper1",
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "nodeType": "Cloud",
@@ -311,7 +323,8 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper2"
+				    "name": "proper2",
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 `
@@ -328,7 +341,6 @@ metadata:
 
 		It("Hook must not fail and Values should contain an id", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			fmt.Println("JOPA", f.ValuesGet("nodeManager.internal").String())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.manualRolloutID").String()).To(Equal("test"))
 		})
 	})
@@ -348,7 +360,8 @@ metadata:
                     "kubernetesVersion": "1.15",
                     "manualRolloutID": "",
                     "name": "hybrid1",
-                    "nodeType": "Hybrid"
+                    "nodeType": "Hybrid",
+                    "updateEpoch": "` + calculateEpoch("hybrid1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
                   },
 				  {
 				    "nodeType": "Cloud",
@@ -370,7 +383,8 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper1"
+				    "name": "proper1",
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "nodeType": "Cloud",
@@ -391,13 +405,15 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper2"
+				    "name": "proper2",
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
                     "kubernetesVersion": "1.15",
                     "manualRolloutID": "",
                     "name": "static1",
-                    "nodeType": "Static"
+                    "nodeType": "Static",
+                    "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
                   }
 				]
 			`
@@ -439,7 +455,8 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper1"
+				    "name": "proper1",
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "nodeType": "Cloud",
@@ -460,7 +477,8 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "name": "proper2"
+				    "name": "proper2",
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 	`
@@ -503,7 +521,8 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "bashible": {
@@ -524,7 +543,8 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`
@@ -584,7 +604,8 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "bashible": {
@@ -605,7 +626,8 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 				`
@@ -650,7 +672,8 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "bashible": {
@@ -671,7 +694,8 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`
@@ -731,7 +755,8 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
 				    "bashible": {
@@ -752,7 +777,8 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
-				    "instanceClass": null
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`

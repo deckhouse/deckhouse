@@ -1,0 +1,784 @@
+package hooks
+
+import (
+	"bytes"
+	"fmt"
+	"strings"
+	"text/template"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
+)
+
+var _ = Describe("Modules :: nodeManager :: hooks :: update_approval ::", func() {
+	const (
+		initialState = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+status:
+  desired: 1
+  ready: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: undisruptable-worker
+spec:
+  nodeType: Static
+  allowDisruptions: false
+status:
+  desired: 1
+  ready: 1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  worker: dXBkYXRlZA== # updated
+  undisruptable-worker: dXBkYXRlZA== # updated
+`
+	)
+	nodeNames := []string{"worker-1", "worker-2", "worker-3"}
+
+	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+
+	Context("Empty cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("approve_updates", func() {
+		for _, gOneIsApproved := range []bool{true, false} {
+			for _, gWaitingForApproval := range []bool{true, false} {
+				for _, gNodeReady := range []bool{true, false} {
+					for _, gNgReady := range []bool{true, false} {
+						for _, gNodeType := range []string{"Cloud", "Hybrid", "Static"} {
+							Context(fmt.Sprintf("Approved: %t, AproveRequired: %v, NodeReady: %t, NgReady: %t, NodeType: %s", gOneIsApproved, gWaitingForApproval, gNodeReady, gNgReady, gNodeType), func() {
+								oneIsApproved := gOneIsApproved
+								waitingForApproval := gWaitingForApproval
+								nodeReady := gNodeReady
+								ngReady := gNgReady
+								nodeType := gNodeType
+
+								BeforeEach(func() {
+									f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestApproveUpdates(nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, nodeType)))
+									f.RunHook()
+								})
+
+								It("Works as expected", func() {
+									Expect(f).To(ExecuteSuccessfully())
+
+									approvedReadyCount := 0
+									approvedNotReadyCount := 0
+									waitingForApprovalCount := 0
+									for i := 1; i <= len(nodeNames); i++ {
+										if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists() {
+											if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`status.conditions.0.status`).String() == "True" {
+												approvedReadyCount++
+											} else {
+												approvedNotReadyCount++
+											}
+										}
+										if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists() {
+											waitingForApprovalCount++
+										}
+									}
+
+									if oneIsApproved {
+										By("If 1 node was approved – it should stay approved", func() {
+											Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(1))
+										})
+									} else if waitingForApproval {
+										if ngReady && nodeReady {
+											By("If ng desired==ready and all nodes ready – 1 node should be approved", func() {
+												Expect(approvedReadyCount).To(Equal(1))
+												Expect(approvedNotReadyCount).To(Equal(0))
+												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+											})
+										} else if !ngReady && nodeReady && nodeType != "Cloud" {
+											By("If nodeType is not Cloud, ng will not have desired field, so if all existing nodes are ready – 1 node should be approved", func() {
+												Expect(approvedReadyCount).To(Equal(1))
+												Expect(approvedNotReadyCount).To(Equal(0))
+												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+											})
+										} else if !ngReady && nodeReady && nodeType == "Cloud" {
+											By("If ng desired != ready, but all existing nodes are ready – there should be no approved nodes", func() {
+												Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(0))
+												Expect(waitingForApprovalCount).To(Equal(len(nodeNames)))
+											})
+										} else if !nodeReady {
+											By("If there are not ready nodes – one of them should be approved", func() {
+												Expect(approvedReadyCount).To(Equal(0))
+												Expect(approvedNotReadyCount).To(Equal(1))
+												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+											})
+										} else {
+											By("Something went wrong!", func() {
+												Expect(true).To(BeFalse())
+											})
+										}
+
+									} else {
+										By("If there was no approved before and no nodes are waiting for approval – there should be no approved nodes", func() {
+											Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(0))
+										})
+									}
+								})
+							})
+						}
+					}
+				}
+			}
+		}
+	})
+
+	Context("approve_disruptions", func() {
+		for _, gDisruptionRequired := range []bool{true, false} {
+			for _, gAllowDisruptons := range []int{0, 1, 2} {
+				for _, gUnschedulable := range []bool{true, false} {
+					Context(fmt.Sprintf("DisruptionRequired: %t, AllowDisruptons: %v, Unschedulable: %t", gDisruptionRequired, gAllowDisruptons, gUnschedulable), func() {
+						disruptionRequired := gDisruptionRequired
+						allowDisruptons := gAllowDisruptons
+						unschedulable := gUnschedulable
+						BeforeEach(func() {
+							f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestApproveDisruptions(nodeNames, disruptionRequired, allowDisruptons, unschedulable)))
+							f.RunHook()
+						})
+
+						It("Works as expected", func() {
+							Expect(f).To(ExecuteSuccessfully())
+							for _, nodeName := range nodeNames {
+								if disruptionRequired && allowDisruptons > 0 {
+									if unschedulable {
+										By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+										})
+										By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
+										})
+									} else {
+										By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+										})
+										By(fmt.Sprintf("%s must have /draining", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
+										})
+									}
+								} else {
+									if disruptionRequired {
+										By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+										})
+									}
+
+									if unschedulable {
+										By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
+										})
+									} else {
+										By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
+											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+										})
+									}
+								}
+							}
+						})
+					})
+				}
+			}
+		}
+	})
+
+	Context("draining_nodes", func() {
+		for _, gDraining := range []bool{true, false} {
+			for _, gUnschedulable := range []bool{true, false} {
+				Context(fmt.Sprintf("Draining: %t, Unschedulable: %t", gDraining, gUnschedulable), func() {
+					draining := gDraining
+					unschedulable := gUnschedulable
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable)))
+						f.RunHook()
+					})
+
+					It("Works as expected", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						for _, nodeName := range nodeNames {
+							if draining {
+								By(fmt.Sprintf("%s must have /drained", nodeName), func() {
+									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeTrue())
+								})
+
+								By(fmt.Sprintf("%s must not have /draining", nodeName), func() {
+									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+								})
+
+								By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
+									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
+								})
+							} else {
+								By(fmt.Sprintf("%s must not have /drained", nodeName), func() {
+									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+								})
+
+								if unschedulable {
+									By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
+										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
+									})
+								} else {
+									By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
+										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+									})
+								}
+							}
+						}
+					})
+				})
+			}
+		}
+	})
+
+	Context("process_updated_nodes :: ", func() {
+		for _, gUpdated := range []bool{true, false} {
+			for _, gReady := range []bool{true, false} {
+				for _, gAllowDisruptions := range []bool{true, false} {
+					for _, gDisruption := range []bool{true, false} {
+						for _, gDrained := range []bool{true, false} {
+							Context(fmt.Sprintf("Updated: %t, Ready: %t, AllowDisruptions: %t, Disruption: %t, Drained: %t :: ", gUpdated, gReady, gAllowDisruptions, gDisruption, gDrained), func() {
+								updated := gUpdated
+								ready := gReady
+								allowDisruptions := gAllowDisruptions
+								disruption := gDisruption
+								drained := gDrained
+								BeforeEach(func() {
+									f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestProcessUpdatedNodes(nodeNames, updated, ready, allowDisruptions, disruption, drained)))
+									f.RunHook()
+								})
+
+								It("Works as expected", func() {
+									Expect(f).To(ExecuteSuccessfully())
+									for _, nodeName := range nodeNames {
+										if updated && ready {
+											By(fmt.Sprintf("%s must not have /approved", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+											})
+											By(fmt.Sprintf("%s must not have /drained", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+											})
+											By(fmt.Sprintf("%s must not have /disruption-approved", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeFalse())
+											})
+
+											By(fmt.Sprintf("%s must not have /disruption-required, which might be left, because node was approved manualy", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+											})
+
+											if drained {
+												By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+												})
+											} else {
+												By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
+												})
+											}
+										} else {
+											By(fmt.Sprintf("%s must have /approved", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+											})
+
+											if drained {
+												By(fmt.Sprintf("%s must have /drained", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeTrue())
+												})
+											}
+											By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
+											})
+
+											if disruption {
+												By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
+												})
+											}
+										}
+
+									}
+								})
+
+							})
+						}
+					}
+				}
+			}
+		}
+	})
+
+	Context("approve_updates :: all flow for one node", func() {
+		state := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: Static
+status:
+  desired: 3
+  ready: 3
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: test
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+    stub: worker-1
+    stub2: worker-1
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-2
+  labels:
+    node.deckhouse.io/group: test
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+    stub: worker-2
+    stub2: worker-2
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-3
+  labels:
+    node.deckhouse.io/group: test
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+    stub: worker-3
+    stub2: worker-3
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+`
+
+		It("Works as expected", func() {
+			approvedNodeIndex := -1
+
+			By("one of nodes must be approved", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(state, 2))
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				approvedCount := 0
+				waitingForApprovalCount := 0
+				for i := 1; i <= len(nodeNames); i++ {
+					if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists() {
+						approvedCount++
+						approvedNodeIndex = i
+					}
+					if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists() {
+						waitingForApprovalCount++
+					}
+				}
+
+				Expect(approvedNodeIndex).To(Not(Equal(-1)))
+				Expect(approvedCount).To(Equal(1))
+				Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+
+				for i := 1; i <= len(nodeNames); i++ {
+					if i == approvedNodeIndex {
+						continue
+					}
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+				}
+			})
+
+			By(fmt.Sprintf("worker-%d must be marked for draining", approvedNodeIndex), func() {
+				newState := strings.Replace(f.ObjectStore.ToYaml(), fmt.Sprintf("stub: worker-%d", approvedNodeIndex), `update.node.deckhouse.io/disruption-required: ""`, 1)
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(newState, 1))
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
+
+				for i := 1; i <= len(nodeNames); i++ {
+					if i == approvedNodeIndex {
+						continue
+					}
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+				}
+			})
+
+			By(fmt.Sprintf("worker-%d must be drained", approvedNodeIndex), func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(f.ObjectStore.ToYaml(), 2))
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`spec.unschedulable`).String()).To(Equal("true"))
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+
+				for i := 1; i <= len(nodeNames); i++ {
+					if i == approvedNodeIndex {
+						continue
+					}
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+				}
+			})
+
+			By(fmt.Sprintf("disruption of worker-%d should be approved", approvedNodeIndex), func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(f.ObjectStore.ToYaml(), 2))
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`spec.unschedulable`).String()).To(Equal("true"))
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+
+				for i := 1; i <= len(nodeNames); i++ {
+					if i == approvedNodeIndex {
+						continue
+					}
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeFalse())
+				}
+			})
+
+			By(fmt.Sprintf("worker-%d must be processed after it becomes updated", approvedNodeIndex), func() {
+				newState := strings.Replace(f.ObjectStore.ToYaml(), fmt.Sprintf("stub2: worker-%d", approvedNodeIndex), `node.deckhouse.io/configuration-checksum: "updated"`, 1)
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(newState, 1))
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+
+				for i := 1; i <= len(nodeNames); i++ {
+					if i == approvedNodeIndex {
+						continue
+					}
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+					Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeFalse())
+				}
+			})
+
+			By("next node must be approved", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(f.ObjectStore.ToYaml(), 1))
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+
+				approvedCount := 0
+				waitingForApprovalCount := 0
+				for i := 1; i <= len(nodeNames); i++ {
+					if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists() {
+						approvedCount++
+					}
+					if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists() {
+						waitingForApprovalCount++
+					}
+				}
+
+				Expect(approvedCount).To(Equal(1))
+				Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 2))
+			})
+		})
+	})
+})
+
+func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady bool, nodeType string) string {
+	const tpl = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: worker-2
+spec:
+  nodeType: {{ $.NodeType }}
+status:
+{{- if $.NgReady }}
+  {{- if eq $.NodeType "Cloud" }}
+  desired: 3
+  {{- end }}
+  ready: 3
+{{- else }}
+  {{- if eq $.NodeType "Cloud" }}
+  desired: 3
+  {{- end }}
+  ready: 2
+{{- end }}
+
+{{- range $i, $nodeName := .NodeNames }}
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: {{ $nodeName }}
+  labels:
+    node.deckhouse.io/group: worker-2
+  annotations:
+{{- if and $.OneIsApproved (eq $i 0) }}
+    update.node.deckhouse.io/approved: ""
+{{- end }}
+{{- if $.AproveRequired }}
+    update.node.deckhouse.io/waiting-for-approval: ""
+{{- end }}
+{{- if $.NodeReady }}
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+{{- else }}
+status:
+  conditions:
+  - type: Ready
+    status: 'False'
+{{- end }}
+{{- end }}
+`
+	tmpl, _ := template.New("state").Parse(tpl)
+	var state bytes.Buffer
+	tmpl.Execute(&state, struct {
+		NodeNames      []string
+		OneIsApproved  bool
+		AproveRequired bool
+		NodeReady      bool
+		NgReady        bool
+		NodeType       string
+	}{nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, nodeType})
+	return state.String()
+}
+
+func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, allowDisruptions int, unschedulable bool) string {
+
+	const tpl = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: worker-2
+spec:
+  nodeType: Static
+{{- if eq .AllowDisruptions 1 }}
+  allowDisruptions: true
+{{- else if eq .AllowDisruptions 0 }}
+  allowDisruptions: false
+{{- end }}
+{{- range $nodeName := .NodeNames }}
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: {{ $nodeName }}
+  labels:
+    node.deckhouse.io/group: worker-2
+  annotations:
+    update.node.deckhouse.io/approved: ""
+{{- if $.DisruptionRequired }}
+    update.node.deckhouse.io/disruption-required: ""
+{{- end }}
+{{- if $.Unschedulable }}
+spec:
+  unschedulable: true
+{{- end }}
+{{- end }}
+`
+	tmpl, _ := template.New("state").Parse(tpl)
+	var state bytes.Buffer
+	tmpl.Execute(&state, struct {
+		NodeNames          []string
+		DisruptionRequired bool
+		AllowDisruptions   int
+		Unschedulable      bool
+	}{nodeNames, disruptionRequired, allowDisruptions, unschedulable})
+
+	return state.String()
+}
+
+func generateStateToTestDrainingNodes(nodeNames []string, draining, unschedulable bool) string {
+	state := ``
+
+	for _, nodeName := range nodeNames {
+		state += fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: %s
+  labels:
+    node.deckhouse.io/group: worker
+  annotations:
+    update.node.deckhouse.io/approved: ""
+`, nodeName)
+
+		if draining {
+			state += `
+    update.node.deckhouse.io/draining: ""
+`
+		}
+		if unschedulable {
+			state += `
+spec:
+  unschedulable: true`
+		}
+	}
+
+	return state
+}
+
+func generateStateToTestProcessUpdatedNodes(nodeNames []string, updated, ready, allowDisruptions, disruption, drained bool) string {
+	state := ``
+	ngName := "worker"
+	if !allowDisruptions {
+		ngName = "undisruptable-worker"
+	}
+
+	for _, nodeName := range nodeNames {
+		state += fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: %s
+  labels:
+    node.deckhouse.io/group: %s
+  annotations:
+    update.node.deckhouse.io/approved: ""
+`, nodeName, ngName)
+		if updated {
+			state += `
+    node.deckhouse.io/configuration-checksum: updated
+`
+		} else {
+			state += `
+    node.deckhouse.io/configuration-checksum: notupdated
+`
+		}
+
+		if !allowDisruptions {
+			state += `
+    update.node.deckhouse.io/disruption-required: ""
+`
+		}
+
+		if disruption {
+			state += `
+    update.node.deckhouse.io/disruption-approved: ""
+`
+		}
+
+		if drained {
+			state += `
+    update.node.deckhouse.io/drained: ""
+`
+		}
+		state += `
+spec:
+  unschedulable: true`
+
+		if ready {
+			state += `
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+`
+		} else {
+			state += `
+status:
+  conditions:
+  - type: Ready
+    status: 'False'
+`
+		}
+	}
+
+	return state
+}

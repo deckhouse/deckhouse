@@ -77,12 +77,7 @@ github.com/evanphx/json-patch v4.5.0+incompatible h1:ouOWdg56aJriqS0huScTkVXPC5I
 github.com/evanphx/json-patch v4.5.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/flant/addon-operator v1.0.0-beta.6 h1:BNTXhjn/k0srOfmwbbTQ9yipUjVXqL89ihbQoEv6k/U=
-github.com/flant/addon-operator v1.0.0-beta.6/go.mod h1:dhQTLOpJywRVY5Mhj594uWru7Vv94LpmcFLRavsfHJA=
-github.com/flant/addon-operator v1.0.0-beta.6.0.20200423180323-c33509e7ca98/go.mod h1:dhQTLOpJywRVY5Mhj594uWru7Vv94LpmcFLRavsfHJA=
-github.com/flant/addon-operator v1.0.0-beta.6.0.20200427115106-12fbe9e3d0ad/go.mod h1:dhQTLOpJywRVY5Mhj594uWru7Vv94LpmcFLRavsfHJA=
-github.com/flant/addon-operator v1.0.0-beta.6.0.20200427131135-d1d3a4bc5d74/go.mod h1:dhQTLOpJywRVY5Mhj594uWru7Vv94LpmcFLRavsfHJA=
-github.com/flant/addon-operator v1.0.0-beta.6.0.20200428093538-b059cdd82b0a/go.mod h1:dhQTLOpJywRVY5Mhj594uWru7Vv94LpmcFLRavsfHJA=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200428100530-ca4ca58f98bc h1:sPczeTQ7PnYofcga2woSY6gmn1sX7KWy9+D/kPsFYck=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200428100530-ca4ca58f98bc/go.mod h1:dhQTLOpJywRVY5Mhj594uWru7Vv94LpmcFLRavsfHJA=
 github.com/flant/kubedog v0.3.4/go.mod h1:o9cSuE3Z/kgxKhLCLUGUc9vPOFQgmY0B+7bdOQq++7o=
 github.com/flant/libjq-go v1.6.1-0.20200401092614-198670408da1 h1:pOPBJDB7PZz/SKa13mlR3bvkRJ0KWKRe6v+KZOObkKw=
@@ -219,10 +214,12 @@ github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/golang-lru v0.5.1 h1:0hERBMJE1eitiLkihrMvRVBYAkpHzc/J3QdDN+dAcgU=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
+github.com/helm/helm v2.16.6+incompatible h1:wKFIp1iWCR4vPV+3hzGNwioMa4XZznghDoUMqehShWo=
 github.com/helm/helm v2.16.6+incompatible/go.mod h1:ahXhuvluW4YnSL6W6hDVetZsVK8Pv4BP8OwKli7aMqo=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huandu/xstrings v1.3.1/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334 h1:VHgatEHNcBFEB7inlalqfNqw65aNkM1lGX2yt3NmbS8=
 github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334/go.mod h1:SK73tn/9oHe+/Y0h39VT4UCxmurVJkR5NA7kMEAOgSE=
 github.com/imdario/mergo v0.3.5/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/imdario/mergo v0.3.7 h1:Y+UAYTZ7gDEuOfhxKWy+dvb5dRQ6rJjFSdX2HZY1/gI=
@@ -522,6 +519,7 @@ k8s.io/client-go v0.0.0-20190918160344-1fbdaa4c8d90/go.mod h1:J69/JveO6XESwVgG53
 k8s.io/client-go v0.17.0 h1:8QOGvUGdqDMFrm9sD6IUFl256BcffynGoe80sxgTEDg=
 k8s.io/client-go v0.17.0/go.mod h1:TYgR6EUHs6k45hb6KWjVD6jFZvJV4gHDikv/It0xz+k=
 k8s.io/gengo v0.0.0-20190128074634-0689ccc1d7d6/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
+k8s.io/helm v2.16.6+incompatible h1:aVg+KRb+ADYgRoX9fRw2FMbBndEjgq1KyxIv+uqYeoM=
 k8s.io/helm v2.16.6+incompatible/go.mod h1:LZzlS4LQBHfciFOurYBFkCMTaZ0D1l+p0teMg7TSULI=
 k8s.io/klog v0.0.0-20181102134211-b9b56d5dfc92/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
 k8s.io/klog v0.3.0/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=

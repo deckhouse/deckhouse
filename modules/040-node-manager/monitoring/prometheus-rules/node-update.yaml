@@ -1,0 +1,197 @@
+- name: d8.node-group-update
+  rules:
+  - alert: D8NodeIsNotUpdating
+    expr: |
+      max by (node,node_group) (
+        node_group_node_status{status="ToBeUpdated"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{condition="Ready", status="true"} == 1))) 
+      ) > 0
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "D8NodeGroupHasProblemsWithUpdate,tier=cluster,prometheus=deckhouse,node_group={{ $labels.node_group }}"
+      summary: Нода {{ $labels.node }} не отрабатывает обновление
+      description: |
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }}, но она это обновление не получила и не пытается.
+        Скорее всего проблемы в Bashible, который по какой-то причине не обрабатывает обновление. Его задача на данном этапе — повесить на свою ноду аннотацию `update.node.deckhouse.io/waiting-for-approval` для того, чтобы запросить разрешение.
+        Узнать самую актуальную версию обновления:
+        ```kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d```
+        Узнать текущую версию на ноде:
+        ```kubectl get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'```
+        Логи Bashible на ноде:
+        ```journalctl -fu bashible```
+
+  - alert: D8NodeIsNotUpdating
+    expr: |
+      max by (node,node_group) (
+        node_group_node_status{status="Approved"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{condition="Ready", status="true"} == 1))) 
+      )> 0
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "D8NodeGroupHasProblemsWithUpdate,tier=cluster,prometheus=deckhouse,node_group={{ $labels.node_group }}"
+      summary: Нода {{ $labels.node }} не может закончить обновление
+      description: |
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, но не может завершить это обновление.
+        Логи Bashible на ноде:
+        ```journalctl -fu bashible```
+
+  - alert: D8NodeIsNotUpdating
+    expr: |
+      max by (node,node_group) (
+        node_group_node_status{status="DisruptionApproved"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition == 1))) 
+      )> 0
+    for: 20m
+    labels:
+      tier: cluster
+      severity_level: "7"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "D8NodeGroupHasProblemsWithUpdate,tier=cluster,prometheus=deckhouse,node_group={{ $labels.node_group }}"
+      summary: Нода {{ $labels.node }} не может закончить обновление
+      description: |
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению, наткнулась на рискованный шаг, менеджер обновлений (хук update_approval модуля node-group) осуществил drain ноды и нода получила разрешение на этот рискованный шаг, но не сообщает об успешном завершении обновления.
+        Логи Bashible на ноде:
+        ```journalctl -fu bashible```
+
+  - alert: D8NodeUpdateStuckWaitingForDisruptionApproval
+    expr: |
+      max by (node,node_group) (
+        node_group_node_status{status="WaitingForDisruptionApproval"} *
+        on(node) group_left() (max by(node) (kube_node_status_condition == 1)) 
+      )> 0
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "D8NodeGroupHasProblemsWithUpdate,tier=cluster,prometheus=deckhouse,node_group={{ $labels.node_group }}"
+      summary: В кластере есть нода, которая долго не может получить разрешение на рискованное обновление.
+      summary: Нода {{ $labels.node }} не может получить разрешение на disruption
+      description: |
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на рискованный шаг. На этот рискованный шаг нода не может дождаться разрешения, которое должно быть выдано полностью автоматически (хук update_approval модуля node-manager).
+
+  - alert: D8NodeGroupIsNotUpdating
+    expr: |
+      count by (node_group) (
+        node_group_node_status{status="WaitingForApproval"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition == 1))) 
+      ) > 0 and (
+        count by (node_group) (
+          node_group_node_status{status="Approved"} *
+          on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+        ) == 0
+      )
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "D8NodeGroupHasProblemsWithUpdate,tier=cluster,prometheus=deckhouse,node_group={{ $labels.node_group }}"
+      summary: Группа узлов {{ $labels.node_group }} не отрабатывает обновление
+      description: |
+        Пришло обновление для нод в группе {{ $labels.node_group }}, они об этом обновлении узнали, но ни одна нода не может получить разрешение на начало обновления.
+        Скорее всего какие-то проблемы в работе хука update_approval модуля node-manager.
+
+  - alert: D8NodeGroupHasProblemsWithUpdate
+    expr: count(max by (node_group) (ALERTS{alertname=~"D8NodeGroupIsNotUpdating|D8NodeIsNotUpdating|D8NodeUpdateStuckWaitingForDisruptionApproval", alertstate="firing"})) > 0
+    labels:
+      tier: cluster
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_grouped_by__main: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
+      summary: Группа узлов {{ $labels.node_group }} имеет проблемы обновления нод.
+      description: |
+        Подробную информацию можно получить в одном из связанных алертов.
+
+  - alert: D8ClusterHasProblemsWithNodesUpdates
+    expr: count(max by (node_group) (ALERTS{alertname="D8NodeGroupHasProblemsWithUpdate", alertstate="firing"})) > 0
+    labels:
+      tier: cluster
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      summary: В кластере проблемы обновления нод
+      description: |
+        Подробную информацию можно получить в одном из связанных алертов.
+
+  - alert: NodeRequiresDisruptionApprovalForUpdate
+    expr: |
+      max by (node,node_group) (
+        node_group_node_status{status="WaitingForManualDisruptionApproval"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition == 1))) 
+      )> 0
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse"
+      summary: Ноде {{ $labels.node }} требуется разрешение на disruption для продолжение обновления
+      description: |
+        Пришло обновление для нод и нода {{ $labels.node }} из группы {{ $labels.node_group }} об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на рискованный шаг. Так как в настройках группы {{ $labels.node_group }} не включен `allowDisruptions`, необходимо вручную выдать разрешение. Если нода готова к опасным обновлениям (например, дрейнута), дайте ей разрешение с помощью аннотации:
+        ```
+        kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true
+        kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
+        ```
+
+  - alert: ClusterHasNodesRequiringDisruptionApprovalForUpdate
+    expr: count(max by (node_group) (ALERTS{alertname=~"NodeRequiresDisruptionApprovalForUpdate", alertstate="firing"})) > 0
+    labels:
+      tier: cluster
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      summary: Группа узлов {{ $labels.node_group }} имеет проблемы обновления нод
+      description: |
+        Подробную информацию можно получить в одном из связанных алертов.
+
+  - alert: NodeStuckInDrainingForDisruptionDuringUpdate
+    expr: |
+      max by (node,node_group) (
+        node_group_node_status{status="DrainingForDisruption"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition == 1))) 
+      )> 0
+    for: 2h
+    labels:
+      tier: cluster
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse"
+      summary: Нода {{ $labels.node }} не может выполнить drain для обновления
+      description: |
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }}, она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению, наткнулась на рискованный шаг, и для выдачи автоматического разрешения был запущен drain, который никак не может завершиться.
+
+  - alert: ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate
+    expr: count(max by (node_group) (ALERTS{alertname=~"NodeStuckInDrainingForDisruptionDuringUpdate", alertstate="firing"})) > 0
+    labels:
+      tier: cluster
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      summary: В кластере есть ноды которым требуется разрешение на disruption для продолжение обновления
+      description: |
+        Подробную информацию можно получить в одном из связанных алертов.

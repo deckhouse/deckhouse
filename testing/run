@@ -22,8 +22,11 @@ if [[ $file =~ ^modules/.* ]]; then
       hook_name="$(basename "${file%%_test.go}")"
       tests=""
       docker_args="-w /deckhouse/modules/$module_name$(dirname "${file}")"
-      focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
-      ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+
+      if ! grep -q '\(FIt\|FDescribe\|FContext\) *(' "$(dirname "modules/${module_name}${file}")/${hook_name}_test.go"; then
+        focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
+        ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+      fi
     else
       tests="./modules/$module_name${file}/..."
     fi
@@ -45,8 +48,11 @@ elif [[ $file =~ ^global-hooks/.* ]]; then
     hook_name="$(basename "${file%%_test.go}")"
     tests=""
     docker_args="-w /deckhouse/$(dirname "${file}")"
-    focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
-    ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+
+    if ! grep -q '\(FIt\|FDescribe\|FContext\) *(' "$(dirname "${file}")/${hook_name}_test.go"; then
+      focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
+      ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+    fi
   else
     tests="./${file}/..."
   fi

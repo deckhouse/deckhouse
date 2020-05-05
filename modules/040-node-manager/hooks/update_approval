@@ -1,0 +1,209 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: configuration_checksums_secret
+      group: main
+      queue: /modules/$(module::name::kebab_case)/update_approval
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      nameSelector:
+        matchNames: [configuration-checksums]
+      jqFilter: (.data // {}) | [to_entries[] | (.value |= (. | @base64d))] | from_entries
+    - name: ngs
+      group: main
+      queue: /modules/$(module::name::kebab_case)/update_approval
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "nodeType": .spec.nodeType,
+          "allowDisruptions": (if .spec != null then if (.spec | has("allowDisruptions")) then .spec.allowDisruptions else true end else true end),
+          "status": .status
+        }
+    - name: nodes
+      group: main
+      queue: /modules/$(module::name::kebab_case)/update_approval
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: node.deckhouse.io/group
+          operator: Exists
+      jqFilter: |
+        def jsonPathExists(path): if path then true else false end; . |
+          {
+            "name": .metadata.name,
+            "nodeGroup": (.metadata.labels."node.deckhouse.io/group" // null),
+            "configurationChecksum": (.metadata.annotations."node.deckhouse.io/configuration-checksum" // ""),
+            "isUnschedulable": (.spec.unschedulable // false),
+            "isReady": (if .status.conditions then .status.conditions[] | select(.type == "Ready") | .status == "True" else false end),
+            "isWaitingForApproval": jsonPathExists(.metadata.annotations."update.node.deckhouse.io/waiting-for-approval"),
+            "isApproved": jsonPathExists(.metadata.annotations."update.node.deckhouse.io/approved"),
+            "isDisruptionRequired": jsonPathExists(.metadata.annotations."update.node.deckhouse.io/disruption-required"),
+            "isDraining": jsonPathExists(.metadata.annotations."update.node.deckhouse.io/draining")
+          }
+    - name: nodes_for_draining
+      group: draining
+      queue: /modules/$(module::name::kebab_case)/draining
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: node.deckhouse.io/group
+          operator: Exists
+      jqFilter: |
+          {
+            "name": .metadata.name,
+            "isDraining": (.metadata.annotations | has("update.node.deckhouse.io/draining"))
+          }
+    schedule:
+    - name: draining_schedule
+      group: draining
+      queue: /modules/$(module::name::kebab_case)/draining
+      crontab: "* * * * *"
+EOF
+}
+
+# Approve updates
+#  * Only one node from node group can be approved for update
+#  * If there are not ready nodes in the group, they'll be updated first
+function approve_updates() {
+  for ng_name in $(context::jq -r '.snapshots.ngs[].filterResult | .name'); do
+    # shellcheck disable=SC2016
+    ng="$(context::jq --arg ng_name "$ng_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name)')"
+    # shellcheck disable=SC2016
+    nodes="$(context::jq -c --arg ng_name "$ng_name" '.snapshots.nodes[].filterResult | select(.nodeGroup == $ng_name)' | sort -R)"
+
+    # Skip ng, if it already has approved nodes
+    if jq -ers '[.[] | select(.isApproved == true)] | any' <<< "$nodes" > /dev/null; then
+      continue
+    fi
+
+    # Skip ng, if it has no waiting nodes
+    if ! jq -ers '[.[] | select(.isWaitingForApproval)] | any' <<< "$nodes"  > /dev/null; then
+      continue
+    fi
+
+    approved_node_name=""
+
+    # Allow one node, if 100% nodes in NodeGroup are ready
+    if jq -er '.status.desired == .status.ready or .nodeType != "Cloud"' <<< "$ng" >/dev/null && jq -ers 'all(.isReady)' <<< "$nodes" >/dev/null; then
+      approved_node_name="$(jq -ers '[.[] | select(.isWaitingForApproval)] | first | .name' <<< "$nodes")"
+    fi
+
+    # Allow one of not ready nodes, if any
+    if tmp="$(jq -ers '[.[] | select(.isReady == false and .isWaitingForApproval == true)] | first | .name' <<< "$nodes")"; then
+      approved_node_name="$tmp"
+    fi
+
+    if [ -n "$approved_node_name" ] ; then
+      kubernetes::patch_jq "" "node/${approved_node_name}" '.metadata.annotations."update.node.deckhouse.io/approved" = "" |
+                                                            del(.metadata.annotations."update.node.deckhouse.io/waiting-for-approval")'
+      finished="yes"
+    fi
+  done
+}
+
+# Approve disruption updates for NodeGroups with allowDisruptions == true
+# We don't limit number of Nodes here, because it's already limited
+function approve_disruptions() {
+  for node_name in $(context::jq -cr '.snapshots.nodes[].filterResult | select(.isDisruptionRequired == true and .isDraining == false) | .name'); do
+    # shellcheck disable=SC2016
+    node="$(context::jq --arg node_name "$node_name" '.snapshots.nodes[].filterResult | select(.name == $node_name)')"
+    ng_name="$(jq -r '.nodeGroup' <<< "$node")"
+
+    # Skip nodes in NodeGroup not allowing disruptive updates
+    # shellcheck disable=SC2016
+    if ! context::jq --arg ng_name "$ng_name" -e '.snapshots.ngs[].filterResult | select(.name == $ng_name) | select(.allowDisruptions == true) | any' > /dev/null; then
+      continue
+    fi
+
+    finished="yes"
+
+    if jq -er '.isUnschedulable == false' <<< "$node" > /dev/null; then
+      # If node is not unschedulable – mark it for draining
+      kubernetes::patch_jq "" "node/${node_name}" '.metadata.annotations."update.node.deckhouse.io/draining" = ""'
+    else
+      # Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
+      kubernetes::patch_jq "" "node/${node_name}" '.metadata.annotations."update.node.deckhouse.io/disruption-approved" = "" |
+                                                   del(.metadata.annotations."update.node.deckhouse.io/disruption-required")'
+    fi
+  done
+}
+
+# Process updated nodes: remove approved and disruption-approved annotations, if:
+#   * Node is ready
+#   * Node checksum is equal to NodeGroup checksum
+function process_updated_nodes() {
+  for node_name in $(context::jq -cr '.snapshots.nodes[].filterResult | select(.isApproved == true) | .name'); do
+    # shellcheck disable=SC2016
+    node="$(context::jq --arg node_name "$node_name" '.snapshots.nodes[].filterResult | select(.name == $node_name)')"
+    node_checksum="$(jq -r '.configurationChecksum' <<< "$node")"
+    ng_name="$(jq -r '.nodeGroup' <<< "$node")"
+    ng_checksum="$(context::get "snapshots.configuration_checksums_secret.0.filterResult.${ng_name}")"
+
+    if [ -n "$node_checksum" ] && [ -n "$ng_checksum" ] && [ "$node_checksum" == "$ng_checksum" ] ; then
+      if jq -er '.isReady == true' <<< "$node" > /dev/null; then
+        kubernetes::patch_jq "" "node/${node_name}" 'del(.metadata.annotations."update.node.deckhouse.io/approved") |
+                                                     del(.metadata.annotations."update.node.deckhouse.io/waiting-for-approval") |
+                                                     del(.metadata.annotations."update.node.deckhouse.io/disruption-required") |
+                                                     del(.metadata.annotations."update.node.deckhouse.io/disruption-approved") |
+                                                     if .metadata.annotations | has("update.node.deckhouse.io/drained") then del(.spec.unschedulable) else . end |
+                                                     del(.metadata.annotations."update.node.deckhouse.io/drained")'
+        finished="yes"
+      fi
+    fi
+  done
+}
+
+function __on_group::main() {
+  finished="no"
+
+  for f in process_updated_nodes approve_disruptions approve_updates; do
+    $f
+
+    if [ "$finished" == "yes" ]; then
+      return 0
+    fi
+  done
+}
+
+# Drain nodes: If node is marked for draining – drain it!
+function __on_group::draining() {
+  unset pids
+  declare -A pids
+
+  draining="no"
+  for node_name in $(context::jq -cr '.snapshots.nodes_for_draining[].filterResult | select(.isDraining == true) | .name'); do
+    draining="yes"
+
+    if [ -v D8_IS_TESTS_ENVIRONMENT ]; then
+      kubernetes::patch_jq "" "node/$node_name" '.spec.unschedulable = true'
+      true &
+    else
+      kubectl drain "$node_name" --delete-local-data=true --ignore-daemonsets=true --force=true --timeout=30s &
+    fi
+
+    pids["$node_name"]="$!"
+  done
+
+  if [ "$draining" == "yes" ]; then
+    for node_name in "${!pids[@]}"; do
+      if wait "${pids["$node_name"]}" ; then
+        kubernetes::patch_jq "" "node/${node_name}" '.metadata.annotations."update.node.deckhouse.io/drained" = "" |
+                                                     del(.metadata.annotations."update.node.deckhouse.io/draining")'
+      fi
+    done
+  fi
+}
+
+hook::run "$@"

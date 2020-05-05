@@ -31,11 +31,12 @@ _on_kubernetes_api_proxy_service_changed() {
 {{- end }}
   fi
 
-  systemctl enable kubernetes-api-proxy
 {{- if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
   systemctl restart kubernetes-api-proxy
 {{- end }}
+
+  systemctl enable kubernetes-api-proxy
 }
 
 bb-sync-file /etc/systemd/system/kubernetes-api-proxy.service - << "EOF"

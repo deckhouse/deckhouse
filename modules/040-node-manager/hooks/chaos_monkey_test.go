@@ -54,28 +54,28 @@ kind: Node
 metadata:
   name: node1
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largeng
+    node.deckhouse.io/group: largeng
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: node2
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largeng
+    node.deckhouse.io/group: largeng
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: node3
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: largeng
+    node.deckhouse.io/group: largeng
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: smallnode1
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: toosmall
+    node.deckhouse.io/group: toosmall
 `
 		stateMachines = `
 ---
@@ -119,8 +119,8 @@ metadata:
   name: victimnode
   namespace: d8-cloud-instance-manager
   labels:
-    cloud-instance-manager.deckhouse.io/cloud-instance-group: someng
-    cloud-instance-manager.deckhouse.io/chaos-monkey-victim: ""
+    node.deckhouse.io/group: someng
+    node.deckhouse.io/chaos-monkey-victim: ""
     node: victimnode
 `
 	)

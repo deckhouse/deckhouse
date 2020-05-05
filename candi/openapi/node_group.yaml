@@ -30,6 +30,10 @@ spec:
     type: integer
     description: "Number of Kubernetes nodes (in any state) in the group."
     JSONPath: .status.nodes
+  - name: UpToDate
+    type: integer
+    description: "Number of up-to-date nodes in the group."
+    JSONPath: .status.upToDate
   - name: Instances
     type: integer
     description: "Number of instances (in any state) in the group."
@@ -79,6 +83,9 @@ spec:
             max:
               type: integer
               description: "Maximum amount of instances in the group."
+            upToDate:
+              type: integer
+              description: "Number of up-to-date nodes in the group."
             error:
               type: string
               description: "Error message about possible problems with the group handling."
@@ -211,3 +218,5 @@ spec:
                 period:
                   type: string
                   pattern: '^[0-9]+[mh]{1}$'
+            allowDisruptions:
+              type: boolean

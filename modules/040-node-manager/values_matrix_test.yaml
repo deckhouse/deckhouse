@@ -62,10 +62,7 @@ nodeManager:
               iops: 42
               instanceType: t2.medium
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.16.6
+            kubernetesVersion: "1.16"
             cloudInstances:
               classReference:
                 kind: AWSInstanceClass
@@ -80,10 +77,7 @@ nodeManager:
               ami: myami
               instanceType: t2.medium
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.16.6
+            kubernetesVersion: "1.16"
             cloudInstances:
               classReference:
                 kind: AWSInstanceClass
@@ -130,10 +124,7 @@ nodeManager:
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: OpenStackInstanceClass
@@ -173,10 +164,7 @@ nodeManager:
               diskType: superdisk #optional
               diskSizeGb: 42 #optional
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: GCPInstanceClass
@@ -192,10 +180,7 @@ nodeManager:
               imageName: ubuntu-18-04-cloud-amd64
               machineType: mymachinetype
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: GCPInstanceClass
@@ -242,10 +227,7 @@ nodeManager:
                 nestedHardwareVirtualization: true
                 memoryReservation: 42
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: VsphereInstanceClass
@@ -294,10 +276,7 @@ nodeManager:
               labels: # optional
                 my: label
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: YandexInstanceClass
@@ -321,10 +300,7 @@ nodeManager:
               labels: # optional
                 my: label
             nodeType: Cloud
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: YandexInstanceClass
@@ -342,10 +318,7 @@ nodeManager:
         - []
         - - name: worker
             nodeType: Static
-            bashible:
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
     - <<: *internalDefaults
       bootstrapTokens:
         worker: mytoken
@@ -354,21 +327,13 @@ nodeManager:
         - []
         - - name: worker
             nodeType: Static
-            bashible:
-              bundle: ubuntu-18.04-1.0
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
         - - name: worker
             instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
             nodeType: Cloud
-            bashible:
-              bundle: ubuntu-18.04-1.0
-              dynamicOptions: {}
-              options:
-                kubernetesVersion: 1.15.4
+            kubernetesVersion: "1.15"
             cloudInstances:
               classReference:
                 kind: OpenStackInstanceClass

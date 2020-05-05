@@ -8,8 +8,8 @@ function __config__() {
     afterHelm: 10
     kubernetes:
     - name: ngs
+      group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
-      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
       watchEvent: ["Added", "Modified"]
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
@@ -25,8 +25,8 @@ function __config__() {
           .zonesNum = (.spec.cloudInstances.zones | length)
         else . end
     - name: cloud_provider_secrets
+      group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
-      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
       apiVersion: v1
       kind: Secret
       namespace:
@@ -35,13 +35,21 @@ function __config__() {
       nameSelector:
         matchNames: [d8-node-manager-cloud-provider]
       jqFilter: |
-        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
-        +
-        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
-        | {"zonesNum": (.zones | length)}
-    - name: mds
+        {"zonesNum": (try(.data.zones | @base64d | fromjson) // [] | length)}
+    - name: configuration_checksums_secret
+      group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
-      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      nameSelector:
+        matchNames: [configuration-checksums]
+      jqFilter: (.data // {}) | [to_entries[] | (.value |= (. | @base64d))] | from_entries
+    - name: mds
+      group: main
+      queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
       watchEvent: ["Added", "Modified"]
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
@@ -50,8 +58,8 @@ function __config__() {
           matchNames: [d8-cloud-instance-manager]
       jqFilter: '{"nodeGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
     - name: instances
+      group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
-      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
       watchEvent: ["Added", "Modified"]
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: Machine
@@ -60,19 +68,20 @@ function __config__() {
           matchNames: [d8-cloud-instance-manager]
       jqFilter: '{"nodeGroup": .metadata.labels."instance-group"}'
     - name: nodes
+      group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
-      includeSnapshotsFrom: [ngs,cloud_provider_secrets,mds,instances,nodes]
       apiVersion: v1
       kind: Node
       labelSelector:
         matchExpressions:
-        - key: "cloud-instance-manager.deckhouse.io/cloud-instance-group"
+        - key: "node.deckhouse.io/group"
           operator: Exists
       jqFilter: |
         {
           "name": .metadata.name,
-          "cloudInstanceGroup": .metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group",
-          "isReady": ([.status.conditions[] | select(.type == "Ready")][-1].status == "True")
+          "cloudInstanceGroup": .metadata.labels."node.deckhouse.io/group",
+          "isReady": ([.status.conditions[] | select(.type == "Ready")][-1].status == "True"),
+          "configurationChecksum": .metadata.annotations."node.deckhouse.io/configuration-checksum"
         }
 EOF
 }
@@ -91,6 +100,10 @@ function __main__() {
     nodes="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name)] | length')"
     ready_nodes="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name and .filterResult.isReady)] | length')"
 
+    ng_checksum="$(context::jq --arg ng_name "$ng_name" -r '.snapshots.configuration_checksums_secret[0].filterResult[$ng_name]')"
+    uptodate_nodes_count="$(context::jq --arg ng_checksum "$ng_checksum" '[.snapshots.nodes[].filterResult | select(.configurationChecksum == $ng_checksum)] | length')"
+
+    # shellcheck disable=SC2016
     status_patch="$(context::jq -c \
       --arg i $i \
       --arg default_zones_num $default_zones_num \
@@ -98,13 +111,15 @@ function __main__() {
       --arg instances_num "$instances" \
       --arg nodes_num "$nodes" \
       --arg ready_nodes_num "$ready_nodes" \
+      --arg uptodate_nodes_count "$uptodate_nodes_count" \
       '.snapshots.ngs[$i | tonumber].filterResult |
         if .spec.nodeType == "Cloud" and $default_zones_num == "0" then
         {
           "desired": ($desired_instances_num | tonumber),
           "instances": ($instances_num | tonumber),
           "nodes": ($nodes_num | tonumber),
-          "ready": ($ready_nodes_num | tonumber)
+          "ready": ($ready_nodes_num | tonumber),
+          "upToDate": ($uptodate_nodes_count | tonumber)
         }
         elif .spec.nodeType == "Cloud" then
         {
@@ -113,12 +128,14 @@ function __main__() {
           "desired": ($desired_instances_num | tonumber),
           "instances": ($instances_num | tonumber),
           "nodes": ($nodes_num | tonumber),
-          "ready": ($ready_nodes_num | tonumber)
+          "ready": ($ready_nodes_num | tonumber),
+          "upToDate": ($uptodate_nodes_count | tonumber)
         }
         else
         {
           "nodes": ($nodes_num | tonumber),
-          "ready": ($ready_nodes_num | tonumber)
+          "ready": ($ready_nodes_num | tonumber),
+          "upToDate": ($uptodate_nodes_count | tonumber)
         }
         end
     ')"
