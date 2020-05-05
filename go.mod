@@ -1,4 +1,4 @@
-module github.com/deckhouse/deckhouse/testing
+module github.com/deckhouse/deckhouse
 
 go 1.13
 
@@ -6,7 +6,7 @@ require (
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-beta.6 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.9.0.20200424122611-b895d20c1963
+	github.com/flant/shell-operator v1.0.0-beta.9.0.20200501142139-f9ab4893a8ce // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.4.0
