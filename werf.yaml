@@ -19,7 +19,7 @@
     - gawk
 
 # Hooks dependencies (from edge/testing)
-- apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/testing/ update_cache=yes
+- apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/community/ update_cache=yes
 - apk: name=cfssl repository=http://nl.alpinelinux.org/alpine/edge/testing/
 - apk: name=rgxg repository=http://nl.alpinelinux.org/alpine/edge/testing/
 
@@ -180,12 +180,10 @@ from: golang:1.13-alpine3.10
 git:
 - add: /
   to: /deckhouse
-  includePaths:
-  - testing
   stageDependencies:
     install:
-      - testing/go.mod
-      - testing/go.sum
+      - go.mod
+      - go.sum
 import:
 - artifact: deckhouse-controller
   add: /deckhouse-controller/deckhouse-controller
@@ -217,6 +215,7 @@ ansible:
       - bash
       - libcurl
       - bash-completion
+  - apk: name=dumb-init repository=http://nl.alpinelinux.org/alpine/edge/community/
   - apk:
       name:
       - binutils
@@ -227,10 +226,11 @@ ansible:
       sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
       sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
   - command: go get github.com/onsi/ginkgo/ginkgo
+  - command: go get github.com/go-delve/delve/cmd/dlv
   install:
   - command: go mod download
     args:
-      chdir: /deckhouse/testing
+      chdir: /deckhouse
   - command: addgroup -g 998 -S kcov-runner
   - command: adduser -u 999 -G kcov-runner -D -H -s /bin/bash kcov-runner
 
