@@ -97,6 +97,7 @@ else
   cmd="$cmd$(
     cat <<"END"
 pid=$!
+touch /test-is-not-stopped
 while kill -0 $pid 2>/dev/null; do
   if (( $(date +%s) - $(date +%s -r /test-is-not-stopped) > 1 )) ; then
     pkill -P $pid 2>/dev/null

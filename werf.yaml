@@ -17,6 +17,8 @@
     - util-linux
     - sed
     - gawk
+    - netcat-openbsd
+    - busybox-extras
 
 # Hooks dependencies (from edge/testing)
 - apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/community/ update_cache=yes
