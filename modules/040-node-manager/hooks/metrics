@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: machine_deployments
+      queue: /modules/$(module::name::kebab_case)/metrics
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
       includeSnapshotsFrom: ["machine_deployments"]
@@ -28,13 +29,107 @@ function __config__() {
             "name": .metadata.name
           }
         }
+    - name: nodes
+      group: node_status
+      queue: /modules/$(module::name::kebab_case)/metrics
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: "node.deckhouse.io/group"
+          operator: Exists
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "nodeGroup": .metadata.labels."node.deckhouse.io/group",
+          "configurationChecksum": .metadata.annotations."node.deckhouse.io/configuration-checksum",
+          "isWaitingForApproval":  (.metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval")),
+          "isApproved":            (.metadata.annotations | has("update.node.deckhouse.io/approved")),
+          "isDisruptionRequired":  (.metadata.annotations | has("update.node.deckhouse.io/disruption-required")),
+          "isDraining":            (.metadata.annotations | has("update.node.deckhouse.io/draining")),
+          "isDrained":             (.metadata.annotations | has("update.node.deckhouse.io/drained")),
+          "isDisruptionApproved":  (.metadata.annotations | has("update.node.deckhouse.io/disruption-approved"))
+        }
+    - name: ngs
+      group: node_status
+      queue: /modules/$(module::name::kebab_case)/metrics
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "allowDisruptions": (if .spec | has("allowDisruptions") then .spec.allowDisruptions else true end)
+        }
+    - name: configuration_checksums_secret
+      group: node_status
+      queue: /modules/$(module::name::kebab_case)/metrics
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      nameSelector:
+        matchNames: [configuration-checksums]
+      jqFilter: (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
 EOF
 }
 
 
-function __main__() {
-  for i in $(context::jq -r '.snapshots.machine_deployments | keys[]'); do
-    context::get snapshots.machine_deployments.$i.filterResult | jq -rc . >> $METRICS_PATH
+function __on_kubernetes::machine_deployments() {
+  context::jq -rc '.snapshots.machine_deployments[] | .filterResult' >> $METRICS_PATH
+}
+
+function __on_group::node_status() {
+  if ! context::has snapshots.configuration_checksums_secret.0; then
+    echo "WARNING: There is no configuration-checksums Secret in namespace d8-cloud-instance-manager."
+    return 0
+  fi
+
+  for node_index in $(context::jq '.snapshots.nodes | to_entries[] | select(.value.filterResult.nodeGroup != null) | .key'); do
+    node_data="$(context::get snapshots.nodes.$node_index.filterResult)"
+    node_name="$(jq -r '.name' <<< "$node_data")"
+    node_group="$(jq -r '.nodeGroup' <<< "$node_data")"
+    desired_configuration_checksum="$(context::get snapshots.configuration_checksums_secret.0.filterResult."${node_group}")"
+
+    if ! ng_data="$(context::jq -er --arg node_group "$node_group" '.snapshots.ngs[] | select(.object.metadata.name == $node_group) | .filterResult')"; then
+      echo "WARNING: Can't find NodeGroup $node_group, skipping node $node_name..."
+      continue
+    fi
+
+    node_status="$(
+      jq -nr \
+       --argjson node "$node_data" \
+       --argjson ng "$ng_data" \
+       --arg desired_configuration_checksum "$desired_configuration_checksum" '
+        if   $node.isWaitingForApproval                                                        then "WaitingForApproval"
+        elif $node.isApproved and $node.isDisruptionRequired and $node.isDraining              then "DrainingForDisruption"
+        elif $node.isApproved and $node.isDisruptionRequired and $ng.allowDisruptions == true  then "WaitingForDisruptionApproval"
+        elif $node.isApproved and $node.isDisruptionRequired and $ng.allowDisruptions == false then "WaitingForManualDisruptionApproval"
+        elif $node.isApproved and $node.isDisruptionApproved                                   then "DisruptionApproved"
+        elif $node.isApproved                                                                  then "Approved"
+        elif $node.configurationChecksum != $desired_configuration_checksum                    then "ToBeUpdated"
+        elif $node.configurationChecksum == $desired_configuration_checksum                    then "UpToDate"
+        else                                                                                        "Unknown"
+        end
+    ')"
+
+    if [ "$node_status" == "Unknown" ] ; then
+      >&2 echo "Error! Node state can't be Unknown"
+      exit 1
+    fi
+
+    jq -nc --arg metric_name node_group_node_status --arg node_name "$node_name" --arg node_group "$node_group" --arg node_status $node_status '
+        [
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForApproval"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "Approved"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "DrainingForDisruption"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForDisruptionApproval"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForManualDisruptionApproval"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "DisruptionApproved"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "ToBeUpdated"}},
+          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "UpToDate"}}
+        ] |
+        (to_entries[] | select(.value.labels.status == $node_status) | .key) as $key | .[$key].set = 1 | .[]' >> $METRICS_PATH
   done
 }
 

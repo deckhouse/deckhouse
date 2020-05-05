@@ -4,7 +4,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"fmt"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -40,6 +39,11 @@ metadata:
   name: worker
   labels:
     node.deckhouse.io/group: worker
+    node-role.kubernetes.io/worker: ""
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node.deckhouse.io/uninitialized
 `
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
@@ -52,10 +56,12 @@ metadata:
 			    "kind": "Node",
 			    "metadata": {
 			      "labels": {
-			        "node.deckhouse.io/group": "worker"
+			        "node.deckhouse.io/group": "worker",
+			        "node-role.kubernetes.io/worker": ""
 			      },
 			      "name": "worker"
-			    }
+			    },
+                "spec": {}
 			  }
 			`
 			Expect(f).To(ExecuteSuccessfully())
@@ -163,8 +169,6 @@ spec:
 				}
 			`
 			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
-			// fmt.Printf("LOG:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", f.ValuesGet("nodeManager.test").String())
-			// fmt.Printf("NODE:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", lastApplied)
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 		})
@@ -222,9 +226,6 @@ spec:
 				}
 			`
 			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
-			node := f.KubernetesGlobalResource("Node", "worker").Parse()
-			fmt.Printf("LOG:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", f.ValuesGet("nodeManager.test").String())
-			fmt.Printf("NODE:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", node)
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 		})
@@ -309,9 +310,6 @@ spec:
 				}
 			`
 			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
-			node := f.KubernetesGlobalResource("Node", "worker").Parse()
-			fmt.Printf("LOG:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", f.ValuesGet("nodeManager.test").String())
-			fmt.Printf("NODE:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", node)
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 		})
@@ -411,8 +409,6 @@ spec:
 
 			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
 			node := f.KubernetesGlobalResource("Node", "worker").Parse()
-			fmt.Printf("LOG:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", f.ValuesGet("nodeManager.test").String())
-			fmt.Printf("NODE:\n🔥🔥🔥\n%v\n🔥🔥🔥\n", node)
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 			Expect(node).To(MatchYAML(expectedYAML))

@@ -133,7 +133,7 @@ function __main__() {
     ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
 
     # If nodeType is "Cloud" and cloud provider exists
-    if (jq -e '.nodeType == "Cloud"' <<< "$ng") && [ -n "$instance_class_kind" ]; then
+    if (jq -e '.nodeType == "Cloud"' <<< "$ng" > /dev/null) && [ -n "$instance_class_kind" ]; then
       instance_classes="$(context::jq -r '
         [.snapshots.ics[]] | reduce .[] as $i ({}; . + {($i.filterResult.name): $i.filterResult.spec})
       ')"
@@ -158,7 +158,7 @@ function __main__() {
 
       # check #2 — is .spec.cloudInstances.classReference valid
       ng_instance_class_name=$(jq -r '.cloudInstances.classReference.name' <<< "$ng")
-      if jq -e '. | has("'$ng_instance_class_name'") | not' <<< "$instance_classes" >/dev/null 2>&1; then
+      if jq -e '. | has("'$ng_instance_class_name'") | not' <<< "$instance_classes" > /dev/null; then
         error_message="Wrong classReference: There is no valid instance class $ng_instance_class_name of type $ng_instance_class_kind."
 
         if
@@ -187,9 +187,9 @@ function __main__() {
 
     # Calculate effective version
     effective_kubernetes_version="$global_target_kubernetes_version"
-    if jq -e '.kubernetesVersion != null' <<< "$ng" ; then
+    if jq -e '.kubernetesVersion != null' <<< "$ng" > /dev/null; then
       effective_kubernetes_version="$(jq -r '.kubernetesVersion' <<< "$ng")"
-      
+
       # If kubernetesVersion IS specified in NodeGroup, we don't allow Nodes
       # to be more than 2 version befind control plane
       if semver::lt "$effective_kubernetes_version" "$(semver::unbump_minor "$(semver::unbump_minor "$control_plane_max_kubernetes_version")")" ; then
@@ -207,6 +207,12 @@ function __main__() {
       effective_kubernetes_version="$control_plane_min_kubernetes_version"
     fi
     ng="$(jq --arg effective_kubernetes_version "$effective_kubernetes_version" '.kubernetesVersion = $effective_kubernetes_version' <<< "$ng")"
+
+    # Calculate update epoch
+    update_epoch=$(awk -v seed="$(values::get global.discovery.clusterUUID)${ng_name}" -v timestamp="$(date +%s)" \
+      'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'
+    )
+    ng="$(jq --arg update_epoch "$update_epoch" '.updateEpoch = $update_epoch' <<< "$ng")"
 
     _set_ng_error_status "${ng_name}" ""
     final_node_groups="$(jq --argjson ng "$ng" '. + [$ng]' <<< $final_node_groups)"

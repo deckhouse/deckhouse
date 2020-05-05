@@ -23,9 +23,9 @@
           Bозможные проблемы: неправильная конфигурация instance class для cloud provider.
 {{- end }}
 
-- name: d8.cloud-instance-group
+- name: d8.node-group
   rules:
-  - alert: CloudInstanceGroupReplicasUnavailable
+  - alert: NodeGroupReplicasUnavailable
     expr: |
       max by (name) (mcm_machine_deployment_status_unavailable_replicas > 0)
       * on(name) group_left(node_group) machine_deployment_node_group_info
@@ -36,14 +36,14 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasCloudInstanceGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
       summary: В cloud instance group {{`{{ $labels.node_group }}`}} есть недоступные инстансы
       description: |
         Количество недоступных инстансов: {{`{{ $value }}`}}. Более подробная информация в связанных алертах.
 {{- template "todo_list" }}
 
-  - alert: CloudInstanceGroupReplicasUnavailable
+  - alert: NodeGroupReplicasUnavailable
     expr: |
       max by (name) (mcm_machine_deployment_status_unavailable_replicas > 0 and mcm_machine_deployment_status_ready_replicas == 0)
       * on(name) group_left(node_group) machine_deployment_node_group_info
@@ -54,13 +54,13 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasCloudInstanceGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
       summary: В cloud instance group {{`{{ $labels.node_group }}`}} нет ни одного доступного инстанса
       description: |
 {{- template "todo_list" }}
 
-  - alert: CloudInstanceGroupReplicasUnavailable
+  - alert: NodeGroupReplicasUnavailable
     expr: |
       max by (name) (mcm_machine_deployment_status_unavailable_replicas > mcm_machine_deployment_info_spec_rolling_update_max_surge)
       * on(name) group_left(node_group) machine_deployment_node_group_info
@@ -71,15 +71,15 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasCloudInstanceGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
       summary: В cloud instance group {{`{{ $labels.node_group }}`}} количество одновременно недоступных инстансов превышает допустимое значение.
       description: |
         Возможно, autoscaler заказал большое количество нод. Обратите внимание на состояние machine в кластере.
 {{- template "todo_list" }}
 
-  - alert: ClusterHasCloudInstanceGroupsWithUnavailableReplicas
-    expr: count(max by (node_group) (ALERTS{alertname="CloudInstanceGroupReplicasUnavailable", alertstate="firing"})) > 0
+  - alert: ClusterHasNodeGroupsWithUnavailableReplicas
+    expr: count(max by (node_group) (ALERTS{alertname="NodeGroupReplicasUnavailable", alertstate="firing"})) > 0
     labels:
       tier: cluster
     annotations:

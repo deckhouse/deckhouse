@@ -5,7 +5,10 @@ post-install() {
 }
 {{- end }}
 
-kernel_version="5.3.0.51.104"
-bb-apt-install linux-generic-hwe-18.04="$kernel_version"
+version="5.3.0-51-generic"
 
-bb-apt-autoremove
+if (! bb-apt-package? "linux-image-${version}") || (! bb-apt-package? "linux-modules-${version}") || (! bb-apt-package? "linux-headers-${version}"); then
+  bb-deckhouse-get-disruptive-update-approval
+  bb-apt-install "linux-image-${version}" "linux-modules-${version}" "linux-headers-${version}"
+  bb-apt-autoremove
+fi

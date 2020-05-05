@@ -34,7 +34,7 @@ modulesImages:
 discovery:
   clusterMasterCount: "3"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  clusterVersion: 1.15.4
+  kubernetesVersion: 1.15.4
 `
 
 const nodeManagerAWS = `
@@ -68,6 +68,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: Cloud
+    kubernetesVersion: "1.16"
     bashible:
       dynamicOptions: {}
       options:
@@ -109,6 +110,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: Cloud
+    kubernetesVersion: "1.15"
     bashible:
       dynamicOptions: {}
       options:
@@ -161,6 +163,7 @@ internal:
       - ic-groupa
       - ic-groupb
     nodeType: Cloud
+    kubernetesVersion: "1.15"
     bashible:
       dynamicOptions: {}
       options:
@@ -210,6 +213,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: Cloud
+    kubernetesVersion: "1.15"
     bashible:
       dynamicOptions: {}
       options:
@@ -266,6 +270,7 @@ internal:
       labels: # optional
         my: label
     nodeType: Cloud
+    kubernetesVersion: "1.15"
     bashible:
       dynamicOptions: {}
       options:
@@ -291,10 +296,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    bashible:
-      dynamicOptions: {}
-      options:
-        kubernetesVersion: 1.15.4
+    kubernetesVersion: "1.15"
 `
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {

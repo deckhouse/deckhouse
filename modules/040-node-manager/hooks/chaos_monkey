@@ -22,11 +22,11 @@ function __config__() {
       kind: Node
       labelSelector:
         matchExpressions:
-        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
+        - key: node.deckhouse.io/group
           operator: Exists
       jqFilter: |
         {
-          "nodeGroup": (.metadata.labels."cloud-instance-manager.deckhouse.io/cloud-instance-group" // null),
+          "nodeGroup": (.metadata.labels."node.deckhouse.io/group" // null),
           "name": .metadata.name
         }
     - name: machines
@@ -35,7 +35,7 @@ function __config__() {
       kind: Machine
       jqFilter: |
         {
-          "isMonkeyVictim": (.metadata.labels | has("cloud-instance-manager.deckhouse.io/chaos-monkey-victim")),
+          "isMonkeyVictim": (.metadata.labels | has("node.deckhouse.io/chaos-monkey-victim")),
           "node": .metadata.labels.node,
           "name": .metadata.name
         }
@@ -91,7 +91,7 @@ function __on_schedule::monkey() {
       victim_node="$(context::jq -r --arg ng_name "${ng_name}" '.snapshots.nodes[] | select(.filterResult.nodeGroup == $ng_name) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
       victim_machine="$(context::jq -r --arg node "${victim_node}" '.snapshots.machines[] | select(.filterResult.node == $node) | .filterResult.name' | shuf -n 1 $SHUF_RANDOM_SOURCE)"
       if [[ "$ng_chaos_mode" == "DrainAndDelete" ]] ; then
-        kubernetes::patch_jq "d8-cloud-instance-manager" "machine/$victim_machine" '.metadata.labels."cloud-instance-manager.deckhouse.io/chaos-monkey-victim" = ""'
+        kubernetes::patch_jq "d8-cloud-instance-manager" "machine/$victim_machine" '.metadata.labels."node.deckhouse.io/chaos-monkey-victim" = ""'
         kubernetes::delete_if_exists "d8-cloud-instance-manager" "machine/$victim_machine"
       fi
     fi

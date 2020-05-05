@@ -49,16 +49,152 @@ spec:
         metadata:
           creationTimestamp: null
           labels:
-            cloud-instance-manager.deckhouse.io/cloud-instance-group: bad
+            node.deckhouse.io/group: bad
             node-role.kubernetes.io/bad: ""
         spec: {}
+`
+		stateNodes = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node0
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations: {}
+   # status should be "ToBeUpdated"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    "node.deckhouse.io/configuration-checksum": abc # "abc" is stored in configuration-checksums-secret
+    # status should be "UpToDate"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node2
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    "node.deckhouse.io/configuration-checksum": xyz # not desired
+    # status should be "ToBeUpdated"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node3
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/waiting-for-approval: ""  # status should be "WaitingForApproval"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node4
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/approved: ""  # status should be "Approved"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node50
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: "" # status should be "WaitingForDisruptionApproval" due to NG.allowDisruptions = true
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node51
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: "" # status should be "WaitingForManualDisruptionApproval" due to NG.allowDisruptions = false
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node6
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/draining: "" # status should be "DrainingForDisruption"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node7
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/drained: "" # status should be "DrainedForDisruption"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node8
+  labels:
+    node.deckhouse.io/group: ng0
+  annotations:
+    node.deckhouse.io/configuration-checksum: xyz # not desired
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-approved: "" # status should be "DisruptionApproved"
+`
 
+		stateNodeGroups = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: ng0
+spec: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  allowDisruptions: false
+`
 
+		stateConfigurationChecksumsSecret = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+type: Opaque
+data:
+  ng0: YWJj #abc
+  ng1: YWJj #abc
 `
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -83,4 +219,16 @@ spec:
 			Expect(f.BindingContexts.Get("0.snapshots.machine_deployments.0.filterResult.labels").String()).To(MatchJSON(`{"node_group":"proper","name":"dev-proper-297926a1"}`))
 		})
 	})
+
+	Context("All kinds of nodes", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNodes + stateNodeGroups + stateConfigurationChecksumsSecret))
+			f.RunHook()
+		})
+
+		It("Hook must not fail, metrics must render", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
 })

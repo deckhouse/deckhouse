@@ -2,7 +2,6 @@ package hooks
 
 import (
 	"encoding/base64"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
