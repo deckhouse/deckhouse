@@ -58,6 +58,7 @@ function __main__() {
       if ($ic.spec|has("bashible")) then
         .spec.bashible //= $ic.spec.bashible
       else . end |
+      .spec.allowDisruptions = false |
       del(.spec.instanceClassReference) |
       del(.spec.minInstancesPerZone) |
       del(.spec.maxInstancesPerZone) |
