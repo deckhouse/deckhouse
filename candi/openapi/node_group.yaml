@@ -22,6 +22,10 @@ spec:
   subresources:
     status: {}
   additionalPrinterColumns:
+  - name: Type
+    type: string
+    description: "Type of nodes in group"
+    JSONPath: .spec.nodeType
   - name: Ready
     type: integer
     description: "Number of ready Kubernetes nodes in the group."
