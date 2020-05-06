@@ -18,7 +18,7 @@ metadata:
   - machine.sapcloud.io/machine-controller-manager
   labels:
     heritage: deckhouse
-    instance-group: proper
+    node-group: proper
     module: node-manager
   name: dev-proper-297926a1
   namespace: d8-cloud-instance-manager
@@ -36,7 +36,6 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/bashible-bundles-options: d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09
         checksum/machine-class: 95ad1a35397453b647c1d25d78264bca4605ff522e719e8f605159a9351d8c2a
       creationTimestamp: null
       labels:

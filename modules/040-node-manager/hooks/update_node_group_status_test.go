@@ -66,7 +66,7 @@ metadata:
   name: md-ng1
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng1
+    node-group: ng1
 spec:
   replicas: 2
 `

@@ -69,10 +69,6 @@ internal:
       instanceType: t2.medium
     nodeType: Cloud
     kubernetesVersion: "1.16"
-    bashible:
-      dynamicOptions: {}
-      options:
-        kubernetesVersion: 1.16.6
     cloudInstances:
       classReference:
         kind: AWSInstanceClass
@@ -111,10 +107,6 @@ internal:
       diskSizeGb: 42 #optional
     nodeType: Cloud
     kubernetesVersion: "1.15"
-    bashible:
-      dynamicOptions: {}
-      options:
-        kubernetesVersion: 1.15.4
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -164,10 +156,6 @@ internal:
       - ic-groupb
     nodeType: Cloud
     kubernetesVersion: "1.15"
-    bashible:
-      dynamicOptions: {}
-      options:
-        kubernetesVersion: 1.15.4
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -214,10 +202,6 @@ internal:
         memoryReservation: 42
     nodeType: Cloud
     kubernetesVersion: "1.15"
-    bashible:
-      dynamicOptions: {}
-      options:
-        kubernetesVersion: 1.15.4
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -271,10 +255,6 @@ internal:
         my: label
     nodeType: Cloud
     kubernetesVersion: "1.15"
-    bashible:
-      dynamicOptions: {}
-      options:
-        kubernetesVersion: 1.15.4
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -406,15 +386,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09"))
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d801592ae7c43d3b0fba96a805c8d9f7fd006b9726daf97ba7f7abc399a56b09"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
@@ -539,15 +515,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
 
@@ -678,15 +650,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
 
@@ -811,15 +779,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e54154626facdf7ba3937af03fb11ac3e626cf1ebab8e36fb17c8320ed4ae906"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e54154626facdf7ba3937af03fb11ac3e626cf1ebab8e36fb17c8320ed4ae906"))
 
@@ -944,15 +908,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("74795e5fe09827e6c1b0a44968e667aa93a9c1ee34e9c6f0bb6994dbdb2bb2fd"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/bashible-bundles-options").String()).To(Equal("d98bbed20612cd12e463d29a0d76837bb821a14810944aea2a2c19542e3d71be"))
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("74795e5fe09827e6c1b0a44968e667aa93a9c1ee34e9c6f0bb6994dbdb2bb2fd"))
 

@@ -6,7 +6,7 @@
     * Синхронизирует метаданные Yandex Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в Yandex.
 2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
 3. CSI storage — для заказа дисков в Yandex.
-4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [YandexInstanceClass'ы](#YandexInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#cloudinstancegroup-custom-resource).
+4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [YandexInstanceClass'ы](#YandexInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#NodeGroup-custom-resource).
 
 ## Конфигурация
 
@@ -20,11 +20,11 @@
 
 ### Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `YandexInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `YandexInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `folderID` — имя каталога в Yandex, к которому будут привязаны compute ресурсы.
 * `region` — имя региона, где будут заказываться инстансы.
-* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [CloudInstanceGroup](modules/040-cloud-instance-manager/README.md#CloudInstanceGroup-custom-resource) объекте.
+* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [NodeGroup](modules/040-cloud-instance-manager/README.md#NodeGroup-custom-resource) объекте.
   * Формат — массив строк.
 * `zoneToSubnetIdMap` — карта для сопоставления zone и subnet
   * Формат — объект ключ-значение, где ключом является имя зоны, а значение - subnet, который относится к данной зоне

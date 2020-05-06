@@ -33,7 +33,7 @@
   - alert: CronJobSchedulingError
     expr: |
       (
-        time() - kube_cronjob_next_schedule_time > 0
+        timestamp(kube_cronjob_next_schedule_time) - kube_cronjob_next_schedule_time > 0
       )
       * on (namespace, cronjob)
       (

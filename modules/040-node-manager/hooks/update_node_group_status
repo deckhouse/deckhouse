@@ -56,7 +56,7 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
-      jqFilter: '{"nodeGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
+      jqFilter: '{"nodeGroup": .metadata.labels."node-group", "replicas": .spec.replicas}'
     - name: instances
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses

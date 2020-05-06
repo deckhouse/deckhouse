@@ -7,13 +7,14 @@
     2. Синхронизирует метаданные OpenStack Servers и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в OpenStack.
 2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
 3. CSI storage — для заказа дисков в Cinder (block). Manilla (filesystem) пока не поддерживается.
-4. Регистрация в модуле [node-manager](modules/040-node-manager), чтобы [OpenStackInstanceClass'ы](#OpenStackInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-node-manager/README.md#CloudInstanceGroup-custom-resource).
+4. Регистрация в модуле [node-manager](modules/040-node-manager), чтобы [OpenStackInstanceClass'ы](#OpenStackInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-node-manager/README.md#NodeGroup-custom-resource).
+
 
 ## Конфигурация
 
 ### Включение модуля
 
-Модуль автоматически включается для всех облачных кластеров развёрнутых в openstack.  
+Модуль автоматически включается для всех облачных кластеров развёрнутых в openstack.
 
 ### Параметры
 Настройки модуля устанавливаются автоматически на основании [выбранной схемы размещения](candi/README.md).
@@ -23,7 +24,7 @@
 <details>
 <summary>Развернуть</summary>
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `OpenStackInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/README.md#как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/README.md#как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `connection` - Параметры подключения к api cloud provider'a
     * `authURL` — OpenStack Identity API URL.
@@ -147,7 +148,7 @@ spec:
 ```
 
 #### LoadBalancer
-**Внимание!!! На данный момент в openstack при заказе loadbalancer не определяется правильный клиентский IP.**  
+**Внимание!!! На данный момент в openstack при заказе loadbalancer не определяется правильный клиентский IP.**
 
 ##### Пример IngressNginxController
 

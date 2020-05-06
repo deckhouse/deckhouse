@@ -6,7 +6,7 @@
     1. Синхронизирует метаданные vSphere VirtualMachines и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в vSphere.
 2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
 3. CSI storage — для заказа дисков на datastore через механизм First-Class Disk.
-4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [VsphereInstanceClass'ы](#VsphereInstanceClass-custom-resource) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#CloudInstanceGroup-custom-resource).
+4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [VsphereInstanceClass'ы](#VsphereInstanceClass-custom-resource) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#NodeGroup-custom-resource).
 
 ## Конфигурация
 
@@ -20,7 +20,7 @@
 
 ### Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `VsphereInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `VsphereInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `host` — домен vCenter сервера.
 * `username` — логин.
