@@ -1,6 +1,8 @@
 package terraform
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
@@ -9,10 +11,11 @@ import (
 	"github.com/flant/logboek"
 
 	"flant/deckhouse-candi/pkg/config"
+	"flant/deckhouse-candi/pkg/log"
 )
 
 const (
-	deckhouseClusterStatePrefix = ".deckhouse-candi.tfstate"
+	deckhouseClusterStateSuffix = "-deckhouse-candi.tfstate"
 	cloudProvidersDir           = "/deckhouse/candi/cloud-providers/"
 	varFileName                 = "cluster-config.auto.tfvars.json"
 )
@@ -21,10 +24,13 @@ type Interface interface {
 	Init(bool) ([]byte, error)
 	Apply() ([]byte, error)
 	GetTerraformOutput(string) ([]byte, error)
+	Destroy(bool) ([]byte, error)
 	getState() ([]byte, error)
 }
 
 type Runner struct {
+	step       string
+	stateDir   string
 	WorkingDir string
 	State      string
 	MetaConfig *config.MetaConfig
@@ -37,60 +43,62 @@ var (
 
 func NewRunner(step string, metaConfig *config.MetaConfig) *Runner {
 	workingDir := buildTerraformPath(metaConfig.ProviderName, metaConfig.Layout, step)
-	return &Runner{WorkingDir: workingDir, MetaConfig: metaConfig}
+	return &Runner{WorkingDir: workingDir, stateDir: workingDir, step: step, MetaConfig: metaConfig}
+}
+
+func (r *Runner) WithStateDir(dir string) {
+	if dir != "" {
+		r.stateDir = dir
+	}
 }
 
 func (r *Runner) Init(bootstrap bool) ([]byte, error) {
-	logboek.LogInfoF("Init terraform ... ")
+	err := logboek.LogProcess("Terraform Init", log.TerraformOptions(), func() error {
+		clusterConfigJSON, err := r.MetaConfig.MarshalConfig(bootstrap)
+		if err != nil {
+			return fmt.Errorf("terraform prepare cluster config error: %v", err)
+		}
 
-	clusterConfigJSON, err := r.MetaConfig.MarshalConfig(bootstrap)
-	if err != nil {
-		return nil, fmt.Errorf("terraform prepare cluster config error: %v", err)
-	}
+		varFilePath := filepath.Join(r.stateDir, varFileName)
+		if err = ioutil.WriteFile(varFilePath, clusterConfigJSON, 0755); err != nil {
+			return fmt.Errorf("terraform saving cluster config error: %v", err)
+		}
 
-	varFilePath := filepath.Join(r.WorkingDir, varFileName)
-	if err = ioutil.WriteFile(varFilePath, clusterConfigJSON, 0755); err != nil {
-		return nil, fmt.Errorf("terraform saving cluster config error: %v", err)
-	}
+		args := []string{
+			"init",
+			"-get-plugins=false",
+			"-no-color",
+			"-input=false",
+			fmt.Sprintf("-var-file=%s", varFilePath),
+			r.WorkingDir,
+		}
 
-	output, err := exec.Command("terraform",
-		"init",
-		"-get-plugins=false",
-		"-no-color",
-		"-input=false",
-		fmt.Sprintf("-var-file=%s", varFilePath),
-		r.WorkingDir,
-	).CombinedOutput() // #nosec
-
-	if err == nil {
-		logboek.LogInfoLn("OK!")
-	} else {
-		logboek.LogWarnLn("ERROR!")
-	}
-	return output, err
+		return execTerraform(args...)
+	})
+	return []byte(""), err
 }
 
 func (r *Runner) Apply() ([]byte, error) {
-	logboek.LogInfoF("Apply terraform ... ")
-	state := filepath.Join(r.WorkingDir, deckhouseClusterStatePrefix)
-	args := []string{
-		"apply",
-		"-auto-approve",
-		"-input=false",
-		"-no-color",
-		fmt.Sprintf("-var-file=%s", filepath.Join(r.WorkingDir, varFileName)),
-		fmt.Sprintf("-state=%s", state),
-		fmt.Sprintf("-state-out=%s", state),
-		r.WorkingDir,
-	}
-	data, err := exec.Command("terraform", args...).CombinedOutput() // #nosec
-	if err == nil {
-		r.State = state
-		logboek.LogInfoLn("OK!")
-	} else {
-		logboek.LogWarnLn("ERROR!")
-	}
-	return data, err
+	err := logboek.LogProcess("Terraform Apply", log.TerraformOptions(), func() error {
+		state := filepath.Join(r.stateDir, r.step+deckhouseClusterStateSuffix)
+		args := []string{
+			"apply",
+			"-auto-approve",
+			"-input=false",
+			"-no-color",
+			fmt.Sprintf("-var-file=%s", filepath.Join(r.WorkingDir, varFileName)),
+			fmt.Sprintf("-state=%s", state),
+			fmt.Sprintf("-state-out=%s", state),
+			r.WorkingDir,
+		}
+
+		err := execTerraform(args...)
+		if err == nil {
+			r.State = state
+		}
+		return err
+	})
+	return []byte(""), err
 }
 
 func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
@@ -112,30 +120,51 @@ func (r *Runner) Destroy(detectState bool) ([]byte, error) {
 		if !detectState {
 			return nil, fmt.Errorf("no state found, try to run terraform apply first")
 		}
-		r.State = filepath.Join(r.WorkingDir, deckhouseClusterStatePrefix)
+		r.State = filepath.Join(r.stateDir, r.step+deckhouseClusterStateSuffix)
 	}
 
-	logboek.LogInfoF("Destroy terraform ... ")
-	args := []string{
-		"destroy",
-		"-no-color",
-		"-auto-approve",
-		fmt.Sprintf("-var-file=%s", filepath.Join(r.WorkingDir, varFileName)),
-		fmt.Sprintf("-state=%s", r.State),
-		r.WorkingDir,
-	}
+	err := logboek.LogProcess("Terraform Destroy", log.TerraformOptions(), func() error {
+		args := []string{
+			"destroy",
+			"-no-color",
+			"-auto-approve",
+			fmt.Sprintf("-var-file=%s", filepath.Join(r.WorkingDir, varFileName)),
+			fmt.Sprintf("-state=%s", r.State),
+			r.WorkingDir,
+		}
 
-	output, err := exec.Command("terraform", args...).CombinedOutput()
-	if err == nil {
-		logboek.LogInfoLn("OK!")
-	} else {
-		logboek.LogWarnLn("ERROR!")
-	}
-	return output, err
+		return execTerraform(args...)
+	})
+	return []byte(""), err
 }
 
 func (r *Runner) getState() ([]byte, error) {
 	return ioutil.ReadFile(r.State)
+}
+
+func execTerraform(args ...string) error {
+	cmd := exec.Command("terraform", args...)
+	stdout, _ := cmd.StdoutPipe()
+
+	var errbuf bytes.Buffer
+	cmd.Stderr = &errbuf
+
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("run terraform: %v", err)
+	}
+
+	r := bufio.NewScanner(stdout)
+	for r.Scan() {
+		logboek.LogInfoLn(r.Text())
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		logboek.LogWarnF(errbuf.String() + "\n")
+		return fmt.Errorf("wait terraform: %v", err)
+	}
+	return nil
 }
 
 func buildTerraformPath(provider, layout, step string) string {
@@ -166,6 +195,8 @@ func (r *FakeRunner) GetTerraformOutput(output string) ([]byte, error) {
 	result := r.OutputResults[output]
 	return result.Data, result.Error
 }
+
+func (r *FakeRunner) Destroy(_ bool) ([]byte, error) { return nil, nil }
 
 func (r *FakeRunner) getState() ([]byte, error) {
 	return []byte(r.State), nil

@@ -23,6 +23,7 @@ func prettyPrintJSON(jsonData []byte) string {
 func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("base-infrastructure", "Run base terraform and save the state.")
 	app.DefineConfigFlags(cmd)
+	app.DefineTerraformFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -32,6 +33,7 @@ func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause
 
 		basePipelineResult, err := terraform.NewPipeline(
 			"base-infrastructure",
+			app.TerraformStateDir,
 			metaConfig,
 			terraform.GetBasePipelineResult,
 		).Run()
@@ -62,6 +64,7 @@ func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause
 func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("master-node-bootstrap", " Run master terraform and return the result.")
 	app.DefineConfigFlags(cmd)
+	app.DefineTerraformFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -71,6 +74,7 @@ func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 		masterPipelineResult, err := terraform.NewPipeline(
 			"master-node-bootstrap",
+			app.TerraformStateDir,
 			metaConfig,
 			terraform.GetMasterPipelineResult,
 		).Run()
@@ -102,6 +106,7 @@ func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("destroy-all", " Destroy all terraform environment.")
 	app.DefineConfigFlags(cmd)
+	app.DefineTerraformFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -112,7 +117,14 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 		var masterState string
 		err = logboek.LogProcess("Run Destroy for master-node-bootstrap", log.BoldOptions(), func() error {
 			masterRunner := terraform.NewRunner("master-node-bootstrap", metaConfig)
-			stdout, err := masterRunner.Destroy(true)
+			masterRunner.WithStateDir(app.TerraformStateDir)
+			stdout, err := masterRunner.Init(false)
+			if err != nil {
+				logboek.LogInfoF(string(stdout))
+				return err
+			}
+
+			stdout, err = masterRunner.Destroy(true)
 			if err != nil {
 				logboek.LogInfoF(string(stdout))
 				return err
@@ -121,13 +133,20 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			return nil
 		})
 		if err != nil {
-			return err
+			logboek.LogErrorLn(err)
 		}
 
 		var baseState string
 		err = logboek.LogProcess("Run Destroy for base-infrastructure", log.BoldOptions(), func() error {
 			baseRunner := terraform.NewRunner("base-infrastructure", metaConfig)
-			stdout, err := baseRunner.Destroy(true)
+			baseRunner.WithStateDir(app.TerraformStateDir)
+			stdout, err := baseRunner.Init(false)
+			if err != nil {
+				logboek.LogInfoF(string(stdout))
+				return err
+			}
+
+			stdout, err = baseRunner.Destroy(true)
 			if err != nil {
 				logboek.LogInfoF(string(stdout))
 				return err
@@ -136,7 +155,7 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			return nil
 		})
 		if err != nil {
-			return err
+			logboek.LogErrorLn(err)
 		}
 
 		_ = os.Remove(masterState)

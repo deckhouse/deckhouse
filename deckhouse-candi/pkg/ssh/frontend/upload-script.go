@@ -10,6 +10,7 @@ import (
 
 	"github.com/flant/logboek"
 
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/ssh/session"
 )
 
@@ -83,38 +84,38 @@ func (u *UploadScript) ExecuteBundle(parentDir string, bundleDir string) (stdout
 	bundleCmd := NewCommand(u.Session, tarCmdline).Sudo()
 
 	// Buffers to implement output handler logic
-	var buffer []string
 	var lastStep string
 
-	err = bundleCmd.WithStdoutHandler(bundleOutputHandler(&buffer, &lastStep)).CaptureStdout(nil).Run()
+	err = bundleCmd.WithStdoutHandler(bundleOutputHandler(&lastStep)).CaptureStdout(nil).Run()
+	logboek.LogProcessEnd(log.BoldEndOptions())
 	if err != nil {
 		err = fmt.Errorf("execute bundle: %v", err)
-	} else {
-		logboek.LogInfoLn("OK!")
 	}
 	return bundleCmd.StdoutBytes(), err
 }
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
-func bundleOutputHandler(buffer *[]string, lastStep *string) func(string) {
+func bundleOutputHandler(lastStep *string) func(string) {
 	return func(l string) {
+		if l == "===" {
+			return
+		}
 		if stepHeaderRegexp.Match([]byte(l)) {
 			match := stepHeaderRegexp.FindStringSubmatch(l)
+			stepName := match[1]
 
-			if *lastStep == match[1] {
-				logboek.LogWarnLn("ERROR!")
-				logboek.LogErrorLn(strings.Join(*buffer, "\n"))
-				logboek.LogInfoF("[Retry] ")
+			if *lastStep == stepName {
+				logboek.LogProcessFail(log.BoldFailOptions())
+				stepName = "Retry " + stepName
 			} else if *lastStep != "" {
-				logboek.LogInfoLn("OK!")
+				logboek.LogProcessEnd(log.BoldEndOptions())
 			}
 
-			logboek.LogInfoF("Step %s ... ", match[1])
-			*buffer = []string{}
+			logboek.LogProcessStart("Run step "+stepName, log.BoldStartOptions())
 			*lastStep = match[1]
 			return
 		}
-		*buffer = append(*buffer, l)
+		logboek.LogInfoLn(l)
 	}
 }

@@ -203,7 +203,7 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 				if !errors.IsAlreadyExists(err) {
 					return err
 				}
-				logboek.LogWarnF("%s already exists. Trying to update ... ", task.name)
+				logboek.LogInfoF("%s already exists. Trying to update ... ", task.name)
 				err = task.updateTask(manifest)
 				if err != nil {
 					logboek.LogWarnLn("ERROR!")
