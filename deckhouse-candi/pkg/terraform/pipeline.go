@@ -14,8 +14,9 @@ type Pipeline struct {
 	GetResult       func(*Pipeline) (map[string][]byte, error)
 }
 
-func NewPipeline(step string, metaConfig *config.MetaConfig, getResult func(*Pipeline) (map[string][]byte, error)) *Pipeline {
+func NewPipeline(step, stateDir string, metaConfig *config.MetaConfig, getResult func(*Pipeline) (map[string][]byte, error)) *Pipeline {
 	tfRunner := NewRunner(step, metaConfig)
+	tfRunner.WithStateDir(stateDir)
 	return &Pipeline{Step: step, TerraformRunner: tfRunner, MetaConfig: metaConfig, GetResult: getResult}
 }
 
@@ -39,7 +40,7 @@ func (p *Pipeline) runTerraform() error {
 
 func (p *Pipeline) Run() (map[string][]byte, error) {
 	var result map[string][]byte
-	err := logboek.LogProcess("Run terraform pipeline "+p.Step, log.BoldOptions(), func() error {
+	err := logboek.LogProcess("Run Terraform pipeline "+p.Step, log.BoldOptions(), func() error {
 		err := p.runTerraform()
 		if err != nil {
 			return err

@@ -27,7 +27,7 @@ type saveFromTo struct {
 func logTemplatesData(name string, data map[string]interface{}) {
 	formattedData, _ := yaml.Marshal(data)
 	_ = logboek.LogProcess(fmt.Sprintf("%s data", name), log.BoldOptions(), func() error {
-		logboek.LogInfoF("\n%s\n", string(formattedData))
+		logboek.LogInfoF(string(formattedData))
 		return nil
 	})
 }
@@ -39,7 +39,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName string, me
 	bashibleData := metaConfig.MarshalConfigForBashibleBundleTemplate(bundleName, nodeIP)
 	logTemplatesData("bashible", bashibleData)
 
-	return logboek.LogProcess("Render bundle templates", log.BoldOptions(), func() error {
+	return logboek.LogProcess("Render bashible bundle templates", log.BoldOptions(), func() error {
 		if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName); err != nil {
 			return err
 		}

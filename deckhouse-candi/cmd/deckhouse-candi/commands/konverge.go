@@ -30,7 +30,7 @@ func DefineKonvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		err = deckhouse.RunKonverge(
 			kubeCl,
-			terraform.NewPipeline("tf_base", new(config.MetaConfig), terraform.GetBasePipelineResult),
+			terraform.NewPipeline("tf_base", "", new(config.MetaConfig), terraform.GetBasePipelineResult),
 		)
 
 		if err != nil {

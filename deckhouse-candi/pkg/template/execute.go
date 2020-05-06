@@ -43,7 +43,7 @@ func RenderTemplate(templatesDir string, data map[string]interface{}) ([]Rendere
 
 	files, err := ioutil.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
-		logboek.LogWarnF("Templates directory %q does not exist\n", templatesDir)
+		logboek.LogInfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
 		return nil, nil
 	}
 

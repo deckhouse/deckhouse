@@ -100,7 +100,8 @@ func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string
 			"name": "master",
 		},
 		"spec": map[string]interface{}{
-			"nodeType": "Hybrid",
+			"nodeType":         "Hybrid",
+			"allowDisruptions": false,
 			/*
 				"cloudInstances": map[string]interface{}{
 					"classReference": map[string]interface{}{

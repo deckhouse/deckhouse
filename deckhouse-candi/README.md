@@ -9,9 +9,6 @@ Deckhouse CandI (Cluster and Infrastructure)
 
 ### Разработка cloud provider'ов
 
-
-
-
 Пример конфигурации для OpenStack:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

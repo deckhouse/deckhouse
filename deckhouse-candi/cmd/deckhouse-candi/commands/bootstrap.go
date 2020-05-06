@@ -37,6 +37,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSshFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
+	app.DefineTerraformFlags(cmd)
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
@@ -72,20 +73,12 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var masterInstanceClass []byte
 		if metaConfig.ClusterType == "Cloud" {
 			err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
-				basePipelineResult, err := terraform.NewPipeline(
-					"base-infrastructure",
-					metaConfig,
-					terraform.GetBasePipelineResult,
-				).Run()
+				basePipelineResult, err := terraform.NewPipeline("base-infrastructure", app.TerraformStateDir, metaConfig, terraform.GetBasePipelineResult).Run()
 				if err != nil {
 					return err
 				}
 
-				masterPipelineResult, err := terraform.NewPipeline(
-					"master-node-bootstrap",
-					metaConfig,
-					terraform.GetMasterPipelineResult,
-				).Run()
+				masterPipelineResult, err := terraform.NewPipeline("master-node-bootstrap", app.TerraformStateDir, metaConfig, terraform.GetMasterPipelineResult).Run()
 				if err != nil {
 					return err
 				}
