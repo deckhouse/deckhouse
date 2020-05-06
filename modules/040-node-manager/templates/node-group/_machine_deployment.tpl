@@ -1,3 +1,7 @@
+{{- define "node_group_bashible_checksum_hack" }}
+kubernetesVersion: {{ .Values.global.discovery.kubernetesVersion }}
+{{- end }}
+
 {{- define "node_group_machine_deployment" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
@@ -14,7 +18,7 @@ metadata:
   annotations:
     zone: {{ $zone_name }}
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list $context (dict "instance-group" $ng.name)) | indent 2 }}
+{{ include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | indent 2 }}
 spec:
   minReadySeconds: 300
   strategy:
@@ -31,10 +35,9 @@ spec:
         instance-group: {{ $ng.name }}-{{ $zone_name }}
       annotations:
   # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible. Оставил чтобы не перекатывались ноды.
-  {{- if hasKey $ng "bashible" }}
-        bashible-bundle: {{ $ng.bashible.bundle | quote }}
-        checksum/bashible-bundles-options: {{ $ng.bashible.options | toJson | sha256sum | quote }}
-  {{- end }}
+        bashible-bundle: "ubuntu-18.04-1.0"
+        checksum/bashible-bundles-options: {{ include "node_group_bashible_checksum_hack" $context | fromYaml | toJson | sha256sum | quote }}
+
         checksum/machine-class: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
     spec:
       class:

@@ -25,7 +25,7 @@ function __config__() {
           "set": 1,
           "labels":
           {
-            "node_group": .metadata.labels | to_entries[] | select(.key == "instance-group") | .value,
+            "node_group": .metadata.labels | to_entries[] | select(.key == "node-group") | .value,
             "name": .metadata.name
           }
         }

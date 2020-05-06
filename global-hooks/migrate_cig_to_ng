@@ -55,9 +55,6 @@ function __main__() {
       if (.spec|has("zones")) then
         .spec.cloudInstances.zones //= .spec.zones
       else . end |
-      if ($ic.spec|has("bashible")) then
-        .spec.bashible //= $ic.spec.bashible
-      else . end |
       .spec.allowDisruptions = false |
       del(.spec.instanceClassReference) |
       del(.spec.minInstancesPerZone) |
@@ -71,11 +68,6 @@ function __main__() {
     done
 
     kubectl delete crd cloudinstancegroups.deckhouse.io
-
-    for ic in $(kubectl get "$instance_class_kind" -o json | jq -r '.items[] | select(.spec|has("bashible")) | .metadata.name'); do
-      echo "!!! NOTICE: Remove bashible from ${instance_class_kind}/${ic} !!!"
-      kubectl patch "$instance_class_kind" $ic --type=json -p='[{"op": "remove", "path": "/spec/bashible"}]'
-    done
   fi
 }
 

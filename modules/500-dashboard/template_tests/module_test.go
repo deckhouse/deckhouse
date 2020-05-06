@@ -29,7 +29,7 @@ modules:
   publicDomainTemplate: "%s.example.com"
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  clusterVersion: 1.15.4
+  kubernetesVersion: 1.15.4
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
@@ -51,7 +51,7 @@ modules:
 discovery:
   clusterControlPlaneIsHighlyAvailable: true
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  clusterVersion: 1.15.4
+  kubernetesVersion: 1.15.4
   d8SpecificNodeCountByRole:
     system: 3
     master: 5
@@ -72,7 +72,7 @@ modules:
   publicDomainTemplate: "%s.example.com"
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  clusterVersion: 1.15.4
+  kubernetesVersion: 1.15.4
   d8SpecificNodeCountByRole:
     system: 3
 `
@@ -93,7 +93,7 @@ modules:
   publicDomainTemplate: "%s.example.com"
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  clusterVersion: 1.15.4
+  kubernetesVersion: 1.15.4
   d8SpecificNodeCountByRole:
     system: 3
 `

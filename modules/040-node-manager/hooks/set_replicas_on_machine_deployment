@@ -15,7 +15,7 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
-      jqFilter: '{"name": .metadata.name, "nodeGroup": .metadata.labels."instance-group", "replicas": .spec.replicas}'
+      jqFilter: '{"name": .metadata.name, "nodeGroup": .metadata.labels."node-group", "replicas": .spec.replicas}'
     - name: ngs
       queue: /modules/$(module::name::kebab_case)/set_replicas_on_machine_deployment
       includeSnapshotsFrom: [mds,ngs]

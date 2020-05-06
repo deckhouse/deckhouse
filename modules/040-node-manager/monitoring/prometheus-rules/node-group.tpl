@@ -38,7 +38,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
-      summary: В cloud instance group {{`{{ $labels.node_group }}`}} есть недоступные инстансы
+      summary: В node group {{`{{ $labels.node_group }}`}} есть недоступные инстансы
       description: |
         Количество недоступных инстансов: {{`{{ $value }}`}}. Более подробная информация в связанных алертах.
 {{- template "todo_list" }}
@@ -56,7 +56,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
-      summary: В cloud instance group {{`{{ $labels.node_group }}`}} нет ни одного доступного инстанса
+      summary: В node group {{`{{ $labels.node_group }}`}} нет ни одного доступного инстанса
       description: |
 {{- template "todo_list" }}
 
@@ -73,7 +73,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
-      summary: В cloud instance group {{`{{ $labels.node_group }}`}} количество одновременно недоступных инстансов превышает допустимое значение.
+      summary: В node group {{`{{ $labels.node_group }}`}} количество одновременно недоступных инстансов превышает допустимое значение.
       description: |
         Возможно, autoscaler заказал большое количество нод. Обратите внимание на состояние machine в кластере.
 {{- template "todo_list" }}
@@ -86,6 +86,6 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_alert_type: "group"
-      summary: В кластере есть несколько cloud instance group c недоступными инстансами.
+      summary: В кластере есть несколько node group c недоступными инстансами.
       description: |
         Подробную информацию можно получить в одном из связанных алертов.

@@ -35,10 +35,6 @@ spec:
     classReference:
       kind: D8TestInstanceClass
       name: proper1
-  bashible:
-    options:
-      kubernetesVersion: "1.15"
-    bundle: centos-7.1.1.1
   kubernetesVersion: "1.42"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -52,9 +48,6 @@ spec:
       kind: D8TestInstanceClass
       name: proper2
     zones: [a,b]
-  bashible:
-    options: {}
-    bundle: slackware-14.1
 `
 		stateNGStaticAndHybrid = `
 ---
@@ -146,10 +139,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
   name: improper1
-spec:
-  bashible:
-    options: {}
-    bundle: ubuntu-7.1.1.1
+spec: {}
 `
 		stateCloudProviderSecret = `
 ---
@@ -188,7 +178,6 @@ metadata:
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.15.5", "kubernetesVersions":["1.15.5"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "CloudInstanceGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
 	Context("Cluster with NGs, MDs and provider secret", func() {
@@ -227,12 +216,6 @@ metadata:
 				[
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -248,10 +231,6 @@ metadata:
 				  },
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -285,12 +264,6 @@ metadata:
 				[
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -306,10 +279,6 @@ metadata:
 				  },
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -365,12 +334,6 @@ metadata:
                   },
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -388,10 +351,6 @@ metadata:
 				  },
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -437,12 +396,6 @@ metadata:
 				[
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -460,10 +413,6 @@ metadata:
 				  },
 				  {
 				    "nodeType": "Cloud",
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -502,12 +451,6 @@ metadata:
 			expectedJSON := `
 				[
 				  {
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -525,10 +468,6 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -585,12 +524,6 @@ metadata:
 				    "some": "imdata"
 				  },
 				  {
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -608,10 +541,6 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -653,12 +582,6 @@ metadata:
 			expectedJSON := `
 				[
 				  {
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -676,10 +599,6 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -736,12 +655,6 @@ metadata:
 				    "some": "imdata"
 				  },
 				  {
-				    "bashible": {
-				      "bundle": "centos-7.1.1.1",
-				      "options": {
-				        "kubernetesVersion": "1.15"
-				      }
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -759,10 +672,6 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "bashible": {
-				      "bundle": "slackware-14.1",
-				      "options": {}
-				    },
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",

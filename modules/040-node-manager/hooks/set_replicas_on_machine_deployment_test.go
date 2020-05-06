@@ -83,7 +83,7 @@ metadata:
   name: md-ng1
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng1
+    node-group: ng1
 spec:
   replicas: 1 # $ng_min_instances -ge $ng_max_instances
 ---
@@ -93,7 +93,7 @@ metadata:
   name: md-ng20
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng20
+    node-group: ng20
 spec: {} # "$replicas" == "null"
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
@@ -102,7 +102,7 @@ metadata:
   name: md-ng21
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng21
+    node-group: ng21
 spec:
   replicas: 0 # $replicas -eq 0
 ---
@@ -112,7 +112,7 @@ metadata:
   name: md-ng3
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng3
+    node-group: ng3
 spec:
   replicas: 2 # $replicas -le $ng_min_instances
 ---
@@ -122,7 +122,7 @@ metadata:
   name: md-ng4
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng4
+    node-group: ng4
 spec:
   replicas: 7 # $replicas -gt $ng_max_instances
 ---
@@ -132,7 +132,7 @@ metadata:
   name: md-ng5
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng5
+    node-group: ng5
 spec:
   replicas: 5 # $ng_min_instances <= $replicas <= $ng_max_instances
 ---
@@ -142,7 +142,7 @@ metadata:
   name: md-ng6
   namespace: d8-cloud-instance-manager
   labels:
-    instance-group: ng6 #ng6 is missing
+    node-group: ng6 #ng6 is missing
 spec:
   replicas: 5
 `

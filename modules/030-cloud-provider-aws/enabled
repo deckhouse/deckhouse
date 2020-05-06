@@ -3,14 +3,12 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.16.0
+  enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
 
-  self_name=cloud-provider-aws
-  if values::get global.enabledModules | jq '.[]' -r | grep -v -E '^'$self_name'$' | grep -E '^cloud-provider-[a-z-]+$' ; then
-    >&2 echo "Unable to enable module $self_name: More than one cloud provider is enabled!"
-    exit 1
-  else
+  if values::has --config cloudProviderAws; then
     echo "true" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "false" > "$MODULE_ENABLED_RESULT"
   fi
 }
 

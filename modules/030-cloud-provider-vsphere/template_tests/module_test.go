@@ -44,7 +44,7 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
     podSubnet: 10.0.1.0/16
-    clusterVersion: 1.15.4
+    kubernetesVersion: 1.15.4
 `
 
 const moduleValues = `
