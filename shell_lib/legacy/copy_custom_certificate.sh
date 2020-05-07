@@ -37,6 +37,7 @@ function legacy::common_hooks::https::copy_custom_certificate::main() {
         jq -r ".metadata.namespace=\"$1\" | .metadata.name=\"$2\" |
           .metadata |= with_entries(select([.key] | inside([\"name\", \"namespace\", \"labels\"])))" \
         | jq 'del(.metadata.labels."antiopa-secret-copier")' \
+        | jq 'del(.metadata.labels."secret-copier.deckhouse.io/enabled")' \
         | kubernetes::replace_or_create_json
     fi
   fi
