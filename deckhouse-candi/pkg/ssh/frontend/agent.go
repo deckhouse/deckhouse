@@ -58,11 +58,11 @@ func (a *Agent) AddKeys() error {
 	for _, k := range a.Session.PrivateKeys {
 		app.Debugf("add key %s\n", k)
 		sshAdd := cmd.NewSshAdd(a.Session).KeyCmd(k)
-		output, err := sshAdd.Output()
-
+		output, err := sshAdd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("ssh-add: %v", err)
+			return fmt.Errorf("ssh-add: %s %v", string(output), err)
 		}
+
 		str := string(output)
 		if str != "" && str != "\n" {
 			fmt.Printf("ssh-add: %s\n", output)

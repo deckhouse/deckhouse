@@ -21,6 +21,8 @@ type UploadScript struct {
 	Args       []string
 
 	sudo bool
+
+	stdoutHandler func(string)
 }
 
 func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
@@ -33,6 +35,11 @@ func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *
 
 func (u *UploadScript) Sudo() *UploadScript {
 	u.sudo = true
+	return u
+}
+
+func (u *UploadScript) WithStdoutHandler(handler func(string)) *UploadScript {
+	u.stdoutHandler = handler
 	return u
 }
 
@@ -55,7 +62,12 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 		cmd = NewCommand(u.Session, "./"+scriptName, u.Args...).Cmd()
 	}
 
-	err = cmd.CaptureStdout(nil).Run()
+	scriptCmd := cmd.CaptureStdout(nil)
+	if u.stdoutHandler != nil {
+		scriptCmd = scriptCmd.WithStdoutHandler(u.stdoutHandler)
+	}
+
+	err = scriptCmd.Run()
 	if err != nil {
 		err = fmt.Errorf("execute on remote: %v", err)
 	}
@@ -84,12 +96,16 @@ func (u *UploadScript) ExecuteBundle(parentDir string, bundleDir string) (stdout
 	bundleCmd := NewCommand(u.Session, tarCmdline).Sudo()
 
 	// Buffers to implement output handler logic
-	var lastStep string
+	lastStep := ""
 
 	err = bundleCmd.WithStdoutHandler(bundleOutputHandler(&lastStep)).CaptureStdout(nil).Run()
-	logboek.LogProcessEnd(log.BoldEndOptions())
 	if err != nil {
+		if lastStep != "" {
+			logboek.LogProcessFail(log.BoldFailOptions())
+		}
 		err = fmt.Errorf("execute bundle: %v", err)
+	} else {
+		logboek.LogProcessEnd(log.BoldEndOptions())
 	}
 	return bundleCmd.StdoutBytes(), err
 }

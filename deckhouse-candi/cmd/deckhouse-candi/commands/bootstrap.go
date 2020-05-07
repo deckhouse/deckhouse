@@ -153,35 +153,27 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			if err = template.PrepareBootstrap(templateController, nodeIP, bundleName, metaConfig); err != nil {
 				return fmt.Errorf("prepare bootstrap: %v", err)
 			}
-			err = logboek.LogProcess("Run Bootstrap", log.BoldOptions(), func() error {
-				bootstrapScripts := []string{"bootstrap.sh"}
-				if metaConfig.ClusterType == "Cloud" {
-					bootstrapScripts = append(bootstrapScripts, "bootstrap-networks.sh")
-				}
 
-				for _, bootstrapScript := range bootstrapScripts {
-					logboek.LogInfoF("Execute bootstrap/%s ... ", bootstrapScript)
+			bootstrapScripts := []string{"bootstrap.sh"}
+			if metaConfig.ClusterType == "Cloud" {
+				bootstrapScripts = append(bootstrapScripts, "bootstrap-networks.sh")
+			}
 
-					cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).Sudo()
+			for _, bootstrapScript := range bootstrapScripts {
+				err = logboek.LogProcess("Run "+bootstrapScript, log.BoldOptions(), func() error {
+					cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).
+						WithStdoutHandler(func(l string) { logboek.LogInfoLn(l) }).
+						Sudo()
 
-					stdout, err := cmd.Execute()
+					_, err := cmd.Execute()
 					if err != nil {
-						logboek.LogWarnLn("ERROR!")
-						if len(stdout) > 0 {
-							logboek.LogInfoF("bootstrap/%s stdout: %v\n", bootstrapScript, string(stdout))
-						}
-						if ee, ok := err.(*exec.ExitError); ok {
-							return fmt.Errorf("script 'bootstrap/%s' error: %v\nstderr: %s", bootstrapScript, err, string(ee.Stderr))
-						}
-						return fmt.Errorf("script 'bootstrap/%s' error: %v", bootstrapScript, err)
-					} else {
-						logboek.LogInfoLn("OK!")
+						return fmt.Errorf("run %s: %v", bootstrapScript, err)
 					}
+					return nil
+				})
+				if err != nil {
+					return err
 				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("run bootstrap: %v", err)
 			}
 			return nil
 		})

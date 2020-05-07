@@ -86,7 +86,7 @@ func (r *Runner) Apply() ([]byte, error) {
 			"-auto-approve",
 			"-input=false",
 			"-no-color",
-			fmt.Sprintf("-var-file=%s", filepath.Join(r.WorkingDir, varFileName)),
+			fmt.Sprintf("-var-file=%s", filepath.Join(r.stateDir, varFileName)),
 			fmt.Sprintf("-state=%s", state),
 			fmt.Sprintf("-state-out=%s", state),
 			r.WorkingDir,
@@ -128,7 +128,7 @@ func (r *Runner) Destroy(detectState bool) ([]byte, error) {
 			"destroy",
 			"-no-color",
 			"-auto-approve",
-			fmt.Sprintf("-var-file=%s", filepath.Join(r.WorkingDir, varFileName)),
+			fmt.Sprintf("-var-file=%s", filepath.Join(r.stateDir, varFileName)),
 			fmt.Sprintf("-state=%s", r.State),
 			r.WorkingDir,
 		}

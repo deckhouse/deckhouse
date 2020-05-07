@@ -52,10 +52,9 @@ func (s *SshAdd) AddKeys(keys []string) error {
 		cmd := exec.Command(SshAddPath, args...)
 		cmd.Env = append(os.Environ(), env...)
 
-		output, err := cmd.Output()
-
+		output, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("ssh-add: %v", err)
+			return fmt.Errorf("ssh-add: %s %v", string(output), err)
 		}
 		str := string(output)
 		if str != "" && str != "\n" {
@@ -72,10 +71,10 @@ func (s *SshAdd) AddKeys(keys []string) error {
 		cmd.Env = append(os.Environ(), env...)
 
 		output, err := cmd.CombinedOutput()
-
 		if err != nil {
 			return fmt.Errorf("ssh-add -l: %v", err)
 		}
+
 		str := string(output)
 		if str != "" && str != "\n" {
 			fmt.Printf("ssh-add -l: %s\n", output)
