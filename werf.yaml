@@ -1,106 +1,162 @@
-{{- define "deckhouse_dependencies" }}
-- apk: update_cache=yes
-
-- name: "Install dependencies"
-  apk:
-    name:
-    - bash  # All hooks written in bash
-    - bash-completion
-    - curl
-    - pwgen
-    - apache2-utils
-    - bc
-    - grep
-    - tar
-    - unzip
-    - coreutils
-    - util-linux
-    - sed
-    - gawk
-    - netcat-openbsd
-    - busybox-extras
-
-# Hooks dependencies (from edge/testing)
-- apk: name=jo repository=http://nl.alpinelinux.org/alpine/edge/community/ update_cache=yes
-- apk: name=cfssl repository=http://nl.alpinelinux.org/alpine/edge/testing/
-- apk: name=rgxg repository=http://nl.alpinelinux.org/alpine/edge/testing/
-
-- name: "Install yq"
-  get_url:
-    url: https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
-    checksum: "sha256:754c6e6a7ef92b00ef73b8b0bb1d76d651e04d26aa6c6625e272201afa889f8b"
-    dest: /usr/local/bin/yq
-    mode: +x
-
-- name: "Install kubectl"
-  get_url:
-    url: https://storage.googleapis.com/kubernetes-release/release/v1.14.10/bin/linux/amd64/kubectl
-    checksum: "sha256:7729c6612bec76badc7926a79b26e0d9b06cc312af46dbb80ea7416d1fce0b36"
-    dest: /usr/local/bin/kubectl
-    mode: +x
-
-# TODO: checksum
-- name: "Install etcdctl"
-  unarchive:
-    extra_opts:
-    - etcd-v3.3.10-linux-amd64/etcdctl
-    - --strip-components=1
-    src: https://github.com/etcd-io/etcd/releases/download/v3.3.10/etcd-v3.3.10-linux-amd64.tar.gz
-    remote_src: yes
-    dest: /usr/local/bin
-
-# TODO: checksum
-- name: "Install semver"
-  unarchive:
-    extra_opts:
-    - semver-tool-2.1.0/src
-    - --strip-components=2
-    src: https://github.com/fsaintjacques/semver-tool/archive/2.1.0.tar.gz
-    remote_src: yes
-    dest: /usr/local/bin
-
-# govc for vsphere-cloud-provider
-# TODO: checksum
-- shell: wget -O- https://github.com/vmware/govmomi/releases/download/v0.21.0/govc_linux_amd64.gz | gunzip -cq - > /usr/local/bin/govc && chmod +x /usr/local/bin/govc
-
-# ca-certificates for helm
-- apk: name=ca-certificates
-
-# TODO: checksum
-- name: "Install helm"
-  unarchive:
-    extra_opts:
-    - linux-amd64/helm
-    - --strip-components=1
-    src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
-    remote_src: yes
-    dest: /usr/local/bin
-- raw: helm init --client-only
-
-# TODO зачем второй раз скачиваем?
-- name: "Install tiller"
-  unarchive:
-    extra_opts:
-    - linux-amd64/tiller
-    - --strip-components=1
-    src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
-    remote_src: yes
-    dest: /bin
-
-- name: "Install registry client"
-  get_url:
-    url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
-    dest: /usr/local/bin/reg
-    mode: +x
-    checksum: "sha256:0470b6707ac68fa89d0cd92c83df5932c9822df7176fcf02d131d75f74a36a19"
-{{- end }}
-
-
 project: deckhouse
 configVersion: 1
 ---
+image: base
+from: alpine:3.11
+ansible:
+  beforeInstall:
+  - apk: update_cache=yes
+
+  - name: "Install dependencies"
+    apk:
+      name:
+        - bash
+        - bash-completion
+        - ca-certificates
+        - curl
+        - pwgen
+        - apache2-utils
+        - bc
+        - grep
+        - tar
+        - unzip
+        - coreutils
+        - util-linux
+        - sed
+        - gawk
+        - netcat-openbsd
+        - busybox-extras
+        - vim
+
+  - name: "Install jo"
+    apk:
+      name:
+      - jo
+      repository: http://nl.alpinelinux.org/alpine/edge/community/
+      update_cache: yes
+
+  - name: "Install cfssl and rgxg"
+    apk:
+      name:
+        - cfssl
+        - rgxg
+      repository: http://nl.alpinelinux.org/alpine/edge/testing/
+      update_cache: yes
+
+  - name: "Install yq"
+    get_url:
+      url: https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
+      checksum: "sha256:754c6e6a7ef92b00ef73b8b0bb1d76d651e04d26aa6c6625e272201afa889f8b"
+      dest: /usr/local/bin/yq
+      mode: +x
+
+  - name: "Install kubectl"
+    get_url:
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.14.10/bin/linux/amd64/kubectl
+      checksum: "sha256:7729c6612bec76badc7926a79b26e0d9b06cc312af46dbb80ea7416d1fce0b36"
+      dest: /usr/local/bin/kubectl
+      mode: +x
+
+  # TODO: checksum
+  - name: "Install etcdctl"
+    unarchive:
+      extra_opts:
+        - etcd-v3.3.10-linux-amd64/etcdctl
+        - --strip-components=1
+      src: https://github.com/etcd-io/etcd/releases/download/v3.3.10/etcd-v3.3.10-linux-amd64.tar.gz
+      remote_src: yes
+      dest: /usr/local/bin
+
+  # TODO: checksum
+  - name: "Install semver"
+    unarchive:
+      extra_opts:
+        - semver-tool-2.1.0/src
+        - --strip-components=2
+      src: https://github.com/fsaintjacques/semver-tool/archive/2.1.0.tar.gz
+      remote_src: yes
+      dest: /usr/local/bin
+
+  # TODO: checksum
+  - name: "Install helm and tiller"
+    unarchive:
+      extra_opts:
+        - linux-amd64/helm
+        - linux-amd64/tiller
+        - --strip-components=1
+      src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
+      remote_src: yes
+      dest: /usr/local/bin
+  - raw: helm init --client-only
+
+  - name: "Install registry client"
+    get_url:
+      url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
+      dest: /usr/local/bin/reg
+      mode: +x
+      checksum: "sha256:0470b6707ac68fa89d0cd92c83df5932c9822df7176fcf02d131d75f74a36a19"
+
+  - name: "Shell comfort: inputrc"
+    copy:
+      content: |
+{{ .Files.Get "deckhouse-controller/files/inputrc" | indent 8 }}
+      dest: /etc/inputrc
+
+  - name: "Shell comfort: bashrc"
+    copy:
+      content: |
+{{ .Files.Get "deckhouse-controller/files/bashrc" | indent 8 }}
+      dest: /root/.bashrc
+
+  - name: "Shell comfort: vimrc"
+    copy:
+      content: |
+{{ .Files.Get "deckhouse-controller/files/vimrc" | indent 8 }}
+      dest: /root/.vimrc
+
+  - name: "Shell comfort: kubectl completion"
+    shell: kubectl completion bash > /root/.kubectl_completion.sh
+
+  - name: "Shell comfort: history search"
+    shell: |
+      sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
+      sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
+
+  - raw: rm -rf /var/cache/apk/*
+
+---
+image: base-for-go
+fromImage: base
+ansible:
+  beforeInstall:
+    - name: "Install dependencies"
+      apk:
+        name:
+          - go
+          - git
+          - build-base
+          - libstdc++
+          - libgcc
+          - libcurl
+
+    - name: "Install dependencies from edge/main"
+      apk:
+        name:
+          - binutils
+          - binutils-dev
+          - elfutils-dev
+        repository: http://nl.alpinelinux.org/alpine/edge/main/
+
+    - raw: rm -rf /var/cache/apk/*
+
+docker:
+  ENV:
+    GOPATH: /usr/local/go
+    PATH: /usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+---
 image: dev
-from: alpine:3.10
+fromImage: base
 git:
 - add: /
   to: /deckhouse
@@ -134,34 +190,12 @@ import:
   to: /usr/bin/jq
   before: setup
 ansible:
-  beforeInstall:
-{{ include "deckhouse_dependencies" . | indent 2 }}
-
-  - raw: rm -rf /var/cache/apk/*
-
   setup:
   - name: "Add modules images tags.json"
     copy:
       content: |
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
       dest: /deckhouse/modules/images_tags.json
-  - name: "Shell comfort: inputrc"
-    copy:
-      content: |
-{{ .Files.Get "deckhouse-controller/files/inputrc" | indent 8 }}
-      dest: /etc/inputrc
-  - name: "Shell comfort: bashrc"
-    copy:
-      content: |
-{{ .Files.Get "deckhouse-controller/files/bashrc" | indent 8 }}
-      dest: /root/.bashrc
-  - name: "Shell comfort: vimrc"
-    copy:
-      content: |
-{{ .Files.Get "deckhouse-controller/files/vimrc" | indent 8 }}
-      dest: /root/.vimrc
-  - name: "Shell comfort: kubectl completion"
-    shell: kubectl completion bash > /root/.kubectl_completion.sh
 
   # Because of https://github.com/flant/werf/issues/1741 just move the entry point
   - name: "Move deckhouse entrypoint to the right location"
@@ -175,10 +209,9 @@ docker:
 ---
 artifact: kcov
 from: flant/kcov-alpine:v0.5
-
 ---
 image: tests
-from: golang:1.13-alpine3.10
+fromImage: base-for-go
 git:
 - add: /
   to: /deckhouse
@@ -205,36 +238,36 @@ import:
   before: setup
 ansible:
   beforeInstall:
-{{ include "deckhouse_dependencies" . | indent 2 }}
-  - apk:
+  - name: "Install dumb-init"
+    apk:
       name:
-      - vim
-      - git
-      - build-base
-      - libstdc++
-      - libgcc
-      - curl
-      - bash
-      - libcurl
-      - bash-completion
-  - apk: name=dumb-init repository=http://nl.alpinelinux.org/alpine/edge/community/
-  - apk:
-      name:
-      - binutils
-      - binutils-dev
-      - elfutils-dev
-      repository: http://nl.alpinelinux.org/alpine/edge/main/
-  - shell: |
-      sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
-      sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
-  - command: go get github.com/onsi/ginkgo/ginkgo
-  - command: go get github.com/go-delve/delve/cmd/dlv
+        - dumb-init
+      repository: http://nl.alpinelinux.org/alpine/edge/community/
+
+  - name: "Install ginkgo"
+    command: go get github.com/onsi/ginkgo/ginkgo
+
+  - name: "Install dlv"
+    command: go get github.com/go-delve/delve/cmd/dlv
+
+  - name: "Add group for kcov"
+    group:
+      name: kcov-runner
+      gid: 998
+  - name: "Add user for kcov"
+    user:
+      name: kcov-runner
+      group: kcov-runner
+      uid: 999
+      shell: /bin/bash
+
+  - raw: rm -rf /var/cache/apk/*
+
   install:
-  - command: go mod download
+  - name: "Download go modules"
+    command: go mod download
     args:
       chdir: /deckhouse
-  - command: addgroup -g 998 -S kcov-runner
-  - command: adduser -u 999 -G kcov-runner -D -H -s /bin/bash kcov-runner
 
 docker:
   ENV:
@@ -244,10 +277,9 @@ docker:
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
     CGO_CFLAGS: "-I/libjq/include"
     CGO_LDFLAGS: "-L/libjq/lib"
-
 ---
 artifact: deckhouse-controller
-from: golang:1.13-alpine3.10
+fromImage: base-for-go
 git:
 - add: /deckhouse-controller
   to: /deckhouse-controller
@@ -280,7 +312,7 @@ ansible:
   - apk:
       name: git,ca-certificates,gcc,libc-dev
       update_cache: yes
-  - command: rm -rf /var/cache/apk/*
+  - raw: rm -rf /var/cache/apk/*
 
   install:
   - shell: go mod download
@@ -291,9 +323,40 @@ ansible:
   - command: /deckhouse-controller/go-build.sh /libjq
     args:
       chdir: /deckhouse-controller
+
+---
+artifact: deckhouse-candi
+fromImage: base-for-go
+git:
+  - add: /deckhouse-candi
+    to: /deckhouse-candi
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - "**/*.go"
+        - go-build.sh
+ansible:
+  beforeInstall:
+    - apk:
+        name: git,ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - shell: go mod download
+      args:
+        chdir: /deckhouse-candi
+
+  setup:
+    - command: /deckhouse-candi/go-build.sh
+      args:
+        chdir: /deckhouse-candi
+
 ---
 artifact: jq
-from: alpine:3.10
+from: alpine:3.11
 git:
 - url: https://github.com/stedolan/jq
   add: /
@@ -313,6 +376,7 @@ ansible:
       - build-base
       repository: http://nl.alpinelinux.org/alpine/edge/main/
       update_cache: yes
+  - raw: rm -rf /var/cache/apk/*
   - shell: |
       cd /src
       autoreconf -fi
@@ -327,11 +391,10 @@ ansible:
 
 ---
 artifact: libjq
-from: alpine:3.10
+from: alpine:3.11
 git:
 - url: https://github.com/flant/libjq-go
   commit: 198670408da175150946b04c3aae5404d97ee29b
-  #tag: v1.6.0
   add: /
   to: /src
   stageDependencies:
@@ -342,8 +405,10 @@ git:
 ansible:
   install:
   - shell: /src/scripts/install-libjq-dependencies-alpine.sh
+  - raw: rm -rf /var/cache/apk/*
   setup:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
+
 ---
 image: install
 fromImage: dev
@@ -354,50 +419,27 @@ import:
   before: setup
 ansible:
   beforeInstall:
+
   - name: "Add deckhouse-candi completion"
     shell: |
       echo 'eval "$(deckhouse-candi --completion-script-bash)"' >> /root/.bashrc
+
   - name: "Install dependencies"
     apk:
       name: [openssh-client]
+
   - name: "Install terraform"
     unarchive:
       src: https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
+
   - name: "Install terraform provider openstack"
     unarchive:
       src: https://releases.hashicorp.com/terraform-provider-openstack/1.26.0/terraform-provider-openstack_1.26.0_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
----
-artifact: deckhouse-candi
-from: golang:1.13-alpine3.10
-git:
-- add: /deckhouse-candi
-  to: /deckhouse-candi
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
-    - go-build.sh
-ansible:
-  beforeInstall:
-  - apk:
-      name: git,ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
 
-  install:
-  - shell: go mod download
-    args:
-      chdir: /deckhouse-candi
-
-  setup:
-  - command: /deckhouse-candi/go-build.sh
-    args:
-      chdir: /deckhouse-candi
+  - raw: rm -rf /var/cache/apk/*
