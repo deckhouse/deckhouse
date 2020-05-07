@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, bundle, provider, kubernetesVersion, runType]
+    required: [apiVersion, kind, bundle, kubernetesVersion, runType]
     properties:
       apiVersion:
         type: string
@@ -37,3 +37,13 @@ apiVersions:
           type: object
         cloudInstances:
           type: object
+    oneOf:
+    - required: [clusterBootstrap]
+      properties:
+        runType:
+          enum: [ClusterBootstrap]
+          type: string
+    - properties:
+        runType:
+          enum: [ImageBuilding, Normal]
+          type: string

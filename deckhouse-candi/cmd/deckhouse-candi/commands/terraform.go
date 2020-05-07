@@ -111,7 +111,7 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
 		if err != nil {
-			logboek.LogErrorLn(err)
+			return err
 		}
 
 		var masterState string
