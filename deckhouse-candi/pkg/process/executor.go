@@ -1,4 +1,4 @@
-package cmd
+package process
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 	"os/exec"
 
 	"flant/deckhouse-candi/pkg/app"
-	"flant/deckhouse-candi/pkg/ssh/util"
+	"flant/deckhouse-candi/pkg/process/util"
 )
 
 // exec.Cmd executor
@@ -77,11 +77,11 @@ err := proxyCmd.Start()
 */
 
 type Executor struct {
-	Cmd *exec.Cmd
+	cmd *exec.Cmd
 
-	Live bool
+	Session *Session
 
-	Sudo      bool
+	Live      bool
 	StdinPipe bool
 
 	Stdin io.WriteCloser
@@ -93,14 +93,28 @@ type Executor struct {
 	StdoutSplitter bufio.SplitFunc
 	StdoutHandler  func(l string)
 
-	StderrBuffer *bytes.Buffer
+	StderrBuffer   *bytes.Buffer
+	StderrSplitter bufio.SplitFunc
+	StderrHandler  func(l string)
 
-	stop bool
+	WaitHandler func(err error)
+
+	started   bool
+	stop      bool
+	waitCh    chan struct{}
+	stopCh    chan struct{}
+	waitError error
+	killError error
 }
 
-func NewExecutor(cmd *exec.Cmd) *Executor {
+func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
+	return NewExecutor(DefaultSession, cmd)
+}
+
+func NewExecutor(sess *Session, cmd *exec.Cmd) *Executor {
 	return &Executor{
-		Cmd: cmd,
+		Session: sess,
+		cmd:     cmd,
 	}
 }
 
@@ -124,11 +138,35 @@ func (e *Executor) WithStdoutSplitter(fn bufio.SplitFunc) *Executor {
 	return e
 }
 
+func (e *Executor) WithStderrHandler(stderrHandler func(l string)) *Executor {
+	e.StderrHandler = stderrHandler
+	return e
+}
+
+func (e *Executor) WithStderrSplitter(fn bufio.SplitFunc) *Executor {
+	e.StderrSplitter = fn
+	return e
+}
+
+func (e *Executor) WithWaitHandler(waitHandler func(error)) *Executor {
+	e.WaitHandler = waitHandler
+	return e
+}
+
 func (e *Executor) CaptureStdout(buf *bytes.Buffer) *Executor {
 	if buf != nil {
 		e.StdoutBuffer = buf
 	} else {
 		e.StdoutBuffer = &bytes.Buffer{}
+	}
+	return e
+}
+
+func (e *Executor) CaptureStderr(buf *bytes.Buffer) *Executor {
+	if buf != nil {
+		e.StderrBuffer = buf
+	} else {
+		e.StderrBuffer = &bytes.Buffer{}
 	}
 	return e
 }
@@ -151,6 +189,13 @@ func (e *Executor) StdoutBytes() []byte {
 	return nil
 }
 
+func (e *Executor) StderrBytes() []byte {
+	if e.StderrBuffer != nil {
+		return e.StderrBuffer.Bytes()
+	}
+	return nil
+}
+
 func (e *Executor) SetupStreamHandlers() (err error) {
 	// stderr goes to console (commented because ssh writes only "Connection closed" messages to stderr)
 	// e.Cmd.Stderr = os.Stderr
@@ -159,7 +204,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 
 	// setup stdout stream handlers
 	if e.Live && e.StdoutBuffer == nil && e.StdoutHandler == nil && len(e.Matchers) == 0 {
-		e.Cmd.Stdout = os.Stdout
+		e.cmd.Stdout = os.Stdout
 		return
 	}
 
@@ -173,7 +218,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
 		}
-		e.Cmd.Stdout = stdoutWritePipe
+		e.cmd.Stdout = stdoutWritePipe
 
 		// create pipe for StdoutHandler
 		if e.StdoutHandler != nil {
@@ -184,20 +229,39 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 		}
 	}
 
+	var stderrReadPipe *os.File
+	var stderrHandlerWritePipe *os.File
+	var stderrHandlerReadPipe *os.File
+	if e.StderrBuffer != nil || e.StderrHandler != nil {
+		// create pipe for stderr
+		var stderrWritePipe *os.File
+		stderrReadPipe, stderrWritePipe, err = os.Pipe()
+		if err != nil {
+			return fmt.Errorf("unable to create os pipe for stderr: %s", err)
+		}
+		e.cmd.Stderr = stderrWritePipe
+
+		// create pipe for StderrHandler
+		if e.StderrHandler != nil {
+			stderrHandlerReadPipe, stderrHandlerWritePipe, err = os.Pipe()
+			if err != nil {
+				return fmt.Errorf("unable to create os pipe for stderrHandler: %s", err)
+			}
+		}
+	}
+
 	if e.StdinPipe {
-		e.Stdin, err = e.Cmd.StdinPipe()
+		e.Stdin, err = e.cmd.StdinPipe()
 		if err != nil {
 			return fmt.Errorf("open stdin pipe: %v", err)
 		}
 	}
 
 	// Start reading from stdout of a command.
-	// Copy to os.Stdout if live output is enabled
-	// Wait for SUCCESS line if sudo is enabled and then:
-	// Copy to buffer if capture is enabled
-	// Copy to pipe if StdoutHandler is set
-	//var cmdStdoutOutput bytes.Buffer
-
+	// Wait until all matchers are done and then:
+	// - Copy to os.Stdout if live output is enabled
+	// - Copy to buffer if capture is enabled
+	// - Copy to pipe if StdoutHandler is set
 	go func() {
 		buf := make([]byte, 16)
 		matchersDone := false
@@ -256,7 +320,40 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 	if e.StdoutHandler != nil {
 		go func() {
 			e.ConsumeLines(stdoutHandlerReadPipe, e.StdoutHandler)
-			app.Debugf("stop line consumer for '%s'\n", e.Cmd.Args[0])
+			app.Debugf("stop line consumer for '%s'\n", e.cmd.Args[0])
+		}()
+	}
+
+	// Start reading from stderr of a command.
+	// Copy to os.Stderr if live output is enabled
+	// Copy to buffer if capture is enabled
+	// Copy to pipe if StderrHandler is set
+	go func() {
+		buf := make([]byte, 16)
+		for {
+			n, err := stderrReadPipe.Read(buf)
+
+			// TODO logboek
+			if e.Live || app.IsDebug == 1 {
+				os.Stderr.Write(buf[:n])
+			}
+			if e.StderrBuffer != nil {
+				e.StderrBuffer.Write(buf[:n])
+			}
+			if e.StderrHandler != nil {
+				stderrHandlerWritePipe.Write(buf[:n])
+			}
+
+			if err == io.EOF {
+				break
+			}
+		}
+	}()
+
+	if e.StderrHandler != nil {
+		go func() {
+			e.ConsumeLines(stderrHandlerReadPipe, e.StderrHandler)
+			app.Debugf("stop sdterr line consumer for '%s'\n", e.cmd.Args[0])
 		}()
 	}
 
@@ -276,33 +373,110 @@ func (e *Executor) ConsumeLines(r io.Reader, fn func(l string)) {
 		}
 
 		if app.IsDebug == 1 && text != "" {
-			fmt.Printf("%s: %s\n", e.Cmd.Args[0], text)
+			fmt.Printf("%s: %s\n", e.cmd.Args[0], text)
 		}
 	}
 }
 
 func (e *Executor) Start() error {
 	// setup stream handlers
-	app.Debugf("start: %s", e.Cmd.String())
+	app.Debugf("executor: start '%s'\n", e.cmd.String())
 	err := e.SetupStreamHandlers()
 	if err != nil {
 		return err
 	}
-	return e.Cmd.Start()
+	err = e.cmd.Start()
+	if err != nil {
+		return err
+	}
+	e.started = true
+
+	e.ProcessWait()
+
+	app.Debugf("Register stoppable: '%s'\n", e.cmd.String())
+	e.Session.RegisterStoppable(e)
+
+	return nil
 }
 
-func (e *Executor) Stop() error {
-	e.stop = true
-	e.Cmd.Process.Kill()
-	return e.Cmd.Wait()
+func (e *Executor) ProcessWait() {
+	waitErrCh := make(chan error, 1)
+	e.waitCh = make(chan struct{}, 1)
+	e.stopCh = make(chan struct{}, 1)
+
+	// wait for process in go routine
+	go func() {
+		waitErrCh <- e.cmd.Wait()
+	}()
+
+	// watch for wait or stop
+	go func() {
+		defer func() {
+			close(e.waitCh)
+			close(waitErrCh)
+		}()
+		// Wait until Stop() is called or/and Wait() is returning.
+		for {
+			select {
+			case err := <-waitErrCh:
+				if e.stop {
+					// Ignore error if Stop() was called.
+					//close(e.waitCh)
+					return
+				}
+				e.waitError = err
+				if e.WaitHandler != nil {
+					e.WaitHandler(e.waitError)
+				}
+				//close(e.waitCh)
+				return
+			case <-e.stopCh:
+				e.stop = true
+				// prevent next readings from closed channel
+				e.stopCh = nil
+				err := e.cmd.Process.Kill()
+				if err != nil {
+					e.killError = err
+				}
+			}
+		}
+	}()
 }
 
+func (e *Executor) Stop() {
+	if e.stop {
+		app.Debugf("Stop '%s': already stopped\n", e.cmd.String())
+		return
+	}
+	if !e.started {
+		app.Debugf("Stop '%s': not started yet\n", e.cmd.String())
+		return
+	}
+	if e.cmd == nil {
+		app.Debugf("Possible BUG: Call Executor.Stop with Cmd==nil\n")
+		return
+	}
+
+	app.Debugf("Stop '%s'\n", e.cmd.String())
+	if e.stopCh != nil {
+		close(e.stopCh)
+	}
+	<-e.waitCh
+	return
+}
+
+// Run executes a command and blocks until it is finished or stopped.
 func (e *Executor) Run() error {
-	app.Debugf("run: %s", e.Cmd.String())
-	// setup stream handlers
-	err := e.SetupStreamHandlers()
+	app.Debugf("executor: run '%s'\n", e.cmd.String())
+
+	err := e.Start()
 	if err != nil {
 		return err
 	}
-	return e.Cmd.Run()
+	<-e.waitCh
+	return e.waitError
+}
+
+func (e *Executor) Cmd() *exec.Cmd {
+	return e.cmd
 }

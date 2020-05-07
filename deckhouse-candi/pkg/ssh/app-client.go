@@ -7,7 +7,7 @@ import (
 
 func NewClientFromFlags() *SshClient {
 	return &SshClient{
-		Session: &session.Session{
+		Settings: &session.Session{
 			PrivateKeys: app.SshPrivateKeys,
 			Host:        app.SshHost,
 			User:        app.SshUser,

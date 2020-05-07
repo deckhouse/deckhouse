@@ -76,25 +76,9 @@ func (k *KubernetesClient) Init(configSrc string) error {
 	return nil
 }
 
-func (k *KubernetesClient) Stop() {
-	if k.KubeProxy != nil {
-		k.KubeProxy.Stop()
-	}
-	if k.SshClient != nil {
-		k.SshClient.StopSession()
-	}
-}
-
 func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
-	success := false
-	defer func() {
-		if !success {
-			k.Stop()
-		}
-	}()
-
 	if k.SshClient == nil {
-		k.SshClient, err = ssh.NewClientFromFlags().StartSession()
+		k.SshClient, err = ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return "", err
 		}
@@ -106,7 +90,6 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 		return "", fmt.Errorf("start kube proxy: %v", err)
 	}
 
-	success = true
 	logboek.LogInfoF("Proxy started on port %s\n", port)
 
 	return port, nil

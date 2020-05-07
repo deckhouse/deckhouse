@@ -2,14 +2,15 @@ package commands
 
 import (
 	"fmt"
-	"github.com/flant/logboek"
 	"os/exec"
 	"path"
 	"strings"
 
+	"github.com/flant/logboek"
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/ssh"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -17,8 +18,7 @@ func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClaus
 	app.DefineSshFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().StartSession()
-		defer sshCl.StopSession()
+		sshCl, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
@@ -28,6 +28,8 @@ func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClaus
 		if err != nil {
 			return fmt.Errorf("check connection: %v", err)
 		}
+
+		TestCommandDelay()
 
 		return nil
 	})
@@ -46,11 +48,14 @@ func DefineTestScpCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("data", "data to test uploadbytes method").StringVar(&Data)
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().StartSession()
-		defer sshCl.StopSession()
+		app.Debugf("scp: start ssh-agent\n")
+		sshCl, err := ssh.NewClientFromFlags().Start()
+
 		if err != nil {
 			return err
 		}
+
+		app.Debugf("scp: start\n")
 
 		success := false
 		if Direction == "up" {
@@ -87,6 +92,7 @@ func DefineTestScpCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		if !success {
 			fmt.Printf("unrecognized flags\n")
 		}
+
 		return nil
 	})
 
@@ -110,11 +116,10 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().StartSession()
+		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return nil
 		}
-		defer sshClient.StopSession()
 
 		cmd := sshClient.UploadScript(ScriptPath)
 		if Sudo {
@@ -157,11 +162,10 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().StartSession()
+		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return nil
 		}
-		defer sshClient.StopSession()
 
 		cmd := sshClient.UploadScript(ScriptName).Sudo()
 		parentDir := path.Dir(BundleDir)

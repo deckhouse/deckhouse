@@ -31,12 +31,14 @@ func (f *File) Upload(srcPath string, remotePath string) error {
 	if fType == "DIR" {
 		scp.WithRecursive(true)
 	}
-	scpCmd := scp.WithSrc(srcPath).WithRemoteDst(remotePath).Cmd()
-	// app.Debugf("run scp: %s\n", scpCmd.String())
-	// app.Debugf("run scp: %#v\n", scpCmd)
-	err = scpCmd.Run()
+	scp.WithSrc(srcPath).
+		WithRemoteDst(remotePath).
+		Scp().
+		CaptureStdout(nil).
+		CaptureStderr(nil)
+	err = scp.Run()
 	if err != nil {
-		return fmt.Errorf("upload file '%s': %v", srcPath, err)
+		return fmt.Errorf("upload file '%s': %v\n%s\nstderr: %s", srcPath, err, string(scp.StdoutBytes()), string(scp.StderrBytes()))
 	}
 
 	return nil
@@ -60,17 +62,19 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		return fmt.Errorf("write data to tmp file: %v", err)
 	}
 
-	scp := cmd.NewScp(f.Session)
-	scpCmd := scp.WithSrc(srcPath).WithRemoteDst(remotePath).Cmd()
-	app.Debugf("run scp: %s\n", scpCmd.String())
-	//app.Debugf("run scp: %#v\n", scpCmd)
-	stdout, err := scpCmd.CombinedOutput()
+	scp := cmd.NewScp(f.Session).
+		WithSrc(srcPath).
+		WithRemoteDst(remotePath).
+		Scp().
+		CaptureStderr(nil).
+		CaptureStdout(nil)
+	err = scp.Run()
 	if err != nil {
-		return fmt.Errorf("upload file '%s': %v", remotePath, err)
+		return fmt.Errorf("upload file '%s': %v\n%s\nstderr: %s", remotePath, err, string(scp.StdoutBytes()), string(scp.StderrBytes()))
 	}
 
-	if len(stdout) > 0 {
-		logboek.LogInfoF("Upload file: %s", string(stdout))
+	if len(scp.StdoutBytes()) > 0 {
+		logboek.LogInfoF("Upload file: %s", string(scp.StdoutBytes()))
 	}
 	return nil
 }
@@ -78,10 +82,10 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 func (f *File) Download(remotePath string, dstPath string) error {
 	scp := cmd.NewScp(f.Session)
 	scp.WithRecursive(true)
-	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Cmd()
-	app.Debugf("run scp: %s\n", scpCmd.String())
+	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Scp()
+	app.Debugf("run scp: %s\n", scpCmd.Cmd().String())
 	//app.Debugf("run scp: %#v\n", scpCmd)
-	stdout, err := scpCmd.CombinedOutput()
+	stdout, err := scpCmd.Cmd().CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("download file '%s': %v", remotePath, err)
 	}
@@ -106,10 +110,10 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 	}()
 
 	scp := cmd.NewScp(f.Session)
-	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Cmd()
-	app.Debugf("run scp: %s\n", scpCmd.String())
+	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Scp()
+	app.Debugf("run scp: %s\n", scpCmd.Cmd().String())
 	//app.Debugf("run scp: %#v\n", scpCmd)
-	stdout, err := scpCmd.CombinedOutput()
+	stdout, err := scpCmd.Cmd().CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("download file '%s': %v", remotePath, err)
 	}

@@ -5,6 +5,7 @@ import (
 	"flant/deckhouse-candi/pkg/ssh/cmd"
 	"flant/deckhouse-candi/pkg/ssh/session"
 	"fmt"
+	"github.com/flant/logboek"
 	"io"
 	"os"
 	"os/exec"
@@ -102,15 +103,19 @@ func (t *Tunnel) Up() error {
 	return nil
 }
 
-func (t *Tunnel) Down() error {
+func (t *Tunnel) Stop() {
+	if t == nil {
+		return
+	}
 	if t.Session == nil {
-		return fmt.Errorf("bug: down tunnel '%s': no session", t.String())
+		logboek.LogErrorF("bug: down tunnel '%s': no session", t.String())
+		return
 	}
 	if t.sshCmd != nil {
 		t.stop = true
 		t.sshCmd.Process.Kill()
 	}
-	return nil
+	return
 }
 
 func (t *Tunnel) String() string {

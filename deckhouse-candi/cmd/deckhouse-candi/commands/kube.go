@@ -1,16 +1,20 @@
 package commands
 
 import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/flant/logboek"
+	sh_app "github.com/flant/shell-operator/pkg/app"
+	"gopkg.in/alecthomas/kingpin.v2"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/deckhouse"
 	"flant/deckhouse-candi/pkg/kube"
 	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/ssh"
-	"fmt"
-	"github.com/flant/logboek"
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	"gopkg.in/alecthomas/kingpin.v2"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -20,8 +24,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 	sh_app.DefineKubeClientFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().StartSession()
-		defer sshCl.StopSession()
+		sshCl, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
@@ -38,8 +41,6 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
-		// defer stop ssh-agent, proxy and a tunnel
-		defer kubeCl.Stop()
 
 		list, err := kubeCl.CoreV1().Namespaces().List(v1.ListOptions{})
 		if err != nil {
@@ -62,6 +63,8 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			fmt.Printf("No namespaces.\n")
 		}
 
+		TestCommandDelay()
+
 		return nil
 	})
 	return cmd
@@ -82,8 +85,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		StringVar(&Name)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().StartSession()
-		defer sshCl.StopSession()
+		sshCl, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
@@ -100,8 +102,6 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
-			// defer stop ssh-agent, proxy and a tunnel
-			defer kubeCl.Stop()
 
 			err = deckhouse.WaitForReadiness(kubeCl, &deckhouse.Config{})
 			if err != nil {
@@ -116,4 +116,19 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		return nil
 	})
 	return cmd
+}
+
+func TestCommandDelay() {
+	delayStr := os.Getenv("TEST_DELAY")
+	if delayStr == "" || delayStr == "no" {
+		return
+	}
+
+	delay, err := time.ParseDuration(delayStr)
+
+	if err != nil {
+		delay = time.Minute
+	}
+
+	time.Sleep(delay)
 }

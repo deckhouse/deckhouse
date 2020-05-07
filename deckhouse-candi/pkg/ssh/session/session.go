@@ -4,11 +4,8 @@ import (
 	"fmt"
 )
 
-type Stopable interface {
-	Stop()
-}
-
-// Session is used store ssh settings
+// TODO rename to Settings
+// Session is used to store ssh settings
 type Session struct {
 	// input
 	PrivateKeys []string
@@ -20,28 +17,11 @@ type Session struct {
 	ExtraArgs   string
 
 	// runtime
-	AuthSock  string
-	stopables []Stopable
+	AuthSock string
 }
 
 func NewSession() *Session {
-	return &Session{
-		stopables: make([]Stopable, 0),
-	}
-}
-
-func (s *Session) Stop() error {
-	if s == nil {
-		return nil
-	}
-	for _, st := range s.stopables {
-		st.Stop()
-	}
-	return nil
-}
-
-func (s *Session) RegisterStoppable(stopable Stopable) {
-	// s.stopables = append(s.stopables, stopable)
+	return &Session{}
 }
 
 // RemoteAddress returns host or username@host

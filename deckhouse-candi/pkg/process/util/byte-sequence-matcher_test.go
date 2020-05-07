@@ -1,8 +1,9 @@
 package util_test
 
 import (
-	"flant/deckhouse-candi/pkg/ssh/util"
 	"testing"
+
+	"flant/deckhouse-candi/pkg/process/util"
 )
 
 func Test_Match_Several_buffers(t *testing.T) {

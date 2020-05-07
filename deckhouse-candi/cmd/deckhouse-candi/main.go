@@ -2,19 +2,29 @@ package main
 
 import (
 	"fmt"
-	"github.com/flant/logboek"
 	"os"
 
+	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands"
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/process"
+	"flant/deckhouse-candi/pkg/util/signal"
 )
 
 func main() {
 	logboek.Init()
 	logboek.SetLevel(logboek.Info)
+
+	// kill all started subprocesses on return from main or on signal
+	defer process.DefaultSession.Stop()
+	go func() {
+		signal.WaitForProcessInterruption(func() {
+			process.DefaultSession.Stop()
+		})
+	}()
 
 	// kubectl compatibility
 	sh_app.KubeConfig = os.Getenv("KUBECONFIG")

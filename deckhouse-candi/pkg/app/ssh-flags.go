@@ -9,8 +9,10 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+const DefaultSshAgentPrivateKeys = "~/.ssh/id_rsa"
+
 var (
-	SshAgentPrivateKeys = "~/.ssh/id_rsa"
+	SshAgentPrivateKeys = make([]string, 0)
 	SshPrivateKeys      = make([]string, 0)
 	SshBastionHost      = ""
 	SshBastionUser      = os.Getenv("USER")
@@ -22,7 +24,7 @@ var (
 
 func DefineSshFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
-		StringVar(&SshAgentPrivateKeys)
+		StringsVar(&SshAgentPrivateKeys)
 	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
 		StringVar(&SshBastionHost)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
@@ -37,6 +39,9 @@ func DefineSshFlags(cmd *kingpin.CmdClause) {
 		StringVar(&SshExtraArgs)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+		if len(SshAgentPrivateKeys) == 0 {
+			SshAgentPrivateKeys = append(SshAgentPrivateKeys, DefaultSshAgentPrivateKeys)
+		}
 		SshPrivateKeys, err = ParseSshPrivateKeyPaths(SshAgentPrivateKeys)
 		if err != nil {
 			return fmt.Errorf("ssh private keys: %v", err)
@@ -45,26 +50,29 @@ func DefineSshFlags(cmd *kingpin.CmdClause) {
 	})
 }
 
-func ParseSshPrivateKeyPaths(paths string) ([]string, error) {
+func ParseSshPrivateKeyPaths(pathSets []string) ([]string, error) {
 	res := make([]string, 0)
-	if paths == "" {
+	if len(pathSets) == 0 || (len(pathSets) == 1 && pathSets[0] == "") {
 		return res, nil
 	}
-	keys := strings.Split(paths, ",")
-	for _, k := range keys {
-		if strings.HasPrefix(k, "~") {
-			home := os.Getenv("HOME")
-			if home == "" {
-				return nil, fmt.Errorf("HOME is not defined for key '%s'", k)
-			}
-			k = strings.Replace(k, "~", home, 1)
-		}
 
-		keyPath, err := filepath.Abs(k)
-		if err != nil {
-			return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
+	for _, pathSet := range pathSets {
+		keys := strings.Split(pathSet, ",")
+		for _, k := range keys {
+			if strings.HasPrefix(k, "~") {
+				home := os.Getenv("HOME")
+				if home == "" {
+					return nil, fmt.Errorf("HOME is not defined for key '%s'", k)
+				}
+				k = strings.Replace(k, "~", home, 1)
+			}
+
+			keyPath, err := filepath.Abs(k)
+			if err != nil {
+				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
+			}
+			res = append(res, keyPath)
 		}
-		res = append(res, keyPath)
 	}
 	return res, nil
 }

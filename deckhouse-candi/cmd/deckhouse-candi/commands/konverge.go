@@ -25,8 +25,6 @@ func DefineKonvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
-		// defer stop ssh-agent, proxy and a tunnel
-		defer kubeCl.Stop()
 
 		err = deckhouse.RunKonverge(
 			kubeCl,

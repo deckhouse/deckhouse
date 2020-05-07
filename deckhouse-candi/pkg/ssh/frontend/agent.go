@@ -19,12 +19,6 @@ func NewAgent(sess *session.Session) *Agent {
 }
 
 func (a *Agent) Start() error {
-	success := false
-	defer func() {
-		if !success {
-			a.Stop()
-		}
-	}()
 	if len(a.Session.PrivateKeys) == 0 {
 		a.Agent = &cmd.SshAgent{
 			Session:  a.Session,
@@ -37,20 +31,19 @@ func (a *Agent) Start() error {
 		Session: a.Session,
 	}
 
+	app.Debugf("agent: start ssh-agent\n")
 	err := a.Agent.Start()
 	if err != nil {
 		return fmt.Errorf("start ssh-agent: %v", err)
 	}
 
+	app.Debugf("agent: run ssh-add for keys\n")
 	err = a.AddKeys()
 	if err != nil {
 		return fmt.Errorf("add keys: %v", err)
 	}
 
-	a.Session.RegisterStoppable(a.Agent)
-	success = true
 	return nil
-
 }
 
 // TODO replace with x/crypto/ssh/agent ?
@@ -87,8 +80,5 @@ func (a *Agent) AddKeys() error {
 }
 
 func (a *Agent) Stop() {
-	if a.Agent != nil {
-		a.Agent.Stop()
-		a.Agent = nil
-	}
+	a.Agent.Stop()
 }
