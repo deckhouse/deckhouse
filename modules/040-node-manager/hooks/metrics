@@ -19,6 +19,8 @@ function __config__() {
         - key: heritage
           operator: In
           values: ["deckhouse"]
+        - key: node-group
+          operator: Exists
       jqFilter: |
         {
           "name": "machine_deployment_node_group_info",
