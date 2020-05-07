@@ -8,37 +8,28 @@ manage_etc_hosts: localhost
 write_files:
 
 {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-  {{- $bootstrap_scripts_from_bundles := list }}
-  {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
-    {{- $bootstrap_scripts_from_bundles = append $bootstrap_scripts_from_bundles $path }}
-  {{- end }}
+  {{- $tpl_context := dict }}
+  {{- $_ := set $tpl_context "Release" $context.Release }}
+  {{- $_ := set $tpl_context "Chart" $context.Chart }}
+  {{- $_ := set $tpl_context "Files" $context.Files }}
+  {{- $_ := set $tpl_context "Capabilities" $context.Capabilities }}
+  {{- $_ := set $tpl_context "Template" $context.Template }}
+  {{- $_ := set $tpl_context "Values" $context.Values }}
+  {{- $_ := set $tpl_context "nodeGroup" $ng }}
 
-  {{- $bootstrap_scripts_common := list }}
-  {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
-    {{- $bootstrap_scripts_common = append $bootstrap_scripts_common $path }}
-  {{- end }}
-
-  {{- $bootstrap_scripts := list  }}
-  {{- if gt (len $bootstrap_scripts_common) 0 }}
-    {{- $bootstrap_scripts = $bootstrap_scripts_common }}
+  {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
+- path: '/var/lib/bashible/cloud-provider-bootstrap-networks.sh'
+  permissions: '0700'
+  encoding: b64
+  content: {{ tpl $bootstrap_script_common $tpl_context | b64enc }}
   {{- else }}
-    {{- $bootstrap_scripts = $bootstrap_scripts_from_bundles }}
-  {{- end }}
-
-  {{- range $path := $bootstrap_scripts }}
-    {{- $bundle := (dir $path | base) }}
-    {{- $tpl_context := dict }}
-    {{- $_ := set $tpl_context "Release" $context.Release }}
-    {{- $_ := set $tpl_context "Chart" $context.Chart }}
-    {{- $_ := set $tpl_context "Files" $context.Files }}
-    {{- $_ := set $tpl_context "Capabilities" $context.Capabilities }}
-    {{- $_ := set $tpl_context "Template" $context.Template }}
-    {{- $_ := set $tpl_context "Values" $context.Values }}
-    {{- $_ := set $tpl_context "nodeGroup" $ng }}
+    {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
+      {{- $bundle := (dir $path | base) }}
 - path: '/var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh'
   permissions: '0700'
   encoding: b64
   content: {{ tpl ($context.Files.Get $path) $tpl_context | b64enc }}
+    {{- end }}
   {{- end }}
 {{- end }}
 
