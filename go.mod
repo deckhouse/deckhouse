@@ -14,7 +14,7 @@ require (
 	github.com/imdario/mergo v0.3.8
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/onsi/ginkgo v1.11.0
+	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/otiai10/copy v1.0.2
 	github.com/tidwall/gjson v1.3.4
