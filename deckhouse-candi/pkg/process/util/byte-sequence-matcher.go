@@ -1,9 +1,7 @@
 package util
 
 // ByteSequenceMatcher can be used to match byte stream against a string
-
-// It receives a buffer and search
-
+// byte by byte.
 type ByteSequenceMatcher struct {
 	// settings
 	Pattern        string

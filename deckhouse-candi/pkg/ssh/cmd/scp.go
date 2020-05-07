@@ -1,14 +1,18 @@
 package cmd
 
 import (
-	"flant/deckhouse-candi/pkg/ssh/session"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"flant/deckhouse-candi/pkg/process"
+	"flant/deckhouse-candi/pkg/ssh/session"
 )
 
 type Scp struct {
+	*process.Executor
+
 	Session *session.Session
 	scpCmd  *exec.Cmd
 
@@ -55,7 +59,7 @@ func (s *Scp) WithPreserve(preserve bool) *Scp {
 	return s
 }
 
-func (s *Scp) Cmd() *exec.Cmd {
+func (s *Scp) Scp() *Scp {
 	//env := append(os.Environ(), s.Env...)
 	env := append(os.Environ(), s.Session.AuthSockEnv())
 
@@ -132,10 +136,12 @@ func (s *Scp) Cmd() *exec.Cmd {
 		dstPath,
 	}...)
 
-	scpCmd := exec.Command("scp", args...)
-	scpCmd.Env = env
+	s.scpCmd = exec.Command("scp", args...)
+	s.scpCmd.Env = env
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr
 
-	return scpCmd
+	s.Executor = process.NewDefaultExecutor(s.scpCmd)
+
+	return s
 }

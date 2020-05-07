@@ -23,8 +23,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 	sh_app.DefineKubeClientFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().StartSession()
-		defer sshCl.StopSession()
+		sshCl, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
@@ -41,8 +40,6 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
-			// defer stop ssh-agent, proxy and a tunnel
-			defer kubeCl.Stop()
 
 			err = deckhouse.DeleteDeckhouseDeployment(kubeCl)
 			if err != nil {
@@ -72,8 +69,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		BoolVar(&DryRun)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().StartSession()
-		defer sshClient.StopSession()
+		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
@@ -125,7 +121,6 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			if err := kubeCl.Init(""); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
-			defer kubeCl.Stop()
 
 			err = deckhouse.CreateDeckhouseDeployment(kubeCl, &installConfig)
 			if err != nil {

@@ -26,6 +26,8 @@ type KubeProxy struct {
 
 	proxy  *Command
 	tunnel *Tunnel
+
+	stop bool
 }
 
 func NewKubeProxy(sess *session.Session) *KubeProxy {
@@ -35,9 +37,7 @@ func NewKubeProxy(sess *session.Session) *KubeProxy {
 func (k *KubeProxy) Start() (port string, err error) {
 	success := false
 	defer func() {
-		if success {
-			k.Session.RegisterStoppable(k)
-		} else {
+		if !success {
 			k.Stop()
 		}
 	}()
@@ -60,6 +60,10 @@ func (k *KubeProxy) Start() (port string, err error) {
 	k.proxy.OnCommandStart(func() {
 		onStart <- struct{}{}
 	})
+	waitCh := make(chan error, 1)
+	k.proxy.WithWaitHandler(func(err error) {
+		waitCh <- err
+	})
 
 	app.Debugf("Start proxy process\n")
 	err = k.proxy.Start()
@@ -73,7 +77,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 	t := time.NewTicker(20 * time.Second)
 	defer t.Stop()
 	select {
-	case e := <-k.proxy.WaitCh:
+	case e := <-waitCh:
 		return "", fmt.Errorf("proxy exited suddenly: %v", e)
 	case <-t.C:
 		return "", fmt.Errorf("timeout waiting fot api proxy port")
@@ -96,7 +100,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 		// TODO if local port is busy, increase port and start again
 		err := tun.Up()
 		if err != nil {
-			tun.Down()
+			tun.Stop()
 			lastError = fmt.Errorf("tunnel '%s': %v", tunnelAddress, err)
 			localPort++
 			retry++
@@ -120,14 +124,19 @@ func (k *KubeProxy) Start() (port string, err error) {
 }
 
 func (k *KubeProxy) Stop() {
+	if k == nil {
+		return
+	}
+	if k.stop {
+		return
+	}
 	if k.proxy != nil {
 		k.proxy.Stop()
-		k.proxy = nil
 	}
 	if k.tunnel != nil {
-		k.tunnel.Down()
-		k.tunnel = nil
+		k.tunnel.Stop()
 	}
+	k.stop = true
 }
 
 // ScanPasswordOrLines is a split function for a Scanner that returns each line of

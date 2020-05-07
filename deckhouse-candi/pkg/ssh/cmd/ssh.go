@@ -6,10 +6,12 @@ import (
 	"os/exec"
 	"strings"
 
+	"flant/deckhouse-candi/pkg/process"
 	"flant/deckhouse-candi/pkg/ssh/session"
 )
 
 type Ssh struct {
+	*process.Executor
 	Session     *session.Session
 	Args        []string
 	Env         []string
@@ -117,6 +119,8 @@ func (s *Ssh) Cmd() *exec.Cmd {
 
 	sshCmd := exec.Command("ssh", args...)
 	sshCmd.Env = env
+
+	s.Executor = process.NewDefaultExecutor(sshCmd)
 
 	return sshCmd
 }

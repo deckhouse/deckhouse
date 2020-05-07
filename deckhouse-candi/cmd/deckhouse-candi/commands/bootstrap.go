@@ -94,7 +94,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				_ = json.Unmarshal(masterPipelineResult["nodeIP"], &nodeIP)
 				masterInstanceClass = masterPipelineResult["masterInstanceClass"]
 
-				sshClient.Session.Host = app.SshHost
+				sshClient.Settings.Host = app.SshHost
 
 				logboek.LogInfoF("Master IP: %s", masterPipelineResult["masterIP"])
 				return nil
@@ -221,7 +221,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
-			defer kubeCl.Stop()
 
 			err = deckhouse.CreateDeckhouseManifests(kubeCl, &installConfig)
 			if err != nil {
@@ -248,11 +247,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().StartSession()
+		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
-		defer sshClient.StopSession()
 
 		err = app.AskBecomePassword()
 		if err != nil {
