@@ -167,7 +167,7 @@ data:
 
 		It("Min and max must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":0,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":1,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
 		})
 	})
 
@@ -180,7 +180,7 @@ data:
 		It("Min, max, desired, instances, nodes, ready must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":2,"instances":2,"nodes":2,"ready":1,"upToDate": 2}`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":0,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
 		})
 	})
 
