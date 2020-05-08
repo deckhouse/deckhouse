@@ -61,6 +61,7 @@ function main() {
     echo "Configuration is in sync, nothing to do."
     exit 0
   fi
+  rm -f $CONFIGURATION_CHECKSUM_FILE
 {{ end }}
 
   if [ -z "${is_local-}" ]; then
@@ -101,7 +102,7 @@ function main() {
       kubectl \
         --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${HOSTNAME}" \
         --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-        update.node.deckhouse.io/waiting-for-approval= || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
+        update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
     done
 
     >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
