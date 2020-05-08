@@ -21,7 +21,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       jqFilter: '.spec.containers[].image'
-      includeSnapshotsFrom: [endpoints]
+      group: main
     - apiVersion: v1
       kind: pod
       watchEvent: [Added, Modified]
@@ -32,7 +32,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       jqFilter: '.spec.containers[].image'
-      includeSnapshotsFrom: [endpoints]
+      group: main
     - name: endpoints
       apiVersion: v1
       kind: Endpoints
@@ -42,7 +42,7 @@ function __config__() {
         nameSelector:
           matchNames: [default]
       jqFilter: '.subsets[] | "\(.addresses[].ip):\(.ports[].port)"'
-      includeSnapshotsFrom: [endpoints]
+      group: main
 EOF
 }
 
