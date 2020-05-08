@@ -103,7 +103,7 @@ nodeManager: |
 * `chaos` — настройки chaos monkey для данной IG:
   * Опциональный параметр.
   * `mode` — режим работы chaos monkey, возможные значения: `DrainAndDelete` — при срабатывании drain'ит и удаляет ноду, `Disabled` — не трогает данную IG.
-    * По-умолчанию `DrainAndDelete`.
+    * По-умолчанию `Disabled`.
   * `period` — в какой интервал времени сработает chaos monkey (указывать можно в [golang формате](https://golang.org/pkg/time/#ParseDuration));
     * По-умолчанию `6h`.
 
