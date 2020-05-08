@@ -2,7 +2,11 @@ matrixTestDefaults:
   internal: &internalDefaults
     clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
     kubernetesCA: myclusterca
-
+    bashibleChecksumMigration:
+      worker:
+        bashibleBundle: mybundle
+        bashibleChecksum: mychecksum
+        machineClassChecksumBeforeMigration: null
 global:
   enabledModules:
     __ConstantChoices__:

@@ -39,6 +39,7 @@ discovery:
 
 const nodeManagerAWS = `
 internal:
+  bashibleChecksumMigration: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -82,6 +83,7 @@ internal:
 
 const nodeManagerGCP = `
 internal:
+  bashibleChecksumMigration: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -120,6 +122,7 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
+  bashibleChecksumMigration: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -169,6 +172,7 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
+  bashibleChecksumMigration: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -215,6 +219,7 @@ internal:
 
 const nodeManagerYandex = `
 internal:
+  bashibleChecksumMigration: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -268,6 +273,7 @@ internal:
 
 const nodeManagerStatic = `
 internal:
+  bashibleChecksumMigration: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca

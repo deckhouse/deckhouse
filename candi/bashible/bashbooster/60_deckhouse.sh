@@ -32,7 +32,6 @@ bb-deckhouse-get-disruptive-update-approval() {
     bb-log-info "Disruption required, waiting for approval"
 
     attempt=0
-    kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${HOSTNAME}" --overwrite update.node.deckhouse.io/disruption-required=
     until
       kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "${HOSTNAME}" -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null

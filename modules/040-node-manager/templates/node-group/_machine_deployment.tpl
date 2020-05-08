@@ -1,7 +1,3 @@
-{{- define "node_group_bashible_checksum_hack" }}
-kubernetesVersion: {{ .Values.global.discovery.kubernetesVersion }}
-{{- end }}
-
 {{- define "node_group_machine_deployment" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
@@ -17,6 +13,15 @@ metadata:
   {{- end }}
   annotations:
     zone: {{ $zone_name }}
+  # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible.
+  {{- if hasKey $context.Values.nodeManager.internal.bashibleChecksumMigration $ng.name }}
+    {{- $migrationData := (pluck $ng.name $context.Values.nodeManager.internal.bashibleChecksumMigration | first) }}
+    {{- if not $migrationData.machineClassChecksumBeforeMigration }}
+    checksum/machine-class-before-migration: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
+    {{- else if eq $migrationData.machineClassChecksumBeforeMigration (include "node_group_machine_class_checksum" (list $context $ng $zone_name)) }}
+    checksum/machine-class-before-migration: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
+    {{- end }}
+  {{- end }}
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | indent 2 }}
 spec:
@@ -34,10 +39,17 @@ spec:
       labels:
         instance-group: {{ $ng.name }}-{{ $zone_name }}
       annotations:
-  # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible. Оставил чтобы не перекатывались ноды.
-        bashible-bundle: "ubuntu-18.04-1.0"
-        checksum/bashible-bundles-options: {{ include "node_group_bashible_checksum_hack" $context | fromYaml | toJson | sha256sum | quote }}
-
+  # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible.
+  {{- if hasKey $context.Values.nodeManager.internal.bashibleChecksumMigration $ng.name }}
+    {{- $migrationData := (pluck $ng.name $context.Values.nodeManager.internal.bashibleChecksumMigration | first) }}
+    {{- if not $migrationData.machineClassChecksumBeforeMigration }}
+        bashible-bundle: {{ $migrationData.bashibleBundle | quote }}
+        checksum/bashible-bundles-options: {{ $migrationData.bashibleChecksum | quote }}
+    {{- else if eq $migrationData.machineClassChecksumBeforeMigration (include "node_group_machine_class_checksum" (list $context $ng $zone_name)) }}
+        bashible-bundle: {{ $migrationData.bashibleBundle | quote }}
+        checksum/bashible-bundles-options: {{ $migrationData.bashibleChecksum | quote }}
+    {{- end }}
+  {{- end }}
         checksum/machine-class: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
     spec:
       class:
