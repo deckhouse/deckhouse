@@ -52,7 +52,7 @@ function __main__() {
   kubernetes_versions=( )
   for e in $endpoints; do
     v=$(curl -sk -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://${e}/version?timeout=32s" |
-      jq -er '.gitVersion[1:]')
+      jq -er '.gitVersion[1:]' | grep -Po "\d+\.\d+\.\d+")
     kubernetes_versions+=( "$v" )
   done
 

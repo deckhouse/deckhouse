@@ -35,6 +35,10 @@ apiVersions:
         default: "cluster.local"
       kubernetesVersion:
         type: string
+        enum:
+        - "1.14"
+        - "1.15"
+        - "1.16"
     oneOf:
     - properties:
         clusterType:
