@@ -1,3 +1,5 @@
+bb-var BB_APT_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_packages"
+
 bb-apt?() {
     bb-exe? apt-get
 }
@@ -56,6 +58,10 @@ bb-apt-install() {
     export DEBIAN_FRONTEND=noninteractive
     for PACKAGE in "$@"
     do
+        local NEED_FIRE=false
+        if test -f "$BB_APT_UNHANDLED_PACKAGES_STORE" && grep -Eq "^${PACKAGE}$" "$BB_APT_UNHANDLED_PACKAGES_STORE"; then
+            NEED_FIRE=true
+        fi
         if ! bb-apt-package? "$PACKAGE"
         then
             bb-apt-update
@@ -63,6 +69,10 @@ bb-apt-install() {
             apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages -y "$PACKAGE"
             bb-apt-hold $PACKAGE
             bb-exit-on-error "Failed to install package '$PACKAGE'"
+            echo "$PACKAGE" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
+            NEED_FIRE=true
+        fi
+        if [[ "$NEED_FIRE" == "true" ]]; then
             bb-event-fire "bb-package-installed" "$PACKAGE"
         fi
     done
@@ -70,16 +80,24 @@ bb-apt-install() {
 
 bb-apt-remove() {
     export DEBIAN_FRONTEND=noninteractive
+    local PACKAGES_TO_REMOVE=( )
+
     for PACKAGE in "$@"
     do
         if bb-apt-package? "$PACKAGE"
         then
-            bb-log-info "Removing package '$PACKAGE'"
-            apt-get remove -y --allow-change-held-packages "$PACKAGE"
-            bb-exit-on-error "Failed to remove package '$PACKAGE'"
-            bb-event-fire "bb-package-removed" "$PACKAGE"
+            PACKAGES_TO_REMOVE+=( "$PACKAGE" )
         fi
     done
+
+    if [ "${#PACKAGES_TO_REMOVE[@]}" -gt 0 ]; then
+        bb-log-info "Removing packages '${PACKAGES_TO_REMOVE[@]}'"
+        apt-get remove -y --allow-change-held-packages ${PACKAGES_TO_REMOVE[@]}
+        bb-exit-on-error "Failed to remove packages '${PACKAGES_TO_REMOVE[@]}'"
+        for i in ${PACKAGES_TO_REMOVE[@]}; do
+            bb-event-fire "bb-package-removed" "$i"
+        done
+    fi
 }
 
 bb-apt-autoremove() {
@@ -140,4 +158,3 @@ bb-apt-upgrade() {
         fi
     done
 }
-

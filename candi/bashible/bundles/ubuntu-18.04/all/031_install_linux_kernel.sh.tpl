@@ -6,17 +6,21 @@ post-install() {
 {{- end }}
 
 desired_version="5.3.0-51-generic"
+if [ -f /var/lib/bashible/kernel_version_desired_by_cloud_provider ]; then
+  desired_version="$(</var/lib/bashible/kernel_version_desired_by_cloud_provider)"
+fi
+
 if (! bb-apt-package? "linux-image-${desired_version}") || (! bb-apt-package? "linux-modules-${desired_version}") || (! bb-apt-package? "linux-headers-${desired_version}"); then
   bb-deckhouse-get-disruptive-update-approval
   bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-headers-${desired_version}"
   bb-apt-autoremove
 fi
 
-desired_version_common="$(echo "$desired_version" | sed -r 's/-[^0-9]+$//')"
-packages_image="$(  dpkg -l 'linux-image-*'   | grep '^[a-z]i' | grep -Fv "$desired_version_common" || true)"
-packages_headers="$(dpkg -l 'linux-headers-*' | grep '^[a-z]i' | grep -Fv "$desired_version_common" || true)"
-packages_modules="$(dpkg -l 'linux-modules-*' | grep '^[a-z]i' | grep -Fv "$desired_version_common" || true)"
+version_pattern="$(echo "$desired_version" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-[a-z0-9\.-]+(\1|\1-\2)$/')"
 
-for pkg in $packages_image $packages_headers $packages_modules; do
-  bb-apt-remove $pkg
-done
+packages="$(dpkg --get-selections | grep -E '^linux-.*\s(install|hold)$' | awk '{print $1}' | grep -Ev "$version_pattern" | grep -Ev '^linux-base$' || true)"
+if [ -n "$packages" ]; then
+  bb-apt-remove $packages
+fi
+
+rm -f /var/lib/bashible/kernel_version_desired_by_cloud_provider

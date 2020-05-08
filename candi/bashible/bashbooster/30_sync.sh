@@ -1,3 +1,5 @@
+bb-var BB_SYNC_UNHANDLED_FILES_STORE "/var/lib/bashible/bashbooster_unhandled_synced_files"
+
 bb-sync-file() {
     local DST_FILE="$1"
     local SRC_FILE="$2"
@@ -11,15 +13,21 @@ bb-sync-file() {
         cat > "$SRC_FILE"
     fi
 
+    if test -f "$BB_SYNC_UNHANDLED_FILES_STORE" && grep -Eq "^${DST_FILE}$" "$BB_SYNC_UNHANDLED_FILES_STORE"; then
+        DST_FILE_CHANGED=true
+    fi
+
     if [[ ! -f "$DST_FILE" ]]
     then
         touch "$DST_FILE"
         DST_FILE_CHANGED=true
+        echo "$DST_FILE" >> "$BB_SYNC_UNHANDLED_FILES_STORE"
     fi
     if [[ -n "$( diff -q "$SRC_FILE" "$DST_FILE" )" ]]
     then
         cp -f -p "$SRC_FILE" "$DST_FILE"
         DST_FILE_CHANGED=true
+        echo "$DST_FILE" >> "$BB_SYNC_UNHANDLED_FILES_STORE"
     fi
 
     if $DST_FILE_CHANGED
