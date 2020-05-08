@@ -124,7 +124,6 @@ function main() {
 {{ end }}
 
   # Execute bashible steps
-  rm -rf $BOOTSTRAP_DIR/.bb-workspace
   for step in $BUNDLE_STEPS_DIR/*; do
     echo ===
     echo === Step: $step
