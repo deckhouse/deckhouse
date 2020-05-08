@@ -224,3 +224,10 @@ spec:
                   pattern: '^[0-9]+[mh]{1}$'
             allowDisruptions:
               type: boolean
+            docker:
+              description: Docker settings for nodes.
+              type: object
+              properties:
+                maxConcurrentDownloads:
+                  type: integer
+                  description: Set the max concurrent downloads for each pull (default 3).
