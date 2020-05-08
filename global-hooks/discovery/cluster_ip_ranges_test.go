@@ -159,6 +159,16 @@ spec:
     args:
     - qqq
 `
+		stateClusterConfiguration = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: d8-system
+data:
+  cluster-configuration.yaml: test
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -190,6 +200,19 @@ spec:
 			})
 		})
 
+	})
+
+	Context("With d8-cluster-configuration secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateMaster + stateControllerManagerK8SApp + stateApiserverK8SApp + stateClusterConfiguration))
+			f.RunHook()
+		})
+
+		It("Should not have \"global.discovery.podSubnet\" and \"global.discovery.serviceSubnet\" values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(BeEmpty())
+			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(BeEmpty())
+		})
 	})
 
 	Context("multiple nodes; controller-manager by component; apiserver by component", func() {

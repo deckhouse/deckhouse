@@ -12,7 +12,7 @@ EOF
 
 function __on_after_helm() {
   if kubectl -n kube-system get ds kube-flannel-ds >/dev/null 2>&1; then
-    cluster_version=$(values::get global.discovery.clusterVersion)
+    cluster_version=$(values::get global.discovery.kubernetesVersion)
     if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
       cluster_type=$(values::get --required global.discovery.clusterType)
       # Подам kube-flannel необходимо задать максимальный priorityClass, так как без подов kube-flannel
@@ -31,7 +31,7 @@ function __on_after_helm() {
 
 function __on_after_delete_helm() {
   if kubectl -n kube-system get ds kube-flannel-ds >/dev/null 2>&1; then
-    cluster_version=$(values::get global.discovery.clusterVersion)
+    cluster_version=$(values::get global.discovery.kubernetesVersion)
     if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
       cluster_type=$(values::get --required global.discovery.clusterType)
       # Подам kube-flannel необходимо задать максимальный priorityClass, так как без подов kube-flannel

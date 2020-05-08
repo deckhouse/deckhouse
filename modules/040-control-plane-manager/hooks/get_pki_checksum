@@ -1,0 +1,32 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: pki_checksum
+      includeSnapshotsFrom: ["pki_checksum"]
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-pki]
+      jqFilter: '.data'
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.pki_checksum.0.filterResult; then
+    values::set controlPlaneManager.internal.pkiChecksum "$(context::get snapshots.pki_checksum.0.filterResult | sha256sum | cut -d' ' -f 1)"
+  else
+    >&2 echo 'ERROR: There is no Secret named "d8-pki" in NS "kube-system"'
+    return 1
+  fi
+}
+
+hook::run "$@"

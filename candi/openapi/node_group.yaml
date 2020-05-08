@@ -1,0 +1,226 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: nodegroups.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  scope: Cluster
+  names:
+    plural: nodegroups
+    singular: nodegroup
+    kind: NodeGroup
+    shortNames:
+    - ng
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+  - name: Type
+    type: string
+    description: "Type of nodes in group"
+    JSONPath: .spec.nodeType
+  - name: Ready
+    type: integer
+    description: "Number of ready Kubernetes nodes in the group."
+    JSONPath: .status.ready
+  - name: Nodes
+    type: integer
+    description: "Number of Kubernetes nodes (in any state) in the group."
+    JSONPath: .status.nodes
+  - name: UpToDate
+    type: integer
+    description: "Number of up-to-date nodes in the group."
+    JSONPath: .status.upToDate
+  - name: Instances
+    type: integer
+    description: "Number of instances (in any state) in the group."
+    JSONPath: .status.instances
+  - name: Desired
+    type: integer
+    description: "Number of desired instances in the group."
+    JSONPath: .status.desired
+  - name: Min
+    type: integer
+    description: "Minimal amount of instances in the group."
+    JSONPath: .status.min
+  - name: Max
+    type: integer
+    description: "Maximum amount of instances in the group."
+    JSONPath: .status.max
+  - name: Error
+    type: string
+    description: "Error message about possible problems with the group handling."
+    JSONPath: .status.error
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: 'NodeGroup defines parameters for a group of Nodes and, if nodeType is Cloud, also runtime parameters for instances to be created.'
+      required:
+      - spec
+      properties:
+        status:
+          type: object
+          required: []
+          properties:
+            ready:
+              type: integer
+              description: "Number of ready Kubernetes nodes in the group."
+            nodes:
+              type: integer
+              description: "Number of Kubernetes nodes (in any state) in the group."
+            instances:
+              type: integer
+              description: "Number of instances (in any state) in the group."
+            desired:
+              type: integer
+              description: "Number of desired machines in the group."
+            min:
+              type: integer
+              description: "Minimal amount of instances in the group."
+            max:
+              type: integer
+              description: "Maximum amount of instances in the group."
+            upToDate:
+              type: integer
+              description: "Number of up-to-date nodes in the group."
+            error:
+              type: string
+              description: "Error message about possible problems with the group handling."
+        spec:
+          type: object
+          required:
+          - nodeType
+          properties:
+            nodeType:
+              type: string
+              enum:
+              - Cloud
+              - Static
+              - Hybrid
+            kubernetesVersion:
+              type: string
+              enum:
+              - "1.14"
+              - "1.15"
+              - "1.16"
+            cloudInstances:
+              type: object
+              required:
+              - classReference
+              - minPerZone
+              - maxPerZone
+              properties:
+                zones:
+                  description: List of availability zones to create instances in.
+                  example: |
+                    - Helsinki
+                    - Espoo
+                    - Tampere
+                  type: array
+                  items:
+                    type: string
+                minPerZone:
+                  description: |
+                    Minimal amount of instances for the group in each zone.
+                    If equals-or-more than "maxPerZone", cluster-autoscaler is disabled for this NodeGroup.
+                  type: integer
+                  minimum: 0
+                maxPerZone:
+                  description: |
+                    Maximum amount of instances for the group in each zone.
+                  type: integer
+                  minimum: 0
+                maxUnavailablePerZone:
+                  description: |
+                    Maximum amount of unavailable instances (during rollout) in the group in each zone.
+                  type: integer
+                  minimum: 0
+                maxSurgePerZone:
+                  description: |
+                    Maximum amount of instances to rollout simultaneously in the group in each zone.
+                  type: integer
+                  minimum: 0
+                classReference:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                      - OpenStackInstanceClass
+                      - GCPInstanceClass
+                      - VsphereInstanceClass
+                      - AWSInstanceClass
+                      - YandexInstanceClass
+                    name:
+                      type: string
+            static:
+              type: object
+              properties:
+                internalNetworkCIDRs:
+                  type: array
+                  items:
+                    type: string
+                    description: List of subnets to search interfaces in
+                    example: '192.168.42.0/24'
+                    pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+            nodeTemplate:
+              description: Specification of some of the fields that will be maintained in all nodes of the group.
+              example: |
+                labels:
+                  environment: production
+                  app: warp-drive-ai
+                annotations:
+                  ai.fleet.com/discombobulate: "true"
+                taints:
+                - effect: NoExecute
+                  key: ship-class
+                  value: frigate
+              type: object
+              properties:
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                annotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                taints:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum:
+                        - NoSchedule
+                        - PreferNoSchedule
+                        - NoExecute
+                      key:
+                        type: string
+                      value:
+                        type: string
+            chaos:
+              description: Chaos monkey settings.
+              example: |
+                mode: DrainAndReboot
+                period: 24h
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum:
+                  - Disabled
+                  - DrainAndDelete
+                period:
+                  type: string
+                  pattern: '^[0-9]+[mh]{1}$'
+            allowDisruptions:
+              type: boolean

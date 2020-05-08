@@ -1,0 +1,78 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    kubernetes:
+    - name: provider_cluster_configuration
+      includeSnapshotsFrom: [provider_cluster_configuration]
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-provider-cluster-configuration]
+      jqFilter: |
+        .data."cloud-provider-cluster-configuration.yaml" //= "" | .data."cloud-provider-discovery-data.json" //= "" |
+        {
+          "provider_cluster_configuration": (.data."cloud-provider-cluster-configuration.yaml" | @base64d),
+          "provider_discovery_data": (.data."cloud-provider-discovery-data.json" | @base64d)
+        }
+EOF
+}
+
+function set_values_from_provider_cluster_configuration_yaml() {
+  values::unset cloudProviderOpenstack.internal.connection
+  provider='{}'
+  provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
+  if [[ "$provider_cluster_configuration_yaml" != "null" ]]; then
+    provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfig.provider | . //= {}')
+  fi
+
+  #TODO merge configs framework
+  provider_discovery_data=$(echo "$1" | jq -r '
+    if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
+      "instances": {},
+      "loadBalancer": {}
+    } end | .provider_discovery_data')
+  #getting provider discovery data with fall back to default empty values
+  cloudProviderOpenstack=$(values::get cloudProviderOpenstack)
+  connection=$(echo "$cloudProviderOpenstack" | jq -r --argjson provider "$provider" '.connection //= {} | $provider * .connection')
+  values::set cloudProviderOpenstack.internal.connection "$connection"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.internalNetworkNames //= [] | $data.internalNetworkNames + .internalNetworkNames | unique')
+  values::set cloudProviderOpenstack.internal.internalNetworkNames "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= [] | $data.externalNetworkNames + .externalNetworkNames | unique')
+  values::set cloudProviderOpenstack.internal.externalNetworkNames "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.instances.securityGroups //= [] | $data.instances.securityGroups + .instances.securityGroups | unique')
+  values::set cloudProviderOpenstack.internal.instances.securityGroups "$i"
+
+  #TODO remove after pivot merged
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= [] | $data.zones + .zones | unique')
+  values::set cloudProviderOpenstack.internal.zones "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then $data.instances.sshKeyPairName else .instances.sshKeyPairName end')
+  values::set cloudProviderOpenstack.internal.instances.sshKeyPairName "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
+  values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.loadBalancer //= {} | $data.loadBalancer * .loadBalancer')
+  values::set cloudProviderOpenstack.internal.loadBalancer "$i"
+}
+
+function __main__() {
+  if context::has snapshots.provider_cluster_configuration.0; then
+    set_values_from_provider_cluster_configuration_yaml "$(context::get snapshots.provider_cluster_configuration.0.filterResult)"
+  else
+    set_values_from_provider_cluster_configuration_yaml "{}"
+  fi
+}
+
+hook::run "$@"

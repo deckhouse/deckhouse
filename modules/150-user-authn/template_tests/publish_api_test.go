@@ -12,7 +12,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.clusterVersion", "1.15.6")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.ingressClass", "nginx")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")

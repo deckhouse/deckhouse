@@ -28,7 +28,7 @@ spec:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
     - targetLabel: job
-{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.clusterVersion) }}
+{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.kubernetesVersion) }}
       replacement: kube-etcd2
 {{- else }}
       replacement: kube-etcd3
@@ -50,7 +50,7 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - targetLabel: job
-{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.clusterVersion) }}
+{{- if and (or (eq .Values.global.discovery.clusterType "AWS") (eq .Values.global.discovery.clusterType "GCE")) (semverCompare "<=1.11" .Values.global.discovery.kubernetesVersion) }}
       replacement: kube-etcd2
 {{- else }}
       replacement: kube-etcd3

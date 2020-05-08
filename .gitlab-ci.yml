@@ -11,8 +11,7 @@ Build:
     - ./modules_images bp --write-tags=modules/images_tags.json
     - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE} dev
-    - werf build --stages-storage :local tests
+    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE}
     - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --stages-storage :local --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE} dev; fi
   before_script:
     - rm -rf shell-operator || true
@@ -37,14 +36,14 @@ Tests:
     - chmod -R 0777 testing
     - |
       >testing/dummy_dirs
-      for dir in $(find -L testing/global-hooks testing/modules/*/hooks -type d); do
+      for dir in $(find -L global-hooks modules/*/hooks -type d); do
         echo "$dir" >> testing/dummy_dirs
         cat > "$dir/dummy" <<"EOF"
           #!/bin/bash
       EOF
       done
     - >
-      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/testing" --stages-storage :local --
+      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --stages-storage :local --
       go test -vet=off ./modules/... ./global-hooks/...
     - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   before_script:
@@ -69,9 +68,9 @@ Matrix Tests:
     - type multiwerf && source <(multiwerf use 1.1 beta)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf run tests
-        --docker-options="-v $(pwd):/deckhouse -w /deckhouse/testing"
+        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
         --stages-storage :local
-        -- ginkgo -vet=off --slowSpecThreshold=30 ./matrix/
+        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
   except:
     - schedules
   dependencies:

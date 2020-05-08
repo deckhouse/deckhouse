@@ -8,7 +8,7 @@
     * Синхронизирует метаданные GCP Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в GCP.
 2. simple-bridge CNI — DaemonSet, который работает на **каждой** ноде кластера. Вытаскивает из API Kubernetes CIDR, выданный этой конкретной ноде и кладёт в виде CNI конфигурации в `/etc/cni/net.d/simple-bridge.conf`.
 3. CSI storage — для заказа дисков в GCP.
-4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [GCPInstanceClass'ы](#GCPInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#cloudinstancegroup-custom-resource).
+4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [GCPInstanceClass'ы](#GCPInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#NodeGroup-custom-resource).
 
 ## Конфигурация
 
@@ -22,12 +22,12 @@
 
 ### Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `GCPInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `GCPInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `networkName` — имя VPC network в GCP, где будут заказываться instances.
 * `subnetworkName` — имя subnet в VPC netwok `networkName`, где будут заказываться instances.
 * `region` — имя GCP региона, в котором будут заказываться instances.
-* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [CloudInstanceGroup](modules/040-cloud-instance-manager/README.md#CloudInstanceGroup-custom-resource) объекте.
+* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [NodeGroup](modules/040-cloud-instance-manager/README.md#NodeGroup-custom-resource) объекте.
     * Формат — массив строк.
 * `extraInstanceTags` — Список дополнительных GCP tags, которые будут установлены на заказанные instances. Позволяют прикрепить к создаваемым instances различные firewall правила в GCP.
     * Формат — массив строк.
@@ -95,17 +95,6 @@ cloudProviderGcp: |
     * Формат — integer. В ГиБ.
     * По-умолчанию `50` ГиБ.
     * Опциональный параметр.
-* `bashible` — параметры bootstrap фазы.
-    * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
-        * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
-        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
-        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
-
-        ```yaml
-        options:
-          kubernetesVersion: "1.15.3"
-        ```
 
 #### Пример GCPInstanceClass
 
@@ -117,10 +106,6 @@ metadata:
 spec:
   machineType: n1-standard-1
   image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
-  bashible:
-    bundle: ubuntu-18.04-1.0
-    options:
-      kubernetesVersion: 1.15.3
 ```
 
 ### Storage

@@ -19,9 +19,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
-{{- if semverCompare ">=1.11" .Values.global.discovery.clusterVersion }}
-      priorityClassName: cluster-critical
-{{- end }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
       hostNetwork: true
       nodeSelector:
         beta.kubernetes.io/arch: amd64
@@ -45,14 +43,9 @@ spec:
       containers:
       - name: kube-flannel
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/flanneld:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.flanneld }}
-        command:
-        - /opt/bin/flanneld
         args:
         - --ip-masq
         - --kube-subnet-mgr
-{{- if hasKey .Values.cloudProviderVsphere.internal "internalSubnetRegex" }}
-        - --iface-regex={{ .Values.cloudProviderVsphere.internal.internalSubnetRegex }}
-{{- end }}
         resources:
           requests:
             cpu: "100m"

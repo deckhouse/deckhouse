@@ -1,46 +1,52 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: OpenStackMachineClass
 metadata:
-  name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
-  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.region | quote }}
+  region: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.region | quote }}
   availabilityZone: {{ .zoneName }}
-  flavorName: {{ .instanceGroup.instanceClass.flavorName }}
-  imageName: {{ .instanceGroup.instanceClass.imageName }}
+  flavorName: {{ .nodeGroup.instanceClass.flavorName }}
+  imageName: {{ .nodeGroup.instanceClass.imageName }}
   networks:
-  - name: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.networkName }}
-{{- if not (hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "internalNetworkName") }}
-  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
-    podNetwork: true
+  {{- $networks := list }}
+  {{- if hasKey .nodeGroup.instanceClass "additionalNetworks" }}
+    {{- range $additionalNetwork := .nodeGroup.instanceClass.additionalNetworks }}
+      {{- $networks = append $networks $additionalNetwork }}
+    {{- end }}
   {{- end }}
-{{- end }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "internalNetworkName" }}
-  - name: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.internalNetworkName }}
-  {{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
+  {{- $networks = prepend $networks .nodeGroup.instanceClass.mainNetwork }}
+  {{- range $networks }}
+  - name: {{ . | quote }}
+    {{- if has . $.Values.nodeManager.internal.cloudProvider.openstack.internalNetworkNames }}
+      {{- if eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled" }}
     podNetwork: true
+      {{- end }}
+    {{- end }}
   {{- end }}
-{{- end }}
-{{- if .Values.cloudInstanceManager.internal.cloudProvider.openstack.addPodSubnetToPortWhitelist }}
   podNetworkCidr: {{ .Values.global.discovery.podSubnet }}
-{{- end }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "sshKeyPairName" }}
-  keyName: {{ .Values.cloudInstanceManager.internal.cloudProvider.openstack.sshKeyPairName }}
-{{- end }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.openstack "securityGroups" }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack "instances" }}
+  {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
+  keyName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.sshKeyPairName }}
+  {{- end }}
+  {{- if or (hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups") (hasKey .nodeGroup.instanceClass "securityGroups") }}
   securityGroups:
-  {{- range .Values.cloudInstanceManager.internal.cloudProvider.openstack.securityGroups }}
+    {{- range .Values.nodeManager.internal.cloudProvider.openstack.instances.securityGroups }}
   - {{ . }}
+    {{- end }}
+    {{- range .nodeGroup.instanceClass.securityGroups }}
+  - {{ . }}
+    {{- end }}
   {{- end }}
 {{- end }}
-{{- if hasKey .instanceGroup.instanceClass "rootDiskSize" }}
-  rootDiskSize: {{ .instanceGroup.instanceClass.rootDiskSize }}
+{{- if hasKey .nodeGroup.instanceClass "rootDiskSize" }}
+  rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
 {{- end }}
   tags:
     # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
     kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
-    kubernetes.io-role-deckhouse-{{ .instanceGroup.name }}-{{ .zoneName }}: "1"
+    kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
   secretRef:
-    namespace: d8-{{ .Chart.Name }}
-    name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

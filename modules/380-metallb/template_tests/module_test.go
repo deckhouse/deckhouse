@@ -36,7 +36,7 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
 	BeforeEach(func() {
-		f.ValuesSet("global.discovery.clusterVersion", "1.15.6")
+		f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 		f.ValuesSet("global.modulesImages.registry", "registryAddr")
 		f.ValuesSet("global.modulesImages.tags.common.kubeCaAuthProxy", "xxx")
 

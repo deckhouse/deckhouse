@@ -1,3 +1,5 @@
 cloudProviderOpenstack:
-  internal: {}
-  addPodSubnetToPortWhitelist: true
+  internal:
+    instances: {}
+    zones: []
+  instances: {}

@@ -1,0 +1,149 @@
+{{- $kubeImageRepoSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "-" }}
+{{- $kubeImageTagSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "" }}
+
+{{- $images := dict }}
+{{- range $component := list (list "kubeApiserver" "kube-apiserver") (list "kubeControllerManager" "kube-controller-manager") (list "kubeScheduler" "kube-scheduler") }}
+  {{- $_ := set $images (index $component 1) (printf "%s/control-plane-manager/%s-%s:%s" $.Values.global.modulesImages.registry (index $component 1) $kubeImageRepoSuffix (index $.Values.global.modulesImages.tags.controlPlaneManager (printf "%s%s" (index $component 0) $kubeImageTagSuffix)) ) }}
+{{- end }}
+{{- $_ := set $images "etcd" (printf "%s/control-plane-manager/etcd:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
+
+{{- $tpl_context := dict }}
+{{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
+{{- $_ := set $tpl_context "images" $images }}
+{{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
+{{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
+{{- $_ := set $tpl_context "apiserver" dict }}
+{{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
+{{- if hasKey .Values.controlPlaneManager "apiserver" }}
+  {{- if .Values.controlPlaneManager.apiserver.bindToWildcard }}
+    {{ $_ := set $tpl_context.apiserver "bindToWildcard" true }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "authn" }}
+    {{- if .Values.controlPlaneManager.apiserver.authn.oidcIssuerURL }}
+      {{ $_ := set $tpl_context.apiserver "oidcIssuerURL" .Values.controlPlaneManager.apiserver.authn.oidcIssuerURL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.apiserver.authn.oidcCA }}
+      {{ $_ := set $tpl_context.apiserver "oidcCA" .Values.controlPlaneManager.apiserver.authn.oidcCA }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "authz" }}
+    {{- if .Values.controlPlaneManager.apiserver.authz.webhookURL }}
+      {{ $_ := set $tpl_context.apiserver "webhookURL" .Values.controlPlaneManager.apiserver.authz.webhookURL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.apiserver.authz.webhookCA }}
+      {{ $_ := set $tpl_context.apiserver "webhookCA" .Values.controlPlaneManager.apiserver.authz.webhookCA }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "certSANs" }}
+    {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.apiserver.certSANs }}
+  {{- end }}
+{{- end }}
+{{- $_ := set $tpl_context "Template" $.Template }}
+
+{{- define "control_plane_config" }}
+  {{- $context := index . 0 }}
+  {{- $tpl_context := index . 1 }}
+kubeadm-config.yaml: {{ tpl ($context.Files.Get "kubeadm/config.yaml.tpl") $tpl_context | b64enc }}
+  {{- range $kustomize_file, $_ := $context.Files.Glob "kubeadm/kustomize/*" }}
+kubeadm-kustomize-{{ base $kustomize_file }}: {{ tpl ($context.Files.Get $kustomize_file) $tpl_context | b64enc }}
+  {{- end }}
+  {{- if $tpl_context.apiserver.oidcCA }}
+extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
+  {{- end }}
+  {{- if $tpl_context.apiserver.webhookCA }}
+extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-control-plane-manager-config
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+data:
+{{ include "control_plane_config" (list . $tpl_context) | indent 2 }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: d8-control-plane-manager
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager
+  template:
+    metadata:
+      labels:
+        app: d8-control-plane-manager
+      annotations:
+        checksum/config: {{ include "control_plane_config" (list . $tpl_context) | sha256sum }}
+        checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
+        rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: control-plane-manager
+      containers:
+      - name: control-plane-manager
+        image: {{ .Values.global.modulesImages.registry }}/control-plane-manager/control-plane-manager:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
+        volumeMounts:
+        - mountPath: /var/lib/etcd
+          name: etcd
+          readOnly: true
+        - mountPath: /pki
+          name: pki
+          readOnly: true
+        - mountPath: /config
+          name: config
+          readOnly: true
+        - mountPath: /etc/kubernetes
+          name: etc-kubernetes
+        - mountPath: /root/.kube/
+          name: root-kube
+        env:
+        - name: MY_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: ETCD_SERVERS
+          value: {{ .Values.controlPlaneManager.internal.etcdServers | join "," | quote }}
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /ready
+{{- range $name, $image := $images }}
+      - name: image-holder-{{ $name | kebabcase }}
+        image: {{ $image }}
+        command:
+        - /pause
+{{- end }}
+      hostNetwork: true
+      priorityClassName: system-cluster-critical
+      volumes:
+      - secret:
+          secretName: d8-pki
+        name: pki
+      - secret:
+          secretName: d8-control-plane-manager-config
+        name: config
+      - name: etc-kubernetes
+        hostPath:
+          path: /etc/kubernetes/
+          type: DirectoryOrCreate
+      - name: root-kube
+        hostPath:
+          path: /root/.kube/
+          type: DirectoryOrCreate
+      - name: etcd
+        hostPath:
+          path: /var/lib/etcd
+          type: DirectoryOrCreate

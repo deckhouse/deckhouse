@@ -13,7 +13,7 @@ function __config__() {
       kind: Node
       labelSelector:
         matchExpressions:
-        - key: cloud-instance-manager.deckhouse.io/cloud-instance-group
+        - key: node.deckhouse.io/group
           operator: DoesNotExist
       jqFilter: |
         {

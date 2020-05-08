@@ -68,20 +68,20 @@ function kubernetes::status::put() {
 }
 
 function kubernetes::_init_patch_set() {
-  if [ -n "${D8_KUBERNETES_PATCH_SET_FILE-}" ]; then
-    echo "${D8_KUBERNETES_PATCH_SET_FILE}"
+  if [ -n "${D8_TEST_KUBERNETES_PATCH_SET_FILE-}" ]; then
+    echo "${D8_TEST_KUBERNETES_PATCH_SET_FILE}"
   else
     mktemp -t kubernetes-patch-set.XXXXXXXXXX
   fi
 }
 
 function kubernetes::_destroy_patch_set() {
-  if [ -e ${D8_KUBERNETES_PATCH_SET_FILE} ]; then
-    rm ${D8_KUBERNETES_PATCH_SET_FILE}
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    return 0
   fi
 
-  if [ -z "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-    unset D8_KUBERNETES_PATCH_SET_FILE
+  if [ -e ${D8_KUBERNETES_PATCH_SET_FILE} ]; then
+    rm ${D8_KUBERNETES_PATCH_SET_FILE}
   fi
 }
 

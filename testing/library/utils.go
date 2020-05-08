@@ -138,7 +138,7 @@ type KubeResult struct {
 func (kr KubeResult) AsStringSlice() []string {
 	array := kr.Array()
 
-	result := make([]string, len(array))
+	result := make([]string, 0, len(array))
 	for _, element := range array {
 		result = append(result, element.String())
 	}

@@ -1,9 +1,8 @@
-{{- if .Values.cloudProviderGcp.networkName }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cloud-instance-manager-cloud-provider
+  name: d8-node-manager-cloud-provider
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: Opaque
@@ -25,4 +24,3 @@ data:
   {{- $_ := set $gcpValues "extraInstanceTags" .Values.cloudProviderGcp.extraInstanceTags }}
   {{- $_ := set $gcpValues "disableExternalIP" .Values.cloudProviderGcp.disableExternalIP }}
   gcp: {{ $gcpValues | toJson | b64enc | quote }}
-{{- end }}

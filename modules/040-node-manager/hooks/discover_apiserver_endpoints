@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: kube_api_ep
+      queue: /modules/$(module::name::kebab_case)
+      includeSnapshotsFrom: [kube_api_ep]
+      apiVersion: v1
+      kind: Endpoints
+      namespace:
+        nameSelector:
+          matchNames: [default]
+      nameSelector:
+        matchNames: [kubernetes]
+      jqFilter: '[.subsets[] | "\(.addresses[].ip):\(.ports[].port)"]'
+EOF
+}
+
+function __on_kubernetes::kube_api_ep() {
+  values::set nodeManager.internal.clusterMasterAddresses "$(context::get snapshots.kube_api_ep.0.filterResult)"
+}
+
+hook::run "$@"

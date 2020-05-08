@@ -1,0 +1,46 @@
+kind: ClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [ClusterConfiguration]
+      clusterType:
+        type: string
+        enum: [Cloud, Static]
+      cloud:
+        type: object
+        required: [provider]
+        properties:
+          provider:
+            type: string
+          prefix:
+            type: string
+      podSubnetCIDR:
+        type: string
+      podSubnetNodeCIDRPrefix:
+        type: string
+        default: "24"
+      serviceSubnetCIDR:
+        type: string
+      clusterDomain:
+        type: string
+        default: "cluster.local"
+      kubernetesVersion:
+        type: string
+    oneOf:
+    - properties:
+        clusterType:
+           enum: [Static]
+    - properties:
+        clusterType:
+           enum: [Cloud]
+      cloud: {}
+      required: [cloud]

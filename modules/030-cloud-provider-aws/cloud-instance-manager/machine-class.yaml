@@ -1,25 +1,25 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: AWSMachineClass
 metadata:
-  name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
-  ami: {{ .instanceGroup.instanceClass.ami | quote }}
-  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.aws.region | quote }}
-  machineType: {{ .instanceGroup.instanceClass.instanceType | quote }}
+  ami: {{ .nodeGroup.instanceClass.ami | quote }}
+  region: {{ .Values.nodeManager.internal.cloudProvider.aws.region | quote }}
+  machineType: {{ .nodeGroup.instanceClass.instanceType | quote }}
   iam:
-    name: {{ .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.iamProfileName | quote }}
-  keyName: {{ .Values.cloudInstanceManager.internal.cloudProvider.aws.keyName }}
+    name: {{ .Values.nodeManager.internal.cloudProvider.aws.instances.iamProfileName | quote }}
+  keyName: {{ .Values.nodeManager.internal.cloudProvider.aws.keyName }}
   sourceDestCheck: false
   networkInterfaces:
-  - subnetID: {{ index .Values.cloudInstanceManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
+  - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
     associatePublicIPAddress: true
     deleteOnTermination: true
     securityGroupIDs:
-{{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances }}
-  {{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
-    {{- range .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
+{{- if .Values.nodeManager.internal.cloudProvider.aws.instances }}
+  {{- if .Values.nodeManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
+    {{- range .Values.nodeManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
     - {{ . | quote }}
     {{- end }}
   {{- end }}
@@ -29,20 +29,20 @@ spec:
     # This is mandatory as the safety controller uses this tag to identify VMs created by by this controller.
     kubernetes.io/cluster/{{ .Values.global.discovery.clusterUUID }}: "1"
     kubernetes.io/role/{{ .Values.global.discovery.clusterUUID }}: "1"
-{{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances }}
-  {{- if .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.extraTags }}
-    {{- range $k, $v := .Values.cloudInstanceManager.internal.cloudProvider.aws.instances.extraTags }}
+{{- if .Values.nodeManager.internal.cloudProvider.aws.instances }}
+  {{- if .Values.nodeManager.internal.cloudProvider.aws.instances.extraTags }}
+    {{- range $k, $v := .Values.nodeManager.internal.cloudProvider.aws.instances.extraTags }}
     {{ $k }}: {{ $v | quote }}
     {{- end }}
   {{- end }}
 {{- end }}
   blockDevices:
   - ebs:
-      volumeSize: {{ .instanceGroup.instanceClass.diskSizeGb | default 20 }}
-      volumeType: {{ .instanceGroup.instanceClass.diskType | default "gp2" | quote }}
-{{- if .instanceGroup.instanceClass.iops }}
-      iops: {{ .instanceGroup.instanceClass.iops }}
+      volumeSize: {{ .nodeGroup.instanceClass.diskSizeGb | default 20 }}
+      volumeType: {{ .nodeGroup.instanceClass.diskType | default "gp2" | quote }}
+{{- if .nodeGroup.instanceClass.iops }}
+      iops: {{ .nodeGroup.instanceClass.iops }}
 {{- end }}
   secretRef:
-    namespace: d8-{{ .Chart.Name }}
-    name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

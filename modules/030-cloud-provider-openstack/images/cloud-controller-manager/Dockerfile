@@ -1,7 +1,7 @@
 FROM golang:1.13-buster
 WORKDIR /src/
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
-    wget https://github.com/kubernetes/cloud-provider-openstack/archive/7811bb5c3fca3699be3834c290f30eeeef3bbbc3.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+    wget https://github.com/flant/cloud-provider-openstack/archive/5dcb9bbd77a3595781e6a9fb366fdc205aaabf7c.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
     make openstack-cloud-controller-manager
 
 # support every standard Linux disk/mount utility so that CSI components won't complain

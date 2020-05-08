@@ -1,0 +1,109 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: ngs
+      queue: /modules/$(module::name::kebab_case)/handle_node_templates
+      group: main
+      executeHookOnEvent: ["Added", "Modified"]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "nodeType": .spec.nodeType,
+          "desired": {
+            "annotations": ((.spec.nodeTemplate // {}).annotations // {}),
+            "labels":      ((.spec.nodeTemplate // {}).labels // {}),
+            "taints":      ((.spec.nodeTemplate // {}).taints // [])
+          }
+        }
+    - name: nodes
+      queue: /modules/$(module::name::kebab_case)/handle_node_templates
+      group: main
+      executeHookOnEvent: ["Added", "Modified"]
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        {
+          "nodeGroup":   (.metadata.labels."node.deckhouse.io/group" // ""),
+          "annotations": .metadata.annotations,
+          "labels":      .metadata.labels,
+          "taints":      .spec.taintsm
+        }
+EOF
+}
+
+function __main__() {
+  ngs="$(context::jq '[.snapshots.ngs[] | {"key": .object.metadata.name, "value": .filterResult}] | from_entries')"
+
+  for n_with_ng in $(context::jq -r '.snapshots.nodes[] | .object.metadata.name + ":" + .filterResult.nodeGroup'); do
+    node_name="${n_with_ng%:*}"
+    ng_name="${n_with_ng##*:}"
+
+    # Skip nodes not managed by us (not having node.deckhouse.io/group label)
+    if [ -z "$ng_name" ]; then
+      continue
+    fi
+
+    # Skip nodes from unknown node groups
+    if ! jq -e --arg ng_name "$ng_name" '. | has($ng_name)' <<< "$ngs" > /dev/null ; then
+      continue
+    fi
+
+    node_type="$(jq -r '.'"${ng_name}"'.nodeType' <<< "$ngs")"
+
+    if [ "$node_type" != "Cloud" ] ; then
+      patch='
+        def excess_keys($b): (. | keys) - ($b | keys);
+        (
+          try(.metadata.annotations."node-manager.deckhouse.io/last-applied-node-template" | fromjson) // {}
+          | .annotations = (.annotations // {})
+          | .labels =      (.labels // {})
+          | .taints =      (.taints // [])
+        ) as $last_applied
+        | '"$(jq -c ".${ng_name}.desired" <<< "$ngs")"' as $desired
+        | .metadata.labels = (
+            (.metadata.labels // {})
+            | delpaths($last_applied.labels | excess_keys($desired.labels) | map([.]))
+            | . + $desired.labels
+          )
+        | .metadata.annotations = (
+            (.metadata.annotations // {})
+            | delpaths($last_applied.annotations | excess_keys($desired.annotations) | map([.]))
+            | . + $desired.annotations
+          )
+        | .spec.taints = (
+            [
+              .spec.taints[]?
+              | select(.key != "node.deckhouse.io/uninitialized")
+            ]
+            | . - ($last_applied.taints - $desired.taints) + $desired.taints
+            | unique
+          )
+        | .metadata.annotations."node-manager.deckhouse.io/last-applied-node-template" = ($desired | tojson)
+        | .metadata.labels."node-role.kubernetes.io/'"${ng_name}"'" = ""
+        | if (.spec.taints | length) == 0 then del(.spec.taints) else . end
+      '
+    else
+      patch='
+        '"$(jq -c ".${ng_name}.desired.taints" <<< "$ngs")"' as $desired_taints
+        | if ((.spec.taints // []) | . == (. + $desired_taints | unique)) then
+            .spec.taints = [.spec.taints[]? | select(.key != "node.deckhouse.io/uninitialized")]
+          else
+            .
+          end
+        | if (.spec.taints | length) == 0 then del(.spec.taints) else . end
+      '
+    fi
+
+    if context::jq -e '[.snapshots.nodes[] | select(.object.metadata.name == "'"${node_name}"'")] | first | .object | . as $original | '"$patch"' | . != $original' > /dev/null ; then
+      kubernetes::patch_jq "" "node/${node_name}" "$patch"
+    fi
+  done
+}
+
+hook::run "$@"

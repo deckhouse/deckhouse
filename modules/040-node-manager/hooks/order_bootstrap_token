@@ -1,0 +1,107 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: ngs
+      queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
+      group: main
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "needToken": (.spec.nodeType == "Static" or .spec.nodeType == "Hybrid")
+        }
+    - name: bootstrap_tokens
+      queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
+      group: main
+      apiVersion: v1
+      kind: Secret
+      watchEvent: ["Modified","Deleted"]
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchExpressions:
+        - key: node-manager.deckhouse.io/node-group
+          operator: Exists
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "nodeGroup": .metadata.labels."node-manager.deckhouse.io/node-group",
+          "validFor": (
+            if (.type == "bootstrap.kubernetes.io/token") and (.data | has("expiration"))
+            then
+              .data.expiration | @base64d | (fromdateiso8601 - now)
+            else null end
+          ),
+          "bootstrapToken": (
+            if (.data | has("token-id")) and (.data | has("token-secret"))
+            then
+              (.data."token-id" | @base64d) + "." + (.data."token-secret" | @base64d)
+            else null end
+          ),
+          "creationTimestamp": .metadata.creationTimestamp
+        }
+    schedule:
+    - queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
+      group: main
+      crontab: "23 * * * *"
+EOF
+}
+
+function __main__() {
+  # Remove all expired tokens
+  expiredTokens="$(context::jq -r '.snapshots.bootstrap_tokens[] | select(.filterResult.validFor != null and .filterResult.validFor <= 0) | .filterResult.name')"
+  for s in $expiredTokens; do
+    kubernetes::delete_if_exists kube-system secret/$s
+  done
+
+  # we don't want to keep tokens for deleted NodeGroups
+  values::set nodeManager.internal.bootstrapTokens '{}'
+
+  for ng_name in $(context::jq -r '.snapshots.ngs[] | select(.filterResult.needToken) | .filterResult.name'); do
+    latestToken="$(context::jq -r --arg ng_name "$ng_name" '
+      [
+        .snapshots.bootstrap_tokens[] | select(.filterResult.nodeGroup == $ng_name and .filterResult.validFor != null)
+      ] | sort_by(.filterResult.creationTimestamp) | last
+    ')"
+
+    if jq -e '.filterResult.validFor > 10800' <<< "$latestToken" > /dev/null; then
+      # token is valid for more than 3 hours — we can use it
+      values::set nodeManager.internal.bootstrapTokens."$ng_name" "$(jq -r '.filterResult.bootstrapToken' <<< "$latestToken")"
+    else
+      # token is not valid for more than 3 hours or doesn't exist — we must generate the new one
+      token_id=$(pwgen -sA 6 1 | tr -d '\n')
+      token_secret=$(pwgen -sA 16 1 | tr -d '\n')
+
+      kubernetes::create_yaml <<END
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bootstrap-token-${token_id}
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    node-manager.deckhouse.io/node-group: ${ng_name}
+type: bootstrap.kubernetes.io/token
+data:
+  expiration: $(date +"%Y-%m-%dT%H:%M:%SZ" -d @$(expr "$(date +'%s')" + 14400) | tr -d '\n' | base64 -w0)
+  token-id: $(echo -n $token_id | base64 -w0)
+  token-secret: $(echo -n $token_secret | base64 -w0)
+  auth-extra-groups: $(echo -n system:bootstrappers:d8-node-manager | base64 -w0)
+  usage-bootstrap-authentication: $(echo -n true | base64 -w0)
+  usage-bootstrap-signing: $(echo -n true | base64 -w0)
+END
+
+      values::set nodeManager.internal.bootstrapTokens."$ng_name" "$token_id.$token_secret"
+    fi
+  done
+}
+
+hook::run "$@"

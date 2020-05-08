@@ -1,50 +1,50 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: YandexMachineClass
 metadata:
-  name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
-  regionID: {{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.region }}
+  regionID: {{ .Values.nodeManager.internal.cloudProvider.yandex.region }}
   zoneID: {{ .zoneName }}
-  platformID: {{ .instanceGroup.instanceClass.platformID }}
+  platformID: {{ .nodeGroup.instanceClass.platformID }}
   resourcesSpec:
-    cores: {{ .instanceGroup.instanceClass.cores }}
-    coreFraction: {{ .instanceGroup.instanceClass.coreFraction | default 100 }}
-    memory: {{ mul .instanceGroup.instanceClass.memory 1024 1024 }}
-    gpus: {{ .instanceGroup.instanceClass.gpus | default 0 }}
+    cores: {{ .nodeGroup.instanceClass.cores }}
+    coreFraction: {{ .nodeGroup.instanceClass.coreFraction | default 100 }}
+    memory: {{ mul .nodeGroup.instanceClass.memory 1024 1024 }}
+    gpus: {{ .nodeGroup.instanceClass.gpus | default 0 }}
   bootDiskSpec:
     autoDelete: true
-    typeID: {{ .instanceGroup.instanceClass.diskType }}
-    size: {{ mul (.instanceGroup.instanceClass.diskSizeGB | default 50) 1024 1024 1024 }}
-    imageID: {{ .instanceGroup.instanceClass.imageID }}
+    typeID: {{ .nodeGroup.instanceClass.diskType }}
+    size: {{ mul (.nodeGroup.instanceClass.diskSizeGB | default 50) 1024 1024 1024 }}
+    imageID: {{ .nodeGroup.instanceClass.imageID }}
   networkInterfaceSpecs:
-{{- if .instanceGroup.instanceClass.mainSubnet }}
-  - subnetID: {{ .instanceGroup.instanceClass.mainSubnet }}
+{{- if .nodeGroup.instanceClass.mainSubnet }}
+  - subnetID: {{ .nodeGroup.instanceClass.mainSubnet }}
 {{- else}}
-  - subnetID: {{ index .Values.cloudInstanceManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName }}
+  - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.assignPublicIPAddress }}
+{{- if .nodeGroup.instanceClass.assignPublicIPAddress }}
     assignPublicIPAddress: true
 {{- end }}
-{{- range .instanceGroup.instanceClass.additionalSubnets }}
+{{- range .nodeGroup.instanceClass.additionalSubnets }}
   - subnetID: {{ . | quote }}
 {{- end }}
-{{- if .instanceGroup.instanceClass.preemptible }}
+{{- if .nodeGroup.instanceClass.preemptible }}
   schedulingPolicy:
     preemptible: true
 {{- end }}
   labels:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
     kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}: "1"
-    kubernetes-io-role-deckhouse-{{ .instanceGroup.name }}-{{ .zoneName }}: "1"
-{{- if hasKey .instanceGroup.instanceClass "labels" }}
-  {{- range $k, $v := .instanceGroup.instanceClass.labels }}
+    kubernetes-io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+{{- if hasKey .nodeGroup.instanceClass "labels" }}
+  {{- range $k, $v := .nodeGroup.instanceClass.labels }}
     {{ $k }}: {{ $v }}
   {{- end }}
 {{- end }}
   metadata:
-    ssh-keys: "{{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.sshUser }}:{{ .Values.cloudInstanceManager.internal.cloudProvider.yandex.sshKey }}"
+    ssh-keys: "{{ .Values.nodeManager.internal.cloudProvider.yandex.sshUser }}:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
   secretRef:
-    namespace: d8-{{ .Chart.Name }}
-    name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

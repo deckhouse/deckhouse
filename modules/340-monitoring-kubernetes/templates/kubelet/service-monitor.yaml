@@ -45,7 +45,7 @@ spec:
     - sourceLabels: [namespace]
       regex: '^$'
       action: drop
-{{- if semverCompare ">=1.16" .Values.global.discovery.clusterVersion }}
+{{- if semverCompare ">=1.16" .Values.global.discovery.kubernetesVersion }}
     - sourceLabels: [pod]
       regex: '^$'
       action: drop

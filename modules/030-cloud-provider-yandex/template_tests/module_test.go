@@ -1,7 +1,7 @@
 /*
 
 User-stories:
-1. There are module settings. They must be exported via Secret d8-cloud-instance-manager-cloud-provider.
+1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, yandex-csi, flannel.
 
 */
@@ -44,13 +44,11 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
     podSubnet: 10.0.1.0/16
-    clusterVersion: 1.15.4
+    kubernetesVersion: 1.15.4
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 `
 
 const moduleValues = `
-    internal:
-      internalSubnetRegex: myintsubnetregex
     zones: ["zonea", "zoneb"]
     zoneToSubnetIdMap:
       zonea: aaa
@@ -61,10 +59,11 @@ const moduleValues = `
     sshKey: mysshkey
     sshUser: mysshuser
     serviceAccountJSON: '{"my": "json"}'
-    nameservers: ["1.1.1.1", "2.2.2.2"]
+    dns:
+      nameservers: ["1.1.1.1", "2.2.2.2"]
+      search: ["example.com"]
     region: myreg
     folderID: myfoldid
-    internalSubnet: 192.0.1.0/16
 `
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
@@ -84,7 +83,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-yandex")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:flannel")
 			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:flannel")
@@ -130,10 +129,15 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
           "folderID": "myfoldid",
-          "nameservers": [
-            "1.1.1.1",
-            "2.2.2.2"
-          ],
+          "dns": {
+            "nameservers": [
+              "1.1.1.1",
+              "2.2.2.2"
+            ],
+            "search": [
+              "example.com"
+            ]
+          },
           "region": "myreg",
           "serviceAccountJSON": "{\"my\": \"json\"}",
           "sshKey": "mysshkey",

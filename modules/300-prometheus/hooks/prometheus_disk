@@ -46,6 +46,11 @@ function __config__() {
 EOF
 }
 
+# TODO: It's a bug https://flant.slack.com/archives/C78AQG5EY/p1587134804048800
+function __on_kubernetes::main() {
+  return 0
+}
+
 function __on_schedule::main() {
   discover_disk_usage "main"
   calculate_disk_size_and_retention "main"
@@ -109,7 +114,7 @@ function calculate_disk_size_and_retention() {
   if [ "$(context::jq -r --arg name $prometheus_name '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name)] | length')" -gt "0" ]; then
     # If at least one pvc exists
 
-    current_pvc_size="$(context::jq -r --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name) | .status.capacity.storage' | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs 'split("\n")[:-1] | max')"
+    current_pvc_size="$(context::jq -r --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage' | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs 'split("\n")[:-1] | max')"
 
     # If actual filesystem size is larger than PVC size (someone has manualy resized disk), we use actual filesystem size,
     # instead of PVC size, in subsequent calculations

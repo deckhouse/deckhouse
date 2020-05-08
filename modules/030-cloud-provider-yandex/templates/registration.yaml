@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cloud-instance-manager-cloud-provider
+  name: d8-node-manager-cloud-provider
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: Opaque
@@ -20,8 +20,10 @@ data:
   {{- $_ := set $yandexValues "folderID" .Values.cloudProviderYandex.folderID }}
   {{- $_ := set $yandexValues "sshKey" .Values.cloudProviderYandex.sshKey }}
   {{- $_ := set $yandexValues "sshUser" .Values.cloudProviderYandex.sshUser }}
-  {{- if .Values.cloudProviderYandex.nameservers }}
-    {{- $_ := set $yandexValues "nameservers" .Values.cloudProviderYandex.nameservers }}
+  {{- if .Values.cloudProviderYandex.dns }}
+    {{- $_ := set $yandexValues "dns" dict }}
+    {{- $_ := set $yandexValues.dns "nameservers" .Values.cloudProviderYandex.dns.nameservers }}
+    {{- $_ := set $yandexValues.dns "search" .Values.cloudProviderYandex.dns.search }}
   {{- end }}
   {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.zoneToSubnetIdMap }}
   yandex: {{ $yandexValues | toJson | b64enc | quote }}

@@ -182,7 +182,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	return hookConfig
 }
 
-func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
+func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, desiredQuantity int) string {
 	var contexts string
 	var err error
 	if !hec.IsKubeStateInited {
@@ -203,13 +203,21 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
 		}
 		hec.IsKubeStateInited = true
 	} else {
-		contexts, err = hec.BindingContextController.ChangeState(newKubeState)
+		if desiredQuantity > 0 {
+			contexts, err = hec.BindingContextController.ChangeStateAndWaitForBindingContexts(desiredQuantity, newKubeState)
+		} else {
+			contexts, err = hec.BindingContextController.ChangeState(newKubeState)
+		}
 		if err != nil {
 			panic(err)
 		}
 	}
 	hec.KubeState = newKubeState
 	return contexts
+}
+
+func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
+	return hec.KubeStateSetAndWaitForBindingContexts(newKubeState, 0)
 }
 
 func (hec *HookExecutionConfig) RunSchedule(crontab string) string {
@@ -336,7 +344,7 @@ func (hec *HookExecutionConfig) RunHook() {
 
 	KubernetesPatchSetFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
-	hookEnvs = append(hookEnvs, "D8_KUBERNETES_PATCH_SET_FILE="+KubernetesPatchSetFile.Name())
+	hookEnvs = append(hookEnvs, "D8_TEST_KUBERNETES_PATCH_SET_FILE="+KubernetesPatchSetFile.Name())
 
 	MetricsFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())

@@ -40,7 +40,7 @@ global:
       __ConstantChoices__: [true, false]
     d8SpecificNodeCountByRole:
       system: 3
-    clusterVersion: 1.15.5
+    kubernetesVersion: 1.15.5
 
 userAuthz:
   __ConstantChoices__:

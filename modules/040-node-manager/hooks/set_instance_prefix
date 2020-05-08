@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 100
+EOF
+}
+
+function __main__() {
+  if values::has nodeManager.instancePrefix; then
+    values::set nodeManager.internal.instancePrefix "$(values::get nodeManager.instancePrefix)"
+  else
+    values::set nodeManager.internal.instancePrefix "$(values::get global.clusterConfiguration.cloud.prefix)"
+  fi
+}
+
+hook::run "$@"

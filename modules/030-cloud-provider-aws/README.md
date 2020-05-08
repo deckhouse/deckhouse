@@ -8,7 +8,7 @@
     * Синхронизирует метаданные AWS Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в AWS.
 2. simple-bridge — DaemonSet. Настраивает bridge между нодами.
 3. CSI storage — для заказа дисков в AWS.
-4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [AWSInstanceClass'ы](#AWSInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#cloudinstancegroup-custom-resource).
+4. Регистрация в модуле [node-manager](modules/040-node-manager), чтобы [AWSInstanceClass'ы](#AWSInstanceClass) можно было использовать в [NodeGroups](modules/040-node-manager/README.md#nodegroup-custom-resource).
 
 ## Конфигурация
 
@@ -22,12 +22,12 @@
 
 ### Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `AWSInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `AWSInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `region` — имя AWS региона, в котором будут заказываться instances.
-* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [CloudInstanceGroup](modules/040-cloud-instance-manager/README.md#CloudInstanceGroup-custom-resource) объекте.
+* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [NodeGroup](modules/040-node-manager/README.md#NodeGroup-custom-resource) объекте.
     * Формат — массив строк.
     * Опциональный параметр. Вычисляется из всех зон в текущем регионе.
 * `instances` — параметры заказываемых instances.
@@ -78,17 +78,6 @@ cloudProviderAws: |
     * Формат — integer. В ГиБ.
     * По-умолчанию `20` ГиБ.
     * Опциональный параметр.
-* `bashible` — параметры bootstrap фазы.
-    * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
-        * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
-        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
-        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
-
-        ```yaml
-        options:
-          kubernetesVersion: "1.15.3"
-        ```
 
 #### Пример AWSInstanceClass
 
@@ -102,10 +91,6 @@ spec:
   ami: ami-040a1551f9c9d11ad
   diskSizeGb: 15
   diskType:  gp2
-  bashible:
-    bundle: ubuntu-18.04-1.0
-    options:
-      kubernetesVersion: 1.15.3
 ```
 
 ### Storage
@@ -203,4 +188,4 @@ chmod +x ~/.ansible-terraform-inventory
 1. [Настройте](#настройка-окружения) облачное окружение. Возможно, [автоматически](#автоматизированная-подготовка-окружения).
 2. [Установите](#включение-модуля) deckhouse с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
 3. [Создайте](#AWSInstanceClass-custom-resource) один или несколько `AWSInstanceClass`
-4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [cloud-instance-manager](modules/040-cloud-instance-manager).
+4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [node-manager](modules/040-node-manager).

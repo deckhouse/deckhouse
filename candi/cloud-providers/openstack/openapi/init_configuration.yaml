@@ -1,0 +1,29 @@
+kind: OpenStackInitConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, masterInstanceClass]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [OpenStackInitConfiguration]
+      masterInstanceClass:
+        type: object
+        additionalProperties: false
+        required: [flavorName, imageName]
+        properties:
+          flavorName:
+            type: string
+          imageName:
+            type: string
+          rootDiskSizeInGb:
+            type: integer
+          securityGroups:
+            type: array
+            items:
+              type: string

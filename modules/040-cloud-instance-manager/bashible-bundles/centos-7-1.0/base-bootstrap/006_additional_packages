@@ -1,5 +1,0 @@
-#!/bin/bash -e
-
-export DEBIAN_FRONTEND=noninteractive
-
-yum install -y nfs-utils

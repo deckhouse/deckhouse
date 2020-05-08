@@ -1,0 +1,91 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: remove_dead_etcd_members
+      queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchLabels:
+          node-role.kubernetes.io/master: ""
+      jqFilter: ".metadata.name"
+    - name: etcd_certs
+      group: remove_dead_etcd_members
+      queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
+      executeHookOnSynchronization: false
+      executeHookOnEvent: []
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-pki]
+      jqFilter: |
+        {
+          "ca.crt": (if .data."etcd-ca.crt" then .data."etcd-ca.crt" | @base64d else "" end),
+          "client.crt": (if .data."etcd-ca.crt" then .data."etcd-ca.crt" | @base64d else "" end),
+          "client.key": (if .data."etcd-ca.key" then .data."etcd-ca.key" | @base64d else "" end)
+        }
+EOF
+}
+
+function set_etcdctl_credentials() {
+  cacert="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."ca.crt"')"
+  cert="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."client.crt"')"
+  key="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."client.key"')"
+
+  certs_dir="/tmp/control-plane-manager/remove_dead_etcd_memebers/etcd-certs"
+  ETCDCTL_CACERT="$certs_dir/ca.crt"
+  ETCDCTL_CERT="$certs_dir/client.crt"
+  ETCDCTL_KEY="$certs_dir/client.key"
+
+  mkdir -p "$certs_dir"
+  echo "$cacert" > "$ETCDCTL_CACERT"
+  echo "$cert" > "$ETCDCTL_CERT"
+  echo "$key" > "$ETCDCTL_KEY"
+
+  ETCDCTL_ENDPOINTS=$(values::jq -r '.controlPlaneManager.internal.etcdServers | join(",")')
+
+  if [[ -z "$ETCDCTL_ENDPOINTS" ]]; then
+    echo "ERROR: Failed to find etcdctl endpoints"
+    exit 1
+  fi
+
+  if [[ ! -s "$ETCDCTL_CERT" || ! -s "$ETCDCTL_KEY" || ! -s "$ETCDCTL_CACERT" ]]; then
+    echo "etcd certs not present in a snapshot storage"
+    exit 1
+  fi
+
+  export ETCDCTL_API=3
+  export ETCDCTL_CACERT
+  export ETCDCTL_CERT
+  export ETCDCTL_KEY
+  export ETCDCTL_ENDPOINTS
+}
+
+function __main__() {
+  set_etcdctl_credentials
+
+  existing_members="$(etcdctl member list | cut -d',' -f3 | sort)"
+  existing_members="${existing_members//[[:space:]]/}"
+  node_names="$(context::jq -er '.snapshots.nodes[].filterResult')"
+  new_members="$(echo "$node_names" | sort)"
+
+  remove_list="$(comm -23 <(echo "$existing_members") <(echo "$new_members"))"
+  IFS=$'\n'
+  for member in $remove_list; do
+    echo "Removing $member from cluster"
+    member_hash="$(echo "$existing_members" | grep "$member" | cut -d',' -f1)"
+    etcdctl member remove "$member_hash"
+  done
+  unset IFS
+}
+
+hook::run "$@"

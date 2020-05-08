@@ -1,0 +1,22 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+    schedule:
+    - name: "every_hour"
+      crontab: "11 * * * *"
+EOF
+}
+
+function __main__() {
+  epoch=$(awk -v seed="$(values::get global.discovery.clusterUUID)" -v timestamp="$(date +%s)" \
+    'BEGIN{srand(seed); printf("%d\n", ((rand() * 864000) + timestamp) / 864000)}'
+  )
+  values::set controlPlaneManager.internal.rolloutEpoch "$epoch"
+}
+
+hook::run "$@"

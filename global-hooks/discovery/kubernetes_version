@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Возникла проблема: при обновлении кластера Kubernetes SemVer comparison не срабатывал, что приводило к отвалу etcd из мониторинга Prometheus.
+# Не помогал рестарт deckhouse, а только полное удаление Helm релиза prometheus и последующая установка.
+# Целью данного хука является введение независимого от Helm механизма определения версии кластера.
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - apiVersion: v1
+      kind: pod
+      watchEvent: [Added, Modified]
+      labelSelector:
+        matchLabels:
+          component: kube-apiserver
+          tier: control-plane
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      jqFilter: '.spec.containers[].image'
+      includeSnapshotsFrom: [endpoints]
+    - apiVersion: v1
+      kind: pod
+      watchEvent: [Added, Modified]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-apiserver
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      jqFilter: '.spec.containers[].image'
+      includeSnapshotsFrom: [endpoints]
+    - name: endpoints
+      apiVersion: v1
+      kind: Endpoints
+      nameSelector:
+        matchNames: [kubernetes]
+      namespace:
+        nameSelector:
+          matchNames: [default]
+      jqFilter: '.subsets[] | "\(.addresses[].ip):\(.ports[].port)"'
+      includeSnapshotsFrom: [endpoints]
+EOF
+}
+
+function __main__() {
+  endpoints="$(context::jq -r '.snapshots.endpoints[].filterResult')"
+
+  kubernetes_versions=( )
+  for e in $endpoints; do
+    v=$(curl -sk -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://${e}/version?timeout=32s" |
+      jq -er '.gitVersion[1:]')
+    kubernetes_versions+=( "$v" )
+  done
+
+  if [ -n "$kubernetes_versions" ]; then
+    kubernetes_version_min="$(semver::get_min "${kubernetes_versions[@]}")"
+
+    if [ -n "$kubernetes_version_min" ]; then
+      values::set global.discovery.kubernetesVersion "$kubernetes_version_min"
+    fi
+
+    values::set global.discovery.kubernetesVersions "$(echo -ne "${kubernetes_versions[@]}" | jq -rRs '[split(" ")[] | select(length > 0)]')"
+  fi
+}
+
+hook::run $@

@@ -1,0 +1,126 @@
+#!/bin/bash -e
+
+CONTAINER_NAME="deckhouse-testing"
+
+if [[ "$1" == "--debug" ]]; then
+  DEBUG=yes
+  shift
+
+  # Override stdout and stderr for entire script
+  exec >/tmp/deckhouse-testing-debug.log 2>&1
+fi
+
+file="$1"
+
+if [[ $file =~ ^modules/.* ]]; then
+  file="${file##modules/}"
+  module_name="${file%%/*}"
+  file="${file##${module_name}}"
+
+  if [[ $file =~ ^/hooks/.* ]]; then
+    if [[ -f "modules/${module_name}${file}" ]]; then
+      hook_name="$(basename "${file%%_test.go}")"
+      tests=""
+      docker_args="-w /deckhouse/modules/$module_name$(dirname "${file}")"
+
+      if ! grep -q '\(FIt\|FDescribe\|FContext\) *(' "$(dirname "modules/${module_name}${file}")/${hook_name}_test.go"; then
+        focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
+        ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+      fi
+    else
+      tests="./modules/$module_name${file}/..."
+    fi
+  elif [[ $file == "/hooks" ]]; then
+    tests="./modules/$module_name/hooks/..."
+  elif [[ $file =~ ^/(template_tests|templates)(/.*)? ]]; then
+    tests="./modules/$module_name/template_tests/..."
+  elif [[ $file == "/values_matrix_test.yaml" ]]; then
+    tests="./testing/matrix/..."
+    docker_args="-e MODULES_DIR=./modules/${module_name}"
+  else
+    tests="./modules/$module_name/... ./testing/matrix/..."
+    docker_args="-e MODULES_DIR=./modules/${module_name}"
+  fi
+elif [[ $file == "modules" ]]; then
+  tests="./modules/... ./testing/matrix/..."
+elif [[ $file =~ ^global-hooks/.* ]]; then
+  if [[ -f "${file}" ]]; then
+    hook_name="$(basename "${file%%_test.go}")"
+    tests=""
+    docker_args="-w /deckhouse/$(dirname "${file}")"
+
+    if ! grep -q '\(FIt\|FDescribe\|FContext\) *(' "$(dirname "${file}")/${hook_name}_test.go"; then
+      focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
+      ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+    fi
+  else
+    tests="./${file}/..."
+  fi
+elif [[ "$file" == "." ]]; then
+  tests="./..."
+fi
+
+if [[ -z "$tests" && -z "$docker_args" && -z "$focus_args" ]]; then
+  echo >&2 "ERROR: Don't know how to run tests for \"$1\""
+  exit 1
+fi
+
+if [[ -z "$(docker ps --filter "name=$CONTAINER_NAME" -q)" ]]; then
+  PATH="$HOME/bin/:$PATH"
+  # shellcheck disable=SC1090
+  . "$(multiwerf use 1.1 stable --as-file)"
+
+  werf build tests --stages-storage :local
+  # shellcheck disable=SC2016
+  werf run tests \
+    --docker-options="-v $(pwd):/deckhouse --name $CONTAINER_NAME --rm -d -e KCOV_DISABLED=yes -w /deckhouse -p 127.0.0.1:4284:4284" \
+    --stages-storage :local \
+    -- \
+    dumb-init -- bash -c 'touch /last-used; while [[ -z "$(find /last-used -mmin +60)" ]]; do sleep 60; done'
+fi
+
+docker exec "$CONTAINER_NAME" touch /last-used
+
+if [[ "$DEBUG" == "yes" ]]; then
+  # TODO: Kill dlv and all parents when stop is pressed in IDE
+
+  docker exec "$CONTAINER_NAME" killall dlv || true
+
+  echo "Running: docker exec $docker_args $CONTAINER_NAME dlv test --headless --listen 0.0.0.0:4284 --api-version 2 -- -vet=off $tests $focus_args ..."
+
+  # shellcheck disable=SC2086
+  docker exec $docker_args "$CONTAINER_NAME" \
+    dlv test --headless --listen 0.0.0.0:4284 --api-version 2 -- $tests $focus_args \
+    >>/tmp/deckhouse-testing-debug.log 2>&1 &
+
+  while ! docker exec "$CONTAINER_NAME" netstat -nlt | grep -q '4284.*LISTEN'; do
+    sleep 0.1
+  done
+else
+  echo "Running: docker exec $docker_args $CONTAINER_NAME ginkgo -vet=off $tests $ginkgo_args ..."
+
+  cmd="ginkgo -vet=off $tests $ginkgo_args &"
+  cmd="$cmd$(
+    cat <<"END"
+pid=$!
+touch /test-is-not-stopped
+while kill -0 $pid 2>/dev/null; do
+  if (( $(date +%s) - $(date +%s -r /test-is-not-stopped) > 1 )) ; then
+    pkill -P $pid 2>/dev/null
+    kill $pid 2>/dev/null
+  fi
+  sleep 0.1
+done
+END
+  )"
+
+  # shellcheck disable=SC2086
+  docker exec $docker_args "$CONTAINER_NAME" bash -c "$cmd" &
+
+  pid=$!
+  # shellcheck disable=SC2009
+  while kill -0 $pid 2>/dev/null; do
+    docker exec "$CONTAINER_NAME" touch /test-is-not-stopped
+    sleep 0.1
+  done
+fi

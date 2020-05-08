@@ -1,7 +1,7 @@
 /*
 
 User-stories:
-1. There are module settings. They must be exported via Secret d8-cloud-instance-manager-cloud-provider.
+1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, cinder-csi-driver, flannel.
 
 */
@@ -42,26 +42,61 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
     podSubnet: 10.0.1.0/16
-    clusterVersion: 1.15.4
+    kubernetesVersion: 1.15.4
+    defaultStorageClass: fastssd
 `
 
 const moduleValues = `
   internal:
-    internalSubnetRegex: myregex
-  networkName: mynetname
-  zones: ["zonea", "zoneb"]
-  authURL: http://my.cloud.lalla/123/
-  username: myuser
-  password: myPaSs
-  domainName: mydomain
-  tenantName: mytenantname
-  tenantID: mytenantid
-  caCert: mycacert
-  region: myreg
-  internalNetworkName: myintnetname
-  addPodSubnetToPortWhitelist: true
-  sshKeyPairName: mysshkeypairname
-  securityGroups: ["aaa","bbb"]
+    volumeTypes:
+    - Fast SSD
+    - Slow HDD
+    connection:
+      authURL: http://my.cloud.lalla/123/
+      username: myuser
+      password: myPaSs
+      domainName: mydomain
+      tenantName: mytenantname
+      caCert: mycacert
+      region: myreg
+    internalNetworkNames:
+      - myintnetname
+      - myintnetname2
+    externalNetworkNames:
+      - myextnetname
+      - myextnetname2
+    podNetworkMode: "VXLAN"
+    instances:
+      sshKeyPairName: mysshkeypairname
+      securityGroups: ["aaa","bbb"]
+    zones: ["zonea", "zoneb"]
+    loadBalancer:
+      subnetID: my-subnet-id
+      floatingNetworkID: my-floating-network-id
+`
+
+const badModuleValues = `
+  internal:
+    connection:
+      authURL: http://my.cloud.lalla/123/
+      username: myuser
+      password: myPaSs
+      domainName: mydomain
+      tenantName: mytenantname
+      tenantID: mytenantid
+      caCert: mycacert
+      region: myreg
+    internalNetworkNames:
+      - myintnetname
+      - myintnetname2
+    externalNetworkNames:
+      - myextnetname
+      - myextnetname2
+    podNetworkMode: "VXLAN"
+    instances:
+      sshKeyPairName: mysshkeypairname
+      securityGroups: ["aaa","bbb"]
+    zones: ["zonea", "zoneb"]
 `
 
 var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
@@ -81,7 +116,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-openstack")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
 			cinderNodePluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi-node")
@@ -117,28 +152,34 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:cluster-admin")
 
+			scFast := f.KubernetesGlobalResource("StorageClass", "fastssd")
+			scSlow := f.KubernetesGlobalResource("StorageClass", "slowhdd")
+
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			// user story #1
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
-          "addPodSubnetToPortWhitelist": true,
-          "authURL": "http://my.cloud.lalla/123/",
-          "caCert": "mycacert",
-          "domainName": "mydomain",
-          "internalNetworkName": "myintnetname",
-          "networkName": "mynetname",
-          "password": "myPaSs",
-          "region": "myreg",
-          "securityGroups": [
-            "aaa",
-            "bbb"
-          ],
-          "sshKeyPairName": "mysshkeypairname",
-          "tenantID": "mytenantid",
-          "tenantName": "mytenantname",
-          "username": "myuser"
+          "connection": {
+            "authURL": "http://my.cloud.lalla/123/",
+            "caCert": "mycacert",
+            "domainName": "mydomain",
+            "region": "myreg",
+            "password": "myPaSs",
+            "tenantName": "mytenantname",
+            "username": "myuser"
+          },
+          "internalNetworkNames": ["myintnetname", "myintnetname2"],
+          "externalNetworkNames": ["myextnetname", "myextnetname2"],
+          "instances": {
+            "securityGroups": [
+              "aaa",
+              "bbb"
+            ],
+            "sshKeyPairName": "mysshkeypairname"
+          },
+          "podNetworkMode": "VXLAN"
         }`
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -175,9 +216,49 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			Expect(ccmVPA.Exists()).To(BeTrue())
 			Expect(ccmDeploy.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
+			ccmExpectedConfig := `
+[Global]
+auth-url = "http://my.cloud.lalla/123/"
+domain-name = "mydomain"
+tenant-name = "mytenantname"
+username = "myuser"
+password = "myPaSs"
+region = "myreg"
+ca-file = /etc/cloud-contoller-manager-config/ca.crt
+[Networking]
+public-network-name = "myextnetname"
+public-network-name = "myextnetname2"
+internal-network-name = "myintnetname"
+internal-network-name = "myintnetname2"
+[LoadBalancer]
+create-monitor = "true"
+subnet-id = "my-subnet-id"
+floating-network-id = "my-floating-network-id"`
+			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+
+			Expect(scFast.Exists()).To(BeTrue())
+			Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(scSlow.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Openstack bad config", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
+			f.HelmRender()
+		})
+
+		It("Test should fail", func() {
+			Expect(string(f.Session.Err.Contents())).NotTo(HaveLen(0))
+			Expect(f.Session.ExitCode()).NotTo(BeZero())
 		})
 	})
 })

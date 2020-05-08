@@ -1,44 +1,44 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: GCPMachineClass
 metadata:
-  name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
-  namespace: d8-{{ .Chart.Name }}
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
   canIpForward: true
-  region: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.region | quote }}
+  region: {{ .Values.nodeManager.internal.cloudProvider.gcp.region | quote }}
   zone: {{ .zoneName }}
-  machineType: {{ .instanceGroup.instanceClass.machineType }}
+  machineType: {{ .nodeGroup.instanceClass.machineType }}
   disks:
   - autoDelete: true
     boot: true
-    sizeGb: {{ .instanceGroup.instanceClass.diskSizeGb | default 20 }}
-    type: {{ .instanceGroup.instanceClass.diskType | default "pd-standard" | quote }}
-    image: {{ .instanceGroup.instanceClass.image | quote }}
+    sizeGb: {{ .nodeGroup.instanceClass.diskSizeGb | default 20 }}
+    type: {{ .nodeGroup.instanceClass.diskType | default "pd-standard" | quote }}
+    image: {{ .nodeGroup.instanceClass.image | quote }}
   serviceAccounts:
-  - email: {{ index (.Values.cloudInstanceManager.internal.cloudProvider.gcp.serviceAccountKey | fromJson) "client_email" | quote }}
+  - email: {{ index (.Values.nodeManager.internal.cloudProvider.gcp.serviceAccountKey | fromJson) "client_email" | quote }}
     scopes:
     - "https://www.googleapis.com/auth/cloud-platform"
   networkInterfaces:
-  - network: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.networkName }}
-    subnetwork: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.subnetworkName }}
-    disableExternalIP: {{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.disableExternalIP }}
+  - network: {{ .Values.nodeManager.internal.cloudProvider.gcp.networkName }}
+    subnetwork: {{ .Values.nodeManager.internal.cloudProvider.gcp.subnetworkName }}
+    disableExternalIP: {{ .Values.nodeManager.internal.cloudProvider.gcp.disableExternalIP }}
   scheduling:
     automaticRestart: true
     onHostMaintenance: MIGRATE
-    preemptible: {{ .instanceGroup.instanceClass.preemptible | default false }}
+    preemptible: {{ .nodeGroup.instanceClass.preemptible | default false }}
   metadata:
   - key: ssh-keys
-    value: "{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshUser }}:{{ .Values.cloudInstanceManager.internal.cloudProvider.gcp.sshKey }}"
+    value: "{{ .Values.nodeManager.internal.cloudProvider.gcp.sshUser }}:{{ .Values.nodeManager.internal.cloudProvider.gcp.sshKey }}"
   tags:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
   - kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}
-  - kubernetes-io-role-deckhouse-{{ .instanceGroup.name }}-{{ .zoneName }}
-{{- if hasKey .Values.cloudInstanceManager.internal.cloudProvider.gcp "extraInstanceTags" }}
-  {{- range .Values.cloudInstanceManager.internal.cloudProvider.gcp.extraInstanceTags }}
+  - kubernetes-io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.gcp "extraInstanceTags" }}
+  {{- range .Values.nodeManager.internal.cloudProvider.gcp.extraInstanceTags }}
   - {{ . | quote }}
   {{- end }}
 {{- end }}
   secretRef:
-    namespace: d8-{{ .Chart.Name }}
-    name: {{ .instanceGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

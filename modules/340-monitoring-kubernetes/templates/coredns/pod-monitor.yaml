@@ -1,4 +1,4 @@
-{{- if semverCompare ">=1.13" .Values.global.discovery.clusterVersion }}
+{{- if semverCompare ">=1.13" .Values.global.discovery.kubernetesVersion }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

@@ -1,0 +1,100 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: kubeadm_etcd_pods_ips
+      group: discover_etcd_servers
+      queue: /modules/$(module::name::kebab_case)/discover_etcd_servers
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: etcd
+          tier: control-plane
+      jqFilter: '.status.podIP'
+    - name: etcd_certs
+      group: discover_etcd_servers
+      queue: /modules/$(module::name::kebab_case)/discover_etcd_servers
+      executeHookOnSynchronization: false
+      executeHookOnEvent: []
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-pki]
+      jqFilter: |
+        {
+          "ca.crt": (if .data."etcd-ca.crt" then .data."etcd-ca.crt" | @base64d else "" end),
+          "client.crt": (if .data."etcd-ca.crt" then .data."etcd-ca.crt" | @base64d else "" end),
+          "client.key": (if .data."etcd-ca.key" then .data."etcd-ca.key" | @base64d else "" end)
+        }
+EOF
+}
+
+function set_etcdctl_credentials() {
+  cacert="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."ca.crt"')"
+  cert="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."client.crt"')"
+  key="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."client.key"')"
+
+  certs_dir="/tmp/control-plane-manager/discover_etcd_servers/etcd-certs"
+  ETCDCTL_CACERT="$certs_dir/ca.crt"
+  ETCDCTL_CERT="$certs_dir/client.crt"
+  ETCDCTL_KEY="$certs_dir/client.key"
+
+  mkdir -p "$certs_dir"
+  echo "$cacert" > "$ETCDCTL_CACERT"
+  echo "$cert" > "$ETCDCTL_CERT"
+  echo "$key" > "$ETCDCTL_KEY"
+
+  ETCDCTL_ENDPOINTS="$1"
+
+  if [[ -z "$ETCDCTL_ENDPOINTS" ]]; then
+    echo "ERROR: Failed to find etcdctl endpoints"
+    exit 1
+  fi
+
+  if [[ ! -s "$ETCDCTL_CERT" || ! -s "$ETCDCTL_KEY" || ! -s "$ETCDCTL_CACERT" ]]; then
+    echo "etcd certs not present in a snapshot storage"
+    exit 1
+  fi
+
+  export ETCDCTL_API=3
+  export ETCDCTL_CACERT
+  export ETCDCTL_CERT
+  export ETCDCTL_KEY
+  export ETCDCTL_ENDPOINTS
+}
+
+function __main__() {
+  if context::jq -re '(.snapshots.kubeadm_etcd_pods_ips[0].filterResult | length) > 0' >/dev/null; then
+    new_eps="$(context::jq -r '[.snapshots.kubeadm_etcd_pods_ips[] | "https://" + .filterResult + ":2379"]')"
+    old_eps="$(values::jq -r '.controlPlaneManager.internal.etcdServers')"
+    formatted_unique_eps="$(jq -nre --argjson new_eps "$new_eps" --argjson old_eps "$old_eps" '$new_eps + $old_eps | unique | join(",")')"
+    set_etcdctl_credentials "$formatted_unique_eps"
+
+    actual_members="$(etcdctl member list | cut -d',' -f5)"
+    actual_members="${actual_members//[[:space:]]/}"
+    non_empty="$(jq -n --arg actual_members "$actual_members" '$actual_members | split("\n") | map(select(length > 0))')"
+
+    if jq -ne --arg non_empty "$non_empty" '($non_empty | length) == 0' >/dev/null; then
+      >&2 "FATAL: got an empty member list from etcd"
+      exit 1
+    fi
+    values::set controlPlaneManager.internal.etcdServers "$non_empty"
+
+  else
+    >&2 echo 'ERROR: No etcd servers found, but this module expects in-cluster etcd'
+    return 1
+  fi
+}
+
+hook::run "$@"

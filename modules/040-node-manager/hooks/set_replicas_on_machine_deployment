@@ -1,0 +1,60 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: mds
+      queue: /modules/$(module::name::kebab_case)/set_replicas_on_machine_deployment
+      includeSnapshotsFrom: [mds,ngs]
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineDeployment
+      watchEvent: ["Added", "Modified"]
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: '{"name": .metadata.name, "nodeGroup": .metadata.labels."node-group", "replicas": .spec.replicas}'
+    - name: ngs
+      queue: /modules/$(module::name::kebab_case)/set_replicas_on_machine_deployment
+      includeSnapshotsFrom: [mds,ngs]
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      watchEvent: ["Added", "Modified"]
+      jqFilter: '{"name": .metadata.name, "min": .spec.cloudInstances.minPerZone, "max": .spec.cloudInstances.maxPerZone}'
+EOF
+}
+
+function __main__() {
+  for i in $(context::jq -r '.snapshots.mds | keys[]'); do
+    name="$(context::get snapshots.mds.$i.filterResult.name)"
+    ng_name="$(context::get snapshots.mds.$i.filterResult.nodeGroup)"
+    replicas="$(context::get snapshots.mds.$i.filterResult.replicas)"
+
+    if ! ng_index="$(context::jq -er --arg ng_name "$ng_name" '.snapshots.ngs | to_entries[] | select(.value.filterResult.name == $ng_name) | .key')"; then
+      >&2 echo "WARNING: can't find NodeGroup $ng_name to get min and max instances per zone."
+      continue
+    fi
+
+    ng_min_instances="$(context::get snapshots.ngs.$ng_index.filterResult.min)"
+    ng_max_instances="$(context::get snapshots.ngs.$ng_index.filterResult.max)"
+
+    replicas_should_be=""
+    if [[ $ng_min_instances -ge $ng_max_instances ]] ; then
+      replicas_should_be=$ng_max_instances
+    elif [[ "$replicas" == "null" || $replicas -eq 0 ]] ; then
+      replicas_should_be=$ng_min_instances
+    elif [[ $replicas -le $ng_min_instances ]] ; then
+      replicas_should_be=$ng_min_instances
+    elif [[ $replicas -gt $ng_max_instances ]] ; then
+      replicas_should_be=$ng_max_instances
+    fi
+
+    if [ -n "$replicas_should_be" ]; then
+      kubernetes::patch_jq d8-cloud-instance-manager machinedeployment/$name '.spec.replicas = '${replicas_should_be}
+    fi
+  done
+}
+
+hook::run "$@"

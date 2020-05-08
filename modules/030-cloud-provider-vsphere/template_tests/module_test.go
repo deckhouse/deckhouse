@@ -1,7 +1,7 @@
 /*
 
 User-stories:
-1. There are module settings. They must be exported via Secret d8-cloud-instance-manager-cloud-provider.
+1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, csi, flannel.
 3. There is list of datastores in values.yaml. StorageClass must be created for every datastore. Datastore mentioned in value `defaultDatastore` must be annotated as default.
 
@@ -44,7 +44,7 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
     podSubnet: 10.0.1.0/16
-    clusterVersion: 1.15.4
+    kubernetesVersion: 1.15.4
 `
 
 const moduleValues = `
@@ -86,7 +86,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-vsphere")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-instance-manager-cloud-provider")
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:flannel")
 			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:flannel")

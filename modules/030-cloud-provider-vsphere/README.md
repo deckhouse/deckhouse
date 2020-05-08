@@ -6,7 +6,7 @@
     1. Синхронизирует метаданные vSphere VirtualMachines и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в vSphere.
 2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
 3. CSI storage — для заказа дисков на datastore через механизм First-Class Disk.
-4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [VsphereInstanceClass'ы](#VsphereInstanceClass-custom-resource) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#CloudInstanceGroup-custom-resource).
+4. Регистрация в модуле [cloud-instance-manager](modules/040-cloud-instance-manager), чтобы [VsphereInstanceClass'ы](#VsphereInstanceClass-custom-resource) можно было использовать в [CloudInstanceClass'ах](modules/040-cloud-instance-manager/README.md#NodeGroup-custom-resource).
 
 ## Конфигурация
 
@@ -20,7 +20,7 @@
 
 ### Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `CloudInstanceGroup` и `VsphereInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `VsphereInstanceClass`. См. подробнее в документации модуля [cloud-instance-manager](/modules/040-cloud-instance-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `host` — домен vCenter сервера.
 * `username` — логин.
@@ -43,9 +43,6 @@
 * `sshKeys` — список public SSH ключей в plain-text формате.
     * Формат — массив строк.
     * Опциональный параметр. По-умолчанию разрешённых ключей для пользователя по-умолчанию не будет.
-* `internalSubnet` — subnet CIDR, использующийся для внутренней межнодовой сети. Используется для настройки параметра `--iface-regex` во flannel.
-    * Формат — string. Например, `10.201.0.0/16`.
-    * Опциональный параметр.
 * `externalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
     * Формат — массив строк. Например,
 
@@ -80,7 +77,6 @@ cloudProviderVsphere: |
   region: moscow-x001
   sshKeys:
   - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD5sAcceTHeT6ZnU+PUF1rhkIHG8/B36VWy/j7iwqqimC9CxgFTEi8MPPGNjf+vwZIepJU8cWGB/By1z1wLZW3H0HMRBhv83FhtRzOaXVVHw38ysYdQvYxPC0jrQlcsJmLi7Vm44KwA+LxdFbkj+oa9eT08nQaQD6n3Ll4+/8eipthZCDFmFgcL/IWy6DjumN0r4B+NKHVEdLVJ2uAlTtmiqJwN38OMWVGa4QbvY1qgwcyeCmEzZdNCT6s4NJJpzVsucjJ0ZqbFqC7luv41tNuTS3Moe7d8TwIrHCEU54+W4PIQ5Z4njrOzze9/NlM935IzpHYw+we+YR+Nz6xHJwwj i@my-PC"
-  internalSubnet: "10.0.201.0/16"
   externalNetworkNames:
   - KUBE-3
   - devops-internal
@@ -103,7 +99,7 @@ cloudProviderVsphere: |
     * Формат — integer. В гибибайтах.
 * `template` — путь до VirtualMachine Template, который будет склонирован для создания новой VirtualMachine.
     * Пример — `dev/golden_image`
-* `mainNetwork` — путь до network, которая будет подключена к виртуальной машине.
+* `mainNetwork` — путь до network, которая будет подключена к виртуальной машине, как основная сеть (шлюз по-умолчанию).
     * Пример — `k8s-msk-178`
 * `additionalNetworks` — список путей до networks, которые будут подключены к виртуальной машине.
     * Формат — массив строк.
@@ -147,17 +143,6 @@ cloudProviderVsphere: |
         * Формат — integer. От 0 до 100.
         * Опциональный параметр.
         * По-умолчанию, `80`.
-* `bashible` — параметры bootstrap фазы.
-    * `bundle` — версия. По сути, имя директории [здесь](modules/040-cloud-instance-manager/bashible).
-        * **WIP!** Precooked версия требует специально подготовленного образа.
-    * `options` — ассоциативный массив параметров. Уникальный для каждой `version`. Параметры описаны в [`README.md`](modules/040-cloud-instance-manager/bashible) соответствующих версий.
-        * **Важно!** У некоторых версий (ubuntu-*, centos-*) есть обязательная опция — `kubernetesVersion`.
-        * Пример для [ubuntu-18.04-1.0](modules/040-cloud-instance-manager/bashible/ubuntu-18.04-1.0):
-
-        ```yaml
-        options:
-          kubernetesVersion: "1.15.3"
-        ```
 
 #### Пример VsphereInstanceClass
 
@@ -173,10 +158,6 @@ spec:
   template: dev/golden_image
   network: k8s-msk-178
   datastore: lun-1201
-  bashible:
-    bundle: ubuntu-18.04-1.0
-    options:
-      kubernetesVersion: 1.15.3
 ```
 
 ### Storage

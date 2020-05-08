@@ -11,7 +11,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.clusterVersion", "1.15.6")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")

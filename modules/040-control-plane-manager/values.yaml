@@ -1,0 +1,5 @@
+controlPlaneManager:
+  internal: {}
+  apiserver:
+    authn: {}
+    authz: {}
