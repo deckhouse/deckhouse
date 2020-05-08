@@ -8,3 +8,5 @@ if ! type jq 2>/dev/null || ! type curl 2>/dev/null; then
     sleep 10
   done
 fi
+
+touch /var/lib/bashible/first_run

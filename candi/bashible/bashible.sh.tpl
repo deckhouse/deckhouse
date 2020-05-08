@@ -36,6 +36,11 @@ function main() {
   export BUNDLE="{{ .bundle }}"
   export CONFIGURATION_CHECKSUM_FILE="/var/lib/bashible/configuration_checksum"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
+  export FIRST_BASHIBLE_RUN="no"
+
+  if [ -f /var/lib/bashible/first_run ] ; then
+    FIRST_BASHIBLE_RUN="yes"
+  fi
 
   mkdir -p "$BUNDLE_STEPS_DIR"
 
@@ -74,7 +79,7 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if [ -f $CONFIGURATION_CHECKSUM_FILE ]; then
+  if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
     >&2 echo "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
     attempt=0
     until
@@ -143,6 +148,7 @@ function main() {
 {{ if eq .runType "Normal" }}
   kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node ${HOSTNAME} --overwrite node.deckhouse.io/configuration-checksum="${CONFIGURATION_CHECKSUM}"
   echo "$CONFIGURATION_CHECKSUM" > $CONFIGURATION_CHECKSUM_FILE
+  rm -f /var/lib/bashible/first_run
 {{ end }}
 }
 
