@@ -32,7 +32,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Node
-      jqFilter: '.status.nodeInfo.kubeletVersion[1:] | split(".")[:-1] | join(".")'
+      jqFilter: '.status.nodeInfo.kubeletVersion[1:] | split(".")[0:2] | join(".")'
 
     - name: max_used_control_plane_version
       group: versions
