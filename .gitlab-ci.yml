@@ -1,3 +1,7 @@
+variables:
+  WERF_TRUE_GIT_DEBUG_WORKTREE_SWITCH: "1"
+  WERF_VERBOSE: "1"
+
 stages:
   - build
   - testing
