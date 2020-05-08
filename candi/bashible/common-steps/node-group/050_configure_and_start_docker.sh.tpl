@@ -1,6 +1,7 @@
 bb-event-on 'bb-sync-file-changed' '_on_docker_config_changed'
 _on_docker_config_changed() {
 {{ if ne .runType "ImageBuilding" -}}
+  bb-deckhouse-get-disruptive-update-approval
   systemctl restart docker.service
 {{- end }}
 }
