@@ -16,7 +16,7 @@ function __config__() {
           matchNames: [d8-cloud-instance-manager]
       jqFilter: |
         {
-          "nodeGroup": .metadata.labels."node-group",
+          "nodeGroup": (.metadata.labels."node-group" // .metadata.labels."instance-group"),
           "data": {
             "bashibleBundle": .spec.template.metadata.annotations."bashible-bundle",
             "bashibleChecksum": .spec.template.metadata.annotations."checksum/bashible-bundles-options",
@@ -27,12 +27,13 @@ EOF
 }
 
 function __main__() {
-  values::set nodeManager.internal.bashibleChecksumMigration "$(context::jq -rc '
+  bashibleChecksumMigration="$(context::jq -rc '
     [
       .snapshots.mds[] | select(.filterResult.data.bashibleChecksum != null) |
       {(.filterResult.nodeGroup): .filterResult.data}
     ] | add // {}
   ')"
+  values::set nodeManager.internal.bashibleChecksumMigration "$bashibleChecksumMigration"
 }
 
 hook::run "$@"
