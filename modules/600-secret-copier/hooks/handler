@@ -14,6 +14,7 @@ function __config__() {
       labelSelector:
         matchLabels:
           antiopa-secret-copier: "yes"
+      jqFilter: '[.metadata.name, .metadata.namespace, .metadata.labels, .data]'
     - name: secrets_d8
       queue: /modules/$(module::name::kebab_case)
       group: main
@@ -22,12 +23,14 @@ function __config__() {
       labelSelector:
         matchLabels:
           secret-copier.deckhouse.io/enabled: ""
+      jqFilter: '[.metadata.name, .metadata.namespace, .metadata.labels, .data]'
     - name: namespaces
       queue: /modules/$(module::name::kebab_case)
       group: main
       apiVersion: v1
       kind: Namespace
       watchEvent: [Added]
+      jqFilter: '{"isTerminating": (.status.phase == "Terminating")}'
     schedule:
     - name: sync_secrets
       queue: /modules/$(module::name::kebab_case)
@@ -39,9 +42,9 @@ EOF
 
 function __main__() {
   secrets_desired_file=$(mktemp)
-  context::jq -r '
+  context::jq -rc '
     (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
-    .snapshots.namespaces as $namespaces |
+    [.snapshots.namespaces[] | select(.filterResult.isTerminating | not)] as $namespaces |
     [
       [$secrets[] | select(.object.metadata.namespace == "default")] |
       map(.object.metadata.namespace = ($namespaces[] | select(.object.metadata.name != "default")| .object.metadata.name ))[] |
@@ -50,7 +53,7 @@ function __main__() {
     ]' > $secrets_desired_file
 
   secrets_are_file=$(mktemp)
-  context::jq -r '
+  context::jq -rc '
     (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
     [
       $secrets[] | select(.object.metadata.namespace != "default") |
@@ -58,7 +61,7 @@ function __main__() {
       .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
     ]' > $secrets_are_file
 
-  secrets_to_delete="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -r '
+  secrets_to_delete="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -rc '
     [
       $secrets_are[] |
       . as $secret_is |
@@ -66,7 +69,7 @@ function __main__() {
     ]'
   )"
 
-  secrets_to_create="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -r '
+  secrets_to_create="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -rc '
     [
       $secrets_desired[] |
       . as $secret_desired |
@@ -74,7 +77,7 @@ function __main__() {
     ]'
   )"
 
-  secrets_to_replace="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -r '
+  secrets_to_replace="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -rc '
     [
       $secrets_desired[] |
       . as $secret_desired |
