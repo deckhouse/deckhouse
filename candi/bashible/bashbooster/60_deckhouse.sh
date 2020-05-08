@@ -1,5 +1,5 @@
 bb-deckhouse-get-disruptive-update-approval() {
-    if [ ! -f "$CONFIGURATION_CHECKSUM_FILE" ]; then
+    if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
         return 0
     fi
 
