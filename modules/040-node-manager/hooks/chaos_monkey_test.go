@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -9,41 +10,89 @@ import (
 
 var _ = Describe("Modules :: node-manager :: hooks :: chaos_monkey ::", func() {
 	const (
-		stateCIGSmall = `
+		stateCloudNGSmall = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
   name: toosmall
 spec:
+  nodeType: Cloud
 status:
   desired: 1
   ready: 1
 `
-		stateCIGLarge = `
+		stateCloudNGLarge = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
   name: largeng
 spec:
+  nodeType: Cloud
   chaos:
+    mode: DrainAndDelete
     period: 5m
 status:
   desired: 3
   ready: 3
 `
-		stateCIGLargeBroken = `
+		stateCloudNGLargeBroken = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
   name: largeng
 spec:
+  nodeType: Cloud
   chaos:
+    mode: DrainAndDelete
     period: 5m
 status:
   desired: 3
+  ready: 2
+`
+
+		stateHybridNGSmall = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: toosmall
+spec:
+  nodeType: Hybrid
+status:
+  nodes: 1
+  ready: 1
+`
+		stateHybridNGLarge = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: largeng
+spec:
+  nodeType: Hybrid
+  chaos:
+    mode: DrainAndDelete
+    period: 5m
+status:
+  nodes: 3
+  ready: 3
+`
+		stateHybridNGLargeBroken = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: largeng
+spec:
+  nodeType: Hybrid
+  chaos:
+    mode: DrainAndDelete
+    period: 5m
+status:
+  nodes: 3
   ready: 2
 `
 
@@ -140,75 +189,94 @@ metadata:
 		})
 	})
 
-	Context("Cluster with ngs ready for chaos", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(stateCIGSmall + stateCIGLarge + stateNodes + stateMachines)
-			f.BindingContexts.Set(f.RunSchedule("* * * * *"))
-			f.AddHookEnv("RANDOM_SEED=7")
-			f.RunHook()
+	for _, gIsNgCloud := range []bool{true, false} {
+		Context(fmt.Sprintf("Cloud: %t :: ", gIsNgCloud), func() {
+			isNgCloud := gIsNgCloud
+
+			stateNGSmall := ""
+			stateNGLarge := ""
+			stateNGLargeBroken := ""
+			if isNgCloud {
+				stateNGSmall = stateCloudNGSmall
+				stateNGLarge = stateCloudNGLarge
+				stateNGLargeBroken = stateCloudNGLargeBroken
+			} else {
+				stateNGSmall = stateHybridNGSmall
+				stateNGLarge = stateHybridNGLarge
+				stateNGLargeBroken = stateHybridNGLargeBroken
+			}
+
+			Context("Cluster with ngs ready for chaos", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
+					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.AddHookEnv("RANDOM_SEED=7")
+					f.RunHook()
+				})
+
+				It("Hook is lucky to run monkey. One machine must be deleted.", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeFalse())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
+				})
+			})
+
+			Context("Cluster with broken large ng", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(stateNGSmall + stateNGLargeBroken + stateNodes + stateMachines)
+					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.AddHookEnv("RANDOM_SEED=7")
+					f.RunHook()
+				})
+
+				It("Hook is lucky to run monkey. All machines must survive.", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
+				})
+			})
+
+			Context("Cluster with large ready ng and victim machine", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines + stateMachineVictim)
+					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.AddHookEnv("RANDOM_SEED=7")
+					f.RunHook()
+				})
+
+				It("Hook is lucky to run monkey. All machines must survive.", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
+				})
+			})
+
+			Context("Hook isn't lucky to run monkey. All machines must survive.", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
+					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.AddHookEnv("RANDOM_SEED=0")
+					f.RunHook()
+				})
+
+				It("", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
+				})
+			})
 		})
-
-		It("Hook is lucky to run monkey. One machine must be deleted.", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
-		})
-	})
-
-	Context("Cluster with broken large ng", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(stateCIGSmall + stateCIGLargeBroken + stateNodes + stateMachines)
-			f.BindingContexts.Set(f.RunSchedule("* * * * *"))
-			f.AddHookEnv("RANDOM_SEED=7")
-			f.RunHook()
-		})
-
-		It("Hook is lucky to run monkey. All machines must survive.", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
-		})
-	})
-
-	Context("Cluster with large ready ng and victim machine", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(stateCIGSmall + stateCIGLarge + stateNodes + stateMachines + stateMachineVictim)
-			f.BindingContexts.Set(f.RunSchedule("* * * * *"))
-			f.AddHookEnv("RANDOM_SEED=7")
-			f.RunHook()
-		})
-
-		It("Hook is lucky to run monkey. All machines must survive.", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
-		})
-	})
-
-	Context("Hook isn't lucky to run monkey. All machines must survive.", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(stateCIGSmall + stateCIGLarge + stateNodes + stateMachines)
-			f.BindingContexts.Set(f.RunSchedule("* * * * *"))
-			f.AddHookEnv("RANDOM_SEED=0")
-			f.RunHook()
-		})
-
-		It("", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
-		})
-	})
+	}
 })
