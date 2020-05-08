@@ -62,7 +62,7 @@
       plk_cause_of__node_unschedulable: "NodeUnschedulable,tier=cluster,prometheus=deckhouse,node={{ $labels.node }}"
       summary: Нода {{ $labels.node }} не может закончить обновление
       description: |
-        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению, наткнулась на рискованный шаг, менеджер обновлений (хук update_approval модуля node-group) осуществил drain ноды и нода получила разрешение на этот рискованный шаг, но не сообщает об успешном завершении обновления.
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению, наткнулась на шаг вызывающий возможный простой, менеджер обновлений (хук update_approval модуля node-group) осуществил drain ноды и нода получила разрешение на этот возможный простой, но не сообщает об успешном завершении обновления.
         Логи Bashible на ноде:
         ```journalctl -fu bashible```
 
@@ -82,7 +82,7 @@
       plk_grouped_by__main: "D8NodeGroupHasProblemsWithUpdate,tier=cluster,prometheus=deckhouse,node_group={{ $labels.node_group }}"
       summary: Нода {{ $labels.node }} не может получить разрешение на disruption
       description: |
-        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на рискованный шаг. На этот рискованный шаг нода не может дождаться разрешения, которое должно быть выдано полностью автоматически (хук update_approval модуля node-manager).
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }} и она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на шаг вызывающий возможный простой. На этот возможный простой нода не может дождаться разрешения, которое должно быть выдано полностью автоматически (хук update_approval модуля node-manager).
 
   - alert: D8NodeGroupIsNotUpdating
     expr: |
@@ -148,7 +148,7 @@
       plk_grouped_by__main: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse"
       summary: Ноде {{ $labels.node }} требуется разрешение на disruption для продолжение обновления
       description: |
-        Пришло обновление для нод и нода {{ $labels.node }} из группы {{ $labels.node_group }} об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на рискованный шаг. Так как в настройках группы {{ $labels.node_group }} не включен `allowDisruptions`, необходимо вручную выдать разрешение. Если нода готова к опасным обновлениям (например, дрейнута), дайте ей разрешение с помощью аннотации:
+        Пришло обновление для нод и нода {{ $labels.node }} из группы {{ $labels.node_group }} об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на шаг вызывающий возможный простой. Так как в настройках группы {{ $labels.node_group }} не включен `allowDisruptions`, необходимо вручную выдать разрешение. Если нода готова к опасным обновлениям (например, дрейнута), дайте ей разрешение с помощью аннотации:
         ```
         kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true
         kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
@@ -182,7 +182,7 @@
       plk_grouped_by__main: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse"
       summary: Нода {{ $labels.node }} не может выполнить drain для обновления
       description: |
-        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }}, она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению, наткнулась на рискованный шаг, и для выдачи автоматического разрешения был запущен drain, который никак не может завершиться.
+        Пришло обновление ноды {{ $labels.node }} из группы {{ $labels.node_group }}, она об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению, наткнулась на шаг вызывающий возможный простой, и для выдачи автоматического разрешения был запущен drain, который никак не может завершиться.
 
   - alert: ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate
     expr: count(max by (node_group) (ALERTS{alertname=~"NodeStuckInDrainingForDisruptionDuringUpdate", alertstate="firing"})) > 0
