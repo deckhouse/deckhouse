@@ -157,6 +157,7 @@ docker:
 ---
 image: dev
 fromImage: base
+fromCacheVersion: 2020-05-08.1
 git:
 - add: /
   to: /deckhouse
@@ -212,6 +213,7 @@ from: flant/kcov-alpine:v0.5
 ---
 image: tests
 fromImage: base-for-go
+fromCacheVersion: 2020-05-08.1
 git:
 - add: /
   to: /deckhouse

@@ -15,7 +15,7 @@ Build:
     - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --stages-storage :local --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE} dev; fi
   before_script:
     - rm -rf shell-operator || true
-    - git submodule update --remote
+    - git submodule update --init --recursive
   except:
     - schedules
   tags:
@@ -48,7 +48,7 @@ Tests:
     - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   before_script:
     - rm -rf shell-operator || true
-    - git submodule update --remote
+    - git submodule update --init --recursive
   except:
     - schedules
   artifacts:
