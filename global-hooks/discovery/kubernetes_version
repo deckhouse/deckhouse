@@ -34,6 +34,7 @@ function __config__() {
       jqFilter: '.spec.containers[].image'
       group: main
     - name: endpoints
+      group: main
       apiVersion: v1
       kind: Endpoints
       nameSelector:
@@ -41,13 +42,17 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [default]
-      jqFilter: '.subsets[] | "\(.addresses[].ip):\(.ports[].port)"'
-      group: main
+      jqFilter: |
+        [
+          .subsets[] |
+          (.ports[] | select(.name == "https") | .port | tostring) as \$port |
+          .addresses[] | .ip + ":" + \$port
+        ]
 EOF
 }
 
 function __main__() {
-  endpoints="$(context::jq -r '.snapshots.endpoints[].filterResult')"
+  endpoints="$(context::jq -r '.snapshots.endpoints | first | .filterResult[]')"
 
   kubernetes_versions=( )
   for e in $endpoints; do
