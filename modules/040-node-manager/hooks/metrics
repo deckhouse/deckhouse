@@ -72,7 +72,7 @@ function __config__() {
           matchNames: [d8-cloud-instance-manager]
       nameSelector:
         matchNames: [configuration-checksums]
-      jqFilter: (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+      jqFilter: (.data // {}) | [to_entries[] | (.value |= (. | @base64d))] | from_entries
 EOF
 }
 
