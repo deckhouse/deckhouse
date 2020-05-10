@@ -6,23 +6,27 @@ function __config__() {
   cat << EOF
    configVersion: v1
    kubernetes:
-   - name: k8s_nodes
-     includeSnapshotsFrom: ["keepalived_instances", "k8s_nodes", "secrets"]
+   - name: nodes
+     queue: /modules/$(module::name::kebab_case)
+     group: main
      apiVersion: v1
      kind: Node
      jqFilter: '.metadata.labels'
    - name: secrets
-     includeSnapshotsFrom: ["keepalived_instances", "k8s_nodes", "secrets"]
+     queue: /modules/$(module::name::kebab_case)
+     group: main
      apiVersion: v1
      kind: Secret
      namespace:
        nameSelector:
          matchNames: ["d8-keepalived"]
      labelSelector:
-       matchLabels:
-         app: keepalived
+       matchExpressions:
+       - {"key": "keepalived-instance", "operator": "Exists"}
+     jqFilter: '.data.authPass | @base64d'
    - name: keepalived_instances
-     includeSnapshotsFrom: ["keepalived_instances", "k8s_nodes", "secrets"]
+     queue: /modules/$(module::name::kebab_case)
+     group: main
      apiVersion: deckhouse.io/v1alpha1
      kind: KeepalivedInstance
 EOF
@@ -39,12 +43,12 @@ function __main__() {
 
   for instanceName in $(jq -r '. | keys[]' <<< ${instances}); do
     nodeSelector=$(jq -r ".\"${instanceName}\".nodeSelector" <<< "$instances")
-    replicas=$(context::jq -r "[.snapshots.k8s_nodes[] | select(.object.metadata.labels | contains(${nodeSelector}))] | length")
+    replicas=$(context::jq -r "[.snapshots.nodes[] | select(.object.metadata.labels | contains(${nodeSelector}))] | length")
     values::set keepalived.instances."${instanceName}".replicas $replicas
   done
 
   for instance in $(jq -nr --argjson a "${instances}" '$a | to_entries[] | .key'); do
-    if authPass=$(context::jq -re ".snapshots.secrets[] | select(.object.metadata.name==\"keepalived-instance-secret-$instance\") | .object.data.authPass" | base64 -d); then
+    if authPass=$(context::jq --arg instance "$instance" -re '.snapshots.secrets[] | select(.object.metadata.labels."keepalived-instance" == $instance) | .filterResult'); then
       values::set keepalived.instances."${instance}".authPass "$authPass"
     else
       values::set keepalived.instances."${instance}".authPass $(tools::generate_password | cut -c -8)
