@@ -1,3 +1,4 @@
+{{- if include "machine_controller_manager_enabled" . }}
 - name: d8.machine-controller-manager.availability
   rules:
   - alert: D8MachineControllerManagerPodIsNotReady
@@ -13,7 +14,7 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
-      summary: Под {{$labels.pod}} находится в состоянии НЕ Ready
+      summary: Под {{`{{$labels.pod}}`}} находится в состоянии НЕ Ready
 
   - alert: D8MachineControllerManagerPodIsNotRunning
     expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase!="Running",pod=~"machine-controller-manager-.*"} > 0)
@@ -30,8 +31,8 @@
       plk_labels_as_annotations: "phase"
       summary: Под machine-controller-manager находится в состоянии НЕ Running
       description: |-
-        Под {{$labels.pod}} находится в состоянии {{$labels.phase}}. Для проверки статуса пода необходимо выполнить:
-        1. `kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status`
+        Под {{`{{$labels.pod}}`}} находится в состоянии {{`{{$labels.phase}}`}}. Для проверки статуса пода необходимо выполнить:
+        1. `kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status`
 
   - alert: D8MachineControllerManagerTargetDown
     expr: max by (job) (up{job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 0)
@@ -110,7 +111,7 @@
       plk_labels_as_annotations: "pod"
       summary: Machine controller manager слишком часто перезагружается
       description: |
-        Количество перезапусков за последний час: {{ $value }}.
+        Количество перезапусков за последний час: {{`{{ $value }}`}}.
 
         Частый перезапуск Machine controller manager не является нормальной ситуацией, он должен быть постоянно запущена и работать.
         Необходимо посмотреть логи:
@@ -130,3 +131,6 @@
       summary: Machine controller manager работает некорректно
       description: |
         Machine controller manager работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
+{{- else }}
+[]
+{{- end }}
