@@ -1,18 +1,22 @@
 package linter
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
+	"os/signal"
 	"regexp"
+	"runtime"
 	"strings"
-	"sync"
+	"syscall"
 
 	"github.com/fatih/color"
+	"github.com/helm/helm/pkg/renderutil"
+	"github.com/helm/helm/pkg/timeconv"
 	"github.com/kyokomi/emoji"
 	"gopkg.in/yaml.v3"
+	"k8s.io/helm/pkg/chartutil"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
@@ -20,91 +24,151 @@ import (
 )
 
 var (
-	sep        = regexp.MustCompile("(?:^|\\s*\n)---\\s*")
-	pathRegexp = regexp.MustCompile("# Source: (.*)")
+	workersQuantity = runtime.NumCPU()
+
+	sep = regexp.MustCompile("(?:^|\\s*\n)---\\s*")
 )
 
 type ModuleController struct {
-	valuesDir string
-	Module    types.Module
+	Module types.Module
+	Values []string
+	Chart  *chart.Chart
 }
 
-func NewModuleController(tmpDir string, m types.Module) *ModuleController {
-	return &ModuleController{valuesDir: tmpDir, Module: m}
+func NewModuleController(m types.Module, values []string) *ModuleController {
+	// Check chart requirements to make sure all dependencies are present in /charts
+	hc, err := chartutil.Load(m.Path)
+	if err != nil {
+		panic(fmt.Errorf("chart load: %v", err))
+	}
+	return &ModuleController{Module: m, Values: values, Chart: hc}
 }
 
-func (c *ModuleController) GetTestCases() ([]string, int, error) {
-	var files []string
-	err := filepath.Walk(c.valuesDir, func(path string, info os.FileInfo, err error) error {
-		if c.valuesDir == path {
-			return nil
+type Task struct {
+	index  int
+	values string
+}
+
+type Worker struct {
+	id       int
+	tasksCh  chan Task
+	errorsCh chan error
+	doneCh   chan struct{}
+
+	ctx context.Context
+}
+
+func NewWorker(ctx context.Context, id int, tasksCh chan Task, errorsCh chan error, doneCh chan struct{}) *Worker {
+	return &Worker{id: id, tasksCh: tasksCh, errorsCh: errorsCh, doneCh: doneCh, ctx: ctx}
+}
+
+func (w *Worker) Start(c *ModuleController) {
+	for {
+		select {
+		case task := <-w.tasksCh:
+			objectStore := storage.NewUnstructuredObjectStore()
+
+			err := c.RunRender(task.values, &objectStore)
+			if err != nil {
+				w.errorsCh <- testsError(task.index, err, task.values, "")
+				return
+			}
+
+			err = rules.ApplyLintRules(c.Module, objectStore)
+			if err != nil {
+				w.errorsCh <- err
+				return
+			}
+			w.doneCh <- struct{}{}
+		case <-w.ctx.Done():
+			return
 		}
-		files = append(files, path)
-		return nil
-	})
-	return files, len(files), err
+	}
 }
 
 func (c *ModuleController) Run() error {
-	testCases, testCasesQuantity, err := c.GetTestCases()
-	if err != nil {
-		return err
+	testCasesQuantity := len(c.Values)
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+
+	errorsCh := make(chan error, testCasesQuantity)
+	tasksCh := make(chan Task)
+	doneCh := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for id := 0; id <= workersQuantity; id++ {
+		go NewWorker(ctx, id, tasksCh, errorsCh, doneCh).Start(c)
 	}
 
-	var wg sync.WaitGroup
-	waitCh := make(chan struct{})
-	errorCh := make(chan error, testCasesQuantity)
-
-	wg.Add(testCasesQuantity)
 	go func() {
-		for index, file := range testCases {
-			go func(index int, file string) {
-				defer wg.Done()
-
-				index++
-
-				objectStore := storage.NewUnstructuredObjectStore()
-				fileContent, err := ioutil.ReadFile(file)
-				if err != nil {
-					errorCh <- fmt.Errorf("test #%v failed: %s", index, err)
-					return
-				}
-
-				out, err := c.RunRender(file)
-				if err != nil {
-					errorCh <- testsError(index, err, string(fileContent), string(out))
-					return
-				}
-
-				doc, err := fillObjectStore(objectStore, out)
-				if err != nil {
-					errorCh <- testsError(index, err, string(fileContent), doc)
-					return
-				}
-
-				err = rules.ApplyLintRules(c.Module, objectStore)
-				if err != nil {
-					errorCh <- err
-					return
-				}
-				objectStore.Close()
-			}(index, file)
+		for index, valuesData := range c.Values {
+			tasksCh <- Task{index: index, values: valuesData}
 		}
-		wg.Wait()
-		close(waitCh)
 	}()
 
-	select {
-	case <-waitCh:
-		fmt.Print(testsSuccessful(c.Module.Name, testCasesQuantity))
-		return nil
-	case err := <-errorCh:
-		return err
+	doneCounter := 0
+	for {
+		select {
+		case <-doneCh:
+			doneCounter++
+			if doneCounter == testCasesQuantity {
+				fmt.Print(testsSuccessful(c.Module.Name, testCasesQuantity))
+				return nil
+			}
+		case s := <-signalCh:
+			fmt.Printf("\nReceived signal %s, exiting...\n", s)
+			return nil
+		case err := <-errorsCh:
+			return err
+		}
 	}
 }
 
-func (c *ModuleController) RunRender(values string) ([]byte, error) {
-	return exec.Command("helm", "template", c.Module.Path, "--values", values).CombinedOutput() // #nosec
+func (c *ModuleController) RunRender(values string, objectStore *storage.UnstructuredObjectStore) error {
+	data, err := renderutil.Render(c.Chart,
+		&chart.Config{Raw: values, Values: map[string]*chart.Value{}},
+		renderutil.Options{
+			ReleaseOptions: chartutil.ReleaseOptions{
+				Name:      c.Module.Name,
+				IsInstall: true,
+				IsUpgrade: true,
+				Time:      timeconv.Now(),
+				Namespace: c.Module.Namespace,
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("chart render: %v", err)
+	}
+
+	for path, bigFile := range data {
+		bigFileTmp := strings.TrimSpace(bigFile)
+		docs := sep.Split(bigFileTmp, -1)
+		for _, d := range docs {
+			if d == "" {
+				continue
+			}
+			d = strings.TrimSpace(d)
+
+			var node map[string]interface{}
+			err := yaml.Unmarshal([]byte(d), &node)
+			if err != nil {
+				return fmt.Errorf("manifest unmarshal: %v\n--- Manifest:%s", err, d)
+			}
+
+			if node == nil {
+				continue
+			}
+
+			err = objectStore.Put(path, node)
+			if err != nil {
+				return fmt.Errorf("helm chart object already exists: %v", err)
+			}
+		}
+	}
+	return nil
 }
 
 func testsSuccessful(moduleName string, testCasesQuantity int) string {
@@ -117,52 +181,4 @@ func testsSuccessful(moduleName string, testCasesQuantity int) string {
 
 func testsError(index int, errorHeader error, generatedValues, doc string) error {
 	return fmt.Errorf("test #%v failed: %s\n\n-----\n%s\n\n-----\n%s", index, errorHeader, generatedValues, doc)
-}
-
-func extractManifestPath(doc string) string {
-	if idx := strings.Index(doc, "\n"); idx != -1 {
-		doc = doc[:idx]
-	}
-
-	matches := pathRegexp.FindStringSubmatch(doc)
-	if len(matches) > 0 {
-		// second capture group is a path
-		return matches[1]
-	}
-	return ""
-}
-
-func fillObjectStore(objectStore storage.UnstructuredObjectStore, bigFile []byte) (string, error) {
-	path := ""
-
-	bigFileTmp := strings.TrimSpace(string(bigFile))
-	docs := sep.Split(bigFileTmp, -1)
-	for _, d := range docs {
-		if d == "" {
-			continue
-		}
-
-		d = strings.TrimSpace(d)
-
-		pathCandidate := extractManifestPath(d)
-		if pathCandidate != "" {
-			path = pathCandidate
-		}
-
-		var node map[string]interface{}
-		err := yaml.Unmarshal([]byte(d), &node)
-		if err != nil {
-			return d, err
-		}
-
-		if node == nil {
-			continue
-		}
-
-		err = objectStore.Put(path, node)
-		if err != nil {
-			return d, fmt.Errorf("helm chart object already exists: %v", err)
-		}
-	}
-	return "", nil
 }
