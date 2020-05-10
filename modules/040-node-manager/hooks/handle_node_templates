@@ -32,7 +32,7 @@ function __config__() {
           "nodeGroup":   (.metadata.labels."node.deckhouse.io/group" // ""),
           "annotations": .metadata.annotations,
           "labels":      .metadata.labels,
-          "taints":      .spec.taintsm
+          "taints":      .spec.taints
         }
 EOF
 }
@@ -91,7 +91,7 @@ function __main__() {
     else
       patch='
         '"$(jq -c ".${ng_name}.desired.taints" <<< "$ngs")"' as $desired_taints
-        | if ((.spec.taints // []) | . == (. + $desired_taints | unique)) then
+        | if ((.spec.taints // []) | (. | sort) == (. + $desired_taints | unique | sort)) then
             .spec.taints = [.spec.taints[]? | select(.key != "node.deckhouse.io/uninitialized")]
           else
             .
