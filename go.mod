@@ -3,16 +3,24 @@ module github.com/deckhouse/deckhouse
 go 1.13
 
 require (
+	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
+	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-beta.6 // branch: master
 	github.com/flant/shell-operator v1.0.0-beta.9.0.20200501142139-f9ab4893a8ce // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
+	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/google/go-cmp v0.4.0
+	github.com/helm/helm v2.16.6+incompatible
+	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.8
 	github.com/kyokomi/emoji v2.1.0+incompatible
+	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
@@ -26,6 +34,7 @@ require (
 	k8s.io/api v0.17.0
 	k8s.io/apiextensions-apiserver v0.17.0
 	k8s.io/apimachinery v0.17.0
+	k8s.io/helm v2.16.7+incompatible
 	sigs.k8s.io/yaml v1.1.1-0.20191128155103-745ef44e09d6
 )
 

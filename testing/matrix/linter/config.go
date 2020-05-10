@@ -191,6 +191,18 @@ func (f *FileController) SaveValues() error {
 	return nil
 }
 
+func (f *FileController) ReturnValues() ([]string, error) {
+	var valuesFiles []string
+	for f.Queue.Len() > 0 {
+		out, err := yaml.Marshal(f.Queue.PopFront())
+		if err != nil {
+			return nil, fmt.Errorf("rendering values failed: %v", err)
+		}
+		valuesFiles = append(valuesFiles, string(out))
+	}
+	return valuesFiles, nil
+}
+
 func (f *FileController) Close() {
 	_ = os.RemoveAll(f.TmpDir)
 }

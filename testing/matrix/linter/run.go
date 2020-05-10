@@ -2,6 +2,8 @@ package linter
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
@@ -9,6 +11,9 @@ import (
 
 //
 func Run(tmpDir string, m types.Module) error {
+	// Silence default logger (helm)
+	log.SetOutput(ioutil.Discard)
+
 	f, err := LoadConfiguration(m.Path+"/"+modules.ValuesConfigFilename, "", tmpDir)
 	if err != nil {
 		return fmt.Errorf("configuration loading error: %v", err)
@@ -17,17 +22,10 @@ func Run(tmpDir string, m types.Module) error {
 
 	f.FindAll()
 
-	err = f.SaveValues()
+	values, err := f.ReturnValues()
 	if err != nil {
 		return fmt.Errorf("saving values error: %v", err)
 	}
 
-	c := NewModuleController(f.TmpDir, m)
-
-	err = c.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return NewModuleController(m, values).Run()
 }
