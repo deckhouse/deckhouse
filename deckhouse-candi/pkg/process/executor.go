@@ -263,6 +263,9 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 	// - Copy to buffer if capture is enabled
 	// - Copy to pipe if StdoutHandler is set
 	go func() {
+		if stdoutReadPipe == nil {
+			return
+		}
 		buf := make([]byte, 16)
 		matchersDone := false
 		if len(e.Matchers) == 0 {
@@ -317,18 +320,23 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 		}
 	}()
 
-	if e.StdoutHandler != nil {
-		go func() {
-			e.ConsumeLines(stdoutHandlerReadPipe, e.StdoutHandler)
-			app.Debugf("stop line consumer for '%s'\n", e.cmd.Args[0])
-		}()
-	}
+	go func() {
+		if e.StdoutHandler == nil {
+			return
+		}
+		e.ConsumeLines(stdoutHandlerReadPipe, e.StdoutHandler)
+		app.Debugf("stop line consumer for '%s'\n", e.cmd.Args[0])
+	}()
 
 	// Start reading from stderr of a command.
 	// Copy to os.Stderr if live output is enabled
 	// Copy to buffer if capture is enabled
 	// Copy to pipe if StderrHandler is set
 	go func() {
+		if stderrReadPipe == nil {
+			return
+		}
+
 		buf := make([]byte, 16)
 		for {
 			n, err := stderrReadPipe.Read(buf)
@@ -350,12 +358,13 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 		}
 	}()
 
-	if e.StderrHandler != nil {
-		go func() {
-			e.ConsumeLines(stderrHandlerReadPipe, e.StderrHandler)
-			app.Debugf("stop sdterr line consumer for '%s'\n", e.cmd.Args[0])
-		}()
-	}
+	go func() {
+		if e.StderrHandler == nil {
+			return
+		}
+		e.ConsumeLines(stderrHandlerReadPipe, e.StderrHandler)
+		app.Debugf("stop sdterr line consumer for '%s'\n", e.cmd.Args[0])
+	}()
 
 	return nil
 }
