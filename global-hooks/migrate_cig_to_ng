@@ -61,7 +61,8 @@ function __main__() {
       del(.spec.maxInstancesPerZone) |
       del(.spec.maxInstancesUnavailablePerZone) |
       del(.spec.maxInstancesSurgePerZone) |
-      del(.spec.zones)
+      del(.spec.zones) |
+      del(.status)
       ' > "$tmp_ng_path"
       echo "!!! NOTICE: Migrate CloudInstanceGroup ($cig) to NodeGroup !!!"
       kubectl create -f "$tmp_ng_path" || true
