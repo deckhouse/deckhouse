@@ -29,17 +29,17 @@ var _ = Describe("Modules :: nodeManager :: hooks :: handle_node_templates_test 
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: wor-ker
 spec:
   nodeType: Cloud
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   labels:
-    node.deckhouse.io/group: worker
-    node-role.kubernetes.io/worker: ""
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ""
 spec:
   taints:
   - effect: NoSchedule
@@ -56,16 +56,16 @@ spec:
 			    "kind": "Node",
 			    "metadata": {
 			      "labels": {
-			        "node.deckhouse.io/group": "worker",
-			        "node-role.kubernetes.io/worker": ""
+			        "node.deckhouse.io/group": "wor-ker",
+			        "node-role.kubernetes.io/wor-ker": ""
 			      },
-			      "name": "worker"
+			      "name": "wor-ker"
 			    },
                 "spec": {}
 			  }
 			`
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("Node", "worker").Parse()).To(MatchJSON(expectedJSON))
+			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse()).To(MatchJSON(expectedJSON))
 		})
 	})
 
@@ -76,16 +76,16 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: wor-ker
 spec:
   nodeType: Static
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   labels:
-    node.deckhouse.io/group: worker
+    node.deckhouse.io/group: wor-ker
 `
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
@@ -101,16 +101,16 @@ metadata:
 			              "node-manager.deckhouse.io/last-applied-node-template": "{\"annotations\":{},\"labels\":{},\"taints\":[]}"
 			            },
 			            "labels": {
-			              "node.deckhouse.io/group": "worker",
-			              "node-role.kubernetes.io/worker": ""
+			              "node.deckhouse.io/group": "wor-ker",
+			              "node-role.kubernetes.io/wor-ker": ""
 			            },
-			            "name": "worker"
+			            "name": "wor-ker"
 			          },
 			          "spec": {}
 			        }
 			`
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("Node", "worker").Parse()).To(MatchJSON(expectedJSON))
+			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse()).To(MatchJSON(expectedJSON))
 		})
 	})
 
@@ -122,7 +122,7 @@ metadata:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: wor-ker
 spec:
   nodeType: Static
   nodeTemplate:
@@ -130,7 +130,7 @@ spec:
       new: new
     labels:
       new: new
-      node.deckhouse.io/group: worker
+      node.deckhouse.io/group: wor-ker
     taints:
     - effect: NoSchedule
       key: new
@@ -138,9 +138,9 @@ spec:
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   labels:
-    node.deckhouse.io/group: worker
+    node.deckhouse.io/group: wor-ker
 spec:
   taints:
   - key: node.deckhouse.io/uninitialized
@@ -155,7 +155,7 @@ spec:
 				{
 					"labels": {
 						"new": "new",
-						"node.deckhouse.io/group": "worker"
+						"node.deckhouse.io/group": "wor-ker"
 					},
 					"annotations": {
 						"new": "new"
@@ -168,7 +168,7 @@ spec:
 					]
 				}
 			`
-			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 		})
@@ -182,14 +182,14 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: wor-ker
 spec:
   nodeType: Static
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   annotations:
     node-manager.deckhouse.io/last-applied-node-template: |
       {
@@ -207,7 +207,7 @@ metadata:
         ]
       }
   labels:
-    node.deckhouse.io/group: worker
+    node.deckhouse.io/group: wor-ker
 spec:
   taints:
   - key: node.deckhouse.io/uninitialized
@@ -225,7 +225,7 @@ spec:
 					"taints": []
 				}
 			`
-			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 		})
@@ -239,7 +239,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: wor-ker
 spec:
   nodeType: Static
   nodeTemplate:
@@ -258,7 +258,7 @@ spec:
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   annotations:
     node-manager.deckhouse.io/last-applied-node-template: |
       {
@@ -276,7 +276,7 @@ metadata:
         ]
       }
   labels:
-    node.deckhouse.io/group: worker
+    node.deckhouse.io/group: wor-ker
 spec:
   taints:
   - key: node.deckhouse.io/uninitialized
@@ -309,7 +309,7 @@ spec:
 					]
 				}
 			`
-			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 		})
@@ -323,7 +323,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: wor-ker
 spec:
   nodeType: Static
   nodeTemplate:
@@ -338,7 +338,7 @@ spec:
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   annotations:
     node-manager.deckhouse.io/last-applied-node-template: |
       {
@@ -362,7 +362,7 @@ metadata:
         ]
       }
   labels:
-    node.deckhouse.io/group: worker
+    node.deckhouse.io/group: wor-ker
 spec:
   taints:
   - key: node.deckhouse.io/uninitialized
@@ -394,21 +394,21 @@ spec:
 apiVersion: v1
 kind: Node
 metadata:
-  name: worker
+  name: wor-ker
   annotations:
     a: a
     node-manager.deckhouse.io/last-applied-node-template: '{"annotations":{"a":"a"},"labels":{"a":"a"},"taints":[{"effect":"NoSchedule","key":"a"}]}'
   labels:
     a: a
-    node.deckhouse.io/group: worker
-    node-role.kubernetes.io/worker: ''
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ''
 spec:
   taints:
   - key: a
     effect: NoSchedule`
 
-			lastApplied := f.KubernetesGlobalResource("Node", "worker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
-			node := f.KubernetesGlobalResource("Node", "worker").Parse()
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			node := f.KubernetesGlobalResource("Node", "wor-ker").Parse()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
 			Expect(node).To(MatchYAML(expectedYAML))

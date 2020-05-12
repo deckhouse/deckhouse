@@ -28,7 +28,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroups
 metadata:
-  name: ng2
+  name: ng-2
 spec:
   nodeType: Cloud
   cloudInstances:
@@ -53,7 +53,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroups
 metadata:
-  name: ng2
+  name: ng-2
 spec:
   nodeType: Static
 status: {}
@@ -139,7 +139,7 @@ metadata:
   namespace: d8-cloud-instance-manager
 data:
   ng1: YTY2NWE0NTkyMDQyMmY5ZDQxN2U0ODY3ZWZkYzRmYjhhMDRhMWYzZmZmMWZhMDdlOTk4ZTg2ZjdmN2EyN2FlMw== # sha256sum 123
-  ng2: OGQyM2NmNmM4NmU4MzRhN2FhNmVkZWQ1NGMyNmNlMmJiMmU3NDkwMzUzOGM2MWJkZDVkMjE5Nzk5N2FiMmY3Mg== # sha256sum 321
+  ng-2: OGQyM2NmNmM4NmU4MzRhN2FhNmVkZWQ1NGMyNmNlMmJiMmU3NDkwMzUzOGM2MWJkZDVkMjE5Nzk5N2FiMmY3Mg== # sha256sum 321
 `
 	)
 
@@ -180,7 +180,7 @@ data:
 		It("Min, max, desired, instances, nodes, ready must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":2,"instances":2,"nodes":2,"ready":1,"upToDate": 2}`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
 		})
 	})
 
@@ -193,7 +193,7 @@ data:
 		It("Nodes, ready must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","nodes":2,"ready":1,"upToDate": 2}`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng2").Field("status").String()).To(MatchJSON(`{"nodes":0,"ready":0,"upToDate": 0}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"nodes":0,"ready":0,"upToDate": 0}`))
 		})
 	})
 })

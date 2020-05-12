@@ -15,7 +15,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: chaos_monkey ::", func() {
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: toosmall
+  name: too-small
 spec:
   nodeType: Cloud
 status:
@@ -58,7 +58,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: toosmall
+  name: too-small
 spec:
   nodeType: Hybrid
 status:
@@ -124,7 +124,7 @@ kind: Node
 metadata:
   name: smallnode1
   labels:
-    node.deckhouse.io/group: toosmall
+    node.deckhouse.io/group: too-small
 `
 		stateMachines = `
 ---
