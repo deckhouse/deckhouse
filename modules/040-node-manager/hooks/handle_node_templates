@@ -54,7 +54,7 @@ function __main__() {
       continue
     fi
 
-    node_type="$(jq -r '.'"${ng_name}"'.nodeType' <<< "$ngs")"
+    node_type="$(jq -r '."'"${ng_name}"'".nodeType' <<< "$ngs")"
 
     if [ "$node_type" != "Cloud" ] ; then
       patch='
@@ -65,7 +65,7 @@ function __main__() {
           | .labels =      (.labels // {})
           | .taints =      (.taints // [])
         ) as $last_applied
-        | '"$(jq -c ".${ng_name}.desired" <<< "$ngs")"' as $desired
+        | '"$(jq -c ".\"${ng_name}\".desired" <<< "$ngs")"' as $desired
         | .metadata.labels = (
             (.metadata.labels // {})
             | delpaths($last_applied.labels | excess_keys($desired.labels) | map([.]))
@@ -90,7 +90,7 @@ function __main__() {
       '
     else
       patch='
-        '"$(jq -c ".${ng_name}.desired.taints" <<< "$ngs")"' as $desired_taints
+        '"$(jq -c ".\"${ng_name}\".desired.taints" <<< "$ngs")"' as $desired_taints
         | if ((.spec.taints // []) | (. | sort) == (. + $desired_taints | unique | sort)) then
             .spec.taints = [.spec.taints[]? | select(.key != "node.deckhouse.io/uninitialized")]
           else

@@ -16,7 +16,7 @@ var stateNGStatic = `
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
 metadata:
-  name: static0
+  name: static-0
 spec:
   nodeType: Static
 `
@@ -54,7 +54,7 @@ type: bootstrap.kubernetes.io/token
 metadata:
   creationTimestamp: "2020-01-01T00:00:00Z"
   labels:
-    node-manager.deckhouse.io/node-group: static0
+    node-manager.deckhouse.io/node-group: static-0
   name: bootstrap-token-aaaaaa
   namespace: kube-system
 data:
@@ -76,7 +76,7 @@ type: bootstrap.kubernetes.io/token
 metadata:
  creationTimestamp: "2020-01-02T00:00:00Z"
  labels:
-    node-manager.deckhouse.io/node-group: static0
+    node-manager.deckhouse.io/node-group: static-0
  name: bootstrap-token-kkkkkk
  namespace: kube-system
 data:
@@ -98,7 +98,7 @@ type: bootstrap.kubernetes.io/token
 metadata:
  creationTimestamp: "2020-01-03T00:00:00Z"
  labels:
-    node-manager.deckhouse.io/node-group: static0
+    node-manager.deckhouse.io/node-group: static-0
  name: bootstrap-token-ssssss
  namespace: kube-system
 data:
@@ -133,12 +133,12 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			f.RunHook()
 		})
 
-		It("A new token for NG static0 must have generated.", func() {
+		It("A new token for NG static-0 must have generated.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static0").String()
+			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(HaveLen(23))
 
 			tokenSlice := strings.Split(bootstrapToken, ".")
@@ -182,7 +182,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			f.RunHook()
 		})
 
-		It("Expired token must be deleted. A new token for NodeGroup static0 must have generated.", func() {
+		It("Expired token must be deleted. A new token for NodeGroup static-0 must have generated.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.BindingContexts.Get("0.snapshots.ngs").Array()).To(HaveLen(2))
@@ -192,7 +192,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static0").String()
+			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(HaveLen(23))
 
 			tokenSlice := strings.Split(bootstrapToken, ".")
@@ -249,7 +249,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static0").String()
+			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(len(bootstrapToken)).To(Equal(23))
 			Expect(bootstrapToken).ToNot(Equal("kkkkkk.kkkkkkkkkkkkkkkk"))
 
@@ -319,7 +319,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static0").String()
+			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(Equal("ssssss.ssssssssssssssss"))
 		})
 	})
@@ -357,7 +357,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static0").String()
+			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(Equal("ssssss.ssssssssssssssss"))
 		})
 	})
