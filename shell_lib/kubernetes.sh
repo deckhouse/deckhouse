@@ -178,6 +178,15 @@ function kubernetes::_apply_patch_set() {
   done < ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
+# This function has proven to be safe and reliant:
+# 1. resourceVersion is passed from the original object to kubectl replace,
+#    so optimistic locking is engaged, therefore this function is free of race
+#    conditions.
+# 2. kubectl replace, while "replacing" object, doesn't lead to emission of
+#    DELETE events. If the object is changed – all watching parties will receive
+#    just a single UPDATE event (and not a sequence of DELETE and CREATE events).
+# 3. If in between getting and replacing, the original object was changed – the
+#    function will automatically make up to 5 retries.
 function kubernetes::_jq_patch() {
   local namespace="$1"
   local resource="$2"
