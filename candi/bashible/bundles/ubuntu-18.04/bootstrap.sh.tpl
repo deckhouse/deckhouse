@@ -9,4 +9,5 @@ if ! type jq 2>/dev/null || ! type curl 2>/dev/null; then
   done
 fi
 
+mkdir -p /var/lib/bashible/
 touch /var/lib/bashible/first_run
