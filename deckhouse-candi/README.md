@@ -65,7 +65,21 @@ masterInstanceClass:
   imageName: ubuntu-18-04-cloud-amd64
   rootDiskSizeInGb: 20
 ```
-Запуск werf:
+Для установки кластера надо запустить контейнер с образом, содержащим deckhouse-candi. Для этого запускаем из registry
+уже готовый образ:
+1. Скачиваем свежий образ с необходимого канала обновления, например для канала обновления alpha
+```bash
+docker pull registry.flant.com/sys/antiopa/install:alpha
+```
+> Для того чтобы стянуть образ с registry.flant.com надо использовать токен вашего пользователя
+> https://docs.gitlab.com/ce/user/profile/personal_access_tokens.html#creating-a-personal-access-token
+
+1. Запускаем контейнер, монтируем `config.yaml`, содержащий конфигурацию разворачиваемого кластера
+```bash
+docker run -it -v $(pwd)/config.yaml:/config.yaml -v $HOME/.ssh/:/tmp/.ssh/ registry.flant.com/sys/antiopa/install:alpha
+```
+
+Вместо запуска готового образа в целях разработки может понадобиться собирать и запускать контейнер, используя werf:
 ```yaml
 werf build --stages-storage :local install
 werf run install \
@@ -73,19 +87,16 @@ werf run install \
   --stages-storage :local -- bash
 ```
 
-Вместо сборки можно взять готовый образ `registry.flant.com/sys/antiopa/install` тегом `имя_вашей_ветки`.
-
-
 Установка кластера:
 ```yaml
 deckhouse-candi bootstrap \
   --ssh-user=ubuntu \
-  --ssh-agent-private-keys=~/.ssh/tfadm-id-rsa \
+  --ssh-agent-private-keys=/tmp/.ssh/tfadm-id-rsa \
   --ssh-bastion-user=y.gagarin \
   --ssh-bastion-host=tf.hf-bastion \
   --config=/config.yaml 
 ```
 Удаление кластер:
 ```bash
-deckhouse-candi helper run-terraform-destroy-all --config=/config.yaml
+deckhouse-candi terraform destroy-all --config=/config.yaml
 ```
