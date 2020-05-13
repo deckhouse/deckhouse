@@ -16,12 +16,6 @@ module "simple_master" {
   master_internal_port_id = local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id
 }
 
-module "kubernetes_data" {
-  source = "../../../terraform-modules/kubernetes-data"
-  prefix = local.prefix
-  master_id = module.simple_master.id
-}
-
 module "security_groups" {
   source = "../../../terraform-modules/security-groups"
   security_group_names = local.security_group_names
