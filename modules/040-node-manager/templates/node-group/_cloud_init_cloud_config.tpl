@@ -1,7 +1,7 @@
 {{- define "node_group_cloud_init_cloud_config" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
-  {{- $bootstrap_token := index . 2 }}
+  {{- $bootstrap_token := index . 2 -}}
 #cloud-config
 package_update: True
 manage_etc_hosts: localhost
