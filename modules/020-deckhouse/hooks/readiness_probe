@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
+}
+
+function __main__() {
+  if kubectl -n d8-system get deploy deckhouse -o json | jq -e '.spec.template.spec.containers[0].readinessProbe' >/dev/null ; then
+    return 0
+  fi
+
+  kubernetes::patch_jq d8-system deployment/deckhouse '. | .spec.template.spec.containers[0].readinessProbe = {"failureThreshold":120,"httpGet":{"path":"/ready","port":9650},"initialDelaySeconds":5,"periodSeconds":5}'
+}
+
+hook::run $@
