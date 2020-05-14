@@ -276,7 +276,7 @@ func generateSecret(name, namespace string, data map[string][]byte) *apiv1.Secre
 
 func generateSecretWithTerraformState(data []byte) *apiv1.Secret {
 	return generateSecret(
-		"d8-cluster-teraform-state",
+		"d8-cluster-terraform-state",
 		"kube-system",
 		map[string][]byte{
 			"cluster_terraform_state.json": data,

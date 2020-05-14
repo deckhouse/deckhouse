@@ -73,6 +73,7 @@ func main() {
 
 	deckhouseCmd := kpApp.Command("deckhouse", "Install and uninstall deckhouse.")
 	{
+		commands.DefineDeckhouseInstall(deckhouseCmd)
 		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
 		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
 	}

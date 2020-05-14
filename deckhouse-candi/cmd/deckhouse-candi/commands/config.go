@@ -21,6 +21,7 @@ const (
 func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("bashible-bundle", "Render bashible bundle.")
 	app.DefineConfigFlags(cmd)
+	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
 		templateData, err := config.ParseBashibleConfig(app.ConfigPath, bashibleTemplateOpenAPI)
@@ -56,6 +57,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 func DefineRenderKubeadmConfig(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("kubeadm-config", "Render kubeadm config.")
 	app.DefineConfigFlags(cmd)
+	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
 		templateData, err := config.ParseBashibleConfig(app.ConfigPath, kubeadmTemplateOpenAPI)
