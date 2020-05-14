@@ -1,3 +1,5 @@
+#!/bin/bash
+
 {{- if hasKey . "cloudProvider" }}
   {{- if hasKey .cloudProvider.yandex "dns" }}
 

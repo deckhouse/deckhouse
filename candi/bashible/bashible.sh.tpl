@@ -74,7 +74,7 @@ function main() {
     for bundle_collection in $bundle_collections; do
       collection_data="$(get_secret $bundle_collection | jq -r '.data')"
       for step in $(jq -r 'to_entries[] | .key' <<< "$collection_data"); do
-        jq -r --arg step "$step" '.[$step]' <<< "$collection_data" | base64 -d > "$BUNDLE_STEPS_DIR/$step"
+        jq -r --arg step "$step" '.[$step] // ""' <<< "$collection_data" | base64 -d > "$BUNDLE_STEPS_DIR/$step"
       done
     done
   fi
