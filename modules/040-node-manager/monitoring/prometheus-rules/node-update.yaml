@@ -160,7 +160,7 @@
             ```
         * Не забудьте, после успешного завершения (когда аннотация `update.node.deckhouse.io/approved` будет снята), **сделать uncordon**.
         ```
-        while kubectl get node {{ $labels.node }} | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' > /dev/null; do sleep 1; done
+        while kubectl get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' > /dev/null; do sleep 1; done
         kubectl uncordon {{ $labels.node }}
         ```
 
