@@ -146,7 +146,7 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 
 	if len(cfg.TerraformState) > 0 {
 		tasks = append(tasks, createManifestTask{
-			name:     `Secret "d8-terraform-state"`,
+			name:     `Secret "d8-cluster-terraform-state"`,
 			manifest: func() interface{} { return generateSecretWithTerraformState(cfg.TerraformState) },
 			createTask: func(manifest interface{}) error {
 				_, err := client.CoreV1().Secrets("kube-system").Create(manifest.(*apiv1.Secret))

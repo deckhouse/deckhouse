@@ -21,15 +21,14 @@ floating ip.
 ```
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
-spec:
-  layout: Standard
-  standard:
-    internalNetworkCIDR: 192.168.199.0/24                   # required
-    internalNetworkDNSServers:                              # required
-    - 8.8.8.8
-    - 4.2.2.2
-    internalNetworkSecurity: true|false                     # optional, default true
-    externalNetworkName: shared                             # required
+layout: Standard
+standard:
+  internalNetworkCIDR: 192.168.199.0/24                   # required
+  internalNetworkDNSServers:                              # required
+  - 8.8.8.8
+  - 4.2.2.2
+  internalNetworkSecurity: true|false                     # optional, default true
+  externalNetworkName: shared                             # required
 provider:
   ...
 ---
@@ -60,13 +59,12 @@ virtual ip создаётся в публичной сети, то он всё �
 ```
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
-spec:
-  layout: StandardWithNoRouter
-  standardWithNoRouter:
-    internalNetworkCIDR: 192.168.199.0/24                   # required
-    externalNetworkName: ext-net                            # required
-    externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)   
-    internalNetworkSecurity: true|false                     # optional, default true
+layout: StandardWithNoRouter
+standardWithNoRouter:
+  internalNetworkCIDR: 192.168.199.0/24                   # required
+  externalNetworkName: ext-net                            # required
+  externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)   
+  internalNetworkSecurity: true|false                     # optional, default true
 provider:
   ...
 ---
@@ -97,12 +95,11 @@ virtual ip создаётся в публичной сети, то он всё �
 ```
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
-spec:
-  layout: Simple
-  simple:
-    externalNetworkName: ext-net                            # required
-    externalNetworkDHCP: false                              # optional, default true   
-    podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
+layout: Simple
+simple:
+  externalNetworkName: ext-net                            # required
+  externalNetworkDHCP: false                              # optional, default true   
+  podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
 provider:
   ...
 ---
@@ -131,12 +128,11 @@ Master нода и ноды кластера подключаются к сущ�
 ```
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
-spec:
-  layout: SimpleWithInternalNetwork
-  simpleWithInternalNetwork:
-    internalSubnetName: pivot-standard                      # required, all cluster nodes have to be in the same subnet
-    podNetworkMode: DirectRoutingWithPortSecurityEnabled    # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
-    externalNetworkName: ext-net                            # optional, if set will be used for ordering load balancer floating ip
+layout: SimpleWithInternalNetwork
+simpleWithInternalNetwork:
+  internalSubnetName: pivot-standard                      # required, all cluster nodes have to be in the same subnet
+  podNetworkMode: DirectRoutingWithPortSecurityEnabled    # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
+  externalNetworkName: ext-net                            # optional, if set will be used for ordering load balancer floating ip
 provider:
   ...
 ---

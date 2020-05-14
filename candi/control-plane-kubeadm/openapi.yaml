@@ -11,7 +11,7 @@ apiVersions:
         enum: [deckhouse.io/v1alpha1]
       kind:
         type: string
-        enum: [BashibleTemplateData]
+        enum: [KubeadmConfigTemplateData]
       nodeIP:
         type: string
       extraArgs:
