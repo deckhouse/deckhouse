@@ -18,7 +18,7 @@ function __config__() {
           "desired": {
             "annotations": ((.spec.nodeTemplate // {}).annotations // {}),
             "labels":      ((.spec.nodeTemplate // {}).labels // {}),
-            "taints":      ((.spec.nodeTemplate // {}).taints // [])
+            "taints":      (((.spec.nodeTemplate // {}).taints // []) | map(if .value == "" then del(.value) else . end ))
           }
         }
     - name: nodes
