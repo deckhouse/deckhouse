@@ -158,7 +158,7 @@
         groups:
 {{ $provider.crowd.groups | toYaml | indent 8 }}
         {{- end }}
-        usernamePrompt: "Crowd username"
+        usernamePrompt: {{ $provider.crowd.usernamePrompt | default "Crowd username" | quote }}
       {{- end }}
     {{- end }}
   {{- end }}
