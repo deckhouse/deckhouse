@@ -1,7 +1,11 @@
 - name: d8.grafana.availability
   rules:
   - alert: D8GrafanaPodIsNotReady
-    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"grafana-.*"}) != 1
+    expr: |
+      min by (pod) (
+        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-monitoring"}
+      ) != 1
     labels:
       severity_level: "6"
       tier: cluster
@@ -16,7 +20,12 @@
       summary: Grafana под находится в состоянии НЕ Ready
 
   - alert: D8GrafanaPodIsNotRunning
-    expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-monitoring",phase!="Running",pod=~"grafana-.*"} > 0)
+    expr: |
+      max by (namespace, pod, phase) (
+        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        * on (pod) group_right() kube_pod_status_phase{namespace="d8-monitoring",phase!="Running"}
+        > 0
+      )
     labels:
       severity_level: "6"
       tier: cluster
@@ -98,7 +107,14 @@
 - name: d8.grafana.malfunctioning
   rules:
   - alert: D8GrafanaPodIsRestartingTooOften
-    expr: max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-monitoring", pod=~"grafana-.*"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-monitoring", pod=~"grafana-.*"}) > 5
+    expr: |
+      max by (pod) (
+        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-monitoring"}[1h])
+        and
+        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-monitoring"}
+      ) > 5
     labels:
       severity_level: "9"
       tier: cluster
