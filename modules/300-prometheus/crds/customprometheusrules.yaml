@@ -14,15 +14,10 @@ spec:
     singular: customprometheusrule
     kind: CustomPrometheusRules
   version: v1alpha1
-  additionalPrinterColumns:
-  - JSONPath: .spec.folder
-    name: Folder
-    description: 'Folder in Grafana.'
-    type: string
   validation:
     openAPIV3Schema:
       type: object
-      description: 'CustomPrometheusRules is an interface to describing additional prometheus rules.'
+      description: Additional Prometheus recording and alerting rules.
       required:
       - spec
       properties:
@@ -33,6 +28,42 @@ spec:
           properties:
             groups:
               type: array
-              description: Groups of the prometheus rules.
+              description: Groups of Prometheus rules.
               items:
                 type: object
+                required:
+                - name
+                - rules
+                description: RuleGroup is a list of sequentially evaluated recording and alerting rules.
+                properties:
+                  interval:
+                    type: string
+                  name:
+                    type: string
+                  rules:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - expr
+                      description: Rule describes an alerting or recording rule.
+                      properties:
+                        alert:
+                          type: string
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        expr:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          x-kubernetes-int-or-string: true
+                        for:
+                          type: string
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        record:
+                          type: string
