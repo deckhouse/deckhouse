@@ -23,12 +23,6 @@ module "standard_with_no_router_master" {
   config_drive = !local.external_network_dhcp
 }
 
-module "kubernetes-data" {
-  source = "../../../terraform-modules/kubernetes-data"
-  prefix = local.prefix
-  master_id = module.standard_with_no_router_master.id
-}
-
 module "security_groups" {
   source = "../../../terraform-modules/security-groups"
   security_group_names = local.security_group_names

@@ -22,12 +22,6 @@ module "standard_master" {
   external_network_name = data.openstack_networking_network_v2.external.name
 }
 
-module "kubernetes_data" {
-  source = "../../../terraform-modules/kubernetes-data"
-  prefix = local.prefix
-  master_id = module.standard_master.id
-}
-
 module "security_groups" {
   source = "../../../terraform-modules/security-groups"
   security_group_names = local.security_group_names
