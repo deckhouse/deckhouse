@@ -12,27 +12,26 @@ var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
 
 	Context("With FromIngressSecret option and empty cluster", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
+			f.KubeStateSetAndWaitForBindingContexts("", 0)
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "FromIngressSecret")
 		})
 
 		Context("Adding secret", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(`
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
 kind: Secret
 metadata:
   name: ingress-tls
   namespace: d8-user-authn
 data:
-  tls.crt: dGVzdA==`))
+  tls.crt: dGVzdA==
+`, 1))
 				f.RunHook()
 			})
 
-			It("Should add ca for oidc provider", func() {
+			It("Should add ca for OIDC provider", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-
 				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 			})
 		})
@@ -41,21 +40,20 @@ data:
 	Context("With FromIngressSecret option and secret", func() {
 		BeforeEach(func() {
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "FromIngressSecret")
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
 kind: Secret
 metadata:
   name: ingress-tls
   namespace: d8-user-authn
 data:
-  ca.crt: dGVzdA==`))
+  ca.crt: dGVzdA==
+`, 1))
 			f.RunHook()
 		})
 
-		It("Should add ca for oidc provider", func() {
+		It("Should add ca for OIDC provider", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-
 			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 		})
 	})
@@ -66,10 +64,8 @@ data:
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "DoNotNeed")
 			f.RunHook()
 		})
-		It("Should add no ca for oidc provider", func() {
+		It("Should add no ca for OIDC provider", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-
 			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal(""))
 		})
 	})
@@ -79,13 +75,10 @@ data:
 			f.BindingContexts.Set(BeforeHelmContext)
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "Custom")
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCustomCA", "testca")
-
 			f.RunHook()
 		})
-		It("Should add no ca for oidc provide from config", func() {
+		It("Should add no ca for OIDC provide from config", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-
 			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
 		})
 	})

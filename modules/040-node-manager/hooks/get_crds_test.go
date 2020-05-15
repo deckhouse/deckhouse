@@ -12,8 +12,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func calculateEpoch(ng_name string, clusterUUID string) string {
-	epochCmd := exec.Command(`/bin/bash`, `-c`, `awk -v seed="`+clusterUUID+ng_name+`" -v timestamp="$(date +%s)" 'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'`)
+func calculateEpoch(ngName string, clusterUUID string) string {
+	epochCmd := exec.Command(`/bin/bash`, `-c`, `awk -v seed="`+clusterUUID+ngName+`" -v timestamp="1234567890" 'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'`)
 	epochOut, err := epochCmd.Output()
 	if err != nil {
 		panic(err)
