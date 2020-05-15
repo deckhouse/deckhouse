@@ -40,7 +40,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "2m"
+      plk_pending_until_firing_for: "10m"
       plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: Deckhouse под находится в состоянии НЕ Ready
