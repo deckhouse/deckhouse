@@ -126,6 +126,11 @@ function __main__() {
   (if .cloud_provider_secrets[0] | has("object") then .cloud_provider_secrets[].filterResult.zones else [] end) as $b |
   $a + $b | unique')
 
+  timestamp=$(date +%s)
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    timestamp="1234567890" # Fake timestamp for updateEpoch test values
+  fi
+
   final_node_groups="[]"
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
     ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
@@ -209,7 +214,7 @@ function __main__() {
     ng="$(jq --arg effective_kubernetes_version "$effective_kubernetes_version" '.kubernetesVersion = $effective_kubernetes_version' <<< "$ng")"
 
     # Calculate update epoch
-    update_epoch=$(awk -v seed="$(values::get global.discovery.clusterUUID)${ng_name}" -v timestamp="$(date +%s)" \
+    update_epoch=$(awk -v seed="$(values::get global.discovery.clusterUUID)${ng_name}" -v timestamp="$timestamp" \
       'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'
     )
     ng="$(jq --arg update_epoch "$update_epoch" '.updateEpoch = $update_epoch' <<< "$ng")"
