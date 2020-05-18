@@ -91,7 +91,7 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		dec := yaml.NewDecoder(strings.NewReader(kpo.ResourceSpec))
 		err = dec.Decode(&t)
 		if err != nil {
-			return object_store.ObjectStore{}, fmt.Errorf("operation \"CreateIfNotExists\", faield to decode YAML: %s\n\n%s", err)
+			return object_store.ObjectStore{}, fmt.Errorf("operation \"CreateIfNotExists\", faield to decode YAML: %v", err)
 		}
 		if t == nil {
 			return object_store.ObjectStore{}, errors.New("kubernetes CreateIfNotExists operation should contain pure YAML")
@@ -108,7 +108,7 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		dec := yaml.NewDecoder(strings.NewReader(kpo.ResourceSpec))
 		err = dec.Decode(&t)
 		if err != nil {
-			return object_store.ObjectStore{}, fmt.Errorf("operation \"Replace\", faield to decode YAML: %s\n\n%s", err)
+			return object_store.ObjectStore{}, fmt.Errorf("operation \"Replace\", faield to decode YAML: %v", err)
 		}
 		if t == nil {
 			return object_store.ObjectStore{}, errors.New("kubernetes ReplaceOrRestore operation should contain pure YAML")

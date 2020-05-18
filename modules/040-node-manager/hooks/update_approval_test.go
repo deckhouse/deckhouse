@@ -625,7 +625,7 @@ status:
 `
 	tmpl, _ := template.New("state").Parse(tpl)
 	var state bytes.Buffer
-	tmpl.Execute(&state, struct {
+	err := tmpl.Execute(&state, struct {
 		NodeNames      []string
 		OneIsApproved  bool
 		AproveRequired bool
@@ -633,12 +633,13 @@ status:
 		NgReady        bool
 		NodeType       string
 	}{nodeNames, oneIsApproved, waitingForApproval, nodeReady, ngReady, nodeType})
+	if err != nil {
+		panic(err)
+	}
 	return state.String()
 }
 
-func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, allowDisruptions int, unschedulable bool) string {
-
-	const tpl = `
+const tpl = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -670,15 +671,19 @@ spec:
 {{- end }}
 {{- end }}
 `
+
+func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, allowDisruptions int, unschedulable bool) string {
 	tmpl, _ := template.New("state").Parse(tpl)
 	var state bytes.Buffer
-	tmpl.Execute(&state, struct {
+	err := tmpl.Execute(&state, struct {
 		NodeNames          []string
 		DisruptionRequired bool
 		AllowDisruptions   int
 		Unschedulable      bool
 	}{nodeNames, disruptionRequired, allowDisruptions, unschedulable})
-
+	if err != nil {
+		panic(fmt.Errorf("execute template: %v", err))
+	}
 	return state.String()
 }
 
