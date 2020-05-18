@@ -1,0 +1,121 @@
+- name: d8.extended-monitoring.image-availability-exporter.availability
+  rules:
+
+  - alert: D8ImageAvailabilityExporterTargetDown
+    expr: max by (job) (up{job="image-availability-exporter"} == 0)
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "1m"
+      plk_grouped_by__main: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_ignore_labels: "job"
+      description: >
+        Следует проверить состояние Pod'ов: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+        или логи: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: Prometheus не может получить метрики image-availability-exporter
+
+  - alert: D8ImageAvailabilityExporterTargetAbsent
+    expr: absent(up{job="image-availability-exporter"}) == 1
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "1m"
+      plk_ignore_labels: "job"
+      plk_grouped_by__main: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      description: >
+        Следует проверить состояние Pod'ов: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+        или логи: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: В Prometheus отсутствует `image-availability-exporter` target
+
+  - alert: D8ImageAvailabilityExporterPodIsNotReady
+    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"image-availability-exporter-.*"}) != 1
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "30m"
+      plk_labels_as_annotations: "pod"
+      plk_grouped_by__main: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Pod image-availability-exporter находится в состоянии НЕ Ready
+      description: |
+        В кластере не происходит проверка наличия указанных в поле `image` образов в container registry.
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+
+  - alert: D8ImageAvailabilityExporterPodIsNotRunning
+    expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"image-availability-exporter-.*"})
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "30m"
+      plk_grouped_by__main: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Под image-availability-exporter находится в состоянии НЕ Running
+      description: |
+        В кластере не происходит проверка наличия указанных в поле `image` образов в container registry.
+
+        Куда смотреть:
+        1. Посмотреть информацию о деплойменте: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
+        2. Посмотреть состояние пода и понять, почему он не запущен: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+
+  - alert: D8ImageAvailabilityExporterUnavailable
+    expr: count(ALERTS{alertname=~"D8ImageAvailabilityExporterTargetDown|D8ImageAvailabilityExporterTargetAbsent", alertstate="firing"})
+    labels:
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      summary: image-availability-exporter не работает
+      description: |
+        image-availability-exporter не работает. Что именно с ним не так можно узнать в одном из связанных алертов.
+
+- name: d8.extended-monitoring.image-availability-exporter.malfunctioning
+  rules:
+
+  - alert: D8ImageAvailabilityExporterStuck
+    expr: |
+      increase(k8s_image_availability_exporter_completed_rechecks_total[10m]) == 0
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "20m"
+      plk_grouped_by__main: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
+      description: |
+        image-availability-exporter более 20 минут не осуществлял проверку наличия образов в registry.
+        Необходимо проверить логи: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: image-availability-exporter завис
+
+  - alert: D8ImageAvailabilityExporterMalfunctioning
+    expr: count(ALERTS{alertname=~"D8ImageAvailabilityExporterStuck", alertstate="firing"})
+    labels:
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      description: |
+        image-availability-exporter работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
+      summary: image-availability-exporter работает некорректно
