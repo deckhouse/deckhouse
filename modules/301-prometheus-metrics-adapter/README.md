@@ -330,15 +330,16 @@ spec:
   maxReplicas: 2
   metrics:              # Какие метрики использовать для скейла? Мы используем внешние метрики.
   - type: External
-    metric:
-      name: mymetric  # Метрика, которую мы зарегистрировали с помощью создания метрики в прометее kube_adapter_metric_mymetric.
-      selector:
-        matchLabels:  # Для внешних метрик можно и нужно уточнять запрос с помощью лейблов.
-          namespace: mynamespace
-          ingress: myingress
-    target:
-      type: Value     # Для метрик типа External можно использовать только `type: Value`.
-      value: 10       # Если значение нашей метрики больше 10, то надо скейлиться!
+    external:
+      metric:
+        name: mymetric  # Метрика, которую мы зарегистрировали с помощью создания метрики в прометее kube_adapter_metric_mymetric.
+        selector:
+          matchLabels:  # Для внешних метрик можно и нужно уточнять запрос с помощью лейблов.
+            namespace: mynamespace
+            ingress: myingress
+      target:
+        type: Value     # Для метрик типа External можно использовать только `type: Value`.
+        value: 10       # Если значение нашей метрики больше 10, то надо скейлиться!
 ```
 
 #### Пример с размером очереди в Amazon SQS
