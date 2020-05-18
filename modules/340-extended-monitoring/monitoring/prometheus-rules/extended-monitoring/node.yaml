@@ -7,17 +7,19 @@
           (node_filesystem_size_bytes - node_filesystem_avail_bytes)
           /
           node_filesystem_size_bytes
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes"})))
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes",type="hard"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-warning"})
       )
     labels:
-      severity_level: "5"
+      severity_level: "6"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
@@ -29,17 +31,19 @@
           (node_filesystem_size_bytes - node_filesystem_avail_bytes)
           /
           node_filesystem_size_bytes
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes"})))
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes",type="hard"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-critical"})
       )
     labels:
-      severity_level: "4"
+      severity_level: "5"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "2m"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
@@ -51,17 +55,19 @@
           (node_filesystem_files - node_filesystem_files_free)
           /
           node_filesystem_files
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes"})))
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes",type="hard"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-warning"})
       )
     labels:
-      severity_level: "5"
+      severity_level: "6"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
@@ -73,17 +79,19 @@
           (node_filesystem_files - node_filesystem_files_free)
           /
           node_filesystem_files
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes"})))
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes",type="hard"})))
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})
       )
     labels:
-      severity_level: "4"
+      severity_level: "5"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "2m"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
