@@ -45,6 +45,8 @@ const globalValues = `
       __ConstantChoices__: "3"
     d8SpecificNodeCountByRole:
       worker: 1
+    nodeCountByType:
+      cloud: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.15.4
 `

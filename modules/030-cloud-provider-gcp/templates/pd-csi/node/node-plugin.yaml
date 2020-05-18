@@ -1,3 +1,4 @@
+{{- if (include "helm_lib_cluster_has_non_static_nodes" .) }}
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -13,6 +14,16 @@ spec:
       labels:
         app: csi-pd-node
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - operator: In
+                key: node.deckhouse.io/type
+                values:
+                - Cloud
+                - Hybrid
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
@@ -99,3 +110,4 @@ spec:
         hostPath:
           path: /sys
           type: Directory
+{{- end }}

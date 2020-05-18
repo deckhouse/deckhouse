@@ -86,6 +86,7 @@ function __main__() {
           )
         | .metadata.annotations."node-manager.deckhouse.io/last-applied-node-template" = ($desired | tojson)
         | .metadata.labels."node-role.kubernetes.io/'"${ng_name}"'" = ""
+        | .metadata.labels."node.deckhouse.io/type" = "'"${node_type}"'"
         | if (.spec.taints | length) == 0 then del(.spec.taints) else . end
       '
     else

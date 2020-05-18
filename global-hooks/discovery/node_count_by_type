@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node_types
+      apiVersion: v1
+      kind: Node
+      includeSnapshotsFrom: ["node_types"]
+      jqFilter: |
+        .metadata.labels // {} | ."node.deckhouse.io/type" // "" | ascii_downcase
+EOF
+}
+
+function __on_kubernetes::node_types() {
+  node_counts="$(
+    context::jq -r '
+      [
+        .snapshots.node_types[] | select(.filterResult != "") | .filterResult
+      ] |
+      group_by(.) | map({(.[0]): length}) | add // {}'
+  )"
+  values::set global.discovery.nodeCountByType "$node_counts"
+}
+
+hook::run "$@"

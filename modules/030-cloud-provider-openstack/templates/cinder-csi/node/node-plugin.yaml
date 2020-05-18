@@ -1,3 +1,4 @@
+{{- if (include "helm_lib_cluster_has_non_static_nodes" .) }}
 ---
 kind: DaemonSet
 apiVersion: apps/v1
@@ -19,10 +20,11 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - operator: NotIn
-                key: node-type.deckhouse.io
+              - operator: In
+                key: node.deckhouse.io/type
                 values:
-                - static
+                - Cloud
+                - Hybrid
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
@@ -107,3 +109,4 @@ spec:
         - name: secret-cinderplugin
           secret:
             secretName: cloud-controller-manager
+{{- end }}

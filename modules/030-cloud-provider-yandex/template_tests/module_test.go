@@ -43,6 +43,8 @@ const globalValues = `
     clusterMasterCount: 3
     d8SpecificNodeCountByRole:
       worker: 1
+    nodeCountByType:
+      cloud: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.15.4
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
