@@ -75,11 +75,11 @@
 
   - alert: D8MachineControllerManagerUnavailable
     expr: |
-      (count(ALERTS{alertname=~"D8MachineControllerManagerPodIsNotReady|D8MachineControllerManagerPodIsNotRunning|D8MachineControllerManagerTargetAbsent|D8MachineControllerManagerTargetDown", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"})) > 0
+      count(ALERTS{alertname=~"D8MachineControllerManagerPodIsNotReady|D8MachineControllerManagerPodIsNotRunning|D8MachineControllerManagerTargetAbsent|D8MachineControllerManagerTargetDown", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="machine-controller-manager", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: node-manager
