@@ -102,7 +102,8 @@ metadata:
 			            },
 			            "labels": {
 			              "node.deckhouse.io/group": "wor-ker",
-			              "node-role.kubernetes.io/wor-ker": ""
+			              "node-role.kubernetes.io/wor-ker": "",
+			              "node.deckhouse.io/type": "Static"
 			            },
 			            "name": "wor-ker"
 			          },
@@ -402,6 +403,7 @@ metadata:
     a: a
     node.deckhouse.io/group: wor-ker
     node-role.kubernetes.io/wor-ker: ''
+    node.deckhouse.io/type: Static
 spec:
   taints:
   - key: a

@@ -23,6 +23,7 @@ metadata:
   name: node-2
   labels:
     node.deckhouse.io/group: worker
+    node.deckhouse.io/type: Cloud
 ---
 apiVersion: v1
 kind: Node
@@ -45,6 +46,14 @@ metadata:
   name: node-5
 spec:
   providerID: "super-provider"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-6
+  labels:
+    node.deckhouse.io/group: worker
+    node.deckhouse.io/type: Static
 `
 	)
 
@@ -71,13 +80,14 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// Two patches — for node-1 and node-3
-			Expect(len(f.KubernetesResourcePatch.Operations)).To(Equal(2))
+			Expect(len(f.KubernetesResourcePatch.Operations)).To(Equal(3))
 
 			Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.providerID").String()).To(Equal(`static://`))
 			Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.providerID").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Node", "", "node-3").Field("spec.providerID").String()).To(Equal(`static://`))
 			Expect(f.KubernetesResource("Node", "", "node-4").Field("spec.providerID").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Node", "", "node-5").Field("spec.providerID").String()).To(Equal(`super-provider`))
+			Expect(f.KubernetesResource("Node", "", "node-6").Field("spec.providerID").String()).To(Equal(`static://`))
 		})
 	})
 })

@@ -11,14 +11,11 @@ function __config__() {
       includeSnapshotsFrom: ["nodes"]
       apiVersion: v1
       kind: Node
-      labelSelector:
-        matchExpressions:
-        - key: node.deckhouse.io/group
-          operator: DoesNotExist
       jqFilter: |
         {
           "needPatch": (
             (.spec.taints // [] | any(.key == "node.cloudprovider.kubernetes.io/uninitialized") | not) and
+            (.metadata.labels."node.deckhouse.io/type" != "Cloud") and
             ((.spec.providerID // "") == "")
           )
         }

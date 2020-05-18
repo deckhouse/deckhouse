@@ -1,3 +1,4 @@
+{{- if (include "helm_lib_cluster_has_non_static_nodes" .) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -35,10 +36,11 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - operator: NotIn
-                key: node-type.deckhouse.io
+              - operator: In
+                key: node.deckhouse.io/type
                 values:
-                - static
+                - Cloud
+                - Hybrid
       imagePullSecrets:
       - name: deckhouse-registry
       hostNetwork: true
@@ -118,3 +120,4 @@ spec:
       - name: device-dir
         hostPath:
           path: /dev
+{{- end }}
