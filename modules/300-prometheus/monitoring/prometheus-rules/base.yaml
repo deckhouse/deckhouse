@@ -36,11 +36,11 @@
 
     - alert: D8PrometheusMalfunctioning
       expr: |
-        (count(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning", alertstate="firing"})
-        +
-        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="trickster", alertstate="firing"})
-        +
-        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="prometheus", alertstate="firing"})) > 0
+        count(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning", alertstate="firing"}) > 0
+        OR
+        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="trickster", alertstate="firing"}) > 0
+        OR
+        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="prometheus", alertstate="firing"}) > 0
       labels:
         tier: cluster
         d8_module: prometheus

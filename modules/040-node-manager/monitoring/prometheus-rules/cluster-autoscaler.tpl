@@ -76,11 +76,11 @@
 
   - alert: D8ClusterAutoscalerUnavailable
     expr: |
-      (count(ALERTS{alertname=~"D8ClusterAutoscalerManagerPodIsNotReady|D8ClusterAutoscalerPodIsNotRunning|D8ClusterAutoscalerTargetAbsent|D8ClusterAutoscalerTargetDown", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-cloud-instance-manager", deployment="cluster-autoscaler", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="cluster-autoscaler", alertstate="firing"})) > 0
+      count(ALERTS{alertname=~"D8ClusterAutoscalerManagerPodIsNotReady|D8ClusterAutoscalerPodIsNotRunning|D8ClusterAutoscalerTargetAbsent|D8ClusterAutoscalerTargetDown", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-cloud-instance-manager", deployment="cluster-autoscaler", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="cluster-autoscaler", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: node-manager

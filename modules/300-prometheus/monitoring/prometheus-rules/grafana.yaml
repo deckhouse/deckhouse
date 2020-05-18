@@ -84,11 +84,11 @@
 
   - alert: D8GrafanaUnavailable
     expr: |
-      (count(ALERTS{alertname=~"D8GrafanaPodIsNotReady|D8GrafanaPodIsNotRunning|D8GrafanaTargetAbsent|D8GrafanaTargetDown", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", namespace="d8-monitoring", statefulset="grafana", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"KubernetesStatefulSetStuck", namespace="d8-monitoring", statefulset="grafana", alertstate="firing"})) > 0
+      count(ALERTS{alertname=~"D8GrafanaPodIsNotReady|D8GrafanaPodIsNotRunning|D8GrafanaTargetAbsent|D8GrafanaTargetDown", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", namespace="d8-monitoring", statefulset="grafana", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesStatefulSetStuck", namespace="d8-monitoring", statefulset="grafana", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: prometheus
@@ -135,9 +135,9 @@
 
   - alert: D8GrafanaMalfunctioning
     expr: |
-      (count(ALERTS{alertname=~"D8GrafanaPodIsRestartingTooOften", alertstate="firing"})
-      +
-      count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="grafana", alertstate="firing"})) > 0
+      count(ALERTS{alertname=~"D8GrafanaPodIsRestartingTooOften", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="grafana", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: prometheus
