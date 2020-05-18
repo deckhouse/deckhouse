@@ -201,6 +201,7 @@ function kubernetes::_jq_patch() {
   )'
 
   success=false
+  err=""
   for attempt in $(seq 1 5) ; do
     if ! kubectl -n "$namespace" get "$resource" -o json > $tmp ||
        ! jq -S "$cleanup_filter" $tmp > $a ||
@@ -217,8 +218,11 @@ function kubernetes::_jq_patch() {
       return 1
     fi
 
-    if diff -u $a $b || kubectl replace -f $b; then
+    if diff -u $a $b >/dev/null || err=$(kubectl replace -f $b 2>&1 1>/dev/null); then
       success=true
+      break
+    else
+      echo "NOTICE: attempt #$attempt to patch kubernetes resource $namespace/$resource failed, retrying patch"
     fi
   done
 
@@ -226,7 +230,7 @@ function kubernetes::_jq_patch() {
   if [[ "$success" == "true" ]]; then
     return 0
   else
-    >&2 echo "ERROR: Couldn't patch kubernetes resource."
+    >&2 echo "ERROR: Couldn't patch kubernetes resource $namespace/$resource. $err"
     return 1
   fi
 }
