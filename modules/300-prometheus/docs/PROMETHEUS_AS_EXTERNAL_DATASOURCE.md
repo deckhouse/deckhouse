@@ -26,6 +26,7 @@ metadata:
   namespace: d8-monitoring
   annotations:
     kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: basic-auth
     nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -35,13 +36,17 @@ metadata:
       proxy_ssl_session_reuse on;
 spec:
   rules:
-  - host: prometheus-api.k8s.nabokikh.hf.flant.com
+  - host: prometheus-api.example.com
     http:
       paths:
       - backend:
           serviceName: trickster
           servicePort: https
         path: /trickster/main
+  tls:
+  - hosts:
+    - prometheus-api.example.com
+    secretName: example-com-tls  
 ---
 apiVersion: v1
 kind: Secret
@@ -52,15 +57,15 @@ type: Opaque
 data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
-Далее остается только добавить Datasources в Grafana:
+Далее остается только добавить Datasource в Grafana:
 
 **В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>/trickster/main/`**
 
 <img src="./img/prometheus_connect_settings.png" height="500">
 
-**Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`. 
+* **Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`. 
 
-**Огромный минус** подключения таким способом - необходимость создания Ingress-ресурса в системном namespace'е.
+* **Огромный минус** подключения таким способом - необходимость создания Ingress-ресурса в системном namespace'е.
 Deckhouse **не гарантирует** сохранение работоспособности данной схемы подключения в связи с его активными постоянными обновлениями. 
 
 ### Подключение стороннего приложения к Prometheus
