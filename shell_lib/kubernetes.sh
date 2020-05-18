@@ -218,7 +218,7 @@ function kubernetes::_jq_patch() {
       return 1
     fi
 
-    if diff -u $a $b >/dev/null || err=$(kubectl replace -f $b 2>&1 1>/dev/null); then
+    if diff -u $a $b || err=$(kubectl replace -f $b 2>&1 1>/dev/null); then
       success=true
       break
     else
