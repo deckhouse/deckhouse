@@ -16,9 +16,11 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/vmware/govmomi v0.21.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
+	k8s.io/helm v2.16.6+incompatible
+	k8s.io/kubectl v0.17.0
 )
 
 //replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.4-0.20200313141509-0c0fba4d39e1 // branch: fix_in_body_0_19_7
