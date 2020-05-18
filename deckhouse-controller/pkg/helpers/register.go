@@ -8,7 +8,7 @@ import (
 
 	"flant/deckhouse-controller/pkg/helpers/aws"
 	"flant/deckhouse-controller/pkg/helpers/fnv"
-	"flant/deckhouse-controller/pkg/helpers/helm"
+	helm "flant/deckhouse-controller/pkg/helpers/helm_release_tools"
 	"flant/deckhouse-controller/pkg/helpers/openstack"
 	"flant/deckhouse-controller/pkg/helpers/unit"
 	"flant/deckhouse-controller/pkg/helpers/vsphere"
@@ -54,6 +54,16 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	helmReleaseRenameInput := helmReleaseRenameCommand.Arg("input", "String").Required().String()
 	helmReleaseRenameCommand.Action(func(c *kingpin.ParseContext) error {
 		return helm.ReleaseRename(*helmReleaseRenameInput)
+	})
+
+	helmSetReleaseStatusDeployedCommand := helmCommand.Command("set-release-status-deployed", "Sets release status to DEPLOYED")
+	helmSetReleaseStatusDeployedCommand.Action(func(c *kingpin.ParseContext) error {
+		return helm.SetReleaseStatusDeployed()
+	})
+
+	helmSetReleaseInfoCommand := helmCommand.Command("release-info", "Get helm release info")
+	helmSetReleaseInfoCommand.Action(func(c *kingpin.ParseContext) error {
+		return helm.ReleaseInfo()
 	})
 
 	// deckhouse-candi parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
