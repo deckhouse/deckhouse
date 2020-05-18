@@ -27,8 +27,6 @@ const (
 )
 
 const (
-	stateEmpty = ``
-
 	stateLimitsAreSet = `
 apiVersion: apps/v1
 kind: Deployment
