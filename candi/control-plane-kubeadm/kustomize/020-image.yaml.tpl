@@ -1,6 +1,6 @@
 {{- if hasKey . "images" }}
   {{- range $component := (list "kube-apiserver" "kube-controller-manager" "kube-scheduler" "etcd") }}
-    {{- if hasKey $.images ($component | camelcase) }}
+    {{- if hasKey $.images $component }}
 ---
 apiVersion: v1
 kind: Pod
@@ -10,7 +10,7 @@ metadata:
 spec:
   containers:
   - name: {{ $component }}
-    image: {{ pluck ($component | camelcase) $.images }}
+    image: {{ pluck $component $.images | first }}
     {{- end }}
   {{- end }}
 {{- end }}
