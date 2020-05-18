@@ -3,14 +3,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: extended-monitoring
+  name: image-availability-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "image-availability")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: extended-monitoring
+    name: image-availability-exporter
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -18,9 +18,9 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: extended-monitoring
+  name: image-availability-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "image-availability")) | indent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -28,42 +28,37 @@ spec:
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}
-      app: extended-monitoring
+      app: image-availability-exporter
   template:
     metadata:
       labels:
         module: {{ $.Chart.Name }}
-        app: extended-monitoring
+        app: image-availability-exporter
     spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: extended-monitoring
+      serviceAccountName: image-availability-exporter
       containers:
-      - name: extended-monitoring
-        image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoring }}
+      - name: image-availability-exporter
+        image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/image-availability-exporter:{{ .Values.global.modulesImages.tags.extendedMonitoring.imageAvailabilityExporter }}
+        args:
+        - --bind-address=127.0.0.1:8080
+{{- if .Values.extendedMonitoring.imageAvailability }}
+  {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
+        - --ignored-images={{ .Values.extendedMonitoring.imageAvailability.ignoredImages | join "," | quote }}
+  {{- end }}
+{{- end }}
         resources:
           requests:
             cpu: "100m"
-            memory: "32Mi"
-        args:
-        - "/app/extended-monitoring.py"
-        - "127.0.0.1"
-        env:
-        - name: "PYTHONUNBUFFERED"
-          value: "1"
-        livenessProbe:
+            memory: "64Mi"
+        readinessProbe:
           httpGet:
             path: /healthz
             scheme: HTTPS
             port: 8081
-        readinessProbe:
-          httpGet:
-            path: /ready
-            scheme: HTTPS
-            port: 8081
-          timeoutSeconds: 5
       - name: kube-rbac-proxy
         image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -77,7 +72,9 @@ spec:
           name: https-metrics
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
@@ -93,4 +90,4 @@ spec:
                   apiVersion: v1
                   resource: deployments
                   subresource: prometheus-metrics
-                  name: extended-monitoring
+                  name: image-availability-exporter

@@ -1,11 +1,30 @@
-Модуль extended-monitoring
-==========================
+# Модуль extended-monitoring
 
-## Назначение
+Состоит из двух Prometheus exporter'ов:
 
-Добавляет [алерты](#non-namespaced-kubernetes-objects) по месту и inode на нодах, плюс включает «расширенный мониторинг» объектов в [указанных](#конфигурация) `namespace`, с возможностью кастомизации порогов алертов (очень просто включается и рекомендуется для включения как минимум на продуктивных контурах).
+1. `extended-monitoring-exporter` — генерирует метрики на основе аннотаций Kubernetes-объектов;
+2. `image-availability-exporter` — генерирует метрики о проблемах доступа к Docker-образу в registry
 
-## Конфигурация
+## image-availability-exporter
+
+### Назначение
+
+Добавляет метрики и алерты, позволяющие узнать о проблемах доступа к образу, прописанному в поле `image` из Deployments, StatefulSets, DaemonSets, CronJobs, в registry.
+
+### Конфигурация
+
+* `imageAvailabilityExporter`
+  * `ignoredImages` — список имён образов, наличие которых не надо проверять в registry. Например, `alpine:3.12` или `quay.io/test/test:v1.1`.
+    * Формат — массив строк.
+    * Опциональный параметр.
+
+## extended-monitoring-exporter
+
+### Назначение
+
+Добавляет [алерты](#non-namespaced-kubernetes-objects) по месту и по inode на нодах, плюс включает «расширенный мониторинг» объектов в [указанных](#конфигурация) `namespace`, с возможностью кастомизации порогов алертов (очень просто включается и рекомендуется для включения как минимум на продуктивных контурах).
+
+### Конфигурация
 
 Чтобы включить экспортирование extended-monitoring метрик, нужно навесить на Namespace аннотацию `extended-monitoring.flant.com/enabled` любым удобным способом, например:
 - добавить в проект соответствующий helm-чарт (рекомендуемый)
@@ -19,7 +38,7 @@
 
 Слежение за объектом можно отключить индивидуально, поставив на него аннотацию `extended-monitoring.flant.com/enabled=false`. Соответственно, отключатся и аннотации по-умолчанию, а также все алерты, привязанные к аннотациям.
 
-## Стандартные аннотации и поддерживаемые Kubernetes объекты
+### Стандартные аннотации и поддерживаемые Kubernetes объекты
 
 Далее приведён список используемых в Prometheus Rules аннотаций, а также их стандартные значения.
 
@@ -27,11 +46,11 @@
 1. Начинаются с префикса `threshold.extended-monitoring.flant.com/`;
 2. Имеют целочисленное значение в качестве value, за исключением Namespace аннотации `extended-monitoring.flant.com/enabled` (в которой value можно опустить). Указанное в value значение устанавливает порог срабатывания алерта.
 
-### Non-namespaced Kubernetes objects
+#### Non-namespaced Kubernetes objects
 
 Не нуждаются в аннотации на Namespace. Включены по-умолчанию.
 
-#### Node
+##### Node
 
 | Annotation                              | Type          | Default value  |
 |-----------------------------------------|---------------|----------------|
@@ -48,9 +67,9 @@
 
 > ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
 
-### Namespaced Kubernetes objects
+#### Namespaced Kubernetes objects
 
-#### Pod
+##### Pod
 
 | Annotation                              | Type          | Default value  |
 |-----------------------------------------|---------------|----------------|
@@ -67,14 +86,14 @@
 
 > ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
 
-#### Ingress
+##### Ingress
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
 | 5xx-warning  | int (percent) | 10            |
 | 5xx-critical | int (percent) | 20            |
 
-#### Deployment
+##### Deployment
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
@@ -82,7 +101,7 @@
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение чем разрешено в `maxUnavailable` - т.е. при нуле сработает, если недоступно больше чем указано в `maxUnavailable`, а при единице, сработает если недоступно больше чем указано в `maxUnavailable` плюс 1. Таким образом можно у конкретных Deployment, находящихся в namespace со включенным расширенным мониторингом, и которым можно быть недоступными, подкрутить этот параметр, чтобы не получать ненужные алерты.
 
-#### Statefulset
+##### Statefulset
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
@@ -90,7 +109,7 @@
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
-#### DaemonSet
+##### DaemonSet
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
@@ -98,11 +117,11 @@
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
-#### CronJob
+##### CronJob
 
 Работает только выключение через аннотацию `extended-monitoring.flant.com/enabled=false`.
 
-## Как работает
+### Как работает
 
 Модуль экспортирует в Prometheus специальные аннотации Kubernetes объектов. Позволяет улучшить Prometheus правила, путём добавления порога срабатывания для алертов. Использование метрик, экспортируемых данным модулем, позволяет, например, заменить "магические" константы в правилах.
 
@@ -133,6 +152,6 @@ max by (namespace, pod, container) (
 )
 ```
 
-### Development
+#### Development
 
 Информацию о разработке можно получить в [DEVELOPMENT.md](modules/350-extended-monitoring/DEVELOPMENT.md).
