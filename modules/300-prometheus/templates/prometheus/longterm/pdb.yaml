@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.longtermRetentionDays }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -14,3 +15,4 @@ spec:
     matchLabels:
       app: prometheus
       prometheus: longterm
+{{- end }}

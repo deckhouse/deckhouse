@@ -52,6 +52,7 @@ search: prometheus
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
     * По-умолчанию `1095`.
     * Работает совместно с параметром `longtermRetentionGigabytes`.
+    * Если указать `0`, то longterm Prometheus не будет запущен в кластере.
 * `longtermRetentionGigabytes` — сколько гигабайт хранить.
     * По-умолчанию `30` гигабайт.
     * Работает совместно с параметром `longtermRetentionDays`.

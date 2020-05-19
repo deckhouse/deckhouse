@@ -16,7 +16,7 @@
         description: |-
           Служебный prometheus работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
         summary: Служебный prometheus работает некорректно
-
+{{- if .Values.prometheus.longtermRetentionDays }}
     - alert: D8LongtermPrometheusMalfunctioning
       expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus-longterm", alertstate="firing"})
       labels:
@@ -33,6 +33,7 @@
         description: |
           Служебный prometheus longterm работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
         summary: Служебный prometheus longterm работает некорректно
+{{- end }}
 
     - alert: D8PrometheusMalfunctioning
       expr: |
@@ -54,6 +55,7 @@
           Какой-то из deckhouse prometheus работает некорректно. Что именно и с каким именно prometheus не так можно узнать в одном из связанных алертов.
         summary: Какой-то из deckhouse prometheus работает некорректно
 
+{{- if .Values.prometheus.longtermRetentionDays }}
     - alert: D8PrometheusLongtermTargetAbsent
       expr: absent(up{job="prometheus", namespace="d8-monitoring", service="prometheus-longterm"} == 1)
       labels:
@@ -77,7 +79,7 @@
           3. В каком состоянии находится сам под: `kubectl -n d8-monitoring describe pod prometheus-longterm-0`
         summary: >
           В таргетах prometheus нет prometheus longterm
-
+{{- end }}
 
     - alert: D8TricksterTargetAbsent
       expr: absent(up{job="trickster", namespace="d8-monitoring"} == 1)

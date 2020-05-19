@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.longtermRetentionDays }}
 ---
 apiVersion: v1
 kind: Service
@@ -20,3 +21,4 @@ spec:
   selector:
     app: prometheus
     prometheus: longterm
+{{- end }}
