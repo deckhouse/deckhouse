@@ -22,6 +22,11 @@ rules:
   - machinedeployments
   - machines
   - machinesets
+  - awsmachineclasses
+  - gcpmachineclasses
+  - openstackmachineclasses
+  - vspheremachineclasses
+  - yandexmachineclasses
   verbs:
   - get
   - list
