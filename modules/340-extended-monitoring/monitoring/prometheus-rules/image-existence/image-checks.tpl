@@ -112,7 +112,7 @@
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_registry_v1_api_not_supported == 1
     )
   labels:
-    severity_level: "10"
+    severity_level: "9"
     d8_module: extended-monitoring
     d8_component: image-availability-exporter
   annotations:
