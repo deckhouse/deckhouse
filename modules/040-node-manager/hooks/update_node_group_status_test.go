@@ -12,7 +12,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: update_node_group_status :
 		stateCloudNG1 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroups
+kind: NodeGroup
 metadata:
   name: ng1
 spec:
@@ -26,7 +26,7 @@ status:
 		stateCloudNG2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroups
+kind: NodeGroup
 metadata:
   name: ng-2
 spec:
@@ -141,6 +141,76 @@ data:
   ng1: YTY2NWE0NTkyMDQyMmY5ZDQxN2U0ODY3ZWZkYzRmYjhhMDRhMWYzZmZmMWZhMDdlOTk4ZTg2ZjdmN2EyN2FlMw== # sha256sum 123
   ng-2: OGQyM2NmNmM4NmU4MzRhN2FhNmVkZWQ1NGMyNmNlMmJiMmU3NDkwMzUzOGM2MWJkZDVkMjE5Nzk5N2FiMmY3Mg== # sha256sum 321
 `
+
+		failedMachineDeployment = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-failed-ng
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng-2
+spec:
+  replicas: 2
+status:
+  failedMachines:
+  - lastOperation:
+      description: 'Cloud provider message - rpc error: code = FailedPrecondition
+        desc = Image not found #2.'
+      lastUpdateTime: "2020-05-15T15:01:15Z"
+      state: Failed
+      type: Create
+    name: machine-ng-2-aaa
+    ownerRef: korker-3e52ee98-8649499f7
+  - lastOperation:
+      description: 'Cloud provider message - rpc error: code = FailedPrecondition
+        desc = Image not found.'
+      lastUpdateTime: "2020-05-15T15:01:13Z"
+      state: Failed
+      type: Create
+    name: machine-ng-2-bbb
+    ownerRef: korker-3e52ee98-8649499f7
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: machine-ng1-aaa
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng-2
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: machine-ng1-bbb
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng-2
+`
+
+		secondFailedMachineDeployment = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-second-failed-ng
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng-2
+spec:
+  replicas: 2
+status:
+  failedMachines:
+  - lastOperation:
+      description: 'Cloud provider message - rpc error: code = FailedPrecondition
+        desc = Image not found #3.'
+      lastUpdateTime: "2020-05-15T15:05:12Z"
+      state: Failed
+      type: Create
+    name: machine-ng-2-ccc
+    ownerRef: korker-3e52ee98-8649499f7
+`
 	)
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
@@ -167,7 +237,7 @@ data:
 
 		It("Min and max must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":1,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":1,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [], "error": ""}`))
 		})
 	})
 
@@ -179,8 +249,8 @@ data:
 
 		It("Min, max, desired, instances, nodes, ready must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":2,"instances":2,"nodes":2,"ready":1,"upToDate": 2}`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":2,"instances":2,"nodes":2,"ready":1,"upToDate": 2, "lastMachineFailures": [], "error": ""}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [], "error": ""}`))
 		})
 	})
 
@@ -194,6 +264,30 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","nodes":2,"ready":1,"upToDate": 2}`))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"nodes":0,"ready":0,"upToDate": 0}`))
+		})
+	})
+
+	Context("One failed NG MD, Machines, Nodes and zones Secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateCloudNG2 + stateNodes + stateCloudProviderSecret + configurationChecksums + failedMachineDeployment))
+			f.RunHook()
+		})
+
+		It("NG's status.lastMachineFailures must be filled", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.","lastUpdateTime":"2020-05-15T15:01:15Z","state":"Failed","type":"Create"},"name":"machine-ng-2-aaa","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.","lastUpdateTime":"2020-05-15T15:01:13Z","state":"Failed","type":"Create"},"name":"machine-ng-2-bbb","ownerRef":"korker-3e52ee98-8649499f7"}], "error": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2."}`))
+		})
+	})
+
+	Context("One failed NG from two failed MDs, Machines, Nodes and zones Secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateCloudNG2 + stateNodes + stateCloudProviderSecret + configurationChecksums + failedMachineDeployment + secondFailedMachineDeployment))
+			f.RunHook()
+		})
+
+		It("NG's status.lastMachineFailures must be filled", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.","lastUpdateTime":"2020-05-15T15:01:15Z","state":"Failed","type":"Create"},"name":"machine-ng-2-aaa","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.","lastUpdateTime":"2020-05-15T15:01:13Z","state":"Failed","type":"Create"},"name":"machine-ng-2-bbb","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.","lastUpdateTime":"2020-05-15T15:05:12Z","state":"Failed","type":"Create"},"name":"machine-ng-2-ccc","ownerRef":"korker-3e52ee98-8649499f7"}], "error": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3."}`))
 		})
 	})
 })
