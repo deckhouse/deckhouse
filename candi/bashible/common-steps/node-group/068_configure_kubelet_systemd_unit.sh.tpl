@@ -43,5 +43,8 @@ $([ -n "$discovered_node_ip" ] && echo "    --node-ip=${discovered_node_ip} \\")
     --cloud-provider=external \\
 {{- end }}
     --pod-manifest-path=/etc/kubernetes/manifests \\
+{{- if hasKey .nodeGroup "kubelet" }}
+    --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
+{{- end }}
     --v=2
 EOF

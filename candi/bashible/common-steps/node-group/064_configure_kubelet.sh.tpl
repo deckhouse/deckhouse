@@ -1,6 +1,13 @@
 bb-event-on 'bb-sync-file-changed' 'bb-flag-set kubelet-need-restart'
 
-bb-sync-file /var/lib/kubelet/config.yaml - << "EOF"
+# Detect systemd-resolved
+if grep -q '^nameserver 127.0.0.53' /etc/resolv.conf ; then
+  resolvConfPath="/run/systemd/resolve/resolv.conf"
+else
+  resolvConfPath="/etc/resolv.conf"
+fi
+
+bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 authentication:
@@ -71,14 +78,18 @@ kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000
-maxPods: 110
+{{- $max_pods := 110 }}
+{{- if hasKey .nodeGroup "kubelet" }}
+  {{- $max_pods = .nodeGroup.kubelet.maxPods | default $max_pods }}
+{{- end }}
+maxPods: {{ $max_pods }}
 nodeStatusUpdateFrequency: 10s
 podsPerCore: 0
 podPidsLimit: -1
 readOnlyPort: 0
 registryPullQPS: 5
 registryBurst: 10
-resolvConf: /run/systemd/resolve/resolv.conf
+resolvConf: ${resolvConfPath}
 rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true

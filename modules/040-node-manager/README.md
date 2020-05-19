@@ -117,6 +117,14 @@ nodeManager: |
     * Опциональный параметр.
     * Значение по-умолчанию зависит от выбранного облачного провайдера и обычно соответствует всем зонам используемого
       региона.
+* `kubelet` — параметры настройки kubelet'а.
+  * `maxPods` — максимальное количество подов на нодах данной `NodeGroup`.
+    * По-умолчанию `110`.
+  * `rootDir` — Путь к каталогу для файлов kubelet'а (volume mounts, ...).
+    * По-умолчанию `/var/lib/kubelet`.
+* `docker` — параметры настройки docker'а.
+  * `maxConcurrentDownloads` — максимальное количество потоков одновременного скачивания docker образов.
+    * По-умолчанию `3`.
 * `nodeTemplate` — настройки Node объектов в Kubernetes, которые будут добавлены после регистрации ноды.
   * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
     * Пример:
@@ -172,6 +180,11 @@ spec:
     classReference:
       kind: AWSInstanceClass
       name: test
+  kubelet:
+    maxPods: 150
+    rootDir: "/mnt/data/kubelet"
+  docker:
+    maxConcurrentDownloads: 10
   nodeTemplate:
     labels:
       environment: production

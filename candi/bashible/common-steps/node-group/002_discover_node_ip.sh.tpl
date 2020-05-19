@@ -36,7 +36,11 @@ function is_ip_in_cidr() {
   test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
 }
 
-ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | .addr_info[] | .local')
+if bb-is-ubuntu-version? 18.04 ; then
+  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | .addr_info[] | .local')
+elif bb-is-ubuntu-version? 16.04 ; then
+  ip_in_system=$(ip -f inet -br addr | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' -o)
+fi
 
 for cidr in {{ .nodeGroup.static.internalNetworkCIDRs | join " " }}; do
   for ip in $ip_in_system; do

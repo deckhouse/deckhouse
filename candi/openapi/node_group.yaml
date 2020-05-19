@@ -231,3 +231,13 @@ spec:
                 maxConcurrentDownloads:
                   type: integer
                   description: Set the max concurrent downloads for each pull (default 3).
+            kubelet:
+              description: Kubelet settings for nodes.
+              type: object
+              properties:
+                maxPods:
+                  type: integer
+                  description: Set the max count of pods per node (default 110).
+                rootDir:
+                  type: string
+                  description: Directory path for managing kubelet files (volume mounts,etc). (default "/var/lib/kubelet")
