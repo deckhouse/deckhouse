@@ -5,7 +5,14 @@ post-install() {
 }
 {{- end }}
 
-desired_version="5.3.0-51-generic"
+if bb-is-ubuntu-version? 18.04 ; then
+  desired_version="5.3.0-51-generic"
+elif bb-is-ubuntu-version? 16.04 ; then
+  desired_version="4.15.0-99-generic"
+else
+  bb-log-error "Unsupported Ubuntu version"
+  exit 1
+fi
 if [ -f /var/lib/bashible/kernel_version_desired_by_cloud_provider ]; then
   desired_version="$(</var/lib/bashible/kernel_version_desired_by_cloud_provider)"
 fi

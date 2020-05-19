@@ -38,9 +38,8 @@ fi
 
 # Generate nginx config (to the temporary location)
 cat > /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf << END
-{{- if eq .bundle "ubuntu-18.04" }}
+{{- if or (eq .bundle "ubuntu-18.04") (eq .bundle "ubuntu-lts") }}
 user www-data;
-load_module /usr/lib/nginx/modules/ngx_stream_module.so;
 {{- else if eq .bundle "centos-7" }}
 user nginx;
 include /usr/share/nginx/modules/*.conf;

@@ -1,5 +1,5 @@
-{{- if eq .bundle "ubuntu-18.04" }}
-bb-apt-install "nginx=1.14.0-0ubuntu1.7" "libnginx-mod-stream=1.14.0-0ubuntu1.7"
+{{- if or (eq .bundle "ubuntu-18.04") (eq .bundle "ubuntu-lts") }}
+bb-apt-install "nginx=1.18.0-1~$(lsb_release -cs)"
 
 {{- else if eq .bundle "centos-7" }}
 if ! rpm -q nginx >/dev/null >/dev/null ; then
@@ -8,15 +8,16 @@ if ! rpm -q nginx >/dev/null >/dev/null ; then
 fi
 {{- end }}
 
+# Disable default nginx vhost
+if systemctl is-active --quiet nginx ; then
+{{- if ne .runType "ImageBuilding" }}
+  systemctl stop nginx
+{{- end }}
+  systemctl disable nginx
+fi
+
 bb-event-on 'bb-sync-file-changed' '_on_kubernetes_api_proxy_service_changed'
 _on_kubernetes_api_proxy_service_changed() {
-  if systemctl is-active --quiet nginx ; then
-  {{- if ne .runType "ImageBuilding" }}
-    systemctl stop nginx
-  {{- end }}
-    systemctl disable nginx
-  fi
-
   if [ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
     mkdir -p /etc/kubernetes/kubernetes-api-proxy
 
