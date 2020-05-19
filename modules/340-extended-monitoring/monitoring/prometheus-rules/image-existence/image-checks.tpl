@@ -14,7 +14,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Следует проверить наличие образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -35,7 +35,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Следует формат имени образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -56,7 +56,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Container registry недоступен для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -77,7 +77,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Невозможно аутентифицироваться в container registry с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -98,7 +98,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Не хватает прав для загрузки с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -119,7 +119,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Неподдерживаемый формат манифеста для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -140,7 +140,7 @@
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
     plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},tier=cluster,prometheus=deckhouse"
+    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
     description: >
       Произошла неизвестная ошибка для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
@@ -167,7 +167,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_alert_type: "group"
-      plk_grouped_by__main: "UnavailableImagesInCluster,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__main: "UnavailableImagesInCluster,prometheus=deckhouse"
       summary: В Namespace `{{`{{ $labels.namespace }}`}}` наличествует отсутствие образов в container registry.
       description: Подробнее в связанных алертах.
 
