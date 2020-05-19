@@ -80,7 +80,8 @@ func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) 
 					continue
 				}
 
-				if line.Message == "Module run success" {
+				// TODO use module.state label
+				if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
 					stopPrintDots()
 					logboek.LogInfoF("Module %q run successfully\n", line.Module)
 					continue
