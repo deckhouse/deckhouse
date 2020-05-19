@@ -38,6 +38,21 @@ ingressNginx:
           - name: test
             spec:
               config: {}
+              resourcesRequests:
+                __ConstantChoices__:
+                - mode: VPA
+                  static: {}
+                  vpa:
+                    cpu:
+                      max: 200m
+                    memory:
+                      min: 100Mi
+                - mode: Static
+                  static:
+                    cpu: 100m
+                  vpa:
+                    cpu: {}
+                    memory: {}
               ingressClass: nginx
               controllerVersion: "0.25"
               inlet: LoadBalancer

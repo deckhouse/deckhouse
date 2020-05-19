@@ -60,6 +60,14 @@ spec:
   "inlet": "LoadBalancer",
   "loadBalancer": {},
   "hstsOptions": {},
+  "resourcesRequests": {
+    "mode": "VPA",
+    "static": {},
+    "vpa": {
+      "cpu": {},
+      "memory": {}
+    }
+  },
   "hostPortWithProxyProtocol": {},
   "hostPort": {},
   "acceptRequestsFrom": [
@@ -83,6 +91,8 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+  resourcesRequests:
+    mode: Static
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressNginxController
@@ -91,6 +101,14 @@ metadata:
 spec:
   ingressClass: test
   inlet: HostPortWithProxyProtocol
+  resourcesRequests:
+    mode: VPA
+    vpa:
+      mode: Auto
+      cpu:
+        max: 100m
+      memory:
+        max: 200Mi
   hostPortWithProxyProtocol:
     httpPort: 80
     httpsPort: 443
@@ -110,6 +128,11 @@ spec:
 "controllerVersion": "0.25",
 "inlet": "LoadBalancer",
 "hstsOptions": {},
+"resourcesRequests": {
+  "mode": "Static",
+  "static": {},
+  "vpa": {"cpu": {}, "memory": {}}
+},
 "loadBalancer": {},
 "hostPortWithProxyProtocol": {},
 "hostPort": {}
@@ -122,11 +145,13 @@ spec:
 "controllerVersion": "0.25",
 "inlet": "HostPortWithProxyProtocol",
 "hstsOptions": {},
-"loadBalancer": {},
-"hostPortWithProxyProtocol": {
-  "httpPort": 80,
-  "httpsPort": 443
+"resourcesRequests": {
+  "mode": "VPA",
+  "static": {},
+  "vpa": {"cpu": {"max": "100m"}, "memory": {"max": "200Mi"}, "mode": "Auto"}
 },
+"loadBalancer": {},
+"hostPortWithProxyProtocol": {"httpPort": 80, "httpsPort": 443},
 "hostPort": {}
 }`))
 		})

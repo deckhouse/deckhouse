@@ -9,11 +9,18 @@ function __config__() {
     - name: controller
       apiVersion: deckhouse.io/v1alpha1
       kind: IngressNginxController
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom:
       - controller
       jqFilter: |
         .spec.config //= {}
         | .spec.hstsOptions //= {}
+        | .spec.resourcesRequests //= {}
+        | if .spec.resourcesRequests.mode == null then .spec.resourcesRequests.mode = "VPA" else . end
+        | .spec.resourcesRequests.vpa //= {}
+        | .spec.resourcesRequests.vpa.cpu //= {}
+        | .spec.resourcesRequests.vpa.memory //= {}
+        | .spec.resourcesRequests.static //= {}
         | if .spec.inlet == "LoadBalancer" then .spec.loadBalancer //= {} else .spec.loadBalancer |= {} end
         | if .spec.inlet == "HostPort" then .spec.hostPort //= {} else .spec.hostPort |= {} end
         | if .spec.inlet == "HostPortWithProxyProtocol" then .spec.hostPortWithProxyProtocol //= {} else .spec.hostPortWithProxyProtocol |= {} end

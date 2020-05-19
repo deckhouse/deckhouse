@@ -111,8 +111,8 @@ spec:
             hostPortWithProxyProtocol:
               type: object
               anyOf:
-              - {required: ["httpPort"]}
-              - {required: ["httpsPort"]}
+              - {required: ['httpPort']}
+              - {required: ['httpsPort']}
               properties:
                 httpPort:
                   type: integer
@@ -159,6 +159,49 @@ spec:
               description: 'Headers to add to all request.'
               additionalProperties:
                 type: string
+            resourcesRequests:
+              required: ['mode']
+              type: object
+              description: 'Resources requests settings.'
+              properties:
+                mode:
+                  type: string
+                  enum: ['VPA', 'Static']
+                vpa:
+                  type: object
+                  description: 'VPA mode settings.'
+                  properties:
+                    mode:
+                      type: string
+                      enum: ['Initial', 'Auto']
+                    cpu:
+                      type: object
+                      properties:
+                        max:
+                          description: 'Maximum allowed CPU requests.'
+                          type: string
+                        min:
+                          description: 'Minimum allowed CPU requests.'
+                          type: string
+                    memory:
+                      type: object
+                      properties:
+                        max:
+                          description: 'Maximum allowed memory requests.'
+                          type: string
+                        min:
+                          description: 'Minimum allowed memory requests.'
+                          type: string
+                static:
+                  type: object
+                  description: 'Static mode settings.'
+                  properties:
+                    cpu:
+                      type: string
+                      description: 'CPU requests.'
+                    memory:
+                      type: string
+                      description: 'Memory requests.'
             customErrors:
               type: object
               required: ['namespace', 'serviceName', 'codes']
