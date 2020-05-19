@@ -93,8 +93,10 @@ function __main__() {
   fi
 
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
-    ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
+    ng_name="$(context::get snapshots.ngs."$i".filterResult.name)"
 
+    last_machine_failures="$(context::jq -r --arg ng_name "${ng_name}" '([.snapshots.mds[] | select(.filterResult.nodeGroup == $ng_name)] | reduce .[] as $md ([]; . += $md.object.status.failedMachines)) // []')"
+    latest_machine_failure="$(jq -n --argjson last_machine_failures "${last_machine_failures}" '($last_machine_failures | sort_by(.lastOperation.lastUpdateTime | fromdate) | .[-1].lastOperation.description) // ""')"
     all_md_replicas="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.mds[] | select(.filterResult.nodeGroup == $ng_name) | .filterResult.replicas] | add // 0')"
     instances_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.instances[] | select(.filterResult.nodeGroup | test("^" + $ng_name + "-.+"))] | length')"
     nodes_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name)] | length')"
@@ -105,13 +107,15 @@ function __main__() {
 
     # shellcheck disable=SC2016
     status_patch="$(context::jq -c \
-      --argjson i $i \
-      --argjson default_zones_num $default_zones_num \
+      --argjson i "$i" \
+      --argjson default_zones_num "$default_zones_num" \
       --argjson all_md_replicas "$all_md_replicas" \
       --argjson instances_num "$instances_num" \
       --argjson nodes_num "$nodes_num" \
       --argjson ready_nodes_num "$ready_nodes_num" \
       --argjson uptodate_nodes_count "$uptodate_nodes_count" \
+      --argjson last_machine_failures "$last_machine_failures" \
+      --argjson latest_machine_failure "$latest_machine_failure" \
       '.snapshots.ngs[$i].filterResult |
         if .spec.nodeType == "Cloud" then
         {
@@ -119,6 +123,8 @@ function __main__() {
           "max": (.maxPerZone * (.zonesNum // $default_zones_num)),
           "desired": ([$all_md_replicas, (.minPerZone * (.zonesNum // $default_zones_num))] | max),
           "instances": $instances_num,
+          "lastMachineFailures": $last_machine_failures,
+          "error": $latest_machine_failure
         }
         else {} end |
         .nodes = $nodes_num |

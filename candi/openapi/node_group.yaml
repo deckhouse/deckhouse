@@ -93,6 +93,35 @@ spec:
             error:
               type: string
               description: "Error message about possible problems with the group handling."
+            lastMachineFailures:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: "Machine's name."
+                  providerID:
+                    type: string
+                    description: "Machine's ProviderID."
+                  ownerRef:
+                    type: string
+                    description: "Machine owner's name."
+                  lastOperation:
+                    type: object
+                    properties:
+                      description:
+                        type: string
+                        description: "Last operation's description."
+                      lastUpdateTime:
+                        type: string
+                        description: "Timestamp of last status update for operation."
+                      state:
+                        type: string
+                        description: "Machine's operation state."
+                      type:
+                        type: string
+                        description: "Type of operation."
         spec:
           type: object
           required:

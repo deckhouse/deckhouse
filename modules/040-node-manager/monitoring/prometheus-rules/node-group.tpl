@@ -6,8 +6,8 @@
           4. Проблемы с bootstrap'ом machine'ы
 
         Необходимо выполнить следующие действия:
-          1. `kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller`
-          2. Если в логах видно, что machine постоянно создаются и удаляются из-за какой-то ошибки, то при получении списка
+          1. `kubectl get ng {{`{{ $labels.node_group }}`}} -o yaml` В поле `.status.lastMachineFailures` можно будет увидеть все ошибки создания Machines.
+          2. Если Machines постоянно создаются и удаляются из-за какой-то ошибки, то при получении списка
           machine вы увидете, что нет ни одной machine, которая находится в Pending больше пары минут
           `kubectl -n d8-cloud-instance-manager get machine`
           3. Если ошибок в логах нет и machine висят в pending, то надо посмотреть описание machine
