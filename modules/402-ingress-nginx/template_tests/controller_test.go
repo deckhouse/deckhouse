@@ -23,7 +23,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry", "registry.example.com")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
 		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.25")
@@ -50,6 +50,15 @@ key: teststring
     hsts: true
     hstsOptions:
       maxAge: "123456789123456789"
+    resourcesRequests:
+      mode: VPA
+      static: {}
+      vpa:
+        cpu:
+          max: 100m
+        memory:
+          max: 200Mi
+        mode: Auto
     loadBalancer:
       annotations:
         my: annotation
@@ -65,6 +74,12 @@ key: teststring
     inlet: "HostPortWithProxyProtocol"
     hstsOptions: {}
     loadBalancer: {}
+    resourcesRequests:
+      mode: Static
+      static: {}
+      vpa:
+        cpu: {}
+        memory: {}
     hostPortWithProxyProtocol:
       httpPort: 80
       httpsPort: 443
@@ -98,6 +113,23 @@ key: teststring
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "test-next-ingress-nginx-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-next-load-balancer").Exists()).ToNot(BeTrue())
+
+			vpaTest := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-test")
+			Expect(vpaTest.Exists()).To(BeTrue())
+			Expect(vpaTest.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
+			Expect(vpaTest.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
+- containerName: controller
+  minAllowed:
+    cpu: 10m
+    memory: 50Mi
+  maxAllowed:
+    cpu: 100m
+    memory: 200Mi`))
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next").
+				Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`
+cpu: 50m
+memory: 200Mi`))
+			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-test-next").Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
 		})
 	})
 })

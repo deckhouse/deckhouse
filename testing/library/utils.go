@@ -69,11 +69,11 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 
 			_, moduleDir := filepath.Split(path)
 			moduleDirClean := string([]byte(moduleDir)[4:])
-			moduleName := strcase.ToCamel(moduleDirClean)
+			moduleName := strcase.ToLowerCamel(moduleDirClean)
 			moduleImagesValues["global"]["modulesImages"]["tags"][moduleName] = map[string]string{}
 
 			for _, tag := range imageTags {
-				fileName := strcase.ToCamel(tag.File)
+				fileName := strcase.ToLowerCamel(tag.File)
 				moduleImagesValues["global"]["modulesImages"]["tags"][moduleName][fileName] = tag.Object
 			}
 		}

@@ -16,8 +16,22 @@ spec:
     apiVersion: "apps/v1"
     kind: DaemonSet
     name: controller-{{ $name }}
+    {{- if eq $crd.spec.resourcesRequests.mode "VPA" }}
+  updatePolicy:
+    updateMode: {{ $crd.spec.resourcesRequests.vpa.mode | default "Initial" | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: controller
+      maxAllowed:
+        cpu: {{ $crd.spec.resourcesRequests.vpa.cpu.max | default "50m" | quote }}
+        memory: {{ $crd.spec.resourcesRequests.vpa.memory.max | default "200Mi" | quote }}
+      minAllowed:
+        cpu: {{ $crd.spec.resourcesRequests.vpa.cpu.min | default "10m" | quote }}
+        memory: {{ $crd.spec.resourcesRequests.vpa.memory.min | default "50Mi" | quote }}
+    {{- else }}
   updatePolicy:
     updateMode: "Off"
+    {{- end }}
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -58,7 +72,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/controller-{{ $crd.spec.controllerVersion | replace "." "-" }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}
-        name: ingress-nginx-controller
+        name: controller
         env:
         - name: POD_NAME
           valueFrom:
@@ -100,6 +114,12 @@ spec:
             exec:
               command:
                 - /wait-shutdown
+  {{- end }}
+  {{- if eq $crd.spec.resourcesRequests.mode "Static" }}
+        resources:
+          requests:
+            cpu: {{ $crd.spec.resourcesRequests.static.cpu | default "50m" | quote }}
+            memory: {{ $crd.spec.resourcesRequests.static.memory | default "200Mi" | quote }}
   {{- end }}
         ports:
         - containerPort: 80
