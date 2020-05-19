@@ -28,12 +28,12 @@ spec:
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}
-      app: extended-monitoring
+      app: extended-monitoring-exporter
   template:
     metadata:
       labels:
         module: {{ $.Chart.Name }}
-        app: extended-monitoring
+        app: extended-monitoring-exporter
     spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
