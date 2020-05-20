@@ -1,7 +1,7 @@
 - name: kubernetes.extended-monitoring
   rules:
-  - alert: ExtendedMonitoringDown
-    expr: absent(up{job="extended-monitoring"} == 1)
+  - alert: ExtendedMonitoringTargetDown
+    expr: absent(up{job="extended-monitoring-exporter"} == 1)
     for: 5m
     labels:
       impact: critical
@@ -19,7 +19,7 @@
         * и [пр](https://github.com/deckhouse/deckhouse/tree/master/modules/350-extended-monitoring).
 
         Куда смотреть:
-        1. `kubectl -n d8-monitoring describe deploy extended-monitoring`
-        2. `kubectl -n d8-monitoring describe pod -l app=extended-monitoring`
+        1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`
+        2. `kubectl -n d8-monitoring describe pod -l app=extended-monitoring-exporter`
       summary: >
         Extended-monitoring is down

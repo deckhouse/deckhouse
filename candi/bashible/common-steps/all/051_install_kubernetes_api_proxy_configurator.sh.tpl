@@ -1,3 +1,10 @@
+bb-event-on 'bb-sync-file-changed' '_on_kubernetes_api_proxy_configurator_changed'
+_on_kubernetes_api_proxy_configurator_changed() {
+  if systemctl is-enabled --quiet kubernetes-api-proxy 2>/dev/null ; then
+    systemctl restart kubernetes-api-proxy-configurator
+  fi
+}
+
 bb-sync-file /var/lib/bashible/kubernetes-api-proxy-configurator.sh - << "EOF"
 #!/bin/bash
 

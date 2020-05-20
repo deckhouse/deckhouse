@@ -7,7 +7,7 @@ global:
       common:
         kubeRbacProxy: hashstring
       extendedMonitoring:
-        extendedMonitoring: hashstring
+        extendedMonitoringExporter: hashstring
         imageAvailabilityExporter: hashstring
   discovery:
     clusterControlPlaneIsHighlyAvailable: true
