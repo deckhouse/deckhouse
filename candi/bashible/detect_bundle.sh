@@ -6,11 +6,11 @@ if [ -e /etc/os-release ]; then
   case $bundleName in
     centos-7)
       echo $bundleName
-      return 0
+      exit 0
     ;;
     ubuntu-16.04|ubuntu-18.04)
       echo "ubuntu-lts"
-      return 0
+      exit 0
     ;;
     "-")
       >&2 echo "ERROR: Can't determine OS! No ID and VERSION_ID in /etc/os-release."

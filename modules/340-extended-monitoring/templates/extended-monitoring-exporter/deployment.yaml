@@ -3,14 +3,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: extended-monitoring
+  name: extended-monitoring-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring-exporter")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: extended-monitoring
+    name: extended-monitoring-exporter
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -18,9 +18,9 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: extended-monitoring
+  name: extended-monitoring-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring-exporter")) | indent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -42,7 +42,7 @@ spec:
       serviceAccountName: extended-monitoring-exporter
       containers:
       - name: extended-monitoring
-        image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoring }}
+        image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring-exporter:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoringExporter }}
         resources:
           requests:
             cpu: "100m"
@@ -93,4 +93,4 @@ spec:
                   apiVersion: v1
                   resource: deployments
                   subresource: prometheus-metrics
-                  name: extended-monitoring
+                  name: extended-monitoring-exporter
