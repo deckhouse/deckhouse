@@ -1,4 +1,8 @@
 {{- if or (eq .bundle "ubuntu-18.04") (eq .bundle "ubuntu-lts") }}
+# Migration 2020-05-20: Remove after release
+if bb-apt-hold? "libnginx-mod-stream" ; then
+  bb-apt-unhold "libnginx-mod-stream"
+fi
 bb-apt-install "nginx=1.18.0-1~$(lsb_release -cs)"
 
 {{- else if eq .bundle "centos-7" }}
