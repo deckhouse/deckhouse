@@ -37,7 +37,7 @@ spec:
         args:
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
-        - "--kubelet-registration-path=/var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock"
+        - "--kubelet-registration-path=/var/lib/kubelet/csi-plugins/ebs.csi.aws.com/csi.sock"
         lifecycle:
           preStop:
             exec:
@@ -85,7 +85,7 @@ spec:
           type: Directory
       - name: plugin-dir
         hostPath:
-          path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+          path: /var/lib/kubelet/csi-plugins/ebs.csi.aws.com/
           type: DirectoryOrCreate
       - name: device-dir
         hostPath:

@@ -37,7 +37,7 @@ spec:
         args:
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
-        - "--kubelet-registration-path=/var/lib/kubelet/plugins/pd.csi.storage.gke.io/csi.sock"
+        - "--kubelet-registration-path=/var/lib/kubelet/csi-plugins/pd.csi.storage.gke.io/csi.sock"
         lifecycle:
           preStop:
             exec:
@@ -87,7 +87,7 @@ spec:
           type: Directory
       - name: plugin-dir
         hostPath:
-          path: /var/lib/kubelet/plugins/pd.csi.storage.gke.io/
+          path: /var/lib/kubelet/csi-plugins/pd.csi.storage.gke.io/
           type: DirectoryOrCreate
       - name: device-dir
         hostPath:

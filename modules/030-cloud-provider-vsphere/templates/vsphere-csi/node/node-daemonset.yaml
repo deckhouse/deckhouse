@@ -62,7 +62,7 @@ spec:
         - name: ADDRESS
           value: "/csi/csi.sock"
         - name: DRIVER_REG_SOCK_PATH
-          value: "/var/lib/kubelet/plugins/vsphere.csi.vmware.com/csi.sock"
+          value: "/var/lib/kubelet/csi-plugins/vsphere.csi.vmware.com/csi.sock"
         securityContext:
           privileged: true
         volumeMounts:
@@ -111,7 +111,7 @@ spec:
           type: DirectoryOrCreate
       - name: plugin-dir
         hostPath:
-          path: /var/lib/kubelet/plugins/vsphere.csi.vmware.com
+          path: /var/lib/kubelet/csi-plugins/vsphere.csi.vmware.com
           type: DirectoryOrCreate
       - name: pods-mount-dir
         hostPath:
