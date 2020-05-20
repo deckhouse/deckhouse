@@ -106,27 +106,6 @@
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
     summary: Не хватает прав для загрузки с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`.
 
-- alert: {{ $controllerKind }}OldRegistryFormat
-  expr: |
-    max by (namespace, {{ $controllerKind | lower }}, container, image) (
-      k8s_image_availability_exporter_{{ $controllerKind | lower }}_registry_v1_api_not_supported == 1
-    )
-  labels:
-    severity_level: "9"
-    d8_module: extended-monitoring
-    d8_component: image-availability-exporter
-  annotations:
-    plk_protocol_version: "1"
-    plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
-    description: >
-      Неподдерживаемый формат манифеста для образа `{{`{{ $labels.image }}`}}`
-      в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
-      в контейнере `{{`{{ $labels.container }}`}}` в registry.
-    summary: Неподдерживаемый формат манифеста для образа `{{`{{ $labels.image }}`}}`.
-
 - alert: {{ $controllerKind }}UnknownError
   expr: |
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
@@ -159,7 +138,7 @@
 {{- end }}
 
   - alert: UnavailableImagesInNamespace
-    expr: (count by (namespace) (ALERTS{alertname=~".+ImageAbsent|.+BadImageFormat|.+RegistryUnavailable|.+AuthenticationFailure|.+AuthorizationFailure|.+OldRegistryFormat|.+UnknownError", alertstate="firing"})) > 0
+    expr: (count by (namespace) (ALERTS{alertname=~".+ImageAbsent|.+BadImageFormat|.+RegistryUnavailable|.+AuthenticationFailure|.+AuthorizationFailure|.+UnknownError", alertstate="firing"})) > 0
     labels:
       d8_module: extended-monitoring
       d8_component: image-availability-exporter
