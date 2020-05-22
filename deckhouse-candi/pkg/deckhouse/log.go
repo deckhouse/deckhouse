@@ -15,10 +15,11 @@ import (
 )
 
 type logLine struct {
-	Module  string `json:"module,omitempty"`
-	Level   string `json:"level,omitempty"`
-	Output  string `json:"output,omitempty"`
-	Message string `json:"msg,omitempty"`
+	Module    string `json:"module,omitempty"`
+	Level     string `json:"level,omitempty"`
+	Output    string `json:"output,omitempty"`
+	Message   string `json:"msg,omitempty"`
+	Component string `json:"operator.component,omitempty"`
 }
 
 func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) error {
@@ -74,7 +75,7 @@ func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) 
 					return err
 				}
 
-				if line.Level == "error" || line.Output == "stderr" {
+				if line.Level == "error" || (line.Output == "stderr" && line.Component != "tiller") {
 					stopPrintDots()
 					logboek.LogWarnLn(line.Message)
 					continue

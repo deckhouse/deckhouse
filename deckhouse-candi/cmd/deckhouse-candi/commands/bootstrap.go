@@ -2,15 +2,6 @@ package commands
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-
-	"github.com/flant/logboek"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
-
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/deckhouse"
@@ -19,6 +10,13 @@ import (
 	"flant/deckhouse-candi/pkg/ssh"
 	"flant/deckhouse-candi/pkg/template"
 	"flant/deckhouse-candi/pkg/terraform"
+	"fmt"
+	"github.com/flant/logboek"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 const banner = `
@@ -70,7 +68,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var nodeIP string
-		var masterInstanceClass []byte
+		// var masterInstanceClass []byte
 		if metaConfig.ClusterType == "Cloud" {
 			err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
 				basePipelineResult, err := terraform.NewPipeline("base-infrastructure", app.TerraformStateDir, metaConfig, terraform.GetBasePipelineResult).Run()
@@ -92,7 +90,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 				_ = json.Unmarshal(masterPipelineResult["masterIP"], &app.SshHost)
 				_ = json.Unmarshal(masterPipelineResult["nodeIP"], &nodeIP)
-				masterInstanceClass = masterPipelineResult["masterInstanceClass"]
+				// masterInstanceClass = masterPipelineResult["masterInstanceClass"]
 
 				sshClient.Settings.Host = app.SshHost
 
@@ -209,6 +207,33 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
+		err = logboek.LogProcess("⛺ Reboot master ⛺", log.TaskOptions(), func() error {
+			rebootCmd := sshClient.Command("sudo", "reboot").Sudo()
+			if err := rebootCmd.Run(); err != nil {
+				if ee, ok := err.(*exec.ExitError); ok {
+					if ee.ExitCode() == 255 {
+						return nil
+					}
+				}
+				return fmt.Errorf("shutdown error: stdout: %s stderr: %s %v", rebootCmd.StdoutBuffer.String(), rebootCmd.StderrBuffer.String(), err)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		err = logboek.LogProcess("🚝 Wait for SSH on master become ready again 🚝", log.TaskOptions(), func() error {
+			err = sshClient.Check().AwaitAvailability()
+			if err != nil {
+				return fmt.Errorf("await master available: %v", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
 		err = logboek.LogProcess("🛥️ Install Deckhouse 🛥️", log.TaskOptions(), func() error {
 			var kubeCl *kube.KubernetesClient
 			err := logboek.LogProcess("Start Proxy", log.BoldOptions(), func() error {
@@ -222,9 +247,14 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
+			err = deckhouse.WaitForKubernetesAPI(kubeCl)
+			if err != nil {
+				return fmt.Errorf("deckhouse wait api: %v", err)
+			}
+
 			err = deckhouse.CreateDeckhouseManifests(kubeCl, &installConfig)
 			if err != nil {
-				return fmt.Errorf("deckhouse install: %v", err)
+				return fmt.Errorf("deckhouse create manifests: %v", err)
 			}
 
 			err = deckhouse.WaitForReadiness(kubeCl, &installConfig)

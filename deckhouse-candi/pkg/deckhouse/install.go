@@ -111,22 +111,6 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 				return err
 			},
 		},
-		{
-			name: `Deployment "deckhouse"`,
-			manifest: func() interface{} {
-				return generateDeckhouseDeployment(
-					image, cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired(),
-				)
-			},
-			createTask: func(manifest interface{}) error {
-				_, err := client.AppsV1().Deployments("d8-system").Create(manifest.(*appsv1.Deployment))
-				return err
-			},
-			updateTask: func(manifest interface{}) error {
-				_, err := client.AppsV1().Deployments("d8-system").Update(manifest.(*appsv1.Deployment))
-				return err
-			},
-		},
 	}
 
 	if cfg.IsRegistryAccessRequired() {
@@ -192,6 +176,23 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 			},
 		})
 	}
+
+	tasks = append(tasks, createManifestTask{
+		name: `Deployment "deckhouse"`,
+		manifest: func() interface{} {
+			return generateDeckhouseDeployment(
+				image, cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired(),
+			)
+		},
+		createTask: func(manifest interface{}) error {
+			_, err := client.AppsV1().Deployments("d8-system").Create(manifest.(*appsv1.Deployment))
+			return err
+		},
+		updateTask: func(manifest interface{}) error {
+			_, err := client.AppsV1().Deployments("d8-system").Update(manifest.(*appsv1.Deployment))
+			return err
+		},
+	})
 
 	return logboek.LogProcess("Create Manifests", log.BoldOptions(), func() error {
 		for _, task := range tasks {
@@ -387,5 +388,22 @@ func CreateNodeGroup(client *kube.KubernetesClient, data map[string]interface{})
 			time.Sleep(15 * time.Second)
 		}
 		return fmt.Errorf("failed waiting for NodeGroup")
+	})
+}
+
+func WaitForKubernetesAPI(client *kube.KubernetesClient) error {
+	return logboek.LogProcess("Wait for Kubernetes API to become ready", log.BoldOptions(), func() error {
+		for i := 1; i < 45; i++ {
+			_, err := client.CoreV1().Namespaces().Get("kube-system", metav1.GetOptions{})
+			if err == nil {
+				logboek.LogInfoLn("Kubernetes API ready")
+				return nil
+			}
+
+			logboek.LogInfoF("[Attempt #%v of 45] Waiting for Kubernetes API to become ready, next attempt in 5s\n", i)
+			logboek.LogInfoF("%v\n\n", err)
+			time.Sleep(5 * time.Second)
+		}
+		return fmt.Errorf("failed waiting for Kubernetes API to become ready")
 	})
 }
