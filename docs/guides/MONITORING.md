@@ -192,3 +192,4 @@ spec:
   selector:
     app: my-alertmanager
 ```
+**Важно!!** если вы создаете Endpoints для Service вручную (например для использования внешнего alertmanager'а), обязательно указывать имя порта (name) и в Service, и в Endpoints. 

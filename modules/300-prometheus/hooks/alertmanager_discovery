@@ -21,7 +21,7 @@ function __config__() {
           {
             "namespace": .metadata.namespace,
             "name": .metadata.name,
-            "port": .spec.ports[0].port,
+            "port": (if .spec.ports[0] then .spec.ports[0].name // .spec.ports[0].port else null end),
             "pathPrefix": (.metadata.annotations."prometheus.deckhouse.io/alertmanager-path-prefix" // "/")
           }
         }
