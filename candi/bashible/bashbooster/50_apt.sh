@@ -66,7 +66,7 @@ bb-apt-install() {
         then
             bb-apt-update
             bb-log-info "Installing package '$PACKAGE'"
-            apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages -y "$PACKAGE"
+            apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages --allow-downgrades -y "$PACKAGE"
             bb-apt-hold $PACKAGE
             bb-exit-on-error "Failed to install package '$PACKAGE'"
             echo "$PACKAGE" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
