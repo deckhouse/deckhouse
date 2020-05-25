@@ -21,6 +21,7 @@ metadata:
 provisioner: csi-cinderplugin
 parameters:
   type: {{ $volumeType | quote }}
+allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
   {{- end }}
 {{- end }}
