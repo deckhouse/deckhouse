@@ -209,11 +209,14 @@ class GetHandler(BaseHTTPRequestHandler):
             self.end_headers()
         else:
             exported = []
+            enabled_nses = []
 
             # iterate over namespaced objects in explicitly enabled via annotation Namespaces
             ns_list = corev1.list_namespace()
             for namespace in (ns for ns in ns_list.items if ns.metadata.annotations and
                                                             EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()):
+                enabled_nses.append('extended_monitoring_enabled{{namespace="{}"}} 1'.format(namespace.metadata.name))
+
                 for kube_object in KUBERNETES_NAMESPACED_OBJECTS:
                     exported.extend(kube_object.list_threshold_annotated_objects(namespace.metadata.name))
 
@@ -224,6 +227,8 @@ class GetHandler(BaseHTTPRequestHandler):
             # TYPE extended_monitoring_annotations gauge\n"""
             for annotated_object in exported:
                 response += annotated_object.formatted
+
+            response += '\n'.join(enabled_nses)
 
             self.send_response(200)
             self.send_header('Content-Type',
