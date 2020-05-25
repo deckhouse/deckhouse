@@ -49,8 +49,8 @@ cat > /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf << END
 user www-data;
 {{- else if eq .bundle "centos-7" }}
 user nginx;
-include /usr/share/nginx/modules/*.conf;
 {{- end }}
+
 pid /var/run/kubernetes-api-proxy.pid;
 error_log stderr notice;
 

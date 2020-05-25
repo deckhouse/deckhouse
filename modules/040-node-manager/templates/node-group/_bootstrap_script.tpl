@@ -80,14 +80,14 @@ while [ "$patch_pending" = true ] ; do
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"tcpEndpoint\": \"${tcp_endpoint}\"} }]" \
-      "https://$server/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname)/status" ; then
+      "https://$server/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname -s)/status" ; then
 
-      echo "Successfully patched machine $(hostname) status."
+      echo "Successfully patched machine $(hostname -s) status."
       patch_pending=false
 
       break
     else
-      >&2 echo "Failed to patch machine $(hostname) status."
+      >&2 echo "Failed to patch machine $(hostname -s) status."
       sleep 10
       continue
     fi

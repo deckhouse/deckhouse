@@ -3,7 +3,8 @@ rm -f /etc/systemd/system/kubelet.service.d/cim.conf
 rm -rf /var/lib/kubelet/manifests
 
 # In case we adopting node bootstrapped by kubeadm
-rm -f /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+rm -f /etc/systemd/system/kubelet.service.d/10-kubeadm.conf     # for ubuntu
+rm -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf # for centos
 rm -f /var/lib/kubelet/kubeadm-flags.env
 
 # Read previously discovered IP
