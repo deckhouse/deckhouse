@@ -232,6 +232,7 @@ public-network-name = "myextnetname"
 public-network-name = "myextnetname2"
 internal-network-name = "myintnetname"
 internal-network-name = "myintnetname2"
+ipv6-support-disabled = true
 [LoadBalancer]
 create-monitor = "true"
 subnet-id = "my-subnet-id"
