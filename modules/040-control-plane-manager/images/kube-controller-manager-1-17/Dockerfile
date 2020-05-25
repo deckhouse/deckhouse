@@ -1,4 +1,4 @@
-FROM k8s.gcr.io/kube-controller-manager:v1.15.12
+FROM k8s.gcr.io/kube-controller-manager:v1.17.6
 
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 

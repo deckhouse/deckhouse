@@ -1,9 +1,9 @@
 FROM alpine:3.11
 
 RUN apk add --no-cache jq curl bash gettext grep
-RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v1.16.8/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && \
+RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v1.16.10/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && \
   chmod +x /usr/local/bin/kubectl
-RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v1.16.8/bin/linux/amd64/kubeadm -o /usr/local/bin/kubeadm && \
+RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v1.16.10/bin/linux/amd64/kubeadm -o /usr/local/bin/kubeadm && \
   chmod +x /usr/local/bin/kubeadm
 RUN curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl-certinfo_1.4.1_linux_amd64 -o /usr/local/bin/cfssl-certinfo && \
   chmod +x /usr/local/bin/cfssl-certinfo

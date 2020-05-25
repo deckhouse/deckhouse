@@ -1,9 +1,13 @@
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 {{- if eq .clusterConfiguration.kubernetesVersion "1.15" }}
-kubernetesVersion: 1.15.11
+kubernetesVersion: 1.15.12
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.16" }}
-kubernetesVersion: 1.16.8
+kubernetesVersion: 1.16.10
+{{- else if eq .clusterConfiguration.kubernetesVersion "1.17" }}
+kubernetesVersion: 1.17.6
+{{- else if eq .clusterConfiguration.kubernetesVersion "1.18" }}
+kubernetesVersion: 1.18.3
 {{- else }}
   {{- join (slice "Kubernetes version" .clusterConfiguration.kubernetesVersion "is not supported!") " "| fail }}
 {{- end }}
