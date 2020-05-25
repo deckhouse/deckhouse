@@ -6,6 +6,8 @@
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_absent == 1
     )
+    * on (namespace) group_left()
+    max by (namespace) (extended_monitoring_enabled)
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -27,6 +29,8 @@
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_bad_image_format == 1
     )
+    * on (namespace) group_left()
+    max by (namespace) (extended_monitoring_enabled)
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -48,6 +52,8 @@
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_registry_unavailable == 1
     )
+    * on (namespace) group_left()
+    max by (namespace) (extended_monitoring_enabled)
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -69,6 +75,8 @@
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_authentication_failure == 1
     )
+    * on (namespace) group_left()
+    max by (namespace) (extended_monitoring_enabled)
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -90,6 +98,8 @@
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_authorization_failure == 1
     )
+    * on (namespace) group_left()
+    max by (namespace) (extended_monitoring_enabled)
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -111,6 +121,8 @@
     max by (namespace, {{ $controllerKind | lower }}, container, image) (
       k8s_image_availability_exporter_{{ $controllerKind | lower }}_unknown_error == 1
     )
+    * on (namespace) group_left()
+    max by (namespace) (extended_monitoring_enabled)
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
