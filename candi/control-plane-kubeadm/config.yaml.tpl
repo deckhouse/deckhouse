@@ -26,9 +26,15 @@ apiServer:
   {{- end }}
   {{- if .apiserver.bindToWildcard }}
     bind-address: "0.0.0.0"
+  {{- else if .nodeIP }}
+    bind-address: {{ .nodeIP | quote }}
+  {{- else }}
+    bind-address: "0.0.0.0"
+  {{- end }}
+  {{- if .apiserver.oidcCA }}
+    oidc-ca-file: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
   {{- end }}
   {{- if .apiserver.oidcIssuerURL }}
-    oidc-ca-file: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
     oidc-client-id: kubernetes
     oidc-groups-claim: groups
     oidc-username-claim: email

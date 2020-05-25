@@ -4,7 +4,7 @@ kind: Config
 clusters:
   - name: user-authz-webhook
     cluster:
-      certificate-authority-data: {{ required ".webhookCA is required" .webhookCA | quote }}
+      certificate-authority-data: {{ required ".webhookCA is required" .webhookCA | b64enc }}
       server: {{ required ".webhookURL" .webhookURL | quote }}
 users:
   - name: user-authz-webhook
