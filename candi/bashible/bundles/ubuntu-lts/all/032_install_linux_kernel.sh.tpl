@@ -20,7 +20,7 @@ fi
 if bb-is-ubuntu-version? 18.04 ; then
   if (! bb-apt-package? "linux-image-${desired_version}") || (! bb-apt-package? "linux-modules-${desired_version}") || (! bb-apt-package? "linux-headers-${desired_version}"); then
     bb-deckhouse-get-disruptive-update-approval
-    bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-headers-${desired_version}"
+    bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-modules-extra-${desired_version}" "linux-headers-${desired_version}"
   fi
 elif bb-is-ubuntu-version? 16.04 ; then
   if (! bb-apt-package? "linux-image-unsigned-${desired_version}") || (! bb-apt-package? "linux-modules-${desired_version}") || (! bb-apt-package? "linux-headers-${desired_version}"); then
