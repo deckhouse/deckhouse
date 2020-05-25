@@ -73,14 +73,16 @@ function set_etcdctl_credentials() {
 function __main__() {
   set_etcdctl_credentials
 
-  existing_members="$(etcdctl member list | cut -d',' -f3 | sort)"
-  existing_members="${existing_members//[[:space:]]/}"
+  existing_members="$(etcdctl member list)"
+  existing_members_names="$(echo "$existing_members" | cut -d',' -f3 | sort)"
+  existing_members_names="${existing_members_names//[[:blank:]]/}"
   node_names="$(context::jq -er '.snapshots.nodes[].filterResult')"
   new_members="$(echo "$node_names" | sort)"
 
-  remove_list="$(comm -23 <(echo "$existing_members") <(echo "$new_members"))"
+  remove_list="$(comm -23 <(echo "$existing_members_names") <(echo "$new_members"))"
   IFS=$'\n'
   for member in $remove_list; do
+    unset IFS
     echo "Removing $member from cluster"
     member_hash="$(echo "$existing_members" | grep "$member" | cut -d',' -f1)"
     etcdctl member remove "$member_hash"

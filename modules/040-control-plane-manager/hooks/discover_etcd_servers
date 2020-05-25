@@ -82,7 +82,7 @@ function __main__() {
     set_etcdctl_credentials "$formatted_unique_eps"
 
     actual_members="$(etcdctl member list | cut -d',' -f5)"
-    actual_members="${actual_members//[[:space:]]/}"
+    actual_members="${actual_members//[[:blank:]]/}"
     non_empty="$(jq -n --arg actual_members "$actual_members" '$actual_members | split("\n") | map(select(length > 0))')"
 
     if jq -ne --arg non_empty "$non_empty" '($non_empty | length) == 0' >/dev/null; then
