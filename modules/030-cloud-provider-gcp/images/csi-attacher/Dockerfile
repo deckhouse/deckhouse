@@ -1,1 +1,1 @@
-FROM gke.gcr.io/csi-attacher:v1.1.0-gke.0
+FROM gke.gcr.io/csi-attacher:v2.1.1-gke.0
