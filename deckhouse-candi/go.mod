@@ -12,7 +12,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/flant/kubedog v0.3.4
 	github.com/flant/logboek v0.3.4
-	github.com/flant/shell-operator v1.0.0-beta.9.0.20200414173230-b8966f9d8851 // branch: +feat_kube_server
+	github.com/flant/shell-operator v1.0.0-beta.10
 	github.com/go-openapi/spec v0.19.3
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/go-openapi/validate v0.19.7

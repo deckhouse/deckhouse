@@ -10,7 +10,6 @@ import (
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
-	"github.com/flant/shell-operator/pkg/executor"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
@@ -46,10 +45,6 @@ func main() {
 		Action(func(c *kingpin.ParseContext) error {
 			sh_app.SetupLogging()
 			log.Infof("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
-
-			// Be a good parent - clean up after the child processes
-			// in case if addon-operator is a PID 1 process.
-			go executor.Reap()
 
 			operator := deckhouse.DefaultDeckhouse()
 			err := deckhouse.InitAndStart(operator)
