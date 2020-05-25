@@ -1,5 +1,5 @@
 FROM alpine:3.11.2
-COPY --from=gcr.io/google-containers/coredns:1.6.6 /coredns  /coredns
+COPY --from=coredns/coredns:1.6.9 /coredns  /coredns
 COPY start.sh /
 COPY liveness.sh /
 COPY stop.sh /
