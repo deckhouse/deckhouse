@@ -85,7 +85,7 @@ function main() {
     attempt=0
     until
       node_data="$(
-        kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "${HOSTNAME}" -o json | jq '
+        kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
         {
           "resourceVersion": .metadata.resourceVersion,
           "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
@@ -100,7 +100,7 @@ function main() {
         exit 1
       fi
       kubectl \
-        --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${HOSTNAME}" \
+        --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
         --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
         update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
     done
@@ -108,7 +108,7 @@ function main() {
     >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
     attempt=0
     until
-      kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "${HOSTNAME}" -o json | \
+      kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
     do
       attempt=$(( attempt + 1 ))
@@ -117,7 +117,7 @@ function main() {
         exit 1
       fi
       echo "Steps are waiting for approval to start:"
-      echo "kubectl annotate node ${HOSTNAME} update.node.deckhouse.io/approved="
+      echo "kubectl annotate node $(hostname -s) update.node.deckhouse.io/approved="
       echo "Retry in 10sec..."
       sleep 10
     done
@@ -146,7 +146,17 @@ function main() {
   done
 
 {{ if eq .runType "Normal" }}
-  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node ${HOSTNAME} --overwrite node.deckhouse.io/configuration-checksum="${CONFIGURATION_CHECKSUM}"
+  attempt=0
+  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(hostname -s) --overwrite node.deckhouse.io/configuration-checksum="${CONFIGURATION_CHECKSUM}"; do
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM} after ${MAX_RETRIES} retries."
+      exit 1
+    fi
+    >&2 echo "Failed to annotate node $(hostname -s) with annotation node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM} ... retry in 10 seconds."
+    sleep 10
+  done
+
   echo "$CONFIGURATION_CHECKSUM" > $CONFIGURATION_CHECKSUM_FILE
   rm -f /var/lib/bashible/first_run
 {{ end }}

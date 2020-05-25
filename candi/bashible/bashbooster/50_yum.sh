@@ -1,4 +1,5 @@
 bb-var BB_YUM_UPDATED false
+bb-var BB_YUM_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_packages"
 
 bb-yum?() {
     bb-exe? yum
@@ -15,32 +16,46 @@ bb-yum-package?() {
 }
 
 bb-yum-update() {
-    $BB_YUM_UPDATED && return 0
+    bb-flag? yum-updated && return 0
     bb-log-info 'Updating yum cache'
     yum clean all
     yum makecache
-    BB_YUM_UPDATED=true
+    bb-flag-set yum-updated
 }
 
 bb-yum-install() {
+    PACKAGES_TO_INSTALL=()
     for PACKAGE in "$@"
     do
+        local NEED_FIRE=false
+        if test -f "$BB_YUM_UNHANDLED_PACKAGES_STORE" && grep -Eq "^${PACKAGE}$" "$BB_YUM_UNHANDLED_PACKAGES_STORE"; then
+            NEED_FIRE=true
+        fi
         if ! bb-yum-package? "$PACKAGE"
         then
-            bb-yum-update
-            bb-log-info "Installing package '$PACKAGE'"
-            yum install -y "$PACKAGE"
-            bb-yum-versionlock "$PACKAGE"
-            bb-exit-on-error "Failed to install package '$PACKAGE'"
-            bb-event-fire "bb-package-installed" "$PACKAGE"
+            PACKAGES_TO_INSTALL+=("$PACKAGE")
         fi
     done
+
+    if [ "${#PACKAGES_TO_INSTALL[@]}" -gt "0" ]
+    then
+        bb-yum-update
+        bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
+        yum install -y ${PACKAGES_TO_INSTALL[@]}
+        bb-yum-versionlock ${PACKAGES_TO_INSTALL[@]}
+        bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
+        printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_YUM_UNHANDLED_PACKAGES_STORE"
+        NEED_FIRE=true
+    fi
+    if [[ "$NEED_FIRE" == "true" ]]; then
+        bb-event-fire "bb-package-installed" "$PACKAGE"
+    fi
 }
 
 bb-yum-remove() {
     for PACKAGE in "$@"
     do
-        if ! bb-yum-package? "$PACKAGE"
+        if bb-yum-package? "$PACKAGE"
         then
             bb-yum-update
             bb-log-info "Removing package '$PACKAGE'"

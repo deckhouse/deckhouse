@@ -19,7 +19,7 @@ if [ -f /etc/kubernetes/admin.conf ]; then
       sleep 1
     done
 
-  elif kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/${HOSTNAME}$"; then
+  elif kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/$(hostname -s)$"; then
     >&2 echo "ERROR: Trying to re-bootstrap cluster which has more than one node."
     exit 1
   fi

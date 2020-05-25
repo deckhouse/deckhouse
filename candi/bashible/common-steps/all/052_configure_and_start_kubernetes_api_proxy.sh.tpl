@@ -4,13 +4,18 @@ if bb-apt-hold? "libnginx-mod-stream" ; then
   bb-apt-unhold "libnginx-mod-stream"
 fi
 bb-apt-install "nginx=1.18.0-1~$(lsb_release -cs)"
-
 {{- else if eq .bundle "centos-7" }}
-if ! rpm -q nginx >/dev/null >/dev/null ; then
-  yum install -y "nginx-1:1.16.1-*" "nginx-mod-stream-1:1.16.1-*"
-  yum versionlock "nginx-1:1.16.1-*" "nginx-mod-stream-1:1.16.1-*"
+bb-yum-install "nginx-1.18.0"
+{{- end }}
+
+# Disable default nginx vhost
+{{- if ne .runType "ImageBuilding" }}
+if systemctl is-active --quiet nginx ; then
+  systemctl stop nginx
 fi
 {{- end }}
+systemctl disable nginx
+
 
 # Disable default nginx vhost
 if systemctl is-active --quiet nginx ; then
