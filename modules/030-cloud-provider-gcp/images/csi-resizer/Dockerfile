@@ -1,1 +1,1 @@
-FROM gke.gcr.io/csi-resizer:v0.3.0-gke.0
+FROM gke.gcr.io/csi-resizer:v0.4.0-gke.0
