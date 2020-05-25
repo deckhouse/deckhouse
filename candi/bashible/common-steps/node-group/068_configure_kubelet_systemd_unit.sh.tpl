@@ -37,7 +37,7 @@ ExecStart=/usr/bin/kubelet \\
     --kubeconfig=/etc/kubernetes/kubelet.conf \\
     --network-plugin=cni \\
     --address=${discovered_node_ip:-0.0.0.0} \\
-{{- if eq .nodeGroup.nodeType "Static" }}
+{{- if eq .nodeGroup.nodeType "Static" -}}
 $([ -n "$discovered_node_ip" ] && echo "    --node-ip=${discovered_node_ip} \\")
 {{- else }}
     --cloud-provider=external \\

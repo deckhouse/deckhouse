@@ -24,11 +24,32 @@ Candi - Cluster and Infrastructure
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
 clusterType: Static
-...
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.16"
+clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
-...
+sshPublicKeys:
+- ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDTXjTmx3hq2EPDQHWSJN7By1VNFZ8colI5tEeZDBVYAe9Oxq4FZsKCb1aGIskDaiAHTxrbd2efoJTcPQLBSBM79dcELtqfKj9dtjy4S1W0mydvWb2oWLnvOaZX/H6pqjz8jrJAKXwXj2pWCOzXerwk9oSI4fCE7VbqsfT4bBfv27FN4/Vqa6iWiCc71oJopL9DldtuIYDVUgOZOa+t2J4hPCCSqEJK/r+ToHQbOWxbC5/OAufXDw2W1vkVeaZUur5xwwAxIb3wM3WoS3BbwNlDYg9UB2D8+EZgNz1CCCpSy1ELIn7q8RnrTp0+H8V9LoWHSgh3VCWeW8C/MnTW90IR stas@stas-ThinkPad
+masterNodeGroup:
+  static:
+    internalNetworkCIDRs:
+      - 10.0.0.0/24
+  zones:
+  - nova
+  minPerZone: 1
+  maxPerZone: 3
+deckhouse:
+  imagesRepo: registry.flant.com/sys/antiopa
+  registryDockerCfg: edsfkslfklsdfkl==
+  releaseChannel: Alpha
+  configOverrides:
+    global:
+      clusterName: my-cluster-name
+      project: my-project
 ```
 
 Для валидации и проставления значений по умолчанию используются спецификации OpenAPI.

@@ -29,7 +29,8 @@ _on_kubernetes_api_proxy_service_changed() {
   {{- if ne .nodeGroup.nodeType "Static" }}
     /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.nodeIP }}:6443
   {{- else }}
-    /var/lib/bashible/kubernetes-api-proxy-configurator.sh $(cat /var/lib/bashible/discovered-node-ip):6443
+    discovered_node_ip=$(cat /var/lib/bashible/discovered-node-ip)
+    /var/lib/bashible/kubernetes-api-proxy-configurator.sh "${discovered_node_ip:-127.0.0.1}":6443
   {{- end }}
 {{- else }}
     /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .normal.apiserverEndpoints | join " " }}
