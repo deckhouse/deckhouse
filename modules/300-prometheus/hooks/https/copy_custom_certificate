@@ -3,7 +3,7 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  legacy::common_hooks::https::copy_custom_certificate::config
+  legacy::common_hooks::https::copy_custom_certificate::config "d8-monitoring"
 }
 
 function __main__() {

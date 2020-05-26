@@ -33,10 +33,10 @@ metadata:
 spec:
   storageClassName: pvc-sc-openvpn
 `
-		deployment = `
+		pod = `
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
   name: openvpn
   namespace: kube-openvpn
@@ -122,15 +122,15 @@ metadata:
 
 	Context("Cluster with PVC, Pod and setting up openvpn.storageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvc + deployment))
+			f.BindingContexts.Set(f.KubeStateSet(pvc + pod))
 			f.ConfigValuesSet("openvpn.storageClass", "openvpn-sc")
 			f.RunHook()
 		})
 
-		It("Must be executed successfully; effectiveStorageClass must be pvc-sc-openvpn", func() {
+		It("Must be executed successfully; effectiveStorageClass must be openvpn-sc", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("openvpn.internal.effectiveStorageClass").String()).To(Equal("openvpn-sc"))
-			Expect(f.KubernetesResource("Deployment", "kube-openvpn", "openvpn").Exists()).To(BeFalse())
+			// Expect(f.KubernetesResource("Pod", "kube-openvpn", "openvpn").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PersistentVolumeClaim", "kube-openvpn", "openvpn").Exists()).To(BeFalse())
 		})
 	})

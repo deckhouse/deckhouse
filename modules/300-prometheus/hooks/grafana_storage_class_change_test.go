@@ -61,7 +61,7 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
 `
-		grafanaStatefullSet = `
+		grafanaStatefulSet = `
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -153,7 +153,7 @@ metadata:
 
 	Context("Cluster with PVCs and setting up prometheus.grafana.storageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvcMain + pvcLongterm + pvcGrafana + grafanaStatefullSet))
+			f.BindingContexts.Set(f.KubeStateSet(pvcMain + pvcLongterm + pvcGrafana + grafanaStatefulSet))
 			f.ConfigValuesSet("prometheus.grafana.storageClass", "grafana-sc")
 			f.RunHook()
 		})
@@ -162,7 +162,6 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.grafana.effectiveStorageClass").String()).To(Equal("grafana-sc"))
 			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "grafana-storage-grafana-0").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("StatefulSet", "d8-monitoring", "grafana").Exists()).To(BeFalse())
 		})
 	})
 

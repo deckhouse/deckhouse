@@ -7,8 +7,9 @@ function __config__() {
     configVersion: v1
     beforeHelm: 1
     kubernetes:
+    # main
     - name: pvc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -17,57 +18,111 @@ function __config__() {
       labelSelector:
         matchLabels:
           app: grafana
-      jqFilter: ".spec.storageClassName"
+      jqFilter: .spec.storageClassName
     - name: default_sc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
         (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
         (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+    # pvc_modified
+    - name: pvc_modified
+      executeHookOnEvent: ["Modified"]
+      executeHookOnSynchronization: false
+      group: pvc_modified
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: grafana
+    - name: pods
+      group: pvc_modified
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: grafana
+      jqFilter: .metadata.name
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+    # pvc_deleted
+    - name: pvc_deleted
+      executeHookOnEvent: ["Deleted"]
+      executeHookOnSynchronization: false
+      group: pvc_deleted
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: grafana
+    - name: pods
+      group: pvc_deleted
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: grafana
+      jqFilter: .metadata.name
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
 EOF
 }
 
+
+function __on_group::pvc_modified() {
+  if context::jq -er '.snapshots.pvc_modified[0].object.metadata | has("deletionTimestamp")' >/dev/null; then
+    if context::has snapshots.pods.0; then
+      pod_name="$(context::get snapshots.pods.0.object.metadata.name)"
+      kubernetes::delete_if_exists::non_blocking "d8-monitoring" "pod/$pod_name"
+      echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim/grafana-storage-grafana-0 is Terminating !!!"
+    fi
+  fi
+}
+
+function __on_group::pvc_deleted() {
+  if context::has snapshots.pods.0; then
+    pod_name="$(context::get snapshots.pods.0.object.metadata.name)"
+    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "pod/$pod_name"
+    echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim/grafana-storage-grafana-0 was deleted !!!"
+  fi
+}
+
 function __main__() {
-  grafana_storage_class=""
-  current_storage_class=""
-  prometheus_main_storage_class=""
-  global_storage_class=""
-  global_discovery_default_storage_class=""
+  effective_storage_class="false"
+  current_storage_class="false"
 
-  if values::has --config prometheus.grafana.storageClass; then
-    grafana_storage_class="$(values::get --config prometheus.grafana.storageClass)"
-  fi
-
-  if context::has snapshots.pvc.0 ; then
-    current_storage_class="$(context::get snapshots.pvc.0.object.spec.storageClassName)"
-  fi
-
-  if values::has --config prometheus.storageClass; then
-    prometheus_main_storage_class="$(values::get --config prometheus.storageClass)"
+  if context::jq -er '.snapshots.default_sc[] | select(.filterResult == true)' >/dev/null; then
+    effective_storage_class="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
   fi
 
   if values::has --config global.storageClass; then
-    global_storage_class="$(values::get --config global.storageClass)"
+    effective_storage_class="$(values::get --config global.storageClass)"
   fi
 
-  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
-  if [ "$default_sc" != "null" ]; then
-    global_discovery_default_storage_class="$default_sc"
+  if values::has --config prometheus.storageClass; then
+    effective_storage_class="$(values::get --config prometheus.storageClass)"
   fi
 
-  if [ -n "$grafana_storage_class" ]; then
-    effective_storage_class="$grafana_storage_class"
-  elif [ -n "$current_storage_class" ]; then
-    effective_storage_class="$current_storage_class"
-  elif [ -n "$prometheus_main_storage_class" ]; then
-    effective_storage_class="$prometheus_main_storage_class"
-  elif [ -n "$global_storage_class" ]; then
-    effective_storage_class="$global_storage_class"
-  elif [ -n "$global_discovery_default_storage_class" ]; then
-    effective_storage_class="$global_discovery_default_storage_class"
-  else
-    effective_storage_class="false"
+  if context::has snapshots.pvc.0 ; then
+    effective_storage_class="$(context::get snapshots.pvc.0.object.spec.storageClassName)"
+  fi
+  current_storage_class="$effective_storage_class"
+
+  if values::has --config prometheus.grafana.storageClass; then
+    effective_storage_class="$(values::get --config prometheus.grafana.storageClass)"
   fi
 
   values::set prometheus.internal.grafana.effectiveStorageClass "$effective_storage_class"
@@ -77,8 +132,6 @@ function __main__() {
       kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/grafana-storage-grafana-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/grafana-storage-grafana-0 !!!"
     fi
-    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "statefulset/grafana"
-    echo "!!! NOTICE: storage class changed, deleting statefulset/grafana !!!"
   fi
 }
 
