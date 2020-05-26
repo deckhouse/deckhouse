@@ -78,6 +78,11 @@ spec:
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
         ports:
         - containerPort: 6443
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 6443
+            scheme: HTTPS
         volumeMounts:
         - mountPath: /etc/adapter
           name: prometheus-metrics-adapter-config
@@ -91,6 +96,10 @@ spec:
         env:
         - name: PROMETHEUS_URL
           value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
         readinessProbe:
           httpGet:
             path: /healthz
