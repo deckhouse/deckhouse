@@ -27,6 +27,7 @@ ansible:
         - netcat-openbsd
         - busybox-extras
         - vim
+        - tini
 
   - name: "Install jo"
     apk:
