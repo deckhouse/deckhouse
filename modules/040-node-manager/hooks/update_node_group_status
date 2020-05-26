@@ -66,7 +66,7 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
-      jqFilter: '{"nodeGroup": .metadata.labels."instance-group"}'
+      jqFilter: '{"nodeGroup": .spec.nodeTemplate.metadata.labels."node.deckhouse.io/group"}'
     - name: nodes
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
@@ -98,7 +98,7 @@ function __main__() {
     last_machine_failures="$(context::jq -r --arg ng_name "${ng_name}" '([.snapshots.mds[] | select(.filterResult.nodeGroup == $ng_name)] | reduce .[] as $md ([]; . += $md.object.status.failedMachines)) // []')"
     latest_machine_failure="$(jq -n --argjson last_machine_failures "${last_machine_failures}" '($last_machine_failures | sort_by(.lastOperation.lastUpdateTime | fromdate) | .[-1].lastOperation.description) // ""')"
     all_md_replicas="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.mds[] | select(.filterResult.nodeGroup == $ng_name) | .filterResult.replicas] | add // 0')"
-    instances_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.instances[] | select(.filterResult.nodeGroup | test("^" + $ng_name + "-.+"))] | length')"
+    instances_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.instances[] | select(.filterResult.nodeGroup == $ng_name)] | length')"
     nodes_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name)] | length')"
     ready_nodes_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name and .filterResult.isReady)] | length')"
 
