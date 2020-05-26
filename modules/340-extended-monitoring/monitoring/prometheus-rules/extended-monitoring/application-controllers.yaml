@@ -46,6 +46,18 @@
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
+  - alert: KubernetesDeploymentsMalfunctioning
+    expr: |
+      count by (namespace, deployment) (ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", alertstate="firing"}) > 0
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_group_for__deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
+      summary: Deployment {{ $labels.deployment }} is malfunctioning.
+      description: |
+        Examine groupped alerts to find the cause.
+
   - alert: KubernetesDaemonSetReplicasUnavailable
     expr: |
       kube_daemonset_status_number_unavailable
@@ -87,6 +99,18 @@
         Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: KubernetesDaemonSetsMalfunctioning
+    expr: |
+      count by (namespace, daemonset) (ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", alertstate="firing"}) > 0
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_group_for__daemonset_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace={{ $labels.namespace }},daemonset={{ $labels.daemonset }}"
+      summary: DaemonSet {{ $labels.daemonset }} is malfunctioning.
+      description: |
+        Examine groupped alerts to find the cause.
 
   - alert: KubernetesDaemonSetNotUpToDate
     expr: |
@@ -157,3 +181,29 @@
         Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: KubernetesStatefulSetsMalfunctioning
+    expr: |
+      count by (namespace, statefulset) (ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", alertstate="firing"}) > 0
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_group_for__statefulset_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,namespace={{ $labels.namespace }},statefulset={{ $labels.statefulset }}"
+      summary: StatefulSet {{ $labels.statefulset }} is malfunctioning.
+      description: |
+        Examine groupped alerts to find the cause.
+
+  - alert: KubernetesControllersMalfunctioningInNamespace
+    expr: |
+      count by (namespace) (ALERTS{alertname=~"KubernetesDeploymentsMalfunctioning|KubernetesDaemonSetsMalfunctioning|KubernetesStatefulSetsMalfunctioning", alertstate="firing"}) > 0
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_group_for__deployments_malfunctioning: "KubernetesDeploymentsMalfunctioning,namespace={{ $labels.namespace }}"
+      plk_group_for__daemonsets_malfunctioning: "KubernetesDaemonSetsMalfunctioning,namespace={{ $labels.namespace }}"
+      plk_group_for__statefulsets_malfunctioning: "KubernetesStatefulSetsMalfunctioning,namespace={{ $labels.namespace }}"
+      summary: Namespace {{ $labels.namespace }} has malfunctioning kubernetes controllers.
+      description: |
+        Examine groupped alerts to find the cause.
