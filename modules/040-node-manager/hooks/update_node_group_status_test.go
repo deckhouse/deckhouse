@@ -79,6 +79,13 @@ metadata:
   namespace: d8-cloud-instance-manager
   labels:
     instance-group: ng1-nova
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: Cloud
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -87,6 +94,28 @@ metadata:
   namespace: d8-cloud-instance-manager
   labels:
     instance-group: ng1-nova
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: Cloud
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: machine-ng1-big-bbb
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-big-nova
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1-big: ""
+        node.deckhouse.io/group: ng1-big
+        node.deckhouse.io/type: Cloud
 `
 
 		stateNodes = `
