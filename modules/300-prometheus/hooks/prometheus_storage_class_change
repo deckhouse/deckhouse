@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 1
     kubernetes:
     - name: pvc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -17,85 +17,141 @@ function __config__() {
       labelSelector:
         matchLabels:
           app: prometheus
-      jqFilter: ".spec.storageClassName"
+      jqFilter: .spec.storageClassName
     - name: default_sc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
         (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
         (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+    # pvc_modified
+    - name: pvc_modified
+      group: pvc_modified
+      executeHookOnEvent: ["Modified"]
+      executeHookOnSynchronization: false
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+    - name: pods
+      group: pvc_modified
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+      jqFilter: .metadata.name
+    # pvc_deleted
+    - name: pvc_deleted
+      group: pvc_deleted
+      executeHookOnEvent: ["Deleted"]
+      executeHookOnSynchronization: false
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+    - name: pods
+      group: pvc_deleted
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-monitoring"]
+      labelSelector:
+        matchLabels:
+          app: prometheus
+      jqFilter: .metadata.name
 EOF
 }
 
+function __on_group::pvc_modified() {
+  pvcs="$(context::jq -rc '[.snapshots.pvc_modified[].object]')"
+  for i in $(jq -r 'keys[]' <<< "$pvcs"); do
+    # If someone deleted pvc then delete the pod.
+    if jq -er --argjson i "$i"  '.[$i].metadata | has("deletionTimestamp")' <<< "$pvcs" >/dev/null; then
+      pvc_name="$(jq -r --argjson i "$i" '.[$i].metadata.name' <<< "$pvcs")"
+      pvc_index="$(echo "${pvc_name##*-}")"
+      prometheus_name="$(jq -r --argjson i "$i" '.[$i].metadata.labels.prometheus' <<< "$pvcs")"
+      pod_name="prometheus-$prometheus_name-$pvc_index"
+      if context::has snapshots.pods.$pvc_index; then
+        kubernetes::delete_if_exists::non_blocking "d8-monitoring" "pod/$pod_name"
+        echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim/$pvc_name stuck in Terminating state !!!"
+      fi
+    fi
+  done
+}
+
+function __on_group::pvc_deleted() {
+  pods="$(context::jq -rc '[.snapshots.pods[].object]')"
+  for i in $(jq -r 'keys[]' <<< "$pods"); do
+    # If pvc was deleted and pod in phase Pending -- delete him.
+    if jq -er --argjson i "$i"  '.[$i].status.phase == "Pending"' <<< "$pods" >/dev/null; then
+      pod_name="$(jq -r --argjson i "$i" '.[$i].metadata.name' <<< "$pods")"
+      kubernetes::delete_if_exists::non_blocking "d8-monitoring" "pod/$pod_name"
+      echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim was deleted !!!"
+    fi
+  done
+}
+
 function __main__() {
-  prometheus_main_storage_class=""
-  prometheus_longterm_storage_class=""
-  prometheus_main_storage_class_current=""
-  prometheus_longterm_storage_class_current=""
-  global_storage_class=""
-  global_discovery_default_storage_class=""
+  effective_storage_class_main="false"
+  effective_storage_class_longterm="false"
 
-  if values::has --config prometheus.storageClass; then
-    prometheus_main_storage_class="$(values::get --config prometheus.storageClass)"
-  fi
-  if values::has --config prometheus.longtermStorageClass; then
-    prometheus_longterm_storage_class="$(values::get --config prometheus.longtermStorageClass)"
-  fi
-
-  if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")'; then
-    prometheus_main_storage_class_current=$(context::jq -r '.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main") | .spec.storageClassName')
-    prometheus_main_storage_class_current=$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main") | .spec.storageClassName] | first')
-  fi
-  if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "longterm")'; then
-    prometheus_longterm_storage_class_current=$(context::jq -r '.snapshots.pvc[].object | select(.metadata.labels.prometheus == "longterm") | .spec.storageClassName')
+  if context::jq -er '.snapshots.default_sc[] | select(.filterResult == true)' >/dev/null; then
+    default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
+    effective_storage_class_main="$default_sc"
+    effective_storage_class_longterm="$default_sc"
   fi
 
   if values::has --config global.storageClass; then
     global_storage_class="$(values::get --config global.storageClass)"
-  fi
-
-  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
-  if [ "$default_sc" != "null" ]; then
-    global_discovery_default_storage_class="$default_sc"
-  fi
-
-  if [ -n "$prometheus_main_storage_class" ]; then
-    effective_storage_class_main="$prometheus_main_storage_class"
-  elif [ -n "$prometheus_main_storage_class_current" ]; then
-    effective_storage_class_main="$prometheus_main_storage_class_current"
-  elif [ -n "$global_storage_class" ]; then
     effective_storage_class_main="$global_storage_class"
-  elif [ -n "$global_discovery_default_storage_class" ]; then
-    effective_storage_class_main="$global_discovery_default_storage_class"
-  else
-    effective_storage_class_main="false"
+    effective_storage_class_longterm="$global_storage_class"
   fi
 
-  if [ -n "$prometheus_longterm_storage_class" ]; then
-    effective_storage_class_longterm="$prometheus_longterm_storage_class"
-  elif [ -n "$prometheus_longterm_storage_class_current" ]; then
-    effective_storage_class_longterm="$prometheus_longterm_storage_class_current"
-  elif [ -n "$prometheus_main_storage_class" ]; then
-    effective_storage_class_longterm="$prometheus_main_storage_class"
-  elif [ -n "$global_storage_class" ]; then
-    effective_storage_class_longterm="$global_storage_class"
-  elif [ -n "$global_discovery_default_storage_class" ]; then
-    effective_storage_class_longterm="$global_discovery_default_storage_class"
-  else
-    effective_storage_class_longterm="false"
+  if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")' > /dev/null; then
+    effective_storage_class_main=$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main") | .spec.storageClassName] | first')
+  fi
+  prometheus_main_storage_class_current="$effective_storage_class_main"
+
+  if values::has --config prometheus.storageClass; then
+    effective_storage_class_main="$(values::get --config prometheus.storageClass)"
+    effective_storage_class_longterm="$effective_storage_class_main"
+  fi
+
+  if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "longterm")' > /dev/null; then
+    effective_storage_class_longterm=$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "longterm") | .spec.storageClassName] | first')
+  fi
+  prometheus_longterm_storage_class_current="$effective_storage_class_longterm"
+
+  if values::has --config prometheus.longtermStorageClass; then
+    effective_storage_class_longterm="$(values::get --config prometheus.longtermStorageClass)"
   fi
 
   values::set prometheus.internal.prometheusMain.effectiveStorageClass "$effective_storage_class_main"
   values::set prometheus.internal.prometheusLongterm.effectiveStorageClass "$effective_storage_class_longterm"
 
   if [ "$prometheus_main_storage_class_current" != "$effective_storage_class_main" ] && [ "$effective_storage_class_main" != "false" ]; then
-    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "statefulset/prometheus-main"
-    echo "!!! NOTICE: storage class changed, deleting statefulset/prometheus-main !!!"
-    if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")'; then
+    if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "main")' > /dev/null; then
       kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-main-db-prometheus-main-0 !!!"
-      if [ "$(context::jq -r '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main")] | length')" -gt "1" ]; then
+      if context::jq -er '([.snapshots.pvc[].object | select(.metadata.labels.prometheus == "main")] | length) > 1'; then
           kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-main-db-prometheus-main-1"
           echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-main-db-prometheus-main-1 !!!"
       fi
@@ -103,9 +159,7 @@ function __main__() {
   fi
 
   if [ "$prometheus_longterm_storage_class_current" != "$effective_storage_class_longterm" ] && [ "$effective_storage_class_longterm" != "false" ]; then
-    kubernetes::delete_if_exists::non_blocking "d8-monitoring" "statefulset/prometheus-longterm"
-    echo "!!! NOTICE: storage class changed, deleting statefulset/prometheus-longterm !!!"
-    if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "longterm")'; then
+    if context::jq -e '.snapshots.pvc[].object.metadata.labels | select(.prometheus == "longterm")' > /dev/null; then
       kubernetes::delete_if_exists::non_blocking "d8-monitoring" "persistentvolumeclaim/prometheus-longterm-db-prometheus-longterm-0"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/prometheus-longterm-db-prometheus-longterm-0 !!!"
     fi

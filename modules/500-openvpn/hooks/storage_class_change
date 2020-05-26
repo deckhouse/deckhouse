@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 1
     kubernetes:
     - name: pvc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -17,64 +17,63 @@ function __config__() {
       labelSelector:
         matchLabels:
           app: openvpn
-      jqFilter: ".spec.storageClassName"
     - name: default_sc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
         (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
         (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+    - name: openvpn_pod
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["kube-openvpn"]
+      labelSelector:
+        matchLabels:
+          app: openvpn
+      jqFilter: .metadata.name
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
 EOF
 }
 
 function __main__ {
-  openvpn_storage_class=""
-  current_storage_class=""
-  global_storage_class=""
-  global_discovery_default_storage_class=""
+  effective_storage_class="false"
 
-  if values::has --config openvpn.storageClass; then
-    openvpn_storage_class="$(values::get --config openvpn.storageClass)"
-  fi
-
-  if context::has snapshots.pvc.0 ; then
-    current_storage_class="$(context::get snapshots.pvc.0.object.spec.storageClassName)"
+  if context::jq -er '.snapshots.default_sc[] | select(.filterResult == true)' >/dev/null; then
+    effective_storage_class="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
   fi
 
   if values::has --config global.storageClass; then
-    global_storage_class="$(values::get --config global.storageClass)"
+    effective_storage_class="$(values::get --config global.storageClass)"
   fi
 
-  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
-  if [ "$default_sc" != "null" ]; then
-    global_discovery_default_storage_class="$default_sc"
+  if context::has snapshots.pvc.0 ; then
+    effective_storage_class="$(context::get snapshots.pvc.0.object.spec.storageClassName)"
   fi
+  current_storage_class="$effective_storage_class"
 
-  if [ -n "$openvpn_storage_class" ]; then
-    effective_storage_class="$openvpn_storage_class"
-  elif [ -n "$current_storage_class" ]; then
-    effective_storage_class="$current_storage_class"
-  elif [ -n "$global_storage_class" ]; then
-    effective_storage_class="$global_storage_class"
-  elif [ -n "$global_discovery_default_storage_class" ]; then
-    effective_storage_class="$global_discovery_default_storage_class"
-  else
-    effective_storage_class="false"
+  if values::has --config openvpn.storageClass; then
+    effective_storage_class="$(values::get --config openvpn.storageClass)"
   fi
 
   values::set openvpn.internal.effectiveStorageClass "$effective_storage_class"
+
+  if context::jq -er '.snapshots.pvc[0].object.metadata | has("deletionTimestamp")' >/dev/null; then
+    pod_name="$(context::get snapshots.openvpn_pod.0.object.metadata.name)"
+    kubernetes::delete_if_exists::non_blocking "kube-openvpn" "pod/$pod_name"
+    echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim/openvpn was deleted !!!"
+  fi
 
   if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
     if context::has snapshots.pvc.0 ; then
       kubernetes::delete_if_exists::non_blocking "kube-openvpn" "persistentvolumeclaim/openvpn"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/openvpn !!!"
     fi
-    kubernetes::delete_if_exists::non_blocking "kube-openvpn" "deployment/openvpn"
-    echo "!!! NOTICE: storage class changed, deleting deployment/openvpn !!!"
   fi
-
-
 }
 
 hook::run $@

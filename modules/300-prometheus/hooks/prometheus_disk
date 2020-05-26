@@ -76,12 +76,13 @@ function discover_disk_usage() {
   disk_usage_max="0"
   for pod in $(context::jq -r --arg name "$prometheus_name" '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name) | .metadata.name | gsub("prometheus-\($name)-db-";"")'); do
     # If PodScheduled
-    if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq '.status.conditions[] | select(.type == "PodScheduled") | .status')" == "True" ]; then
+    if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq -r '.status.conditions[] | select(.type == "PodScheduled") | .status')" == "True" ]; then
       # If container prometheus ready
-      if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq '.status.containerStatuses[] | select(.name == "prometheus") | .ready')" != "false" ]; then
-        df_out="$(kubectl -n d8-monitoring exec ${pod} -c prometheus --  df -Ph /prometheus/ | grep -v 'Filesystem' | awk '{print "{\"size\":\""$2"\",\"usage\":\""$5"\"}"}')"
+      if [ "$(kubectl -n d8-monitoring get po ${pod} -o json | jq -r '.status.containerStatuses[] | select(.name == "prometheus") | .ready')" != "false" ]; then
+        # Filesystem size in kilobytes
+        df_out="$(kubectl -n d8-monitoring exec ${pod} -c prometheus --  df -PBK /prometheus/ | grep -v 'Filesystem' |awk '{print "{\"size\":\""$2"\",\"usage\":\""$5"\"}"}')"
         disk_usage=$(jq -r '.usage | gsub("%";"")' <<< "$df_out")
-        disk_filesystem_size=$(jq -r '.size | gsub("G";"")' <<< "$df_out" | cut -f1 -d'.')
+        disk_filesystem_size=$(jq -r '.size | gsub("K";"") | tonumber * 1024' <<< "$df_out" | cut -f1 -d'.')
         if [ "$disk_usage_max" -lt "$disk_usage" ]; then
           disk_usage_max="$disk_usage"
         fi
@@ -114,7 +115,14 @@ function calculate_disk_size_and_retention() {
   if [ "$(context::jq -r --arg name $prometheus_name '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name)] | length')" -gt "0" ]; then
     # If at least one pvc exists
 
-    current_pvc_size="$(context::jq -r --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage' | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs 'split("\n")[:-1] | max')"
+    # current_pvc_size="$(context::jq -re --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage' | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs '[split("\n")[:-1][] | tonumber] | max')"
+
+    if ! current_pvcs_size="$(context::jq -re --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage')"; then
+      echo "!!! ERROR: One or more PVC exists for prometheus-$prometheus_name, but not have .status.capacity.storage !!!"
+      return 1
+    fi
+
+    current_pvc_size="$(echo "$current_pvcs_size" | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs '[split("\n")[:-1][] | tonumber] | max')"
 
     # If actual filesystem size is larger than PVC size (someone has manualy resized disk), we use actual filesystem size,
     # instead of PVC size, in subsequent calculations

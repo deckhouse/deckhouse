@@ -39,10 +39,6 @@ search: prometheus
 
 * `retentionDays` — сколько дней хранить данные.
     * По-умолчанию `15`.
-    * Работает совместно с параметром `retentionGigabytes`.
-* `retentionGigabytes` — сколько гигабайт хранить.
-    * По-умолчанию `30` гигабайт.
-    * Работает совместно с параметром `retentionDays`.
 * `storageClass` — имя storageClass'а, который использовать.
     * Если не указано — используется StorageClass существующей PVC Prometheus, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
     * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
@@ -51,11 +47,7 @@ search: prometheus
     * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
     * По-умолчанию `1095`.
-    * Работает совместно с параметром `longtermRetentionGigabytes`.
     * Если указать `0`, то longterm Prometheus не будет запущен в кластере.
-* `longtermRetentionGigabytes` — сколько гигабайт хранить.
-    * По-умолчанию `30` гигабайт.
-    * Работает совместно с параметром `longtermRetentionDays`.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -119,6 +111,14 @@ search: prometheus
     *  Опциональный параметр, значение по-умолчанию — `300`.
 * `longtermMaxDiskSizeGigabytes` — максимальный размер в гигабайтах, до которого автоматически может ресайзиться диск Prometheus longterm.
     *  Опциональный параметр, значение по-умолчанию — `300`.
+
+### Примечание
+* `retentionSize` для `main` и `longterm` **рассчитывается автоматически, возможности задать значение нет!**
+    * Алгоритм расчета:
+        * `pvc_size * 0.8` — если PVC существует.
+        * `10 GiB` — если PVC нет и StorageClass поддерживает ресайз.
+        * `25 GiB` — если PVC нет и StorageClass не поддерживает ресайз.
+    * Если используется `local-storage` и требуется изменить `retentionSize`, то необходимо вручную изменить размер PV и PVC в нужную сторону. **Внимание!** Для расчета берется значение из `.status.capacity.storage` PVC, поскольку оно отражает рельный размер PV в случае ручного ресайза.
 
 ### Пример конфига
 
