@@ -1,0 +1,44 @@
+- name: d8.helm-releases-resource-versions
+  rules:
+  - alert: ResourceVersionDeprecated
+    expr: |
+      resource_versions_compatibility == 1
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: HELM-Release {{ $labels.helm_release_name }} contains resource {{ .kind }}/{{ .resource_name }} with unsupported apiVersion {{ .api_version }} in kubernetes 1.16+
+      description: |
+        Use the `apiVersion: apps/v1`
+
+  - alert: HelmReleaseHasResourcesWithDeprecatedVersions
+    expr: |
+      count by (helm_release_name) (ALERTS{alertname=~"ResourceVersionDeprecated", alertstate="firing"})
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_group_for__resource_version_deprecated: "ResourceVersionDeprecated,prometheus=deckhouse,helm_release_name={{ $labels.helm_release_name }}"
+      summary: One of HELM-Releases contains one resource at least with unsupported apiVersion in kubernetes 1.16+
+      description: |
+        Examine groupped alerts to find the cause.
+
+  - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
+    expr: |
+      count by (alertname) (ALERTS{alertname=~"HelmReleaseHasResourcesWithDeprecatedVersions", alertstate="firing"})
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      plk_group_for__helm_release_resource_versions_deprecated: HelmReleaseHasResourcesWithDeprecatedVersions,prometheus=deckhouse
+      summary: One of HELM-Releases contains one resource at least with unsupported apiVersion in kubernetes 1.16+
+      description: |
+        Examine groupped alerts to find the cause.
