@@ -90,6 +90,11 @@ github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5Kwzbycv
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200525115426-61084413a50e h1:GhJxIpAEUHJuhqtLGO14XeDvILwccbY2GhC+6uAWqig=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200525115426-61084413a50e/go.mod h1:4Ca45nVqVHGf4iPeWdKdH02Io2EFJ4Zm7pYhxmCaSqY=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200527121941-3cfd6980defe h1:1pbAbBy9ucAe14/KPlrJ41hwq6yxcsoWZsCSjcB8C24=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200527121941-3cfd6980defe/go.mod h1:TWYWwZ5qRuoXRFW64a3oeE3JOXZuKZWh7u8JvmV6DgY=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200527205055-ae4b5e06cc9e h1:LDiHrk3OpO26VFaosRjxk/SWl7PbLsgXkWydeRLZ8ic=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200527205055-ae4b5e06cc9e/go.mod h1:TWYWwZ5qRuoXRFW64a3oeE3JOXZuKZWh7u8JvmV6DgY=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200528113129-c852d3e5c83e/go.mod h1:TWYWwZ5qRuoXRFW64a3oeE3JOXZuKZWh7u8JvmV6DgY=
 github.com/flant/kubedog v0.3.4/go.mod h1:o9cSuE3Z/kgxKhLCLUGUc9vPOFQgmY0B+7bdOQq++7o=
 github.com/flant/libjq-go v1.6.1-0.20200401092614-198670408da1 h1:pOPBJDB7PZz/SKa13mlR3bvkRJ0KWKRe6v+KZOObkKw=
 github.com/flant/libjq-go v1.6.1-0.20200401092614-198670408da1/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
@@ -98,6 +103,8 @@ github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kC
 github.com/flant/shell-operator v1.0.0-beta.9.0.20200525114037-935a9c01a368 h1:uefztkeUp92HVIQjulziJILhcDH5aTVCfkAJW4rdUTg=
 github.com/flant/shell-operator v1.0.0-beta.9.0.20200525114037-935a9c01a368/go.mod h1:Cf7KVE1Qy60dtA112nuOBo33Ef0xeoB2vil7iJULnEM=
 github.com/flant/shell-operator v1.0.0-beta.10/go.mod h1:Cf7KVE1Qy60dtA112nuOBo33Ef0xeoB2vil7iJULnEM=
+github.com/flant/shell-operator v1.0.0-beta.10.0.20200526112906-2d1bb9208462 h1:0y4D3NZ6bFLiVYYflWCqnWF2iO67i7wkhO6FNNy/Mbw=
+github.com/flant/shell-operator v1.0.0-beta.10.0.20200526112906-2d1bb9208462/go.mod h1:Cf7KVE1Qy60dtA112nuOBo33Ef0xeoB2vil7iJULnEM=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
