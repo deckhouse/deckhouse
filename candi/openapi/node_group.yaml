@@ -255,6 +255,13 @@ spec:
                   pattern: '^[0-9]+[mh]{1}$'
             allowDisruptions:
               type: boolean
+            operatingSystem:
+              description: Operating System settings for nodes.
+              type: object
+              properties:
+                manageKernel:
+                  type: boolean
+                  description: Disable kernel maintainance from bashible.
             docker:
               description: Docker settings for nodes.
               type: object

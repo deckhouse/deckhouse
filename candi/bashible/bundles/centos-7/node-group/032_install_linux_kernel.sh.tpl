@@ -1,3 +1,11 @@
+{{- $manage_kernel := true }}
+{{- if hasKey .nodeGroup "operatingSystem" }}
+  {{- if not .nodeGroup.operatingSystem.manageKernel }}
+    {{- $manage_kernel = false }}
+  {{- end }}
+{{- end }}
+
+{{- if $manage_kernel }}
 {{- if ne .runType "ImageBuilding" }}
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
@@ -16,3 +24,4 @@ packages="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$")"
 if [ -n "$packages" ]; then
   bb-yum-remove $packages
 fi
+{{- end }}
