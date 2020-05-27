@@ -1,3 +1,11 @@
+{{- $manage_kernel := true }}
+{{- if hasKey .nodeGroup "operatingSystem" }}
+  {{- if not .nodeGroup.operatingSystem.manageKernel }}
+    {{- $manage_kernel = false }}
+  {{- end }}
+{{- end }}
+
+{{- if $manage_kernel }}
 {{- if ne .runType "ImageBuilding" }}
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
@@ -37,3 +45,4 @@ if [ -n "$packages" ]; then
 fi
 
 rm -f /var/lib/bashible/kernel_version_desired_by_cloud_provider
+{{- end }}
