@@ -48,11 +48,15 @@ prometheus:
     alertmanagers:
       __ConstantChoices__:
       - {}
-      - alphaprom:
+      - main:
         - name: mysvc1
           namespace: myns1
           pathPrefix: /myprefix/
           port: 81
+        - name: mysvc2
+          namespace: myns1
+          pathPrefix: /myprefix/
+          port: test
     deployDexAuthenticator: true
     grafana:
       effectiveStorageClass: ceph-ssd
@@ -91,7 +95,7 @@ prometheus:
   retentionDays: 15
   retentionGigabytes: 30
   vpa:
-    __ConstantChoice__:
+    __ConstantChoices__:
     - updateMode: Initial
     -
       updateMode: Off

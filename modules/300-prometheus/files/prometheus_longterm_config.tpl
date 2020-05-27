@@ -25,11 +25,19 @@ alerting:
       regex: {{ .name }}
       replacement: $1
       action: keep
+    {{- if kindIs "string" .port }}
+    - source_labels: [__meta_kubernetes_endpoint_port_name]
+      separator: ;
+      regex: {{ .port | quote }}
+      replacement: $1
+      action: keep
+    {{- else }}
     - source_labels: [__meta_kubernetes_pod_container_port_number]
       separator: ;
       regex: {{ .port | quote }}
       replacement: $1
       action: keep
+    {{- end }}
   {{- end }}
 {{- end }}
 scrape_configs:
