@@ -2,14 +2,14 @@
   rules:
   - alert: ResourceVersionDeprecated
     expr: |
-      resource_versions_compatibility == 1
+      max without (instance, pod, hook, job) (resource_versions_compatibility) == 1
     labels:
       tier: cluster
       severity_level: "9"
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: HELM-Release {{ $labels.helm_release_name }} contains resource {{ .kind }}/{{ .resource_name }} with unsupported apiVersion {{ .api_version }} in kubernetes 1.16+
+      summary: HELM-Release {{ $labels.helm_release_name }} contains resource {{ $labels.kind }}/{{ $labels.resource_name }} with unsupported apiVersion {{ $labels.api_version }} in kubernetes 1.16+
       description: |
         For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
 
