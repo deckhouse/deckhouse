@@ -11,7 +11,7 @@
       plk_protocol_version: "1"
       summary: HELM-Release {{ $labels.helm_release_name }} contains resource {{ .kind }}/{{ .resource_name }} with unsupported apiVersion {{ .api_version }} in kubernetes 1.16+
       description: |
-        Use the `apiVersion: apps/v1`
+        For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
 
   - alert: HelmReleaseHasResourcesWithDeprecatedVersions
     expr: |

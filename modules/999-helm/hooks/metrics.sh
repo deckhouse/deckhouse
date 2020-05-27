@@ -8,11 +8,10 @@ function __config__() {
     kubernetes:
     - name: helm_releases
       group: main
+      queue: /modules/$(module::name::kebab_case)/helm_releases
+      waitForSynchronization: false
       apiVersion: v1
       kind: ConfigMap
-      namespace:
-        nameSelector:
-          matchNames: [d8-system]
       labelSelector:
         matchLabels:
           OWNER: TILLER
@@ -36,30 +35,52 @@ function __main__() {
         "apps/v1beta1": "",
         "apps/v1beta2": "",
         "extensions/v1beta1": ""
+      },
+      "ReplicaSet": {
+        "apps/v1beta1": "",
+        "apps/v1beta2": "",
+        "extensions/v1beta1": ""
+      },
+      "NetworkPolicy": {
+        "extensions/v1beta1": ""
+      },
+      "PodSecurityPolicy": {
+        "extensions/v1beta1": ""
       }
     }
   '
 
+
+  D8_HELM_HOST="$HELM_HOST"
   metrics=""
 
-  release_names="$(helm list --output json | jq -r '.Releases[].Name')"
-  for release_name in $release_names; do
-    manifest="$(helm get manifest "$release_name" | yq read -d"*" -j -)"
-    metrics="$metrics\n$(jq -rc --arg release_name "$release_name" --argjson d "$unsupported_versions" '
-      .[] | select(.kind != null) |
-      {
-        "name": "resource_versions_compatibility",
-        "set": 0,
-        "labels": {
-          "helm_release_name": $release_name,
-          "resource_name": .metadata.name,
-          "kind": .kind,
-          "api_version": .apiVersion
+  namespaces="$(context::jq -r '.snapshots.helm_releases[].object.metadata.namespace' | sort | uniq)"
+  for namespace in $namespaces; do
+    if [ "$namespace" != "d8-system" ]; then
+      HELM_HOST=""
+    else
+      HELM_HOST="$D8_HELM_HOST"
+    fi
+    release_names="$(helm --tiller-namespace "$namespace" list --output json | jq -r '.Releases[].Name')"
+    for release_name in $release_names; do
+      manifest="$(helm --tiller-namespace "$namespace" get manifest "$release_name" | yq read -d"*" -j -)"
+      metrics="$metrics\n$(jq -rc --arg release_name "$release_name" --argjson d "$unsupported_versions" '
+        .[] | select(.kind != null) |
+        {
+          "name": "resource_versions_compatibility",
+          "set": 0,
+          "labels": {
+            "helm_release_name": $release_name,
+            "resource_name": .metadata.name,
+            "kind": .kind,
+            "api_version": .apiVersion,
+            "namespace": .metadata.namespace
+          }
         }
-      }
-      | . as $in
-      | if $d[.labels.kind] != null then if $d[$in.labels.kind] | has($in.labels.api_version) then .set = 1 else . end else . end
-    ' <<< "$manifest")"
+        | . as $in
+        | if $d[.labels.kind] != null then if $d[$in.labels.kind] | has($in.labels.api_version) then .set = 1 else . end else . end
+      ' <<< "$manifest")"
+    done
   done
 
   echo -e "$metrics" >> $METRICS_PATH
