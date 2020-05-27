@@ -1,0 +1,19 @@
+--- nginx_exporter.go	(revision 40e9421dbb3d0b43dde9f016705b5a9a4f97cd1b)
++++ nginx_exporter.go	(date 1589799776084)
+@@ -12,6 +12,7 @@
+
+ 	"github.com/prometheus/client_golang/prometheus"
+ 	"github.com/prometheus/common/log"
++	"github.com/prometheus/client_golang/prometheus/promhttp"
+ )
+
+ const (
+@@ -183,7 +184,7 @@
+ 	prometheus.MustRegister(exporter)
+
+ 	log.Infof("Starting Server: %s", *listeningAddress)
+-	http.Handle(*metricsEndpoint, prometheus.Handler())
++	http.Handle(*metricsEndpoint, promhttp.Handler())
+ 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+ 		w.Write([]byte(`<html>
+ 			<head><title>Nginx Exporter</title></head>
