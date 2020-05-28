@@ -73,7 +73,8 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 		return
 	})
 	registryWatcher.WithErrorCallback(func() {
-		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_errors", 1.0, map[string]string{})
+		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_check_count", 1.0, map[string]string{})
+		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_check_errors_count", 1.0, map[string]string{})
 		nowTime := time.Now()
 		if LastSuccessTime.Add(app.RegistryErrorsMaxTimeBeforeRestart).Before(nowTime) {
 			log.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
@@ -82,10 +83,17 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 		return
 	})
 	registryWatcher.WithSuccessCallback(func() {
+		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_check_count", 1.0, map[string]string{})
 		LastSuccessTime = time.Now()
 	})
-	registryWatcher.WithImageInfoCallback(func() (s string, s2 string) {
-		return GetCurrentPodImageInfo(kubeClient)
+	registryWatcher.WithImageInfoCallback(func() (imageName string, imageId string) {
+		imageName, imageId = GetCurrentPodImageInfo(kubeClient)
+
+		d.MetricStorage.SendCounterNoPrefix("deckhouse_kube_image_digest_check_count", 1.0, map[string]string{})
+		if imageName == "" || imageId == "" {
+			d.MetricStorage.SendCounterNoPrefix("deckhouse_kube_image_digest_check_errors_count", 1.0, map[string]string{})
+		}
+		return
 	})
 	registryWatcher.WithImageUpdatedCallback(func(s string) {
 		UpdateDeploymentImageAndExit(kubeClient, s)
