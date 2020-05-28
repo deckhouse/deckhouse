@@ -2,6 +2,15 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/flant/logboek"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/deckhouse"
@@ -10,13 +19,6 @@ import (
 	"flant/deckhouse-candi/pkg/ssh"
 	"flant/deckhouse-candi/pkg/template"
 	"flant/deckhouse-candi/pkg/terraform"
-	"fmt"
-	"github.com/flant/logboek"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 const banner = `
@@ -29,6 +31,8 @@ const banner = `
 |_____/ \____)____)_| \_)_| |_|\___/ \____(___/ \____)   \______)_||_|_| |_|\____(_____)
 ========================================================================================
 `
+
+const rebootExitCode = 255
 
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
@@ -152,14 +156,17 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				return fmt.Errorf("prepare bootstrap: %v", err)
 			}
 
-			bootstrapScripts := []string{"bootstrap.sh"}
-			if metaConfig.ClusterType == "Cloud" {
-				bootstrapScripts = append(bootstrapScripts, "bootstrap-networks.sh")
-			}
-
-			for _, bootstrapScript := range bootstrapScripts {
+			for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
 				err = logboek.LogProcess("Run "+bootstrapScript, log.BoldOptions(), func() error {
-					cmd := sshClient.UploadScript(templateController.TmpDir + "/bootstrap/" + bootstrapScript).
+					scriptPath := templateController.TmpDir + "/bootstrap/" + bootstrapScript
+					if _, err := os.Stat(scriptPath); err != nil {
+						if os.IsNotExist(err) {
+							logboek.LogInfoF("Script %s doesn't found\n", scriptPath)
+							return nil
+						}
+						return fmt.Errorf("script path: %v", err)
+					}
+					cmd := sshClient.UploadScript(scriptPath).
 						WithStdoutHandler(func(l string) { logboek.LogInfoLn(l) }).
 						Sudo()
 
@@ -211,7 +218,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			rebootCmd := sshClient.Command("sudo", "reboot").Sudo()
 			if err := rebootCmd.Run(); err != nil {
 				if ee, ok := err.(*exec.ExitError); ok {
-					if ee.ExitCode() == 255 {
+					if ee.ExitCode() == rebootExitCode {
 						return nil
 					}
 				}

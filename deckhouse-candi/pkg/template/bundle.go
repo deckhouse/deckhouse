@@ -1,14 +1,15 @@
 package template
 
 import (
-	"flant/deckhouse-candi/pkg/log"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/flant/logboek"
 	"gopkg.in/yaml.v2"
 
 	"flant/deckhouse-candi/pkg/config"
+	"flant/deckhouse-candi/pkg/log"
 )
 
 const (
@@ -55,6 +56,14 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName string, me
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle string) error {
+	dataWithoutNodeGroup := withoutNodeGroup(templateData)
+	getDataForStep := func(step string) map[string]interface{} {
+		if step != "node-group" {
+			return dataWithoutNodeGroup
+		}
+		return templateData
+	}
+
 	saveInfo := []saveFromTo{
 		{
 			from: candiBashibleDir,
@@ -67,7 +76,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiBashibleDir, "common-steps", steps),
 			to:   stepsDir,
-			data: templateData,
+			data: getDataForStep(steps),
 		})
 	}
 
@@ -75,7 +84,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiBashibleDir, "bundles", bundle, steps),
 			to:   stepsDir,
-			data: templateData,
+			data: getDataForStep(steps),
 		})
 	}
 
@@ -83,15 +92,23 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "bundles", bundle, steps),
 			to:   stepsDir,
-			data: templateData,
+			data: dataWithoutNodeGroup,
 		})
 	}
+
 	for _, info := range saveInfo {
 		logboek.LogInfoF("From %q to %q\n", info.from, info.to)
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
 			return err
 		}
 	}
+
+	firstRunFileFlag := filepath.Join(candiBashibleDir, "first_run")
+	logboek.LogInfoF("Create %q\n", firstRunFileFlag)
+	if err := createEmptyFile(firstRunFileFlag); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -115,4 +132,23 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		}
 	}
 	return nil
+}
+
+func createEmptyFile(path string) error {
+	newFile, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create empty file %s: %v", path, err)
+	}
+	newFile.Close()
+	return nil
+}
+
+func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
+	filteredData := make(map[string]interface{}, len(data))
+	for key, value := range data {
+		if key != "nodeGroup" {
+			filteredData[key] = value
+		}
+	}
+	return filteredData
 }
