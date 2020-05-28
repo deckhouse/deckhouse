@@ -11,6 +11,13 @@ post-install() {
 {{- end }}
 }
 
+{{- if hasKey .nodeGroup "docker" }}
+  {{- if .nodeGroup.docker.nvidia }}
+    >&2 echo "ERROR: CentOS nvidia docker is not supported yet!"
+    exit 1
+  {{- end }}
+{{- end }}
+
 docker_package="docker-ce-18.09.9-3.el7.x86_64"
 docker_cli_package="docker-ce-cli-18.09.9-3.el7.x86_64"
 
