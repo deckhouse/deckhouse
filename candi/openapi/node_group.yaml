@@ -269,6 +269,9 @@ spec:
                 maxConcurrentDownloads:
                   type: integer
                   description: Set the max concurrent downloads for each pull (default 3).
+                nvidia:
+                  type: boolean
+                  description: Set to use nvidia-docker2 for container runtime (default false).
             kubelet:
               description: Kubelet settings for nodes.
               type: object
