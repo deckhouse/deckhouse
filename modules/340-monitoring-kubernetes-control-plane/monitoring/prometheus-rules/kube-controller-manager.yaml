@@ -1,6 +1,6 @@
 - name: coreos.kube-controller-manager
   rules:
-  - alert: K8SControllerManagerDown
+  - alert: K8SControllerManagerTargetDown
     expr: absent(up{job="kube-controller-manager"} == 1)
     for: 5m
     labels:
