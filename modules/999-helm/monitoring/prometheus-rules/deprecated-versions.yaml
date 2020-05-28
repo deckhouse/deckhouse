@@ -3,6 +3,7 @@
   - alert: ResourceVersionDeprecated
     expr: |
       max without (instance, pod, hook, job) (resource_versions_compatibility) == 1
+    for: 30m
     labels:
       tier: cluster
       severity_level: "9"
