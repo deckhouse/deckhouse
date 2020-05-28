@@ -4,9 +4,16 @@ set -Eeo pipefail
 
 function get_secret() {
   secret="$1"
+  max_retries="$2"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+    attempt=0
     until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n d8-cloud-instance-manager get secret $secret -o json; do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
+        >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+        exit 1
+      fi
       >&2 echo "failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
@@ -37,6 +44,16 @@ function main() {
   export CONFIGURATION_CHECKSUM_FILE="/var/lib/bashible/configuration_checksum"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
+  export NODE_GROUP="{{ .nodeGroup.name }}"
+
+  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+    if tmp="$(kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+      NODE_GROUP="$tmp"
+      if [ "${NODE_GROUP}" == "null" ] ; then
+        >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
+      fi
+    fi
+  fi
 
   if [ -f /var/lib/bashible/first_run ] ; then
     FIRST_BASHIBLE_RUN="yes"
@@ -46,7 +63,7 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_secret bashible-{{ .nodeGroup.name }}-${BUNDLE} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible-new.sh
+    get_secret bashible-${NODE_GROUP}-${BUNDLE} ${MAX_RETRIES} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible-new.sh
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
     $BOOTSTRAP_DIR/bashible-new.sh --no-lock
@@ -70,7 +87,7 @@ function main() {
 
     # get steps from bundle secrets
     rm -rf $BUNDLE_STEPS_DIR/*
-    bundle_collections="bashible-bundle-${BUNDLE}-{{ .kubernetesVersion }} bashible-bundle-${BUNDLE}-{{ .nodeGroup.name }}"
+    bundle_collections="bashible-bundle-${BUNDLE}-{{ .kubernetesVersion }} bashible-bundle-${BUNDLE}-${NODE_GROUP}"
     for bundle_collection in $bundle_collections; do
       collection_data="$(get_secret $bundle_collection | jq -r '.data')"
       for step in $(jq -r 'to_entries[] | .key' <<< "$collection_data"); do
