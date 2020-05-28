@@ -1,7 +1,8 @@
-{{- define "node_group_static_or_hybrid_bootstrap_script" -}}
+{{- define "node_group_static_or_hybrid_script" -}}
   {{- $context := index . 0 -}}
   {{- $ng := index . 1 -}}
   {{- $bootstrap_token := index . 2 -}}
+  {{- $adopt := index . 3 -}}
 #!/bin/bash
 
 mkdir -p /var/lib/bashible
@@ -46,9 +47,13 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- $_ := set $bashible_bootstrap_script_tpl_context "nodeGroup" $ng }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Template" $context.Template }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Files" $context.Files }}
-cat > /var/lib/bashible/bootstrap.sh <<"EOF"
-{{ include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context }}
-EOF
+cat > /var/lib/bashible/bootstrap.sh <<"END"
+{{ if $adopt }}
+  {{- include "node_group_bashible_bootstrap_script_noninteractive" $bashible_bootstrap_script_tpl_context }}
+{{ else }}
+  {{- include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context }}
+{{ end }}
+END
 chmod +x /var/lib/bashible/bootstrap.sh
 
 cat > /var/lib/bashible/ca.crt <<"EOF"
@@ -59,6 +64,10 @@ cat > /var/lib/bashible/bootstrap-token <<"EOF"
 {{ $bootstrap_token }}
 EOF
 chmod 0600 /var/lib/bashible/bootstrap-token
+
+{{- if not $adopt }}
+touch /var/lib/bashible/first_run
+{{- end }}
 
 /var/lib/bashible/bootstrap.sh
 {{ end }}

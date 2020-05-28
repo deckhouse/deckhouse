@@ -8,11 +8,12 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ $ng.name }}
+  name: manual-bootstrap-for-{{ $ng.name }}
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list $context) | indent 2 }}
 type: Opaque
 data:
   cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
-  bootstrap.sh: {{ include "node_group_static_or_hybrid_bootstrap_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
+  adopt.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first) true) | b64enc }}
+  bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first) false) | b64enc }}
 {{- end }}

@@ -52,6 +52,8 @@ write_files:
   content: {{ $bootstrap_token }}
   permissions: '0600'
 
+- path: /var/lib/bashible/first_run
+
 runcmd:
 - /var/lib/bashible/bootstrap.sh
 output:

@@ -1,5 +1,93 @@
 {{- define "node_group_bashible_bootstrap_script" -}}
   {{- $context := . -}}
+
+  {{- include "node_group_bashible_bootstrap_script_base_bootstrap" $context }}
+
+  {{- if eq .nodeGroup.nodeType "Cloud" }}
+# Put bootstrap log information to Machine resource status
+patch_pending=true
+output_log_port=8000
+while [ "$patch_pending" = true ] ; do
+  for server in {{ .normal.apiserverEndpoints | join " " }} ; do
+    server_addr=$(echo $server | cut -f1 -d":")
+    until tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+      echo "The network is not ready for connecting to apiserver yet, waiting..."
+      sleep 1
+    done
+
+    if curl -s --fail \
+      --max-time 10 \
+      -XPATCH \
+      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/json-patch+json" \
+      --cacert "$BOOTSTRAP_DIR/ca.crt" \
+      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"tcpEndpoint\": \"${tcp_endpoint}\"} }]" \
+      "https://$server/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname -s)/status" ; then
+
+      echo "Successfully patched machine $(hostname -s) status."
+      patch_pending=false
+
+      break
+    else
+      >&2 echo "Failed to patch machine $(hostname -s) status."
+      sleep 10
+      continue
+    fi
+  done
+done
+
+# Start output bootstrap logs
+while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
+  {{- end }}
+
+  {{- include "node_group_bashible_bootstrap_script_download_bashible" $context }}
+
+# Bashible first run
+until /var/lib/bashible/bashible.sh; do
+  echo "Error running bashible script. Retry in 10 seconds."
+  sleep 10
+done;
+
+# Stop output bootstrap logs
+kill -9 %1
+{{- end }}
+
+{{- define "node_group_bashible_bootstrap_script_noninteractive" -}}
+  {{- $context := . -}}
+
+  {{- include "node_group_bashible_bootstrap_script_base_bootstrap" $context }}
+
+  {{- include "node_group_bashible_bootstrap_script_download_bashible" $context }}
+
+cat > /etc/systemd/system/bashible.timer << "EOF"
+[Unit]
+Description=bashible timer
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > /etc/systemd/system/bashible.service << "EOF"
+[Unit]
+Description=Bashible service
+
+[Service]
+EnvironmentFile=/etc/environment
+ExecStart=/var/lib/bashible/bashible.sh --max-retries 10
+EOF
+
+systemctl daemon-reload
+systemctl restart bashible.timer
+systemctl enable bashible.timer
+{{- end }}
+
+{{- define "node_group_bashible_bootstrap_script_base_bootstrap" -}}
+  {{- $context := . -}}
 #!/bin/bash
 
 function get_secret() {
@@ -44,7 +132,7 @@ chmod 0700 $BOOTSTRAP_DIR
 # Detect bundle
 BUNDLE="$(detect_bundle)"
 
-#Install necessary packages. Not in cloud config cause cloud init do not retry installation and silently fails.
+# Install necessary packages. Not in cloud config because cloud init do not retry installation and silently fails.
 basic_bootstrap_${BUNDLE}
 
 # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
@@ -59,55 +147,11 @@ elif [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; th
     sleep 10
   done
 fi
+{{- end }}
 
-  {{- if eq .nodeGroup.nodeType "Cloud" }}
-# Put bootstrap log information to Machine resource status
-patch_pending=true
-output_log_port=8000
-while [ "$patch_pending" = true ] ; do
-  for server in {{ .normal.apiserverEndpoints | join " " }} ; do
-    server_addr=$(echo $server | cut -f1 -d":")
-    until tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-      echo "The network is not ready for connecting to apiserver yet, waiting..."
-      sleep 1
-    done
-
-    if curl -s --fail \
-      --max-time 10 \
-      -XPATCH \
-      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
-      -H "Accept: application/json" \
-      -H "Content-Type: application/json-patch+json" \
-      --cacert "$BOOTSTRAP_DIR/ca.crt" \
-      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"tcpEndpoint\": \"${tcp_endpoint}\"} }]" \
-      "https://$server/apis/machine.sapcloud.io/v1alpha1/namespaces/d8-cloud-instance-manager/machines/$(hostname -s)/status" ; then
-
-      echo "Successfully patched machine $(hostname -s) status."
-      patch_pending=false
-
-      break
-    else
-      >&2 echo "Failed to patch machine $(hostname -s) status."
-      sleep 10
-      continue
-    fi
-  done
-done
-
-# Start output bootstrap logs
-while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
-  {{- end }}
-
+{{- define "node_group_bashible_bootstrap_script_download_bashible" -}}
+  {{- $context := . }}
 # Get bashible script from secret
 get_secret bashible-{{ .nodeGroup.name }}-${BUNDLE} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
-
-# Bashible first run
-until /var/lib/bashible/bashible.sh; do
-  echo "Error running bashible script. Retry in 10 seconds."
-  sleep 10
-done;
-
-# Stop output bootstrap logs
-kill -9 %1
 {{- end }}
