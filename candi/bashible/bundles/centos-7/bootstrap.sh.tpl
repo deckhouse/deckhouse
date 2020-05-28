@@ -10,4 +10,3 @@ until yum install jq nc curl -y; do
 done
 
 mkdir -p /var/lib/bashible/
-touch /var/lib/bashible/first_run

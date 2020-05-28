@@ -994,7 +994,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			bashibleSecrets["bashible-worker-ubuntu-18.04"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-18.04")
 
 			bootstrapSecrets := map[string]object_store.KubeObject{}
-			bootstrapSecrets["worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker")
+			bootstrapSecrets["manual-bootstrap-for-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-worker")
 
 			roles := map[string]object_store.KubeObject{}
 			roles["bashible"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
@@ -1045,7 +1045,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-ubuntu-18.04"].Exists()).To(BeTrue())
 
-			Expect(bootstrapSecrets["worker"].Exists()).To(BeTrue())
+			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
 			Expect(roles["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
