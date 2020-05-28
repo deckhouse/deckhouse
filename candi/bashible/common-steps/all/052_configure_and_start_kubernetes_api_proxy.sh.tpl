@@ -31,7 +31,7 @@ _on_kubernetes_api_proxy_service_changed() {
     mkdir -p /etc/kubernetes/kubernetes-api-proxy
 
 {{- if eq .runType "ClusterBootstrap" }}
-  {{- if ne .nodeGroup.nodeType "Static" }}
+  {{- if .clusterBootstrap.nodeIP }}
     /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.nodeIP }}:6443
   {{- else }}
     discovered_node_ip=$(cat /var/lib/bashible/discovered-node-ip)
