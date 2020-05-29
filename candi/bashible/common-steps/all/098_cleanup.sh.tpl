@@ -1,3 +1,6 @@
+bb-flag-unset apt-updated
+bb-flag-unset yum-updated
+
 rm -f /var/lib/bashible/bootstrap-token
 rm -f /var/lib/bashible/ca.crt
 rm -f /var/lib/bashible/cloud-provider-bootstrap-networks-*.sh
