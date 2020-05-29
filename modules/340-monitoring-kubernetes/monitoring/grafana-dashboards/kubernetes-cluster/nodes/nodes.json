@@ -3893,13 +3893,8 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
-        "current": {
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
-        },
+        "allValue": ".*",
+        "current": {},
         "datasource": "$ds_prometheus",
         "definition": "",
         "hide": 0,
