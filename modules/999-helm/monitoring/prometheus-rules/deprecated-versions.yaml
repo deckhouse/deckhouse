@@ -1,33 +1,20 @@
 - name: d8.helm-releases-resource-versions
   rules:
-  - alert: ResourceVersionDeprecated
-    expr: |
-      max without (instance, pod, hook, job) (resource_versions_compatibility) == 1
-    for: 30m
-    labels:
-      tier: cluster
-      severity_level: "9"
-    annotations:
-      plk_markup_format: markdown
-      plk_protocol_version: "1"
-      summary: HELM-Release {{ $labels.helm_release_name }} contains resource {{ $labels.kind }}/{{ $labels.resource_name }} with unsupported apiVersion {{ $labels.api_version }} in kubernetes 1.16+
-      description: |
-        For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
-
   - alert: HelmReleaseHasResourcesWithDeprecatedVersions
     expr: |
-      count by (helm_release_name) (ALERTS{alertname=~"ResourceVersionDeprecated", alertstate="firing"})
+      max by (helm_release_name) ((max without(instance, pod, hook, job) (resource_versions_compatibility) == 1)
+      * on (module) group_left()(count by(module)(max without(instance, pod, hook, job) (resource_versions_compatibility) == 1) < 50) ^ 0)
     labels:
       tier: cluster
       severity_level: "9"
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__resource_version_deprecated: "ResourceVersionDeprecated,prometheus=deckhouse,helm_release_name={{ $labels.helm_release_name }}"
-      summary: One of HELM-Releases contains one resource at least with unsupported apiVersion in kubernetes 1.16+
+      plk_pending_until_firing_for: "10m"
+      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.16+
       description: |
-        Examine groupped alerts to find the cause.
+        To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
+        For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
 
   - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
     expr: |
@@ -40,6 +27,21 @@
       plk_protocol_version: "1"
       plk_alert_type: "group"
       plk_group_for__helm_release_resource_versions_deprecated: HelmReleaseHasResourcesWithDeprecatedVersions,prometheus=deckhouse
-      summary: One of HELM-Releases contains one resource at least with unsupported apiVersion in kubernetes 1.16+
+      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.16+
       description: |
         Examine groupped alerts to find the cause.
+
+  - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
+    expr: |
+      (count by (module) (resource_versions_compatibility == 1)) >= 50
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_pending_until_firing_for: "10m"
+      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.16+
+      description: |
+        To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
+        For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
