@@ -42,6 +42,11 @@ func (d *DeckhouseController) Stop() {
 	}
 }
 
+func (d *DeckhouseController) Shutdown() {
+	d.RegistryWatcher.Stop()
+	d.AddonOperator.Shutdown()
+}
+
 // StartWatchRegistry initializes and starts a RegistryManager.
 func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	// Initialize RegistryWatcher dependencies
