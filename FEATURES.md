@@ -80,6 +80,9 @@ Statusmap (второй блок сверху на всех досках, кро
 > 4. cloud-controller-manager из модулей 030-cloud-provider-*
 > 5. machine-controller-manager из 040-cloud-instance-manager
 > 6. ingress-conversion-webhook из 400-nginx-ingress
+>
+>В случае, если используется managed кластер kubernetes от cloud provider и включен highAvailability либо глобально, либо для одного из модулей, то
+>предполагается, что в кластере есть минимум 2 ноды, которые подходят под стратегию `master` ([node selector'ов](/docs/development/README.md#node-selector))
 
 | Модуль   |      Статус   |
 |----------|---------------|

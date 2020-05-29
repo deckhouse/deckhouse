@@ -63,18 +63,9 @@ spec:
 {{- include "helm_lib_node_selector" (tuple $context "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $context "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | indent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator
-    {{- if (include "helm_lib_ha_enabled" $context) }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app: dex-authenticator
-                name: {{ $crd.name }}
-            topologyKey: kubernetes.io/hostname
-    {{- end }}
       volumes:
       - name: tls
         emptyDir: {}

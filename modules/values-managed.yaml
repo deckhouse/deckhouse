@@ -1,0 +1,37 @@
+global:
+  discovery: {}
+  modulesImages: {}
+  modules:
+    ingressClass: nginx
+    https:
+      mode: CertManager
+      certManager:
+        clusterIssuerName: letsencrypt
+
+##########################################
+# Список включенных по умолчанию модулей #
+##########################################
+operatorPrometheusCrdEnabled: true
+priorityClassEnabled: true
+prometheusCrdEnabled: true
+verticalPodAutoscalerCrdEnabled: true
+deckhouseEnabled: true
+certManagerEnabled: true
+userAuthzEnabled: true
+operatorPrometheusEnabled: true
+prometheusEnabled: true
+prometheusMetricsAdapterEnabled: true
+verticalPodAutoscalerEnabled: true
+monitoringApplicationsEnabled: true
+monitoringCustomEnabled: true
+monitoringKubernetesEnabled: true
+monitoringPingEnabled: true
+prometheusMadisonIntegrationEnabled: true
+extendedMonitoringEnabled: true
+nodeLocalDnsEnabled: true
+deschedulerEnabled: true
+ingressNginxEnabled: true
+dashboardEnabled: true
+secretCopierEnabled: true
+systemdSlicesCleanerEnabled: true
+helmEnabled: true

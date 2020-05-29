@@ -83,8 +83,7 @@ spec:
         checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
         rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
       tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/master

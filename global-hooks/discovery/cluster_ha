@@ -19,17 +19,15 @@ function __config__() {
           matchNames: [default]
       nameSelector:
         matchNames: [kubernetes]
-      jqFilter: '{"clusterMasterCount": (.subsets[].addresses | length), "isHA": (.subsets[].addresses | length > 1)}'
+      jqFilter: '{"isHA": (.subsets[].addresses | length > 1)}'
 EOF
 }
 
 function __on_kubernetes::kube_api_ep::synchronization() {
-  values::set global.discovery.clusterMasterCount "$(context::get objects.0.filterResult.clusterMasterCount)"
   values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get objects.0.filterResult.isHA)"
 }
 
 function __on_kubernetes::kube_api_ep::added_or_modified() {
-  values::set global.discovery.clusterMasterCount "$(context::get filterResult.clusterMasterCount)"
   values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get filterResult.isHA)"
 }
 

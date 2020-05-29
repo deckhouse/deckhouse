@@ -3,7 +3,7 @@
 set -o pipefail
 set -e
 
-declare -A bundles_map; bundles_map=( ["Default"]="default" ["Minimal"]="minimal" )
+declare -A bundles_map; bundles_map=( ["Default"]="default" ["Minimal"]="minimal" ["Managed"]="managed" )
 
 bundle=${DECKHOUSE_BUNDLE:-Default}
 if [[ ! ${bundles_map[$bundle]+_} ]]; then

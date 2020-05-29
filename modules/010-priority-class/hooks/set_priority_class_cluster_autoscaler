@@ -13,14 +13,7 @@ EOF
 function __on_after_helm() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
-    # Поду cluster-autoscaler необходимо задать максимальный priorityClass, так как без cluster-autoscaler
-    # мы не сможем скейлить кластер
-
-    # В Manual кластерах нет cluster-autoscaler
-    [[ "$cluster_type" == "Manual" ]] && return 0
-
-    # Убедимся, что не забыли поставить cluster-autoscaler
+    # Убедимся, что cluster-autoscaler есть в кластере
     if kubectl -n kube-system get deploy cluster-autoscaler > /dev/null 2> /dev/null ; then
       # Необходимо проставить наивысший priorityClassName cluster-autoscaler
       fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
@@ -33,14 +26,7 @@ function __on_after_helm() {
 function __on_after_delete_helm() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
-    # Поду cluster-autoscaler необходимо задать максимальный priorityClass, так как без cluster-autoscaler
-    # мы не сможем скейлить кластер
-
-    # В Manual кластерах нет cluster-autoscaler
-    [[ "$cluster_type" == "Manual" ]] && return 0
-
-    # Убедимся, что не забыли поставить cluster-autoscaler
+    # Убедимся, что cluster-autoscaler есть в кластере
     if kubectl -n kube-system get deploy cluster-autoscaler > /dev/null 2> /dev/null ; then
       fltr='. | del(.spec.template.spec.priorityClassName)'
       # Применяем

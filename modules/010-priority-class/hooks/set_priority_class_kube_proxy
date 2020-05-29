@@ -13,33 +13,27 @@ EOF
 function __on_after_helm() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
-    # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
-    # работа всего кластера может быть нарушена
-
-    # В AWS и GCE kube-proxy запущены, как static поды
-    [[ "$cluster_type" == "AWS" || "$cluster_type" == "GCE" ]] && return 0
-
-    # Необходимо проставить наивысший priorityClassName kube-proxy
-    fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-    # Применяем
-    kubernetes::patch_jq kube-system daemonset/kube-proxy "$fltr"
+    if kubectl -n kube-system get ds kube-proxy >/dev/null 2>&1; then
+      # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
+      # работа всего кластера может быть нарушена
+      # Необходимо проставить наивысший priorityClassName kube-proxy
+      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+      # Применяем
+      kubernetes::patch_jq kube-system daemonset/kube-proxy "$fltr"
+    fi
   fi
 }
 
 function __on_after_delete_helm() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
-    # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
-    # работа всего кластера может быть нарушена
-
-    # В AWS и GCE kube-proxy запущены, как static поды
-    [[ "$cluster_type" == "AWS" || "$cluster_type" == "GCE" ]] && return 0
-
-    fltr='. | del(.spec.template.spec.priorityClassName)'
-    # Применяем
-    kubernetes::patch_jq kube-system daemonset/kube-proxy "$fltr"
+    if kubectl -n kube-system get ds kube-proxy >/dev/null 2>&1; then
+      # Подам kube-proxy необходимо задать максимальный priorityClass, так как без подов kube-proxy
+      # работа всего кластера может быть нарушена
+      fltr='. | del(.spec.template.spec.priorityClassName)'
+      # Применяем
+      kubernetes::patch_jq kube-system daemonset/kube-proxy "$fltr"
+    fi
   fi
 }
 

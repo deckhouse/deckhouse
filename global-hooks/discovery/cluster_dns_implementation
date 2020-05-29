@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Hook detects how dns is implemented in the cluster. Basically it just detects deployment name with labels `k8s-app: kube-dns`
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: kube_dns_deployment
+      apiVersion: apps/v1
+      kind: Deployment
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-dns
+      jqFilter: '.metadata.name'
+      watchEvent: ["Added", "Modified"]
+EOF
+}
+
+function __on_kubernetes::kube_dns_deployment::synchronization() {
+  values::set global.discovery.clusterDNSImplementation "$(context::get objects.0.filterResult)"
+}
+
+function __on_kubernetes::kube_dns_deployment::added_or_modified() {
+  values::set global.discovery.clusterDNSImplementation "$(context::get filterResult)"
+}
+
+hook::run "$@"
