@@ -13,33 +13,27 @@ EOF
 function __on_after_helm() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
     # dns-controller необходимо задать максимальный priorityClass, так как без dns-controller
     # мы можем получить нерабочий инструмент kubectl
-
-    # В Manual кластерах нет dns-controller
-    [[ "$cluster_type" == "Manual" || "$cluster_type" == "ACS" ]] && return 0
-
-    # Необходимо поставить наивысший priorityClassName dns-controller
-    fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
-    # Применяем
-    kubernetes::patch_jq kube-system deployment/dns-controller "$fltr"
+    if kubectl -n kube-system get deploy dns-controller > /dev/null 2> /dev/null; then
+      # Необходимо поставить наивысший priorityClassName dns-controller
+      fltr='. | .spec.template.spec.priorityClassName = "system-cluster-critical"'
+      # Применяем
+      kubernetes::patch_jq kube-system deployment/dns-controller "$fltr"
+    fi
   fi
 }
 
 function __on_after_delete_helm() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
-    cluster_type=$(values::get --required global.discovery.clusterType)
     # dns-controller необходимо задать максимальный priorityClass, так как без dns-controller
     # мы можем получить нерабочий инструмент kubectl
-
-    # В Manual кластерах нет dns-controller
-    [[ "$cluster_type" == "Manual" || "$cluster_type" == "ACS" ]] && return 0
-
-    fltr='. | del(.spec.template.spec.priorityClassName)'
-    # Применяем
-    kubernetes::patch_jq kube-system deployment/dns-controller "$fltr"
+    if kubectl -n kube-system get deploy dns-controller > /dev/null 2> /dev/null; then
+      fltr='. | del(.spec.template.spec.priorityClassName)'
+      # Применяем
+      kubernetes::patch_jq kube-system deployment/dns-controller "$fltr"
+    fi
   fi
 }
 

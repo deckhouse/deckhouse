@@ -80,6 +80,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// TODO: move to some common function???
 		f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 		f.ValuesSet("global.modulesImages.registry", "registryAddr")
+		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
 	})
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {

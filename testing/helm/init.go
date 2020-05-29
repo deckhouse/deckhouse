@@ -109,11 +109,11 @@ func (hec *HelmConfig) HelmRender() {
 	for _, doc := range releaseutil.SplitManifests(string(hec.Session.Out.Contents())) {
 		var t interface{}
 		err = yaml.Unmarshal([]byte(doc), &t)
+
+		Expect(err).To(Not(HaveOccurred()))
 		if t == nil {
 			continue
 		}
-
-		Expect(err).To(Not(HaveOccurred()))
 		Expect(t).To(BeAssignableToTypeOf(map[string]interface{}{}))
 
 		var unstructuredObj unstructured.Unstructured

@@ -3,6 +3,7 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
+  enabled::fail_if_values_are_not_set global.discovery.podSubnet global.discovery.serviceSubnet
   echo "true" > $MODULE_ENABLED_RESULT
 }
 

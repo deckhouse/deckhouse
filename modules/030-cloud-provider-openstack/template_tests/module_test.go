@@ -38,8 +38,8 @@ const globalValues = `
         cloudControllerManager: imagehash
         flanneld: imagehash
   discovery:
-    clusterMasterCount: 3
     d8SpecificNodeCountByRole:
+      master: 3
       worker: 1
     nodeCountByType:
       cloud: 1

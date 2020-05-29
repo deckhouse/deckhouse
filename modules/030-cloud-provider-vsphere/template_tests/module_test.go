@@ -40,9 +40,9 @@ const globalValues = `
         vsphereCsi: imagehash
         cloudControllerManager: imagehash
   discovery:
-    clusterMasterCount: 3
     d8SpecificNodeCountByRole:
       worker: 1
+      master: 3
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16

@@ -18,3 +18,12 @@ function enabled::disable_module_in_kubernetes_versions_less_than() {
     exit 0
   fi
 }
+
+function enabled::fail_if_values_are_not_set() {
+  for var in "$@"
+  do
+    if ! values::has "$var" ; then
+      return 1
+    fi
+  done
+}

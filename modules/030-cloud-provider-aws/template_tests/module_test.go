@@ -41,10 +41,10 @@ const globalValues = `
         simpleBridge: imagehash
         cloudControllerManager: imagehash
   discovery:
-    clusterMasterCount:
-      __ConstantChoices__: "3"
     d8SpecificNodeCountByRole:
       worker: 1
+      master:
+        __ConstantChoices__: "3"
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16

@@ -179,12 +179,6 @@ spec:
           type: File
         name: key
   {{- end }}
-      nodeSelector:
-  {{- if eq .Values.global.discovery.clusterType "ACS" }}
-        kubernetes.io/role: master
-  {{- else }}
-        node-role.kubernetes.io/master: ""
-  {{- end }}
-      tolerations:
-      - operator: Exists
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 8 }}
+{{- include "helm_lib_tolerations" (tuple . "master") | indent 8 }}
 {{- end }}

@@ -32,7 +32,8 @@ modulesImages:
     common:
       kubeRbacProxy: imagehash
 discovery:
-  clusterMasterCount: "3"
+  d8SpecificNodeCountByRole:
+    master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.15.4
 `

@@ -11,7 +11,7 @@ EOF
 
 function __main__() {
   deckhouse_bundle=$(values::get deckhouse.bundle)
-  if [[ "$deckhouse_bundle" != "Default" ]] && [[ "$deckhouse_bundle" != "Minimal" ]]; then
+  if [[ "$deckhouse_bundle" != "Default" ]] && [[ "$deckhouse_bundle" != "Minimal" ]] && [[ "$deckhouse_bundle" != "Managed" ]]; then
     echo "Deckhouse bundle \"$deckhouse_bundle\" doesn't exists."
     return 1
   fi

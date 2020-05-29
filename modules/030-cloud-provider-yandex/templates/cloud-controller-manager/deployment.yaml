@@ -22,16 +22,7 @@ metadata:
   namespace: d8-cloud-provider-yandex
 {{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
 spec:
-  replicas: {{ .Values.global.discovery.clusterMasterCount }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 0
-{{- if gt (.Values.global.discovery.clusterMasterCount | int) 2 }}
-      maxUnavailable: 2
-{{- else }}
-      maxUnavailable: 1
-{{- end }}
+{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
   selector:
     matchLabels:
       app: cloud-controller-manager
@@ -45,22 +36,12 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
-{{- if gt (.Values.global.discovery.clusterMasterCount | int) 1 }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app: cloud-controller-manager
-            topologyKey: kubernetes.io/hostname
-{{- end }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
       hostNetwork: true
       securityContext:
         runAsUser: 1001
-      tolerations:
-      - operator: Exists
       serviceAccountName: cloud-controller-manager
       containers:
         - name: yandex-cloud-controller-manager

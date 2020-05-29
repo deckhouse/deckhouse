@@ -22,14 +22,7 @@ metadata:
   namespace: d8-cert-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | indent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
-  {{- if (include "helm_lib_ha_enabled" .) }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-  {{- end }}
+{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
   selector:
     matchLabels:
       app: cert-manager
@@ -42,17 +35,9 @@ spec:
         type: Recreate
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cert-manager")) | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       serviceAccountName: cert-manager
-      {{- if (include "helm_lib_ha_enabled" .) }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app: cert-manager
-            topologyKey: kubernetes.io/hostname
-      {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
