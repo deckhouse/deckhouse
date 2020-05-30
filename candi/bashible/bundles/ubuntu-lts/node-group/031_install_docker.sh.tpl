@@ -5,6 +5,9 @@ post-install() {
     bb-flag-unset there-was-docker-installed
   fi
 
+  if bb-is-ubuntu-version? 18.04; then
+    systemctl unmask docker.service  # Fix bug in ubuntu 18.04: https://bugs.launchpad.net/ubuntu/+source/docker.io/+bug/1844894
+  fi
   systemctl enable docker.service
 {{ if ne .runType "ImageBuilding" -}}
   systemctl restart docker.service
@@ -21,9 +24,19 @@ post-install() {
 {{- if $nvidia_docker }}
 package="docker-ce=5:18.09.7~3-0~ubuntu-$(lsb_release -sc) docker-ce-cli=5:18.09.7~3-0~ubuntu-$(lsb_release -sc) nvidia-container-runtime=2.0.0+docker18.09.7-3 nvidia-docker2=2.0.3+docker18.09.7-3"
 
+if bb-apt-package? $(echo $package | cut -f1 -d" " | cut -f1 -d"="); then
+  bb-flag-set there-was-docker-installed
+fi
+
+if ! bb-apt-package? $(echo $package | cut -f1 -d"="); then
+  bb-deckhouse-get-disruptive-update-approval
+fi
+
 if bb-apt-package? docker.io; then
   bb-apt-remove docker.io
 fi
+
+bb-apt-install $package
 {{- else }}
 
 if bb-is-ubuntu-version? 18.04 ; then
@@ -33,6 +46,14 @@ elif bb-is-ubuntu-version? 16.04 ; then
 else
   bb-log-error "Unsupported Ubuntu version"
   exit 1
+fi
+
+if bb-apt-package? $(echo $pacakge | cut -f1 -d"="); then
+  bb-flag-set there-was-docker-installed
+fi
+
+if ! bb-apt-package? $package; then
+  bb-deckhouse-get-disruptive-update-approval
 fi
 
 if bb-apt-package? nvidia-docker2; then
@@ -45,6 +66,7 @@ fi
 
 if bb-apt-package? docker-ce; then
   bb-apt-remove docker-ce
+  bb-flag-set there-was-docker-installed
 fi
 
 if bb-apt-package? docker-ce-cli; then
@@ -54,14 +76,6 @@ fi
 if bb-apt-package? containerd.io; then
   bb-apt-remove containerd.io
 fi
-{{- end }}
-
-if bb-apt-package? $(echo $pacakge | cut -f1 -d"="); then
-  bb-flag-set there-was-docker-installed
-fi
-
-if ! bb-apt-package? $package; then
-  bb-deckhouse-get-disruptive-update-approval
-fi
 
 bb-apt-install $package
+{{- end }}
