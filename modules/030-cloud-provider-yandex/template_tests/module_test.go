@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, yandex-csi, flannel.
+2. There are applications which must be deployed — cloud-controller-manager, yandex-csi, simple-bridge.
 
 */
 
@@ -37,8 +37,8 @@ const globalValues = `
         csiNodeDriverRegistrar: imagehash
         csiLivenessProbe: imagehash
         cloudControllerManager: imagehash
-        flanneld: imagehash
         yandexCsiPlugin: imagehash
+        simpleBridge: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -58,6 +58,7 @@ const moduleValues = `
     defaultLbTargetGroupNetworkId: deftarggroupnetid
     internalNetworkIDs: ["id1", "id2"]
     externalNetworkIDs: ["id1", "id2"]
+    routeTableID: testest
     sshKey: mysshkey
     sshUser: mysshuser
     serviceAccountJSON: '{"my": "json"}'
@@ -87,11 +88,10 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:flannel")
-			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:flannel")
-			flannelSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "flannel")
-			flannelDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "flannel")
-			flannelCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "flannel")
+			sbCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:simple-bridge")
+			sbCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:simple-bridge")
+			sbSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "simple-bridge")
+			sbDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "simple-bridge")
 
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
 			csiControllerSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-yandex", "csi-controller")
@@ -173,11 +173,10 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
 
-			Expect(flannelCR.Exists()).To(BeTrue())
-			Expect(flannelCRB.Exists()).To(BeTrue())
-			Expect(flannelSA.Exists()).To(BeTrue())
-			Expect(flannelDS.Exists()).To(BeTrue())
-			Expect(flannelCM.Exists()).To(BeTrue())
+			Expect(sbCR.Exists()).To(BeTrue())
+			Expect(sbCRB.Exists()).To(BeTrue())
+			Expect(sbSA.Exists()).To(BeTrue())
+			Expect(sbDS.Exists()).To(BeTrue())
 
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())

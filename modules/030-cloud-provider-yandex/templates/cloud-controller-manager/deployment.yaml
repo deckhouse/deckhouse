@@ -50,6 +50,8 @@ spec:
             - /bin/yandex-cloud-controller-manager
             - --cloud-provider=yandex
             - --cluster-name={{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
+            - --allocate-node-cidrs=true
+            - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
             - --v=4
           resources:
             requests:
@@ -70,3 +72,5 @@ spec:
               value: {{ join "," .Values.cloudProviderYandex.internalNetworkIDs | quote }}
             - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
               value: {{ join "," .Values.cloudProviderYandex.externalNetworkIDs | quote }}
+            - name: YANDEX_CLOUD_ROUTE_TABLE_ID
+              value: {{ .Values.cloudProviderYandex.routeTableID | required ".Values.cloudProviderYandex.routeTableID is required" | quote }}

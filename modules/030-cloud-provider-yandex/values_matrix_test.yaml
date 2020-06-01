@@ -15,7 +15,7 @@ global:
         csiNodeDriverRegistrar: imagehash
         csiLivenessProbe: imagehash
         cloudControllerManager: imagehash
-        flanneld: imagehash
+        simpleBridge: imagehash
         yandexCsiPlugin: imagehash
   discovery:
     d8SpecificNodeCountByRole:
@@ -45,6 +45,7 @@ cloudProviderYandex:
       search: ["example.com"]
     region: myreg
     folderID: myfoldid
+    routeTableID: test
   - zones: ["zonea", "zoneb"]
     zoneToSubnetIdMap:
       zonea: aaa
@@ -55,3 +56,4 @@ cloudProviderYandex:
     serviceAccountJSON: '{"my": "json"}'
     region: myreg
     folderID: myfoldid
+    routeTableID: test
