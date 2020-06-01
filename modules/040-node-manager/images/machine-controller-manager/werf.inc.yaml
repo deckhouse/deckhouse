@@ -1,0 +1,36 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: alpine:3.11
+docker:
+  ENV:
+    WORKDIR: /
+    ENTRYPOINT: "/machine-controller-manager"
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}/build
+  add: /src/bin/machine-controller-manager
+  to: /machine-controller-manager
+  before: setup
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}/build
+from: golang:1.13-alpine3.11
+ansible:
+  beforeInstall:
+  - name: "Install dependencies"
+    apk:
+      name:
+      - mercurial
+      - make
+      - bash
+      - tzdata
+      update_cache: yes
+  install:
+  - name: "Build"
+    shell: make build-local
+    args:
+      chdir: /src
+git:
+- url: https://gitlab-ci-token:{{ env "CI_JOB_TOKEN" }}@fox.flant.com/sys/deckhouse-mcm.git
+  to: /src/
+  tag: 0.27.0-flant.6
+  stageDependencies:
+    install:
+    - '**/*'

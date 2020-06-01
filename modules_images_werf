@@ -1,0 +1,60 @@
+#!/bin/bash
+
+set -o pipefail
+set -e
+
+function bp() {
+  werf build-and-publish --config modules_images_werf.yaml --stages-storage :local --publish-report-path images_tags_werf.json
+
+  jq '
+    def to_camel_case:
+      . | ascii_downcase | split("-") | .[0:1] as $first | .[1:] |
+      map(
+        .[1:] as $rest | .[0:1] | ascii_upcase | . + $rest
+      ) |
+      $first + . | join("")
+    ;
+    .Images | to_entries | reduce .[] as $image ({};
+      . * {
+        ($image.key | split("/")[0] | to_camel_case): {
+          ($image.key | split("/")[1] | to_camel_case): $image.value.DockerTag
+        }
+      }
+    )' images_tags_werf.json > modules/images_tags.json
+
+  rm images_tags_werf.json
+}
+
+function cleanup() {
+  >2& echo "Not implemented!"
+  # TODO
+}
+
+! read -rd '' HELP_STRING <<"EOF"
+Usage: modules_images SUBCOMMAND [SUBCOMMAND OPTIONS]...
+
+Available subcommands: (for details, modules_images SUBCOMMAND --help)
+
+modules_images bp
+modules_images cleanup
+EOF
+
+if [[ $# -eq 0 ]] ; then
+  echo "$HELP_STRING"
+  exit 1
+fi
+
+SUBCOMMAND=$1
+shift
+
+type multiwerf && source <(multiwerf use 1.1 alpha)
+type werf && source <(werf ci-env gitlab --verbose);
+
+case "$SUBCOMMAND" in
+  bp )
+    bp $@ ;;
+  cleanup )
+    cleanup $@ ;;
+  * )
+    echo "$HELP_STRING"; exit 1 ;;
+esac

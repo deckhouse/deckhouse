@@ -1,0 +1,31 @@
+project: deckhouse-modules-images
+configVersion: 1
+
+{{- range $path, $content := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}"  }}
+  {{- $ctx := dict }}
+  {{- if regexMatch "/werf.inc.yaml$" $path }}
+  {{- $_ := set $ctx "ImageInstructionType" "Stapel" }}
+  {{- else }}
+  {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
+  {{- end }}
+  {{- $ImageData := regexReplaceAll "^modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}" | split "#" }}
+  {{- $ci_job_token := env "CI_JOB_TOKEN" }}
+  {{- $_ := set $ctx "ModulePriority" $ImageData._0 }}
+  {{- $_ := set $ctx "ModuleName" $ImageData._1 }}
+  {{- $_ := set $ctx "ImageName" $ImageData._2 }}
+  {{- $_ := set $ctx "ImageBuildData" $content }}
+---
+{{ include "module_image_template" $ctx  }}
+{{- end }}
+
+{{- define "module_image_template" }}
+{{- if  eq .ImageInstructionType "Dockerfile" }}
+image: {{ .ModuleName }}/{{ .ImageName }}
+context: ./modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+dockerfile: ./modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/Dockerfile
+args:
+  CI_JOB_TOKEN: {{ env "CI_JOB_TOKEN" }}
+{{- else }}
+{{ tpl .ImageBuildData . }}
+{{- end }}
+{{- end }}
