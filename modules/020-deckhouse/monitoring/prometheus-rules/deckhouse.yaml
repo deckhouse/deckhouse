@@ -164,7 +164,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Глобальный хук {{ $labels.hook }} deckhouse падает слишком часто
-      descritipion: |
+      description: |
         Глобальный хук {{ $labels.hook }} падал в последние __SCRAPE_INTERVAL_X_4__
 
         Необходимо посмотреть логи:
@@ -184,7 +184,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Хук deckhouse {{ $labels.module }}/{{ $labels.hook }} падает слишком часто
-      descritipion: |
+      description: |
         Хук {{ $labels.hook }} модуля {{ $labels.module }} падал в последние __SCRAPE_INTERVAL_X_4__
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
@@ -203,7 +203,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse не может задискаверить модули
-      descritipion: |
+      description: |
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
 
@@ -221,7 +221,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse не может запустить модуль {{ $labels.module }}
-      descritipion: |
+      description: |
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
 
@@ -239,7 +239,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse не может удалить модуль {{ $labels.module }}
-      descritipion: |
+      description: |
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
 
@@ -257,7 +257,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse не может запустить глобальный хук {{ $labels.hook }}
-      descritipion: |
+      description: |
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
 
@@ -275,7 +275,7 @@
       plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse не может запустить модульный хук {{ $labels.module }}/{{ $labels.hook }}
-      descritipion: |
+      description: |
         Необходимо посмотреть логи:
         1. `kubectl -n d8-system logs -f -l app=deckhouse`
 
