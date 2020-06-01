@@ -103,7 +103,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		}
 	}
 
-	firstRunFileFlag := filepath.Join(candiBashibleDir, "first_run")
+	firstRunFileFlag := filepath.Join(bashibleDir, "first_run")
 	logboek.LogInfoF("Create %q\n", firstRunFileFlag)
 	if err := createEmptyFile(firstRunFileFlag); err != nil {
 		return err
