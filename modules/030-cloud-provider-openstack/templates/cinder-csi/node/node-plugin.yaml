@@ -38,7 +38,7 @@ spec:
           args:
             - "--v=5"
             - "--csi-address=/csi/csi.sock"
-            - "--kubelet-registration-path=/var/lib/kubelet/plugins/cinder.csi.openstack.org/csi.sock"
+            - "--kubelet-registration-path=/var/lib/kubelet/csi-plugins/cinder.csi.openstack.org/csi.sock"
           lifecycle:
             preStop:
               exec:
@@ -88,7 +88,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/cinder.csi.openstack.org
+            path: /var/lib/kubelet/csi-plugins/cinder.csi.openstack.org
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
