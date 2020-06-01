@@ -33,6 +33,8 @@
   * **Внимание!** При указании данной опции все создаваемые LoadBalancer'ы будут INTERNAL типом. Для переопределения типа следует использовать аннотацию на Kubernetes Service с ключом `yandex.cpi.flant.com/loadbalancer-external` и любым значением. [Подробнее](#LoadBalancer).
 * `defaultLbTargetGroupNetworkId` — Network ID, что будет использовать для создаваемых Target Groups в LoadBalancers.
   * Формат — строка.
+* `routeTableID` — Route Table ID, что будет использоваться для создания маршрутов к PodCIDR между виртуальными машинами. Должна быть привязана ко всему subnets, что используются на виртуальных машинах в кластере.
+  * Формат — строка.
 * `internalNetworkIDs` — список Network ID, которые будут считаться `InternalIP` при перечислении адресов у Node;
   * Формат — массив строк.
   * Опциональный параметр.
