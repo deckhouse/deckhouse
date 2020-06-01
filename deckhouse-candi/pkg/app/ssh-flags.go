@@ -15,6 +15,7 @@ var (
 	SshAgentPrivateKeys = make([]string, 0)
 	SshPrivateKeys      = make([]string, 0)
 	SshBastionHost      = ""
+	SshBastionPort      = ""
 	SshBastionUser      = os.Getenv("USER")
 	SshUser             = os.Getenv("USER")
 	SshHost             = ""
@@ -27,6 +28,8 @@ func DefineSshFlags(cmd *kingpin.CmdClause) {
 		StringsVar(&SshAgentPrivateKeys)
 	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
 		StringVar(&SshBastionHost)
+	cmd.Flag("ssh-bastion-port", "SSH destination port").
+		StringVar(&SshBastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
 		StringVar(&SshBastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").

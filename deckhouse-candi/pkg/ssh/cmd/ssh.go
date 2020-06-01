@@ -85,6 +85,9 @@ func (s *Ssh) Cmd() *exec.Cmd {
 		if s.Session.BastionUser != "" {
 			bastion = s.Session.BastionUser + "@" + s.Session.BastionHost
 		}
+		if s.Session.BastionPort != "" {
+			bastion = bastion + " -p" + s.Session.BastionPort
+		}
 		args = append(args, []string{
 			"-o",
 			fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p", bastion), // note that single quotes is not needed here

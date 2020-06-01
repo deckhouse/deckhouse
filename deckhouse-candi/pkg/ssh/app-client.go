@@ -13,6 +13,7 @@ func NewClientFromFlags() *SshClient {
 			User:        app.SshUser,
 			Port:        app.SshPort,
 			BastionHost: app.SshBastionHost,
+			BastionPort: app.SshBastionPort,
 			BastionUser: app.SshBastionUser,
 			ExtraArgs:   app.SshExtraArgs,
 		},

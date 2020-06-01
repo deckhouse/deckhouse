@@ -13,6 +13,7 @@ type Session struct {
 	User        string
 	Port        string
 	BastionHost string
+	BastionPort string
 	BastionUser string
 	ExtraArgs   string
 
