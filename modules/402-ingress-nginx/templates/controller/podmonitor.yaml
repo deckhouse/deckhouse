@@ -37,7 +37,7 @@ spec:
       action: labeldrop
   - targetPort: https-metrics
     scheme: https
-    path: /statsd/metrics
+    path: /protobuf/metrics
     tlsConfig:
       insecureSkipVerify: true
       certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
@@ -54,7 +54,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_controller_name]
       targetLabel: app
     - targetLabel: scrape_source
-      replacement: statsd
+      replacement: protobuf
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_pod_ready]

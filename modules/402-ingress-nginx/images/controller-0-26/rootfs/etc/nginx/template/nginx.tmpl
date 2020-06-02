@@ -88,11 +88,11 @@ http {
           balancer = res
         end
 
-        ok, res = pcall(require, "statsd")
+        ok, res = pcall(require, "pbmetrics")
         if not ok then
           error("require failed: " .. tostring(res))
         else
-          statsd = res
+          pbmetrics = res
         end
 
         ok, res = pcall(require, "certificate")
@@ -118,7 +118,7 @@ http {
 
         plugins.run()
 
-        statsd.init_worker()
+        pbmetrics.init_worker()
     }
 
     {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
@@ -745,7 +745,7 @@ stream {
 
             proxy_pass            http://upstream_balancer;
             log_by_lua_block {
-                statsd.call()
+                pbmetrics.call()
             }
         }
         {{ end }}
@@ -1046,7 +1046,7 @@ stream {
                 waf:exec()
                 {{ end }}
                 balancer.log()
-                statsd.call()
+                pbmetrics.call()
 
                 plugins.run()
             }

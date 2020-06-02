@@ -163,14 +163,8 @@ spec:
           name: secret-nginx-auth-tls-key
           subPath: client.key
           readOnly: true
-      - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/statsd-exporter:{{ $context.Values.global.modulesImages.tags.ingressNginx.statsdExporter }}
-        name: statsd-exporter
-        args:
-        - "--statsd.listen-tcp=127.0.0.1:4333"
-        - "--statsd.listen-udp="
-        - "--statsd.listen-unixgram="
-        - "--statsd.mapping-config=/etc/statsd_mapping.conf"
-        - "--web.listen-address=127.0.0.1:9102"
+      - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/protobuf-exporter:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}
+        name: protobuf-exporter
       - name: kube-rbac-proxy
         image: {{ $context.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -195,15 +189,15 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-controller-metrics
                   name: ingress-nginx
-            - upstream: http://127.0.0.1:9102/metrics
-              path: /statsd/metrics
+            - upstream: http://127.0.0.1:9091/metrics
+              path: /protobuf/metrics
               authorization:
                 resourceAttributes:
                   namespace: d8-ingress-nginx
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonsets
-                  subresource: prometheus-statsd-metrics
+                  subresource: prometheus-protobuf-metrics
                   name: ingress-nginx
         ports:
         - containerPort: 10354

@@ -53,8 +53,8 @@
         SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired. https://{{ $labels.host }} version of site doesn't work!
       summary: >
         Certificate has expired
-  - alert: NginxIngressStatsdMetricsBufferOverflow
-    expr: max by (controller, node) (increase(ingress_nginx_statsd_buffer_overflow_total[5m])) > 0
+  - alert: NginxIngressProtobufExporterHasErrors
+    expr: sum by (type, node, controller) (increase(protobuf_exporter_errors_total[5m])) > 0
     for: 10m
     labels:
       severity_level: "6"
@@ -62,10 +62,10 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |-
-        Ingress Nginx Controller StatsD metrics buffer on Node {{ $labels.node }} was overflown.
-        It can be caused by way to high RPS for the current controller.
+        Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.type }} errors.
+        It leeds to loose statistic.
 
         Please check ingress-controller logs:
-        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -o wide | grep {{ $labels.node }} | awk '{print $1}') -c ingress-nginx-controller`
+        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf_exporter`
       summary: >
-        Ingress Nginx Controller StatsD metrics buffer on Node {{ $labels.node }} was overflown.
+        Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.node }} errors.
