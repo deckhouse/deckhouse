@@ -161,7 +161,7 @@ Cleanup registry:
   script:
     - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
     - ./modules_images_werf cleanup
-    - type multiwerf && source <(multiwerf use 1.1 alfa)
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf cleanup --stages-storage :local --images-repo ${CI_REGISTRY_IMAGE}
   only:
