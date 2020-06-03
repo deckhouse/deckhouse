@@ -35,7 +35,7 @@ Tests:
   stage: testing
   script:
     - pwd
-    - type multiwerf && source <(multiwerf use 1.1 beta)
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - rm -rf testing/kcov-report
     - chmod -R 0777 testing
@@ -70,7 +70,7 @@ Matrix Tests:
   stage: testing
   script:
     - pwd
-    - type multiwerf && source <(multiwerf use 1.1 beta)
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf run tests
         --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
