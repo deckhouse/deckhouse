@@ -3,7 +3,7 @@
 if bb-apt-hold? "libnginx-mod-stream" ; then
   bb-apt-unhold "libnginx-mod-stream"
   if [ -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
-    if grep "load_module /usr/lib/nginx/modules/ng1x_stream_module.so;" /etc/kubernetes/kubernetes-api-proxy/nginx.conf -q ; then
+    if grep "load_module /usr/lib/nginx/modules/ngx_stream_module.so;" /etc/kubernetes/kubernetes-api-proxy/nginx.conf -q ; then
       sed -i '/load_module \/usr\/lib\/nginx\/modules\/ngx_stream_module.so;/d' /etc/kubernetes/kubernetes-api-proxy/nginx.conf
     fi
   fi
