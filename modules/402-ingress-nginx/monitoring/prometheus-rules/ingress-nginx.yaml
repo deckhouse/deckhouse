@@ -57,15 +57,14 @@
     expr: sum by (type, node, controller) (increase(protobuf_exporter_errors_total[5m])) > 0
     for: 10m
     labels:
-      severity_level: "6"
+      severity_level: "8"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |-
         Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.type }} errors.
-        It leeds to loose statistic.
 
         Please check ingress-controller logs:
-        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf_exporter`
+        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`
       summary: >
-        Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.node }} errors.
+        Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.type }} errors.

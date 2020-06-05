@@ -221,10 +221,14 @@ local function fill_statsd_buffer()
 
   ngx.var.content_kind = content_kind
 
-  local var_namespace = ngx.var.namespace
+  local var_namespace = ngx.var.namespace == "" and "-" or ngx.var.namespace
+  local var_ingress_name = ngx.var.ingress_name == "" and "-" or ngx.var.ingress_name
+  local var_service_name = ngx.var.service_name == "" and "-" or ngx.var.service_name
+  local var_service_port = ngx.var.service_port == "" and "-" or ngx.var.service_port
+
   local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
-  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. ngx.var.ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
-  local backend_key = var_namespace .. "#" .. ngx.var.ingress_name .. "#" .. ngx.var.service_name .. "#" .. ngx.var.service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
+  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
+  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
   -- requests
   local var_scheme = ngx.var.scheme
   local var_request_method = ngx.var.request_method
