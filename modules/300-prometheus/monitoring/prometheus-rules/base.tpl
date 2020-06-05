@@ -82,9 +82,9 @@
 {{- end }}
 
     - alert: D8TricksterTargetAbsent
-      expr: absent(up{job="trickster", namespace="d8-monitoring"} == 1)
+      expr: (max(up{job="prometheus", service="prometheus"}) == 1) * absent(up{job="trickster", namespace="d8-monitoring"} == 1)
       laels:
-        severity_level: "6"
+        severity_level: "5"
         tier: cluster
         d8_module: prometheus
         d8_component: trickster
@@ -108,7 +108,7 @@
 
     - alert: D8TricksterTargetAbsent
       expr: absent(up{job="trickster", namespace="d8-monitoring"} == 1)
-      for: 2m
+      for: 5m
       laels:
         severity_level: "5"
         tier: cluster
