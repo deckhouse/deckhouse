@@ -71,6 +71,11 @@ function set_etcdctl_credentials() {
 }
 
 function __main__() {
+  if ! values::has controlPlaneManager.internal.etcdServers ; then
+    # Nothing to do on standalone control-plane
+    exit 0
+  fi
+
   set_etcdctl_credentials
 
   existing_members="$(etcdctl member list)"

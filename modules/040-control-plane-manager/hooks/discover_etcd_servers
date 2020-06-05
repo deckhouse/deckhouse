@@ -81,16 +81,28 @@ function __main__() {
     formatted_unique_eps="$(jq -nre --argjson new_eps "$new_eps" --argjson old_eps "$old_eps" '$new_eps + $old_eps | unique | join(",")')"
     set_etcdctl_credentials "$formatted_unique_eps"
 
-    actual_members="$(etcdctl member list | cut -d',' -f5)"
-    actual_members="${actual_members//[[:blank:]]/}"
-    non_empty="$(jq -n --arg actual_members "$actual_members" '$actual_members | split("\n") | map(select(length > 0))')"
+    if actual_members="$(etcdctl member list | cut -d',' -f5)" ; then
+      actual_members="${actual_members//[[:blank:]]/}"
+      non_empty="$(jq -n --arg actual_members "$actual_members" '$actual_members | split("\n") | map(select(length > 0))')"
 
-    if jq -ne --arg non_empty "$non_empty" '($non_empty | length) == 0' >/dev/null; then
-      >&2 "FATAL: got an empty member list from etcd"
-      exit 1
+      if jq -ne --arg non_empty "$non_empty" '($non_empty | length) == 0' >/dev/null; then
+        >&2 "FATAL: got an empty member list from etcd"
+        exit 1
+      fi
+      values::set controlPlaneManager.internal.etcdServers "$non_empty"
+    else
+      # If we can't access etcd then we check if
+      # 1) there is standalone etcd
+      # 2) servercontrolPlaneManager.internal.etcdServers is not set
+      # If both conditions are true then this situation is normal and we can skip discovery
+      if context::jq -re '(.snapshots.kubeadm_etcd_pods_ips[0].filterResult | length) == 1' >/dev/null && ! values::has controlPlaneManager.internal.etcdServers;
+      then
+        echo "WARNING: skipping discovery"
+      else
+        >&2 echo "FATAL: can't connect to standalone etcd server"
+        exit 1
+      fi
     fi
-    values::set controlPlaneManager.internal.etcdServers "$non_empty"
-
   else
     >&2 echo 'ERROR: No etcd servers found, but this module expects in-cluster etcd'
     return 1

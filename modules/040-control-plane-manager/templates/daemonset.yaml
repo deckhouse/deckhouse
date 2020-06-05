@@ -13,7 +13,9 @@
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "apiserver" dict }}
-{{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
+{{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
+  {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
+{{- end }}
 {{- if hasKey .Values.controlPlaneManager "apiserver" }}
   {{- if .Values.controlPlaneManager.apiserver.bindToWildcard }}
     {{ $_ := set $tpl_context.apiserver "bindToWildcard" true }}
@@ -112,8 +114,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+{{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
         - name: ETCD_SERVERS
           value: {{ .Values.controlPlaneManager.internal.etcdServers | join "," | quote }}
+{{- end }}
         readinessProbe:
           exec:
             command:
