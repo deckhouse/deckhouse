@@ -9,8 +9,8 @@ require (
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-beta.6 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.10 // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20200605172407-5031de04eb88 // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.10.0.20200605114414-b093ff97d0d5 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/gobwas/glob v0.2.3 // indirect
