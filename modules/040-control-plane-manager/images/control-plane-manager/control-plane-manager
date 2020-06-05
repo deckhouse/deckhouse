@@ -269,6 +269,10 @@ END
     if [[ "$component" == "etcd" ]] ; then
       # Join etcd, if there is no /var/lib/etcd/member/snap/db
       if [[ ! -f $ROOTFS_DIR/var/lib/etcd/member/snap/db ]] ; then
+        if [[ -z "$ETCD_SERVERS" ]] ; then
+          echo "    * Fatal error: No etcd servers to join to"
+          exit 1
+        fi
         ETCDCTL_API=3 etcdctl member add "${HOSTNAME}" --peer-urls="https://${MY_IP}:2380" \
           --endpoints "$ETCD_SERVERS" \
           --cacert $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.crt \
