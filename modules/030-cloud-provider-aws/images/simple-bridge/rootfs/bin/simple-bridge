@@ -22,19 +22,30 @@ while true; do
       iptables -w 600 -A FORWARD -d $POD_SUBNET -j ACCEPT
     fi
 
-    tee /etc/cni/net.d/simple-bridge.conf <<END
+    rm -f /etc/cni/net.d/simple-bridge.conf
+    tee /etc/cni/net.d/simple-bridge.conflist <<END
 {
-    "cniVersion": "0.3.1",
-    "name": "cni0",
-    "type": "bridge",
-    "bridge": "cni0",
-    "isDefaultGateway": true,
-    "hairpinMode": true,
-    "forceAddress": false,
-    "ipam": {
+  "name": "cbr0",
+  "cniVersion": "0.3.1",
+  "plugins": [
+    {
+      "type": "bridge",
+      "bridge": "cni0",
+      "isDefaultGateway": true,
+      "hairpinMode": true,
+      "forceAddress": false,
+      "ipam": {
         "type": "host-local",
         "subnet": "$podcidr"
+      }
+    },
+    {
+      "type": "portmap",
+      "capabilities": {
+        "portMappings": true
+      }
     }
+  ]
 }
 END
     sleep 3600

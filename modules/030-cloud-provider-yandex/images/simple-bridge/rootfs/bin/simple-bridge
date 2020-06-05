@@ -41,24 +41,35 @@ while true; do
       iptables -w 600 -A FORWARD -d $POD_SUBNET -j ACCEPT
     fi
 
-    tee /etc/cni/net.d/simple-bridge.conf <<END
+    rm -f /etc/cni/net.d/simple-bridge.conf
+    tee /etc/cni/net.d/simple-bridge.conflist <<END
 {
-    "cniVersion": "0.3.1",
-    "name": "cni0",
-    "type": "bridge",
-    "bridge": "cni0",
-    "isDefaultGateway": true,
-    "hairpinMode": true,
-    "forceAddress": false,
-    "ipam": {
+  "name": "cbr0",
+  "cniVersion": "0.3.1",
+  "plugins": [
+    {
+      "type": "bridge",
+      "bridge": "cni0",
+      "isDefaultGateway": true,
+      "hairpinMode": true,
+      "forceAddress": false,
+      "ipam": {
         "type": "host-local",
         "subnet": "$podcidr"
+      }
+    },
+    {
+      "type": "portmap",
+      "capabilities": {
+        "portMappings": true
+      }
     }
+  ]
 }
 END
 
     rm -f /etc/cni/net.d/10-flannel.conflist
-    ip link delete flannel.1 || true
+    ip link delete flannel.1 >/dev/null 2>&1 || true
 
     sleep 3600
   else
