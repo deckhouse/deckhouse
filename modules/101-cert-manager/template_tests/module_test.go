@@ -27,6 +27,7 @@ modulesImages:
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
 discovery:
+  clusterMasterCount: 1
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
   d8SpecificNodeCountByRole:
@@ -47,12 +48,13 @@ modulesImages:
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
 discovery:
+  clusterMasterCount: 5
   clusterControlPlaneIsHighlyAvailable: true
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
   d8SpecificNodeCountByRole:
     system: 3
-    master: 5
+    master: 1
 `
 
 const globalValuesManaged = `
@@ -71,6 +73,7 @@ discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
   d8SpecificNodeCountByRole:
+    master: 1
     system: 3
 `
 
@@ -91,6 +94,7 @@ discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
   d8SpecificNodeCountByRole:
+    master: 3
     system: 3
 `
 
@@ -232,7 +236,7 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/system\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeFalse())
@@ -274,14 +278,14 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/system\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
-			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate
 rollingUpdate:
   maxSurge: 0
-  maxUnavailable: 1
+  maxUnavailable: 2
 `))
 			Expect(cainjector.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
 podAntiAffinity:
