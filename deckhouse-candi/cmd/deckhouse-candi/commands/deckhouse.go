@@ -165,13 +165,26 @@ func DefineDeckhouseInstall(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		clusterConfig, err := metaConfig.MarshalClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("marshal cluster config: %v", err)
+		}
+
+		providerClusterConfig, err := metaConfig.MarshalProviderClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("marshal provider config: %v", err)
+		}
+
 		installConfig := deckhouse.Config{
-			Registry:       metaConfig.DeckhouseConfig.ImagesRepo,
-			DockerCfg:      metaConfig.DeckhouseConfig.RegistryDockerCfg,
-			DevBranch:      metaConfig.DeckhouseConfig.DevBranch,
-			ReleaseChannel: metaConfig.DeckhouseConfig.ReleaseChannel,
-			Bundle:         metaConfig.DeckhouseConfig.Bundle,
-			LogLevel:       metaConfig.DeckhouseConfig.LogLevel,
+			Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
+			DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
+			DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
+			ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
+			Bundle:                metaConfig.DeckhouseConfig.Bundle,
+			LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
+			ClusterConfig:         clusterConfig,
+			ProviderClusterConfig: providerClusterConfig,
+			DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
 		}
 
 		err = logboek.LogProcess("🛥️ Install Deckhouse 🛥️", log.TaskOptions(), func() error {
