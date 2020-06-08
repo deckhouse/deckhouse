@@ -95,7 +95,7 @@ function __main__() {
       # 1) there is standalone etcd
       # 2) servercontrolPlaneManager.internal.etcdServers is not set
       # If both conditions are true then this situation is normal and we can skip discovery
-      if context::jq -re '(.snapshots.kubeadm_etcd_pods_ips[0].filterResult | length) == 1' >/dev/null && ! values::has controlPlaneManager.internal.etcdServers;
+      if context::jq -re '(.snapshots.kubeadm_etcd_pods_ips | length) == 1' >/dev/null && ! values::has controlPlaneManager.internal.etcdServers;
       then
         echo "WARNING: skipping discovery"
       else
