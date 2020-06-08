@@ -174,3 +174,36 @@ spec:
 ## Кастомизация прав для предустановленных accessLevel
 
 См. [DEVELOPMENT.md](/modules/140-user-authz/DEVELOPMENT.md#кастомизация-прав-для-предустановленных-accesslevel).
+
+## Как проверить, что у пользователя есть доступ?
+Необходимо выполнить следующую команду, в которой будут указаны:
+* `resourceAttributes` (как в RBAC) - к чему мы проверяем доступ
+* `user` - имя пользователя
+* `groups` - группы пользователя
+ 
+P.S. при совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах dex'а `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации)
+```bash
+cat  <<EOF | 2>&1 kubectl create -v=8 -f - | tail -2 \
+  | grep "Response Body" | awk -F"Response Body:" '{print $2}' \
+  | jq -rc .status
+apiVersion: authorization.k8s.io/v1
+kind: SubjectAccessReview
+spec:
+  resourceAttributes:
+    namespace: d8-monitoring
+    verb: get
+    group: ""
+    resource: "pods"
+  user: "user@gmail.com"
+  groups:
+  - Everyone
+  - Admins
+EOF
+```
+В результате увидим, есть ли доступ и на основании какой роли:
+```bash
+{
+  "allowed": true,
+  "reason": "RBAC: allowed by ClusterRoleBinding \"user-authz:myuser:super-admin\" of ClusterRole \"user-authz:super-admin\" to User \"user@gmail.com\""
+}
+```
