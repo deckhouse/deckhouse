@@ -174,14 +174,21 @@ func getDCByRegion(ctx context.Context, client vsphereClient, regionTagName, reg
 		return nil, err
 	}
 
-	dcs, err := tagsClient.ListAttachedObjects(ctx, regionTag.ID)
-	if len(dcs) != 1 {
-		return nil, fmt.Errorf("only one DC should match \"region\" tag")
+	attachedObjects, err := tagsClient.ListAttachedObjects(ctx, regionTag.ID)
+
+	var dcRefs []mo.Reference
+	for _, ref := range attachedObjects {
+		if ref.Reference().Type == "Datacenter" {
+			dcRefs = append(dcRefs, ref)
+		}
+	}
+	if len(dcRefs) != 1 {
+		return nil, fmt.Errorf("only one DC should match \"region\" tag, insted matched: %v", dcRefs)
 	}
 
 	finder := find.NewFinder(client.client.Client)
 
-	dcRef, err := finder.ObjectReference(ctx, dcs[0].Reference())
+	dcRef, err := finder.ObjectReference(ctx, dcRefs[0].Reference())
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +293,9 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 			if tag.CategoryID == zoneTagCategory.ID {
 				dsZones = append(dsZones, tag.Name)
 			}
+		}
+		if len(dsZones) == 0 {
+			continue
 		}
 
 		dsObject, err := finder.ObjectReference(ctx, attachedTags.ObjectID.Reference())
