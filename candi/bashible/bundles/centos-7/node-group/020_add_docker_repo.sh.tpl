@@ -1,3 +1,4 @@
+{{- if include "node_group_manage_docker" .nodeGroup }}
 if bb-yum-repo? d8-docker-ce-stable/x86_64; then
   exit 0
 fi
@@ -44,3 +45,4 @@ EOF
 
 rpmkeys --import /etc/pki/rpm-gpg/d8-docker-ce
 yum -q makecache -y --disablerepo='*' --enablerepo=d8-docker-ce-stable
+{{- end }}

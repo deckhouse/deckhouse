@@ -129,8 +129,8 @@ nodeManager: |
 * `docker` — параметры настройки docker'а.
   * `maxConcurrentDownloads` — максимальное количество потоков одновременного скачивания docker образов.
     * По-умолчанию `3`.
-  * `nvidia` — параметр, определяющий использовать ли [nvidia-docker2](https://github.com/NVIDIA/k8s-device-plugin#quick-start) в качестве runtime контейнеров (В данный момент нет поддержки для CentOS).
-    * По-умолчанию `false`.
+  * `manage` — автоматическое управление версией и параметрами docker.
+    * По-умолчанию `true`.
 * `nodeTemplate` — настройки Node объектов в Kubernetes, которые будут добавлены после регистрации ноды.
   * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
     * Пример:

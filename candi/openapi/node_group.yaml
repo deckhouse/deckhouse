@@ -261,7 +261,7 @@ spec:
               properties:
                 manageKernel:
                   type: boolean
-                  description: Disable kernel maintainance from bashible.
+                  description: Enable kernel maintenance from bashible (default true).
             docker:
               description: Docker settings for nodes.
               type: object
@@ -269,9 +269,9 @@ spec:
                 maxConcurrentDownloads:
                   type: integer
                   description: Set the max concurrent downloads for each pull (default 3).
-                nvidia:
+                manage:
                   type: boolean
-                  description: Set to use nvidia-docker2 for container runtime (default false).
+                  description: Enable docker maintenance from bashible  (default true).
             kubelet:
               description: Kubelet settings for nodes.
               type: object

@@ -1,3 +1,4 @@
+{{- if include "node_group_manage_docker" .nodeGroup }}
 if bb-apt-repo? https://download.docker.com/linux/ubuntu; then
   exit 0
 fi
@@ -68,3 +69,4 @@ YT90qFF93M3v01BbxP+EIY2/9tiIPbrd
 END
 
 bb-apt-repo-add deb https://download.docker.com/linux/ubuntu "$(lsb_release -cs)" stable
+{{- end }}
