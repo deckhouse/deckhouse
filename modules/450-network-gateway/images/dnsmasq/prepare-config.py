@@ -30,7 +30,7 @@ class dnsmasqConfig:
       args.append('set:' + netname)
       args.append(network['pool'])
       args.append(network['netmask'])
-      rows.append('dhcp-range=' + ','.join(args))
+      rows.append('dhcp-range=' + ','.join(args) + ",24h")
 
       if 'router' in network:
         args = []
