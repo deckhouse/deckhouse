@@ -9,6 +9,7 @@ function __config__() {
     - name: secrets_antiopa
       queue: /modules/$(module::name::kebab_case)
       group: main
+      waitForSynchronization: false
       apiVersion: v1
       kind: Secret
       labelSelector:
@@ -18,6 +19,8 @@ function __config__() {
     - name: secrets_d8
       queue: /modules/$(module::name::kebab_case)
       group: main
+      waitForSynchronization: false
+      executeHookOnSynchronization: false
       apiVersion: v1
       kind: Secret
       labelSelector:
@@ -27,6 +30,8 @@ function __config__() {
     - name: namespaces
       queue: /modules/$(module::name::kebab_case)
       group: main
+      waitForSynchronization: false
+      executeHookOnSynchronization: false
       apiVersion: v1
       kind: Namespace
       watchEvent: [Added]

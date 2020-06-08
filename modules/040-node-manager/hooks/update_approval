@@ -9,6 +9,7 @@ function __config__() {
     - name: configuration_checksums_secret
       group: main
       queue: /modules/$(module::name::kebab_case)/update_approval
+      waitForSynchronization: false
       apiVersion: v1
       kind: Secret
       namespace:
@@ -20,6 +21,7 @@ function __config__() {
     - name: ngs
       group: main
       queue: /modules/$(module::name::kebab_case)/update_approval
+      waitForSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -32,6 +34,7 @@ function __config__() {
     - name: nodes
       group: main
       queue: /modules/$(module::name::kebab_case)/update_approval
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       labelSelector:
@@ -54,6 +57,7 @@ function __config__() {
     - name: nodes_for_draining
       group: draining
       queue: /modules/$(module::name::kebab_case)/draining
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       labelSelector:

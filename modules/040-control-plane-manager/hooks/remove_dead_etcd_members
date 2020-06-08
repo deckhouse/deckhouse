@@ -9,6 +9,7 @@ function __config__() {
     - name: nodes
       group: remove_dead_etcd_members
       queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       labelSelector:
@@ -18,6 +19,7 @@ function __config__() {
     - name: etcd_certs
       group: remove_dead_etcd_members
       queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
+      waitForSynchronization: false
       executeHookOnSynchronization: false
       executeHookOnEvent: []
       apiVersion: v1

@@ -10,6 +10,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)/handle_node_templates
       group: main
       executeHookOnEvent: ["Added", "Modified"]
+      waitForSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -25,6 +26,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)/handle_node_templates
       group: main
       executeHookOnEvent: ["Added", "Modified"]
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       jqFilter: |

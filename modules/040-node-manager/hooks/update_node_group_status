@@ -11,6 +11,7 @@ function __config__() {
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
       watchEvent: ["Added", "Modified"]
+      waitForSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -27,6 +28,7 @@ function __config__() {
     - name: cloud_provider_secrets
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      waitForSynchronization: false
       apiVersion: v1
       kind: Secret
       namespace:
@@ -39,6 +41,7 @@ function __config__() {
     - name: configuration_checksums_secret
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      waitForSynchronization: false
       apiVersion: v1
       kind: Secret
       namespace:
@@ -51,6 +54,7 @@ function __config__() {
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
       watchEvent: ["Added", "Modified"]
+      waitForSynchronization: false
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
       namespace:
@@ -61,6 +65,7 @@ function __config__() {
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
       watchEvent: ["Added", "Modified"]
+      waitForSynchronization: false
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: Machine
       namespace:
@@ -70,6 +75,7 @@ function __config__() {
     - name: nodes
       group: main
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       labelSelector:

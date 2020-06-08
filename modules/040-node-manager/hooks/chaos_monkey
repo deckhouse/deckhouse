@@ -7,7 +7,11 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: ngs
+      group: monkey
       queue: /modules/$(module::name::kebab_case)
+      waitForSynchronization: false
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -17,7 +21,11 @@ function __config__() {
           "name": .metadata.name
         }
     - name: nodes
+      group: monkey
       queue: /modules/$(module::name::kebab_case)
+      waitForSynchronization: false
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
       apiVersion: v1
       kind: Node
       labelSelector:
@@ -30,7 +38,11 @@ function __config__() {
           "name": .metadata.name
         }
     - name: machines
+      group: monkey
       queue: /modules/$(module::name::kebab_case)
+      waitForSynchronization: false
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: Machine
       jqFilter: |
@@ -41,30 +53,13 @@ function __config__() {
         }
     schedule:
     - name: monkey
+      group: monkey
       queue: /modules/$(module::name::kebab_case)/chaos_monkey
       crontab: "* * * * *"
-      includeSnapshotsFrom: [ngs,nodes,machines]
 EOF
 }
 
-function __on_kubernetes::ngs() {
-  return 0
-}
-
-function __on_kubernetes::nodes() {
-  return 0
-}
-
-function __on_kubernetes::machines() {
-  return 0
-}
-
-function __on_kubernetes::monkey() {
-  # TODO: It's a bug https://flant.slack.com/archives/C78AQG5EY/p1587134804048800
-  return 0
-}
-
-function __on_schedule::monkey() {
+function __on_group::monkey() {
   # for testing environment
   if [ -n "${RANDOM_SEED-}" ]; then
     RANDOM="${RANDOM_SEED}"
