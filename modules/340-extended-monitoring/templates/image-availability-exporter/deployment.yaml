@@ -49,6 +49,9 @@ spec:
   {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
         - --ignored-images={{ .Values.extendedMonitoring.imageAvailability.ignoredImages | join "," | quote }}
   {{- end }}
+  {{- if .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
+        - --skip-registry-cert-verification={{ .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
+  {{- end }}
 {{- end }}
         resources:
           requests:
