@@ -8,12 +8,9 @@ User-stories:
 package hooks
 
 import (
-	"sort"
-
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Global hooks :: discovery/cluster_count_node_roles ::", func() {
@@ -34,6 +31,9 @@ apiVersion: v1
 kind: Node
 metadata:
   name: master
+  labels:
+    node-role.flant.com/frontend: ""
+    node-role.kubernetes.io/master: ""
 ---
 apiVersion: v1
 kind: Node
@@ -56,6 +56,7 @@ kind: Node
 metadata:
   name: system
   labels:
+    node-role.flant.com/system: ""
     node-role.deckhouse.io/system: ""
     node-role.kubernetes.io/systembykubernetes: ""
 `
@@ -64,6 +65,9 @@ apiVersion: v1
 kind: Node
 metadata:
   name: master
+  labels:
+    node-role.flant.com/master: ""
+    node-role.kubernetes.io/master: ""
 ---
 apiVersion: v1
 kind: Node
@@ -71,6 +75,7 @@ metadata:
   name: front-1
   labels:
     node-role.flant.com/frontend: ""
+    node-role.flant.com/system: ""
 ---
 apiVersion: v1
 kind: Node
@@ -85,6 +90,7 @@ kind: Node
 metadata:
   name: system
   labels:
+    node-role.flant.com/system: ""
     node-role.deckhouse.io/system: ""
     node-role.kubernetes.io/systembykubernetes: ""
 `
@@ -100,9 +106,6 @@ metadata:
 
 		It("filterResult of master must be null; `global.discovery.d8SpecificNodeCountByRole` must be empty map", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(len(f.BindingContexts.Get("0.objects").Array())).To(Equal(1))
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Value()).To(BeNil())
 			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").Map()).To(BeEmpty())
 		})
 
@@ -114,18 +117,11 @@ metadata:
 
 			It("filterResults must contain single '', two 'frontend' and one 'system' ; `global.discovery.d8SpecificNodeCountByRole` must contain map of nodes", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Parse().Array()).ShouldNot(BeEmpty())
-				Expect(len(f.BindingContexts.Get("2.snapshots.node_roles").Array())).To(Equal(4))
-
-				frSlice := []string{}
-				frSlice = append(frSlice, f.BindingContexts.Get("2.snapshots.node_roles.0.filterResult").String())
-				frSlice = append(frSlice, f.BindingContexts.Get("2.snapshots.node_roles.1.filterResult").String())
-				frSlice = append(frSlice, f.BindingContexts.Get("2.snapshots.node_roles.2.filterResult").String())
-				frSlice = append(frSlice, f.BindingContexts.Get("2.snapshots.node_roles.3.filterResult").String())
-				sort.Strings(frSlice)
-
-				Expect(frSlice).To(Equal([]string{"", "frontend", "frontend", "system"}))
-				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`{"system": 1, "frontend": 2}`))
+				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`
+{
+"frontend": 2,
+"system": 1
+}`))
 			})
 
 			Context("Special nodes modified", func() {
@@ -136,18 +132,13 @@ metadata:
 
 				It("filterResults must contain single '', one 'frontend' and two 'system' ; `global.discovery.d8SpecificNodeCountByRole` must contain map of nodes", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Parse().Array()).ShouldNot(BeEmpty())
-					Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(4))
-
-					frSlice := []string{}
-					frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.0.filterResult").String())
-					frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.1.filterResult").String())
-					frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.2.filterResult").String())
-					frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.3.filterResult").String())
-					sort.Strings(frSlice)
-
-					Expect(frSlice).To(Equal([]string{"", "frontend", "system", "system"}))
-					Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`{"system": 2, "frontend": 1}`))
+					Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`
+{
+"frontend": 1,
+"master": 1,
+"system": 2
+}
+`))
 				})
 
 			})
@@ -164,18 +155,11 @@ metadata:
 
 		It("filterResults must contain single '', two 'frontend' and one 'system' ; `global.discovery.d8SpecificNodeCountByRole` must contain map of nodes", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Parse().Array()).ShouldNot(BeEmpty())
-			Expect(len(f.BindingContexts.Get("0.snapshots.node_roles").Array())).To(Equal(4))
-
-			frSlice := []string{}
-			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.0.filterResult").String())
-			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.1.filterResult").String())
-			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.2.filterResult").String())
-			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.node_roles.3.filterResult").String())
-			sort.Strings(frSlice)
-
-			Expect(frSlice).To(Equal([]string{"", "frontend", "frontend", "system"}))
-			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`{"system": 1, "frontend": 2}`))
+			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`
+{
+"frontend": 2,
+"system": 1
+}`))
 		})
 
 	})

@@ -61,9 +61,12 @@ nodeSelector:
     {{- end }}
 
   {{- else if eq $strategy "master" }}
-    {{- if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
+    {{- if gt (index $context.Values.global.discovery "clusterMasterCount" | int) 0 }}
 nodeSelector:
   node-role.kubernetes.io/master: ""
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
+nodeSelector:
+  node-role.flant.com/master: ""
     {{- else if $module_values.nodeSelector }}
 nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}

@@ -20,7 +20,20 @@ affinity:
 {{- /* returns deployment strategy and replicas for ha components running on master nodes */ -}}
 {{- define "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" }}
   {{- if (include "helm_lib_ha_enabled" .) }}
-    {{- if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
+    {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 0 }}
+replicas: {{ index .Values.global.discovery "clusterMasterCount" }}
+      {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 1 }}
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+        {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 2 }}
+    maxUnavailable: 2
+        {{- else }}
+    maxUnavailable: 1
+        {{- end }}
+      {{- end }}
+    {{- else if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
 replicas: {{ index .Values.global.discovery.d8SpecificNodeCountByRole "master" }}
       {{- if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 1 }}
 strategy:
