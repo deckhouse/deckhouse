@@ -10,6 +10,7 @@ function __config__() {
       apiVersion: v1
       kind: Service
       includeSnapshotsFrom: ["services"]
+      waitForSynchronization: false
       labelSelector:
         matchExpressions:
         - key: prometheus-target

@@ -9,7 +9,7 @@ function __config__() {
     - name: helm_releases
       group: main
       queue: /modules/$(module::name::kebab_case)/helm_releases
-      #waitForSynchronization: false
+      waitForSynchronization: false
       apiVersion: v1
       kind: ConfigMap
       labelSelector:

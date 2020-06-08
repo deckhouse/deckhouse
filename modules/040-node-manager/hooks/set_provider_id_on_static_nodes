@@ -9,6 +9,7 @@ function __config__() {
     - name: nodes
       queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: ["nodes"]
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       jqFilter: |

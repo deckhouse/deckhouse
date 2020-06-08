@@ -9,12 +9,14 @@ function __config__() {
     - name: csinodes
       queue: /modules/$(module::name::kebab_case)/remove_csi_taints
       includeSnapshotsFrom: [csinodes,nodes]
+      waitForSynchronization: false
       apiVersion: storage.k8s.io/v1beta1
       kind: CSINode
       watchEvent: ["Added", "Modified"]
       jqFilter: '{"name": .metadata.name}'
     - name: nodes
       queue: /modules/$(module::name::kebab_case)
+      waitForSynchronization: false
       apiVersion: v1
       kind: Node
       watchEvent: ["Added", "Modified"]
