@@ -1,8 +1,5 @@
 #!/bin/bash
 
-swapoff -a
-sed -i '/swapfile/d' /etc/fstab
-
 {{- if hasKey .nodeGroup "instanceClass" }}
   {{- if .nodeGroup.instanceClass.additionalSubnets }}
 
