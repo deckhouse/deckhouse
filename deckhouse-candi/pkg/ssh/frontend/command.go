@@ -39,6 +39,11 @@ func NewCommand(sess *session.Session, name string, arg ...string) *Command {
 	}
 }
 
+func (c *Command) WithSSHArgs(args ...string) *Command {
+	c.SshArgs = args
+	return c
+}
+
 func (c *Command) OnCommandStart(fn func()) *Command {
 	c.onCommandStart = fn
 	return c

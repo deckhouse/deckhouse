@@ -1,4 +1,3 @@
-{{- if hasKey . "nodeIP" }}
 ---
 apiVersion: v1
 kind: Pod
@@ -10,7 +9,6 @@ spec:
   - name: kube-controller-manager
     livenessProbe:
       httpGet:
-        host: {{ .nodeIP | quote }}
         scheme: HTTPS
         port: 10257
 ---
@@ -24,7 +22,5 @@ spec:
   - name: kube-scheduler
     livenessProbe:
       httpGet:
-        host: {{ .nodeIP | quote }}
         scheme: HTTPS
         port: 10259
-{{- end }}

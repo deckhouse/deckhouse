@@ -215,7 +215,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		err = logboek.LogProcess("⛺ Reboot master ⛺", log.TaskOptions(), func() error {
-			rebootCmd := sshClient.Command("sudo", "reboot").Sudo()
+			rebootCmd := sshClient.Command("sudo", "reboot").Sudo().WithSSHArgs("-o", "ServerAliveInterval=15")
 			if err := rebootCmd.Run(); err != nil {
 				if ee, ok := err.(*exec.ExitError); ok {
 					if ee.ExitCode() == rebootExitCode {

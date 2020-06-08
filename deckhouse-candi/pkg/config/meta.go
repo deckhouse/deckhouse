@@ -77,7 +77,6 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 
 func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string]interface{} {
 	// We can't create NodeGroup with nodeType Cloud for now because the adoption mechanism is not ready yet
-
 	/*
 		var doc map[string]json.RawMessage
 
@@ -92,6 +91,10 @@ func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string
 			return nil, err
 		}
 	*/
+	nodeType := "Hybrid"
+	if m.ClusterType == "Static" {
+		nodeType = "Static"
+	}
 
 	return map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
@@ -100,8 +103,19 @@ func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string
 			"name": "master",
 		},
 		"spec": map[string]interface{}{
-			"nodeType":         "Hybrid",
+			"nodeType":         nodeType,
 			"allowDisruptions": false,
+			"nodeTemplate": map[string]interface{}{
+				"labels": map[string]interface{}{
+					"node-role.kubernetes.io/master": "",
+				},
+				"taints": []map[string]interface{}{
+					{
+						"key":    "node-role.kubernetes.io/master",
+						"effect": "NoSchedule",
+					},
+				},
+			},
 			/*
 				"cloudInstances": map[string]interface{}{
 					"classReference": map[string]interface{}{
