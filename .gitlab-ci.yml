@@ -11,18 +11,29 @@ stages:
 
 Build:
   stage: build
+  variables:
+    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
   script:
     - ./modules_images_werf bp
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE}
-    - if [[ -n ${CI_COMMIT_TAG} ]]; then werf publish --stages-storage :local --tag-custom ${CI_COMMIT_TAG} --images-repo=${CI_REGISTRY_IMAGE} dev; fi
-
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then
+        echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;
+        docker image tag $(werf stage image --stages-storage :local dev) $DESTINATION_IMAGE;
+        docker image push $DESTINATION_IMAGE;
+        docker image rmi $DESTINATION_IMAGE;
+      fi
   before_script:
     - rm -rf shell-operator || true
     - git submodule update --init --recursive
   except:
     - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   tags:
     - build
   artifacts:
@@ -86,7 +97,7 @@ Matrix Tests:
 .base_deploy: &base_deploy
   stage: deploy
   variables:
-    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_TAG}
+    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
   script:
     - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
