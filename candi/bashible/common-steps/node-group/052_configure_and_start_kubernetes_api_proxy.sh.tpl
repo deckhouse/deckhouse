@@ -77,3 +77,9 @@ EOF
 if [ ! -n "$(grep -P '^127.0.0.1 kubernetes$' /etc/hosts)" ] ; then
   echo '127.0.0.1 kubernetes' >> /etc/hosts
 fi
+
+if [ -f "/etc/cloud/templates/hosts.debian.tmpl" ] ; then
+  if [ ! -n "$(grep -P '^127.0.0.1 kubernetes$' /etc/cloud/templates/hosts.debian.tmpl)" ] ; then
+    echo '127.0.0.1 kubernetes' >> /etc/cloud/templates/hosts.debian.tmpl
+  fi
+fi
