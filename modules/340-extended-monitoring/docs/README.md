@@ -22,7 +22,7 @@ hide_sidebar: false
   * `ignoredImages` — список имён образов, наличие которых не надо проверять в registry. Например, `alpine:3.12` или `quay.io/test/test:v1.1`.
     * Формат — массив строк.
     * Опциональный параметр.
-  * `skipRegistryCertVerification` — проверять ли сертификат container registry.
+  * `skipRegistryCertVerification` — пропускать ли проверку сертификата container registry.
     * Формат — bool. По-умолчанию, `false`.
 
 ## extended-monitoring-exporter
