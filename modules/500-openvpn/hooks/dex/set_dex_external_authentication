@@ -13,7 +13,7 @@ function __main__() {
   if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined openvpn.https.mode global.modules.https.mode) != "Disabled" ]]; then
     if ! values::has --config openvpn.auth.externalAuthentication ; then
       values::set openvpn.auth.externalAuthentication '{}'
-      values::set openvpn.auth.externalAuthentication.authURL "https://openvpn-dex-authenticator.kube-openvpn.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
+      values::set openvpn.auth.externalAuthentication.authURL "https://openvpn-dex-authenticator.d8-openvpn.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
       values::set openvpn.auth.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
       values::set openvpn.internal.deployDexAuthenticator "true"
     else
