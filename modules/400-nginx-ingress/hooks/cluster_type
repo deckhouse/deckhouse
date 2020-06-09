@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# Автоопределятор "типа" кластера Kubernetes.
+#
+# Тип кластера — это внутреннее понятие Флант. Нам необходимо знать тип кластера, для того, чтобы корректно его настроить и
+# правильно поставить в него все компоненты. Например, в AWS нужно особым образом интегрировать nginx c elb и там нет flanneld,
+# но нужен автоскейлер. Подобные особенности есть и в других "типах".
+#
+# По-хорошему можно было бы разделить "способ установки" и "cloud provider", и рассматривать все варианты установки для каждого
+# провайдера. Но это сильно усложнит нам работу, а никакого реального результата не даст. Унификация — мать порядка! Поэтому мы
+# "искусственно" ограничиваем возможные типы кластеров следующим набором:
+#  * AWS — AWS + kops
+#  * ACS — Azure + acs-engine
+#  * GCE — GCE + kops
+#  * Manual — "все остальное" + kubeadm
+#
+# Дальше возможны следующие изменения:
+#  * когда kops научится разворачивать кластер в Azure — мы откажемся от типа ACS в пользу типа Azure
+#  * если нам понадобится работать с кластером в GKE — будет тип gke
+#  * когда kops дозреет до нормальной установки в VMWare и у нас появится соответствующий кейс — сделаем vmware
+#  * когда kops дозреет до работы на железе — заменим Manual на cloudless
+#
+# Что касается способа детектирования:
+#  * есть (вроде бы) нормальный способ определить, что кластер развернут в (и интегрирован с) каком-то облаке
+#    — через проверку значения аргумента --cloud-provider у controller'а
+#  * точного способа определить "способ установки", которым кластер был поставлен (kops, acs-engine или kubeadm)
+#    не удалось найти (есть некоторые "вторичные половые признаки", типа различий в названии лейблов, но считать
+#    их надежными и однозначными нельзя)
+#  * таким образом мы считаем, что если AWS и GCE — это всегда kops, если Azure — это всегда acs-engine (пока kops
+#    не научился, потом придумаем как отличать), а если ничего из этих трех — значит это "без облака" и kubeadm
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+
+    - name: controller_manager_by_component
+      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-controller-manager
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
+
+    - name: controller_manager_by_k8s_app
+      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-controller-manager
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
+
+EOF
+}
+
+function __main__() {
+  cluster_type="$(context::jq -r '
+    [
+      (.snapshots.controller_manager_by_k8s_app + .snapshots.controller_manager_by_component)[] | select(.filterResult != null) | .filterResult
+    ] | first // "cloud_provider_not_found" |
+    {"aws": "AWS", "gce": "GCE", "azure": "ACS"}[.] | if . == null then "Manual" else . end
+  ')"
+
+  values::set nginxIngress.internal.clusterType "$cluster_type"
+}
+
+hook::run $@

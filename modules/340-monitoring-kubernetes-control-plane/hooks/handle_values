@@ -1,0 +1,268 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+    kubernetes:
+    - name: secrets
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      jqFilter: |
+        if (.data | has("client.crt")) and (.data | has("client.key"))
+        then
+          {"clientCrt": (.data."client.crt" | @base64d), "clientKey": (.data."client.key" | @base64d)}
+        else null end
+EOF
+}
+
+function __main__ {
+  proxy_merged_instances='{}'
+  is_error=false
+
+  ##################################################################################################
+  # Handling KubeApiserver, KubeControllerManager and KubeScheduler components. KubeEtcd is below. #
+  ##################################################################################################
+
+  for component in KubeApiserver KubeControllerManager KubeScheduler; do
+    c="${component,}" # untitle first char
+
+    merged_values="$(
+      values::jq --arg c "$c" '.monitoringKubernetesControlPlane.defaults[$c] * .monitoringKubernetesControlPlane.discovery[$c] * (.monitoringKubernetesControlPlane[$c] // {})'
+    )"
+    values::set monitoringKubernetesControlPlane.internal.$c "$merged_values"
+
+    # nodeSelector and podSelector can't be merged with "*" because they are dicts
+    values::set monitoringKubernetesControlPlane.internal.$c.throughNode.nodeSelector "$(values::get_first_defined \
+      monitoringKubernetesControlPlane.$c.throughNode.nodeSelector \
+      monitoringKubernetesControlPlane.discovery.$c.throughNode.nodeSelector \
+      monitoringKubernetesControlPlane.defaults.$c.throughNode.nodeSelector
+    )"
+    values::set monitoringKubernetesControlPlane.internal.$c.pod.podSelector "$(values::get_first_defined \
+      monitoringKubernetesControlPlane.$c.pod.podSelector \
+      monitoringKubernetesControlPlane.discovery.$c.pod.podSelector \
+      monitoringKubernetesControlPlane.defaults.$c.pod.podSelector
+    )"
+
+    access_type="$(values::get monitoringKubernetesControlPlane.internal.$c.accessType)"
+    if [[ "$access_type" == "ThroughNode" ]]; then
+      node_selector="$(values::get monitoringKubernetesControlPlane.internal.$c.throughNode.nodeSelector | jq -crS)"
+      node_selector_hash="$(md5sum <<< "$node_selector" | head -c8)"
+      proxy_merged_instances="$(
+        jq \
+          --argjson node_selector "$node_selector" \
+          --arg node_selector_hash "$node_selector_hash" \
+          --arg component "$component" \
+          --argjson values "$(values::get monitoringKubernetesControlPlane.internal.${c})" \
+          '.[$node_selector_hash] //= {"components":[], "nodeSelector": $node_selector} | .[$node_selector_hash].components += [{"name": $component, "values": $values}]' \
+        <<< "$proxy_merged_instances"
+      )"
+    fi
+
+    if [[ "$access_type" == "Pod" || "$access_type" == "ThroughNode" ]]; then
+      at="${access_type,}" # untitle first char
+
+      authentication_method="$(values::get monitoringKubernetesControlPlane.internal.$c.$at.authenticationMethod)"
+      if [[ "$authentication_method" == "Certificate" ]]; then
+        if values::has monitoringKubernetesControlPlane.$c.$at.certificateSecret; then
+          client_certificate_secret="$(values::get monitoringKubernetesControlPlane.$c.$at.certificateSecret)"
+        else
+          >&2 echo "ERROR: monitoringKubernetesControlPlane.$c.$at.certificateSecret is mandatory when accessType is '$access_type' and authenticationMethod is 'Certificate'"
+          is_error=true
+          continue
+        fi
+
+        if secret_data="$(
+           context::jq -ecr --arg secret "$client_certificate_secret" \
+             '.snapshots.secrets[] | select(.object.metadata.name == $secret and .filterResult != null) | .filterResult'
+        )"
+        then
+          values::set monitoringKubernetesControlPlane.internal.$c.clientCertificate "$secret_data"
+        else
+          >&2 echo "ERROR: there isn't a secret '$client_certificate_secret' with 'client.crt' and 'client.key' data in ns d8-system to handle authentication method 'Certificate' for component '$component' with accessType '$access_type'."
+          is_error=true
+          continue
+        fi
+      fi
+    fi
+  done
+
+
+
+  ######################
+  # Handling KubeEtcd. #
+  ######################
+
+  merged_kube_etcd_values="$(
+    values::jq '
+      [
+        {"name": "main"} *
+        .monitoringKubernetesControlPlane.defaults.kubeEtcd *
+        .monitoringKubernetesControlPlane.discovery.kubeEtcd *
+        (.monitoringKubernetesControlPlane.kubeEtcd // {})
+      ] + .monitoringKubernetesControlPlane.kubeEtcdAdditionalInstances'
+  )"
+
+  if values::is_true monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.discovered; then
+      merged_kube_etcd_values="$(
+        values::jq --argjson merged_kube_etcd_values "$merged_kube_etcd_values" '
+        $merged_kube_etcd_values +
+        [
+          {"name": "events"} *
+          .monitoringKubernetesControlPlane.defaults.kubeEtcd *
+          .monitoringKubernetesControlPlane.discovery.kubeEtcdEvents *
+          (.monitoringKubernetesControlPlane.kubeEtcd // {})
+        ] + .monitoringKubernetesControlPlane.kubeEtcdAdditionalInstances'
+    )"
+  fi
+
+  values::set monitoringKubernetesControlPlane.internal.kubeEtcd "$merged_kube_etcd_values"
+
+  # nodeSelector and podSelector can't be merged with "*" because they are dicts
+  values::set monitoringKubernetesControlPlane.internal.kubeEtcd.0.throughNode.nodeSelector "$(values::get_first_defined \
+    monitoringKubernetesControlPlane.kubeEtcd.0.throughNode.nodeSelector \
+    monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.nodeSelector \
+    monitoringKubernetesControlPlane.defaults.kubeEtcd.throughNode.nodeSelector
+  )"
+  values::set monitoringKubernetesControlPlane.internal.kubeEtcd.0.pod.podSelector "$(values::get_first_defined \
+    monitoringKubernetesControlPlane.kubeEtcd.0.pod.podSelector \
+    monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podSelector \
+    monitoringKubernetesControlPlane.defaults.kubeEtcd.pod.podSelector
+  )"
+
+  for i in $(values::jq -r '.monitoringKubernetesControlPlane.internal.kubeEtcd | to_entries[] | .key'); do
+    if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.name; then
+      >&2 echo "ERROR: name is mandatory for additional kube-etcd instances"
+      is_error=true
+      continue
+    fi
+
+    name="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.name)"
+    if [[ "${#name}" -gt 12 ]]; then
+      >&2 echo "ERROR: additional kube-etcd instance name can't be larger than 12 chars (name '$name' is bad)"
+      is_error=true
+      continue
+    fi
+    if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.accessType; then
+      >&2 echo "ERROR: accessType is mandatory for additional kube-etcd instance '$name'"
+      is_error=true
+      continue
+    fi
+
+    access_type="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.accessType)"
+    if [[ $access_type == "ThroughNode" ]]; then
+      if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.nodeSelector; then
+        >&2 echo "ERROR: throughNode.nodeSelector is mandatory for additional kube-etcd instance '$name' because of accessType is 'ThroughNode'"
+        is_error=true
+        continue
+      fi
+      if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.localPort; then
+        >&2 echo "ERROR: throughNode.localPort is mandatory for additional kube-etcd instance '$name' because of accessType is 'ThroughNode'"
+        is_error=true
+        continue
+      fi
+      if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.authenticationMethod; then
+        >&2 echo "ERROR: throughNode.authenticationMethod is mandatory for additional kube-etcd instance '$name' because of accessType is 'ThroughNode'"
+        is_error=true
+        continue
+      fi
+
+      authentication_method="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.authenticationMethod)"
+      if [[ "$authentication_method" == "Certificate" ]] && (! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.certificateSecret)
+      then
+        >&2 echo "ERROR: throughNode.certificateSecret is mandatory for additional kube-etcd instance '$name' because of accessType is 'ThroughNode' and authenticationMethod is 'Certificate'"
+        is_error=true
+        continue
+      fi
+      if [[ "$authentication_method" == "HostPathCertificate" ]] &&
+        (
+          ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.hostPathCertificate ||
+          ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.hostPathCertificateKey
+        )
+      then
+        >&2 echo "ERROR: throughNode.hostPathCertificate and throughNode.hostPathCertificateKey are mandatory for additional kube-etcd instance '$name' because of accessType is 'ThroughNode' and authenticationMethod is 'HostPathCertificate'"
+        is_error=true
+        continue
+      fi
+    fi
+
+    if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.metricsPath; then
+      values::set monitoringKubernetesControlPlane.internal.kubeEtcd.$i.metricsPath "$(values::get monitoringKubernetesControlPlane.defaults.kubeEtcd.metricsPath)"
+    fi
+
+    if [[ $access_type == "Pod" ]]; then
+      if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.pod.podSelector; then
+        >&2 echo "ERROR: pod.podSelector is mandatory for additional kube-etcd instance '$name' because of accessType is 'Pod'"
+        is_error=true
+        continue
+      fi
+      if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.pod.podNamespace; then
+        >&2 echo "ERROR: pod.podNamespace is mandatory for additional kube-etcd instance '$name' because of accessType is 'Pod'"
+        is_error=true
+        continue
+      fi
+      if ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.pod.certificateSecret &&
+         ! values::has monitoringKubernetesControlPlane.internal.kubeEtcd.$i.d8PKI
+      then
+        >&2 echo "ERROR: pod.certificateSecret is mandatory for additional kube-etcd instance '$name' because of accessType is 'Pod'"
+        is_error=true
+        continue
+      fi
+    fi
+
+    at="${access_type,}" # untitle first char
+
+    if [[ "$access_type" == "ThroughNode" ]]; then
+      values::set monitoringKubernetesControlPlane.internal.kubeEtcd.$i.$at.proxyListenPort "$((10370 + $i))"
+      authentication_method="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.$at.authenticationMethod)"
+      node_selector="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.$at.nodeSelector | jq -crS)"
+      node_selector_hash="$(md5sum <<< "$node_selector" | head -c8)"
+      component="KubeEtcd${name^}"
+      proxy_merged_instances="$(
+        jq \
+          --argjson node_selector "$node_selector" \
+          --arg node_selector_hash "$node_selector_hash" \
+          --arg component "$component" \
+          --argjson values "$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.${i})" \
+          '.[$node_selector_hash] //= {"components":[], "nodeSelector": $node_selector} | .[$node_selector_hash].components += [{"name": $component, "values": $values}]' \
+        <<< "$proxy_merged_instances"
+      )"
+    fi
+
+    pod_authentication_method="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.pod.authenticationMethod)"
+    through_node_authentication_method="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.throughNode.authenticationMethod)"
+    if [[ ("$access_type" == "Pod" && "$pod_authentication_method" != "D8PKI") || ("$access_type" == "ThroughNode" && "$through_node_authentication_method" == "Certificate") ]]; then
+      client_certificate_secret="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.$at.certificateSecret)"
+
+      if secret_data="$(
+         context::jq -ecr --arg secret "$client_certificate_secret" \
+           '.snapshots.secrets[] | select(.object.metadata.name == $secret and .filterResult != null) | .filterResult'
+      )"
+      then
+        values::set monitoringKubernetesControlPlane.internal.kubeEtcd.$i.clientCertificate "$secret_data"
+      else
+        >&2 echo "ERROR: there isn't a secret '$client_certificate_secret' with 'client.crt' and 'client.key' data in ns d8-system to handle authentication method 'Certificate' for additional kube-etcd instance '$name' with accessType '$access_type'"
+        is_error=true
+        continue
+      fi
+    elif [[ ("$access_type" == "Pod" && "$pod_authentication_method" == "D8PKI") || ("$access_type" == "ThroughNode" && "$through_node_authentication_method" == "D8PKI") ]]; then
+      secret_data="$(values::get monitoringKubernetesControlPlane.internal.kubeEtcd.$i.d8PKI)"
+      values::set monitoringKubernetesControlPlane.internal.kubeEtcd.$i.clientCertificate "$secret_data"
+    fi
+  done
+
+  if [[ "$is_error" == "true" ]]; then
+    return 1
+  fi
+
+  values::set monitoringKubernetesControlPlane.internal.proxy.instances "$proxy_merged_instances"
+}
+
+hook::run $@

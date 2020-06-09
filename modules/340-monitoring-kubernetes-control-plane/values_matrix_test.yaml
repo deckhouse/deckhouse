@@ -1,0 +1,265 @@
+global:
+  enabledModules: ["vertical-pod-autoscaler-crd"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      monitoringKubernetesControlPlane:
+        proxy: tagstring
+  discovery:
+    clusterVersion: 1.15.4
+
+monitoringKubernetesControlPlane:
+  internal:
+    __ConstantChoices__:
+    - kubeApiserver:
+        accessType: Extra
+      kubeControllerManager:
+        accessType: Extra
+      kubeScheduler:
+        accessType: Extra
+      kubeEtcd: []
+      proxy:
+        instances:
+          aaaaaa:
+            nodeSelector:
+              aaa: aaa
+            components:
+              __ConstantChoices__:
+              - - name: KubeApiserver # authenticationMethod "None" including two types of auth in KubeEtcd
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: None
+                      localPort: 6443
+                      proxyListenPort: 10361
+                      scheme: https
+                - name: KubeControllerManager
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: None
+                      localPort: 10252
+                      proxyListenPort: 10362
+                      scheme: http
+                - name: KubeScheduler
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: None
+                      localPort: 10251
+                      proxyListenPort: 10363
+                      scheme: http
+                - name: KubeEtcdMain0
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    name: main0
+                    throughNode:
+                      authenticationMethod: HostPathCertificate
+                      hostPathCertificate: /etc/kubernetes/pki/apiserver-etcd-client.crt
+                      hostPathCertificateKey: /etc/kubernetes/pki/apiserver-etcd-client.key
+                      localPort: 2379
+                      proxyListenPort: 10370
+                - name: KubeEtcdMain1
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    name: main1
+                    throughNode:
+                      authenticationMethod: Certificate
+                      localPort: 2379
+                      proxyListenPort: 10371
+              - - name: KubeApiserver # authenticationMethod "Certificate"
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: Certificate
+                      localPort: 6443
+                      proxyListenPort: 10361
+                      scheme: https
+                - name: KubeControllerManager
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: Certificate
+                      localPort: 10252
+                      proxyListenPort: 10362
+                      scheme: http
+                - name: KubeScheduler
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: Certificate
+                      localPort: 10251
+                      proxyListenPort: 10363
+                      scheme: http
+              - - name: KubeApiserver # authenticationMethod "ProxyServiceAccount"
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: ProxyServiceAccount
+                      localPort: 6443
+                      proxyListenPort: 10361
+                      scheme: https
+                - name: KubeControllerManager
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: ProxyServiceAccount
+                      localPort: 10252
+                      proxyListenPort: 10362
+                      scheme: http
+                - name: KubeScheduler
+                  values:
+                    accessType: ThroughNode
+                    metricsPath: /metrics
+                    throughNode:
+                      authenticationMethod: ProxyServiceAccount
+                      localPort: 10251
+                      proxyListenPort: 10363
+                      scheme: http
+
+    - kubeApiserver: # accessType "ThroughNode" and authenticationMethod "Certificate" for all components; all variants of KubeEtcd
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: Certificate
+        metricsPath: /metrics
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      kubeControllerManager:
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: Certificate
+        metricsPath: /metrics
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      kubeScheduler:
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: Certificate
+        metricsPath: /metrics
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      kubeEtcd:
+      - name: main0
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: Certificate
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      - name: main1
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: HostPathCertificate
+      - name: main2
+        accessType: Pod
+        pod:
+          authenticationMethod: Certificate
+          podSelector:
+            popopo: qqq
+          podNamespace: kuku
+          port: 4001
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+    - kubeApiserver: # accessType "ThroughNode" and authenticationMethod "ProxyServiceAccount" for all components
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: ProxyServiceAccount
+        metricsPath: /metrics
+      kubeControllerManager:
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: ProxyServiceAccount
+        metricsPath: /metrics
+      kubeScheduler:
+        accessType: ThroughNode
+        throughNode:
+          authenticationMethod: ProxyServiceAccount
+        metricsPath: /metrics
+      kubeEtcd: []
+    - kubeApiserver: # accessType "Pod" and authenticationMethod "Certificate" for all components
+        accessType: Pod
+        pod:
+          authenticationMethod: Certificate
+          podSelector:
+            qqq: www
+          podNamespace: kuku
+          port: 321
+        metricsPath: /metrics
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      kubeControllerManager:
+        accessType: Pod
+        pod:
+          authenticationMethod: Certificate
+          podSelector:
+            qqq: www
+          podNamespace: kuku
+          port: 321
+        metricsPath: /metrics
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      kubeScheduler:
+        accessType: Pod
+        pod:
+          authenticationMethod: Certificate
+          podSelector:
+            qqq: www
+          podNamespace: kuku
+          port: 321
+        metricsPath: /metrics
+        clientCertificate:
+          clientCrt: mycert
+          clientKey: mykey
+      kubeEtcd: []
+    - kubeApiserver: # accessType "Pod" and authenticationMethod "PrometheusCertificate" for all components
+        accessType: Pod
+        pod:
+          authenticationMethod: PrometheusCertificate
+          podSelector:
+            qqq: www
+          podNamespace: kuku
+          port: 321
+        metricsPath: /metrics
+      kubeControllerManager:
+        accessType: Pod
+        pod:
+          authenticationMethod: PrometheusCertificate
+          podSelector:
+            qqq: www
+          podNamespace: kuku
+          port: 321
+        metricsPath: /metrics
+      kubeScheduler:
+        accessType: Pod
+        pod:
+          authenticationMethod: PrometheusCertificate
+          podSelector:
+            qqq: www
+          podNamespace: kuku
+          port: 321
+        metricsPath: /metrics
+      kubeEtcd: []
+    - kubeApiserver: # special for KubeApiserver accessType "DefaultService"
+        accessType: DefaultService
+      kubeControllerManager:
+        accessType: Extra
+      kubeScheduler:
+        accessType: Extra
+      kubeEtcd: []

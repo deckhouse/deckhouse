@@ -1,0 +1,223 @@
+{{- $context := . }}
+{{- range $hash, $instance := .Values.monitoringKubernetesControlPlane.internal.proxy.instances }}
+  {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: control-plane-proxy-{{ $hash }}
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list $context (dict "app" "control-plane-proxy" "control-plane-proxy-instance" $hash)) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: control-plane-proxy-{{ $hash }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      maxAllowed:
+        cpu: 0.01
+        memory: 0.02Gi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: control-plane-proxy-{{ $hash }}
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list $context (dict "app" "control-plane-proxy" "control-plane-proxy-instance" $hash)) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: control-plane-proxy
+      control-plane-proxy-instance: {{ $hash }}
+  template:
+    metadata:
+      labels:
+        app: control-plane-proxy
+        control-plane-proxy-instance: {{ $hash }}
+  {{- range $component := $instance.components }}
+        control-plane-proxy-{{ $component.name | kebabcase }}: ""
+  {{- end }}
+    spec:
+      serviceAccountName: control-plane-proxy
+      hostNetwork: true
+{{- include "helm_lib_priority_class" (tuple $context "cluster-medium") | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      nodeSelector:
+{{ $instance.nodeSelector | toYaml | indent 8 }}
+      tolerations:
+      - operator: Exists
+      containers:
+  {{- range $component := $instance.components }}
+    {{- if eq $component.name "KubeApiserver" }}
+      {{- $proxyListenPort  := ($component.values.throughNode.proxyListenPort | toString) }}
+      {{- $localPort   := ($component.values.throughNode.localPort | toString) }}
+      {{- $authenticationMethod := $component.values.throughNode.authenticationMethod }}
+      {{- $metricsPath := $component.values.metricsPath }}
+
+      - name: {{ $component.name | kebabcase }}
+        image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
+        args:
+        - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote}}
+        - {{ printf "--proxy-pass=http://localhost:%s%s" $localPort $metricsPath | quote }}
+      {{- if eq $authenticationMethod "ProxyServiceAccount" }}
+        - "--proxy-bearer-token-from-service-account"
+      {{- else if eq $authenticationMethod "Certificate" }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/client.key"
+      {{- end }}
+        - "--user=d8-monitoring:scraper"
+        - "--proxy-bearer-token-from-service-account"
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: {{ $proxyListenPort }}
+          name: metrics-ka
+      {{- if eq $authenticationMethod "Certificate" }}
+        volumeMounts:
+        - name: kube-apiserver-client-cert
+          mountPath: "/etc/nginx/certs"
+      {{- end }}
+
+
+    {{- else if eq $component.name "KubeControllerManager"}}
+      {{- $proxyListenPort := ($component.values.throughNode.proxyListenPort | toString) }}
+      {{- $localPort := ($component.values.throughNode.localPort | toString) }}
+      {{- $scheme := $component.values.throughNode.scheme }}
+      {{- $authenticationMethod := $component.values.throughNode.authenticationMethod }}
+      {{- $metricsPath := $component.values.metricsPath }}
+
+      - name: {{ $component.name | kebabcase }}
+        image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
+        args:
+        - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote }}
+        - {{ printf "--proxy-pass=%s://localhost:%s%s" $scheme $localPort $metricsPath | quote }}
+        - "--user=d8-monitoring:scraper"
+      {{- if eq $authenticationMethod "ProxyServiceAccount" }}
+        - "--proxy-bearer-token-from-service-account"
+      {{- else if eq $authenticationMethod "Certificate" }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/client.key"
+      {{- end }}
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: {{ $proxyListenPort }}
+          name: metrics-kcm
+      {{- if eq $authenticationMethod "Certificate" }}
+        volumeMounts:
+        - name: kube-controller-manager-client-cert
+          mountPath: "/etc/nginx/certs"
+      {{- end }}
+
+    {{- else if eq $component.name "KubeScheduler"}}
+      {{- $proxyListenPort := ($component.values.throughNode.proxyListenPort | toString) }}
+      {{- $localPort := ($component.values.throughNode.localPort | toString) }}
+      {{- $scheme := $component.values.throughNode.scheme }}
+      {{- $authenticationMethod := $component.values.throughNode.authenticationMethod }}
+      {{- $metricsPath := $component.values.metricsPath }}
+
+      - name: {{ $component.name | kebabcase }}
+        image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
+        args:
+        - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote }}
+        - {{ printf "--proxy-pass=%s://localhost:%s%s" $scheme $localPort $metricsPath | quote }}
+        - "--user=d8-monitoring:scraper"
+      {{- if eq $authenticationMethod "ProxyServiceAccount" }}
+        - "--proxy-bearer-token-from-service-account"
+      {{- else if eq $authenticationMethod "Certificate" }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/client.key"
+      {{- end }}
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: {{ $proxyListenPort }}
+          name: metrics-ks
+      {{- if eq $authenticationMethod "Certificate" }}
+        volumeMounts:
+        - name: kube-scheduler-client-cert
+          mountPath: "/etc/nginx/certs"
+      {{- end }}
+
+    {{- else if hasPrefix "KubeEtcd" $component.name }}
+      {{- $proxyListenPort := ($component.values.throughNode.proxyListenPort | toString) }}
+      {{- $scheme := ($component.values.throughNode.scheme | toString) }}
+      {{- $localPort := ($component.values.throughNode.localPort | toString) }}
+      {{- $authenticationMethod := $component.values.throughNode.authenticationMethod }}
+      {{- $metricsPath := $component.values.metricsPath }}
+
+      - name: {{ $component.name | kebabcase }}
+        image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
+        args:
+        - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote }}
+        - {{ printf "--proxy-pass=%s://localhost:%s%s" $scheme $localPort $metricsPath | quote }}
+        - "--user=d8-monitoring:scraper"
+      {{- if eq $scheme "https" }}
+        - "--proxy-ssl-cert-file=/etc/nginx/certs/client.crt"
+        - "--proxy-ssl-key-file=/etc/nginx/certs/client.key"
+      {{- end }}
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: {{ $proxyListenPort }}
+          name: ke-{{ $component.values.name | lower }}
+        volumeMounts:
+      {{- if or (eq $component.values.throughNode.authenticationMethod "Certificate") (eq $component.values.throughNode.authenticationMethod "D8PKI") }}
+        - name: kube-etcd-client-cert-{{ $component.values.name | lower }}
+          mountPath: "/etc/nginx/certs"
+      {{- else if eq $authenticationMethod "HostPathCertificate" }}
+        - name: kube-etcd-client-cert-crt-{{ $component.values.name | lower }}
+          mountPath: "/etc/nginx/certs/client.crt"
+        - name: kube-etcd-client-cert-key-{{ $component.values.name | lower }}
+          mountPath: "/etc/nginx/certs/client.key"
+      {{- end }}
+    {{- end }}
+  {{- end }}
+      volumes:
+  {{- range $component := $instance.components }}
+    {{- if and (eq $component.name "KubeApiserver") (eq $component.values.throughNode.authenticationMethod "Certificate") }}
+      - name: kube-apiserver-client-cert
+        secret:
+          secretName: monitoring-control-plane-kube-apiserver-client-cert
+    {{- else if and (eq $component.name "KubeControllerManager") (eq $component.values.throughNode.authenticationMethod "Certificate") }}
+      - name: kube-controller-manager-client-cert
+        secret:
+          secretName: monitoring-control-plane-kube-controller-manager-client-cert
+    {{- else if and (eq $component.name "KubeScheduler") (eq $component.values.throughNode.authenticationMethod "Certificate") }}
+      - name: kube-scheduler-client-cert
+        secret:
+          secretName: monitoring-control-plane-kube-scheduler-client-cert
+    {{- else if and (hasPrefix "KubeEtcd" $component.name) (or (eq $component.values.throughNode.authenticationMethod "Certificate") (eq $component.values.throughNode.authenticationMethod "D8PKI")) }}
+      - name: kube-etcd-client-cert-{{ $component.values.name | lower }}
+        secret:
+          secretName: monitoring-control-plane-kube-etcd-client-cert-{{ $component.values.name | lower }}
+    {{- else if and (hasPrefix "KubeEtcd" $component.name) (eq $component.values.throughNode.authenticationMethod "HostPathCertificate") }}
+      - name: kube-etcd-client-cert-crt-{{ $component.values.name | lower }}
+        hostPath:
+          path: {{ $component.values.throughNode.hostPathCertificate }}
+          type: File
+      - name: kube-etcd-client-cert-key-{{ $component.values.name | lower }}
+        hostPath:
+          path: {{ $component.values.throughNode.hostPathCertificateKey }}
+          type: File
+    {{- end }}
+  {{- end }}
+{{- end }}

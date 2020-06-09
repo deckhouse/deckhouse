@@ -1,0 +1,47 @@
+{{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeControllerManager.accessType "Pod" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-controller-manager
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      d8-monitoring-control-plane-component: kube-controller-manager
+  namespaceSelector:
+    matchNames:
+    - {{ .Values.monitoringKubernetesControlPlane.internal.kubeControllerManager.pod.podNamespace }}
+  endpoints:
+  - scheme: {{ .Values.monitoringKubernetesControlPlane.internal.kubeControllerManager.pod.scheme }}
+    port: metrics
+    path: {{ .Values.monitoringKubernetesControlPlane.internal.kubeControllerManager.metricsPath }}
+  {{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeControllerManager.pod.authenticationMethod "PrometheusCertificate" }}
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+      insecureSkipVerify: true
+  {{- else if eq .Values.monitoringKubernetesControlPlane.internal.kubeControllerManager.pod.authenticationMethod "Certificate" }}
+    tlsConfig:
+      insecureSkipVerify: true
+      cert:
+        secret:
+          name: monitoring-control-plane-kube-controller-manager-client-cert
+          key: client.crt
+      keySecret:
+        name: monitoring-control-plane-kube-controller-manager-client-cert
+        key: client.key
+  {{- end }}
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-controller-manager
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+      regex: "true"
+      action: keep
+{{- end }}

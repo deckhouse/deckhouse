@@ -1,1 +1,75 @@
-monitoringKubernetesControlPlane: {}
+monitoringKubernetesControlPlane:
+  internal:
+    proxy: {}
+    kubeApiserver: {}
+    kubeControllerManager: {}
+    kubeScheduler: {}
+    kubeEtcd: []
+
+  discovery:
+    kubeApiserver:
+      pod: {}
+      throughNode: {}
+    kubeControllerManager:
+      pod: {}
+      throughNode: {}
+    kubeScheduler:
+      pod: {}
+      throughNode: {}
+    kubeEtcd:
+      pod: {}
+      throughNode: {}
+    kubeEtcdEvents:
+      pod: {}
+      throughNode: {}
+
+  defaults:
+    kubeApiserver:
+      accessType: DefaultService
+      throughNode:
+        nodeSelector:
+          node-role.kubernetes.io/master: ""
+        proxyListenPort: 10361
+      pod:
+        podSelector: {}
+        port: 6443
+      metricsPath: /metrics
+  
+    kubeControllerManager:
+      accessType: ThroughNode
+      throughNode:
+        nodeSelector:
+          node-role.kubernetes.io/master: ""
+        localPort: 10252
+        scheme: http
+        authenticationMethod: None
+        proxyListenPort: 10362
+      pod:
+        podSelector: {}
+      metricsPath: /metrics
+
+    kubeScheduler:
+      accessType: ThroughNode
+      throughNode:
+        nodeSelector:
+          node-role.kubernetes.io/master: ""
+        localPort: 10251
+        scheme: http
+        authenticationMethod: None
+        proxyListenPort: 10363
+      pod:
+        podSelector: {}
+      metricsPath: /metrics
+
+    kubeEtcd:
+      accessType: ThroughNode
+      throughNode:
+        nodeSelector:
+          node-role.kubernetes.io/master: ""
+        localPort: 2379
+        authenticationMethod: HostPathCertificate
+        hostPathCertificate: /etc/kubernetes/pki/apiserver-etcd-client.crt
+        hostPathCertificateKey: /etc/kubernetes/pki/apiserver-etcd-client.key
+      pod:
+        podSelector: {}
+      metricsPath: /metrics
