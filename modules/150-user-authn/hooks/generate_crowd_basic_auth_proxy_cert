@@ -59,7 +59,7 @@ function __main__() {
   script=$(cat <<'EOF'
           set -e
           regex="--requestheader-client-ca-file[=| ][^ ]*"
-          ca_path="/host/root$([[ $(ps aux| grep kube-apiserver) =~ $regex ]] && echo ${BASH_REMATCH[0]} | awk -F '=| ' '{ print $2 }')"
+          ca_path="$([[ $(ps aux| grep kube-apiserver) =~ $regex ]] && echo ${BASH_REMATCH[0]} | awk -F '=| ' '{ print $2 }')"
           key_path="$([[ $ca_path =~ ^(.+?)\.[^\.]+$ ]] && echo ${BASH_REMATCH[1]}).key"
 
           csr_config='{"CN":"front-proxy-client","hosts":[""],"key":{"algo": "rsa","size": 2048},"signing":{"default":{"expiry":"72h","usages":["signing","key encipherment","requestheader-client"]}}}'
@@ -93,17 +93,31 @@ ${script}
         - name: CSR
           value: ${csr}
         volumeMounts:
-        - name: root
+        - name: etc
           readOnly:  true
-          mountPath: /host/root
+          mountPath: /etc
+        - name: var
+          readOnly:  true
+          mountPath: /var
+        - name: mnt
+          readOnly:  true
+          mountPath: /mnt
       restartPolicy: Never
       volumes:
-      - name: root
+      - name: etc
         hostPath:
-          path: /
+          path: /etc
+      - name: mnt
+        hostPath:
+          path: /mnt
+      - name: var
+        hostPath:
+          path: /var
       hostPID: true
       nodeSelector:
         node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
 EOF
   kubectl -n d8-system wait --for=condition=complete job crowd-proxy-cert-generate-job --timeout=30s
   logs=$(kubectl -n d8-system logs -l job-name=crowd-proxy-cert-generate-job | grep "^Certificate:")
