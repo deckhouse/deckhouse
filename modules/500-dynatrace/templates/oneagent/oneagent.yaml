@@ -15,7 +15,7 @@ apiVersion: dynatrace.com/v1alpha1
 kind: OneAgent
 metadata:
   name: oneagent-{{ $hostGroup.name | lower }}
-  namespace: kube-{{ $.Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $ (dict "app" "oneagent")) | indent 2 }}
 spec:
   serviceAccountName: oneagent
