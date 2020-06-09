@@ -26,20 +26,20 @@ var _ = Describe("Modules :: openvpn :: hooks :: storage_class_change ::", func(
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: openvpn
-  namespace: kube-openvpn
+  name: certs-openvpn-0
+  namespace: d8-openvpn
   labels:
     app: openvpn
 spec:
   storageClassName: pvc-sc-openvpn
 `
-		pod = `
+		statefulSet = `
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: StatefulSet
 metadata:
   name: openvpn
-  namespace: kube-openvpn
+  namespace: d8-openvpn
   labels:
     app: openvpn
 `
@@ -120,9 +120,9 @@ metadata:
 		})
 	})
 
-	Context("Cluster with PVC, Pod and setting up openvpn.storageClass", func() {
+	Context("Cluster with PVC, StatefulSet and setting up openvpn.storageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvc + pod))
+			f.BindingContexts.Set(f.KubeStateSet(pvc + statefulSet))
 			f.ConfigValuesSet("openvpn.storageClass", "openvpn-sc")
 			f.RunHook()
 		})
@@ -130,8 +130,7 @@ metadata:
 		It("Must be executed successfully; effectiveStorageClass must be openvpn-sc", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("openvpn.internal.effectiveStorageClass").String()).To(Equal("openvpn-sc"))
-			// Expect(f.KubernetesResource("Pod", "kube-openvpn", "openvpn").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("PersistentVolumeClaim", "kube-openvpn", "openvpn").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-openvpn", "certs-openvpn-0").Exists()).To(BeFalse())
 		})
 	})
 

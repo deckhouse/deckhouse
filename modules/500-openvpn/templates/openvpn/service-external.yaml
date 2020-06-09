@@ -6,7 +6,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Chart.Name }}-external
-  namespace: kube-{{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
   {{- if .Values.openvpn.loadBalancer.annotations }}
   annotations:
@@ -33,7 +33,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Chart.Name }}-external
-  namespace: kube-{{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
   type: ClusterIP

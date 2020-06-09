@@ -7,6 +7,7 @@ import (
 	sh_app "github.com/flant/shell-operator/pkg/app"
 
 	"flant/deckhouse-controller/pkg/helpers/aws"
+	"flant/deckhouse-controller/pkg/helpers/etcd"
 	"flant/deckhouse-controller/pkg/helpers/fnv"
 	helm "flant/deckhouse-controller/pkg/helpers/helm_release_tools"
 	"flant/deckhouse-controller/pkg/helpers/openstack"
@@ -64,6 +65,20 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	helmSetReleaseInfoCommand := helmCommand.Command("release-info", "Get helm release info")
 	helmSetReleaseInfoCommand.Action(func(c *kingpin.ParseContext) error {
 		return helm.ReleaseInfo()
+	})
+
+	etcdCommand := helpersCommand.Command("etcd", "etcd helpers.")
+	etcdServiceMoveCommand := etcdCommand.Command("move-service", "Update service namespace/name.")
+	etcdEndpoint := etcdServiceMoveCommand.Arg("endpoint", "String").Required().String()
+	etcdCaFile := etcdServiceMoveCommand.Arg("caFile", "String").Required().String()
+	etcdCertFile := etcdServiceMoveCommand.Arg("certFile", "String").Required().String()
+	etcdKeyFile := etcdServiceMoveCommand.Arg("keyFile", "String").Required().String()
+	etcdServiceNamespace := etcdServiceMoveCommand.Arg("namespace", "String").Required().String()
+	etcdServiceName := etcdServiceMoveCommand.Arg("name", "String").Required().String()
+	etcdServiceNewNamespace := etcdServiceMoveCommand.Arg("new-namespace", "String").Required().String()
+	etcdServiceNewName := etcdServiceMoveCommand.Arg("new-name", "String").Required().String()
+	etcdServiceMoveCommand.Action(func(c *kingpin.ParseContext) error {
+		return etcd.MoveService(*etcdEndpoint, *etcdCaFile, *etcdCertFile, *etcdKeyFile, *etcdServiceNamespace, *etcdServiceName, *etcdServiceNewNamespace, *etcdServiceNewName)
 	})
 
 	// deckhouse-candi parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets

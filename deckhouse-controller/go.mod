@@ -14,6 +14,8 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.4.0
 	github.com/vmware/govmomi v0.21.0
+	go.etcd.io/etcd v3.3.22+incompatible
+	go.uber.org/zap v1.15.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.17.0

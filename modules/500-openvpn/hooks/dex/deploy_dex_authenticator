@@ -20,7 +20,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
 metadata:
   name: openvpn
-  namespace: kube-openvpn
+  namespace: d8-openvpn
   labels:
     heritage: deckhouse
     module: openvpn
@@ -32,8 +32,8 @@ spec:
   $allowedGroups
 EOF
   else
-    if kubectl -n kube-openvpn get dexauthenticator openvpn >/dev/null 2>/dev/null ; then
-      kubectl -n kube-openvpn delete dexauthenticator openvpn >/dev/null 2>/dev/null
+    if kubectl -n d8-openvpn get dexauthenticator openvpn >/dev/null 2>/dev/null ; then
+      kubectl -n d8-openvpn delete dexauthenticator openvpn >/dev/null 2>/dev/null
     fi
   fi
 }
