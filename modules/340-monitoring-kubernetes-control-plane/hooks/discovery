@@ -1,0 +1,401 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: etcd_by_manager
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: etcd-manager-main
+      jqFilter: |
+        {
+          "scheme": (.spec.containers[] | (.command + .args) | join(" ") | match("--client-urls=(http(s)?)://.+?:([0-9]+)") | .captures[0].string),
+          "port": (.spec.containers[] | (.command + .args) | join(" ") | match("--client-urls=(http(s)?)://.+?:([0-9]+)") | .captures[2].string)
+        }
+
+    - name: etcd_by_manifest
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: etcd
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | (.command + .args) | join(" ") |
+        ((match("--listen-metrics-urls") | .string) // (match("--listen-client-urls") | .string)) as \$arg |
+        match(\$arg + "=(\\\\S+)") | .captures[0].string |
+        [
+          split(",")[] |
+          match("(http(s)?)://([0-9.]+?):([0-9]+)") |
+          {"scheme": .captures[0].string, "address": .captures[2].string, "port": .captures[3].string}
+        ] |
+        (.[] | select(.address | startswith("127.") | not)) // .[0]
+
+    - name: etcd_events_by_manager
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: etcd-manager-events
+      jqFilter: |
+        {
+          "scheme": (.spec.containers[] | (.command + .args) | join(" ") | match("--client-urls=(http(s)?)://.+?:([0-9]+)") | .captures[0].string),
+          "port": (.spec.containers[] | (.command + .args) | join(" ") | match("--client-urls=(http(s)?)://.+?:([0-9]+)") | .captures[2].string)
+        }
+
+    - name: kube_apiserver_by_component
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-apiserver
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-apiserver") |
+        (.command + .args) | join(" ") |
+        {
+          "etcdCertfile": (match("(^|\\\\s+)--etcd-certfile=(\\\\S+)(\\\\s+|$)") | .captures[1].string),
+          "etcdKeyfile": (match("(^|\\\\s+)--etcd-keyfile=(\\\\S+)(\\\\s+|$)") | .captures[1].string),
+          "port": (match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string)
+        }
+
+    - name: kube_apiserver_by_k8s_app
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-apiserver
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-apiserver") |
+        (.command + .args) | join(" ") |
+        {
+          "etcdCertfile": (match("(^|\\\\s+)--etcd-certfile=(\\\\S+)(\\\\s+|$)") | .captures[1].string),
+          "etcdKeyfile": (match("(^|\\\\s+)--etcd-keyfile=(\\\\S+)(\\\\s+|$)") | .captures[1].string),
+          "port": (match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string)
+        }
+
+    - name: kube_scheduler_by_component
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-scheduler
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-scheduler") |
+        (.command + .args) | join(" ") |
+        {
+          "bindAddress": (
+            (match("(^|\\\\s+)--bind-address=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // (
+              (match("(^|\\\\s+)--address=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "0.0.0.0"
+            )
+          ),
+          "securePort": ((match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "10259"),
+          "isAuthenticationKubeconfigConfigured": (if match("(^|\\\\s+)--authentication-kubeconfig=(\\\\S+)(\\\\s+|$)") then true else false end),
+          "isAuthorizationKubeconfigConfigured":  (if match("(^|\\\\s+)--authorization-kubeconfig=(\\\\S+)(\\\\s+|$)")  then true else false end)
+        }
+
+    - name: kube_scheduler_by_k8s_app
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-scheduler
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-scheduler") |
+        (.command + .args) | join(" ") |
+        {
+          "bindAddress": (
+            (match("(^|\\\\s+)--bind-address=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // (
+              (match("(^|\\\\s+)--address=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "0.0.0.0"
+            )
+          ),
+          "securePort": ((match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "10259"),
+          "isAuthenticationKubeconfigConfigured": (if match("(^|\\\\s+)--authentication-kubeconfig=(\\\\S+)(\\\\s+|$)") then true else false end),
+          "isAuthorizationKubeconfigConfigured":  (if match("(^|\\\\s+)--authorization-kubeconfig=(\\\\S+)(\\\\s+|$)")  then true else false end)
+        }
+
+    - name: kube_controller_manager_by_component
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: kube-controller-manager
+          tier: control-plane
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        {
+          "bindAddress": (match("(^|\\\\s+)--bind-address=(\\\\S+)(\\\\s+|$)") | .captures[1].string),
+          "securePort": ((match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "10257")
+        }
+
+    - name: kube_controller_manager_by_k8s_app
+      queue: /modules/$(module::name::kebab_case)
+      group: main
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          k8s-app: kube-controller-manager
+      jqFilter: |
+        .spec.containers[] | select(.name == "kube-controller-manager") |
+        (.command + .args) | join(" ") |
+        {
+          "bindAddress": (match("(^|\\\\s+)--bind-address=(\\\\S+)(\\\\s+|$)") | .captures[1].string),
+          "securePort": ((match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "10257")
+        }
+
+    - name: etcd_certs
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-pki]
+      jqFilter: |
+        {
+          "clientCrt": (if .data."etcd-ca.crt" then .data."etcd-ca.crt" | @base64d else null end),
+          "clientKey": (if .data."etcd-ca.key" then .data."etcd-ca.key" | @base64d else null end)
+        }
+EOF
+}
+
+function __main__ {
+  #################
+  #   kube-etcd   #
+  #################
+  if context::has snapshots.etcd_by_manager.0; then
+    snapshot=etcd_by_manager
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.scheme "$(context::get snapshots.$snapshot.0.filterResult.scheme)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podSelector '{"k8s-app": "etcd-manager-main"}'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.scheme "$(context::get snapshots.$snapshot.0.filterResult.scheme)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+
+  elif context::has snapshots.etcd_by_manifest.0; then
+    snapshot=etcd_by_manifest
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.scheme "$(context::get snapshots.$snapshot.0.filterResult.scheme)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podSelector '{"component": "etcd","tier": "control-plane"}'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.scheme "$(context::get snapshots.$snapshot.0.filterResult.scheme)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+
+  else
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.scheme
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.localPort
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.scheme
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.localPort
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podNamespace
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.podSelector
+    >&2 echo "WARNING: Can't find etcd pod to discover scheme and port."
+  fi
+
+  if context::has snapshots.etcd_events_by_manager.0; then
+    snapshot=etcd_events_by_manager
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.discovered true
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.pod.scheme "$(context::get snapshots.$snapshot.0.filterResult.scheme)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.pod.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.scheme "$(context::get snapshots.$snapshot.0.filterResult.scheme)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+
+  else
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.discovered false
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.pod.scheme
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.pod.localPort
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.scheme
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.localPort
+  fi
+
+  if context::has snapshots.etcd_certs.0 &&
+     ! context::is_null 'snapshots.etcd_certs.0.filterResult."clientCrt"' &&
+     ! context::is_null 'snapshots.etcd_certs.0.filterResult."clientKey"'
+  then
+    if context::has snapshots.etcd_by_manifest.0 && context::jq -e '.snapshots.etcd_by_manifest[0].filterResult.address | startswith("127.")' > /dev/null
+    then 
+      values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.accessType 'ThroughNode'
+      values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.accessType 'ThroughNode'
+    else
+      values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.accessType 'Pod'
+      values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.accessType 'Pod'
+    fi
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.authenticationMethod 'D8PKI'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.authenticationMethod 'D8PKI'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.d8PKI "$(context::get snapshots.etcd_certs.0.filterResult)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.pod.authenticationMethod 'D8PKI'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.authenticationMethod 'D8PKI'
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.d8PKI "$(context::get snapshots.etcd_certs.0.filterResult)"
+  else
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.accessType
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.pod.authenticationMethod
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.authenticationMethod
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.d8PKI
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.accessType
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.pod.authenticationMethod
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.authenticationMethod
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.d8PKI
+  fi
+
+  ######################
+  #   kube-apiserver   #
+  ######################
+  if context::has snapshots.kube_apiserver_by_component.0; then
+    snapshot=kube_apiserver_by_component
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.port "$(context::get snapshots.$snapshot.0.filterResult.port)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.throughNode.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.podSelector '{"component": "kube-apiserver","tier": "control-plane"}'
+
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.hostPathCertificate "$(context::get snapshots.$snapshot.0.filterResult.etcdCertfile)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.hostPathCertificateKey "$(context::get snapshots.$snapshot.0.filterResult.etcdKeyfile)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.hostPathCertificate "$(context::get snapshots.$snapshot.0.filterResult.etcdCertfile)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.hostPathCertificateKey "$(context::get snapshots.$snapshot.0.filterResult.etcdKeyfile)"
+
+  elif context::has snapshots.kube_apiserver_by_k8s_app.0; then
+    snapshot=kube_apiserver_by_k8s_app
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.port "$(context::get snapshots.$snapshot.0.filterResult.port)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.throughNode.localPort "$(context::get snapshots.$snapshot.0.filterResult.port)"
+
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.podSelector '{"k8s-app": "kube-apiserver"}'
+
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.hostPathCertificate "$(context::get snapshots.$snapshot.0.filterResult.etcdCertfile)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.hostPathCertificateKey "$(context::get snapshots.$snapshot.0.filterResult.etcdKeyfile)"
+
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.hostPathCertificate "$(context::get snapshots.$snapshot.0.filterResult.etcdCertfile)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeEtcdEvents.throughNode.hostPathCertificateKey "$(context::get snapshots.$snapshot.0.filterResult.etcdKeyfile)"
+
+  else
+    values::unset monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.port
+    values::unset monitoringKubernetesControlPlane.discovery.kubeApiserver.throughNode.localPort
+
+    values::unset monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.podNamespace
+    values::unset monitoringKubernetesControlPlane.discovery.kubeApiserver.pod.podSelector
+
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.hostPathCertificate
+    values::unset monitoringKubernetesControlPlane.discovery.kubeEtcd.throughNode.hostPathCertificateKey
+    >&2 echo "WARNING: Can't find kube-apiserver pod to discover metrics port, selector and etcd client cert."
+  fi
+
+  ######################
+  #   kube-scheduler   #
+  ######################
+  if context::has snapshots.kube_scheduler_by_component.0 && context::jq -e '
+      .snapshots.kube_scheduler_by_component[0].filterResult as $fr |
+      $fr.isAuthenticationKubeconfigConfigured and $fr.isAuthorizationKubeconfigConfigured and ($fr.bindAddress | startswith("127.") | not)
+    ' > /dev/null
+  then
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.accessType "Pod"
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.scheme "https"
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.port "$(context::get snapshots.kube_scheduler_by_component.0.filterResult.securePort)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.podSelector '{"component": "kube-scheduler","tier": "control-plane"}'
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.authenticationMethod 'PrometheusCertificate'
+  elif context::has snapshots.kube_scheduler_by_k8s_app.0 && context::jq -e '
+      .snapshots.kube_scheduler_by_k8s_app[0].filterResult as $fr |
+      $fr.isAuthenticationKubeconfigConfigured and $fr.isAuthorizationKubeconfigConfigured and ($fr.bindAddress | startswith("127.") | not)
+    ' > /dev/null
+  then
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.accessType "Pod"
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.scheme "https"
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.port "$(context::get snapshots.kube_scheduler_by_k8s_app.0.filterResult.securePort)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.podSelector '{"k8s-app": "kube-scheduler"}'
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.authenticationMethod 'PrometheusCertificate'
+  else
+    values::unset monitoringKubernetesControlPlane.discovery.kubeScheduler.accessType
+    values::unset monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.scheme
+    values::unset monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.port
+    values::unset monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.podSelector
+    values::unset monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.podNamespace
+    values::unset monitoringKubernetesControlPlane.discovery.kubeScheduler.pod.authenticationMethod
+  fi
+
+  ###############################
+  #   kube-controller-manager   #
+  ###############################
+  if context::has snapshots.kube_controller_manager_by_component.0 && context::jq -e '
+    .snapshots.kube_controller_manager_by_component[0].filterResult.bindAddress | startswith("127.") | not
+    ' > /dev/null
+  then
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.accessType "Pod"
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.scheme "https"
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.port "$(context::get snapshots.kube_controller_manager_by_component.0.filterResult.securePort)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podSelector '{"component": "kube-controller-manager","tier": "control-plane"}'
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.authenticationMethod 'PrometheusCertificate'
+  elif context::has snapshots.kube_controller_manager_by_k8s_app.0 && context::jq -e '
+    .snapshots.kube_controller_manager_by_k8s_app[0].filterResult.bindAddress | startswith("127.") | not
+    ' > /dev/null
+  then
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.accessType "Pod"
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.scheme "https"
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.port "$(context::get snapshots.kube_controller_manager_by_k8s_app.0.filterResult.securePort)"
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podSelector '{"k8s-app": "kube-controller-manager"}'
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podNamespace 'kube-system'
+    values::set monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.authenticationMethod 'PrometheusCertificate'
+  else
+    values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.accessType
+    values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.scheme
+    values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.port
+    values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podSelector
+    values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podNamespace
+    values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.authenticationMethod
+  fi
+
+}
+
+hook::run $@

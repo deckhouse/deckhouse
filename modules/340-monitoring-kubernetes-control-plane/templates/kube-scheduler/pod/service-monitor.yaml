@@ -1,0 +1,47 @@
+{{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.accessType "Pod" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-scheduler
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      d8-monitoring-control-plane-component: kube-scheduler
+  namespaceSelector:
+    matchNames:
+    - {{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.podNamespace }}
+  endpoints:
+  - scheme: {{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.scheme }}
+    port: metrics
+    path: {{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.metricsPath }}
+  {{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.authenticationMethod "PrometheusCertificate" }}
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+      insecureSkipVerify: true
+  {{- else if eq .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.authenticationMethod "Certificate" }}
+    tlsConfig:
+      insecureSkipVerify: true
+      cert:
+        secret:
+          name: monitoring-control-plane-kube-scheduler-client-cert
+          key: client.crt
+      keySecret:
+        name: monitoring-control-plane-kube-scheduler-client-cert
+        key: client.key
+  {{- end }}
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-scheduler
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+      regex: "true"
+      action: keep
+{{- end }}

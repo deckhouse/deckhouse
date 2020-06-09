@@ -1,0 +1,50 @@
+{{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.accessType "Pod" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-apiserver
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+{{ .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.podSelector | toYaml | indent 6 }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.podNamespace }}
+  podMetricsEndpoints:
+  - scheme: https
+    path: {{ .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.metricsPath }}
+  {{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.authenticationMethod "PrometheusCertificate" }}
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+  {{- else if eq .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.authenticationMethod "Certificate" }}
+    tlsConfig:
+      insecureSkipVerify: true
+      cert:
+        secret:
+          name: monitoring-control-plane-kube-apiserver-client-cert
+          key: client.crt
+      keySecret:
+        name: monitoring-control-plane-kube-apiserver-client-cert
+        key: client.key
+  {{- end }}
+    relabelings:
+    - sourceLabels: [ __address__]
+      targetLabel: __address__
+      replacement: ${1}:{{ .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.port }}
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-apiserver
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+{{- end }}

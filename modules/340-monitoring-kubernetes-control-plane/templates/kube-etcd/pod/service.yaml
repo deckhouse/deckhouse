@@ -1,0 +1,20 @@
+{{- $context := . }}
+{{- range $instance := .Values.monitoringKubernetesControlPlane.internal.kubeEtcd }}
+  {{- if eq $instance.accessType "Pod" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-monitoring-control-plane-kube-etcd-{{ $instance.name }}
+  namespace: {{ $instance.pod.podNamespace }}
+{{ include "helm_lib_module_labels" (list $context (dict "d8-monitoring-control-plane-component" (printf "kube-etcd-%s" $instance.name))) | indent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: {{ $instance.pod.localPort }}
+  selector:
+{{ $instance.pod.podSelector | toYaml | indent 4 }}
+  {{- end }}
+{{- end }}
