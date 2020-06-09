@@ -1,0 +1,11 @@
+global:
+  discovery:
+    kubernetesVersion: 1.15.6
+  modulesImages:
+    registry: registry.flant.com
+    tags:
+      kubeProxy:
+        kubeProxy115: f0e65977fe495b80394ac0b290567a417689bb42e28af6dc0b2c2ffa
+        kubeProxy116: 615c96f11dbc68fc026bc73918f0c62271f2e062e2856768a08c7a52
+        kubeProxy117: fa209be340ee1e99cb3ebd0964aea56b07fa86f5d229bcd33fd69539
+        kubeProxy118: 8a5a1696df22ddbf46d455d890772956c5e78287abdd21153b0a40ae

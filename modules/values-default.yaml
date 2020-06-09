@@ -19,6 +19,7 @@ deckhouseEnabled: true
 cloudProviderOpenstackEnabled: true
 nodeManagerEnabled: true
 controlPlaneManagerEnabled: true
+kubeProxyEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true
 controlPlaneConfiguratorEnabled: true
