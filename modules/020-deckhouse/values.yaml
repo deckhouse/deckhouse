@@ -1,3 +1,5 @@
 deckhouse:
+  auth: {}
+  internal: {}
   logLevel: Info
   bundle: Default
