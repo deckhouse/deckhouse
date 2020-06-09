@@ -104,7 +104,7 @@ func (h *handler) modifyRequest(w http.ResponseWriter, r *http.Request, login st
 	r.Header.Del("Authorization")
 	r.Header.Set("X-Remote-User", login)
 	for _, group := range groups {
-		r.Header.Set("X-Remote-Group", group)
+		r.Header.Add("X-Remote-Group", group)
 	}
 	r.Host = u.Host
 	reverseProxy.ServeHTTP(w, r)
