@@ -1,5 +1,10 @@
-Поддержка модуля istio
-======================
+---
+title: Поддержка модуля istio
+permalink: /modules/360-istio/docs/development.html
+sidebar: modules-istio
+hide_sidebar: false
+---
+
 
 Оригинальный istio поставляется в виде helm-чарта, который мы преобразовали в наш формат выкинув много лишнего и переделав их костыли на наши.
 

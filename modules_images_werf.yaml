@@ -1,6 +1,7 @@
 project: deckhouse-modules-images
 configVersion: 1
 
+{{- $Root := . }}
 {{- range $path, $content := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}"  }}
   {{- $ctx := dict }}
   {{- if regexMatch "/werf.inc.yaml$" $path }}
@@ -14,6 +15,7 @@ configVersion: 1
   {{- $_ := set $ctx "ModuleName" $ImageData._1 }}
   {{- $_ := set $ctx "ImageName" $ImageData._2 }}
   {{- $_ := set $ctx "ImageBuildData" $content }}
+  {{- $_ := set $ctx "Files" $Root.Files }}
 ---
 {{ include "module_image_template" $ctx  }}
 {{- end }}

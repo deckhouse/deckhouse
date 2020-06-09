@@ -1,7 +1,11 @@
-Создание приложения в Github организации для аутентификации в кластере
-=======
+---
+title: "Создание приложения в GitHub организации для аутентификации в кластере" 
+sidebar: modules-user-authn
+permalink: modules/150-user-authn/docs/github.html
+hide_sidebar: false
+---
 
-Для настройки аутентификации с помощью модуля `user-authn` необходимо в организации Github создать новое приложение.
+Для настройки аутентификации с помощью модуля `user-authn` необходимо в организации GitHub создать новое приложение.
 
 Для этого необходимо перейти в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 

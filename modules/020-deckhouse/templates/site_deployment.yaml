@@ -1,0 +1,42 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: documentation
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "documentation")) | indent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: documentation
+  template:
+    metadata:
+      labels:
+        app: documentation
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: front
+        image: "{{ $.Values.global.modulesImages.registry }}/deckhouse/site:{{ $.Values.global.modulesImages.tags.deckhouse.site }}"
+        command: ["nginx", "-g", "daemon off;"]
+        ports:
+          - containerPort: 80
+            name: http
+            protocol: TCP
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/usr/sbin/nginx", "-s", "quit"]
+        volumeMounts:
+          - name: config
+            mountPath: /usr/share/nginx/html/config
+      volumes:
+        - name: config
+          configMap:
+            name: documentation-config

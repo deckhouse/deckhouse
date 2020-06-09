@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+EOF
+}
+
+function __main__() {
+  if values::has deckhouse.internal.deployDexAuthenticator ; then
+    cat <<EOF | kubectl apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+ name: deckhouse
+ namespace: d8-system
+ labels:
+   heritage: deckhouse
+   module: deckhouse
+   app: dex-authenticator
+ annotations:
+   dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applicationDomain: "$(module::public_domain deckhouse)"
+  sendAuthorizationHeader: true
+  applicationIngressCertificateSecretName: "ingress-tls"
+  applicationIngressClassName: "$(module::ingress_class)"
+EOF
+  else
+    if kubectl -n d8-system get dexauthenticator deckhouse >/dev/null 2>/dev/null ; then
+      kubectl -n d8-system delete dexauthenticator deckhouse >/dev/null 2>/dev/null
+    fi
+  fi
+}
+
+hook::run "$@"

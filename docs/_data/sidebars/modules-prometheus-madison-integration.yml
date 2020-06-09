@@ -1,0 +1,10 @@
+entries:
+- title: Модуль prometheus-madison-integration
+  folders:
+    - title: Модуль operator-prometheus
+      url: /modules/340-prometheus-madison-integration/
+      folderitems:
+      - title: Описание модуля
+        url: /modules/340-prometheus-madison-integration/
+      - title: Интеграция с Madison
+        url: /modules/340-prometheus-madison-integration/docs/madison.html

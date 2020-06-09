@@ -1,0 +1,21 @@
+#!/bin/bash
+
+if [ -f modules_menu_skip ]; then
+  modules_skip_list=$(cat modules_menu_skip)
+fi
+
+modules_list=$(find modules -regex '.*.md' -print | cut -d\/ -f2 | sort | uniq)
+
+echo "topnav_modules_items: &modules_items"
+for module in $modules_list ; do
+  skip=false
+  for el in $modules_skip_list ; do
+    if [[ $el == $module ]] ; then skip=true; break; fi
+  done
+  if [[ $skip == 'false' ]]; then
+    cat << YAML
+  - title: $module
+    url: /modules/$module/
+YAML
+  fi
+done

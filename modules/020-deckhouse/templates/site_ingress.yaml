@@ -1,0 +1,71 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: documentation
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "documentation")) | indent 2 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouse.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.deckhouse.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.deckhouse.auth.externalAuthentication.authURL | quote }}
+  {{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+  {{- end }}
+  {{- if .Values.deckhouse.auth.satisfyAny }}
+    nginx.ingress.kubernetes.io/satisfy: "any"
+  {{- end }}
+  nginx.ingress.kubernetes.io/affinity: cookie
+spec:
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "deckhouse") }}
+    http:
+      paths:
+      - backend:
+          serviceName: documentation
+          servicePort: http
+        path: /
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+    - hosts:
+        - {{ include "helm_lib_module_public_domain" (list . "deckhouse") }}
+      secretName: ingress-tls
+  {{- end }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: documentation
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "documentation")) | indent 2 }}
+spec:
+  secretName: ingress-tls
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "deckhouse") }}
+  acme:
+    config:
+    {{- if has (include "helm_lib_module_https_cert_manager_cluster_issuer_name" .) (list "route53" "cloudflare" "digitalocean") }}
+    - dns01:
+        provider: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    {{- else }}
+    - http01:
+        ingressClass: {{ include "helm_lib_module_ingress_class" . | quote }}
+    {{- end }}
+      domains:
+      - {{ include "helm_lib_module_public_domain" (list . "deckhouse") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+{{- end }}
+---
+{{- end }}

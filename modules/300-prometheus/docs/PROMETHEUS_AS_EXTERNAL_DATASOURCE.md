@@ -5,13 +5,13 @@ tags:
   - grafana
 type:
   - instruction
+sidebar: modules-prometheus
+hide_sidebar: false
+permalink: /modules/300-prometheus/docs/prometheus_as_external_datasource.html
 search: Как подключится к Prometheus, пользовательская Grafana
 ---
 
-Как подключиться к Prometheus
-=============================
-
-В данной инструкции описаны варианты подключения к Prometheus для сторонних приложений.
+В данной статье описаны варианты подключения к Prometheus для сторонних приложений.
 
 ### Подключение Prometheus в качестве Datasource
 

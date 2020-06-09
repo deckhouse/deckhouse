@@ -1,0 +1,17 @@
+entries:
+- title: Подсистема CandI
+  folders:
+    - title: Подсистема CandI
+      url: /candi/docs/
+      folderitems:
+      - title: Описание
+        url: /candi/docs/
+      - title: Фреймфорк bashible
+        url: /candi/bashible/
+      - title: Control Plane Kubeadm
+        url: /candi/control-plane-kubeadm/
+        subfolders:
+        - title: Cloud providers
+          subfolderitems:
+          - title: Openstack
+            url: /candi/cloud-providers/openstack/

@@ -1,5 +1,8 @@
-Разработка Deckhouse
-====================
+---
+title: Разработка Deckhouse
+---
+{% raw %}
+
 - Версия, релиз (существительное) — логически законченная и анонсированная версия программы. Формат смотри подробнее ниже. 
 Пример: `20.04` (релиз без хотфиксов), `20.04-hotfix-2020-03-24.5` (этот же релиз, но с хотфиксами). 
 В качестве существительного, употребление терминов `версия` и `релиз` — равносильно.
@@ -133,33 +136,34 @@ Hotfix-релизы это не самостоятельные релизы, а 
     1. При выпуске следующего релиза, в релиз-месседже (в том числе в fox) указать, следующую фразу: "Настоящий релиз содержит все изменения релиза YY.NN, который был остановлен на `early-access`". Если релизов несколько, то перечислить каждый.
 
 <details>
-  <summary><b><span style="font-size: large; ">Использование ***REMOVED*** при релизе</span></b></summary>
+  <summary><b>Использование ***REMOVED*** при релизе</b>
+  </summary>
 
 - Получить информацию о версии (бранче) Deckhouse на каждом кластере:
-    ```
-    ./***REMOVED*** -s "if :kubectl: get ns/d8-system 2> /dev/null > /dev/null ; then :kubectl: -n d8-system get deploy/deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r; else echo "---"; fi" | tee /tmp/res
-    ```
-    В результате — в /tmp/res будет список кластеров с текущими каналами обновлений или версиями. Дальнейшие команды приводятся исходя из использования /tmp/res.
+  ```bash
+  ./***REMOVED*** -s "if :kubectl: get ns/d8-system 2> /dev/null > /dev/null ; then :kubectl: -n d8-system get deploy/deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r; else echo "---"; fi" | tee /tmp/res
+  ```
+  В результате — в /tmp/res будет список кластеров с текущими каналами обновлений или версиями. Дальнейшие команды приводятся исходя из использования /tmp/res.
 
 - Посмотреть состояние подов Deckhouse на кластерах с версией stable (обращаем внимание на `AGE` пода):
-    ```
-    ./***REMOVED*** -s --debug --filter="$(cat /tmp/res | grep :stable | cut -d: -f 1)" --no-prefix ":kubectl: -n d8-system get pod -l app=deckhouse"
-    ```
+  ```bash
+  ./***REMOVED*** -s --debug --filter="$(cat /tmp/res | grep :stable | cut -d: -f 1)" --no-prefix ":kubectl: -n d8-system get pod -l app=deckhouse"
+  ```
 
 - Посмотреть состояние релизов helm на кластерах на канале `stable`:
-    ```
-    ./***REMOVED*** -s --debug --filter="$(cat /tmp/res | grep :stable | cut -d: -f 1)" --no-prefix ':kubectl: -n d8-system exec -t $(:kubectl: -n d8-system get pod -l app=deckhouse -o name | cut -d/ -f2) -- helm --tiller-namespace=d8-system --host 127.0.0.1:44434 list'
-    ```
+  ```bash
+  ./***REMOVED*** -s --debug --filter="$(cat /tmp/res | grep :stable | cut -d: -f 1)" --no-prefix ':kubectl: -n d8-system exec -t $(:kubectl: -n d8-system get pod -l app=deckhouse -o name | cut -d/ -f2) -- helm --tiller-namespace=d8-system --host 127.0.0.1:44434 list'
+  ```
 
 - Собрать в папку /tmp/logs (должна существовать) логи с кластеров на канале `stable`:
-    ```
-    ./***REMOVED*** -s --debug --filter="$(cat /tmp/res | grep :stable | cut -d: -f 1)" --stdout-dir=/tmp/logs ":kubectl: -n d8-system logs deploy/deckhouse"
-    ```
+  ```bash
+  ./***REMOVED*** -s --debug --filter="$(cat /tmp/res | grep :stable | cut -d: -f 1)" --stdout-dir=/tmp/logs ":kubectl: -n d8-system logs deploy/deckhouse"
+  ```
 
 - После того, как собрали логи, можно грепнуть их, например, так (пропуская частые, некритичные сообщения):
-    ```
-    grep -inr error /tmp/logs/ | grep -v 'check image' | grep -v 'get manifest' | grep -v 'too old resource version' | grep -vE 'error copying from local|remote'
-    ```
+  ```bash
+  grep -inr error /tmp/logs/ | grep -v 'check image' | grep -v 'get manifest' | grep -v 'too old resource version' | grep -vE 'error copying from local|remote'
+  ```
 </details>
 
 Style Guide
@@ -216,9 +220,9 @@ Bundle - вариант поставки Deckhouse. Варианты:
 * `helm upgrade --install` вызывается при наличии файла `/modules/<module-name>/Chart.yaml`.
 * Для каждого модуля создается отдельный helm-релиз. За создание ресурсов в кластере отвечает Tiller, запущенный отдельным процессом в pod'е Deckhouse.
 Просмотр helm-релизов: 
-    ```bash
-    kubectl -n d8-system exec deploy/deckhouse -- helm list
-    ```
+  ```bash
+  kubectl -n d8-system exec deploy/deckhouse -- helm list
+  ```
 * При первом выкате helm-релиза, если в кластере уже есть ресурсы, описанные в релизе – выкат в helm упадет. При этом будет создан релиз в состоянии FAILED. 
 Ошибка будет продолжать появляться пока из кластера не будут удалены повторяющиеся ресурсы.
 
@@ -297,33 +301,36 @@ Helper'у на вход передается глобальный context и ж�
 
 * Если у модуля в values есть переменная `tolerations` - будет использовано её значение.
 * Если указана стратегия `frontend` или `system`, в манифест будут добавлены следующие правила:
-    ```yaml
-    tolerations:
-    - key: dedicated.flant.com
-      operator: Equal
-      value: {{ .Chart.Name }}
-    - key: dedicated.flant.com
-      operator: Equal
-      value: {{ имя_стратегии }}
-    ```
+
+  ```yaml
+  tolerations:
+  - key: dedicated.flant.com
+    operator: Equal
+    value: {{ .Chart.Name }}
+  - key: dedicated.flant.com
+    operator: Equal
+    value: {{ имя_стратегии }}
+  ```
 * Если указана стратегия `monitoring`, правила будут выглядеть так:  
-    ```yaml
-    tolerations:
-    - key: dedicated.flant.com
-      operator: Equal
-      value: {{ .Chart.Name }}
-    - key: dedicated.flant.com
-      operator: Equal
-      value: {{ имя_стратегии }}
-    - key: dedicated.flant.com
-      operator: Equal
-      value: "system"
-    ```
+
+  ```yaml
+  tolerations:
+  - key: dedicated.flant.com
+    operator: Equal
+    value: {{ .Chart.Name }}
+  - key: dedicated.flant.com
+    operator: Equal
+    value: {{ имя_стратегии }}
+  - key: dedicated.flant.com
+    operator: Equal
+    value: "system"
+  ```
 * Если указана стратегия `master`, правила будут выглядеть так:  
-    ```yaml
-    tolerations:
-    - operator: Exists
-    ```
+
+  ```yaml
+  tolerations:
+  - operator: Exists
+  ```
 Helper **ОБЯЗАТЕЛЬНО** должен быть использован для всех компонентов Deckhouse, в которых это возможно, кроме DaemonSet'ов, всегда выкатываемых на все ноды кластера (node-exporter, csi-node, flannel, etc). 
 
 
@@ -347,16 +354,19 @@ Helper **ОБЯЗАТЕЛЬНО** должен быть использован �
 Чтобы компоненты модуля (Deployment или StatefulSet) корректно работали и обновлялись в режиме HA, существуют правила:
 
 * Обязательно указываем podAntiAffinity для Deployment и StatefulSet, чтобы поды не располагались на одной ноде. Пример для prometheus:
+
   ```yaml
-    {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deployment-label")) | indent 6 }}
+  {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deployment-label")) | indent 6 }}
   ```
 * Для Deployment правильно выставляем `replicas` и `strategy`:
   * Deployment располагается НЕ на мастер нодах:
+
     ```yaml
     {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
     ```
     Это защищает нас от блокировки обновления в случае, когда количество подов Deployment равно количеству нод, и указаны nodeSelector и podAntiAffinity.
   * Deployment располагается на мастер нодах (на каждой!):
+
     ```yaml
     {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
     ```
@@ -365,7 +375,6 @@ Helper **ОБЯЗАТЕЛЬНО** должен быть использован �
 ### Проверка сложных условий
 
 Если нужно несколько раз проверять сложное условие, рекомендуется самостоятельно реализовать helper (если подобный helper еще не был реализован до вас).
-
 
 * Если результат выполнения helper'а равен `true`, helper должен вернуть строку вида `not empty string`.
 * Если результат выполнения helper'а равен `false`, helper должен вернуть пустую строку.
@@ -515,7 +524,8 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller help
 
 #### Примеры:
 <details>
- <summary>Вывод логов для каждого модуля:</summary>
+ <summary>Вывод логов для каждого модуля:
+ </summary>
 
 * С цветом:
 ```bash
@@ -532,7 +542,8 @@ kubectl -n d8-system logs deploy/deckhouse -f | jq -r --arg mod cloud-instance-m
 </details>
 
 <details>
- <summary>Вывод логов для каждого хука:</summary>
+ <summary>Вывод логов для каждого хука:
+ </summary>
 
 * С цветом:
 ```bash
@@ -593,7 +604,7 @@ Helm-тесты модуля             | `./testing/run ./modules/150-user-aut
 ```
 docker exec -ti deckhouse-testing bash
 ```
-
+{% endraw %}
 ### Запуск и отладка тестов из Golang'а
 
 #### Использование
@@ -602,7 +613,7 @@ docker exec -ti deckhouse-testing bash
 
 1. Выбираем необходимую Run/Debug Configuration в правом верхнем углу экрана:
 
-    ![](running-tests-from-golang/00-select-configuration.jpg)
+    ![]({{ site.baseurl }}/images/running-tests-from-golang/00-select-configuration.jpg)
 2. Выбираем файл (или директорию), для которой запустить тесты (или в Project, или просто держим фокус на открытом файле).
 3. Запускаем тесты, нажав `Ctrl-R`.
 
@@ -630,28 +641,29 @@ docker exec -ti deckhouse-testing bash
 1. Добавить два External Tool:
     1. Открыть раздел External Tools в Preference'ах проекта и нажать добавить:
 
-        ![](running-tests-from-golang/01-external-tools.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/01-external-tools.jpg)
     2. Ввести следующие параметры и создать external tool для запуска тестов:
 
-        ![](running-tests-from-golang/02-external-tool-for-running-tests.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/02-external-tool-for-running-tests.jpg)
     3. Аналогичным оразом создать второй external tool, для отладки тестов
 
-        ![](running-tests-from-golang/03-external-tool-for-debugging-tests.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/03-external-tool-for-debugging-tests.jpg)
 
         **Важно!!!** Добавлен параметр `--debug`, все checkbox'ы сняты!
 2. Добавить Run/Debug Configuration **для запуска тестов**:
     1. Открыть в верхнем меню Run -> Edit Configurations
     2. Добавить конфигурацию на основе Shell
 
-        ![](running-tests-from-golang/04-create-run-configuration.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/04-create-run-configuration.jpg)
     3. Заполнить следующим образом:
 
-        ![](running-tests-from-golang/05-setup-run-configuration.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/05-setup-run-configuration.jpg)
 3. Добавить Run/Debug Configuration **для отладки тестов**:
     1. Открыть в верхнем меню Run -> Edit Configurations
     2. Добавить конфигурацию на основе Go Remote
 
-        ![](running-tests-from-golang/06-create-debug-configuration.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/06-create-debug-configuration.jpg)
     3. Заполнить следующим образом:
 
-        ![](running-tests-from-golang/07-setup-debug-configuration.jpg)
+        ![]({{ site.baseurl }}/images/running-tests-from-golang/07-setup-debug-configuration.jpg)
+

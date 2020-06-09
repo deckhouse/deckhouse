@@ -1,7 +1,11 @@
-<!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
+---
+title: "Интеграция с Madison"
+permalink: /modules/340-prometheus-madison-integration/madison.html
+sidebar: modules-prometheus-madison-integration
+hide_sidebar: false
+---
 
-Интеграция с Madison
-====================
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
 
 Отправка алертов
 ----------------
