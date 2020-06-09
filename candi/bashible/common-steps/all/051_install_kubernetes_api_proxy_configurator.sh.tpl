@@ -40,20 +40,22 @@ fi
 
 # If there are no endpoints, try to get endpoint from locally running apiserver
 if [ -z "$apiserver_endpoints" ] && [ -f /etc/kubernetes/manifests/kube-apiserver.yaml ] ; then
-  if local_apiserver_endpoint="$(netstat -tlpn | grep 6443 | awk '{print $4}')" ; then
+  if local_apiserver_endpoint="$(netstat -tlpn | grep -E -o '[0-9\.]+:6443')" ; then
     apiserver_endpoints="$local_apiserver_endpoint"
   fi
 
-  secure_port="$(ps -e -o command | grep kube-apiserver | grep -E -o '\-\-secure-port=[0-9]*' | cut -d= -f2)"
-  if [ -z "$secure_port" ] ; then
+  secure_port="$(ps -e -o command | grep kube-apiserver | grep -E -o '\-\-secure-port=[0-9]+' | cut -d= -f2)"
+  if [ "x$secure_port" == "x" ] ; then
     secure_port="6443"
   fi
 
-  if local_apiserver_endpoint="$(ps -e -o command | grep kube-apiserver | grep -E -o '\-\-advertise-address=[0-9\.]*' | cut -d= -f2)" ; then
+  local_apiserver_endpoint="$(ps -e -o command | grep kube-apiserver | grep -E -o '\-\-advertise-address=[0-9\.]+' | cut -d= -f2)"
+  if [ "x$local_apiserver_endpoint" != "x" ] ; then
     apiserver_endpoints="$apiserver_endpoints $local_apiserver_endpoint:$secure_port"
   fi
 
-  if local_apiserver_endpoint="$(ps -e -o command | grep kube-apiserver | grep -E -o '\-\-bind-address=[0-9\.]*' | cut -d= -f2)" ; then
+  local_apiserver_endpoint="$(ps -e -o command | grep kube-apiserver | grep -E -o '\-\-bind-address=[0-9\.]+' | cut -d= -f2)"
+  if [ "x$local_apiserver_endpoint" != "x" ] ; then
     apiserver_endpoints="$apiserver_endpoints $local_apiserver_endpoint:$secure_port"
   fi
 fi
