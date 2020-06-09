@@ -4,11 +4,12 @@ tags:
   - prometheus
 type:
   - instruction
+permalink: /modules/300-prometheus/docs/prometheus_remote_write.html
+sidebar: modules-prometheus
+hide_sidebar: false
 search: prometheus remote write
 ---
 
-Запись данных Prometheus в longterm storage
-===========================================
 
 Общая информация
 ----------------

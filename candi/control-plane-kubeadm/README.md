@@ -1,5 +1,9 @@
-Control Plane Kubeadm
-=====================
+---
+title: Control Plane Kubeadm
+sidebar: candi
+hide_sidebar: false
+---
+
 Go-шаблоны для подготовки конфигурации kubeadm. 
 
 * `config.yaml.tpl` - основная конфигурация

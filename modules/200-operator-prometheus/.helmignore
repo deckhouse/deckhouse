@@ -1,4 +1,7 @@
-images
+crds
 docs
 enabled
+hooks
+images
+template_tests
 README.md

@@ -1,2 +1,6 @@
+crds
+docs
 enabled
-README.md
+hooks
+images
+template_tests

@@ -1,0 +1,9 @@
+# Next lines are for local build only
+modules: &modules_items
+  - title: 020-deckhouse
+    url: /modules/020-deckhouse
+
+
+entries:
+- title: Modules sidebar
+  folders: *modules_items

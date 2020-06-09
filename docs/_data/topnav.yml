@@ -1,0 +1,22 @@
+# Next lines are for local build only
+topnav_modules_items: &modules_items
+  - title: 020-deckhouse
+    url: /modules/020-deckhouse
+
+
+## Topnav single links
+## if you want to list an external url, use external_url instead of url. the theme will apply a different link base.
+topnav:
+- title: Topnav
+  items:
+  - title: CandI
+    url: /candi/
+  - title: Модули
+    url: /modules/
+    folderitems: *modules_items
+  - title: Руководства
+    url: /guides/monitoring.html
+  - title: Разработка
+    url: /development/
+  - title: Каналы обновлений
+    url: /releases.html

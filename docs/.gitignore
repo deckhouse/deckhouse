@@ -1,0 +1,6 @@
+modules
+_site/
+.sass-cache/
+.jekyll-metadata
+.jekyll-cache
+_pdf

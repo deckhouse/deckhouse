@@ -18,4 +18,23 @@ spec:
     - containerName: deckhouse
       maxAllowed:
         cpu: 200m
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: documentation
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "documentation")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: documentation
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: front
+      maxAllowed:
+        cpu: 200m
 {{- end }}

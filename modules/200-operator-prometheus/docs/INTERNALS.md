@@ -1,7 +1,11 @@
-<!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
+---
+title: "Как работает Prometheus под управлением Prometheus Operator"
+permalink: /modules/200-operator-prometheus/docs/internals.html
+sidebar: modules-operator-prometheus
+hide_sidebar: false
+---
 
-Как работает Prometheus под управлением Prometheus Operator
-===========================================================
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
 
 Всего в связке участвует два компонента:
 * [Prometheus](#prometheus)

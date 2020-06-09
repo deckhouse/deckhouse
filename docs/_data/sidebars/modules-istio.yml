@@ -1,0 +1,12 @@
+entries:
+- title: Модуль istio
+  folders:
+    - title: Модуль istio
+      url: /modules/360-istio/
+      folderitems:
+      - title: Описание модуля
+        url: /modules/360-istio/
+      - title: Использование
+        url: /modules/360-istio/docs/usage.html
+      - title: Поддержка
+        url: /modules/360-istio/docs/development.html

@@ -1,3 +1,9 @@
+---
+title: Cloud provider - Openstack
+sidebar: candi
+hide_sidebar: false
+---
+
 ## Поддерживаемые схемы размещения
 
 Каждая схема размещения должна быть описана двумя объектами OpenStackClusterConfiguration и OpenStackInitConfiguration.

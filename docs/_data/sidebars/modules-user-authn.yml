@@ -1,0 +1,20 @@
+entries:
+- title: Модуль user-authn
+  folders:
+    - title: Модуль user-authn
+      url: /modules/150-user-authn/
+      folderitems:
+      - title: Описание модуля
+        url: /modules/150-user-authn/
+      - title: User stories
+        url: /modules/150-user-authn/user-stories.html
+
+        subfolders:
+        - title: Создание приложений
+          subfolderitems:
+          - title: В Crowd
+            url: /modules/150-user-authn/docs/crowd.html
+          - title: В GitHub
+            url: /modules/150-user-authn/docs/github.html
+          - title: В GitLab
+            url: /modules/150-user-authn/docs/gitlab.html

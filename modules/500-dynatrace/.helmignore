@@ -1,5 +1,6 @@
+crds
+docs
+enabled
 hooks
 images
-crds
-enabled
-README.md
+template_tests

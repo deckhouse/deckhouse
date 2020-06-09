@@ -1,0 +1,73 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: nginx:1.17.2
+ansible:
+  setup:
+  - name: "Copy nginx.conf"
+    copy:
+      content: |
+{{ .Files.Get "modules/020-deckhouse/images/site/nginx.conf" | indent 8 }}
+      dest: /etc/nginx/nginx.conf
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /srv/jekyll-data/_site/
+  to: /usr/share/nginx/html
+  before: setup
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+from: jekyll/jekyll:3.8
+mount:
+  - from: build_dir
+    to: /usr/local/bundle
+ansible:
+  install:
+    - name: "Install Dependencies"
+      shell: bundle install
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+  setup:
+    - name: "Adding modules into navigation menu"
+      shell: /bin/bash modules_make_data > /srv/jekyll-data/_data/topnav.yml2 &&  sed '1,+4d' _data/topnav.yml >> /srv/jekyll-data/_data/topnav.yml2  && mv -f /srv/jekyll-data/_data/topnav.yml2 /srv/jekyll-data/_data/topnav.yml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Adding permalinks if it wasn't set and stripping 'docs/' from it"
+      shell: |
+        for i in $(find . -regex '.*.md' -print); do
+          cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
+          if [ $? -eq 0 ]; then
+            # permalink not present, add it
+            PERMALINK="/$(echo $i | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#.md$#.html#')"
+            sed -i "1apermalink: $PERMALINK" $i
+          fi
+        done
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Building"
+      shell: jekyll build
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+git:
+- add: /docs
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    install: ['Gemfile','Gemfile.lock']
+    setup: ['**/*']
+- add: /
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['README.md', 'candi/**/*.md', 'deckhouse-candi/**/*.md']
+- add: /modules
+  to: /srv/jekyll-data/modules
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['**/docs/']

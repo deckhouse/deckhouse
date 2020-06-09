@@ -1,0 +1,47 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: d8_deployment
+      apiVersion: apps/v1
+      kind: Deployment
+      watchEvent: ["Added", "Modified"]
+      namespace:
+        nameSelector:
+          matchNames: ["d8-system"]
+      nameSelector:
+        matchNames: ["deckhouse"]
+      allowFailure: true
+      jqFilter: '.spec.template.spec  .containers[0].image | split(":")[1]'
+EOF
+}
+
+function __on_kubernetes::d8_deployment() {
+  log_level=$(values::get deckhouse.logLevel)
+  # Надо подумать, может это лишнее уже.
+  if [[ "$log_level" = "Debug" ]] ; then
+    echo "logLevel - ${log_level} for __on_kubernetes::d8_deployment handler"
+    echo "filterResult - $(context::get objects.0.filterResult)"
+    echo "objects - $(context::get objects)"
+  fi
+
+  if context::has objects.0; then
+    if [[ "$(values::get deckhouse.deckhouseTag)" != "$(context::get objects.0.filterResult)" ]] ; then
+      values::set deckhouse.deckhouseTag "$(context::get objects.0.filterResult)"
+      if [[ "$log_level" = "Debug" ]] ; then
+        echo "Set deckhouse.deckhouseTag value to '$(context::get objects.0.filterResult)'"
+      fi
+    fi
+  else
+    if [[ "$log_level" = "Debug" ]] ; then
+      echo "There is no corresponding values in the context... Leave deckhouse.deckhouseTag on '$(values::get deckhouse.deckhouseTag)'"
+    fi
+  fi
+
+}
+
+hook::run $@
