@@ -62,14 +62,16 @@ func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObjec
 	namespace := object.Unstructured.GetNamespace()
 
 	if shortPath == RootRBACForUsPath {
-		if objectName != m.Name {
-			return errors.NewLintRuleError(
-				"MANIFEST053",
-				object.Identity(),
-				nil,
-				"Name of ServiceAccount in %q should be equal to Chart Name (%s)",
-				RootRBACForUsPath, m.Name,
-			)
+		if objectName != m.Name{
+			if namespace != "kube-system" && objectName != "d8-"+m.Name {
+				return errors.NewLintRuleError(
+					"MANIFEST053",
+					object.Identity(),
+					nil,
+					"Name of ServiceAccount in %q should be equal to Chart Name (%s)",
+					RootRBACForUsPath, m.Name,
+				)
+			}
 		}
 		if !isDeckhouseSystemNamespace(namespace) && m.Namespace != namespace {
 			return errors.NewLintRuleError(
