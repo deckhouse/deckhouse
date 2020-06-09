@@ -1,3 +1,4 @@
+{{- if include "node_group_manage_docker" .nodeGroup }}
 bb-event-on 'bb-sync-file-changed' '_on_docker_config_changed'
 _on_docker_config_changed() {
 {{ if ne .runType "ImageBuilding" -}}
@@ -5,13 +6,6 @@ _on_docker_config_changed() {
   systemctl restart docker.service
 {{- end }}
 }
-
-{{- $nvidia_docker := false }}
-{{- if hasKey .nodeGroup "docker" }}
-  {{- if .nodeGroup.docker.nvidia }}
-    {{- $nvidia_docker = true }}
-  {{- end }}
-{{- end }}
 
 bb-sync-file /etc/docker/daemon.json - << "EOF"
 {
@@ -24,15 +18,7 @@ bb-sync-file /etc/docker/daemon.json - << "EOF"
                 "max-file": "5",
                 "max-size": "10m"
         },
-{{- if $nvidia_docker }}
-        "runtimes": {
-          "nvidia": {
-            "path": "/usr/bin/nvidia-container-runtime",
-            "runtimeArgs": []
-          }
-        },
-        "default-runtime": "nvidia",
-{{- end }}
 	"max-concurrent-downloads": {{ $max_concurrent_downloads }}
 }
 EOF
+{{- end }}
