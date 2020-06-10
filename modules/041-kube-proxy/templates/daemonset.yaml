@@ -16,6 +16,8 @@ spec:
     metadata:
       labels:
         k8s-app: kube-proxy
+      annotations:
+        checksum/config: {{ include "ConfigMapData" . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry

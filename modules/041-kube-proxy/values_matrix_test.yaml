@@ -1,3 +1,6 @@
+kubeProxy:
+  internal:
+    clusterMasterAddresses: ["10.2.3.4", "10.5.6.7"]
 global:
   discovery:
     kubernetesVersion: 1.15.6
