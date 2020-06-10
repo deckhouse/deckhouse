@@ -8,6 +8,7 @@ global:
     registry: registry.flant.com
     tags:
       kubeProxy:
+        apiProxyCheck: sadfwffeqwfeqw3fwqefewfreg53gregfreqfq3t43ferwfdsaf43f3s
         kubeProxy114: safdfsadfsadfdsafdeqwfr3wqefr42tf2fdsacfsdf43frwfssadf34
         kubeProxy115: f0e65977fe495b80394ac0b290567a417689bb42e28af6dc0b2c2ffa
         kubeProxy116: 615c96f11dbc68fc026bc73918f0c62271f2e062e2856768a08c7a52
