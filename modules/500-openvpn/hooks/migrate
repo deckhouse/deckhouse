@@ -131,9 +131,9 @@ function __main__ {
     tmp="/tmp/etcd-$(date +%N)"
     mkdir -p "$tmp"
 
-    kubectl -n kube-system exec -t "$pod_name" cat "$pod_ca_path"  > "$tmp/ca.crt" 2>/dev/null
-    kubectl -n kube-system exec -t "$pod_name" cat "$pod_cert_path" > "$tmp/client.crt" 2>/dev/null
-    kubectl -n kube-system exec -t "$pod_name" cat "$pod_key_path" > "$tmp/client.key" 2>/dev/null
+    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_ca_path" > "$tmp/ca.crt" 2>/dev/null
+    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_cert_path" > "$tmp/client.crt" 2>/dev/null
+    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_key_path" > "$tmp/client.key" 2>/dev/null
 
     endpoint="$(jq -r '.endpoint' <<< "$etcd_connection_opts")"
     ca_path="$tmp/ca.crt"
