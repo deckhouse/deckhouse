@@ -67,12 +67,6 @@ nodeSelector:
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
 nodeSelector:
   node-role.flant.com/master: ""
-    {{- else if $module_values.nodeSelector }}
-nodeSelector:
-{{ $module_values.nodeSelector | toYaml | indent 2 }}
-    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
-nodeSelector:
-  node-role.flant.com/{{$context.Chart.Name}}: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
 nodeSelector:
   node-role.flant.com/system: ""
@@ -151,12 +145,7 @@ tolerations:
     {{- end }}
 
   {{- else if eq $strategy "master" }}
-    {{- if $module_values.tolerations }}
-tolerations:
-{{ $module_values.tolerations | toYaml }}
-    {{- else }}
 tolerations:
 - operator: Exists
-    {{- end }}
   {{- end }}
 {{- end }}
