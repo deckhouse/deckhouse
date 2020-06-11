@@ -1,3 +1,4 @@
+{{- if and .Values.global.modules.publicDomainTemplate  .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -8,3 +9,4 @@ metadata:
 data:
   channel.json: >
     {"channel":"{{ $.Values.deckhouse.deckhouseTag }}"}
+{{- end }}

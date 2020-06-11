@@ -1,3 +1,4 @@
+{{- if and .Values.global.modules.publicDomainTemplate  .Values.global.clusterIsBootstrapped }}
 ---
 kind: Service
 apiVersion: v1
@@ -12,3 +13,4 @@ spec:
     protocol: TCP
   selector:
     app: documentation
+{{- end }}

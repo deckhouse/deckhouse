@@ -10,7 +10,7 @@ EOF
 }
 
 function __main__() {
-  if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined deckhouse.https.mode global.modules.https.mode) != "Disabled" ]]
+  if values::is_true global.clusterIsBootstrapped && values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined deckhouse.https.mode global.modules.https.mode) != "Disabled" ]]
   then
     if ! values::has --config deckhouse.auth.externalAuthentication ; then
       values::set deckhouse.auth.externalAuthentication '{}'
