@@ -12,6 +12,7 @@ global:
 # Список включенных по умолчанию модулей #
 ##########################################
 operatorPrometheusCrdEnabled: true
+userAuthnCrdEnabled: true
 priorityClassEnabled: true
 prometheusCrdEnabled: true
 verticalPodAutoscalerCrdEnabled: true
