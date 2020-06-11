@@ -1,7 +1,7 @@
 ---
 title: "Создание приложения в GitLab для аутентификации в кластере" 
 sidebar: modules-user-authn
-permalink: modules/150-user-authn/docs/gitlab.html
+permalink: modules/150-user-authn/gitlab.html
 hide_sidebar: false
 ---
 

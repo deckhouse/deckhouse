@@ -7,12 +7,12 @@ entries:
       - title: Описание модуля
         url: /modules/300-prometheus/
       - title: "Разработка графиков Grafana"
-        url: /modules/300-prometheus/docs/grafana_dashboard_development.html
+        url: /modules/300-prometheus/grafana_dashboard_development.html
       - title: "Как подключиться к Prometheus"
-        url: /modules/300-prometheus/docs/prometheus_as_external_datasource.html
+        url: /modules/300-prometheus/prometheus_as_external_datasource.html
       - title: "Запись данных Prometheus в longterm storage"
-        url: /modules/300-prometheus/docs/prometheus_remote_write.html
+        url: /modules/300-prometheus/prometheus_remote_write.html
       - title: "Разработка правил Prometheus"
-        url: /modules/300-prometheus/docs/prometheus_rules_development.html
+        url: /modules/300-prometheus/prometheus_rules_development.html
       - title: "Разработка target'ов Prometheus"
-        url: /modules/300-prometheus/docs/prometheus_targets_development.html
+        url: /modules/300-prometheus/prometheus_targets_development.html

@@ -13,8 +13,8 @@ entries:
         - title: Создание приложений
           subfolderitems:
           - title: В Crowd
-            url: /modules/150-user-authn/docs/crowd.html
+            url: /modules/150-user-authn/crowd.html
           - title: В GitHub
-            url: /modules/150-user-authn/docs/github.html
+            url: /modules/150-user-authn/github.html
           - title: В GitLab
-            url: /modules/150-user-authn/docs/gitlab.html
+            url: /modules/150-user-authn/gitlab.html

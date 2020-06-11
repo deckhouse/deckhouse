@@ -4,7 +4,7 @@ tags:
   - grafana
 type:
   - instruction
-permalink: /modules/300-prometheus/docs/grafana_dashboard_development.html
+permalink: /modules/300-prometheus/grafana_dashboard_development.html
 sidebar: modules-prometheus
 hide_sidebar: false
 search: grafana разработка графиков
@@ -89,7 +89,7 @@ search: grafana разработка графиков
 
 ### Job должен быть явно указан
 
-Как и при разработке правил для Prometheus, необходимо всегда [явно указывать job](PROMETHEUS_RULES_DEVELOPMENT.md#Всегда-явно-указывать-job), чтобы гарантированно избежать конфликтов в именах метрик.
+Как и при разработке правил для Prometheus, необходимо всегда [явно указывать job](prometheus_rules_development.html#всегда-явно-указывать-job), чтобы гарантированно избежать конфликтов в именах метрик.
 
 ### Prometheus должен выбираться
 

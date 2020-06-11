@@ -7,4 +7,4 @@ entries:
       - title: Описание модуля
         url: /modules/200-operator-prometheus/
       - title: Как работает Prometheus под управлением Prometheus Operator
-        url: /modules/200-operator-prometheus/docs/internals.html
+        url: /modules/200-operator-prometheus/internals.html

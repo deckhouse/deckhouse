@@ -4,7 +4,7 @@ tags:
   - prometheus
 type:
   - instruction
-permalink: /modules/300-prometheus/docs/prometheus_rules_development.html
+permalink: /modules/300-prometheus/prometheus_rules_development.html
 sidebar: modules-prometheus
 hide_sidebar: false
 search: Разработка правил Prometheus, prometheus alerting rules
@@ -21,7 +21,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
     * в [kubernetes](../prometheus-rules/kubernetes/) лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (pod'ы, cronjob'ы, место на диске и пр.).
     * в [applications](../prometheus-rules/kubernetes/) лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
-* Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator](../../200-operator-prometheus/docs/INTERNALS.md)):
+* Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator](../../200-operator-prometheus/internals.html)):
     * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
         * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
         * Если изменений нет, то надо проверить, что deckhouse сдеплоилась успешно:
@@ -74,7 +74,7 @@ sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone
 * `irate(foo[1h])` возвращает rate для последних двух точек (то есть не rate от первой до последней точки, а rate на основании двух последних точек).
 * Мы можем быть уверены, что мы не будем использовать `scrape_interval` больше 30m (это слишком редко и не имеет никакого практического смысла).
 
-Таким образом получается, что `irate(foo[1h])` в правилах Prometheus эквивалентно `rate[$__interval_rv]` в Grafana (см. подробнее "Объяснение деталей и причин" в разделе ["Точность данных и детализация"](GRAFANA_DASHBOARD_DEVELOPMENT.md#Точность-данных-и-детализация) документации по разработке графиков Grafana).
+Таким образом получается, что `irate(foo[1h])` в правилах Prometheus эквивалентно `rate[$__interval_rv]` в Grafana (см. подробнее "Объяснение деталей и причин" в разделе ["Точность данных и детализация"](grafana_dashboard_development.html#точность-данных-и-детализация) документации по разработке графиков Grafana).
 
 ### Не пытаться генерировать рулы Helm'ом
 
