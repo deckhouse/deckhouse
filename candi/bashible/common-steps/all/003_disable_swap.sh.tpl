@@ -1,2 +1,2 @@
 swapoff -a
-sed -i '/swapfile/d' /etc/fstab
+sed -i '/[[:space:]]swap[[:space:]]/d' /etc/fstab
