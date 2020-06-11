@@ -58,6 +58,7 @@ spec:
           - --cloud-provider={{ .Values.nodeManager.internal.cloudProvider.type | quote }}
           - --machine-max-evict-retries=30
           - --machine-safety-orphan-vms-period=5m
+          - --failed-machine-deletion-ratio=0.2
           - --bootstrap-token-auth-extra-groups=system:bootstrappers:d8-node-manager
           - --address=127.0.0.1
           - --port=10258
