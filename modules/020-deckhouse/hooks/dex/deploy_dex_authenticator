@@ -10,7 +10,8 @@ EOF
 }
 
 function __main__() {
-  if values::has deckhouse.internal.deployDexAuthenticator ; then
+
+  if values::has deckhouse.internal.deployDexAuthenticator && values::is_true global.clusterIsBootstrapped ; then
     cat <<EOF | kubectl apply -f -
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator

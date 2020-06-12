@@ -1,3 +1,4 @@
+{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -40,3 +41,4 @@ spec:
         - name: config
           configMap:
             name: documentation-config
+{{- end }}
