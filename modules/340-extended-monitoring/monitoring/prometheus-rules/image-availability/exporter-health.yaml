@@ -27,7 +27,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "1m"
+      plk_pending_until_firing_for: "15m"
       plk_ignore_labels: "job"
       plk_grouped_by__main: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
       description: >
