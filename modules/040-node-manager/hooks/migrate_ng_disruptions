@@ -1,0 +1,46 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    kubernetes:
+    - name: ngs
+      group: main
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "migrated" : (if .spec | has("disruptions") then true else false end)
+        }
+EOF
+}
+
+function __main__ {
+  for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
+    if context::jq -er --argjson i "$i" '.snapshots.ngs[$i].filterResult.migrated == false'; then
+      ng_name="$(context::jq -r --argjson i "$i" '.snapshots.ngs[$i].object.metadata.name')"
+      fltr='.|
+        .spec.disruptions.approvalMode = (
+          if .spec | has("allowDisruptions") then
+            if .spec.allowDisruptions == true then
+              "Automatic"
+            else
+              "Manual"
+            end
+          else
+            "Automatic"
+          end
+        ) |
+        del(.spec.allowDisruptions)
+      '
+      kubernetes::patch_jq "" "nodegroups.deckhouse.io/$ng_name" "$fltr"
+    fi
+  done
+}
+
+hook::run "$@"

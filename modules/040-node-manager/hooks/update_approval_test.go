@@ -32,7 +32,8 @@ metadata:
   name: undisruptable-worker
 spec:
   nodeType: Static
-  allowDisruptions: false
+  disruptions:
+    approvalMode: Manual
 status:
   desired: 1
   ready: 1
@@ -150,57 +151,68 @@ data:
 
 	Context("approve_disruptions", func() {
 		for _, gDisruptionRequired := range []bool{true, false} {
-			for _, gAllowDisruptons := range []int{0, 1, 2} {
-				for _, gUnschedulable := range []bool{true, false} {
-					Context(fmt.Sprintf("DisruptionRequired: %t, AllowDisruptons: %v, Unschedulable: %t", gDisruptionRequired, gAllowDisruptons, gUnschedulable), func() {
-						disruptionRequired := gDisruptionRequired
-						allowDisruptons := gAllowDisruptons
-						unschedulable := gUnschedulable
-						BeforeEach(func() {
-							f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestApproveDisruptions(nodeNames, disruptionRequired, allowDisruptons, unschedulable)))
-							f.RunHook()
-						})
+			for _, gDisruptionsApprovalMode := range []int{0, 1, 2} {
+				for _, gDisruptionsDrainBeforeApproval := range []int{0, 1, 2} {
+					for _, gUnschedulable := range []bool{true, false} {
+						Context(fmt.Sprintf("DisruptionRequired: %t, DisruptionsApprovalMode: %v, DisruptionsDrainBeforeApproval: %v, Unschedulable: %t", gDisruptionRequired, gDisruptionsApprovalMode, gDisruptionsDrainBeforeApproval, gUnschedulable), func() {
+							disruptionRequired := gDisruptionRequired
+							disruptionsApprovalMode := gDisruptionsApprovalMode
+							disruptionsDrainBeforeApproval := gDisruptionsDrainBeforeApproval
+							unschedulable := gUnschedulable
+							BeforeEach(func() {
+								f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestApproveDisruptions(nodeNames, disruptionRequired, disruptionsApprovalMode, disruptionsDrainBeforeApproval, unschedulable)))
+								f.RunHook()
+							})
 
-						It("Works as expected", func() {
-							Expect(f).To(ExecuteSuccessfully())
-							for _, nodeName := range nodeNames {
-								if disruptionRequired && allowDisruptons > 0 {
-									if unschedulable {
-										By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
-										})
-										By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
-										})
+							It("Works as expected", func() {
+								Expect(f).To(ExecuteSuccessfully())
+								for _, nodeName := range nodeNames {
+									if disruptionRequired && disruptionsApprovalMode > 0 {
+										if disruptionsDrainBeforeApproval > 0 {
+											if unschedulable {
+												By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+												})
+												By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
+												})
+											} else {
+												By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+												})
+												By(fmt.Sprintf("%s must have /draining", nodeName), func() {
+													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
+												})
+											}
+										} else {
+											By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+											})
+											By(fmt.Sprintf("%s must have /disruption-approved", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeTrue())
+											})
+										}
 									} else {
-										By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
-										})
-										By(fmt.Sprintf("%s must have /draining", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
-										})
-									}
-								} else {
-									if disruptionRequired {
-										By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
-										})
-									}
-
-									if unschedulable {
-										By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
-										})
-									} else {
-										By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
-											Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeFalse())
-										})
+										if disruptionRequired {
+											By(fmt.Sprintf("%s must have /disruption-required", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+											})
+										}
+										if unschedulable {
+											By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
+											})
+										} else {
+											By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
+												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeFalse())
+											})
+										}
 									}
 								}
-							}
+							})
 						})
-					})
+					}
 				}
 			}
 		}
@@ -259,17 +271,17 @@ data:
 	Context("process_updated_nodes :: ", func() {
 		for _, gUpdated := range []bool{true, false} {
 			for _, gReady := range []bool{true, false} {
-				for _, gAllowDisruptions := range []bool{true, false} {
+				for _, gDisruptionsApprovalMode := range []bool{true, false} {
 					for _, gDisruption := range []bool{true, false} {
 						for _, gDrained := range []bool{true, false} {
-							Context(fmt.Sprintf("Updated: %t, Ready: %t, AllowDisruptions: %t, Disruption: %t, Drained: %t :: ", gUpdated, gReady, gAllowDisruptions, gDisruption, gDrained), func() {
+							Context(fmt.Sprintf("Updated: %t, Ready: %t, DisruptionsApprovalMode: %t, Disruption: %t, Drained: %t :: ", gUpdated, gReady, gDisruptionsApprovalMode, gDisruption, gDrained), func() {
 								updated := gUpdated
 								ready := gReady
-								allowDisruptions := gAllowDisruptions
+								disruptionsApprovalMode := gDisruptionsApprovalMode
 								disruption := gDisruption
 								drained := gDrained
 								BeforeEach(func() {
-									f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestProcessUpdatedNodes(nodeNames, updated, ready, allowDisruptions, disruption, drained)))
+									f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestProcessUpdatedNodes(nodeNames, updated, ready, disruptionsApprovalMode, disruption, drained)))
 									f.RunHook()
 								})
 
@@ -647,10 +659,29 @@ metadata:
   name: worker-2
 spec:
   nodeType: Static
-{{- if eq .AllowDisruptions 1 }}
-  allowDisruptions: true
-{{- else if eq .AllowDisruptions 0 }}
-  allowDisruptions: false
+{{- if eq .DisruptionsApprovalMode 0 }}
+  disruptions:
+    approvalMode: Manual
+{{- else if eq .DisruptionsApprovalMode 1 }}
+  disruptions:
+    approvalMode: Automatic
+    {{- if eq .DisruptionsDrainBeforeApproval 0 }}
+    automatic:
+      drainBeforeApproval: false
+    {{- else if eq .DisruptionsDrainBeforeApproval 1 }}
+    automatic:
+      drainBeforeApproval: true
+    {{- end }}
+{{- else if eq .DisruptionsApprovalMode 2 }}
+  {{- if eq .DisruptionsDrainBeforeApproval 0 }}
+  disruptions:
+    automatic:
+      drainBeforeApproval: false
+    {{- else if eq .DisruptionsDrainBeforeApproval 1 }}
+  disruptions:
+    automatic:
+      drainBeforeApproval: true
+  {{- end }}
 {{- end }}
 {{- range $nodeName := .NodeNames }}
 ---
@@ -672,15 +703,16 @@ spec:
 {{- end }}
 `
 
-func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, allowDisruptions int, unschedulable bool) string {
+func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, disruptionsApprovalMode, disruptionsDrainBeforeApproval int, unschedulable bool) string {
 	tmpl, _ := template.New("state").Parse(tpl)
 	var state bytes.Buffer
 	err := tmpl.Execute(&state, struct {
-		NodeNames          []string
-		DisruptionRequired bool
-		AllowDisruptions   int
-		Unschedulable      bool
-	}{nodeNames, disruptionRequired, allowDisruptions, unschedulable})
+		NodeNames                      []string
+		DisruptionRequired             bool
+		DisruptionsApprovalMode        int
+		DisruptionsDrainBeforeApproval int
+		Unschedulable                  bool
+	}{nodeNames, disruptionRequired, disruptionsApprovalMode, disruptionsDrainBeforeApproval, unschedulable})
 	if err != nil {
 		panic(fmt.Errorf("execute template: %v", err))
 	}
@@ -718,10 +750,10 @@ spec:
 	return state
 }
 
-func generateStateToTestProcessUpdatedNodes(nodeNames []string, updated, ready, allowDisruptions, disruption, drained bool) string {
+func generateStateToTestProcessUpdatedNodes(nodeNames []string, updated, ready, disruptionsApprovalMode, disruption, drained bool) string {
 	state := ``
 	ngName := "worker"
-	if !allowDisruptions {
+	if !disruptionsApprovalMode {
 		ngName = "undisruptable-worker"
 	}
 
@@ -747,7 +779,7 @@ metadata:
 `
 		}
 
-		if !allowDisruptions {
+		if !disruptionsApprovalMode {
 			state += `
     update.node.deckhouse.io/disruption-required: ""
 `

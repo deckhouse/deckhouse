@@ -253,8 +253,6 @@ spec:
                 period:
                   type: string
                   pattern: '^[0-9]+[mh]{1}$'
-            allowDisruptions:
-              type: boolean
             operatingSystem:
               description: Operating System settings for nodes.
               type: object
@@ -262,6 +260,22 @@ spec:
                 manageKernel:
                   type: boolean
                   description: Enable kernel maintenance from bashible (default true).
+            disruptions:
+              description: Disruptions settings for nodes.
+              type: object
+              required:
+              - approvalMode
+              properties:
+                approvalMode:
+                  type: string
+                  enum:
+                    - Manual
+                    - Automatic
+                automatic:
+                  type: object
+                  properties:
+                    drainBeforeApproval:
+                      type: boolean
             docker:
               description: Docker settings for nodes.
               type: object
