@@ -12,9 +12,12 @@ document.addEventListener("DOMContentLoaded", function() {
       $(".releases__menu-item.releases__menu--channel--"+resp['channel']).addClass("releases__menu-item-block-active");
       $(".releases__menu-item-title.releases__menu--channel--"+resp['channel']).addClass("releases__menu-item-title-active");
       var update_channels_list = ['alpha','beta','early-access','stable','rock-solid'];
-      if (update_channels_list.indexOf(resp['channel']) < 1 ) {
+      if (update_channels_list.indexOf(resp['channel']) < 0 ) {
         $("#releases__stale__block").css({ display: "block" });
-      }
+      } else {
+        $("#releases__stale__block").css({display: "none"});
+      };
+
     } else {
       $(".updateChannelContent").text('unknown');
       console.log('UpdateChannel is not defined.');
