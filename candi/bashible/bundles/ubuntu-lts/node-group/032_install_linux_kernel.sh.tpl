@@ -9,6 +9,7 @@
 {{- if ne .runType "ImageBuilding" }}
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
+  bb-log-info "Setting reboot flag due to kernel was updated"
   bb-flag-set reboot
 }
 {{- end }}

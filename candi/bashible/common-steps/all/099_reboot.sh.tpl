@@ -5,4 +5,6 @@ if bb-flag? reboot; then
   bb-flag-unset reboot
   shutdown -r now
 fi
+{{- else }}
+bb-flag-unset reboot
 {{- end }}
