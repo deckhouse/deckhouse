@@ -64,7 +64,7 @@ spec:
         image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
         args:
         - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote}}
-        - {{ printf "--proxy-pass=http://localhost:%s%s" $localPort $metricsPath | quote }}
+        - {{ printf "--proxy-pass=http://127.0.0.1:%s%s" $localPort $metricsPath | quote }}
       {{- if eq $authenticationMethod "ProxyServiceAccount" }}
         - "--proxy-bearer-token-from-service-account"
       {{- else if eq $authenticationMethod "Certificate" }}
@@ -99,7 +99,7 @@ spec:
         image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
         args:
         - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote }}
-        - {{ printf "--proxy-pass=%s://localhost:%s%s" $scheme $localPort $metricsPath | quote }}
+        - {{ printf "--proxy-pass=%s://127.0.0.1:%s%s" $scheme $localPort $metricsPath | quote }}
         - "--user=d8-monitoring:scraper"
       {{- if eq $authenticationMethod "ProxyServiceAccount" }}
         - "--proxy-bearer-token-from-service-account"
@@ -132,7 +132,7 @@ spec:
         image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
         args:
         - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote }}
-        - {{ printf "--proxy-pass=%s://localhost:%s%s" $scheme $localPort $metricsPath | quote }}
+        - {{ printf "--proxy-pass=%s://127.0.0.1:%s%s" $scheme $localPort $metricsPath | quote }}
         - "--user=d8-monitoring:scraper"
       {{- if eq $authenticationMethod "ProxyServiceAccount" }}
         - "--proxy-bearer-token-from-service-account"
@@ -165,7 +165,7 @@ spec:
         image: {{ $context.Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/proxy:{{ $context.Values.global.modulesImages.tags.monitoringKubernetesControlPlane.proxy }}
         args:
         - {{ printf "--listen=$(MY_POD_IP):%s" $proxyListenPort | quote }}
-        - {{ printf "--proxy-pass=%s://localhost:%s%s" $scheme $localPort $metricsPath | quote }}
+        - {{ printf "--proxy-pass=%s://127.0.0.1:%s%s" $scheme $localPort $metricsPath | quote }}
         - "--user=d8-monitoring:scraper"
       {{- if eq $scheme "https" }}
         - "--proxy-ssl-cert-file=/etc/nginx/certs/client.crt"
