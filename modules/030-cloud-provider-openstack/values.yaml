@@ -3,3 +3,4 @@ cloudProviderOpenstack:
     instances: {}
     zones: []
   instances: {}
+  loadBalancer: {}
