@@ -225,10 +225,11 @@ local function fill_statsd_buffer()
   local var_ingress_name = ngx.var.ingress_name == "" and "-" or ngx.var.ingress_name
   local var_service_name = ngx.var.service_name == "" and "-" or ngx.var.service_name
   local var_service_port = ngx.var.service_port == "" and "-" or ngx.var.service_port
+  local var_location_path = ngx.var.location_path == "" and "-" or ngx.var.location_path
 
   local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
-  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
-  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
+  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#"  .. var_server_name .. "#" .. var_location_path
+  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port  .. "#" .. var_server_name .. "#" .. var_location_path
   -- requests
   local var_scheme = ngx.var.scheme
   local var_request_method = ngx.var.request_method
@@ -378,14 +379,14 @@ local function send(premature)
   local sock = socket()
   local ok, err = sock:connect("127.0.0.1", "9090")
   if not ok then
-    log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
+    log(ERROR, format("failed to connect to the tcp socket, metrics buffer will be lost: %s", tostring(err)))
     return
   end
   sock:settimeout(60000) -- 1 min timeout
 
   ok, err = sock:send(pbbuff:result())
   if not ok then
-    log(ERROR, format("error while sending statsd data via tcp socket: %s", tostring(err)))
+    log(ERROR, format("tcp socket: %s", tostring(err)))
   end
   sock:close()
 
@@ -401,7 +402,7 @@ local _M = {}
 function _M.init_worker()
   local _, err = timer_every(1, send)
   if err then
-    log(ERROR, format("error while sending statsd data: %s", tostring(err)))
+    log(ERROR, format("data send: %s", tostring(err)))
   end
 end
 
