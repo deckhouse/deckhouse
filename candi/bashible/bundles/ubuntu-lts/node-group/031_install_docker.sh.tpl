@@ -25,7 +25,7 @@ else
   exit 1
 fi
 
-if bb-apt-package? $(echo $pacakge | cut -f1 -d"="); then
+if bb-apt-package? $(echo $package | cut -f1 -d"="); then
   bb-flag-set there-was-docker-installed
 fi
 
