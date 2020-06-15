@@ -34,7 +34,7 @@ spec:
     metadata:
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
-        checksum/certificate: {{ include (print .Template.BasePath "/vpa-admission-controller/tls-certs.yaml") . | sha256sum }}
+        checksum/certificate: {{ include (print .Template.BasePath "/admission-controller/tls-certs.yaml") . | sha256sum }}
       labels:
         app: vpa-admission-controller
     spec:
@@ -42,7 +42,7 @@ spec:
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "vpa-admission-controller")) | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
-      serviceAccountName: vpa-admission-controller
+      serviceAccountName: d8-vertical-pod-autoscaler-admission-controller
       imagePullSecrets:
       - name: deckhouse-registry
       containers:

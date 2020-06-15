@@ -91,7 +91,7 @@ spec:
         key: node-role.kubernetes.io/master
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: control-plane-manager
+      serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager
         image: {{ .Values.global.modulesImages.registry }}/control-plane-manager/control-plane-manager:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
