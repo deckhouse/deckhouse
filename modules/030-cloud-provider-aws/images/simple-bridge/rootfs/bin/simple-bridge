@@ -25,7 +25,7 @@ while true; do
     rm -f /etc/cni/net.d/simple-bridge.conf
     tee /etc/cni/net.d/simple-bridge.conflist <<END
 {
-  "name": "cbr0",
+  "name": "cni0",
   "cniVersion": "0.3.1",
   "plugins": [
     {
