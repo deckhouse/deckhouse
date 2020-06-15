@@ -180,10 +180,10 @@ rock-solid:
 Cleanup registry:
   stage: cleanup_registry
   script:
-    - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
     - ./modules_images_werf cleanup
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
     - werf cleanup --stages-storage :local --images-repo ${CI_REGISTRY_IMAGE}
   only:
   - schedules
@@ -196,8 +196,8 @@ Cleanup registry:
 Cleanup modules images:
   stage: cleanup_builder
   script:
-    - docker ps --filter status=exited -q | xargs docker rm -v
-    - docker images -f dangling=true -q | xargs docker image rm
+    - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
+    - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
   only:
     - schedules
   tags:

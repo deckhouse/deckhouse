@@ -28,6 +28,8 @@ function bp() {
 function cleanup() {
   >2& echo "Not implemented!"
   # TODO
+  # Make an empty artifact
+  echo "{}" > modules/images_tags.json
 }
 
 ! read -rd '' HELP_STRING <<"EOF"
