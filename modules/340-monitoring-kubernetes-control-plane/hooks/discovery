@@ -125,8 +125,8 @@ function __config__() {
             )
           ),
           "securePort": ((match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "10259"),
-          "isAuthenticationKubeconfigConfigured": (if match("(^|\\\\s+)--authentication-kubeconfig=(\\\\S+)(\\\\s+|$)") then true else false end),
-          "isAuthorizationKubeconfigConfigured":  (if match("(^|\\\\s+)--authorization-kubeconfig=(\\\\S+)(\\\\s+|$)")  then true else false end)
+          "isAuthenticationKubeconfigConfigured": (if test("(^|\\\\s+)--authentication-kubeconfig=(\\\\S+)(\\\\s+|$)") then true else false end),
+          "isAuthorizationKubeconfigConfigured":  (if test("(^|\\\\s+)--authorization-kubeconfig=(\\\\S+)(\\\\s+|$)")  then true else false end)
         }
 
     - name: kube_scheduler_by_k8s_app
@@ -150,8 +150,8 @@ function __config__() {
             )
           ),
           "securePort": ((match("(^|\\\\s+)--secure-port=(\\\\S+)(\\\\s+|$)") | .captures[1].string) // "10259"),
-          "isAuthenticationKubeconfigConfigured": (if match("(^|\\\\s+)--authentication-kubeconfig=(\\\\S+)(\\\\s+|$)") then true else false end),
-          "isAuthorizationKubeconfigConfigured":  (if match("(^|\\\\s+)--authorization-kubeconfig=(\\\\S+)(\\\\s+|$)")  then true else false end)
+          "isAuthenticationKubeconfigConfigured": (if test("(^|\\\\s+)--authentication-kubeconfig=(\\\\S+)(\\\\s+|$)") then true else false end),
+          "isAuthorizationKubeconfigConfigured":  (if test("(^|\\\\s+)--authorization-kubeconfig=(\\\\S+)(\\\\s+|$)")  then true else false end)
         }
 
     - name: kube_controller_manager_by_component
