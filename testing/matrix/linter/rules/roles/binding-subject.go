@@ -50,7 +50,7 @@ func ObjectBindingSubjectServiceAccountCheck(m types.Module, object storage.Stor
 				"MANIFEST054",
 				object.Identity(),
 				subject.Name,
-				"%s bind to the wrong ServiceAccount (doesn't exist in store)", objectKind,
+				"%s bind to the wrong ServiceAccount (doesn't exist in the store)", objectKind,
 			)
 		}
 	}

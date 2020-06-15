@@ -45,13 +45,13 @@ roleRef:
   name: d8:vertical-pod-autoscaler:controllers-reader
 subjects:
 - kind: ServiceAccount
-  name: vpa-updater
+  name: d8-vertical-pod-autoscaler-updater
   namespace: kube-system
 - kind: ServiceAccount
-  name: vpa-recommender
+  name: d8-vertical-pod-autoscaler-recommender
   namespace: kube-system
 - kind: ServiceAccount
-  name: vpa-admission-controller
+  name: d8-vertical-pod-autoscaler-admission-controller
   namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -109,8 +109,8 @@ roleRef:
   name: d8:vertical-pod-autoscaler:actor
 subjects:
 - kind: ServiceAccount
-  name: vpa-recommender
+  name: d8-vertical-pod-autoscaler-recommender
   namespace: kube-system
 - kind: ServiceAccount
-  name: vpa-updater
+  name: d8-vertical-pod-autoscaler-updater
   namespace: kube-system
