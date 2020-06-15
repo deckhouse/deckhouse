@@ -383,6 +383,76 @@ metadata:
 		})
 	})
 
+	Context("Schedule: Proper cluster with two pairs of NG+IC, provider secret and two extra NodeGroups — static and hybrid", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret + stateNGStaticAndHybrid)
+			f.BindingContexts.Set(f.RunSchedule("*/10 * * * *"))
+			f.RunHook()
+		})
+
+		It("NGs must be stored to nodeManager.internal.nodeGroups", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			expectedJSON := `
+				[
+                  {
+                    "kubernetesVersion": "1.15",
+                    "manualRolloutID": "",
+                    "name": "hybrid1",
+                    "nodeType": "Hybrid",
+                    "updateEpoch": "` + calculateEpoch("hybrid1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+                  },
+				  {
+				    "nodeType": "Cloud",
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "nova"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
+				    "name": "proper1",
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+				  },
+				  {
+				    "nodeType": "Cloud",
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+				    "instanceClass": null,
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
+				    "name": "proper2",
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+				  },
+                  {
+                    "kubernetesVersion": "1.15",
+                    "manualRolloutID": "",
+                    "name": "static1",
+                    "nodeType": "Static",
+                    "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+                  }
+				]
+			`
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
+
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+		})
+	})
+
 	Context("Cluster with two proper pairs of NG+IC, one improper IC and provider secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateICIMroper + stateCloudProviderSecret))

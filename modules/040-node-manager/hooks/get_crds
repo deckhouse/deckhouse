@@ -21,7 +21,7 @@ function __config__() {
     kubernetes:
     - name: ngs
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,$([ -v instance_class_kind ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      group: main
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -38,21 +38,21 @@ function __config__() {
       echo "
     - name: ics
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,ics,cloud_provider_secrets,machine_deployments]
+      group: main
       apiVersion: deckhouse.io/v1alpha1
       kind: ${instance_class_kind}
       jqFilter: |
         {
-          "name": .metadata.name,
-          "spec": .spec,
-          "bundle": .spec.bashible.bundle
+          \"name\": .metadata.name,
+          \"spec\": .spec,
+          \"bundle\": .spec.bashible.bundle
         }
 "
     fi
     )
     - name: cloud_provider_secrets
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [ngs,$([ -v instance_class_kind ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      group: main
       apiVersion: v1
       kind: Secret
       namespace:
@@ -66,9 +66,10 @@ function __config__() {
         (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
         | {"zones": .zones}
     - name: machine_deployments
+      queue: /modules/$(module::name::kebab_case)
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
-      includeSnapshotsFrom: [ngs,$([ -v instance_class_kind ] && echo -n "ics,")cloud_provider_secrets,machine_deployments]
+      group: main
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
@@ -82,6 +83,10 @@ function __config__() {
           "name": .metadata.name,
           "zone": .metadata.annotations.zone
         }
+    schedule:
+    - group: main
+      queue: /modules/$(module::name::kebab_case)
+      crontab: "*/10 * * * *"
 EOF
 }
 
