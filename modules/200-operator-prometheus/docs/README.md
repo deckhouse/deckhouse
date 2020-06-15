@@ -7,7 +7,7 @@ hide_sidebar: false
 
 Модуль устанавливает [prometheus operator](https://github.com/coreos/prometheus-operator).
 
-Как работает вся связка Prometheus и Prometheus Operator можно посмотреть в документации по [внутреннему устройству](./docs/internals.html).
+Как работает вся связка Prometheus и Prometheus Operator можно посмотреть в документации по [внутреннему устройству](internals.html).
 
 Конфигурация
 ------------

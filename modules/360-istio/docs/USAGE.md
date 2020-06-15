@@ -1,6 +1,6 @@
 ---
 title: "Использование модуля istio"
-permalink: /modules/360-istio/docs/usage.html
+permalink: /modules/360-istio/usage.html
 sidebar: modules-istio
 hide_sidebar: false
 ---

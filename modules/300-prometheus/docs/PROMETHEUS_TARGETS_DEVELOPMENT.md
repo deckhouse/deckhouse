@@ -4,7 +4,7 @@ tags:
   - prometheus
 type:
   - instruction
-permalink: /modules/300-prometheus/docs/prometheus_targets_development.html
+permalink: /modules/300-prometheus/prometheus_targets_development.html
 sidebar: modules-prometheus
 hide_sidebar: false
 search: Разработка target'ов Prometheus, prometheus target

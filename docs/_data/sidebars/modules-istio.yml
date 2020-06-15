@@ -7,6 +7,6 @@ entries:
       - title: Описание модуля
         url: /modules/360-istio/
       - title: Использование
-        url: /modules/360-istio/docs/usage.html
+        url: /modules/360-istio/usage.html
       - title: Поддержка
-        url: /modules/360-istio/docs/development.html
+        url: /modules/360-istio/development.html

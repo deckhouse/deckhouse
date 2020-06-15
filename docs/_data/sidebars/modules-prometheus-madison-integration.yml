@@ -7,4 +7,4 @@ entries:
       - title: Описание модуля
         url: /modules/340-prometheus-madison-integration/
       - title: Интеграция с Madison
-        url: /modules/340-prometheus-madison-integration/docs/madison.html
+        url: /modules/340-prometheus-madison-integration/madison.html

@@ -1,7 +1,7 @@
 ---
 title: "Создание приложения в Crowd для аутентификации в кластере" 
 sidebar: modules-user-authn
-permalink: modules/150-user-authn/docs/crowd.html
+permalink: modules/150-user-authn/crowd.html
 hide_sidebar: false
 ---
 

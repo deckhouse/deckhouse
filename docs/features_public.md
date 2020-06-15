@@ -1,7 +1,3 @@
----
-title: Возможности
-permalink: features_public.html
----
 
 Управляет кластером Kubernetes в соответствии с нашими лучшими практиками.
 
