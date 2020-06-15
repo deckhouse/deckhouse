@@ -67,6 +67,11 @@ Tests:
     - git submodule update --init --recursive
   except:
     - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   artifacts:
     when: always
     paths:
@@ -89,6 +94,11 @@ Matrix Tests:
         -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
   except:
     - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   dependencies:
     - Build
   tags:
