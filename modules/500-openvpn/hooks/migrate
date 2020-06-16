@@ -114,7 +114,16 @@ function __main__ {
       ' | kubectl replace -f -
   fi
 
+
   if context::has snapshots.openvpn_external.0; then
+    if kubectl get ns | grep d8-cloud-provider >/dev/null 2>/dev/null; then
+      ns="$(kubectl get ns | grep d8-cloud-provider | awk '{print $1}')"
+      kubectl -n "$ns" scale deployment cloud-controller-manager --replicas=0
+      while kubectl -n "$ns" get po -l app=cloud-controller-manager -o json | jq -re '.items | length > 0'; do
+        sleep 1
+      done
+    fi
+
     if context::has snapshots.etcd_pods.0; then
       etcd_connection_opts="$(context::jq -r '.snapshots.etcd_pods[0].filterResult')"
     elif context::has snapshots.etcd_pods_kops.0; then
@@ -131,9 +140,9 @@ function __main__ {
     tmp="/tmp/etcd-$(date +%N)"
     mkdir -p "$tmp"
 
-    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_ca_path" > "$tmp/ca.crt" 2>/dev/null
-    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_cert_path" > "$tmp/client.crt" 2>/dev/null
-    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_key_path" > "$tmp/client.key" 2>/dev/null
+    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_ca_path || true" > "$tmp/ca.crt" 2>/dev/null
+    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_cert_path || true" > "$tmp/client.crt" 2>/dev/null
+    kubectl -n kube-system exec -t "$pod_name" -- sh -c "cat $pod_key_path || true" > "$tmp/client.key" 2>/dev/null
 
     endpoint="$(jq -r '.endpoint' <<< "$etcd_connection_opts")"
     ca_path="$tmp/ca.crt"
@@ -150,6 +159,11 @@ function __main__ {
     kubernetes::delete_if_exists::non_blocking "kube-openvpn" "ingress/admin"
     kubernetes::delete_if_exists::non_blocking "kube-openvpn" "ingress/openvpn-dex-authenticator"
     kubernetes::delete_if_exists::non_blocking "kube-openvpn" "deployment/openvpn-dex-authenticator"
+
+    if [ -v ns ]; then
+      sleep 3
+      kubectl -n "$ns" scale deployment cloud-controller-manager --replicas=1
+    fi
   fi
 }
 
