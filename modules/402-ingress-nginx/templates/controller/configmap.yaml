@@ -55,6 +55,10 @@ data:
   # Otherwise, by abusing the hell out of various tunables, we risk creating DoS situation.
   large-client-header-buffers: "4 16k"
   body-size: "64m"
+  # According to article https://weblogs.asp.net/owscott/iis-7-compression-good-bad-how-much
+  # gzip-level 1 gives us 50% of compression for 5~6% of CPU for large buffers.
+  # This is the best offer we can get to save CPU time for other tasks.
+  gzip-level: "1"
   server-name-hash-bucket-size: "256"
   variables-hash-bucket-size: "256"
   {{- if $crd.spec.disableHTTP2 }}
