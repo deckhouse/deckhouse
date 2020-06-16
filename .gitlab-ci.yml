@@ -3,24 +3,48 @@ variables:
   WERF_VERBOSE: "1"
 
 stages:
+  - build_modules_images
   - build
   - testing
   - deploy
   - cleanup_registry
   - cleanup_builder
 
+Build Modules Images:
+  stage: build_modules_images
+  script:
+  - ./modules_images_werf bp
+  before_script:
+  - rm -rf shell-operator || true
+  - git submodule update --init --recursive
+  except:
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
+  tags:
+  - build_modules_images
+  artifacts:
+    when: always
+    paths:
+    - modules/images_tags.json
+    expire_in: 30 days
+
 Build:
   stage: build
   variables:
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
   script:
-    - ./modules_images_werf bp
+    - export KUBECONFIG=$(mktemp -d)/kubeconfig
+    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf build-and-publish --stages-storage :local --images-repo=${CI_REGISTRY_IMAGE}
+    - werf build-and-publish --images-repo=${CI_REGISTRY_IMAGE}
     - if [[ -n ${CI_COMMIT_TAG} ]]; then
         echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;
-        docker image tag $(werf stage image --stages-storage :local dev) $DESTINATION_IMAGE;
+        docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
         docker image push $DESTINATION_IMAGE;
         docker image rmi $DESTINATION_IMAGE;
       fi
@@ -35,17 +59,14 @@ Build:
     - stable
     - rock-solid
   tags:
-    - build
-  artifacts:
-    when: always
-    paths:
-    - modules/images_tags.json
-    expire_in: 30 days
+    - werf-distributed
 
 Tests:
   stage: testing
   script:
     - pwd
+    - export KUBECONFIG=$(mktemp -d)/kubeconfig
+    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - rm -rf testing/kcov-report
@@ -59,7 +80,7 @@ Tests:
       EOF
       done
     - >
-      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --stages-storage :local --
+      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
       go test -vet=off ./modules/... ./global-hooks/...
     - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   before_script:
@@ -77,20 +98,19 @@ Tests:
     paths:
     - testing/kcov-report
     expire_in: 14 days
-  dependencies:
-    - Build
   tags:
-    - build
+    - werf-distributed
 
 Matrix Tests:
   stage: testing
   script:
     - pwd
+    - export KUBECONFIG=$(mktemp -d)/kubeconfig
+    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf run tests
         --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-        --stages-storage :local
         -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
   except:
     - schedules
@@ -99,10 +119,8 @@ Matrix Tests:
     - early-access
     - stable
     - rock-solid
-  dependencies:
-    - Build
   tags:
-    - build
+    - werf-distributed
 
 .base_deploy: &base_deploy
   stage: deploy
@@ -120,14 +138,12 @@ Matrix Tests:
     - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_SHA}
     - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
   when: manual
-  dependencies:
-    - Build
   needs:
     - "Matrix Tests"
     - "Tests"
     - "Build"
   tags:
-    - build
+    - werf-distributed
 
 alpha (pre-release):
   <<: *base_deploy
@@ -180,27 +196,25 @@ rock-solid:
 Cleanup registry:
   stage: cleanup_registry
   script:
-    - ./modules_images_werf cleanup
+    - export KUBECONFIG=$(mktemp -d)/kubeconfig
+    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
-    - werf cleanup --stages-storage :local --images-repo ${CI_REGISTRY_IMAGE}
+    - werf cleanup --images-repo ${CI_REGISTRY_IMAGE}
   only:
   - schedules
   tags:
-    - build
-  dependencies:
-    - Build
+    - werf-distributed
   retry: 2
 
 Cleanup modules images:
   stage: cleanup_builder
   script:
+    - ./modules_images_werf cleanup
     - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
     - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
   only:
     - schedules
   tags:
     - build
-  dependencies:
-    - Build
