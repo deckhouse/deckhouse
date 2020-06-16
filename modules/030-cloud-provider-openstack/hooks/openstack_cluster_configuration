@@ -63,7 +63,7 @@ function set_values_from_provider_cluster_configuration_yaml() {
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
   values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.loadBalancer //= {} | $data.loadBalancer * .loadBalancer')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if $data.loadBalancer == null then .loadBalancer else $data.loadBalancer * .loadBalancer end')
   values::set cloudProviderOpenstack.internal.loadBalancer "$i"
 }
 

@@ -18,6 +18,9 @@ global:
 cloudProviderOpenstack:
   internal:
     instances: {}
+    zones: []
+  instances: {}
+  loadBalancer: {}
 `
 		initValuesStringB = `
 global:
@@ -43,6 +46,30 @@ cloudProviderOpenstack:
   internalSubnet: "10.0.201.0/16"
   loadBalancer:
     subnetID: overrideSubnetID
+`
+	initValuesStringC = `
+global:
+  discovery: {}
+cloudProviderOpenstack:
+  internal:
+    instances: {}
+  connection:
+    authURL: https://test.tests.com:5000/v3/
+    domainName: default
+    tenantName: default
+    username: jamie
+    password: nein
+    region: HetznerFinland
+  externalNetworkNames: [public1, public2]
+  internalNetworkNames: [int1, int2]
+  podNetworkMode: DirectRouting
+  instances:
+    sshKeyPairName: my-ssh-keypair
+    securityGroups:
+    - security_group_1
+    - security_group_2
+  internalSubnet: "10.0.201.0/16"
+  loadBalancer: {}
 `
 	)
 
@@ -70,6 +97,25 @@ cloudProviderOpenstack:
   }
 }
 `
+		stateACloudDiscoveryDataWithoutLoadbalancers = `
+{
+  "externalNetworkNames": [
+    "external"
+  ],
+  "instances": {
+    "securityGroups": [
+      "default",
+      "ssh-and-ping",
+      "security_group_1"
+    ]
+  },
+  "internalNetworkNames": [
+    "internal"
+  ],
+  "podNetworkMode": "DirectRoutingWithPortSecurityEnabled",
+  "zones": ["zone1", "zone2"]
+}
+`
 		stateAClusterConfiguration = `
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
@@ -87,6 +133,17 @@ provider:
   password: pa$$word
   region: HetznerFinland
 `
+		stateAWithoutLoadbalancers = fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryDataWithoutLoadbalancers)))
+
 		stateA = fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
@@ -275,6 +332,40 @@ floatingNetworkID: floatingNetworkID
 			Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
 subnetID: overrideSubnetID
 `))
+		})
+	})
+
+	c := HookExecutionConfigInit(initValuesStringC, `{}`)
+	Context("Cluster has cloudProviderOpenstack and discovery data without loadbalancers", func() {
+		BeforeEach(func() {
+			c.BindingContexts.Set(c.KubeStateSet(stateAWithoutLoadbalancers))
+			c.RunHook()
+		})
+
+		It("Should merge values from cloudProviderOpenstack and discovery data", func() {
+			Expect(c).To(ExecuteSuccessfully())
+			connection := "cloudProviderOpenstack.internal.connection."
+			Expect(c.ValuesGet(connection + "authURL").String()).To(Equal("https://test.tests.com:5000/v3/"))
+			Expect(c.ValuesGet(connection + "domainName").String()).To(Equal("default"))
+			Expect(c.ValuesGet(connection + "tenantName").String()).To(Equal("default"))
+			Expect(c.ValuesGet(connection + "username").String()).To(Equal("jamie"))
+			Expect(c.ValuesGet(connection + "password").String()).To(Equal("nein"))
+			Expect(c.ValuesGet(connection + "region").String()).To(Equal("HetznerFinland"))
+			internal := "cloudProviderOpenstack.internal."
+			Expect(c.ValuesGet(internal + "internalNetworkNames").String()).To(MatchYAML(`
+[int1, int2, internal]
+`))
+			Expect(c.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
+[external, public1, public2]
+`))
+			Expect(c.ValuesGet(internal + "zones").String()).To(MatchYAML(`
+["zone1", "zone2"]
+`))
+			Expect(c.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
+			Expect(c.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
+[default, security_group_1, security_group_2, ssh-and-ping]
+`))
+			Expect(c.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`{}`))
 		})
 	})
 })
