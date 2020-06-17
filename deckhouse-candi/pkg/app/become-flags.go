@@ -14,7 +14,7 @@ var (
 
 func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 	// Ansible compatible
-	cmd.Flag("ask-become-pass", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
+	cmd.Flag("ask-become-pass", "Ask for sudo password before the installation process.").
 		Short('K').
 		BoolVar(&AskBecomePass)
 }
