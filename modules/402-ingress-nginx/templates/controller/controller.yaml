@@ -82,6 +82,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+  {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+    {{- if $crd.spec.geoIP2.maxmindLicenseKey }}
+        - name: LUA_USE_GEOIP2
+          value: "true"
+    {{- end }}
+  {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -107,6 +113,14 @@ spec:
         - --update-status=false
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
+  {{- end }}
+  {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+    {{- if $crd.spec.geoIP2.maxmindLicenseKey }}
+        - --maxmind-license-key={{ $crd.spec.geoIP2.maxmindLicenseKey }}
+      {{- if $crd.spec.geoIP2.maxmindEditionIDs }}
+        - --maxmind-edition-ids={{ $crd.spec.geoIP2.maxmindEditionIDs | join "," }}
+      {{- end }}
+    {{- end }}
   {{- end }}
   {{- if semverCompare ">=0.26" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
         lifecycle:
