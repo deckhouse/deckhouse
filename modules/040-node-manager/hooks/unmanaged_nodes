@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  # TODO: Add `keepFullObjectsInMemory: false`
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      queue: /modules/$(module::name::kebab_case)/unmanagemed-nodes
+      includeSnapshotsFrom: [nodes]
+      waitForSynchronization: false
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        {
+          "name":                   .metadata.name,
+          "nodeGroup":              (.metadata.labels | has("node.deckhouse.io/group")),
+          "configurationChecksum":  (.metadata.annotations | has("node.deckhouse.io/configuration-checksum")),
+          "isWaitingForApproval":   (.metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval")),
+          "isApproved":             (.metadata.annotations | has("update.node.deckhouse.io/approved"))
+        }
+EOF
+}
+
+function __on_kubernetes::nodes() {
+  for node in "$(context::jq -rc '.snapshots.nodes[] | .filterResult | .name as $name | all(to_entries[] | select(.key != "name"); .value == false) | if . then $name else empty end')"; do
+    if [ ! -z "$node" ] ; then
+      echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": "'"$node"'"}, "set": 1}' >> $METRICS_PATH
+    else
+      echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": ""}, "set": 0}' >> $METRICS_PATH
+    fi
+  done
+}
+
+hook::run "$@"
