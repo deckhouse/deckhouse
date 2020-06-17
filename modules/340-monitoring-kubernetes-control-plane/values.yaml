@@ -67,9 +67,11 @@ monitoringKubernetesControlPlane:
         nodeSelector:
           node-role.kubernetes.io/master: ""
         localPort: 2379
+        scheme: https
         authenticationMethod: HostPathCertificate
         hostPathCertificate: /etc/kubernetes/pki/apiserver-etcd-client.crt
         hostPathCertificateKey: /etc/kubernetes/pki/apiserver-etcd-client.key
       pod:
         podSelector: {}
+        scheme: https
       metricsPath: /metrics
