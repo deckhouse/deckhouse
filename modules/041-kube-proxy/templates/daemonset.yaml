@@ -22,6 +22,14 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       priorityClassName: system-node-critical
+      initContainers:
+      - name: api-proxy-check
+        image: {{ .Values.global.modulesImages.registry }}/kube-proxy/api-proxy-check:{{ index .Values.global.modulesImages.tags.kubeProxy.apiProxyCheck }}
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy
+          name: config
+        - mountPath: /var/lib/kube-proxy-cm
+          name: kube-proxy-cm
       containers:
       - name: kube-proxy
         image: {{ .Values.global.modulesImages.registry }}/kube-proxy/kube-proxy-{{ $kubeVersion.Major }}-{{ $kubeVersion.Minor }}:{{ index .Values.global.modulesImages.tags.kubeProxy (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "") }}
@@ -33,7 +41,7 @@ spec:
           privileged: true
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
-          name: kube-proxy
+          name: config
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
@@ -48,7 +56,9 @@ spec:
       hostNetwork: true
       serviceAccountName: d8-kube-proxy
       volumes:
-      - name: kube-proxy
+      - name: config
+        emptyDir: {}
+      - name: kube-proxy-cm
         configMap:
           name: kube-proxy
       - name: xtables-lock
