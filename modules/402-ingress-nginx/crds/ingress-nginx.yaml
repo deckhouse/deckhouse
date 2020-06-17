@@ -47,7 +47,7 @@ spec:
             controllerVersion:
               type: string
               description: 'One of the supported NGINX Ingress Controller versions.'
-              enum: ['0.25', '0.26']
+              enum: ['0.25', '0.26', '0.33']
             nodeSelector:
               type: object
               description: 'Controller nodeSelector field.'
@@ -145,6 +145,29 @@ spec:
                 includeSubDomains:
                   type: boolean
                   description: 'If this optional parameter is specified, this rule applies to all of subdomains as well.'
+            geoIP2:
+              type: object
+              description: 'Options for GeoIP2.'
+              properties:
+                maxmindLicenseKey:
+                  type: string
+                  description: 'License key for MaxMind services.'
+                maxmindEditionIDs:
+                  type: array
+                  description: 'MaxMind GeoIP2 database editions IDs.'
+                  items:
+                    type: string
+                    enum:
+                    - GeoIP2-Anonymous-IP
+                    - GeoIP2-Country
+                    - GeoIP2-City
+                    - GeoIP2-Connection-Type
+                    - GeoIP2-Domain
+                    - GeoIP2-ISP
+                    - GeoIP2-ASN
+                    - GeoLite2-ASN
+                    - GeoLite2-Country
+                    - GeoLite2-City
             legacySSL:
               type: boolean
               description: 'Enable old TLS protocol versions and legacy cipher suites.'

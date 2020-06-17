@@ -15,6 +15,7 @@ function __config__() {
       jqFilter: |
         .spec.config //= {}
         | .spec.hstsOptions //= {}
+        | .spec.geoIP2 //= {}
         | .spec.resourcesRequests //= {}
         | if .spec.resourcesRequests.mode == null then .spec.resourcesRequests.mode = "VPA" else . end
         | .spec.resourcesRequests.vpa //= {}

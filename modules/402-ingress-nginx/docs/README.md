@@ -18,7 +18,7 @@ ingressNginxEnabled: "false"
 
 * `defaultControllerVersion` — версия контроллера ingress-nginx, которая будет использоваться для всех контроллеров по-умолчанию, если не был задан параметр `controllerVersion` в IngressNginxController CRD. 
     * По-умолчанию `0.25`,
-    * Доступные варианты: `0.25`, `0.26`.
+    * Доступные варианты: `0.25`, `0.26`, `0.33`.
 
 Параметры ресурса IngressNginxController
 ----------------------------------------
@@ -36,7 +36,7 @@ ingressNginxEnabled: "false"
 **Необязательные параметры:**
 * `controllerVersion` — версия ingress-nginx контроллера;
     * По-умолчанию берется версия из настроек модуля.
-    * Доступные варианты: `"0.25"`, `"0.26"`.
+    * Доступные варианты: `"0.25"`, `"0.26"`, `"0.33"`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
@@ -115,11 +115,26 @@ ingressNginxEnabled: "false"
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `disableHTTP2` — bool, выключить ли HTTP/2.
     * По-умолчанию HTTP/2 включен (`false`).
+* `geoIP2` — опции для включения GeoIP2 (работают только для версии контроллера `"0.33"` и выше):
+    * `maxmindLicenseKey` — лицензионный ключ для скачивания базы данных GeoIP2. Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. Подробнее о получении ключа [читайте здесь](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/).
+    * `maxmindEditionIDs` — список ревизий баз данных, которые будут скачаны при старте. Чем отличаются, например, GeoIP2-City от GeoLite2-City можно ознакомиться [в этой статье](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2-databases/).
+        * По-умолчанию `["GeoLite2-City", "GeoLite2-ASN"]`
+        * Доступные варианты:
+            * GeoIP2-Anonymous-IP
+            * GeoIP2-Country
+            * GeoIP2-City
+            * GeoIP2-Connection-Type
+            * GeoIP2-Domain
+            * GeoIP2-ISP
+            * GeoIP2-ASN
+            * GeoLite2-ASN
+            * GeoLite2-Country
+            * GeoLite2-City</details>
 * `underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers).
     * По-умолчанию `false`.
 * `customErrors` — секция с настройкой кастомизации HTTP ошибок (если секция определена, то все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех ingress-nginx контроллеров**);
     * `serviceName` — имя сервиса, который будет использоваться, как custom default backend.
-    * `namespace` — имя namespace, в котором будет находится сервис, используемый, как custom default backend.
+    * `namespace` — имя namespace, в котором будет находиться сервис, используемый, как custom default backend.
     * `codes` — список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
 * `config` — секция настроек ingress controller, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/);
     * **Внимание!** Ошибка в указании опций может привести к отказу в работе ingress controller'а.
@@ -136,7 +151,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "0.26"
+  controllerVersion: "0.33"
   hsts: true
   config:
     gzip-level: "4"

@@ -60,6 +60,7 @@ spec:
   "inlet": "LoadBalancer",
   "loadBalancer": {},
   "hstsOptions": {},
+  "geoIP2": {},
   "resourcesRequests": {
     "mode": "VPA",
     "static": {},
@@ -128,6 +129,7 @@ spec:
 "controllerVersion": "0.25",
 "inlet": "LoadBalancer",
 "hstsOptions": {},
+"geoIP2": {},
 "resourcesRequests": {
   "mode": "Static",
   "static": {},
@@ -145,6 +147,7 @@ spec:
 "controllerVersion": "0.25",
 "inlet": "HostPortWithProxyProtocol",
 "hstsOptions": {},
+"geoIP2": {},
 "resourcesRequests": {
   "mode": "VPA",
   "static": {},

@@ -90,7 +90,6 @@ data:
     {{- end }}
   {{- end }}
 
-
   {{- if eq $crd.spec.inlet "HostPort" }}
     {{- if $crd.spec.hostPort.behindL7Proxy }}
   proxy-real-ip-cidr: "0.0.0.0/0"
@@ -104,6 +103,12 @@ data:
   {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
   use-proxy-protocol: "true"
   proxy-real-ip-cidr: "0.0.0.0/0"
+  {{- end }}
+
+  {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+    {{- if $crd.spec.geoIP2.maxmindLicenseKey }}
+  use-geoip2: "true"
+    {{- end }}
   {{- end }}
 
   log-format-escape-json: "true"

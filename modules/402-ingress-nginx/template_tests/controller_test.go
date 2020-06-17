@@ -50,6 +50,7 @@ key: teststring
     hsts: true
     hstsOptions:
       maxAge: "123456789123456789"
+    geoIP2: {}
     resourcesRequests:
       mode: VPA
       static: {}
@@ -70,10 +71,13 @@ key: teststring
   spec:
     config: {}
     ingressClass: test
-    controllerVersion: "0.25"
+    controllerVersion: "0.33"
     inlet: "HostPortWithProxyProtocol"
     hstsOptions: {}
     loadBalancer: {}
+    geoIP2:
+      maxmindLicenseKey: 12345
+      maxmindEditionIDs: ["GeoIPTest", "GeoIPTest2"]
     resourcesRequests:
       mode: Static
       static: {}
@@ -107,7 +111,17 @@ key: teststring
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
-			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next").Exists()).To(BeTrue())
+			testNextDaemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next")
+			Expect(testNextDaemonSet.Exists()).To(BeTrue())
+
+			var testNextArgs []string
+			for _, result := range testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array() {
+				testNextArgs = append(testNextArgs, result.String())
+			}
+
+			Expect(testNextArgs).Should(ContainElement("--maxmind-license-key=12345"))
+			Expect(testNextArgs).Should(ContainElement("--maxmind-edition-ids=GeoIPTest,GeoIPTest2"))
+
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "test-next-ingress-nginx-auth-tls").Exists()).To(BeTrue())
