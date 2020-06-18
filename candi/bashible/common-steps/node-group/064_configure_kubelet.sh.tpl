@@ -87,8 +87,8 @@ nodeStatusUpdateFrequency: 10s
 podsPerCore: 0
 podPidsLimit: -1
 readOnlyPort: 0
-registryPullQPS: 5
-registryBurst: 10
+registryPullQPS: 10
+registryBurst: 20
 resolvConf: ${resolvConfPath}
 rotateCertificates: true
 runtimeRequestTimeout: 2m0s
