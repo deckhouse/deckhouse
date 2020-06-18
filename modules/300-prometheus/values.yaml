@@ -1,4 +1,5 @@
 prometheus:
+  grafana: {}
   retentionDays: 15
   longtermRetentionDays: 1095
   auth: {}

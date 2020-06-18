@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: grafana_additional_datasources
+      includeSnapshotsFrom: ["grafana_additional_datasources"]
+      apiVersion: deckhouse.io/v1alpha1
+      queue: /modules/$(module::name::kebab_case)/grafana_additional_datasource
+      kind: GrafanaAdditionalDatasource
+      jqFilter: |
+        .spec.orgId = 1 |
+        .spec.name = .metadata.name |
+        .spec.uuid = .metadata.name |
+        .spec.isDefault = false |
+        .spec.version = 1 |
+        .spec.editable = false |
+        .spec
+EOF
+}
+
+function __main__() {
+  crds=$(context::jq -rc '[(.snapshots.grafana_additional_datasources // []) | .[].filterResult]')
+  values::set prometheus.internal.grafana.additionalDatasources "${crds}"
+}
+
+hook::run "$@"

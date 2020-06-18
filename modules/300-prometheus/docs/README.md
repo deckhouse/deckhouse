@@ -59,9 +59,8 @@ hide_sidebar: false
     * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить авторизацию в grafana и prometheus.
     * `satisfyAny` — разрешает пройти только одну из аутентификаций. В комбинации с опцией whitelistSourceRanges позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
 * `grafana` - настройки для инсталляции Grafana.
-    * `storageClass` — имя storageClass'а, который использовать для Grafana.
-        * Если не указано — используется StorageClass существующей PVC Grafana, а если PVC пока нет — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
-        * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Grafana будет перезаказан, а все данные удалены.
+    * `useDarkTheme` - использование по умолчанию пользовательской темной темы.
+        * По-умолчанию `false`.
     * `customPlugins` - список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana. Необходимо указать в качестве значения список имен плагинов из официального репозитория.
         * Пример добавления plug-in'ов для возможности указания в качестве datasource clickhouse и панели flow-chart:
            ```yaml
@@ -174,4 +173,23 @@ spec:
         plk_protocol_version: "1"
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
+```
+
+### Дополнительные Datasource для Grafana
+Для подключения дополнительных datasource'ов к Grafana добавлен специальный ресурс - `GrafanaAdditionalDatasource`.
+
+Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). 
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: another-prometheus
+spec:
+  type: prometheus
+  access: direct
+  url: http://another-prometheus.example.com/prometheus
+  jsonData:
+    timeInterval: 30s
 ```
