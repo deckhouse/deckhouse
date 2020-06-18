@@ -15,14 +15,7 @@ data:
       type: file
       disableDelete: false
       allowUiUpdates: false
-      updateIntervalSeconds: 30
+      updateIntervalSeconds: 15
       options:
         path: /etc/grafana-dashboard-definitions
         folderFromFileStructure: true
-    # TODO: Удалить механизм grafana-dashboard-definitions-custom когда поймём, что им никто не пользуется
-    - name: custom
-      orgId: 1
-      folder: Custom
-      type: file
-      options:
-        path: /grafana-dashboard-definitions-custom

@@ -1,0 +1,62 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanaadditionaldatasources.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: prometheus
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: grafanaadditionaldatasources
+    singular: grafanaadditionaldatasource
+    kind: GrafanaAdditionalDatasource
+  version: v1alpha1
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: Additional Grafana Datasource
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          description: Spec of additional grafana datasource
+          required:
+          - type
+          - access
+          properties:
+            type:
+              type: string
+              description: Datasource type
+            access:
+              type: string
+              description: Access mode
+              enum: ["proxy", "direct"]
+            url:
+              type: string
+              description: Datasource URL
+              example: http://localhost:8080
+            user:
+              type: string
+              description: Database username
+            database:
+              type: string
+              description: Database name, if used
+            withCredentials:
+              type: boolean
+              description: Enable/disable with credentials headers
+            basicAuth:
+              type: boolean
+              description: Enable/disable basic auth
+            basicAuthUser:
+              type: string
+              description: Basic auth username
+            jsonData:
+              type: object
+              description: Fields that will be converted to json and stored in jsonData
+            secureJsonData:
+              type: object
+              description: Json object of data that will be encrypted

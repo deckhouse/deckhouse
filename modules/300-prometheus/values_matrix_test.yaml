@@ -59,7 +59,19 @@ prometheus:
           port: test
     deployDexAuthenticator: true
     grafana:
-      effectiveStorageClass: ceph-ssd
+      additionalDatasources:
+        __ConstantChoices__:
+        - []
+        -
+          - type: graphite
+            access: proxy
+            url: /graphite-1
+            name: testtesttest
+            uuid: testtesttest
+            orgId: 1
+            editable: false
+            version: 1
+            isDefault: false
     prometheusAPIClientTLS:
       certificate: string
       key: string

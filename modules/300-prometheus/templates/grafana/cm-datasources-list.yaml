@@ -55,4 +55,9 @@ data:
        jsonData:
          timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
 {{- end }}
-
+{{ if .Values.prometheus.internal.grafana.additionalDatasources }}
+  additional_datasources.yaml: |+
+    apiVersion: 1
+    datasources:
+{{ .Values.prometheus.internal.grafana.additionalDatasources | toYaml | indent 6 }}
+{{- end }}

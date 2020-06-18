@@ -3,7 +3,7 @@
   - alert: D8GrafanaPodIsNotReady
     expr: |
       min by (pod) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
         * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-monitoring"}
       ) != 1
     labels:
@@ -22,7 +22,7 @@
   - alert: D8GrafanaPodIsNotRunning
     expr: |
       max by (namespace, pod, phase) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
         * on (pod) group_right() kube_pod_status_phase{namespace="d8-monitoring",phase!="Running"}
         > 0
       )
@@ -79,16 +79,16 @@
 
         Необходимо выполнить следующие действия:
         1. Проверить наличие и состояние подов grafana `kubectl -n d8-monitoring get pods -l app=grafana`
-        2. Проверить наличие statefulset grafana `kubectl -n d8-monitoring get sts grafana`
-        3. Посмотреть состояние statefulset grafana `kubectl -n d8-monitoring describe sts grafana`
+        2. Проверить наличие deployment grafana `kubectl -n d8-monitoring get deployment grafana`
+        3. Посмотреть состояние deployment grafana `kubectl -n d8-monitoring describe deployment grafana`
 
   - alert: D8GrafanaUnavailable
     expr: |
       count(ALERTS{alertname=~"D8GrafanaPodIsNotReady|D8GrafanaPodIsNotRunning|D8GrafanaTargetAbsent|D8GrafanaTargetDown", alertstate="firing"}) > 0
       OR
-      count(ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", namespace="d8-monitoring", statefulset="grafana", alertstate="firing"}) > 0
+      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-monitoring", deployment="grafana", alertstate="firing"}) > 0
       OR
-      count(ALERTS{alertname=~"KubernetesStatefulSetStuck", namespace="d8-monitoring", statefulset="grafana", alertstate="firing"}) > 0
+      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-monitoring", deployment="grafana", alertstate="firing"}) > 0
     labels:
       tier: cluster
       d8_module: prometheus
@@ -97,8 +97,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_alert_type: "group"
-      plk_group_for__grafana_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,namespace=d8-monitoring,prometheus=deckhouse,statefulset=grafana"
-      plk_group_for__grafana_stuck: "KubernetesStatefulSetStuck,namespace=d8-monitoring,prometheus=deckhouse,statefulset=grafana"
+      plk_group_for__grafana_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace=d8-monitoring,prometheus=deckhouse,deployment=grafana"
+      plk_group_for__grafana_stuck: "KubernetesDeploymentStuck,namespace=d8-monitoring,prometheus=deckhouse,deployment=grafana"
       plk_grouped_by__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: Grafana не работает
       description: |
@@ -109,10 +109,10 @@
   - alert: D8GrafanaPodIsRestartingTooOften
     expr: |
       max by (pod) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
         * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-monitoring"}[1h])
         and
-        kube_controller_pod{namespace="d8-monitoring", controller_type="StatefulSet", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
         * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-monitoring"}
       ) > 5
     labels:
@@ -165,4 +165,6 @@
       summary: Обнаружен устаревший метод регистрации кастомных дашборд в Grafana
       description: |-
         В namespace `d8-monitoring` обнаружен CM `grafana-dashboard-definitions-custom`. Это означает, что используется устаревший метод регистрации кастомных дашборд в Графане.
+
+        **Данный метод регистрации dashboard'ов более не работает!**
         Рекомендация — использовать кастомный [ресурс GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/master/modules/300-prometheus/docs/GRAFANA_DASHBOARD_DEVELOPMENT.md#%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81-grafanadashboarddefinition).
