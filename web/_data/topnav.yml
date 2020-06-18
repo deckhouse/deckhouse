@@ -16,7 +16,10 @@ topnav:
     folderitems: *modules_items
   - title: Руководства
     url: /guides/monitoring.html
-  - title: Разработка
-    url: /development/
+    folderitems:
+    - title: Prometheus Мониторинг приложений
+      url: /guides/monitoring.html
+    - title: Разработка Deckhouse
+      url: /guides/development.html
   - title: Каналы обновлений
     url: /releases.html

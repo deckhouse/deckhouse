@@ -3,19 +3,19 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: documentation
+  name: deckhouse-web
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "documentation")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | indent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: documentation
+      app: deckhouse-web
   template:
     metadata:
       labels:
-        app: documentation
+        app: deckhouse-web
     spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
@@ -23,8 +23,8 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - name: front
-        image: "{{ $.Values.global.modulesImages.registry }}/deckhouse/site:{{ $.Values.global.modulesImages.tags.deckhouse.site }}"
+      - name: web
+        image: "{{ $.Values.global.modulesImages.registry }}/deckhouse-web/web:{{ $.Values.global.modulesImages.tags.deckhouseWeb.web }}"
         command: ["nginx", "-g", "daemon off;"]
         ports:
           - containerPort: 80
@@ -40,5 +40,5 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: documentation-config
+            name: deckhouse-web
 {{- end }}

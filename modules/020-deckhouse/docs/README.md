@@ -2,9 +2,7 @@
 title: "Модуль deckhouse"
 ---
 
-Модуль не устанавливает, но настраивает **Deckhouse**, а также создает Deployment с сайтом документации текущей версии.   
-
-По умолчанию документация доступна по адресу 'deckhouse.', согласно значению глобального параметра [publicDomainTemplate]({{ site.baseurl }}/#параметры).
+Модуль не устанавливает, но настраивает **Deckhouse**.   
 
 Конфигурация
 ------------
@@ -22,33 +20,6 @@ title: "Модуль deckhouse"
     * По умолчанию `Default`.
 * `releaseChannel` — канал обновлений Deckhouse.
     * Возможные варианты в порядке возрастания стабильности обновлений: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`. 
-* `ingressClass` — класс ingress-контроллера сервера документации.
-    * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
-* `auth` — опции, связанные с аутентификацией и авторизацией доступа на сервер документации:
-    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
-         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
-         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-    * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
-         * Используется если не включен параметр `externalAuthentication`.
-* `https` — выбираем, какой типа сертификата использовать для HTTP-сервера документации.
-    * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
-    * `mode` — режим работы HTTPS:
-        * `Disabled` — в данном режиме сервер документации будет работать только по HTTP;
-        * `CertManager` — сервер документации будет работать по HTTPS и заказывать сертификат с помощью clusterIssuer заданного в параметре `certManager.clusterIssuerName`;
-        * `CustomCertificate` — сервер документации будет работать по HTTPS используя сертификат из namespace `d8-system`;
-        * `OnlyInURI` — сервер документации будет работать по HTTP (подразумевая, что перед ним стоит внешний HTTPS-балансер, который терминирует HTTPS) и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
-    * `certManager`
-      * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для сервера документации (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-        * По-умолчанию `letsencrypt`.
-    * `customCertificate`
-      * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для сервера документации (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-        * По-умолчанию `false`.
-* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
-    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
-* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
-    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига
 
