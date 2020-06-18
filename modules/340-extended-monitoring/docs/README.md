@@ -61,18 +61,16 @@ hide_sidebar: false
 
 | Annotation                              | Type          | Default value  |
 |-----------------------------------------|---------------|----------------|
-| disk-bytes-warning            | int (percent) | 70             |
-| disk-bytes-critical           | int (percent) | 80             |
-| disk-inodes-warning           | int (percent) | 85             |
-| disk-inodes-critical          | int (percent) | 90             |
-| load-average-per-core-warning | int  | 3            |
-| load-average-per-core-critical | int  | 10             |
+| disk-bytes-warning                      | int (percent) | 70             |
+| disk-bytes-critical                     | int (percent) | 80             |
+| disk-inodes-warning                     | int (percent) | 85             |
+| disk-inodes-critical                    | int (percent) | 90             |
+| load-average-per-core-warning           | int           | 3              |
+| load-average-per-core-critical          | int           | 10             |
 
 > ВНИМАНИЕ! Эти аннотации НЕ действуют для тех разделов, в которых расположены imagefs (по-умолчанию, /var/lib/docker) и nodefs (по-умолчанию, /var/lib/kubelet).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
 Значения по-умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](modules/300-prometheus/images/kubelet-eviction-thresholds-exporter/loop) и [отдельные](modules/300-prometheus/prometheus-rules/kubernetes/eviction-bytes.yaml) [правила](modules/300-prometheus/prometheus-rules/kubernetes/eviction-inodes.yaml).
-
-> ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
 
 #### Namespaced Kubernetes objects
 
@@ -80,31 +78,29 @@ hide_sidebar: false
 
 | Annotation                              | Type          | Default value  |
 |-----------------------------------------|---------------|----------------|
-| disk-bytes-warning            | int (percent) | 85             |
-| disk-bytes-critical           | int (percent) | 95             |
-| disk-inodes-warning           | int (percent) | 85             |
-| disk-inodes-critical          | int (percent) | 90             |
-| container-throttling-warning  | int (percent) | 25             |
-| container-throttling-critical | int (percent) | 50             |
-| container-cores-throttling-warning  | int (cores) |              |
-| container-cores-throttling-critical | int (cores) |              |
-| container-restarts-1h         | int (count)   | 5              |
-| container-restarts-24h        | int (count)   | 5              |
-
-> ВНИМАНИЕ! Алерты по диску пока не работают с Rook ([Пруф](https://flant.slack.com/archives/CFGTVF1KJ/p1554192138002900)).
+| disk-bytes-warning                      | int (percent) | 85             |
+| disk-bytes-critical                     | int (percent) | 95             |
+| disk-inodes-warning                     | int (percent) | 85             |
+| disk-inodes-critical                    | int (percent) | 90             |
+| container-throttling-warning            | int (percent) | 25             |
+| container-throttling-critical           | int (percent) | 50             |
+| container-cores-throttling-warning      | int (cores)   |                |
+| container-cores-throttling-critical     | int (cores)   |                |
+| container-restarts-1h                   | int (count)   | 5              |
+| container-restarts-24h                  | int (count)   | 5              |
 
 ##### Ingress
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
-| 5xx-warning  | int (percent) | 10            |
-| 5xx-critical | int (percent) | 20            |
+| 5xx-warning            | int (percent) | 10            |
+| 5xx-critical           | int (percent) | 20            |
 
 ##### Deployment
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
-| replicas-not-ready  | int (count) | 0            |
+| replicas-not-ready     | int (count)   | 0             |
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение чем разрешено в `maxUnavailable` - т.е. при нуле сработает, если недоступно больше чем указано в `maxUnavailable`, а при единице, сработает если недоступно больше чем указано в `maxUnavailable` плюс 1. Таким образом можно у конкретных Deployment, находящихся в namespace со включенным расширенным мониторингом, и которым можно быть недоступными, подкрутить этот параметр, чтобы не получать ненужные алерты.
 
@@ -112,7 +108,7 @@ hide_sidebar: false
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
-| replicas-not-ready  | int (count) | 0            |
+| replicas-not-ready     | int (count)   | 0             |
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
@@ -120,7 +116,7 @@ hide_sidebar: false
 
 | Annotation             | Type          | Default value |
 |------------------------|---------------|---------------|
-| replicas-not-ready  | int (count) | 0            |
+| replicas-not-ready     | int (count)   | 0             |
 
 Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
