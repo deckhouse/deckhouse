@@ -510,6 +510,49 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller help
 ```
 либо прочитав [документацию](https://github.com/flant/addon-operator/blob/master/RUNNING.md#debug).
 
+### Скрипт для получения всей необходимой debug информации 
+
+Необходимо на мастере выполнить скрипт:
+```shell script
+#!/bin/bash
+
+# Prepare deckhouse info for debug
+deckhouse_pod=$(kubectl -n d8-system  get pod -l app=deckhouse -o name)
+deckhouse_address=$(kubectl -n d8-system  get pod -l app=deckhouse -o json | jq '.items[] | .status.podIP' -r)
+deckhouse_debug_dir=$(mktemp -d)
+debug_date=$(date +%s)
+
+# Get deckhouse version
+kubectl -n d8-system exec -ti ${deckhouse_pod} -- deckhouse-controller version > ${deckhouse_debug_dir}/version
+# Get go trace
+curl -s ${deckhouse_address}:9650/debug/pprof/trace?seconds=60 > ${deckhouse_debug_dir}/trace
+# Get goroutine
+curl -s ${deckhouse_address}:9650/debug/pprof/goroutine > ${deckhouse_debug_dir}/goroutine
+# Get go heap
+curl -s ${deckhouse_address}:9650/debug/pprof/heap > ${deckhouse_debug_dir}/heap
+# Get process dump
+curl -s ${deckhouse_address}:9650/debug/pprof/profile?seconds=60 > ${deckhouse_debug_dir}/profile
+# Get process list
+kubectl -n d8-system  exec -ti $deckhouse_pod -- ps auxfww > ${deckhouse_debug_dir}/ps_aux
+# Get deckhouse log
+kubectl -n d8-system  logs $deckhouse_pod  > ${deckhouse_debug_dir}/log
+# Get deckhouse metrics
+curl -s ${deckhouse_address}:9650/metrics > ${deckhouse_debug_dir}/metrics
+# Get deckhouse queue
+kubectl -n d8-system exec -ti ${deckhouse_pod} -- deckhouse-controller queue list > ${deckhouse_debug_dir}/queue_list
+# Get modules values
+mkdir ${deckhouse_debug_dir}/values
+for module in $(kubectl -n d8-system exec -ti ${deckhouse_pod} -- helm list | grep -v NAME | awk '{print $1}'); do kubectl -n d8-system exec -ti ${deckhouse_pod} -- deckhouse-controller module values ${module} -o json > ${deckhouse_debug_dir}/values/${module}; done
+
+# tar debug files
+tar -czf /tmp/deckhouse_debug_${debug_date}.tar.gz ${deckhouse_debug_dir}
+ls -lah /tmp/deckhouse_debug_${debug_date}.tar.gz
+
+# Clean debug folder
+rm -rf ${deckhouse_debug_dir}
+```
+
+Данный скрипт выполняется ~2.5 минуты. На выходе будет `.tar.gz` файл, который необходимо передать разработчикам deckhouse.
 
 ### Метрики для prometheus
 
