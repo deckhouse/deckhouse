@@ -25,12 +25,38 @@ function __config__() {
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
+        .spec as \$original_spec |
         {
           "name": .metadata.name,
-          "nodeType": .spec.nodeType,
-          "allowDisruptions": (if .spec != null then if (.spec | has("allowDisruptions")) then .spec.allowDisruptions else true end else true end),
+          "nodeType": \$original_spec.nodeType,
+          "disruptions": {
+            "approvalMode": (
+              if \$original_spec.disruptions | has("approvalMode") then
+                \$original_spec.disruptions.approvalMode
+              else
+                if \$original_spec | has("allowDisruptions") then
+                  if \$original_spec.allowDisruptions == true then
+                    "Automatic"
+                  else
+                    "Manual"
+                  end
+                else
+                  "Automatic"
+                end
+              end
+            )
+          },
           "status": .status
-        }
+        } |
+        if .disruptions.approvalMode == "Automatic" then
+          if \$original_spec.disruptions.automatic | has("drainBeforeApproval") then
+            .disruptions.automatic.drainBeforeApproval = \$original_spec.disruptions.automatic.drainBeforeApproval
+          else
+            .disruptions.automatic.drainBeforeApproval = true
+          end
+        else
+          .
+        end
     - name: nodes
       group: main
       queue: /modules/$(module::name::kebab_case)/update_approval
@@ -117,7 +143,7 @@ function approve_updates() {
   done
 }
 
-# Approve disruption updates for NodeGroups with allowDisruptions == true
+# Approve disruption updates for NodeGroups with approvalMode == Automatic
 # We don't limit number of Nodes here, because it's already limited
 function approve_disruptions() {
   for node_name in $(context::jq -cr '.snapshots.nodes[].filterResult | select(.isDisruptionRequired == true and .isDraining == false) | .name'); do
@@ -127,13 +153,16 @@ function approve_disruptions() {
 
     # Skip nodes in NodeGroup not allowing disruptive updates
     # shellcheck disable=SC2016
-    if ! context::jq --arg ng_name "$ng_name" -e '.snapshots.ngs[].filterResult | select(.name == $ng_name) | select(.allowDisruptions == true) | any' > /dev/null; then
+    if ! context::jq --arg ng_name "$ng_name" -e '.snapshots.ngs[].filterResult | select(.name == $ng_name) | select(.disruptions.approvalMode == "Automatic") | any' > /dev/null; then
       continue
     fi
 
     finished="yes"
-
-    if jq -er '.isUnschedulable == false' <<< "$node" > /dev/null; then
+    if context::jq --arg ng_name "$ng_name" -e '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .disruptions.automatic.drainBeforeApproval == false' > /dev/null; then
+      # Skip draining if it's disabled in the NodeGroup
+      kubernetes::patch_jq "" "node/${node_name}" '.metadata.annotations."update.node.deckhouse.io/disruption-approved" = "" |
+                                                   del(.metadata.annotations."update.node.deckhouse.io/disruption-required")'
+    elif jq -er '.isUnschedulable == false' <<< "$node" > /dev/null; then
       # If node is not unschedulable – mark it for draining
       kubernetes::patch_jq "" "node/${node_name}" '.metadata.annotations."update.node.deckhouse.io/draining" = ""'
     else
