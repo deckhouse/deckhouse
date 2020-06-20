@@ -7,9 +7,10 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: node_roles
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Node
-      includeSnapshotsFrom: ["node_roles"]
       jqFilter: |
         [
           .metadata.labels // {} | keys[] |
@@ -19,7 +20,7 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::node_roles() {
+function __main__() {
   node_counts="$(
     context::jq -r '
       [.snapshots.node_roles[] | select(.filterResult != null) | .filterResult] | add |

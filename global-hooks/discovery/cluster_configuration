@@ -7,7 +7,8 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: cluster_configuration
-      includeSnapshotsFrom: ["cluster_configuration"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       namespace:

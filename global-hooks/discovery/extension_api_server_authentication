@@ -7,7 +7,8 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: extension_api_server_authentication
-      includeSnapshotsFrom: ["extension_api_server_authentication"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: ConfigMap
       namespace:
@@ -19,7 +20,7 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::extension_api_server_authentication() {
+function __main__() {
   values::set global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA "$(context::get snapshots.extension_api_server_authentication.0.filterResult)"
 }
 

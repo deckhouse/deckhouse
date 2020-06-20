@@ -7,15 +7,16 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: node_types
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Node
-      includeSnapshotsFrom: ["node_types"]
       jqFilter: |
         .metadata.labels // {} | ."node.deckhouse.io/type" // "" | ascii_downcase
 EOF
 }
 
-function __on_kubernetes::node_types() {
+function __main__() {
   node_counts="$(
     context::jq -r '
       [

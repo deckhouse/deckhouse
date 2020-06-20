@@ -10,7 +10,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)/safe-daemonset-update
       apiVersion: apps/v1
       kind: DaemonSet
-      watchEvent: [Modified]
+      executeHookOnEvent: [Modified]
       labelSelector:
         matchLabels:
          nginx-ingress-safe-update: ""

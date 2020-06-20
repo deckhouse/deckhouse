@@ -9,7 +9,7 @@ function __config__() {
    - name: secret
      apiVersion: v1
      kind: Secret
-     watchEvent: ["Added", "Modified"]
+     executeHookOnEvent: ["Added", "Modified"]
      nameSelector:
        matchNames: ["kubernetes-tls"]
      namespace:

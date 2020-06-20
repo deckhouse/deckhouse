@@ -3,13 +3,13 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  # TODO: Add `keepFullObjectsInMemory: false`
   cat << EOF
     configVersion: v1
     kubernetes:
     - name: nodes
       queue: /modules/$(module::name::kebab_case)/unmanagemed-nodes
-      includeSnapshotsFrom: [nodes]
+      group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       apiVersion: v1
       kind: Node
@@ -24,7 +24,7 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::nodes() {
+function __main__() {
   for node in "$(context::jq -rc '.snapshots.nodes[] | .filterResult | .name as $name | all(to_entries[] | select(.key != "name"); .value == false) | if . then $name else empty end')"; do
     if [ ! -z "$node" ] ; then
       echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": "'"$node"'"}, "set": 1}' >> $METRICS_PATH

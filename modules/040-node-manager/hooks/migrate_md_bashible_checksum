@@ -1,4 +1,5 @@
 #!/bin/bash
+# Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible.
 
 source /deckhouse/shell_lib.sh
 

@@ -8,12 +8,14 @@ function __config__() {
     kubernetes:
     - name: nodes
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: ["nodes"]
+      group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       apiVersion: v1
       kind: Node
       jqFilter: |
         {
+          "name": .metadata.name,
           "needPatch": (
             (.spec.taints // [] | any(.key == "node.cloudprovider.kubernetes.io/uninitialized") | not) and
             (.metadata.labels."node.deckhouse.io/type" != "Cloud") and
@@ -24,7 +26,7 @@ EOF
 }
 
 function __main__() {
-  for node in $(context::jq -r '.snapshots.nodes[] | select(.filterResult.needPatch) | .object.metadata.name'); do
+  for node in $(context::jq -r '.snapshots.nodes[] | select(.filterResult.needPatch) | .filterResult.name'); do
     kubernetes::patch_jq "" node/${node} '.spec.providerID = "static://"'
   done
 }

@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Auto-detector for internal domain (i.e. cluster.local).
 
 source /deckhouse/shell_lib.sh
@@ -10,7 +9,8 @@ function __config__() {
     kubernetes:
 
     - name: cm
-      includeSnapshotsFrom: ["cm", "pod"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: ConfigMap
       namespace:
@@ -22,7 +22,8 @@ function __config__() {
         .data.Corefile | match("\\\\s+kubernetes\\\\s+(\\\\S+?)\\\\.?\\\\s+in-addr.arpa\\\\s+ip6.arpa\\\\s+\\\\{") | .captures[0].string
 
     - name: pod
-      includeSnapshotsFrom: ["cm", "pod"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:

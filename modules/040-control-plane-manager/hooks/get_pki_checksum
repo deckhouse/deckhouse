@@ -7,7 +7,8 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: pki_checksum
-      includeSnapshotsFrom: ["pki_checksum"]
+      group: main
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Secret

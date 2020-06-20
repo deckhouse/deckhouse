@@ -9,7 +9,7 @@ function __config__() {
    - name: cluster_autoscaler
      apiVersion: apps/v1
      kind: Deployment
-     watchEvent: [Added, Modified]
+     executeHookOnEvent: [Added, Modified]
      namespace:
        nameSelector:
          matchNames: [kube-system]

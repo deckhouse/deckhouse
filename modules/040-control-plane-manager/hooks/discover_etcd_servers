@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: kubeadm_etcd_pods_ips
       group: discover_etcd_servers
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/discover_etcd_servers
       apiVersion: v1
       kind: Pod
@@ -21,6 +22,7 @@ function __config__() {
       jqFilter: '.status.podIP'
     - name: etcd_certs
       group: discover_etcd_servers
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/discover_etcd_servers
       executeHookOnSynchronization: false
       executeHookOnEvent: []

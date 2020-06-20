@@ -35,9 +35,9 @@ function __config__() {
   cat << EOF
     configVersion: v1
     kubernetes:
-
     - name: controller_manager_by_component
-      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -51,9 +51,9 @@ function __config__() {
         .spec.containers[] | select(.name == "kube-controller-manager") |
         (.command + .args) | join(" ") |
         match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
-
     - name: controller_manager_by_k8s_app
-      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -66,7 +66,6 @@ function __config__() {
         .spec.containers[] | select(.name == "kube-controller-manager") |
         (.command + .args) | join(" ") |
         match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
-
 EOF
 }
 

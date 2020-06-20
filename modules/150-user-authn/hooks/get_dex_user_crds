@@ -7,10 +7,10 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: user
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: deckhouse.io/v1alpha1
      kind: User
-     includeSnapshotsFrom:
-     - user
      jqFilter: '.spec.userID = (.spec.userID // .metadata.name) | {"name": .metadata.name, "spec": .spec }'
 EOF
 }
@@ -18,9 +18,9 @@ EOF
 
 function __main__() {
   crds=$(context::jq -rc '.snapshots.user | .[].filterResult' | while read userCRD ; do
-    email=$(jq -rc '.spec.email | ascii_downcase' <<< ${userCRD})
+    email=$(jq -rc '.spec.email | ascii_downcase' <<< "${userCRD}")
     encodedName=$(deckhouse-controller helper fnv encode "$email")
-    jq -rc " .encodedName |= \"$encodedName\"" <<< ${userCRD}
+    jq -rc " .encodedName |= \"$encodedName\"" <<< "${userCRD}"
   done | jq -s '.')
 
   values::set userAuthn.internal.dexUsersCRDs "$crds"

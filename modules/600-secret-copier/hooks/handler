@@ -9,16 +9,23 @@ function __config__() {
     - name: secrets_antiopa
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       apiVersion: v1
       kind: Secret
       labelSelector:
         matchLabels:
           antiopa-secret-copier: "yes"
-      jqFilter: '[.metadata.name, .metadata.namespace, .metadata.labels, .data]'
+      jqFilter: |
+        {
+          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"])))),
+          "type": .type,
+          "data": .data
+        }
     - name: secrets_d8
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       executeHookOnSynchronization: false
       apiVersion: v1
@@ -26,16 +33,26 @@ function __config__() {
       labelSelector:
         matchLabels:
           secret-copier.deckhouse.io/enabled: ""
-      jqFilter: '[.metadata.name, .metadata.namespace, .metadata.labels, .data]'
+      jqFilter: |
+        {
+          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"])))),
+          "type": .type,
+          "data": .data
+        }
     - name: namespaces
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       executeHookOnSynchronization: false
       apiVersion: v1
       kind: Namespace
-      watchEvent: [Added]
-      jqFilter: '{"isTerminating": (.status.phase == "Terminating")}'
+      executeHookOnEvent: [Added]
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isTerminating": (.status.phase == "Terminating")
+        }
     schedule:
     - name: sync_secrets
       queue: /modules/$(module::name::kebab_case)
@@ -50,22 +67,37 @@ function __main__() {
   context::jq -rc '
     (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
     [.snapshots.namespaces[] | select(.filterResult.isTerminating | not)] as $namespaces |
-    [
-      [$secrets[] | select(.object.metadata.namespace == "default")] |
-      map(.object.metadata.namespace = ($namespaces[] | select(.object.metadata.name != "default")| .object.metadata.name ))[] |
-      .nsAndName = (.object.metadata.namespace + "/" + .object.metadata.name) |
-      .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
-    ]' > $secrets_desired_file
+    [$secrets[] | select(.filterResult.metadata.namespace == "default")] |
+    map(
+      .manifest = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": .filterResult.metadata,
+        "type": .filterResult.type,
+        "data": .filterResult.data,
+      } |
+      del(.filterResult) |
+      .manifest.metadata.namespace = ($namespaces[] | select(.filterResult.name != "default") | .filterResult.name ) |
+      .nsAndName = .manifest.metadata.namespace + "/" + .manifest.metadata.name
+    )' > $secrets_desired_file
 
   secrets_are_file=$(mktemp)
   context::jq -rc '
     (.snapshots.secrets_antiopa + .snapshots.secrets_d8 | unique) as $secrets |
     [
-      $secrets[] | select(.object.metadata.namespace != "default") |
-      .nsAndName = (.object.metadata.namespace + "/" + .object.metadata.name) |
-      .object.metadata |= with_entries(select([.key] | inside(["name", "namespace", "labels"])))
+      $secrets[] | select(.filterResult.metadata.namespace != "default") |
+      .manifest = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": .filterResult.metadata,
+        "type": .filterResult.type,
+        "data": .filterResult.data
+      } |
+      del(.filterResult) |
+      .nsAndName = (.manifest.metadata.namespace + "/" + .manifest.metadata.name)
     ]' > $secrets_are_file
 
+  # Find secrets in $secrets_are list that arent in $secrets_desired list
   secrets_to_delete="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -rc '
     [
       $secrets_are[] |
@@ -74,6 +106,7 @@ function __main__() {
     ]'
   )"
 
+  # Find secrets in $secrets_desired list that arent in $secrets_are list
   secrets_to_create="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -rc '
     [
       $secrets_desired[] |
@@ -82,29 +115,30 @@ function __main__() {
     ]'
   )"
 
+  # Find secrets that are both in $secrets_desired and $secrets_are list, but differ
   secrets_to_replace="$(context::jq --argfile secrets_desired "$secrets_desired_file" --argfile secrets_are "$secrets_are_file" -rc '
     [
       $secrets_desired[] |
       . as $secret_desired |
       select([$secrets_are[] | .nsAndName] | index($secret_desired.nsAndName)) |
-      select([$secrets_are[] | .object] | index($secret_desired.object) | not)
+      select([$secrets_are[] | .manifest] | index($secret_desired.manifest) | not)
     ]'
   )"
 
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_delete"); do
-    ns="$(jq --argjson i $i -r '.[$i].object.metadata.namespace' <<< "$secrets_to_delete")"
-    name="$(jq --argjson i $i -r '.[$i].object.metadata.name' <<< "$secrets_to_delete")"
+    ns="$(jq --argjson i $i -r '.[$i].manifest.metadata.namespace' <<< "$secrets_to_delete")"
+    name="$(jq --argjson i $i -r '.[$i].manifest.metadata.name' <<< "$secrets_to_delete")"
     kubernetes::delete_if_exists $ns secret/$name
   done
 
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_create"); do
-    object="$(jq --argjson i $i -cr '.[$i].object' <<< "$secrets_to_create")"
-    kubernetes::create_if_not_exists_json <<< "$object"
+    manifest="$(jq --argjson i $i -cr '.[$i].manifest' <<< "$secrets_to_create")"
+    kubernetes::create_if_not_exists_json <<< "$manifest"
   done
 
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_replace"); do
-    object="$(jq --argjson i $i -cr '.[$i].object' <<< "$secrets_to_replace")"
-    kubernetes::replace_or_create_json <<< "$object"
+    manifest="$(jq --argjson i $i -cr '.[$i].manifest' <<< "$secrets_to_replace")"
+    kubernetes::replace_or_create_json <<< "$manifest"
   done
 
   rm -f $secrets_desired_file $secrets_are_file

@@ -100,7 +100,7 @@ spec:
 
 			It("filterResult and `global.discovery.clusterDomain` must be 'mycluster.cm'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").String()).To(Equal("mycluster.cm"))
+				Expect(f.BindingContexts.Get("0.snapshots.cm.0.filterResult").String()).To(Equal("mycluster.cm"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("mycluster.cm"))
 			})
 		})
@@ -113,7 +113,7 @@ spec:
 
 			It("filterResult and `global.discovery.clusterDomain` must be 'mycluster.pod'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").String()).To(Equal("mycluster.pod"))
+				Expect(f.BindingContexts.Get("0.snapshots.pod.0.filterResult").String()).To(Equal("mycluster.pod"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("mycluster.pod"))
 			})
 		})
@@ -127,8 +127,8 @@ spec:
 
 		It("`global.discovery.clusterDomain` must be 'mycluster.cm'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").String()).To(Equal("mycluster.cm"))
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").String()).To(Equal("mycluster.pod"))
+			Expect(f.BindingContexts.Get("0.snapshots.cm.0.filterResult").String()).To(Equal("mycluster.cm"))
+			Expect(f.BindingContexts.Get("0.snapshots.pod.0.filterResult").String()).To(Equal("mycluster.pod"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("mycluster.cm"))
 		})
 	})

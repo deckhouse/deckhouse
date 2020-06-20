@@ -6,17 +6,23 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: default_sc
-      includeSnapshotsFrom: ["default_sc"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
-        (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
-        (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+        {
+          "name": .metadata.name,
+          "isDefault": (
+            (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
+            (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+          )
+        }
 EOF
 }
 
-function __on_kubernetes::default_sc() {
-  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
+function __main__() {
+  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult.isDefault)] | first | .filterResult.name')"
 
   if [[ "$default_sc" != "null" ]]; then
     values::set global.discovery.defaultStorageClass "$default_sc"

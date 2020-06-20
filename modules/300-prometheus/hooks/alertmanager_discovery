@@ -7,7 +7,8 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: alertmanager_services
-      includeSnapshotsFrom: ["alertmanager_services"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
       labelSelector:
@@ -28,7 +29,7 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::alertmanager_services() {
+function __main__() {
   alertmanagers="$(context::jq -rc '
     [.snapshots.alertmanager_services[] | .filterResult] |
     reduce .[] as $i (

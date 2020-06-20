@@ -8,11 +8,11 @@ function __config__() {
   beforeHelm: 10
   kubernetes:
   - name: secret
+    group: main
+    keepFullObjectsInMemory: false
     apiVersion: v1
     kind: Secret
-    watchEvent: ["Added", "Modified"]
-    includeSnapshotsFrom:
-    - secret
+    executeHookOnEvent: ["Added", "Modified"]
     nameSelector:
       matchNames: ["kubernetes-api-ca-key-pair"]
     namespace:

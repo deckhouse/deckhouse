@@ -37,7 +37,8 @@ function __config__() {
     kubernetes:
 
     - name: controller_manager_by_component
-      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -53,7 +54,8 @@ function __config__() {
         match( ".*--cloud-provider=([^ ]+).*") | .captures[0].string
 
     - name: controller_manager_by_k8s_app
-      includeSnapshotsFrom: ["controller_manager_by_k8s_app", "controller_manager_by_component"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:

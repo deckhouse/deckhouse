@@ -16,10 +16,15 @@ function __config__() {
         nameSelector:
           matchNames: [d8-system]
       jqFilter: |
-        if (.data | has("client.crt")) and (.data | has("client.key"))
-        then
-          {"clientCrt": (.data."client.crt" | @base64d), "clientKey": (.data."client.key" | @base64d)}
-        else null end
+        {
+          "name": .metadata.name,
+          "data": (
+            if (.data | has("client.crt")) and (.data | has("client.key"))
+            then
+              {"clientCrt": (.data."client.crt" | @base64d), "clientKey": (.data."client.key" | @base64d)}
+            else null end
+          )
+        }
 EOF
 }
 
@@ -81,7 +86,7 @@ function __main__ {
 
         if secret_data="$(
            context::jq -ecr --arg secret "$client_certificate_secret" \
-             '.snapshots.secrets[] | select(.object.metadata.name == $secret and .filterResult != null) | .filterResult'
+             '.snapshots.secrets[] | select(.filterResult.name == $secret and .filterResult.data != null) | .filterResult.data'
         )"
         then
           values::set monitoringKubernetesControlPlane.internal.$c.clientCertificate "$secret_data"
@@ -243,7 +248,7 @@ function __main__ {
 
       if secret_data="$(
          context::jq -ecr --arg secret "$client_certificate_secret" \
-           '.snapshots.secrets[] | select(.object.metadata.name == $secret and .filterResult != null) | .filterResult'
+           '.snapshots.secrets[] | select(.filterResult.name == $secret and .filterResult.data != null) | .filterResult.data'
       )"
       then
         values::set monitoringKubernetesControlPlane.internal.kubeEtcd.$i.clientCertificate "$secret_data"

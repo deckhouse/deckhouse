@@ -7,13 +7,14 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: node_internal_ips
-      includeSnapshotsFrom: ["node_internal_ips"]
+      group: node_internal_ips
       kind: Node
       apiVersion: v1
       jqFilter: '[.status.addresses[]? | select (.type == "InternalIP") | .address]'
 
     - name: pod_subnet_by_component
-      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app", "cluster_configuration"]
+      group: pod_subnet
+      includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -29,7 +30,8 @@ function __config__() {
         match( "(^|\\\\s+)--cluster-cidr=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: pod_subnet_by_k8s_app
-      includeSnapshotsFrom: ["pod_subnet_by_component", "pod_subnet_by_k8s_app", "cluster_configuration"]
+      group: pod_subnet
+      includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -44,7 +46,8 @@ function __config__() {
         match( "(^|\\\\s+)--cluster-cidr=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: service_subnet_by_component
-      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app", "cluster_configuration"]
+      group: service_subnet
+      includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -60,7 +63,8 @@ function __config__() {
         match( "(^|\\\\s+)--service-cluster-ip-range=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: service_subnet_by_k8s_app
-      includeSnapshotsFrom: ["service_subnet_by_component", "service_subnet_by_k8s_app", "cluster_configuration"]
+      group: service_subnet
+      includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
       namespace:
@@ -90,15 +94,14 @@ EOF
 }
 
 ### nodeInternalIPs
-function __on_kubernetes::node_internal_ips() {
+function __on_group::node_internal_ips() {
   node_internal_ips="$(context::jq -r '[.snapshots.node_internal_ips[] | .filterResult] | add | sort')"
   values::set global.discovery.nodeInternalIPs "$node_internal_ips"
 }
 
-
 ### podSubnet
-function _pod_subnet() {
-  if context::has 'snapshots.cluster_configuration[0].object'; then
+function __on_group::pod_subnet() {
+  if context::has 'snapshots.cluster_configuration.0'; then
     return 0
   fi
 
@@ -112,18 +115,9 @@ function _pod_subnet() {
   values::set global.discovery.podSubnet "$pod_subnet"
 }
 
-function __on_kubernetes::pod_subnet_by_component() {
-  _pod_subnet
-}
-
-function __on_kubernetes::pod_subnet_by_k8s_app() {
-  _pod_subnet
-}
-
-
 ### serviceSubnet
-function _service_subnet() {
-  if context::has 'snapshots.cluster_configuration[0].object'; then
+function __on_group::service_subnet() {
+  if context::has 'snapshots.cluster_configuration.0'; then
     return 0
   fi
 
@@ -135,14 +129,6 @@ function _service_subnet() {
 
   service_subnet="$(jq -rc '.[0].filterResult' <<< ${service_subnet_candidates})"
   values::set global.discovery.serviceSubnet "$service_subnet"
-}
-
-function __on_kubernetes::service_subnet_by_component() {
-  _service_subnet
-}
-
-function __on_kubernetes::service_subnet_by_k8s_app() {
-  _service_subnet
 }
 
 hook::run "$@"

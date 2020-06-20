@@ -9,6 +9,7 @@ function __config__() {
     - name: etcd_by_manager
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -26,6 +27,7 @@ function __config__() {
     - name: etcd_by_manifest
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -48,6 +50,7 @@ function __config__() {
 
     - name: etcd_events_by_manager
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -65,6 +68,7 @@ function __config__() {
     - name: kube_apiserver_by_component
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -86,6 +90,7 @@ function __config__() {
     - name: kube_apiserver_by_k8s_app
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -106,6 +111,7 @@ function __config__() {
     - name: kube_scheduler_by_component
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -132,6 +138,7 @@ function __config__() {
     - name: kube_scheduler_by_k8s_app
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -157,6 +164,7 @@ function __config__() {
     - name: kube_controller_manager_by_component
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -177,6 +185,7 @@ function __config__() {
     - name: kube_controller_manager_by_k8s_app
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Pod
       namespace:
@@ -195,6 +204,7 @@ function __config__() {
 
     - name: etcd_certs
       group: main
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Secret
@@ -395,7 +405,6 @@ function __main__ {
     values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.podNamespace
     values::unset monitoringKubernetesControlPlane.discovery.kubeControllerManager.pod.authenticationMethod
   fi
-
 }
 
 hook::run $@

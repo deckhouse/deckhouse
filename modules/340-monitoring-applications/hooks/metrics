@@ -7,14 +7,16 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: services
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
-      includeSnapshotsFrom: ["services"]
       waitForSynchronization: false
       labelSelector:
         matchExpressions:
         - key: prometheus-target
           operator: Exists
+      jqFilter: "dummy"
 EOF
 }
 

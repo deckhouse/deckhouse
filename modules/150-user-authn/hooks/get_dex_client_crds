@@ -7,11 +7,10 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: client
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: deckhouse.io/v1alpha1
      kind: DexClient
-     includeSnapshotsFrom:
-     - client
-     - credentials
      jqFilter: |
        {
          "id": "dex-client-\(.metadata.name):\(.metadata.namespace)",
@@ -20,11 +19,10 @@ function __config__() {
          "spec": .spec
        }
    - name: credentials
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: v1
      kind: Secret
-     includeSnapshotsFrom:
-     - client
-     - credentials
      labelSelector:
        matchLabels:
          app: dex-client

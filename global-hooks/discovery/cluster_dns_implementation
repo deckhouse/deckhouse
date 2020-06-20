@@ -18,7 +18,7 @@ function __config__() {
         matchLabels:
           k8s-app: kube-dns
       jqFilter: '.metadata.name'
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: ["Added", "Modified"]
 EOF
 }
 

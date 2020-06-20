@@ -11,8 +11,10 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - apiVersion: v1
+      group: main
+      keepFullObjectsInMemory: false
       kind: pod
-      watchEvent: [Added, Modified]
+      executeHookOnEvent: [Added, Modified]
       labelSelector:
         matchLabels:
           component: kube-apiserver
@@ -21,10 +23,11 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       jqFilter: '.spec.containers[].image'
-      group: main
     - apiVersion: v1
+      group: main
+      keepFullObjectsInMemory: false
       kind: pod
-      watchEvent: [Added, Modified]
+      executeHookOnEvent: [Added, Modified]
       labelSelector:
         matchLabels:
           k8s-app: kube-apiserver
@@ -32,9 +35,9 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       jqFilter: '.spec.containers[].image'
-      group: main
     - name: endpoints
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Endpoints
       nameSelector:

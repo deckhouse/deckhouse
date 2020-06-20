@@ -8,9 +8,10 @@ function __config__() {
     beforeAll: 10
     kubernetes:
     - name: node_roles
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Node
-      includeSnapshotsFrom: ["node_roles", "kube_dns_autoscaler", "kube_dns"]
       jqFilter: |
         .metadata.labels // {} |
         if ([keys[] | select(startswith("node-role.kubernetes.io/master"))] | length > 0) then
@@ -30,19 +31,25 @@ function __config__() {
           .
         end
     - name: kube_dns
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
-      includeSnapshotsFrom: ["node_roles", "kube_dns_autoscaler", "kube_dns"]
       namespace:
         nameSelector:
           matchNames: [kube-system]
       labelSelector:
         matchLabels:
           k8s-app: kube-dns
+      jqFilter: |
+        {
+          "name": .metadata.name
+        }
     - name: kube_dns_autoscaler
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
-      includeSnapshotsFrom: ["node_roles", "kube_dns_autoscaler", "kube_dns"]
       namespace:
         nameSelector:
           matchNames: [kube-system]
@@ -160,7 +167,7 @@ function __main__() {
       del(.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution)'
   fi
 
-  kubernetes::patch_jq kube-system deployment/$(context::get snapshots.kube_dns.0.object.metadata.name) "$fltr"
+  kubernetes::patch_jq kube-system deployment/$(context::get snapshots.kube_dns.0.filterResult.name) "$fltr"
 }
 
 hook::run $@

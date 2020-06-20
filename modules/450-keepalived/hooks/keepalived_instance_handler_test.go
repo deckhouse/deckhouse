@@ -1,10 +1,13 @@
 package hooks
 
 import (
+	"testing"
+
+	"github.com/onsi/gomega/gbytes"
+
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func Test(t *testing.T) {
@@ -39,6 +42,23 @@ spec:
     virtualIPAddresses:
     - address: 1.2.2.2/32
 `
+	keepalivedInstanceWithNotUniqueId = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KeepalivedInstance
+metadata:
+  name: not-unique
+spec:
+  nodeSelector:
+    node-role/not-unique: ""
+  vrrpInstances:
+  - id: 12
+    interface:
+      detectionStrategy: DefaultRoute
+    virtualIPAddresses:
+    - address: 4.3.2.1/32
+`
+
 	keepalivedInstanceWithSomeSelectors = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -142,6 +162,18 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("keepalived.instances.front1.replicas").String()).To(Equal("0"))
 			Expect(len(f.ValuesGet("keepalived.instances.front1.authPass").String())).To(Equal(8))
+		})
+	})
+
+	Context("Two keepalived instances with non-unique vrrpInstances[].id", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(keepalivedInstance + keepalivedInstanceWithNotUniqueId))
+			f.RunHook()
+		})
+
+		It("hook must fail with error message", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: All vrrpInstances\[\]\.id in all KeepalivedInstances must be unique cluster-wide\.`))
 		})
 	})
 

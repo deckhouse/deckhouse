@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: nodes
       group: remove_dead_etcd_members
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
       waitForSynchronization: false
       apiVersion: v1
@@ -18,6 +19,7 @@ function __config__() {
       jqFilter: ".metadata.name"
     - name: etcd_certs
       group: remove_dead_etcd_members
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
       waitForSynchronization: false
       executeHookOnSynchronization: false

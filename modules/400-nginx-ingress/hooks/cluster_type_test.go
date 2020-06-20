@@ -104,7 +104,7 @@ spec:
     - "--aaa --bbb --cloud-provider=azure"
 `
 
-	state_NoCloudProvider = `
+		state_NoCloudProvider = `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -138,9 +138,9 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// binding: ControllerManagerByComponent
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").String()).To(Equal("external"))
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_component.0.filterResult").String()).To(Equal("external"))
 			// binding: ControllerManagerByK8SApp
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Value()).To(BeNil())
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_k8s_app.0.filterResult").Value()).To(BeNil())
 
 			Expect(f.ValuesGet("nginxIngress.internal.clusterType").String()).To(Equal("Manual"))
 		})
@@ -156,9 +156,9 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// binding: ControllerManagerByComponent
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Value()).To(BeNil())
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_component.0.filterResult").Value()).To(BeNil())
 			// binding: ControllerManagerByK8SApp
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").String()).To(Equal("aws"))
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_k8s_app.0.filterResult").String()).To(Equal("aws"))
 
 			Expect(f.ValuesGet("nginxIngress.internal.clusterType").String()).To(Equal("AWS"))
 		})
@@ -174,9 +174,9 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// binding: ControllerManagerByComponent
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").String()).To(Equal("gce"))
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_component.0.filterResult").String()).To(Equal("gce"))
 			// binding: ControllerManagerByK8SApp
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Value()).To(BeNil())
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_k8s_app.0.filterResult").Value()).To(BeNil())
 
 			Expect(f.ValuesGet("nginxIngress.internal.clusterType").String()).To(Equal("GCE"))
 		})
@@ -192,9 +192,9 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// binding: ControllerManagerByComponent
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Value()).To(BeNil())
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_component.0.filterResult").Value()).To(BeNil())
 			// binding: ControllerManagerByK8SApp
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").String()).To(Equal("azure"))
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_k8s_app.0.filterResult").String()).To(Equal("azure"))
 
 			Expect(f.ValuesGet("nginxIngress.internal.clusterType").String()).To(Equal("ACS"))
 		})
@@ -210,9 +210,9 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// binding: ControllerManagerByComponent
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Value()).To(BeNil())
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_component.0.filterResult").Value()).To(BeNil())
 			// binding: ControllerManagerByK8SApp
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Value()).To(BeNil())
+			Expect(f.BindingContexts.Get("0.snapshots.controller_manager_by_k8s_app.0.filterResult").Value()).To(BeNil())
 
 			Expect(f.ValuesGet("nginxIngress.internal.clusterType").String()).To(Equal("Manual"))
 		})

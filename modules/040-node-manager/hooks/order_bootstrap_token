@@ -9,6 +9,7 @@ function __config__() {
     - name: ngs
       queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -19,9 +20,10 @@ function __config__() {
     - name: bootstrap_tokens
       queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
-      watchEvent: ["Modified","Deleted"]
+      executeHookOnEvent: ["Modified","Deleted"]
       namespace:
         nameSelector:
           matchNames: [kube-system]

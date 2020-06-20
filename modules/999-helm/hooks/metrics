@@ -8,14 +8,22 @@ function __config__() {
     kubernetes:
     - name: helm_releases
       group: main
-      queue: /modules/$(module::name::kebab_case)/helm_releases
       waitForSynchronization: false
+      keepFullObjectsInMemory: false
+      executeHookOnEvent: ["Added"]
       apiVersion: v1
       kind: ConfigMap
       labelSelector:
         matchLabels:
           OWNER: TILLER
-      jqFilter: .data
+      jqFilter: |
+        {
+          "metadata": .metadata
+        }
+    schedule:
+    - group: main
+      queue: /modules/$(module::name::kebab_case)/helm_releases
+      crontab: "*/20 * * * *"
 EOF
 }
 
@@ -54,14 +62,14 @@ function __main__() {
   D8_HELM_HOST="$HELM_HOST"
   metrics=""
 
-  namespaces="$(context::jq -r '.snapshots.helm_releases[].object.metadata.namespace' | sort | uniq)"
+  namespaces="$(context::jq -r '.snapshots.helm_releases[].filterResult.metadata.namespace' | sort | uniq)"
   for namespace in $namespaces; do
     if [ "$namespace" != "d8-system" ]; then
       HELM_HOST=""
     else
       HELM_HOST="$D8_HELM_HOST"
     fi
-    if release_names="$(context::jq -rec --arg ns "$namespace" '.snapshots.helm_releases | map(select(.object.metadata.namespace == $ns and .object.metadata.labels.STATUS == "DEPLOYED") | .object.metadata.labels.NAME) | unique []')"; then
+    if release_names="$(context::jq -rec --arg ns "$namespace" '.snapshots.helm_releases | map(select(.filterResult.metadata.namespace == $ns and .filterResult.metadata.labels.STATUS == "DEPLOYED") | .filterResult.metadata.labels.NAME) | unique []')"; then
       for release_name in $release_names; do
         if manifest="$(helm --tiller-namespace "$namespace" get manifest "$release_name" 2>/dev/null | yq read -d"*" -j -)"; then
           metrics="$metrics\n$(jq -rc --arg release_name "$release_name" --argjson d "$unsupported_versions" '

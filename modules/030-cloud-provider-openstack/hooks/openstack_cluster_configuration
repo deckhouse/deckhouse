@@ -8,7 +8,8 @@ function __config__() {
     beforeHelm: 20
     kubernetes:
     - name: provider_cluster_configuration
-      includeSnapshotsFrom: [provider_cluster_configuration]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       namespace:
