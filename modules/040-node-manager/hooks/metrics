@@ -25,6 +25,7 @@ function __config__() {
       jqFilter: |
         {
           "name": "machine_deployment_node_group_info",
+          "group": "/modules/$(module::name::kebab_case)/metrics#machine_deployment_node_group_info",
           "set": 1,
           "labels":
           {
@@ -126,14 +127,14 @@ function __on_group::node_status() {
 
     jq -nc --arg metric_name node_group_node_status --arg node_name "$node_name" --arg node_group "$node_group" --arg node_status $node_status '
         [
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForApproval"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "Approved"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "DrainingForDisruption"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForDisruptionApproval"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForManualDisruptionApproval"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "DisruptionApproved"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "ToBeUpdated"}},
-          {"name": $metric_name, "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "UpToDate"}}
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForApproval"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "Approved"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "DrainingForDisruption"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForDisruptionApproval"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "WaitingForManualDisruptionApproval"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "DisruptionApproved"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "ToBeUpdated"}},
+          {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#node_group_node_status", "set": 0, "labels": {"node": $node_name, "node_group": $node_group, "status": "UpToDate"}}
         ] |
         (to_entries[] | select(.value.labels.status == $node_status) | .key) as $key | .[$key].set = 1 | .[]' >> $METRICS_PATH
   done

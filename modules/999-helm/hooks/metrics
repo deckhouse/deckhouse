@@ -77,6 +77,7 @@ function __main__() {
             {
               "name": "resource_versions_compatibility",
               "set": 0,
+              "group": "/modules/'$(module::name::kebab_case)'/metrics",
               "labels": {
                 "helm_release_name": $release_name,
                 "resource_name": .metadata.name,
