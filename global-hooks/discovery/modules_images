@@ -10,7 +10,7 @@ function __config__() {
     - name: d8_deployment
       apiVersion: apps/v1
       kind: Deployment
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: ["Added", "Modified"]
       namespace:
         nameSelector:
           matchNames: [d8-system]

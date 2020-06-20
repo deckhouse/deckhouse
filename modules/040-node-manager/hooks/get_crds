@@ -22,6 +22,8 @@ function __config__() {
     - name: ngs
       queue: /modules/$(module::name::kebab_case)
       group: main
+      includeSnapshotsFrom: ["cloud_provider_secrets"]
+      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
@@ -39,6 +41,8 @@ function __config__() {
     - name: ics
       queue: /modules/$(module::name::kebab_case)
       group: main
+      includeSnapshotsFrom: ["cloud_provider_secrets"]
+      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1alpha1
       kind: ${instance_class_kind}
       jqFilter: |
@@ -50,26 +54,13 @@ function __config__() {
 "
     fi
     )
-    - name: cloud_provider_secrets
-      queue: /modules/$(module::name::kebab_case)
-      group: main
-      apiVersion: v1
-      kind: Secret
-      namespace:
-        nameSelector:
-          matchNames: [kube-system]
-      nameSelector:
-        matchNames: [d8-node-manager-cloud-provider]
-      jqFilter: |
-        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
-        +
-        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries)
-        | {"zones": .zones}
     - name: machine_deployments
       queue: /modules/$(module::name::kebab_case)
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
       group: main
+      includeSnapshotsFrom: ["cloud_provider_secrets"]
+      keepFullObjectsInMemory: false
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
@@ -83,18 +74,40 @@ function __config__() {
           "name": .metadata.name,
           "zone": .metadata.annotations.zone
         }
+    - name: cloud_provider_secrets
+      queue: /modules/$(module::name::kebab_case)
+      includeSnapshotsFrom: ["cloud_provider_secrets"]
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-node-manager-cloud-provider]
+      jqFilter: |
+        (.data | [to_entries[] | (.value |= (. | @base64d))] | from_entries)
+        +
+        (.data | [to_entries[] | try(.value |= (. | @base64d | fromjson))] | from_entries) |
+        {
+          "instanceClassKind": .instanceClassKind,
+          "zones": .zones
+        }
     schedule:
     - group: main
+      includeSnapshotsFrom: ["cloud_provider_secrets"]
       queue: /modules/$(module::name::kebab_case)
       crontab: "*/10 * * * *"
 EOF
 }
 
 function __on_kubernetes::cloud_provider_secrets() {
-  if [ ! -v D8_IS_TESTS_ENVIRONMENT ] && [ "$(context::jq -r '.snapshots.cloud_provider_secrets | length')" -gt "0" ]; then
-    instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
-    if [ "$instance_class_kind" != "$(context::get snapshots.cloud_provider_secrets.0.object.data.instanceClassKind | base64 -d)" ]; then
-      kill 1
+  if [ ! -v D8_IS_TESTS_ENVIRONMENT ] && context::has snapshots.cloud_provider_secrets.0; then
+    current_instance_class_kind="$(cat /tmp/node-manager-instance-class-kind 2>/dev/null || true)"
+    new_instance_class_kind="$(context::get snapshots.cloud_provider_secrets.0.filterResult.instanceClassKind)"
+    if [ "$current_instance_class_kind" != "$new_instance_class_kind" ]; then
+      echo "INFO: InstanceClassKind has changed from $current_instance_class_kind to $new_instance_class_kind, restarting deckhouse..."
+      kill 1 # restart deckhouse
     fi
   fi
 }
@@ -127,8 +140,8 @@ function __main__() {
   control_plane_max_kubernetes_version="$(semver::majmin "$(semver::get_max "$control_plane_kubernetes_versions")")"
 
   default_zones=$(context::jq -r '.snapshots |
-  (if .machine_deployments[0] | has("object") then [.machine_deployments[].object.metadata.annotations.zone | select(length > 0)] else [] end) as $a |
-  (if .cloud_provider_secrets[0] | has("object") then .cloud_provider_secrets[].filterResult.zones else [] end) as $b |
+  (if (.machine_deployments | length) > 0 then [.machine_deployments[].filterResult.zone | select(length > 0)] else [] end) as $a |
+  (if (.cloud_provider_secrets | length) > 0 then .cloud_provider_secrets[].filterResult.zones else [] end) as $b |
   $a + $b | unique')
 
   timestamp=$(date +%s)

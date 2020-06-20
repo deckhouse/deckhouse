@@ -15,7 +15,7 @@ func Test(t *testing.T) {
 }
 
 const (
-	singleServiceWithPrometheusTarget = `
+	servicesWithOldLabels = `
 ---
 apiVersion: v1
 kind: Service
@@ -23,8 +23,6 @@ metadata:
   name: s0
   labels:
     prometheus-target: php-fpm
-`
-	twoServicesWithOldAnnotations = `
 ---
 apiVersion: v1
 kind: Service
@@ -40,7 +38,7 @@ metadata:
   labels:
     prometheus-target: winword
 `
-	newAnnotationDiscoveryService = `
+	servicesWithNewLabels = `
 ---
 apiVersion: v1
 kind: Service
@@ -62,57 +60,20 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		Context("Single Service added", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(singleServiceWithPrometheusTarget))
-				f.RunHook()
-			})
-
-			It("enabledApplications must contain single application 'php-fpm'", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
-				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm"]`))
-			})
-		})
-
-		Context("Single Service with new annotation added", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(newAnnotationDiscoveryService))
-				f.RunHook()
-			})
-
-			It("enabledApplications must contain single application 'test'", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
-				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["test"]`))
-			})
+			Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`[]`))
 		})
 	})
 
-	Context("Single Service in cluster", func() {
+	Context("Services are in cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(singleServiceWithPrometheusTarget))
+			f.BindingContexts.Set(f.KubeStateSet(servicesWithOldLabels + servicesWithNewLabels))
 			f.RunHook()
 		})
 
-		It("enabledApplications must contain single application 'php-fpm'", func() {
+		It("enabledApplications must contain applications 'php-fpm', 'test', 'winword'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm"]`))
-		})
-
-		Context("Two more Services added", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(singleServiceWithPrometheusTarget + twoServicesWithOldAnnotations))
-				f.RunHook()
-			})
-
-			It("enabledApplications must contain single application 'php-fpm' and 'winword'", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
-				Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm", "winword"]`))
-			})
+			// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
+			Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm", "test", "winword"]`))
 		})
 	})
 

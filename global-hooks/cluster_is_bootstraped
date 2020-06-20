@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: is_bootstraped_cm
       includeSnapshotsFrom: ["is_bootstraped_cm", "not_master_and_ready_nodes"]
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: ConfigMap
       namespace:
@@ -17,9 +18,10 @@ function __config__() {
         matchNames: [d8-cluster-is-bootstraped]
     - name: not_master_and_ready_nodes
       includeSnapshotsFrom: ["is_bootstraped_cm", "not_master_and_ready_nodes"]
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Node
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: ["Added", "Modified"]
       jqFilter: '
         (.spec.taints == null or ([.spec.taints[] | select(.key == "node-role.kubernetes.io/master")] | any | not))
         and

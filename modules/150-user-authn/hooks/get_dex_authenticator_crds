@@ -7,11 +7,10 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: authenticator
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: deckhouse.io/v1alpha1
      kind: DexAuthenticator
-     includeSnapshotsFrom:
-     - authenticator
-     - credentials
      jqFilter: |
        {
          "uuid": "\(.metadata.name)@\(.metadata.namespace)",
@@ -21,11 +20,10 @@ function __config__() {
          "allowAccessToKubernetes": ( .metadata.annotations."dexauthenticator.deckhouse.io/allow-access-to-kubernetes" // "" )
        }
    - name: credentials
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: v1
      kind: Secret
-     includeSnapshotsFrom:
-     - authenticator
-     - credentials
      labelSelector:
        matchLabels:
          app: dex-authenticator

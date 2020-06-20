@@ -11,7 +11,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)/remove-superfluous-rwr-ingresses
       apiVersion: networking.k8s.io/v1beta1
       kind: Ingress
-      watchEvent: ["Deleted"]
+      executeHookOnEvent: ["Deleted"]
 EOF
 }
 

@@ -9,12 +9,14 @@ function __config__() {
     - name: ngs
       queue: /modules/$(module::name::kebab_case)/handle_node_templates
       group: main
+      keepFullObjectsInMemory: false
       executeHookOnEvent: ["Added", "Modified"]
       waitForSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
         {
+          "name": .metadata.name,
           "nodeType": .spec.nodeType,
           "desired": {
             "annotations": ((.spec.nodeTemplate // {}).annotations // {}),
@@ -31,6 +33,7 @@ function __config__() {
       kind: Node
       jqFilter: |
         {
+          "name": .metadata.name,
           "nodeGroup":   (.metadata.labels."node.deckhouse.io/group" // ""),
           "annotations": .metadata.annotations,
           "labels":      .metadata.labels,
@@ -40,9 +43,9 @@ EOF
 }
 
 function __main__() {
-  ngs="$(context::jq '[.snapshots.ngs[] | {"key": .object.metadata.name, "value": .filterResult}] | from_entries')"
+  ngs="$(context::jq '[.snapshots.ngs[] | {"key": .filterResult.name, "value": (.filterResult | del(.name))}] | from_entries')"
 
-  for n_with_ng in $(context::jq -r '.snapshots.nodes[] | .object.metadata.name + ":" + .filterResult.nodeGroup'); do
+  for n_with_ng in $(context::jq -r '.snapshots.nodes[] | .filterResult.name + ":" + .filterResult.nodeGroup'); do
     node_name="${n_with_ng%:*}"
     ng_name="${n_with_ng##*:}"
 
@@ -103,7 +106,7 @@ function __main__() {
       '
     fi
 
-    if context::jq -e '[.snapshots.nodes[] | select(.object.metadata.name == "'"${node_name}"'")] | first | .object | . as $original | '"$patch"' | . != $original' > /dev/null ; then
+    if context::jq -e '[.snapshots.nodes[] | select(.filterResult.name == "'"${node_name}"'")] | first | .object | . as $original | '"$patch"' | . != $original' > /dev/null ; then
       kubernetes::patch_jq "" "node/${node_name}" "$patch"
     fi
   done

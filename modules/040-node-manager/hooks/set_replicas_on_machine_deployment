@@ -8,22 +8,24 @@ function __config__() {
     kubernetes:
     - name: mds
       group: main
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/set_replicas_on_machine_deployment
       waitForSynchronization: false
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: ["Added", "Modified"]
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
       jqFilter: '{"name": .metadata.name, "nodeGroup": .metadata.labels."node-group", "replicas": .spec.replicas}'
     - name: ngs
       group: main
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/set_replicas_on_machine_deployment
       waitForSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: ["Added", "Modified"]
       jqFilter: '{"name": .metadata.name, "min": .spec.cloudInstances.minPerZone, "max": .spec.cloudInstances.maxPerZone}'
 EOF
 }

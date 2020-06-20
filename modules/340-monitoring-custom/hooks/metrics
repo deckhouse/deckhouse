@@ -9,38 +9,46 @@ function __config__() {
     - name: service_monitors
       apiVersion: monitoring.coreos.com/v1
       kind: ServiceMonitor
-      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      group: main
+      keepFullObjectsInMemory: false
       labelSelector:
         matchExpressions:
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
+      jqFilter: "dummy"
     - name: pod_monitors
       apiVersion: monitoring.coreos.com/v1
       kind: PodMonitor
-      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      group: main
+      keepFullObjectsInMemory: false
       labelSelector:
         matchExpressions:
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
+      jqFilter: .metadata.name
     - name: rules
       apiVersion: monitoring.coreos.com/v1
       kind: PrometheusRule
-      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      group: main
+      keepFullObjectsInMemory: false
       labelSelector:
         matchExpressions:
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
+      jqFilter: .metadata.name
     - name: custom_services
       apiVersion: v1
       kind: Service
-      includeSnapshotsFrom: ["rules", "service_monitors", "pod_monitors", "custom_services"]
+      group: main
+      keepFullObjectsInMemory: false
       labelSelector:
         matchExpressions:
         - key: prometheus-custom-target
           operator: Exists
+      jqFilter: "dummy"
 EOF
 }
 

@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: ngs
       group: monkey
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       waitForSynchronization: false
       executeHookOnEvent: []
@@ -22,6 +23,7 @@ function __config__() {
         }
     - name: nodes
       group: monkey
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       waitForSynchronization: false
       executeHookOnEvent: []
@@ -39,6 +41,7 @@ function __config__() {
         }
     - name: machines
       group: monkey
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       waitForSynchronization: false
       executeHookOnEvent: []
@@ -70,7 +73,7 @@ function __on_group::monkey() {
     export SHUF_RANDOM_SOURCE=""
   fi
 
-  ng_names="$(context::jq -r '.snapshots.ngs[] | select(.filterResult.spec.chaos.mode != "Disabled" and .filterResult.isReadyForChaos) | .object.metadata.name')"
+  ng_names="$(context::jq -r '.snapshots.ngs[] | select(.filterResult.spec.chaos.mode != "Disabled" and .filterResult.isReadyForChaos) | .filterResult.name')"
   for ng_name in $ng_names ; do
     # If there are nodes in deleting state then do nothing
     if context::jq -e '[.snapshots.machines[] | select(.filterResult.isMonkeyVictim)] | any'; then

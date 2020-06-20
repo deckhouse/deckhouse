@@ -84,8 +84,8 @@ metadata:
 
 			It("filterResult must be false, `global.discovery.defaultStorageClass` must not be set", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").Exists()).To(BeTrue())
-				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
+				Expect(f.BindingContexts.Get("0.snapshots.default_sc.0").Exists()).To(BeTrue())
+				Expect(f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.discovery.defaultStorageClass").Exists()).To(BeFalse())
 			})
 
@@ -97,8 +97,8 @@ metadata:
 
 				It("filterResult must be true, `global.discovery.defaultStorageClass` must be 'sc0'", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Get("0.filterResult").Exists()).To(BeTrue())
-					Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
+					Expect(f.BindingContexts.Get("0.snapshots.default_sc.0").Exists()).To(BeTrue())
+					Expect(f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").Bool()).To(BeTrue())
 					Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("sc0"))
 				})
 			})
@@ -111,8 +111,8 @@ metadata:
 
 				It("filterResult must be true, `global.discovery.defaultStorageClass` must be 'sc1'", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Get("0.filterResult").Exists()).To(BeTrue())
-					Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
+					Expect(f.BindingContexts.Get("0.snapshots.default_sc.1").Exists()).To(BeTrue())
+					Expect(f.BindingContexts.Get("0.snapshots.default_sc.1.filterResult.isDefault").Bool()).To(BeTrue())
 					Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("sc1"))
 				})
 			})
@@ -125,12 +125,12 @@ metadata:
 			f.RunHook()
 		})
 
-		It("filterResults must be true and false, `global.discovery.defaultStorageClass` must be 'sc1'", func() {
+		It("filterResult.isDefault must be true and false, `global.discovery.defaultStorageClass` must be 'sc1'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			frSlice := []string{}
-			frSlice = append(frSlice, f.BindingContexts.Get("0.objects.0.filterResult").String())
-			frSlice = append(frSlice, f.BindingContexts.Get("0.objects.1.filterResult").String())
+			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").String())
+			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.default_sc.1.filterResult.isDefault").String())
 			sort.Strings(frSlice)
 
 			Expect(frSlice).To(Equal([]string{"false", "true"}))
@@ -145,7 +145,7 @@ metadata:
 
 			It("filterResults must be false and false, `global.discovery.defaultStorageClass` must not be set", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
+				Expect(f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.discovery.defaultStorageClass").Exists()).To(BeFalse())
 			})
 		})

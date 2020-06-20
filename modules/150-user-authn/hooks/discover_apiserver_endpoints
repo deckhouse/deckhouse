@@ -10,10 +10,9 @@ function __config__() {
    - name: endpoints
      apiVersion: v1
      kind: Endpoints
-     watchEvent: ["Added", "Modified"]
-     includeSnapshotsFrom:
-     - endpoints
-     - service
+     executeHookOnEvent: ["Added", "Modified"]
+     group: main
+     keepFullObjectsInMemory: false
      nameSelector:
        matchNames: ["kubernetes"]
      namespace:
@@ -23,10 +22,9 @@ function __config__() {
    - name: service
      apiVersion: v1
      kind: Service
-     watchEvent: ["Added", "Modified"]
-     includeSnapshotsFrom:
-     - endpoints
-     - service
+     executeHookOnEvent: ["Added", "Modified"]
+     group: main
+     keepFullObjectsInMemory: false
      nameSelector:
        matchNames: ["kubernetes"]
      namespace:

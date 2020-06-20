@@ -10,7 +10,7 @@ function __config__() {
     - name: webhook-secret
       apiVersion: v1
       kind: Secret
-      watchEvent: [Added, Modified]
+      executeHookOnEvent: [Added, Modified]
       namespace:
         nameSelector:
           matchNames: [d8-user-authz]

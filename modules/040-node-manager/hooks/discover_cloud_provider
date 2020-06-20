@@ -8,7 +8,8 @@ function __config__() {
     kubernetes:
     - name: cloud_provider_secret
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [cloud_provider_secret]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       namespace:
@@ -23,7 +24,7 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::cloud_provider_secret() {
+function __main__() {
   if context::has snapshots.cloud_provider_secret.0.filterResult; then
     values::set nodeManager.internal.cloudProvider "$(context::get snapshots.cloud_provider_secret.0.filterResult)"
   else

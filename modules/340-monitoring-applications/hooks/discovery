@@ -8,26 +8,30 @@ function __config__() {
     beforeHelm: 10
     kubernetes:
     - name: services_old
-      includeSnapshotsFrom: ["services", "services_old"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
       labelSelector:
         matchExpressions:
         - key: prometheus-target
           operator: Exists
+      jqFilter: .metadata.labels."prometheus-target"
     - name: services
-      includeSnapshotsFrom: ["services", "services_old"]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
       labelSelector:
         matchExpressions:
         - key: prometheus.deckhouse.io/target
           operator: Exists
+      jqFilter: .metadata.labels."prometheus.deckhouse.io/target"
 EOF
 }
 
 function __main__() {
-  enabledApplications=$(context::jq -r '[.snapshots.services_old + .snapshots.services | .[] | (.object.metadata.labels."prometheus-target" // .object.metadata.labels."prometheus.deckhouse.io/target")] | sort | unique')
+  enabledApplications=$(context::jq -r '[.snapshots.services_old + .snapshots.services | .[] | .filterResult] | sort | unique')
   values::set monitoringApplications.discovery.enabledApplications "$enabledApplications"
 }
 

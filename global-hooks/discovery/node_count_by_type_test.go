@@ -112,8 +112,8 @@ metadata:
 		It("filterResult of master must be null; `global.discovery.nodeCountByType` must be empty map", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(len(f.BindingContexts.Get("0.objects").Array())).To(Equal(1))
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").Value()).To(BeEmpty())
+			Expect(len(f.BindingContexts.Get("0.snapshots.node_types").Array())).To(Equal(1))
+			Expect(f.BindingContexts.Get("0.snapshots.node_types.0.filterResult").Value()).To(BeEmpty())
 			Expect(f.ValuesGet("global.discovery.nodeCountByType").Map()).To(BeEmpty())
 		})
 

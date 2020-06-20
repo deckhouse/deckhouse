@@ -8,7 +8,7 @@ function __config__() {
     beforeHelm: 1
     kubernetes:
     - name: pvc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -17,19 +17,26 @@ function __config__() {
       labelSelector:
         matchLabels:
           app: dhcp
-      jqFilter: ".spec.storageClassName"
+      jqFilter: |
+        {
+          "storageClassName": .spec.storageClassName
+        }
     - name: default_sc
-      includeSnapshotsFrom: ["pvc", "default_sc"]
+      group: main
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
-        (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
-        (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+        {
+          "name": .metadata.name,
+          "isDefault": (
+             (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
+             (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+          )
+        }
 EOF
 }
 
 function __main__ {
-
   storage_class=""
   if values::has --config networkGateway.storageClass; then
     storage_class="$(values::get --config networkGateway.storageClass)"
@@ -37,7 +44,7 @@ function __main__ {
 
   current_storage_class=""
   if context::has snapshots.pvc.0 ; then
-    current_storage_class="$(context::get snapshots.pvc.0.object.spec.storageClassName)"
+    current_storage_class="$(context::get snapshots.pvc.0.filterResult.storageClassName)"
   fi
 
   global_storage_class=""
@@ -45,7 +52,7 @@ function __main__ {
     global_storage_class="$(values::get --config global.storageClass)"
   fi
 
-  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
+  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult.isDefault)] | first | .filterResult.name')"
   global_discovery_default_storage_class=""
   if [ "$default_sc" != "null" ]; then
     global_discovery_default_storage_class="$default_sc"
@@ -73,8 +80,6 @@ function __main__ {
     kubernetes::delete_if_exists::non_blocking "d8-network-gateway" "pod/dhcp-0"
     echo "!!! NOTICE: storage class changed, deleting pod/dhcp-0 !!!"
   fi
-
-
 }
 
 hook::run $@

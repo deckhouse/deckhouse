@@ -8,27 +8,27 @@ function __config__() {
     kubernetes:
     - name: csinodes
       queue: /modules/$(module::name::kebab_case)/remove_csi_taints
-      includeSnapshotsFrom: [csinodes,nodes]
+      group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       apiVersion: storage.k8s.io/v1beta1
       kind: CSINode
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: ["Added", "Modified"]
       jqFilter: '{"name": .metadata.name}'
     - name: nodes
       queue: /modules/$(module::name::kebab_case)
+      group: main
+      keepFullObjectsInMemory: false
       waitForSynchronization: false
       apiVersion: v1
       kind: Node
-      watchEvent: ["Added", "Modified"]
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
       jqFilter: '{"needPatch": ([(.spec.taints // [])[] | select(.key == "node.deckhouse.io/csi-not-bootstrapped")] | length > 0), "name": .metadata.name}'
 EOF
 }
 
-function __on_kubernetes::nodes() {
-  return 0
-}
-
-function __on_kubernetes::csinodes() {
+function __main__() {
   for csiNodeName in $(context::jq -r '.snapshots.csinodes[] | .filterResult.name'); do
     if context::jq -er --arg nodeName "$csiNodeName" '.snapshots.nodes[] | select(.filterResult.name == $nodeName and .filterResult.needPatch)' > /dev/null;
     then

@@ -97,7 +97,7 @@ function __on_group::node_status() {
     node_group="$(jq -r '.nodeGroup' <<< "$node_data")"
     desired_configuration_checksum="$(context::get snapshots.configuration_checksums_secret.0.filterResult."${node_group}")"
 
-    if ! ng_data="$(context::jq -er --arg node_group "$node_group" '.snapshots.ngs[] | select(.object.metadata.name == $node_group) | .filterResult')"; then
+    if ! ng_data="$(context::jq -er --arg node_group "$node_group" '.snapshots.ngs[] | select(.filterResult.name == $node_group) | .filterResult')"; then
       echo "WARNING: Can't find NodeGroup $node_group, skipping node $node_name..."
       continue
     fi

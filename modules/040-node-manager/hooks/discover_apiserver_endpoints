@@ -8,7 +8,8 @@ function __config__() {
     kubernetes:
     - name: kube_api_ep
       queue: /modules/$(module::name::kebab_case)
-      includeSnapshotsFrom: [kube_api_ep]
+      group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Endpoints
       namespace:
@@ -20,7 +21,7 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::kube_api_ep() {
+function __main__() {
   values::set nodeManager.internal.clusterMasterAddresses "$(context::get snapshots.kube_api_ep.0.filterResult)"
 }
 

@@ -7,9 +7,10 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: prometheusremotewrite
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: deckhouse.io/v1alpha1
      kind: PrometheusRemoteWrite
-     includeSnapshotsFrom: [prometheusremotewrite]
      jqFilter: '{"name": .metadata.name, "spec": .spec}'
 EOF
 }

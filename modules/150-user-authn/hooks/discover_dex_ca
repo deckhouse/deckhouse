@@ -8,11 +8,11 @@ function __config__() {
    beforeHelm: 10
    kubernetes:
    - name: ca_secret
+     group: main
+     keepFullObjectsInMemory: false
      apiVersion: v1
      kind: Secret
-     watchEvent: ["Added", "Modified"]
-     includeSnapshotsFrom:
-     - ca_secret
+     executeHookOnEvent: ["Added", "Modified"]
      nameSelector:
        matchNames: ["ingress-tls"]
      namespace:

@@ -8,12 +8,14 @@ function __config__() {
     kubernetes:
     - name: rules
       includeSnapshotsFrom: ["rules", "internal_rules"]
+      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1alpha1
       queue: /modules/$(module::name::kebab_case)/custom_prometheus_rules
       kind: CustomPrometheusRules
       jqFilter: '{"name": .metadata.name, "groups": .spec.groups}'
     - name: internal_rules
       includeSnapshotsFrom: ["rules", "internal_rules"]
+      keepFullObjectsInMemory: false
       apiVersion: monitoring.coreos.com/v1
       queue: /modules/$(module::name::kebab_case)/custom_prometheus_rules
       kind: PrometheusRule
