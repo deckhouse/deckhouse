@@ -1,32 +1,10 @@
 global:
-  enabledModules: ["vertical-pod-autoscaler-crd", "cert-manager"]
+  enabledModules: ["vertical-pod-autoscaler-crd"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg
-    tags:
-      deckhouse:
-        documentation: imagehash
-  modules:
-    publicDomainTemplate: "%s.example.com"
-    https:
-      __ConstantChoices__:
-        - certManager:
-            clusterIssuerName: letsencrypt
-          mode: CertManager
-        - mode: Disabled
-        - mode: OnlyInURI
-        - mode: CustomCertificate
-          customCertificate:
-            secretName: plainstring
   discovery:
     clusterControlPlaneIsHighlyAvailable: true
     d8SpecificNodeCountByRole:
       system: 1
-    clusterVersion: 1.15.5
-deckhouse:
-  auth:
-    __ConstantChoices__:
-    - externalAuthentication:
-        authSignInURL: https://$host/dex-authenticator/sign_in
-        authURL: https://deckhouse-dex-authenticator.d8-system.svc.cluster.local/dex-authenticator/auth
-    - whitelistSourceRanges: ["1.1.1.1/32"]
+    kubernetesVersion: 1.15.5

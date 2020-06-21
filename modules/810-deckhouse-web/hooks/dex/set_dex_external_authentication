@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 9
+EOF
+}
+
+function __main__() {
+  if values::is_true global.clusterIsBootstrapped && values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined deckhouseWeb.https.mode global.modules.https.mode) != "Disabled" ]]
+  then
+    if ! values::has --config deckhouseWeb.auth.externalAuthentication ; then
+      values::set deckhouseWeb.auth.externalAuthentication '{}'
+      values::set deckhouseWeb.auth.externalAuthentication.authURL "https://deckhouse-web-dex-authenticator.d8-system.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
+      values::set deckhouseWeb.auth.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
+      values::set deckhouseWeb.auth.externalAuthentication.useBearerTokens "true"
+      values::set deckhouseWeb.internal.deployDexAuthenticator "true"
+    else
+      values::unset deckhouseWeb.internal.deployDexAuthenticator
+      values::set deckhouseWeb.auth.externalAuthentication "$(values::get --config deckhouseWeb.auth.externalAuthentication)"
+    fi
+  else
+    if ! values::has --config deckhouseWeb.auth.externalAuthentication ; then
+      values::unset deckhouseWeb.auth.externalAuthentication
+    else
+      values::set deckhouseWeb.auth.externalAuthentication "$(values::get --config deckhouseWeb.auth.externalAuthentication)"
+    fi
+    values::unset deckhouseWeb.internal.deployDexAuthenticator
+  fi
+}
+
+hook::run $@

@@ -11,16 +11,16 @@ EOF
 
 function __main__() {
 
-  if values::has deckhouse.internal.deployDexAuthenticator && values::is_true global.clusterIsBootstrapped ; then
+  if values::has deckhouseWeb.internal.deployDexAuthenticator && values::is_true global.clusterIsBootstrapped ; then
     cat <<EOF | kubectl apply -f -
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
 metadata:
- name: deckhouse
+ name: deckhouse-web
  namespace: d8-system
  labels:
    heritage: deckhouse
-   module: deckhouse
+   module: deckhouse-web
    app: dex-authenticator
  annotations:
    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
@@ -31,8 +31,8 @@ spec:
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else
-    if kubectl -n d8-system get dexauthenticator deckhouse >/dev/null 2>/dev/null ; then
-      kubectl -n d8-system delete dexauthenticator deckhouse >/dev/null 2>/dev/null
+    if kubectl -n d8-system get dexauthenticator deckhouse-web >/dev/null 2>/dev/null ; then
+      kubectl -n d8-system delete dexauthenticator deckhouse-web >/dev/null 2>/dev/null
     fi
   fi
 }

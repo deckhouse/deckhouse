@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+EOF
+}
+
+function __main__() {
+  if kubectl -n d8-system get dexauthenticator deckhouse >/dev/null 2>/dev/null ; then
+    kubectl -n d8-system delete dexauthenticator deckhouse >/dev/null 2>/dev/null
+  fi
+}
+
+hook::run $@

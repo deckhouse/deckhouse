@@ -5,7 +5,7 @@ ansible:
   - name: "Copy nginx.conf"
     copy:
       content: |
-{{ .Files.Get "modules/020-deckhouse/images/site/nginx.conf" | indent 8 }}
+{{ .Files.Get "modules/810-deckhouse-web/images/web/nginx.conf" | indent 8 }}
       dest: /etc/nginx/nginx.conf
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
@@ -50,13 +50,20 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data
 git:
-- add: /docs
+- add: /web
   to: /srv/jekyll-data
   owner: jekyll
   group: jekyll
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: ['**/*']
+- add: /docs
+  to: /srv/jekyll-data/docs
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  excludePaths: ['_not_actual/']
 - add: /
   to: /srv/jekyll-data
   owner: jekyll

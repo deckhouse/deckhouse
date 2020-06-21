@@ -43,4 +43,5 @@ dashboardEnabled: true
 secretCopierEnabled: true
 sysctlTunerEnabled: true
 systemdSlicesCleanerEnabled: true
+deckhouseWebEnabled: true
 helmEnabled: true
