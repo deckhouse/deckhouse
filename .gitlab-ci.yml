@@ -122,6 +122,16 @@ Matrix Tests:
   tags:
     - werf-distributed
 
+No Cyrillic Validation:
+  stage: testing
+  script:
+    - pwd
+    - ./testing/validate_no_cyrillic.sh ${CI_PROJECT_ID} ${CI_MERGE_REQUEST_IID} ${FOX_ACCESS_TOKEN}
+  only:
+    - merge_requests
+  tags:
+    - werf-distributed
+
 .base_deploy: &base_deploy
   stage: deploy
   variables:
