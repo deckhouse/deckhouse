@@ -45,5 +45,11 @@ if [ -n "$packages" ]; then
   bb-apt-remove $packages
 fi
 
+{{- if ne .runType "ImageBuilding" }}
+if [[ "$(uname -r)" != "$desired_version" ]]; then
+  bb-flag-set reboot
+fi
+{{- end }}
+
 rm -f /var/lib/bashible/kernel_version_desired_by_cloud_provider
 {{- end }}
