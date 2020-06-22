@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/metrics_storage"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
 	"flant/deckhouse-controller/pkg/app"
@@ -52,16 +52,19 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	// Initialize RegistryWatcher dependencies
 
 	// Metric storage.
-	metricStorage := metrics_storage.NewMetricStorage()
+	metricStorage := metric_storage.NewMetricStorage()
 	metricStorage.WithContext(d.ctx)
 	metricStorage.WithPrefix(sh_app.PrometheusMetricsPrefix)
 	metricStorage.Start()
+	addon_operator.RegisterAddonOperatorMetrics(metricStorage)
+	RegisterDeckhouseMetrics(metricStorage)
 
 	// Initialize kube client.
 	kubeClient := kube.NewKubernetesClient()
 	kubeClient.WithContextName(sh_app.KubeContext)
 	kubeClient.WithConfigPath(sh_app.KubeConfig)
 	kubeClient.WithRateLimiterSettings(sh_app.KubeClientQps, sh_app.KubeClientBurst)
+	kubeClient.WithMetricStorage(metricStorage)
 	err := kubeClient.Init()
 	if err != nil {
 		log.Errorf("MAIN Fatal: initialize kube client: %s\n", err)
@@ -78,8 +81,10 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 		return
 	})
 	registryWatcher.WithErrorCallback(func() {
-		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_check_count", 1.0, map[string]string{})
-		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_check_errors_count", 1.0, map[string]string{})
+		d.MetricStorage.CounterAdd("deckhouse_registry_check_total", 1.0, map[string]string{})
+
+		d.MetricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1.0, map[string]string{})
+		// throttle logging
 		nowTime := time.Now()
 		if LastSuccessTime.Add(app.RegistryErrorsMaxTimeBeforeRestart).Before(nowTime) {
 			log.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
@@ -88,16 +93,17 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 		return
 	})
 	registryWatcher.WithSuccessCallback(func() {
-		d.MetricStorage.SendCounterNoPrefix("deckhouse_registry_check_count", 1.0, map[string]string{})
+		d.MetricStorage.CounterAdd("deckhouse_registry_check_total", 1.0, map[string]string{})
 		LastSuccessTime = time.Now()
 	})
 	registryWatcher.WithImageInfoCallback(func() (imageName string, imageId string) {
 		imageName, imageId = GetCurrentPodImageInfo(kubeClient)
 
-		d.MetricStorage.SendCounterNoPrefix("deckhouse_kube_image_digest_check_count", 1.0, map[string]string{})
-		if imageName == "" || imageId == "" {
-			d.MetricStorage.SendCounterNoPrefix("deckhouse_kube_image_digest_check_errors_count", 1.0, map[string]string{})
+		d.MetricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1.0, map[string]string{})
+		if imageName != "" && imageId != "" {
+			d.MetricStorage.GaugeSet("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
 		}
+
 		return
 	})
 	registryWatcher.WithImageUpdatedCallback(func(s string) {
