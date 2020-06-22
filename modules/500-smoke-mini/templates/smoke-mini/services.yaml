@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    app: {{ .Chart.Name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-a
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    {{ .Chart.Name }}: a
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-b
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    {{ .Chart.Name }}: b
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-c
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    {{ .Chart.Name }}: c

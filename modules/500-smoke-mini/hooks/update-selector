@@ -1,0 +1,66 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: main
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      executeHookOnEvent: []
+      apiVersion: v1
+      kind: Node
+      jqFilter: .metadata.labels."kubernetes.io/hostname"
+    schedule:
+    - group: main
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      crontab: "*/10 * * * *"
+EOF
+}
+
+function __main__() {
+  nodes=( $(context::jq -r '.snapshots.nodes[].filterResult') )
+
+  if values::has smokeMini.internal.nodeSelector.a; then
+    current_label_a="$(values::get smokeMini.internal.nodeSelector.a)"
+  fi
+
+  if values::has smokeMini.internal.nodeSelector.b; then
+    current_label_b="$(values::get smokeMini.internal.nodeSelector.b)"
+  fi
+
+  if values::has smokeMini.internal.nodeSelector.c; then
+    current_label_b="$(values::get smokeMini.internal.nodeSelector.c)"
+  fi
+
+  if [ -v current_label_a ] && [ -v current_label_b ] && [ -v current_label_c ]; then
+    for i in "${!nodes[@]}"; do
+      if [ "${nodes[$i]}" == "$current_label_a" ] || [ "${nodes[$i]}" == "$current_label_b" ] || [ "${nodes[$i]}" == "$current_label_c" ]; then
+        unset 'nodes[i]'
+      fi
+    done
+    nodes=( ${nodes[@]} )
+
+    target_sts_list=("a" "b" "c")
+    target_sts="${target_sts_list[$(( ($(date +%s) / 600) % 3 ))]}"
+    values::set "smokeMini.internal.nodeSelector.$target_sts" "${nodes[$(( $RANDOM % ${#nodes[@]} ))]}"
+  else
+    if [ "${#nodes[@]}" -gt "2" ]; then
+      values::set smokeMini.internal.nodeSelector.a "${nodes[0]}"
+      values::set smokeMini.internal.nodeSelector.b "${nodes[1]}"
+      values::set smokeMini.internal.nodeSelector.c "${nodes[2]}"
+    elif [ "${#nodes[@]}" -gt "1" ]; then
+      values::set smokeMini.internal.nodeSelector.a "${nodes[0]}"
+      values::set smokeMini.internal.nodeSelector.b "${nodes[1]}"
+      values::set smokeMini.internal.nodeSelector.c "${nodes[1]}"
+    else
+      values::set smokeMini.internal.nodeSelector.a "${nodes[0]}"
+      values::set smokeMini.internal.nodeSelector.b "${nodes[0]}"
+      values::set smokeMini.internal.nodeSelector.c "${nodes[0]}"
+    fi
+  fi
+}
+
+hook::run "$@"

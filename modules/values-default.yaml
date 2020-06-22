@@ -45,3 +45,4 @@ sysctlTunerEnabled: true
 systemdSlicesCleanerEnabled: true
 deckhouseWebEnabled: true
 helmEnabled: true
+smokeMiniEnabled: true
