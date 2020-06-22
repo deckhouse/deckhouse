@@ -1,0 +1,4 @@
+smokeMini:
+  internal:
+    nodeSelector: {}
+  auth: {}
