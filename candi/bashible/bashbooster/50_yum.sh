@@ -1,5 +1,6 @@
 bb-var BB_YUM_UPDATED false
 bb-var BB_YUM_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_packages"
+bb-var BB_YUM_INSTALL_EXTRA_ARGS ""
 
 bb-yum?() {
     bb-exe? yum
@@ -41,7 +42,7 @@ bb-yum-install() {
     then
         bb-yum-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
-        yum install -y ${PACKAGES_TO_INSTALL[@]}
+        yum install $BB_YUM_INSTALL_EXTRA_ARGS -y ${PACKAGES_TO_INSTALL[@]}
         bb-yum-versionlock ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_YUM_UNHANDLED_PACKAGES_STORE"

@@ -55,7 +55,9 @@ bb-apt-dist-upgrade() {
 }
 
 bb-apt-install() {
+    PACKAGES_TO_INSTALL=()
     export DEBIAN_FRONTEND=noninteractive
+
     for PACKAGE in "$@"
     do
         local NEED_FIRE=false
@@ -64,18 +66,23 @@ bb-apt-install() {
         fi
         if ! bb-apt-package? "$PACKAGE"
         then
-            bb-apt-update
-            bb-log-info "Installing package '$PACKAGE'"
-            apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages --allow-downgrades -y "$PACKAGE"
-            bb-apt-hold $PACKAGE
-            bb-exit-on-error "Failed to install package '$PACKAGE'"
-            echo "$PACKAGE" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
-            NEED_FIRE=true
-        fi
-        if [[ "$NEED_FIRE" == "true" ]]; then
-            bb-event-fire "bb-package-installed" "$PACKAGE"
+            PACKAGES_TO_INSTALL+=("$PACKAGE")
         fi
     done
+
+    if [ "${#PACKAGES_TO_INSTALL[@]}" -gt "0" ]
+    then
+        bb-apt-update
+        bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
+        apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages --allow-downgrades -y ${PACKAGES_TO_INSTALL[@]}
+        bb-apt-hold ${PACKAGES_TO_INSTALL[@]}
+        bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
+        printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
+        NEED_FIRE=true
+    fi
+    if [[ "$NEED_FIRE" == "true" ]]; then
+        bb-event-fire "bb-package-installed" "$PACKAGE"
+    fi
 }
 
 bb-apt-remove() {

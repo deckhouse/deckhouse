@@ -1,21 +1,44 @@
+extra_packages=""
+extra_yum_args=""
+
 {{ if eq .kubernetesVersion "1.14" }}
-  kubernetes_version="1.14.10-0"
+kubernetes_version="1.14.10-0"
+extra_packages="kubernetes-cni-0.7.5-0"
+extra_yum_args="--setopt=obsoletes=0" # kubernetes-cni package is obsoleted by package kubelet since versions 1.16.11-0, 1.17.7-0, 1.18.4-0
+
 {{ else if eq .kubernetesVersion "1.15" }}
-  kubernetes_version="1.15.12-0"
+kubernetes_version="1.15.12-0"
+extra_packages="kubernetes-cni-0.7.5-0"
+extra_yum_args="--setopt=obsoletes=0" # kubernetes-cni package is obsoleted by package kubelet since versions 1.16.11-0, 1.17.7-0, 1.18.4-0
+
 {{ else if eq .kubernetesVersion "1.16" }}
-  kubernetes_version="1.16.10-0"
+kubernetes_version="1.16.11-0"
+
 {{ else if eq .kubernetesVersion "1.17" }}
-  kubernetes_version="1.17.6-0"
+kubernetes_version="1.17.7-0"
+
 {{ else if eq .kubernetesVersion "1.18" }}
-  kubernetes_version="1.18.3-0"
+kubernetes_version="1.18.4-0"
+
 {{ else }}
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}
 
-bb-yum-install "kubelet-$kubernetes_version" "kubectl-$kubernetes_version" kubernetes-cni-0.7.5
+BB_YUM_INSTALL_EXTRA_ARGS="$extra_yum_args" bb-yum-install "kubelet-$kubernetes_version" "kubectl-$kubernetes_version" $extra_packages
 
-if [ ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]; then
+if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
+  # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations
   systemctl stop kubelet
+fi
+
+if kubelet_pid="$(pidof kubelet)"; then
+  kubelet_start_date="$(ps -o lstart= -q "$kubelet_pid")"
+  kubelet_start_unixtime="$(date --date="$kubelet_start_date" +%s)"
+  kubelet_bin_change_unixtime="$(stat -c %Z /usr/bin/kubelet)"
+
+  if [ "$kubelet_bin_change_unixtime" -gt "$kubelet_start_unixtime" ]; then
+    bb-flag-set kubelet-need-restart
+  fi
 fi
 
 mkdir -p /etc/kubernetes/manifests
