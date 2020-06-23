@@ -25,13 +25,15 @@ EOF
 }
 
 function __main__() {
-  for node in "$(context::jq -rc '.snapshots.nodes[] | .filterResult | .name as $name | all(to_entries[] | select(.key != "name"); .value == false) | if . then $name else empty end')"; do
-    if [ ! -z "$node" ] ; then
-      echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": "'"$node"'"}, "set": 1}' >> $METRICS_PATH
-    else
-      echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": ""}, "set": 0}' >> $METRICS_PATH
-    fi
-  done
+  if context::jq -e '.snapshots.nodes[0].filterResult' ; then
+    for node in "$(context::jq -rc '.snapshots.nodes[] | .filterResult | .name as $name | all(to_entries[] | select(.key != "name"); .value == false) | if . then $name else empty end')"; do
+      if [ ! -z "$node" ] ; then
+        echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": "'"$node"'"}, "set": 1}' >> $METRICS_PATH
+      else
+        echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": ""}, "set": 0}' >> $METRICS_PATH
+      fi
+    done
+  fi
 }
 
 hook::run "$@"
