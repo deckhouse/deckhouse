@@ -17,6 +17,14 @@ function check_russian_letters() {
 }
 
 function main() {
+  MERGE_REQUEST_ID=$(request_gitlab_api "merge_requests?state=opened" | jq -r --arg c ${COMMIT_SHA} '.[]|select(.sha == $c) | .iid')
+  if [[ "$MERGE_REQUEST_ID" == "" ]]; then
+    echo "No merge request found for commit sha: ${COMMIT_SHA}"
+    exit 0
+  fi
+
+  echo "Merge Request ID = ${MERGE_REQUEST_ID}"
+
   MERGE_REQUEST_DATA=$(request_gitlab_api "merge_requests/${MERGE_REQUEST_ID}/changes" | jq -r '.')
   if [[ $(jq -rc '.labels[] | select ( . == "Content: Cyrillic")' <<< ${MERGE_REQUEST_DATA}) != "" ]]; then
     echo '"Content: Cyrillic" label is present. End.'
@@ -49,7 +57,7 @@ function main() {
 }
 
 PROJECT_ID=$1
-MERGE_REQUEST_ID=$2
+COMMIT_SHA=$2
 JOB_TOKEN=$3
 
 main
