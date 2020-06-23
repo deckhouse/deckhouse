@@ -13,8 +13,8 @@ EOF
 }
 
 function __main__() {
-  if values::has global.discovery.clusterType; then
-    cluster_type="$(values::get global.discovery.clusterType)"
+  if values::has nginxIngress.internal.clusterType; then
+    cluster_type="$(values::get nginxIngress.internal.clusterType)"
   fi
 
   if values::has --config nginxIngress.additionalControllers; then

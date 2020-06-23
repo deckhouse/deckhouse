@@ -16,7 +16,7 @@ func Test(t *testing.T) {
 
 var _ = Describe("Modules :: nginx-ingress :: hooks :: metrics ::", func() {
 	const (
-		initValuesString       = `{"nginxIngress":{"internal": {}}, "global": {"discovery":{"clusterType": "AWS"}}}`
+		initValuesString       = `{"nginxIngress":{"internal": {"clusterType": "AWS"}}}`
 		initConfigValuesString = `{"nginxIngress":{"inlet": "LoadBalancer", "additionalControllers":[{"name":"df", "inlet": "Direct"},{"name":"np", "inlet": "NodePort"},{"name":"lb", "inlet": "LoadBalancer"},{"name": "lb2"}]}}`
 	)
 

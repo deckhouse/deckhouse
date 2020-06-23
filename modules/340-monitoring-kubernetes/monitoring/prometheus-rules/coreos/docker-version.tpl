@@ -52,22 +52,3 @@
         2. Correct {{`{{$labels.job}}`}} version or control plane version on kubernetes master static pod manifests
       summary: >
         Different version of {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} node and kubernetes apiserver version
-{{- if and (eq .Values.global.discovery.clusterType "Manual") (semverCompare ">=1.12" .Values.global.discovery.kubernetesVersion) }}
-- name: kernel.version
-  rules:
-  - alert: UbuntuUnsupportedKernel
-    expr: sum by (node, kernel_version, os_image) (kube_node_info{kernel_version!~"4.1[6-9]\\..*|5\\..*", os_image=~".*(Ubuntu|ubuntu).*"})
-    for: 20m
-    labels:
-      impact: negligible
-      likelihood: certain
-      tier: cluster
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      plk_incident_initial_status: "todo"
-      description: |-
-        Unsupported kernel version of ubuntu OS on {{`{{$labels.node}}`}}.
-        * For actual supported Ubuntu 16.04 kernel launch: `apt install linux-image-unsigned-4.18.0-20-generic linux-modules-4.18.0-20-generic linux-modules-extra-4.18.0-20-generic linux-headers-4.18.0-20-generic linux-headers-4.18.0-20`
-        * For actual supported Ubuntu 18.04 just install latest 5.* kernel
-{{- end }}
