@@ -5,23 +5,36 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    schedule:
+    - crontab: "*/5 * * * *"
+      group: reconcile_etcd_members
+      queue: /modules/$(module::name::kebab_case)/reconcile_etcd_members
+      allowFailure: true
     kubernetes:
-    - name: nodes
-      group: remove_dead_etcd_members
+    - name: kubeadm_etcd_pods_ips
+      group: reconcile_etcd_members
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
-      waitForSynchronization: false
+      queue: /modules/$(module::name::kebab_case)/reconcile_etcd_members
+      allowFailure: true
       apiVersion: v1
-      kind: Node
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
       labelSelector:
         matchLabels:
-          node-role.kubernetes.io/master: ""
-      jqFilter: ".metadata.name"
+          component: etcd
+          tier: control-plane
+      jqFilter: |
+        {
+          client_url: (.metadata.annotations."kubeadm.kubernetes.io/etcd.advertise-client-urls" // ""),
+          member_name: (.spec.containers[0].command[] | select(contains("--name=")) | split("=")[1] // "")
+        }
     - name: etcd_certs
-      group: remove_dead_etcd_members
+      group: reconcile_etcd_members
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)/remove_dead_etcd_members
-      waitForSynchronization: false
+      queue: /modules/$(module::name::kebab_case)/reconcile_etcd_members
+      allowFailure: true
       executeHookOnSynchronization: false
       executeHookOnEvent: []
       apiVersion: v1
@@ -45,7 +58,7 @@ function set_etcdctl_credentials() {
   cert="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."client.crt"')"
   key="$(context::jq -r '.snapshots.etcd_certs[0].filterResult."client.key"')"
 
-  certs_dir="/tmp/control-plane-manager/remove_dead_etcd_memebers/etcd-certs"
+  certs_dir="/tmp/control-plane-manager/discover_etcd_servers/etcd-certs"
   ETCDCTL_CACERT="$certs_dir/ca.crt"
   ETCDCTL_CERT="$certs_dir/client.crt"
   ETCDCTL_KEY="$certs_dir/client.key"
@@ -55,7 +68,7 @@ function set_etcdctl_credentials() {
   echo "$cert" > "$ETCDCTL_CERT"
   echo "$key" > "$ETCDCTL_KEY"
 
-  ETCDCTL_ENDPOINTS=$(values::jq -r '.controlPlaneManager.internal.etcdServers | join(",")')
+  ETCDCTL_ENDPOINTS="$1"
 
   if [[ -z "$ETCDCTL_ENDPOINTS" ]]; then
     echo "ERROR: Failed to find etcdctl endpoints"
@@ -75,18 +88,31 @@ function set_etcdctl_credentials() {
 }
 
 function __main__() {
-  if ! values::has controlPlaneManager.internal.etcdServers ; then
-    # Nothing to do on standalone control-plane
-    exit 0
+  if zero_pods="$(context::jq -r '[.snapshots.kubeadm_etcd_pods_ips[].filterResult] | length == 0')" >/dev/null; then
+    if [[ "$zero_pods" == "true" ]]; then
+      >&2 echo 'No etcd Pods found in snapshot, skipping iteration'
+      return 0
+    fi
+  else
+    return 1
   fi
 
-  set_etcdctl_credentials
+  members_json="$(context::jq -re '[.snapshots.kubeadm_etcd_pods_ips[].filterResult |
+                                      if .client_url == "" then ("client_url should not be empty\n" | halt_error) else . end |
+                                      if .member_name == "" then ("member_name should not be empty\n" | halt_error) else . end
+                                    ]')"
+
+  eps="$(jq -rn --argjson members_json "$members_json" '[$members_json | .[].client_url]')"
+  values::set controlPlaneManager.internal.etcdServers "$eps"
+
+  joined_eps="$(jq -rn --argjson eps "$eps" '$eps | join(",")')"
+  set_etcdctl_credentials "$joined_eps"
 
   existing_members="$(etcdctl member list)"
   existing_members_names="$(echo "$existing_members" | cut -d',' -f3 | sort)"
   existing_members_names="${existing_members_names//[[:blank:]]/}"
-  node_names="$(context::jq -er '.snapshots.nodes[].filterResult')"
-  new_members="$(echo "$node_names" | sort)"
+  names="$(jq -rn --argjson members_json "$members_json" '$members_json | .[].member_name')"
+  new_members="$(echo "$names" | sort)"
 
   remove_list="$(comm -23 <(echo "$existing_members_names") <(echo "$new_members"))"
   IFS=$'\n'

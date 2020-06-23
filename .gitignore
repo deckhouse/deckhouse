@@ -36,3 +36,5 @@ venv/
 .editorconfig
 
 kcov-report
+
+*-tfstate/

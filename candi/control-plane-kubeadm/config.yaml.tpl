@@ -26,7 +26,9 @@ apiServer:
   extraArgs:
 {{- if hasKey . "apiserver" }}
   {{- if hasKey .apiserver "etcdServers" }}
+    {{- if .apiserver.etcdServers }}
     etcd-servers: {{ .apiserver.etcdServers | join "," | quote }}
+    {{- end }}
   {{- end }}
   {{- if .apiserver.bindToWildcard }}
     bind-address: "0.0.0.0"
@@ -83,21 +85,6 @@ scheduler:
     bind-address: {{ .nodeIP | quote }}
 {{- end }}
     port: "0"
-{{- if hasKey . "apiserver" }}
-  {{- if hasKey .apiserver "etcdServers" }}
-etcd:
-  local:
-    extraArgs:
-      # TODO: We should be able to get rid of this hack and use
-      # `kubeadm join phase etcd` after switching to kubeadm
-      #  version 1.18+ because it discovers etcd directly from
-      #  kubernetes by loking for pods in kube-system, rather
-      #  than trying to read endpoints from kubeadm's "cluster
-      #  status"
-      initial-cluster: {{ .apiserver.etcdServers | join "," | quote }}
-      initial-cluster-state: existing
-  {{- end }}
-{{- end }}
 ---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
@@ -106,3 +93,15 @@ localAPIEndpoint:
   advertiseAddress: {{ .nodeIP | quote }}
 {{- end }}
   bindPort: 6443
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: JoinConfiguration
+discovery:
+  file:
+    kubeConfigPath: "/etc/kubernetes/admin.conf"
+controlPlane:
+  localAPIEndpoint:
+{{- if hasKey . "nodeIP" }}
+    advertiseAddress: {{ .nodeIP | quote }}
+{{- end }}
+    bindPort: 6443

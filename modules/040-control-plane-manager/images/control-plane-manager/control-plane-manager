@@ -231,6 +231,7 @@ function converge_component() {
     kubeadm_cmd="kubeadm init phase control-plane ${component#kube-} --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
   else
     kubeadm_cmd="kubeadm init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+    kubeadm_etcd_join_cmd="kubeadm -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
   fi
 
   echo "Converge $component"
@@ -243,10 +244,6 @@ function converge_component() {
   # Generate tmp manifest and calculate checksum
   $kubeadm_cmd --rootfs "$TMP_ROOTFS_DIR" > /dev/null
   manifest_data=$(<"$tmp_manifest")
-  if [[ "$component" != "etcd" ]] ; then
-    # Ignore --initial-cluster and --initial-cluster-state for etcd
-    manifest_data=$(grep -v '\-\-initial-cluster' "$tmp_manifest")
-  fi
   used_files="$(grep -Po '(?<==)/etc/kubernetes.*' "$tmp_manifest" | uniq | sed "s#^#$ROOTFS_DIR#")"
   # shellcheck disable=SC2086
   checksum="$(echo "$manifest_data" "$(sha256sum $used_files | sort)" | sha256sum | cut -d' ' -f 1)"
@@ -266,21 +263,11 @@ END
 
     # Generate new manifest
     backup_file_or_folder "$manifest"
-    if [[ "$component" == "etcd" ]] ; then
-      # Join etcd, if there is no /var/lib/etcd/member/snap/db
-      if [[ ! -f $ROOTFS_DIR/var/lib/etcd/member/snap/db ]] ; then
-        if [[ -z "$ETCD_SERVERS" ]] ; then
-          echo "    * Fatal error: No etcd servers to join to"
-          exit 1
-        fi
-        ETCDCTL_API=3 etcdctl member add "${HOSTNAME}" --peer-urls="https://${MY_IP}:2380" \
-          --endpoints "$ETCD_SERVERS" \
-          --cacert $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.crt \
-          --cert $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.crt \
-          --key $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.key > /dev/null
-      fi
+    if [[ "$component" == "etcd" && ! -d /var/lib/etcd/member ]]; then
+      $kubeadm_etcd_join_cmd --rootfs "$ROOTFS_DIR" | sed 's/^/    /'
+    else
+      $kubeadm_cmd --rootfs "$ROOTFS_DIR" | sed 's/^/    /'
     fi
-    $kubeadm_cmd --rootfs "$ROOTFS_DIR" | sed 's/^/    /'
 
     # Remove checksum patch
     rm "$checksum_patch"

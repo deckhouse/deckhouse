@@ -114,10 +114,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-{{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
-        - name: ETCD_SERVERS
-          value: {{ .Values.controlPlaneManager.internal.etcdServers | join "," | quote }}
-{{- end }}
         readinessProbe:
           exec:
             command:
