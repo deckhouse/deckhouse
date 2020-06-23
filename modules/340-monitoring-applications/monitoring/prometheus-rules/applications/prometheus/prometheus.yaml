@@ -107,6 +107,12 @@
 
   - alert: PrometheusRuleEvaluationFailing
     expr: increase(prometheus_rule_evaluation_failures_total[__SCRAPE_INTERVAL_X_4__]) > 0
+
+    # Prometheus restart sometimes triggers this alert. Because of the asynchronous nature
+    # of metrics in prometheus some of the metrics from extended monitoring are not present
+    # at start time so rules can't be evaluated.
+    for: 15m
+
     labels:
       severity_level: "6"
     annotations:
