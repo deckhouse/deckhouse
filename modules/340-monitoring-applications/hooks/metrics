@@ -16,7 +16,7 @@ function __config__() {
         matchExpressions:
         - key: prometheus-target
           operator: Exists
-      jqFilter: "dummy"
+      jqFilter: .metadata.name
 EOF
 }
 

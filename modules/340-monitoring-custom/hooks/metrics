@@ -16,7 +16,7 @@ function __config__() {
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
-      jqFilter: "dummy"
+      jqFilter: .metadata.name
     - name: pod_monitors
       apiVersion: monitoring.coreos.com/v1
       kind: PodMonitor
@@ -48,7 +48,7 @@ function __config__() {
         matchExpressions:
         - key: prometheus-custom-target
           operator: Exists
-      jqFilter: "dummy"
+      jqFilter: .metadata.name
 EOF
 }
 
