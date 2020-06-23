@@ -5,8 +5,8 @@ go 1.12
 require (
 	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
 	github.com/aws/aws-sdk-go v1.15.90
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20200617114509-b445ffabb9b0 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.10.0.20200617112850-e76e65dd8165 // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20200617114509-b445ffabb9b0 // branch: fix_apply_jq_filter
+	github.com/flant/shell-operator v1.0.0-beta.10.0.20200623151349-a47851ccb595 // branch: fix_apply_jq_filter
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.1.0
