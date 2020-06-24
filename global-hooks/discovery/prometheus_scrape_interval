@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: prometheus_scrape_interval
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: ConfigMap
       namespace:

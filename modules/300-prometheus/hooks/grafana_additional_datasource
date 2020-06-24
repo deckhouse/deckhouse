@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: grafana_additional_datasources
       includeSnapshotsFrom: ["grafana_additional_datasources"]
+      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1alpha1
       queue: /modules/$(module::name::kebab_case)/grafana_additional_datasource
       kind: GrafanaAdditionalDatasource

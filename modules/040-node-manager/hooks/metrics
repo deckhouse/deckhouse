@@ -12,6 +12,7 @@ function __config__() {
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment
       includeSnapshotsFrom: ["machine_deployments"]
+      keepFullObjectsInMemory: false
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
@@ -35,6 +36,7 @@ function __config__() {
         }
     - name: nodes
       group: node_status
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/metrics
       waitForSynchronization: false
       apiVersion: v1
@@ -57,6 +59,7 @@ function __config__() {
         }
     - name: ngs
       group: node_status
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/metrics
       waitForSynchronization: false
       apiVersion: deckhouse.io/v1alpha1
@@ -68,6 +71,7 @@ function __config__() {
         }
     - name: configuration_checksums_secret
       group: node_status
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/metrics
       waitForSynchronization: false
       apiVersion: v1

@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: nodes
       group: main
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/update_selector
       executeHookOnEvent: []
       apiVersion: v1

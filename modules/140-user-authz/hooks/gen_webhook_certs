@@ -8,6 +8,7 @@ function __config__() {
     beforeHelm: 5
     kubernetes:
     - name: webhook-secret
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       executeHookOnEvent: [Added, Modified]

@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: control_plane_versions
       group: versions
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Pod
@@ -29,6 +30,7 @@ function __config__() {
 
     - name: node_versions
       group: versions
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Node
@@ -36,6 +38,7 @@ function __config__() {
 
     - name: max_used_control_plane_version
       group: versions
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Secret

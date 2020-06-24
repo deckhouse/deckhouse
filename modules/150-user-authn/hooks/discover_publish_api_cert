@@ -7,6 +7,7 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: secret
+     keepFullObjectsInMemory: false
      apiVersion: v1
      kind: Secret
      executeHookOnEvent: ["Added", "Modified"]

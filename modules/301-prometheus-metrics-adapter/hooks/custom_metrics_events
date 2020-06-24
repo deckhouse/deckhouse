@@ -7,54 +7,67 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: podmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: PodMetric
     - name: deploymentmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: DeploymentMetric
     - name: statefulsetmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: StatefulSetMetric
     - name: daemonsetmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: DaemonSetMetric
     - name: ingressmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: IngressMetric
     - name: servicemetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ServiceMetric
     - name: namespacemetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: NamespaceMetric
     - name: clusterpodmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterPodMetric
     - name: clusterdeploymentmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterDeploymentMetric
     - name: clusterstatefulsetmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterStatefulSetMetric
     - name: clusterdaemonsetmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterDaemonSetMetric
     - name: clusteringressmetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterIngressMetric
     - name: clusterservicemetric
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/custom_metrics
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterServiceMetric

@@ -10,6 +10,7 @@ function __config__() {
     - name: secrets
       queue: /modules/$(module::name::kebab_case)
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       namespace:

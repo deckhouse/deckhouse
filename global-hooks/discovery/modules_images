@@ -8,6 +8,7 @@ function __config__() {
     onStartup: 10
     kubernetes:
     - name: d8_deployment
+      keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
       executeHookOnEvent: ["Added", "Modified"]
@@ -18,6 +19,7 @@ function __config__() {
         matchNames: [deckhouse]
       jqFilter: '.spec.template.spec.containers[0].image | split(":")[0] | sub("/dev$"; "")'
     - name: d8_registry_secret
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       namespace:

@@ -11,6 +11,7 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: openstackinstanceclasses
+     keepFullObjectsInMemory: false
      includeSnapshotsFrom: [openstackinstanceclasses]
      executeHookOnEvent: []
      apiVersion: deckhouse.io/v1alpha1

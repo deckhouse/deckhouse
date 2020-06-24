@@ -8,6 +8,7 @@ function __config__() {
     beforeHelm: 1
     kubernetes:
     - name: pvc
+      keepFullObjectsInMemory: true
       group: main
       apiVersion: v1
       kind: PersistentVolumeClaim
@@ -19,6 +20,7 @@ function __config__() {
           app: prometheus
       jqFilter: .spec.storageClassName
     - name: default_sc
+      keepFullObjectsInMemory: true
       group: main
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
@@ -27,6 +29,7 @@ function __config__() {
         (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
     # pvc_modified
     - name: pvc_modified
+      keepFullObjectsInMemory: true
       group: pvc_modified
       executeHookOnEvent: ["Modified"]
       executeHookOnSynchronization: false
@@ -39,6 +42,7 @@ function __config__() {
         matchLabels:
           app: prometheus
     - name: pods
+      keepFullObjectsInMemory: true
       group: pvc_modified
       executeHookOnEvent: []
       executeHookOnSynchronization: false
@@ -54,6 +58,7 @@ function __config__() {
     # pvc_deleted
     - name: pvc_deleted
       group: pvc_deleted
+      keepFullObjectsInMemory: true
       executeHookOnEvent: ["Deleted"]
       executeHookOnSynchronization: false
       apiVersion: v1
@@ -66,6 +71,7 @@ function __config__() {
           app: prometheus
     - name: pods
       group: pvc_deleted
+      keepFullObjectsInMemory: true
       executeHookOnEvent: []
       executeHookOnSynchronization: false
       apiVersion: v1

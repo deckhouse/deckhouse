@@ -27,6 +27,7 @@ function __config__() {
     - name: nodes
       queue: /modules/$(module::name::kebab_case)/handle_node_templates
       group: main
+      keepFullObjectsInMemory: true
       executeHookOnEvent: ["Added", "Modified"]
       waitForSynchronization: false
       apiVersion: v1

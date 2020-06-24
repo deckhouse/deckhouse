@@ -55,6 +55,7 @@ function __config__() {
       jqFilter: (.data // {}) | [to_entries[] | (.value |= (. | @base64d))] | from_entries
     - name: mds
       group: main
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/update_ngs_statuses
       executeHookOnEvent: ["Added", "Modified"]
       waitForSynchronization: false

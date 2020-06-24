@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: ds
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/safe-daemonset-update
       apiVersion: apps/v1
       kind: DaemonSet

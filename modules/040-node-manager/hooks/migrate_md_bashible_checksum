@@ -9,6 +9,7 @@ function __config__() {
     kubernetes:
     - name: mds
       group: main
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       apiVersion: machine.sapcloud.io/v1alpha1
       kind: MachineDeployment

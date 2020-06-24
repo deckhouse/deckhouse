@@ -9,6 +9,7 @@ function __config__() {
     - name: kube_api_ep
       queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: [kube_api_ep]
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Endpoints
       namespace:
