@@ -122,6 +122,27 @@ Matrix Tests:
   tags:
     - werf-distributed
 
+Hooks Configuration Tests:
+  stage: testing
+  script:
+    - pwd
+    - export KUBECONFIG=$(mktemp -d)/kubeconfig
+    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests
+        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  tags:
+    - werf-distributed
+
 No Cyrillic Validation:
   stage: testing
   script:

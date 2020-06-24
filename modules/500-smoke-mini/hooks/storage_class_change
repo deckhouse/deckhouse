@@ -10,6 +10,7 @@ function __config__() {
     # main
     - name: pvc
       group: main
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -25,6 +26,7 @@ function __config__() {
         }
     - name: statefulsets
       group: main
+      keepFullObjectsInMemory: true
       apiVersion: apps/v1
       kind: StatefulSet
       namespace:
@@ -38,6 +40,7 @@ function __config__() {
       jqFilter: .metadata.name
     - name: default_sc
       group: main
+      keepFullObjectsInMemory: true
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
@@ -45,6 +48,7 @@ function __config__() {
         (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
     # pvc_modified
     - name: pvc_modified
+      keepFullObjectsInMemory: true
       executeHookOnEvent: ["Modified"]
       executeHookOnSynchronization: false
       group: pvc_modified
@@ -62,6 +66,7 @@ function __config__() {
           "isDeletionTimestamp": (if .metadata | has("deletionTimestamp") then true else false end)
         }
     - name: pods
+      keepFullObjectsInMemory: true
       group: pvc_modified
       apiVersion: v1
       kind: Pod
@@ -80,6 +85,7 @@ function __config__() {
         }
     # pvc_deleted
     - name: pvc_deleted
+      keepFullObjectsInMemory: true
       executeHookOnEvent: ["Deleted"]
       executeHookOnSynchronization: false
       group: pvc_deleted
@@ -98,6 +104,7 @@ function __config__() {
         }
     - name: pods
       group: pvc_deleted
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: Pod
       namespace:

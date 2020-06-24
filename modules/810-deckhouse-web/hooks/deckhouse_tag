@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: d8_deployment
+      keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
       executeHookOnEvent: ["Added", "Modified"]

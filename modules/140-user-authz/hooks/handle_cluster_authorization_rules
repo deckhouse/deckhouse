@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: ccr
       includeSnapshotsFrom: ["ccr"]
+      keepFullObjectsInMemory: true
       kind: ClusterRole
       apiVersion: 'rbac.authorization.k8s.io/v1'
       jqFilter: |
@@ -16,6 +17,7 @@ function __config__() {
         ) | .metadata.annotations."user-authz.deckhouse.io/access-level" as \$accessLevel | ((\$accessLevel[0:1] | ascii_downcase) + \$accessLevel[1:])
     - name: car
       includeSnapshotsFrom: ["car"]
+      keepFullObjectsInMemory: true
       apiVersion: deckhouse.io/v1alpha1
       kind: ClusterAuthorizationRule
 EOF

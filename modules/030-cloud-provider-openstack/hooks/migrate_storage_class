@@ -13,6 +13,7 @@ function __config__() {
     kubernetes:
     - name: storageclasses
       includeSnapshotsFrom: [storageclasses]
+      keepFullObjectsInMemory: false
       apiVersion: storage.k8s.io/v1
       kind: StorageClass
       labelSelector:

@@ -12,6 +12,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: kube_api_ep
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Endpoints
       namespace:

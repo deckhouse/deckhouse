@@ -8,12 +8,14 @@ function __config__() {
     kubernetes:
     - name: node_internal_ips
       group: node_internal_ips
+      keepFullObjectsInMemory: false
       kind: Node
       apiVersion: v1
       jqFilter: '[.status.addresses[]? | select (.type == "InternalIP") | .address]'
 
     - name: pod_subnet_by_component
       group: pod_subnet
+      keepFullObjectsInMemory: false
       includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
@@ -31,6 +33,7 @@ function __config__() {
 
     - name: pod_subnet_by_k8s_app
       group: pod_subnet
+      keepFullObjectsInMemory: false
       includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
@@ -47,6 +50,7 @@ function __config__() {
 
     - name: service_subnet_by_component
       group: service_subnet
+      keepFullObjectsInMemory: false
       includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
@@ -64,6 +68,7 @@ function __config__() {
 
     - name: service_subnet_by_k8s_app
       group: service_subnet
+      keepFullObjectsInMemory: false
       includeSnapshotsFrom: ["cluster_configuration"]
       apiVersion: v1
       kind: Pod
@@ -79,6 +84,7 @@ function __config__() {
         match( "(^|\\\\s+)--service-cluster-ip-range=([0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\/[0-9]+)(\\\\s+|$)") | .captures[1].string
 
     - name: cluster_configuration
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       executeHookOnEvent: []

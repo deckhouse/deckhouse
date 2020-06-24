@@ -9,6 +9,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: kube_dns_deployment
+      keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
       namespace:

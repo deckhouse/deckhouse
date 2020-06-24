@@ -9,6 +9,7 @@ function __config__() {
     kubernetes:
     - name: pvc_old
       group: main
+      keepFullObjectsInMemory: true
       executeHookOnEvent: []
       executeHookOnSynchronization: false
       apiVersion: v1
@@ -21,6 +22,7 @@ function __config__() {
           app: openvpn
     - name: pvc_new
       group: main
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -33,6 +35,7 @@ function __config__() {
       executeHookOnSynchronization: false
     - name: openvpn_external
       group: main
+      keepFullObjectsInMemory: true
       executeHookOnEvent: []
       executeHookOnSynchronization: false
       apiVersion: v1
@@ -44,6 +47,7 @@ function __config__() {
         matchNames: [openvpn-external]
     - name: etcd_pods
       group: main
+      keepFullObjectsInMemory: true
       executeHookOnSynchronization: false
       executeHookOnEvent: []
       apiVersion: v1
@@ -64,6 +68,7 @@ function __config__() {
         }
     - name: etcd_pods_kops
       group: main
+      keepFullObjectsInMemory: true
       executeHookOnSynchronization: false
       executeHookOnEvent: []
       apiVersion: v1

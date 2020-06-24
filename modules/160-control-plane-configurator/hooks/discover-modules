@@ -9,6 +9,7 @@ function __config__() {
     kubernetes:
     - name: cm
       queue: /modules/$(module::name::kebab_case)
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: ConfigMap
       namespace:

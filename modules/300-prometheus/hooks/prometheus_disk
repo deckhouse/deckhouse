@@ -24,14 +24,17 @@ function __config__() {
           app: prometheus
       jqFilter: ".spec.resources.requests.storage"
       includeSnapshotsFrom: ["pvc", "pods"]
+      keepFullObjectsInMemory: true
       queue: /modules/$(module::name::kebab_case)/prometheus_disk
     - name: sc
+      keepFullObjectsInMemory: true
       apiVersion: storage.k8s.io/v1
       kind: StorageClass
       jqFilter: ".allowVolumeExpansion"
       executeHookOnEvent: []
       executeHookOnSynchronization: false
     - name: pods
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: Pod
       namespace:

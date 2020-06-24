@@ -10,6 +10,7 @@ function __config__() {
     # main
     - name: pvc
       group: main
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -21,6 +22,7 @@ function __config__() {
       jqFilter: .spec.storageClassName
     - name: default_sc
       group: main
+      keepFullObjectsInMemory: true
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |
@@ -28,6 +30,7 @@ function __config__() {
         (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
     # pvc_modified
     - name: pvc_modified
+      keepFullObjectsInMemory: true
       executeHookOnEvent: ["Modified"]
       executeHookOnSynchronization: false
       group: pvc_modified
@@ -41,6 +44,7 @@ function __config__() {
           app: openvpn
     - name: pods
       group: pvc_modified
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: Pod
       namespace:
@@ -54,6 +58,7 @@ function __config__() {
       executeHookOnSynchronization: false
     # pvc_deleted
     - name: pvc_deleted
+      keepFullObjectsInMemory: true
       executeHookOnEvent: ["Deleted"]
       executeHookOnSynchronization: false
       group: pvc_deleted
@@ -67,6 +72,7 @@ function __config__() {
           app: openvpn
     - name: pods
       group: pvc_deleted
+      keepFullObjectsInMemory: true
       apiVersion: v1
       kind: Pod
       namespace:

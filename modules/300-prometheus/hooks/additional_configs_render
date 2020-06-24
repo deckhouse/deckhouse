@@ -8,6 +8,7 @@ function __config__() {
     afterHelm: 10
     kubernetes:
     - name: secrets
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)
       apiVersion: v1
       kind: Secret

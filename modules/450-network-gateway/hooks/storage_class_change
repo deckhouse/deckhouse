@@ -9,6 +9,7 @@ function __config__() {
     kubernetes:
     - name: pvc
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: PersistentVolumeClaim
       namespace:
@@ -23,6 +24,7 @@ function __config__() {
         }
     - name: default_sc
       group: main
+      keepFullObjectsInMemory: false
       apiVersion: storage.k8s.io/v1
       kind: Storageclass
       jqFilter: |

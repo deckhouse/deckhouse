@@ -9,6 +9,7 @@ function __config__() {
     kubernetes:
     - name: ngs
       group: main
+      keepFullObjectsInMemory: true
       executeHookOnEvent: []
       executeHookOnSynchronization: false
       apiVersion: deckhouse.io/v1alpha1

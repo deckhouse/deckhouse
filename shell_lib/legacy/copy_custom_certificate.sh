@@ -6,6 +6,7 @@ function legacy::common_hooks::https::copy_custom_certificate::config() {
     afterHelm: 10
     kubernetes:
     - name: secrets
+      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
       watchEvent: [Modified]
@@ -19,6 +20,7 @@ function legacy::common_hooks::https::copy_custom_certificate::config() {
       namespace="$1"
       echo \
    "- name: namespaces
+      keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/copy_custom_certificate
       group: main
       apiVersion: v1
