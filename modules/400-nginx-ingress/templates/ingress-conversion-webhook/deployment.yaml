@@ -42,9 +42,13 @@ spec:
             tcpSocket:
               port: 8080
             initialDelaySeconds: 5
+            failureThreshold: 2
+            periodSeconds: 1
           livenessProbe:
             tcpSocket:
               port: 8080
+            periodSeconds: 1
+            failureThreshold: 3
           resources:
             requests:
               memory: 20Mi
