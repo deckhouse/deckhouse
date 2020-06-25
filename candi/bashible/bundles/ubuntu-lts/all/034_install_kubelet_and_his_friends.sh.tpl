@@ -1,27 +1,18 @@
-extra_packages=""
-
 {{ if eq .kubernetesVersion "1.14" }}
 kubernetes_version="1.14.10-00"
-extra_packages="kubernetes-cni=0.7.5-00" # kubernetes-cni package is obsoleted by package kubelet since versions 1.16.11-0, 1.17.7-0, 1.18.4-0
-
 {{ else if eq .kubernetesVersion "1.15" }}
 kubernetes_version="1.15.12-00"
-extra_packages="kubernetes-cni=0.7.5-00" # kubernetes-cni package is obsoleted by package kubelet since versions 1.16.11-0, 1.17.7-0, 1.18.4-0
-
 {{ else if eq .kubernetesVersion "1.16" }}
-kubernetes_version="1.16.11-00"
-
+kubernetes_version="1.16.11-01"
 {{ else if eq .kubernetesVersion "1.17" }}
-kubernetes_version="1.17.7-00"
-
+kubernetes_version="1.17.7-01"
 {{ else if eq .kubernetesVersion "1.18" }}
-kubernetes_version="1.18.4-00"
-
+kubernetes_version="1.18.4-01"
 {{ else }}
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}
 
-bb-apt-install "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" $extra_packages
+bb-apt-install "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" kubernetes-cni=0.8.6-00
 
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
   # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations
