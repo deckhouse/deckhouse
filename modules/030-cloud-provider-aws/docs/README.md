@@ -26,6 +26,8 @@ title: "Модуль cloud-provider-aws"
 
 > **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `AWSInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
 
+Для работы machine-controller-manager необходим пользователь с правами: `AmazonEC2FullAccess` и `AmazonVPCFullAccess`.
+
 * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `region` — имя AWS региона, в котором будут заказываться instances.
