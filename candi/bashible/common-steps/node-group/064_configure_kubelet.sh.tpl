@@ -95,4 +95,6 @@ runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
 volumeStatsAggPeriod: 1m0s
+healthzBindAddress: 127.0.0.1
+healthzPort: 10248
 EOF
