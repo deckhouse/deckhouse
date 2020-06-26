@@ -1,4 +1,8 @@
 if bb-is-ubuntu-version? 16.04 ; then
+
+  # bugfix (migration)
+  rm -f /etc/apt/sources.list.d/\[trusted\=yes\].list
+
   if bb-apt-repo? https://apt.flant.ru/common ; then
     exit 0
   fi
@@ -58,6 +62,6 @@ viKjQtPnS8EFyC6zArLgjodpzN2EPQVKp2I=
 -----END PGP PUBLIC KEY BLOCK-----
 END
 
-  bb-apt-repo-add deb [trusted=yes] https://apt.flant.ru/common xenial
-  bb-apt-repo-add deb-src [trusted=yes] https://apt.flant.ru/common xenial
+  bb-apt-repo-add deb https://apt.flant.ru/common xenial main
+  bb-apt-repo-add deb-src https://apt.flant.ru/common xenial main
 fi
