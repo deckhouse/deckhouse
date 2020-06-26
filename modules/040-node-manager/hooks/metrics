@@ -65,9 +65,26 @@ function __config__() {
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
+        .spec as \$original_spec |
         {
           "name": .metadata.name,
-          "allowDisruptions": (if .spec | has("allowDisruptions") then .spec.allowDisruptions else true end)
+          "disruptions": {
+            "approvalMode": (
+              if \$original_spec.disruptions | has("approvalMode") then
+                \$original_spec.disruptions.approvalMode
+              else
+                if \$original_spec | has("allowDisruptions") then
+                  if \$original_spec.allowDisruptions == true then
+                    "Automatic"
+                  else
+                    "Manual"
+                  end
+                else
+                  "Automatic"
+                end
+              end
+            )
+          }
         }
     - name: configuration_checksums_secret
       group: node_status
@@ -112,15 +129,15 @@ function __on_group::node_status() {
        --argjson node "$node_data" \
        --argjson ng "$ng_data" \
        --arg desired_configuration_checksum "$desired_configuration_checksum" '
-        if   $node.isWaitingForApproval                                                        then "WaitingForApproval"
-        elif $node.isApproved and $node.isDisruptionRequired and $node.isDraining              then "DrainingForDisruption"
-        elif $node.isApproved and $node.isDisruptionRequired and $ng.allowDisruptions == true  then "WaitingForDisruptionApproval"
-        elif $node.isApproved and $node.isDisruptionRequired and $ng.allowDisruptions == false then "WaitingForManualDisruptionApproval"
-        elif $node.isApproved and $node.isDisruptionApproved                                   then "DisruptionApproved"
-        elif $node.isApproved                                                                  then "Approved"
-        elif $node.configurationChecksum != $desired_configuration_checksum                    then "ToBeUpdated"
-        elif $node.configurationChecksum == $desired_configuration_checksum                    then "UpToDate"
-        else                                                                                        "Unknown"
+        if   $node.isWaitingForApproval                                                                       then "WaitingForApproval"
+        elif $node.isApproved and $node.isDisruptionRequired and $node.isDraining                             then "DrainingForDisruption"
+        elif $node.isApproved and $node.isDisruptionRequired and $ng.disruptions.approvalMode == "Automatic"  then "WaitingForDisruptionApproval"
+        elif $node.isApproved and $node.isDisruptionRequired and $ng.disruptions.approvalMode == "Manual"     then "WaitingForManualDisruptionApproval"
+        elif $node.isApproved and $node.isDisruptionApproved                                                  then "DisruptionApproved"
+        elif $node.isApproved                                                                                 then "Approved"
+        elif $node.configurationChecksum != $desired_configuration_checksum                                   then "ToBeUpdated"
+        elif $node.configurationChecksum == $desired_configuration_checksum                                   then "UpToDate"
+        else                                                                                                       "Unknown"
         end
     ')"
 

@@ -103,8 +103,10 @@ func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string
 			"name": "master",
 		},
 		"spec": map[string]interface{}{
-			"nodeType":         nodeType,
-			"allowDisruptions": false,
+			"nodeType": nodeType,
+			"disruptions": map[string]interface{}{
+				"approvalMode": "Manual",
+			},
 			"nodeTemplate": map[string]interface{}{
 				"labels": map[string]interface{}{
 					"node-role.kubernetes.io/master": "",

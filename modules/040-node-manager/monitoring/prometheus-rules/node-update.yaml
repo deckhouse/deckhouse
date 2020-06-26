@@ -148,11 +148,11 @@
       plk_grouped_by__main: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse"
       summary: Ноде {{ $labels.node }} требуется разрешение на disruption для продолжение обновления
       description: |
-        Пришло обновление для нод и нода {{ $labels.node }} из группы {{ $labels.node_group }} об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на шаг вызывающий возможный простой. Так как в настройках группы {{ $labels.node_group }} не включен `allowDisruptions`, необходимо вручную выдать разрешение.
+        Пришло обновление для нод и нода {{ $labels.node }} из группы {{ $labels.node_group }} об этом обновлении узнала, запросила и получила разрешение, приступила к обновлению и наткнулась на шаг вызывающий возможный простой. Так как в настройках группы (`disruptions.approvalMode`) выбран режим `Manual`, необходимо вручную выдать разрешение
 
         Если нода готова к опасным обновлениям (например, дрейнута), дайте ей разрешение с помощью аннотации `update.node.deckhouse.io/disruption-approved=`.
 
-        **Внимание!!!** Нода не будет автоматически drain'ится (так-как у вас стоит "ручной" режим: `allowDisruptions: false`).
+        **Внимание!!!** Нода не будет автоматически drain'ится (так-как у вас стоит "ручной" режим: `disruptions.approvalMode: Manual`).
         * Чтобы сдрейнить ноду и разрешить ей обновление можно выполнить:
             ```
             kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&
@@ -164,7 +164,7 @@
         kubectl uncordon {{ $labels.node }}
         ```
 
-        Учтите, что если в NodeGroup больше одной ноды, то так как обновления происходят по одному узлу, вам нужно будет поочередно повторить эту операцию для каждого узла группы. Возможно будет проще временно включить `allowDisruptions`.
+        Учтите, что если в NodeGroup больше одной ноды, то так как обновления происходят по одному узлу, вам нужно будет поочередно повторить эту операцию для каждого узла группы. Возможно будет проще временно переключиться в автоматический режим `disruptions.approvalMode: Automatic`.
 
   - alert: ClusterHasNodesRequiringDisruptionApprovalForUpdate
     expr: count(max by (node_group) (ALERTS{alertname=~"NodeRequiresDisruptionApprovalForUpdate", alertstate="firing"})) > 0

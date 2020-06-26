@@ -112,7 +112,7 @@ metadata:
   annotations:
     node.deckhouse.io/configuration-checksum: xyz # not desired
     update.node.deckhouse.io/approved: ""
-    update.node.deckhouse.io/disruption-required: "" # status should be "WaitingForDisruptionApproval" due to NG.allowDisruptions = true
+    update.node.deckhouse.io/disruption-required: "" # status should be "WaitingForDisruptionApproval" due to NG.disruptions.approvalMode = "Automatic"
 ---
 apiVersion: v1
 kind: Node
@@ -123,7 +123,7 @@ metadata:
   annotations:
     node.deckhouse.io/configuration-checksum: xyz # not desired
     update.node.deckhouse.io/approved: ""
-    update.node.deckhouse.io/disruption-required: "" # status should be "WaitingForManualDisruptionApproval" due to NG.allowDisruptions = false
+    update.node.deckhouse.io/disruption-required: "" # status should be "WaitingForManualDisruptionApproval" due to NG.disruptions.approvalMode = "Manual"
 ---
 apiVersion: v1
 kind: Node
@@ -174,7 +174,8 @@ kind: NodeGroup
 metadata:
   name: ng1
 spec:
-  allowDisruptions: false
+  disruptions:
+    approvalMode: Manual
 `
 
 		stateConfigurationChecksumsSecret = `
