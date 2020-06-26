@@ -120,7 +120,7 @@ function _set_ng_error_status() {
   else
     status_patch="$(jq -n '{"error": null}')"
   fi
-  kubernetes::status::patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${status_patch}"
+  kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${status_patch}"
 }
 
 function __main__() {

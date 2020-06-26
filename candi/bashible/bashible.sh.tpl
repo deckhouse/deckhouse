@@ -74,7 +74,7 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]]; then
+  if [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     exit 0
   fi

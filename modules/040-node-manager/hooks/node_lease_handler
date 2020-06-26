@@ -1,0 +1,61 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node_leases
+      queue: /modules/$(module::name::kebab_case)/node_lease_handler
+      executeHookOnEvent: ["Deleted"]
+      includeSnapshotsFrom: ["nodes"]
+      executeHookOnSynchronization: false
+      keepFullObjectsInMemory: false
+      apiVersion: coordination.k8s.io/v1
+      kind: Lease
+      jqFilter: |
+        {
+          "name": .metadata.name
+        }
+    - name: nodes
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "readyConditionKey": (.status.conditions | to_entries[] | select(.value.type == "Ready") | .key)
+        }
+EOF
+}
+
+function __main__() {
+  if node_to_disable_data="$(
+    context::jq --arg lease_name "$(context::get filterResult.name)" -ec '.snapshots.nodes[] | select(.filterResult.name == $lease_name) | .filterResult'
+  )"
+  then
+    node_name="$(jq -r '.name' <<< "$node_to_disable_data")"
+    ready_condition_key="$(jq -r '.readyConditionKey' <<< "$node_to_disable_data")"
+    patch="$(jq -ns --arg ready_condition_key "${ready_condition_key}" --arg current_time "`date -u +'%Y-%m-%dT%H:%M:%SZ'`" '
+[
+  {
+    "op": "replace",
+    "path": ("/status/conditions/" + $ready_condition_key),
+    "value": {
+      "type": "Ready",
+      "status": "False",
+      "lastHeartbeatTime": $current_time,
+      "lastTransitionTime": $current_time,
+      "reason": "KubeletReady",
+      "message": "Status NotReady was set by node_lease_handler hook of node-manager Deckhouse module during bashible reboot step (candi/bashible/common-steps/all/099_reboot.sh)"
+    }
+  }
+]')"
+    kubernetes::status::json_patch "" v1 nodes "${node_name}" "${patch}"
+  fi
+}
+
+hook::run "$@"
