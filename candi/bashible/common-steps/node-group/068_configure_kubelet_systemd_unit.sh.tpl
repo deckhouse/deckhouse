@@ -22,8 +22,9 @@ function _enable_kubelet_service() {
 # Generate kubelet unit
 bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 [Service]
+Type=forking
 ExecStart=
-ExecStart=/usr/bin/kubelet \\
+ExecStart=/usr/local/bin/d8-kubelet-forker /usr/bin/kubelet \\
 {{- if not (eq .nodeGroup.nodeType "Static") }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
 {{- else }}
