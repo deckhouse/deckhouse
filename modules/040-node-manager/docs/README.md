@@ -211,7 +211,8 @@ spec:
   chaos:
     mode: DrainAndReboot
     period: 24h
-  allowDisruptions: false
+  disruptions:
+    approvalMode: Manual
 ```
 
 ## Как мне перекатить машины с новой конфигурацией?
