@@ -38,7 +38,7 @@ EOF
 function __main__() {
   if ! values::has --config controlPlaneManager.apiserver.authnz.webhookURL && ! values::has --config controlPlaneManager.apiserver.authz.webhookCA; then
     # nothing was configured by hand
-    if cm_data="$(context::get --required snapshots.authz-cm.0.filterResult)"; then
+    if cm_data="$(context::get --required snapshots.authz-cm.0.filterResult 2>/dev/null)"; then
       values::set controlPlaneManager.apiserver.authz.webhookURL "$(jq -rn --argjson data "${cm_data}" '$data | .url')"
       values::set controlPlaneManager.apiserver.authz.webhookCA  "$(jq -rn --argjson data "${cm_data}" '$data | .ca')"
     else
@@ -49,7 +49,7 @@ function __main__() {
 
   if ! values::has --config controlPlaneManager.apiserver.authn.oidcIssuerURL && ! values::has --config controlPlaneManager.apiserver.authnn.oidcCA; then
     # nothing was configured by hand
-    if cm_data="$(context::get --required snapshots.authn-cm.0.filterResult)"; then
+    if cm_data="$(context::get --required snapshots.authn-cm.0.filterResult 2>/dev/null)"; then
       values::set controlPlaneManager.apiserver.authn.oidcIssuerURL "$(jq -rn --argjson data "${cm_data}" '$data | .oidcIssuerURL')"
       if ca=$(jq -ren --argjson data "${cm_data}" '$data | .oidcCA'); then
         values::set controlPlaneManager.apiserver.authn.oidcCA "${ca}"
