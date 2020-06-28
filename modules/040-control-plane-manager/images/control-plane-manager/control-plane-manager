@@ -312,6 +312,28 @@ END
   echo
 }
 
+etcd_manifest_path="/etc/kubernetes/manifests/etcd.yaml"
+if [ -f "${etcd_manifest_path}" ] ; then
+  etcd_advertise_address="$(grep -Po '(?<=--advertise-client-urls=https://).+(?=:2379)' "$etcd_manifest_path")"
+  etcd_member_name="$(grep -Po '(?<=--name=).+' "$etcd_manifest_path")"
+  etcd_data_dir="$(grep -Po '(?<=--data-dir=).+' "$etcd_manifest_path")"
+
+  if [[ "$etcd_advertise_address" != "$MY_IP" ]]; then
+    echo "etcd is not supposed to change advertise address from \"$etcd_advertise_address\" to \"$MY_IP\". Verify Node's InternalIP"
+    exit 1
+  fi
+
+  if [[ "$etcd_member_name" != "$HOSTNAME" ]]; then
+    echo "etcd is not supposed to change its name from \"$etcd_member_name\" to \"$HOSTNAME\". Verify Node's hostname."
+    exit 1
+  fi
+
+  if [[ "$etcd_data_dir" != "/var/lib/etcd" ]]; then
+    echo "etcd is not supposed to change data-dir from \"$etcd_data_dir\" to \"/var/lib/etcd\". Verify current \"--data-dir\"."
+    exit 1
+  fi
+fi
+
 # Generate configuration for kubeadm
 mkdir -p $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm
 if [[ -z "$MY_IP" ]] ; then
