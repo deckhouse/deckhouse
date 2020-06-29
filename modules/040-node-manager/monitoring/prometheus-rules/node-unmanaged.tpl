@@ -11,9 +11,15 @@
         plk_protocol_version: "1"
         plk_incident_initial_status: "todo"
         plk_grouped_by__main: "D8ClusterHasUnmanagedNodes,tier=cluster,prometheus=deckhouse"
+    {{- if .Values.global.modules.publicDomainTemplate }}
         summary: Нода {{`{{ $labels.node }}`}} находится не под управлением модуля [node-manager]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/040-node-manager/).
         description: |
           Нода {{`{{ $labels.node }}`}} находистя не под управлением модуля [node-manager]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/040-node-manager/).
+    {{- else }}
+        summary: Нода {{`{{ $labels.node }}`}} находится не под управлением модуля `node-manager`.
+        description: |
+          Нода {{`{{ $labels.node }}`}} находится не под управлением модуля `node-manager`.
+    {{- end }}
 
           Что необходимо сделать:
           - Создать `NodeGroup` в которой будет жить нода или выбрать из существующих;
