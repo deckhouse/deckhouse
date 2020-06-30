@@ -27,7 +27,8 @@ apiServer:
 {{- if hasKey . "apiserver" }}
   {{- if hasKey .apiserver "etcdServers" }}
     {{- if .apiserver.etcdServers }}
-    etcd-servers: {{ .apiserver.etcdServers | join "," | quote }}
+    etcd-servers: >
+      https://127.0.0.1:2379,{{ .apiserver.etcdServers | join "," }}
     {{- end }}
   {{- end }}
   {{- if .apiserver.bindToWildcard }}
@@ -85,6 +86,17 @@ scheduler:
     bind-address: {{ .nodeIP | quote }}
 {{- end }}
     port: "0"
+{{- if hasKey . "etcd" }}
+  {{- if hasKey .etcd "existingCluster" }}
+    {{- if .etcd.existingCluster }}
+etcd:
+  local:
+    extraArgs:
+      # without this parameter, when restarting etcd, and /var/lib/etcd/member does not exist, it'll start with a new empty cluster
+      initial-cluster-state: existing
+    {{- end }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration

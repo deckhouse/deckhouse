@@ -10,24 +10,22 @@ function __config__() {
       group: reconcile_etcd_members
       queue: /modules/$(module::name::kebab_case)/reconcile_etcd_members
     kubernetes:
-    - name: kubeadm_etcd_pods_ips
+    - name: master_nodes
       group: reconcile_etcd_members
       keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/reconcile_etcd_members
       apiVersion: v1
-      kind: Pod
-      namespace:
-        nameSelector:
-          matchNames: [kube-system]
+      kind: Node
       labelSelector:
         matchLabels:
-          component: etcd
-          tier: control-plane
+          node-role.kubernetes.io/master: ""
       jqFilter: |
         {
-          client_url: (.metadata.annotations."kubeadm.kubernetes.io/etcd.advertise-client-urls" // ""),
-          advertise_url: (.spec.containers[0].command[] | select(contains("--advertise-client-urls=")) | split("=")[1] // ""),
-          member_name: (.spec.containers[0].command[] | select(contains("--name=")) | split("=")[1] // "")
+          ip: (.status.addresses // [] |
+          (map(select(.type == "InternalIP"))[0].address) as \$internal_ip |
+          (map(select(.type == "ExternalIP"))[0].address) as \$external_ip |
+          \$internal_ip // \$external_ip),
+          node_name: (.metadata.name)
         }
     - name: etcd_certs
       group: reconcile_etcd_members
@@ -86,43 +84,49 @@ function set_etcdctl_credentials() {
 }
 
 function __main__() {
-  if zero_pods="$(context::jq -r '[.snapshots.kubeadm_etcd_pods_ips[].filterResult] | length == 0')" >/dev/null; then
-    if [[ "$zero_pods" == "true" ]]; then
-      >&2 echo 'No etcd Pods found in snapshot, skipping iteration'
+  if zero_nodes="$(context::jq -r '[.snapshots.master_nodes[].filterResult] | length == 0')" >/dev/null; then
+    if [[ "$zero_nodes" == "true" ]]; then
+      >&2 echo 'No master Nodes found in snapshot, skipping iteration'
       return 0
     fi
   else
     return 1
   fi
 
-  members_json="$(context::jq -re '[.snapshots.kubeadm_etcd_pods_ips[].filterResult |
-                                      if .client_url == "" then .client_url = .advertise_url else . end |
-                                      if .member_name == "" then ("member_name should not be empty\n" | halt_error) else . end
-                                    ]')"
+  discovered_master_nodes="$(context::jq -re '[
+                                      .snapshots.master_nodes[].filterResult |
+                                      if .ip == "" then ("ip should not be empty\n" | halt_error) else . end |
+                                      if .node_name == "" then ("node_name should not be empty\n" | halt_error) else . end
+                                    ]
+                                  ')"
 
-  eps="$(jq -rn --argjson members_json "$members_json" '[$members_json | .[].client_url]')"
+  eps="$(jq -rn --argjson discovered_master_nodes "$discovered_master_nodes" '[$discovered_master_nodes | "https://" + .[].ip + ":2379"]')"
   values::set controlPlaneManager.internal.etcdServers "$eps"
 
   joined_eps="$(jq -rn --argjson eps "$eps" '$eps | join(",")')"
   set_etcdctl_credentials "$joined_eps"
 
-  existing_members="$(etcdctl member list)"
+  existing_members="$(etcdctl --insecure-skip-tls-verify=true member list)"
   existing_members_names="$(echo "$existing_members" | cut -d',' -f3 | sort)"
   existing_members_names="${existing_members_names//[[:blank:]]/}"
+
+  discovered_master_names="$(jq -rn --argjson discovered_master_nodes "$discovered_master_nodes" '$discovered_master_nodes | .[].node_name' | sort)"
   if external_members_names="$(values::jq -re '.controlPlaneManager.etcd.externalMembersNames[]' 2>/dev/null)"; then
-    existing_members_names="${existing_members_names}"$'\n'"${external_members_names}"
+    discovered_master_names="${discovered_master_names}"$'\n'"${external_members_names}"
   fi
 
-  names="$(jq -rn --argjson members_json "$members_json" '$members_json | .[].member_name')"
-  new_members="$(echo "$names" | sort)"
+  remove_list="$(comm -23 <(echo "$existing_members_names") <(echo "$discovered_master_names"))"
+  if [[ "$remove_list" == "$existing_members_names" ]]; then
+    >&2 echo "Attempting do delete every single member from etcd cluster. Exiting."
+    return 1
+  fi
 
-  remove_list="$(comm -23 <(echo "$existing_members_names") <(echo "$new_members"))"
   IFS=$'\n'
   for member in $remove_list; do
     unset IFS
     echo "Removing $member from cluster"
-    member_hash="$(echo "$existing_members" | grep "$member" | cut -d',' -f1)"
-    etcdctl member remove "$member_hash"
+    member_hash="$(echo "$existing_members" | grep "(?<=\s)$member(?=,)" | cut -d',' -f1)"
+    etcdctl --insecure-skip-tls-verify=true member remove "$member_hash"
   done
   unset IFS
 }
