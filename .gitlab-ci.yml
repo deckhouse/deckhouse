@@ -36,6 +36,7 @@ Build:
   stage: build
   variables:
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
   script:
     - export KUBECONFIG=$(mktemp -d)/kubeconfig
     - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
@@ -47,6 +48,9 @@ Build:
         docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
         docker image push $DESTINATION_IMAGE;
         docker image rmi $DESTINATION_IMAGE;
+        docker image tag $(werf stage image install) $DESTINATION_INSTALL_IMAGE;
+        docker image push $DESTINATION_INSTALL_IMAGE;
+        docker image rmi $DESTINATION_INSTALL_IMAGE;
       fi
   before_script:
     - rm -rf shell-operator || true
@@ -162,15 +166,22 @@ No Cyrillic Validation:
   stage: deploy
   variables:
     SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+    SOURCE_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
+    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_JOB_NAME}
   script:
     - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
     - docker image pull $SOURCE_IMAGE
     - docker image tag $SOURCE_IMAGE $DESTINATION_IMAGE
     - docker image push $DESTINATION_IMAGE
+    - docker image pull $SOURCE_INSTALL_IMAGE
+    - docker image tag $SOURCE_INSTALL_IMAGE $DESTINATION_INSTALL_IMAGE
+    - docker image push $DESTINATION_INSTALL_IMAGE
   after_script:
     - docker image rmi $SOURCE_IMAGE
+    - docker image rmi $SOURCE_INSTALL_IMAGE
     - docker image rmi $DESTINATION_IMAGE
+    - docker image rmi $DESTINATION_INSTALL_IMAGE
     - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_SHA}
     - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
   when: manual
@@ -185,7 +196,9 @@ alpha (pre-release):
   <<: *base_deploy
   variables:
     SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_NAME}
+    SOURCE_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_REF_NAME}
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:alpha
+    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:alpha
   environment:
     name: alpha
   only:
