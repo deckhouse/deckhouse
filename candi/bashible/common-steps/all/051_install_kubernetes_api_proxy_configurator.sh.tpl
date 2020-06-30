@@ -19,7 +19,7 @@ if [ -z "$apiserver_endpoints" ] ; then
   fi
 
   if eps=$(kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n default get endpoints kubernetes -o json) ; then
-    for ep in $(echo "$eps" | jq '.subsets[] | (.ports[0].port | tostring) as $port | .addresses[] | .ip + ":" +  $port' -r) ; do
+    for ep in $(echo "$eps" | jq '.subsets[] | (.ports[0].port | tostring) as $port | .addresses[] | .ip + ":" +  $port' -r | sort) ; do
       ip_regex=$(echo $ep | cut -d: -f1 | sed 's/\./\\./g')
 
       if echo "$self_node_addresses" | grep $ip_regex > /dev/null ; then
@@ -108,15 +108,16 @@ done
 END
 
 if [ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
-  cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
+  echo "[INFO] setting up new nginx.conf"
+  mv /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
   systemctl restart kubernetes-api-proxy
-else
-  old_config=$(sha256sum /etc/kubernetes/kubernetes-api-proxy/nginx.conf | awk '{print $1}')
-  new_config=$(sha256sum /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf | awk '{print $1}')
-  if [ "$old_config" != "$new_config" ] ; then
-    mv /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
-    systemctl reload kubernetes-api-proxy
-  fi
+elif
+  ! diff -u /etc/kubernetes/kubernetes-api-proxy/nginx.conf /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf &&
+  nginx -t -c /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf
+then
+  echo "[INFO] nginx.conf changed!"
+  mv /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
+  systemctl reload kubernetes-api-proxy
 fi
 EOF
 

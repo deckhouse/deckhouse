@@ -11,7 +11,7 @@ _on_kubernetes_api_proxy_service_changed() {
 
 bb-sync-file /etc/systemd/system/kubernetes-api-proxy-configurator.timer - d8-service-canged << "EOF"
 [Unit]
-Description=kubernetes api proxy timer
+Description=kubernetes api proxy configurator timer
 
 [Timer]
 OnBootSec=1m
@@ -23,7 +23,7 @@ EOF
 
 bb-sync-file /etc/systemd/system/kubernetes-api-proxy-configurator.service - d8-service-canged << "EOF"
 [Unit]
-Description=kubernetes api proxy
+Description=kubernetes api proxy configurator
 
 [Service]
 EnvironmentFile=/etc/environment
