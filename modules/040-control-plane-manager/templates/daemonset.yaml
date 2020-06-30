@@ -109,6 +109,8 @@ spec:
           name: etc-kubernetes
         - mountPath: /root/.kube/
           name: root-kube
+        - mountPath: /var/lib/kubelet/pki
+          name: var-lib-kubelet-pki
         env:
         - name: MY_IP
           valueFrom:
@@ -145,4 +147,8 @@ spec:
       - name: etcd
         hostPath:
           path: /var/lib/etcd
+          type: DirectoryOrCreate
+      - name: var-lib-kubelet-pki
+        hostPath:
+          path: /var/lib/kubelet/pki/
           type: DirectoryOrCreate
