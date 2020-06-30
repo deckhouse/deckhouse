@@ -319,19 +319,30 @@ if [ -f "${etcd_manifest_path}" ] ; then
   etcd_data_dir="$(grep -Po '(?<=--data-dir=).+' "$etcd_manifest_path")"
 
   if [[ "$etcd_advertise_address" != "$MY_IP" ]]; then
-    echo "etcd is not supposed to change advertise address from \"$etcd_advertise_address\" to \"$MY_IP\". Verify Node's InternalIP"
+    >&2 echo "ERROR: etcd is not supposed to change advertise address from \"$etcd_advertise_address\" to \"$MY_IP\". Verify Node's InternalIP"
     exit 1
   fi
 
   if [[ "$etcd_member_name" != "$HOSTNAME" ]]; then
-    echo "etcd is not supposed to change its name from \"$etcd_member_name\" to \"$HOSTNAME\". Verify Node's hostname."
+    >&2 echo "ERROR: etcd is not supposed to change its name from \"$etcd_member_name\" to \"$HOSTNAME\". Verify Node's hostname."
     exit 1
   fi
 
   if [[ "$etcd_data_dir" != "/var/lib/etcd" ]]; then
-    echo "etcd is not supposed to change data-dir from \"$etcd_data_dir\" to \"/var/lib/etcd\". Verify current \"--data-dir\"."
+    >&2 echo "ERROR: etcd is not supposed to change data-dir from \"$etcd_data_dir\" to \"/var/lib/etcd\". Verify current \"--data-dir\"."
     exit 1
   fi
+fi
+
+kubelet_kubeconfig="/etc/kubernetes/kubelet.conf"
+if ! kubectl --kubeconfig ${kubelet_kubeconfig} config view -o json | jq '.clusters[0].cluster.server' -r | grep 'https://127.0.0.1:6445\|https://kubernetes:6445' > /dev/null ; then
+  >&2 echo "ERROR: kubelet should be configured to access apiserver via kube-api-proxy (through https://127.0.0.1:6445 or https://kubernetes:6445). Probably node is not managed by node-manager."
+  exit 1
+fi
+
+if ! kubectl --kubeconfig ${kubelet_kubeconfig} get node $(hostname -s) >/dev/null ; then
+  >&2 echo "ERROR: update is unsafe to proceed because api-server is not accessible with ${kubelet_kubeconfig} kubeconfig."
+  exit 1
 fi
 
 # Generate configuration for kubeadm
