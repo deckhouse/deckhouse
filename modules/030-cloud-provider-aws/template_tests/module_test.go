@@ -40,6 +40,7 @@ const globalValues = `
         ebsCsiPlugin: imagehash
         simpleBridge: imagehash
         cloudControllerManager: imagehash
+        nodeTerminationHandler: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
