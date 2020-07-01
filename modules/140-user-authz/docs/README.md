@@ -38,6 +38,9 @@ spec:
   subjects:
   - kind: User
     name: some@example.com
+  - kind: ServiceAccount
+    name: gitlab-runner-deploy
+    namespace: d8-service-accounts
   - kind: Group
     name: some-group-name
   accessLevel: PrivilegedUser
