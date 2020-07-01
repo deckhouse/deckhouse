@@ -12,6 +12,9 @@ spec:
     name: {{ .Values.nodeManager.internal.cloudProvider.aws.instances.iamProfileName | quote }}
   keyName: {{ .Values.nodeManager.internal.cloudProvider.aws.keyName }}
   sourceDestCheck: false
+{{- if hasKey .nodeGroup.instanceClass "spotPrice" }}
+  spotPrice: {{ .nodeGroup.instanceClass.spotPrice | quote }}
+{{- end }}
   networkInterfaces:
   - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
     associatePublicIPAddress: true

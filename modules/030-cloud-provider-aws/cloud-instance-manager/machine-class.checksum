@@ -1,6 +1,9 @@
 {{- $options := dict -}}
 {{- $_ := set $options "ami" .nodeGroup.instanceClass.ami -}}
 {{- $_ := set $options "instanceType" .nodeGroup.instanceClass.instanceType -}}
+{{- if hasKey .nodeGroup.instanceClass "spotPrice" -}}
+  {{- $_ := set $options "spotPrice" .nodeGroup.instanceClass.spotPrice -}}
+{{- end -}}
 {{- if hasKey .nodeGroup.instanceClass "diskSizeGb" -}}
   {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSizeGb -}}
 {{- end -}}

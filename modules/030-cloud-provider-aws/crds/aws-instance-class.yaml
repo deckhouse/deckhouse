@@ -39,6 +39,9 @@ spec:
               description: AMI ID to use whilst provisioning AWS instances.
               example: ami-040a1551f9c9d11ad
               type: string
+            spotPrice:
+              description: Set an hourly price for spot instances. If this parameter is not provided, On-Demand instances are created. If the price is not provided (empty string), AWS selects minimum viable price so that instance gets created.
+              type: string
             diskType:
               description: Instance EBS disk type.
               example: "gp2"
