@@ -33,6 +33,15 @@
   {{- printf (list "candi/cloud-providers/" (index . 0) "/bashible/bundles/%s/%s/*.sh.tpl" | join "") (index . 1) (index . 2) }}
 {{- end -}}
 
+{{- define "bundles_validate_step_file" -}}
+  {{- $step_file := . -}}
+  {{- $step_file_name := base $step_file -}}
+
+  {{- if not (regexMatch "^[0-9]+_" $step_file_name) -}}
+    {{- fail (printf "ERROR: Can't handle bashible step template %s. File name must match the pattern: ^[0-9]+_" $step_file) -}}
+  {{- end -}}
+{{- end -}}
+
 {{- define "bundles_rendered_steps_node_group" -}}
   {{- $context := index . 0 -}}
   {{- $bundle  := index . 1 -}}
@@ -44,10 +53,12 @@
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
 
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_common_steps_pattern" (list "node-group")) }}
+    {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
   {{- end }}
 
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_bundle_steps_pattern"  (list $bundle "node-group")) }}
+    {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
   {{- end }}
 
@@ -56,10 +67,12 @@
     {{- $_ := set $tpl_context "cloudProvider" $cloud_provider }}
 
     {{- range $step_file, $_ := $context.Files.Glob (include "bundles_cloud_provider_common_steps_pattern" (list $cloud_provider.type "node-group")) }}
+      {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
     {{- end }}
 
     {{- range $step_file, $_ := $context.Files.Glob (include "bundles_cloud_provider_bundle_steps_pattern" (list $cloud_provider.type $bundle "node-group")) }}
+      {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
     {{- end }}
 
@@ -77,10 +90,12 @@
 
 
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_common_steps_pattern" (list "all")) }}
+    {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
   {{- end }}
 
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_bundle_steps_pattern"  (list $bundle "all")) }}
+    {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
   {{- end }}
 
@@ -89,10 +104,12 @@
     {{- $_ := set $tpl_context "cloudProvider" $cloud_provider }}
 
     {{- range $step_file, $_ := $context.Files.Glob (include "bundles_cloud_provider_common_steps_pattern" (list $cloud_provider.type "all")) }}
+      {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
     {{- end }}
 
     {{- range $step_file, $_ := $context.Files.Glob (include "bundles_cloud_provider_bundle_steps_pattern" (list $cloud_provider.type $bundle "all")) }}
+      {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}
     {{- end }}
 
