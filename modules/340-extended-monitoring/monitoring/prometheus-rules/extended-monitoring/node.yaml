@@ -125,12 +125,12 @@
       ) > on (node) group_left() (
         max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-critical"})
       )
+    for: 5m
     labels:
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
       description: |-
         Последние 5 минут Load average на ноде {{ $labels.node }} выше {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
       summary: >
