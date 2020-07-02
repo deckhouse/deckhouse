@@ -31,6 +31,14 @@ function __main__() {
     title=$(jq -rc '.definition | fromjson | .title' <<< ${dashboard} | slugify)
     folder=$(jq -rc '.folder' <<< ${dashboard})
 
+    # General folder can't be provisioned, see the link for more details
+    # https://github.com/grafana/grafana/blob/3dde8585ff951d5e9a46cfd64d296fdab5acd9a2/docs/sources/http_api/folder.md#a-note-about-the-general-folder
+    if [[ "$folder" == "General" ]]; then
+      # FIXME: Change folder to "" after updating grafana to version >= 7.1
+      #  In grafana >= 7.1 to store dashboard in General folder you must put it into the root of the provisioned folder
+      folder="General Folder"
+    fi
+
     mkdir -p "/tmp/dashboards-prepare/${folder}"
     jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards-prepare/${folder}/${title}.json"
   done
