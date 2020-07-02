@@ -11,11 +11,11 @@ hide_sidebar: false
 **`OpenStackClusterConfiguration`** - содержит в себе описание схемы размещения, набор полей зависит от выбранной схемы и описан
 для каждой из них ниже.
 * В поле `provider` передаются параметры подключения к api openstack, они совпадают с параметрами
-передаваемыми в поле `connection` в модуле [cloud-provider-openstack](/modules/030-cloud-provider-openstack/README.md#параметры).
+передаваемыми в поле `connection` в модуле [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#параметры).
 
 **`OpenStackInitConfiguration`** - содержит в себе параметры, используемые во время бутстрапа кластера.
 * Поле `masterInstanceClass` определяет параметры, с которыми будет создан instance для мастера — может содержать в себе **только** параметры `flavorName`, `imageName`, `rootDiskSizeInGb` и `securityGroups`. Остальные параметры указывать **нельзя** — они будут сконфигурированы автоматически на основании выбранной
-схемы размещения. Подробнее про данные параметры описано в документации модуля [cloud-provider-openstack](/modules/030-cloud-provider-openstack/README.md#openstackinstanceclass-custom-resource).
+схемы размещения. Подробнее про данные параметры описано в документации модуля [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource).
 
 ### Standard
 Создаётся внутренняя сеть кластера со шлюзом в публичную сеть, ноды не имеют публичных ip адресов. Для мастера заказывается

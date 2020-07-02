@@ -10,7 +10,7 @@ sidebar: modules-prometheus
 hide_sidebar: false
 ---
 
-Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [operator-prometheus](../200-operator-prometheus/)) и полностью его настраивает!
+Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [operator-prometheus]({{ site.baseurl }}/modules/200-operator-prometheus/)) и полностью его настраивает!
 
 Модуль устанавливает два экземпляра Prometheus:
 * **main** — основной Prometheus, который выполняет scrape каждые 30 секунд (с помощью параметра `scrapeInterval` можно изменить это значение). Именно он обрабатывает все правила, шлет алерты и является основным источником данных.
@@ -18,7 +18,7 @@ hide_sidebar: false
 
 Когда данный модуль установлен на Kubernetes 1.11 и имеет storage class, поддерживающий [автоматическое расширение диска](https://kubernetes.io/blog/2018/07/12/resizing-persistent-volumes-using-kubernetes/), в случае, если в prometheus не будет помещаться данные, то диск будет автоматически расширяться. В ином случае придет алерт о том, что дисковое пространство в Prometheus заканчивается.
 
-Ресурсы cpu и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../302-vertical-pod-autoscaler). Так же, благодаря кешированию запросов к Prometheus с помощью trickster, потребление памяти Prometheus'ом сильно сокращается.
+Ресурсы cpu и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler]({{ site.baseurl }}/modules/302-vertical-pod-autoscaler/). Так же, благодаря кешированию запросов к Prometheus с помощью trickster, потребление памяти Prometheus'ом сильно сокращается.
 
 Дополнительная информация
 -------------------------
@@ -153,7 +153,7 @@ spec:
 ...
 ```
 ### Rule'ы для Prometheus
-Для хранения PrometheusRule добавлен специальный ресурс - `CustomPrometheusRules`. [Читайте подробнее](../../guides/monitoring.html) в документации по добавлению пользовательских алертов.
+Для хранения PrometheusRule добавлен специальный ресурс - `CustomPrometheusRules`. [Читайте подробнее]({{ site.baseurl }}/guides/monitoring.html) в документации по добавлению пользовательских алертов.
 
 Пример:
 ```yaml

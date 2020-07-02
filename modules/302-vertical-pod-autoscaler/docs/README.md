@@ -80,7 +80,7 @@ verticalPodAutoscaler: |
 ## Как работает
 
 VPA состоит из 3х компонентов:
-- `Recommender` — он мониторит настоящее (делая запросы в [Metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), который у нас реализован силами [prometheus-metrics-adapter](../301-prometheus-metrics-adapter)) и прошлое потребление ресурсов (делая запросы в trickster перед prometheus) и предоставляет рекомендации по cpu и memory для контейнеров.
+- `Recommender` — он мониторит настоящее (делая запросы в [Metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), который у нас реализован силами [prometheus-metrics-adapter]({{ site.baseurl }}/modules/301-prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в trickster перед prometheus) и предоставляет рекомендации по cpu и memory для контейнеров.
 - `Updater` — Проверяет, что у подов с VPA выставлены корректные ресурсы и если нет, — убивает эти поды, чтобы контроллер пересоздал поды с новыми resource requests.
 - `Admission Plugin` — Он задает resource requests при создании новых подов (контроллером или из-за активности Updater'а).
 

@@ -1,5 +1,8 @@
-Deckhouse CandI (Cluster and Infrastructure)
-============================================
+---
+title: Deckhouse CandI (Cluster and Infrastructure) 
+permalink: /candi/deckhouse-candi.html
+---
+
 Приложение, призванное навести порядок в мире развертывания новых кластеров. 
 Оно сеет ужас в сердцах конкурентов. 
 О нем слагают баллады. 
@@ -96,7 +99,7 @@ deckhouse-candi bootstrap \
   --ssh-bastion-host=tf.hf-bastion \
   --config=/config.yaml 
 ```
-Удаление кластер:
+Удаление кластера:
 ```bash
 deckhouse-candi terraform destroy-all --config=/config.yaml
 ```

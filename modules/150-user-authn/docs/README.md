@@ -6,7 +6,6 @@ hide_sidebar: false
 search: kube config generator
 ---
 
-{% raw %}
 Данный модуль устанавливает [dex](https://github.com/dexidp/dex) в кластер для возможности использования внешней аутентификации как в самом кластере (API) так и во всех веб-интерфейсах (Grafana, Dashboard и др.). 
 
 Модуль состоит из нескольких компонентов:
@@ -19,7 +18,7 @@ search: kube config generator
 **Важно!** При включении данного модуля аутентификация во всех веб-интерфейсах перестанет использовать HTTP Basic Auth и переключится на dex (который, в свою очередь, будет использовать настроенные вами внешние провайдеры). 
 Для настройки kubectl необходимо перейти по адресу: `https://kubeconfig.<modules.publicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell команды к себе в консоль.
 
-**Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-configurator](/modules/160-control-plane-configurator), который включён по-умолчанию.
+**Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator/), который включён по-умолчанию.
 
 Конфигурация
 ------------
@@ -39,7 +38,7 @@ data:
   * `id` — уникальный идентификатор провайдера аутентификации;
   * `name` — имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации (если настроен всего один – эта страница не будет показана);
   * `type` — тип внешнего провайдера, в данный момент поддерживается 6 типов: `Github`, `Gitlab`, `BitbucketCloud`, `Crowd`, `OIDC`, `LDAP`;
-  * `github` – параметры провайдера Github (можно указывать только если `type: Github`; как [настроить Github](docs/github.md)):
+  * `github` – параметры провайдера Github (можно указывать только если `type: Github`; как [настроить Github](github.html)):
     * `clientID` — ID организации на Github;
     * `clientSecret` — secret организации на Github;
     * `orgs` — массив названий организаций в Github;
@@ -51,7 +50,7 @@ data:
         * `slug` будет получена группа с именем `['acme:site-reliability-engineers']`;
         * `both` будут получены группы с именами `['acme:Site Reliability Engineers', 'acme:site-reliability-engineers']`.
     * `useLoginAsID` — данная опция позволяет вместо использования внутреннего github id, использовать имя пользователя. 
-  * `gitlab` – параметры провайдера Gitlab (можно указывать только если `type: Gitlab`; как [настроить Gitlab](docs/gitlab.md)):
+  * `gitlab` – параметры провайдера Gitlab (можно указывать только если `type: Gitlab`; как [настроить Gitlab](gitlab.html)):
     * `clientID` — ID приложения созданного в Gitlab;
     * `clientSecret` — secret приложения созданного в Gitlab;
     * `baseURL` — адрес Gitlab'а (например: `https://fox.flant.com`);
@@ -68,7 +67,7 @@ data:
           ```yaml
           groups=["my_team", "my_team/administrators", "my_team/members"]
           ```
-  * `crowd` – параметры провайдера Crowd (можно указывать только если `type: Crowd`; как [настроить Crowd](docs/crowd.md)):
+  * `crowd` – параметры провайдера Crowd (можно указывать только если `type: Crowd`; как [настроить Crowd](crowd.html)):
     * `baseURL` – адрес Crowd'а (например: `https://crowd.example.com/crowd`);
     * `clientID` – ID приложения созданного в Crowd;
     * `clientSecret` – пароль приложения созданного в Crowd;
@@ -143,7 +142,7 @@ data:
 * `idTokenTTL` — данный параметр отвечает за время жизни id токена (указывается с суффиксом s, m или h);
   * По-умолчанию — 10 минут.
   * Пример: `1h`
-* `highAvailability` — ручное управление [режимом отказоустойчивости](/FEATURES.md#отказоустойчивость).
+* `highAvailability` — ручное управление [режимом отказоустойчивости]({{ site.baseurl }}/features.html#отказоустойчивость).
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/vsphere-csi-driver":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
@@ -163,7 +162,7 @@ data:
     * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
   * `customCertificate`
     * `secretName` — указываем имя secret'а в namespace `d8-system`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator](/modules/160-control-plane-configurator).
+* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator/).
   * `enabled` — использовать ли control-plane-configurator для настройки OIDC в kube-apiserver.
     * По-умолчанию `true`.
   * `dexCAMode` — как вычислить CA, который будет использован при настройке kube-apiserver.
@@ -177,6 +176,7 @@ data:
     * Необязательный параметр.
 
 ### Пример конфигурации
+{% raw %}
 
 ```yaml
   userAuthnEnabled: "true"
@@ -206,6 +206,8 @@ data:
     publishAPI:
       enable: true
 ```
+{% endraw %}
+
 ### Настройка Dex-аутентификатора
 Для автоматического деплоя [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения, и подключения его к dex, реализован CRD `DexAuthenticator`. 
 
@@ -232,6 +234,7 @@ data:
     * Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
 
 #### Пример:
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
@@ -251,18 +254,20 @@ spec:
   - 1.1.1.1
   - 192.168.0.0/24
 ```
+{% endraw %}
 
 После появления `DexAuthenticator` в кластере, в указанном namespace'е появятся необходимые deployment, service, ingress, secret.
 Чтобы подключить своё приложение к dex, достаточно будет добавить в ingress вашего приложения следующие аннотации:
 
-
 ##### Пример указания аннотаций для подключения `DexAuthenticator`, который мы описали выше:
+{% raw %}
 ```yaml
 annotations:
   nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
+{% endraw %}
 
 ##### Настройки ограничений на основе CIDR
 
@@ -289,6 +294,7 @@ Dex может работать без подключения провайдер
     * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`
 
 #### Пример:
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: User
@@ -302,6 +308,7 @@ spec:
   - Everyone
   - admins
 ```
+{% endraw %}
 
 ### Настройка OAuth2 клиента в Dex для подключения приложения
 
@@ -315,6 +322,7 @@ spec:
     * По умолчанию разрешено всем группам.
 
 #### Пример:
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: DexClient
@@ -331,10 +339,12 @@ spec:
   trustedPeers:
   - opendistro-sibling 
 ```
+{% endraw %}
 
 После выкладывания описанного выше ресурса в Dex'е будет зарегистрирован клиент с идентификатором (clientID) - `dex-client-myname:mynamespace`
 
 Пароль для доступа к клиенту (clientSecret) будет сохранен в секрете:
+{% raw %}
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -345,10 +355,11 @@ type: Opaque
 data:
   clientSecret: c2VjcmV0
 ```
+{% endraw %}
 
 ### Настройка kube-apiserver
 
-Для работы dashboard и kubeconfig-generator в вашем кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+Для работы dashboard и kubeconfig-generator в вашем кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator/).
 
 <details>
   <summary>Аргументы kube-apiserver, которые будут настроены
@@ -364,4 +375,3 @@ data:
 * --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
 
 </details>
-{% endraw %}

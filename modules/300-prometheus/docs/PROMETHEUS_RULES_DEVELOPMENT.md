@@ -16,12 +16,12 @@ search: Разработка правил Prometheus, prometheus alerting rules
 * Правила в Prometheus делятся на два типа:
     * recording rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — позволяют предрасчитать PromQL выражение и сохранить результат в новую метрику (обычно это необходимо для ускорения работы Grafana или других правил).
     * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
-* Все правила распределены по модулям и лежат в каталоге `monitoring/prometheus-rules`. Правила делятся на три категории:
-    * в [coreos](../prometheus-rules/coreos/) лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
-    * в [kubernetes](../prometheus-rules/kubernetes/) лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (pod'ы, cronjob'ы, место на диске и пр.).
-    * в [applications](../prometheus-rules/kubernetes/) лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
+* Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/master/modules/300-prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
+    * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
+    * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (pod'ы, cronjob'ы, место на диске и пр.).
+    * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
-* Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator](../../200-operator-prometheus/internals.html)):
+* Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator]({{ site.baseurl }}/modules/200-operator-prometheus/internals.html)):
     * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
         * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
         * Если изменений нет, то надо проверить, что deckhouse сдеплоилась успешно:
@@ -48,8 +48,8 @@ search: Разработка правил Prometheus, prometheus alerting rules
 ### Называть группу правил согласно нашему стандарту
 
 Правила в Prometheus разделяются на группы (см. любой файл с правилами для примера). Группу нужно обязательно называть согласно следующему формату: `<имя директории>.<имя файла без расширения>.<имя группы>`. При этом имя группы можно опустить. Например:
-* в [kubernetes/nginx-ingress.yaml](../prometheus-rules/kubernetes/nginx-ingress.yaml) есть три группы: `kubernetes.nginx-ingress.overview`, `kubernetes.nginx-ingress.details` и `kubernetes.nginx-ingress.controller`
-* в [applications/redis.yaml](../prometheus-rules/applications/redis.yaml) есть только одна группа: `applications.redis`.
+* в `kubernetes/nginx-ingress.yaml` есть три группы: `kubernetes.nginx-ingress.overview`, `kubernetes.nginx-ingress.details` и `kubernetes.nginx-ingress.controller`
+* в `applications/redis.yaml` есть только одна группа: `applications.redis`.
 
 
 ### Всегда явно указывать job

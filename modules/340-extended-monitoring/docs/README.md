@@ -70,7 +70,7 @@ hide_sidebar: false
 
 > ВНИМАНИЕ! Эти аннотации НЕ действуют для тех разделов, в которых расположены imagefs (по-умолчанию, /var/lib/docker) и nodefs (по-умолчанию, /var/lib/kubelet).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-Значения по-умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](modules/300-prometheus/images/kubelet-eviction-thresholds-exporter/loop) и [отдельные](modules/300-prometheus/prometheus-rules/kubernetes/eviction-bytes.yaml) [правила](modules/300-prometheus/prometheus-rules/kubernetes/eviction-inodes.yaml).
+Значения по-умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](https://github.com/deckhouse/deckhouse/blob/master/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/loop).
 
 #### Namespaced Kubernetes objects
 
@@ -128,7 +128,7 @@ hide_sidebar: false
 
 Модуль экспортирует в Prometheus специальные аннотации Kubernetes объектов. Позволяет улучшить Prometheus правила, путём добавления порога срабатывания для алертов. Использование метрик, экспортируемых данным модулем, позволяет, например, заменить "магические" константы в правилах.
 
-Правила, добавляемые в Prometheus этим модулем, лежат [здесь]({{ site.baseurl }}/modules/340-extended-monitoring/prometheus-rules).
+Правила, добавляемые в Prometheus этим модулем, лежат [здесь](https://github.com/deckhouse/deckhouse/tree/master/modules/340-extended-monitoring/monitoring/prometheus-rules).
 
 До:
 ```

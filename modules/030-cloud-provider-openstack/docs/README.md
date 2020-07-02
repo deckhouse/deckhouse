@@ -9,7 +9,7 @@ title: "Модуль cloud-provider-openstack"
     2. Синхронизирует метаданные OpenStack Servers и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в OpenStack.
 2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
 3. CSI storage — для заказа дисков в Cinder (block). Manilla (filesystem) пока не поддерживается.
-4. Регистрация в модуле [node-manager](modules/040-node-manager), чтобы [OpenStackInstanceClass'ы](#OpenStackInstanceClass) можно было использовать в [CloudInstanceClass'ах](modules/040-node-manager/README.md#NodeGroup-custom-resource).
+4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [OpenStackInstanceClass'ы](#openstackinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 
 ## Конфигурация
@@ -19,15 +19,12 @@ title: "Модуль cloud-provider-openstack"
 Модуль автоматически включается для всех облачных кластеров развёрнутых в openstack.
 
 ### Параметры
-Настройки модуля устанавливаются автоматически на основании [выбранной схемы размещения](candi/README.md).
+Настройки модуля устанавливаются автоматически на основании [выбранной схемы размещения]({{ site.baseurl }}/candi/).
 
 Если вам необходимо настроить модуль, потому что, например, у вас bare metal кластер, для которого нужно включить
-возможность добавлять дополнительные инстансы из OpenStack, то смотрите параметры ниже
-<details>
-<summary><b>Развернуть...</b>
-</summary>
+возможность добавлять дополнительные инстансы из OpenStack, то смотрите параметры ниже.
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/README.md#как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`. См. подробнее в документации модуля [node-manager]({{ site.baseurl }}/modules/040-node-manager/#как-мне-перекатить-машины-с-новой-конфигурацией).
 
 * `connection` - Параметры подключения к api cloud provider'a
     * `authURL` — OpenStack Identity API URL.
@@ -101,15 +98,14 @@ cloudProviderOpenstack: |
     - default
     - allow-ssh-and-icmp
 ```
-</details>
 
 ### Заказ нод в кластере
 
-Управляйте количеством и процессом заказа машин в облаке с помощью модуля [node-manager](modules/040-node-manager).
+Управляйте количеством и процессом заказа машин в облаке с помощью модуля [node-manager]({{ site.baseurl }}/modules/040-node-manager/).
 
 #### OpenStackInstanceClass custom resource
 
-Ресурс описывает параметры группы OpenStack servers, которые будет использовать machine-controller-manager из модуля [node-manager](modules/040-node-manager). На этот ресурс ссылается ресурс `CloudInstanceClass` из вышеупомянутого модуля.
+Ресурс описывает параметры группы OpenStack servers, которые будет использовать machine-controller-manager из модуля [node-manager]({{ site.baseurl }}/modules/040-node-manager/). На этот ресурс ссылается ресурс `CloudInstanceClass` из вышеупомянутого модуля.
 
 Все опции идут в `.spec`.
 
@@ -185,7 +181,7 @@ spec:
 ## Как мне поднять гибридный (вручную заведённые ноды) кластер?
 
 1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`;
-2. [Включить](#Пример-конфигурации) модуль и прописать ему необходимые для работы параметры.
+2. [Включить](#пример-конфигурации) модуль и прописать ему необходимые для работы параметры.
 
 **Важно!** Cloud-controller-manager синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому если узел кубернетес запущен не с параметром `--cloud-provider=external`, то он автоматически игнорируется (Deckhouse прописывает `static://` в ноды в в `.spec.providerID`, а cloud-controller-manager такие узлы игнорирует).
 
