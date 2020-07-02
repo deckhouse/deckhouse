@@ -53,6 +53,19 @@ spec:
             - --allocate-node-cidrs=true
             - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
             - --v=4
+          ports:
+          - name: ccm
+            containerPort: 10258
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: ccm
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: ccm
+              scheme: HTTPS
           resources:
             requests:
               cpu: 200m
