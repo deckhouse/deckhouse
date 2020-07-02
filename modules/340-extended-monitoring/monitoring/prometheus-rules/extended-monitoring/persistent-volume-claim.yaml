@@ -2,11 +2,13 @@
   rules:
   - alert: PersistentVolumeClaimBytesUsage
     expr: |
-      (
-        kubelet_volume_stats_used_bytes
-      /
-        kubelet_volume_stats_capacity_bytes
-      ) * 100
+      max by (namespace, persistentvolumeclaim) (
+        (
+          kubelet_volume_stats_used_bytes
+        /
+          kubelet_volume_stats_capacity_bytes
+        ) * 100
+      )
       > on (namespace, persistentvolumeclaim) group_right()
       (
         max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-bytes-warning"})
@@ -37,11 +39,13 @@
 
   - alert: PersistentVolumeClaimBytesUsage
     expr: |
-      (
-        kubelet_volume_stats_used_bytes
-      /
-        kubelet_volume_stats_capacity_bytes
-      ) * 100
+      max by (namespace, persistentvolumeclaim) (
+        (
+          kubelet_volume_stats_used_bytes
+        /
+          kubelet_volume_stats_capacity_bytes
+        ) * 100
+      )
       > on (namespace, persistentvolumeclaim) group_right()
       (
         max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-bytes-critical"})
@@ -72,11 +76,13 @@
 
   - alert: PersistentVolumeClaimInodesUsed
     expr: |
-      (
-        kubelet_volume_stats_inodes_used
-      /
-        kubelet_volume_stats_inodes
-      ) * 100
+      max by (namespace, persistentvolumeclaim) (
+        (
+          kubelet_volume_stats_inodes_used
+        /
+          kubelet_volume_stats_inodes
+        ) * 100
+      )
       > on (namespace, persistentvolumeclaim) group_right()
       (
         max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-inodes-warning"})
@@ -107,11 +113,13 @@
 
   - alert: PersistentVolumeClaimInodesUsed
     expr: |
-      (
-        kubelet_volume_stats_inodes_used
-      /
-        kubelet_volume_stats_inodes
-      ) * 100
+      max by (namespace, persistentvolumeclaim) (
+        (
+          kubelet_volume_stats_inodes_used
+        /
+          kubelet_volume_stats_inodes
+        ) * 100
+      )
       > on (namespace, persistentvolumeclaim) group_right()
       (
         max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-inodes-critical"})
