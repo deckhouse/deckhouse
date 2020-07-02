@@ -3,7 +3,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: kube-proxy
+  name: d8-kube-proxy
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-proxy")) | indent 2 }}
 spec:
@@ -60,7 +60,7 @@ spec:
         emptyDir: {}
       - name: kube-proxy-cm
         configMap:
-          name: kube-proxy
+          name: d8-kube-proxy
       - name: xtables-lock
         hostPath:
           path: /run/xtables.lock
