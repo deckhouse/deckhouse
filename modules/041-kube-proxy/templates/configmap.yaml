@@ -35,7 +35,7 @@ kubeconfig.conf: |
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kube-proxy
+  name: d8-kube-proxy
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-proxy")) | indent 2 }}
 data:
