@@ -10839,10 +10839,10 @@
         "type": "constant"
       },
       {
+        "allValue": ".*",
         "current": {
-          "selected": true,
-          "text": ".*",
-          "value": ".*"
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, controller)",
@@ -10851,30 +10851,8 @@
         "label": "Controller",
         "multi": true,
         "name": "controller",
-        "options": [
-          {
-            "selected": true,
-            "text": ".*",
-            "value": ".*"
-          },
-          {
-            "selected": false,
-            "text": ".*",
-            "value": ".*"
-          },
-          {
-            "selected": false,
-            "text": ".*",
-            "value": ".*"
-          },
-          {
-            "selected": false,
-            "text": ".*",
-            "value": ".*"
-          }
-        ],
         "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, controller)",
-        "refresh": 0,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
