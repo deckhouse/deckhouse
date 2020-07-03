@@ -64,6 +64,7 @@ spec:
         - "--v=5"
         - "--csi-address=$(ADDRESS)"
         - "--feature-gates=Topology=true"
+        - "--timeout=300s"
         env:
         - name: ADDRESS
           value: "/csi/csi.sock"
@@ -75,6 +76,7 @@ spec:
         args:
         - "--v=5"
         - "--csi-address=$(ADDRESS)"
+        - "--timeout=300s"
         env:
         - name: ADDRESS
           value: "/csi/csi.sock"
