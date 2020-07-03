@@ -2,7 +2,7 @@ FROM golang:1.13.12-buster as kubeadm_builder
 WORKDIR /src/
 RUN apt update
 RUN apt install rsync -y
-RUN wget https://github.com/flant/kubernetes/archive/v1.16.10-flant.1.tar.gz -O - | tar -xz --strip-components=1 -C /src
+RUN wget https://github.com/flant/kubernetes/archive/v1.16.10-flant.2.tar.gz -O - | tar -xz --strip-components=1 -C /src
 RUN make all WHAT=cmd/kubeadm
 
 FROM alpine:3.11
