@@ -1,17 +1,22 @@
 {{- if ne .runType "ClusterBootstrap" }}
-# If kubelet use apiserver address direct or haproxy, reconfigure to use kubernetes-api-proxy service
-if grep -E 'server: https://([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:6443)|(apiserver:6444)' /etc/kubernetes/kubelet.conf > /dev/null; then
-  sed -r -e 's/server: https:\/\/(\b[0-9]{1,3}\.){3}[0-9]{1,3}:6443/server: https:\/\/kubernetes:6445/' -e 's/server: https:\/\/apiserver:6444/server: https:\/\/kubernetes:6445/' -i /etc/kubernetes/kubelet.conf
+
+kubelet_kubeconfig_path="/etc/kubernetes/kubelet.conf"
+kubelet_certificate_path="/var/lib/kubelet/pki/kubelet-client-current.pem"
+kubelet_kubeconfig_user=$(kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.users[].name' -r)
+
+# Reconfigure kubelet if it doesn't use kubernetes-api-proxy
+if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.clusters[].cluster.server' -r | grep 'https://kubernetes:6445' -q ; then
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set clusters.kubernetes.server https://kubernetes:6445
   bb-flag-set kubelet-need-restart
 fi
 
-# IF kubelet use incorrect certs, reconfigure to use auto renew certs
-if grep -E '(client-certificate-data:\s+[a-zA-Z0-9=]+)|(client-certificate:\s+.+kubelet-client.crt)' /etc/kubernetes/kubelet.conf > /dev/null; then
-  sed -i 's/    client-certificate.*$/    client-certificate: \/var\/lib\/kubelet\/pki\/kubelet-client-current.pem/' /etc/kubernetes/kubelet.conf
+# If kubelet use incorrect certs, reconfigure to use certs that are auto-renewed
+if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq --arg user ${kubelet_kubeconfig_user} '.users[] | select(.name == $user) | .user."client-certificate"' -r | grep ${kubelet_certificate_path} -q ; then
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set users.${kubelet_kubeconfig_user}.client-certificate ${kubelet_certificate_path}
   bb-flag-set kubelet-need-restart
 fi
-if grep -E '(client-key-data:\s+[a-zA-Z0-9=]+)|(client-key:\s+.+kubelet-client.key)' /etc/kubernetes/kubelet.conf > /dev/null ; then
-  sed -i 's/    client-key.*$/    client-key: \/var\/lib\/kubelet\/pki\/kubelet-client-current.pem/' /etc/kubernetes/kubelet.conf
+if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq --arg user ${kubelet_kubeconfig_user} '.users[] | select(.name == $user) | .user."client-key"' -r | grep ${kubelet_certificate_path} -q ; then
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set users.${kubelet_kubeconfig_user}.client-key ${kubelet_certificate_path}
   bb-flag-set kubelet-need-restart
 fi
 {{- end }}
