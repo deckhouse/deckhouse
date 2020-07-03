@@ -173,10 +173,10 @@ git:
   - jq_lib
   - helm_lib
   excludePaths:
+  - docs
+  - web
   - modules/*/docs
   - modules/*/README.md
-  - modules/*/USER_STORIES.md
-  - modules/*/DEVELOPMENT.md
   - modules/*/images
   - modules/*/hooks/*.go
   - modules/*/template_tests
@@ -413,7 +413,7 @@ ansible:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
 
 ---
-image: install
+image: dev/install
 fromImage: dev
 import:
 - artifact: deckhouse-candi
