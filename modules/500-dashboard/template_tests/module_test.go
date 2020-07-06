@@ -117,8 +117,7 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 		})
 
 		It("Everything must render properly for default cluster", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-dashboard")
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
@@ -167,8 +166,7 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 		})
 
 		It("Everything must render properly for default cluster with ha", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-dashboard")
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
@@ -239,8 +237,7 @@ podAntiAffinity:
 		})
 
 		It("Everything must render properly for managed cluster", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-dashboard")
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
@@ -288,8 +285,7 @@ podAntiAffinity:
 		})
 
 		It("Everything must render properly for managed cluster with ha", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-dashboard")
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")

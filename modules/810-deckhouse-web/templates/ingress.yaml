@@ -24,7 +24,6 @@ metadata:
   {{- if .Values.deckhouseWeb.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"
   {{- end }}
-  nginx.ingress.kubernetes.io/affinity: cookie
 spec:
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "deckhouse") }}

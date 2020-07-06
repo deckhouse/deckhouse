@@ -32,7 +32,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: d8:kube-proxy
-  namespace: kube-system
 subjects:
 - kind: ServiceAccount
   name: d8-kube-proxy
@@ -47,7 +46,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: system:node-proxier
-  namespace: kube-system
 subjects:
 - kind: ServiceAccount
   name: d8-kube-proxy

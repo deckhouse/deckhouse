@@ -1,7 +1,7 @@
 project: deckhouse
 configVersion: 1
 ---
-image: base
+image: common-base
 from: alpine:3.11
 ansible:
   beforeInstall:
@@ -78,18 +78,6 @@ ansible:
       remote_src: yes
       dest: /usr/local/bin
 
-  # TODO: checksum
-  - name: "Install helm and tiller"
-    unarchive:
-      extra_opts:
-        - linux-amd64/helm
-        - linux-amd64/tiller
-        - --strip-components=1
-      src: https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
-      remote_src: yes
-      dest: /usr/local/bin
-  - raw: helm init --client-only
-
   - name: "Install registry client"
     get_url:
       url: https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
@@ -125,9 +113,10 @@ ansible:
 
   - raw: rm -rf /var/cache/apk/*
 
+
 ---
 image: base-for-go
-fromImage: base
+fromImage: common-base
 ansible:
   beforeInstall:
     - name: "Install dependencies"
@@ -154,6 +143,19 @@ docker:
   ENV:
     GOPATH: /usr/local/go
     PATH: /usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+---
+image: base
+fromImage: common-base
+import:
+- artifact: helm
+  add: /helm/helm
+  to: /usr/local/bin/helm
+  before: install
+ansible:
+  install:
+    - name: "Install helm 2to3 plugin"
+      command: /usr/local/bin/helm plugin install https://github.com/helm/helm-2to3.git
 
 ---
 image: dev
@@ -411,6 +413,49 @@ ansible:
   - raw: rm -rf /var/cache/apk/*
   setup:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
+
+---
+artifact: helm
+fromImage: base-for-go
+git:
+  - url: https://github.com/helm/helm
+    add: /
+    to: /helm
+    tag: v3.2.4
+    stageDependencies:
+      install:
+        - "**/*"
+  - add: /helm/patches
+    to: /patches
+    stageDependencies:
+      setup:
+        - "**/*"
+ansible:
+  beforeInstall:
+    - apk:
+        name:
+        - git
+        - ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - command: go mod download
+      args:
+        chdir: /helm
+
+  setup:
+    - shell: |
+        for p in $(find /patches -name \*.patch) ; do
+          patch -p1 < $p
+        done
+      args:
+        chdir: /helm
+    - command: go build -o helm ./cmd/helm
+      args:
+        chdir: /helm
+      environment:
+        CGO_ENABLED: "0"
 
 ---
 image: dev/install

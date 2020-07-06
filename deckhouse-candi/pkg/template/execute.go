@@ -3,14 +3,12 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"github.com/flant/logboek"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
-	"github.com/helm/helm/pkg/engine"
+	"github.com/flant/logboek"
 )
 
 const (
@@ -18,16 +16,6 @@ const (
 
 	bundlePermissions = 0700
 )
-
-func prepareFuncMap() template.FuncMap {
-	funcMap := engine.FuncMap()
-
-	// gomplate compatibility
-	funcMap["toYAML"] = funcMap["toYaml"]
-	funcMap["has"] = funcMap["hasKey"]
-
-	return funcMap
-}
 
 type RenderedTemplate struct {
 	Content  *bytes.Buffer
@@ -38,6 +26,9 @@ func formatDir(dir string) string {
 	return strings.TrimSuffix(dir, "/") + "/"
 }
 
+// RenderTemplate renders each file in templatesDir.
+// Files are rendered separately, so no support for
+// libraries, like in Helm.
 func RenderTemplate(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
 	templatesDir = formatDir(templatesDir)
 
@@ -63,19 +54,24 @@ func RenderTemplate(templatesDir string, data map[string]interface{}) ([]Rendere
 		}
 
 		templatePath := templatesDir + file.Name()
-		tmpls, err := template.New(file.Name()).Funcs(prepareFuncMap()).ParseFiles(templatePath)
+
+		// Render template as a chart with one template to use helm functions.
+		tmplData, err := ioutil.ReadFile(templatePath)
 		if err != nil {
-			return nil, fmt.Errorf("parse template file %q: %v", templatePath, err)
+			return nil, fmt.Errorf("read template file '%s': %v", templatePath, err)
 		}
 
-		buff := new(bytes.Buffer)
-		err = tmpls.Execute(buff, &data)
+		// render chart with prepared values
+		var e Engine
+		e.Name = file.Name()
+		e.Data = data
+		out, err := e.Render(tmplData)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("render template file '%s': %v", templatePath, err)
 		}
 
 		renderedTemplates = append(renderedTemplates, RenderedTemplate{
-			Content:  buff,
+			Content:  out,
 			FileName: strings.TrimSuffix(filepath.Base(templatePath), ".tpl"),
 		})
 	}

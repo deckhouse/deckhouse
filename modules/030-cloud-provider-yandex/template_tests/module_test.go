@@ -80,8 +80,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 		})
 
 		It("Everything must render properly", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-yandex")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "deckhouse-registry")

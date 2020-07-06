@@ -142,8 +142,7 @@ internal:
 		})
 
 		It("Everything must render properly", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			sa := f.KubernetesResource("ServiceAccount", "d8-monitoring", "control-plane-proxy")
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:monitoring-kubernetes-control-plane:control-plane-proxy")

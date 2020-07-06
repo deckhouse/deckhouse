@@ -1,0 +1,155 @@
+package template
+
+import (
+	"bytes"
+	"fmt"
+	"regexp"
+	"strings"
+	"text/template"
+
+	"github.com/pkg/errors"
+)
+
+const recursionMaxNums = 1000
+
+type Engine struct {
+	Name string
+	Data map[string]interface{}
+}
+
+// Render
+func (e Engine) Render(tmpl []byte) (out *bytes.Buffer, err error) {
+	t := template.New(e.Name)
+	return e.renderWithTemplate(string(tmpl), t)
+}
+
+// initFunMap creates the Engine's FuncMap and adds context-specific functions.
+func (e Engine) initFunMap(t *template.Template) {
+	funcMap := FuncMap()
+
+	includedNames := make(map[string]int)
+
+	// Add the 'include' function here so we can close over t.
+	funcMap["include"] = func(name string, data interface{}) (string, error) {
+		var buf strings.Builder
+		if v, ok := includedNames[name]; ok {
+			if v > recursionMaxNums {
+				return "", errors.Wrapf(fmt.Errorf("unable to execute template"), "rendering template has a nested reference name: %s", name)
+			}
+			includedNames[name]++
+		} else {
+			includedNames[name] = 1
+		}
+		err := t.ExecuteTemplate(&buf, name, data)
+		includedNames[name]--
+		return buf.String(), err
+	}
+
+	// Add the 'tpl' function here
+	funcMap["tpl"] = func(tpl string, vals map[string]interface{}) (string, error) {
+		clone, err := t.Clone()
+		if err != nil {
+			return "", errors.Errorf("clone template failed: %v", err)
+		}
+
+		result, err := e.renderWithTemplate(tpl, clone)
+		if err != nil {
+			return "", errors.Wrapf(err, "error during tpl function execution for %q", tpl)
+		}
+		return result.String(), nil
+	}
+
+	// Add the `required` function here so we can use lintMode
+	funcMap["required"] = func(warn string, val interface{}) (interface{}, error) {
+		if val == nil {
+			return val, errors.Errorf(warnWrap(warn))
+		} else if _, ok := val.(string); ok {
+			if val == "" {
+				return val, errors.Errorf(warnWrap(warn))
+			}
+		}
+		return val, nil
+	}
+
+	t.Funcs(funcMap)
+}
+
+// renderWithTemplate takes a map of templates/values to render using
+// passed Template object.
+func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *bytes.Buffer, err error) {
+	// Basically, what we do here is start with an empty parent template and then
+	// build up a list of templates -- one for each file. Once all of the templates
+	// have been parsed, we loop through again and execute every template.
+	//
+	// The idea with this process is to make it possible for more complex templates
+	// to share common blocks, but to make the entire thing feel like a file-based
+	// template engine.
+	//
+	// Template from tpl function is a dublicate, so defines in tpl are not interfered
+	// with defines in "real" templates.
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Errorf("rendering template failed: %v", r)
+		}
+	}()
+
+	e.initFunMap(t)
+
+	_, err = t.New(e.Name).Parse(tmpl)
+	if err != nil {
+		return nil, cleanupParseError(e.Name, err)
+	}
+
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, e.Name, e.Data); err != nil {
+		return nil, cleanupExecError(e.Name, err)
+	}
+
+	return &buf, nil
+}
+
+func cleanupParseError(filename string, err error) error {
+	tokens := strings.Split(err.Error(), ": ")
+	if len(tokens) == 1 {
+		// This might happen if a non-templating error occurs
+		return fmt.Errorf("parse error in (%s): %s", filename, err)
+	}
+	// The first token is "template"
+	// The second token is either "filename:lineno" or "filename:lineNo:columnNo"
+	location := tokens[1]
+	// The remaining tokens make up a stacktrace-like chain, ending with the relevant error
+	errMsg := tokens[len(tokens)-1]
+	return fmt.Errorf("parse error at (%s): %s", string(location), errMsg)
+}
+
+func cleanupExecError(filename string, err error) error {
+	if _, isExecError := err.(template.ExecError); !isExecError {
+		return err
+	}
+
+	tokens := strings.SplitN(err.Error(), ": ", 3)
+	if len(tokens) != 3 {
+		// This might happen if a non-templating error occurs
+		return fmt.Errorf("execution error in (%s): %s", filename, err)
+	}
+
+	// The first token is "template"
+	// The second token is either "filename:lineno" or "filename:lineNo:columnNo"
+	location := tokens[1]
+
+	parts := warnRegex.FindStringSubmatch(tokens[2])
+	if len(parts) >= 2 {
+		return fmt.Errorf("execution error at (%s): %s", string(location), parts[1])
+	}
+
+	return err
+}
+
+const warnStartDelim = "HELM_ERR_START"
+const warnEndDelim = "HELM_ERR_END"
+
+var warnRegex = regexp.MustCompile(warnStartDelim + `(.*)` + warnEndDelim)
+
+func warnWrap(warn string) string {
+	return warnStartDelim + warn + warnEndDelim
+}

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 1
+EOF
+
+}
+
+function __main__() {
+  helm2_releases="$(kubectl -n d8-system get cm -l OWNER=TILLER -o json | jq -rc '.items[] | .metadata.labels.NAME' | sort | uniq)"
+  helm3_releases="$(kubectl -n d8-system get secrets -l owner=helm -o json | jq -rc '.items[].metadata.labels.name' | sort | uniq)"
+
+  helm2_releases_to_convert="$(comm -23 <(echo "$helm2_releases") <(echo "$helm3_releases"))"
+
+  IFS=$'\n'
+  for release in $helm2_releases_to_convert; do
+    unset IFS
+    /usr/local/bin/helm 2to3 convert --release-storage configmaps --tiller-out-cluster --tiller-ns d8-system ${release} --release-versions-max 1
+  done
+  unset IFS
+}
+
+hook::run $@
