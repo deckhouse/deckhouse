@@ -144,7 +144,7 @@ function __main__() {
         .upToDate = $uptodate_nodes_count
     ')"
 
-    kubernetes::status::patch "" "deckhouse.io/v1alpha1" "nodegroups" "${ng_name}" "${status_patch}"
+    kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${ng_name}" "${status_patch}"
   done
 }
 

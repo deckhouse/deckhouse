@@ -53,9 +53,18 @@ function kubernetes::delete_if_exists::non_blocking() {
 # $2 apiVersion (i.e. deckhouse.io/v1alpha1)
 # $3 plural kind (i.e. openstackmachineclasses)
 # $4 resourceName (i.e. some-resource-aabbcc)
-# $5 new status json
-function kubernetes::status::patch() {
-  jq -nc --arg newStatus "${5}" '{op: "StatusPatch", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", resourceName: "'${4}'", newStatus: $newStatus}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+# $5 json merge patch body
+function kubernetes::status::merge_patch() {
+  jq -nc --arg newStatus "${5}" '{op: "StatusMergePatch", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", resourceName: "'${4}'", newStatus: $newStatus}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
+}
+
+# $1 namespace
+# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $3 plural kind (i.e. openstackmachineclasses)
+# $4 resourceName (i.e. some-resource-aabbcc)
+# $5 json patch body
+function kubernetes::status::json_patch() {
+  jq -nc --arg jsonPatch "${5}" '{op: "StatusJSONPatch", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", resourceName: "'${4}'", jsonPatch: $jsonPatch}' >> ${D8_KUBERNETES_PATCH_SET_FILE}
 }
 
 # $1 namespace
@@ -128,20 +137,25 @@ function kubernetes::_apply_patch_set() {
         kubectl -n "${namespace}" delete "${resource}" --wait=false >/dev/null 2>&1
       fi
     ;;
-    "StatusPatch")
+    "StatusMergePatch")
       namespace="$(jq -r '.namespace' <<< ${line})"
       apiVersion="$(jq -r '.apiVersion' <<< ${line})"
       kind="$(jq -r '.kind' <<< ${line})"
       resourceName="$(jq -r '.resourceName' <<< ${line})"
       newStatus="$(jq -r '.newStatus' <<< ${line})"
 
-      if [ -n "${namespace}" ]; then
-        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
-      else
-        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/${kind}/${resourceName}/status"
+      apiPlural=apis
+      if [[ "$apiVersion" == "v1" ]]; then
+        apiPlural=api
       fi
 
-      curl -XPATCH \
+      if [ -n "${namespace}" ]; then
+        apiURL="https://kubernetes.default.svc/${apiPlural}/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
+      else
+        apiURL="https://kubernetes.default.svc/${apiPlural}/${apiVersion}/${kind}/${resourceName}/status"
+      fi
+
+      curl --fail -XPATCH \
         --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
         -H "Content-Type: application/merge-patch+json" \
         -H "Accept: application/json" \
@@ -151,6 +165,34 @@ function kubernetes::_apply_patch_set() {
         --data "$(jo status="${newStatus}")" \
       >/dev/null 2>/dev/null
     ;;
+    "StatusJSONPatch")
+      namespace="$(jq -r '.namespace' <<< ${line})"
+      apiVersion="$(jq -r '.apiVersion' <<< ${line})"
+      kind="$(jq -r '.kind' <<< ${line})"
+      resourceName="$(jq -r '.resourceName' <<< ${line})"
+      patch="$(jq -r '.jsonPatch' <<< ${line})"
+
+      apiPlural=apis
+      if [[ "$apiVersion" == "v1" ]]; then
+        apiPlural=api
+      fi
+
+      if [ -n "${namespace}" ]; then
+        apiURL="https://kubernetes.default.svc/${apiPlural}/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
+      else
+        apiURL="https://kubernetes.default.svc/${apiPlural}/${apiVersion}/${kind}/${resourceName}/status"
+      fi
+
+      curl --fail -XPATCH \
+        --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
+        -H "Content-Type: application/json-patch+json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+        "${apiURL}" \
+        --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+        --data "${patch}" \
+      >/dev/null 2>/dev/null
+    ;;
     "StatusPut")
       namespace="$(jq -r '.namespace' <<< ${line})"
       apiVersion="$(jq -r '.apiVersion' <<< ${line})"
@@ -158,13 +200,18 @@ function kubernetes::_apply_patch_set() {
       resourceName="$(jq -r '.resourceName' <<< ${line})"
       newStatus="$(jq -r '.newStatus' <<< ${line})"
 
-      if [ -n "${namespace}" ]; then
-        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
-      else
-        apiURL="https://kubernetes.default.svc/apis/${apiVersion}/${kind}/${resourceName}/status"
+      apiPlural=apis
+      if [[ "$apiVersion" == "v1" ]]; then
+        apiPlural=api
       fi
 
-      curl -XPUT \
+      if [ -n "${namespace}" ]; then
+        apiURL="https://kubernetes.default.svc/${apiPlural}/${apiVersion}/namespaces/${namespace}/${kind}/${resourceName}/status"
+      else
+        apiURL="https://kubernetes.default.svc/${apiPlural}/${apiVersion}/${kind}/${resourceName}/status"
+      fi
+
+      curl --fail -XPUT \
         --resolve "kubernetes.default.svc:443:$KUBERNETES_SERVICE_HOST" \
         -H "Content-Type: application/merge-patch+json" \
         -H "Accept: application/json" \

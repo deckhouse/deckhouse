@@ -29,6 +29,7 @@ type KubernetesPatchOperation struct {
 	Kind         string `json:"kind,omitempty"`
 	ResourceName string `json:"resourceName,omitempty"`
 	NewStatus    string `json:"newStatus,omitempty"`
+	JSONPatch    string `json:"jsonPatch,omitempty"`
 }
 
 func NewKubernetesPatch(kpBytes []byte) (KubernetesPatch, error) {
@@ -167,7 +168,7 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		kind, name := r[0], r[1]
 		newObjectStore.DeleteObject(object_store.NewMetaIndex(kind, kpo.Namespace, name))
 
-	case "StatusPatch":
+	case "StatusMergePatch":
 		var objToPatch object_store.KubeObject
 		var originalStatusJSON []byte
 		var modifiedStatusJSON []byte
@@ -198,6 +199,58 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 
 		objToPatch["status"] = modifiedStatusObj
 		newObjectStore.PutObject(objToPatch, object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName))
+
+	case "StatusJSONPatch":
+		var objToPatch object_store.KubeObject
+		var statusJSON []byte
+		var objectJSON []byte
+		var modifiedJSON []byte
+		var statusObj interface{}
+		var modifiedObj object_store.KubeObject
+
+		var patch jsonpatch.Patch
+
+		if obj, ok := newObjectStore.GetObject(object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName)); ok {
+			objToPatch = obj
+			statusJSON, err = json.Marshal(objToPatch["status"])
+			if err != nil {
+				return object_store.ObjectStore{}, fmt.Errorf("failed to marshal object's .status: %s\n\n%+v", err, objToPatch)
+			}
+			if string(statusJSON) == "null" {
+				statusJSON = []byte("{}")
+			}
+
+			err = json.Unmarshal(statusJSON, &statusObj)
+			if err != nil {
+				return object_store.ObjectStore{}, err
+			}
+
+			objToPatch["status"] = statusObj
+		} else {
+			return object_store.ObjectStore{}, fmt.Errorf("can't find resource %s/%s/%s to patch status", kpo.Kind, kpo.Namespace, kpo.ResourceName)
+		}
+
+		objectJSON, err = json.Marshal(objToPatch)
+		if err != nil {
+			panic(err)
+		}
+
+		patch, err = jsonpatch.DecodePatch([]byte(kpo.JSONPatch))
+		if err != nil {
+			panic(err)
+		}
+
+		modifiedJSON, err := patch.Apply(objectJSON)
+		if err != nil {
+			panic(err)
+		}
+
+		err = json.Unmarshal(modifiedJSON, &modifiedObj)
+		if err != nil {
+			return object_store.ObjectStore{}, err
+		}
+
+		newObjectStore.PutObject(modifiedObj, object_store.NewMetaIndex(kpo.Kind, kpo.Namespace, kpo.ResourceName))
 
 	case "StatusPut":
 		var objToPatch object_store.KubeObject
