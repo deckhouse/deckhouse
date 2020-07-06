@@ -9,7 +9,6 @@ import (
 	"flant/deckhouse-controller/pkg/helpers/aws"
 	"flant/deckhouse-controller/pkg/helpers/etcd"
 	"flant/deckhouse-controller/pkg/helpers/fnv"
-	helm "flant/deckhouse-controller/pkg/helpers/helm_release_tools"
 	"flant/deckhouse-controller/pkg/helpers/openstack"
 	"flant/deckhouse-controller/pkg/helpers/unit"
 	"flant/deckhouse-controller/pkg/helpers/vsphere"
@@ -48,23 +47,6 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	vsphereGetZonesDatastores := vsphereCommand.Command("get-zones-datastores", "Get zones datastores.")
 	vsphereGetZonesDatastores.Action(func(c *kingpin.ParseContext) error {
 		return vsphere.GetZonesDatastores()
-	})
-
-	helmCommand := helpersCommand.Command("helm", "Helm helpers.")
-	helmReleaseRenameCommand := helmCommand.Command("set-release-name", "Update release name in stored structure.")
-	helmReleaseRenameInput := helmReleaseRenameCommand.Arg("input", "String").Required().String()
-	helmReleaseRenameCommand.Action(func(c *kingpin.ParseContext) error {
-		return helm.ReleaseRename(*helmReleaseRenameInput)
-	})
-
-	helmSetReleaseStatusDeployedCommand := helmCommand.Command("set-release-status-deployed", "Sets release status to DEPLOYED")
-	helmSetReleaseStatusDeployedCommand.Action(func(c *kingpin.ParseContext) error {
-		return helm.SetReleaseStatusDeployed()
-	})
-
-	helmSetReleaseInfoCommand := helmCommand.Command("release-info", "Get helm release info")
-	helmSetReleaseInfoCommand.Action(func(c *kingpin.ParseContext) error {
-		return helm.ReleaseInfo()
 	})
 
 	etcdCommand := helpersCommand.Command("etcd", "etcd helpers.")

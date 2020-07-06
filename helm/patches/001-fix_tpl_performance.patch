@@ -1,0 +1,139 @@
+diff --git a/pkg/engine/engine.go b/pkg/engine/engine.go
+index 20bb7be6..d65d79ef 100644
+--- a/pkg/engine/engine.go
++++ b/pkg/engine/engine.go
+@@ -104,7 +104,7 @@ func warnWrap(warn string) string {
+ }
+ 
+ // initFunMap creates the Engine's FuncMap and adds context-specific functions.
+-func (e Engine) initFunMap(t *template.Template, referenceTpls map[string]renderable) {
++func (e Engine) initFunMap(t *template.Template) {
+ 	funcMap := funcMap()
+ 	includedNames := make(map[string]int)
+ 
+@@ -144,7 +144,12 @@ func (e Engine) initFunMap(t *template.Template, referenceTpls map[string]render
+ 			},
+ 		}
+ 
+-		result, err := e.renderWithReferences(templates, referenceTpls)
++		clone, err := t.Clone()
++		if err != nil {
++			return "", errors.Errorf("clone template failed: %v", err)
++		}
++
++		result, err := e.renderWithTemplate(templates, clone)
+ 		if err != nil {
+ 			return "", errors.Wrapf(err, "error during tpl function execution for %q", tpl)
+ 		}
+@@ -184,12 +189,21 @@ func (e Engine) initFunMap(t *template.Template, referenceTpls map[string]render
+ 
+ // render takes a map of templates/values and renders them.
+ func (e Engine) render(tpls map[string]renderable) (map[string]string, error) {
+-	return e.renderWithReferences(tpls, tpls)
++	t := template.New("gotpl")
++	if e.Strict {
++		t.Option("missingkey=error")
++	} else {
++		// Not that zero will attempt to add default values for types it knows,
++		// but will still emit <no value> for others. We mitigate that later.
++		t.Option("missingkey=zero")
++	}
++
++	return e.renderWithTemplate(tpls, t)
+ }
+ 
+-// renderWithReferences takes a map of templates/values to render, and a map of
+-// templates which can be referenced within them.
+-func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable) (rendered map[string]string, err error) {
++// renderWithTemplate takes a map of templates/values to render using
++// passed Template object.
++func (e Engine) renderWithTemplate(tpls map[string]renderable, t *template.Template) (rendered map[string]string, err error) {
+ 	// Basically, what we do here is start with an empty parent template and then
+ 	// build up a list of templates -- one for each file. Once all of the templates
+ 	// have been parsed, we loop through again and execute every template.
+@@ -197,21 +211,16 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable)
+ 	// The idea with this process is to make it possible for more complex templates
+ 	// to share common blocks, but to make the entire thing feel like a file-based
+ 	// template engine.
++	//
++	// Template from tpl function is a dublicate, so defines in tpl are not interfered
++	// with defines in "real" templates.
+ 	defer func() {
+ 		if r := recover(); r != nil {
+ 			err = errors.Errorf("rendering template failed: %v", r)
+ 		}
+ 	}()
+-	t := template.New("gotpl")
+-	if e.Strict {
+-		t.Option("missingkey=error")
+-	} else {
+-		// Not that zero will attempt to add default values for types it knows,
+-		// but will still emit <no value> for others. We mitigate that later.
+-		t.Option("missingkey=zero")
+-	}
+ 
+-	e.initFunMap(t, referenceTpls)
++	e.initFunMap(t)
+ 
+ 	// We want to parse the templates in a predictable order. The order favors
+ 	// higher-level (in file system) templates over deeply nested templates.
+@@ -224,16 +233,6 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable)
+ 		}
+ 	}
+ 
+-	// Adding the reference templates to the template context
+-	// so they can be referenced in the tpl function
+-	for filename, r := range referenceTpls {
+-		if t.Lookup(filename) == nil {
+-			if _, err := t.New(filename).Parse(r.tpl); err != nil {
+-				return map[string]string{}, cleanupParseError(filename, err)
+-			}
+-		}
+-	}
+-
+ 	rendered = make(map[string]string, len(keys))
+ 	for _, filename := range keys {
+ 		// Don't render partials. We don't care out the direct output of partials.
+diff --git a/pkg/engine/engine_test.go b/pkg/engine/engine_test.go
+index 6f58041c..4cfcaf73 100644
+--- a/pkg/engine/engine_test.go
++++ b/pkg/engine/engine_test.go
+@@ -698,3 +698,38 @@ func TestRenderRecursionLimit(t *testing.T) {
+ 	}
+ 
+ }
++
++func TestRenderLoadTemplateForTplFromFile(t *testing.T) {
++	c := &chart.Chart{
++		Metadata: &chart.Metadata{Name: "TplLoadFromFile"},
++		Templates: []*chart.File{
++			{Name: "templates/base", Data: []byte(`{{ tpl (.Files.Get .Values.filename) . }}`)},
++			{Name: "templates/_function", Data: []byte(`{{define "test-function"}}test-function{{end}}`)},
++		},
++		Files: []*chart.File{
++			{Name: "test", Data: []byte(`{{ tpl (.Files.Get .Values.filename2) .}}`)},
++			{Name: "test2", Data: []byte(`{{include "test-function" .}}`)},
++		},
++	}
++
++	v := chartutil.Values{
++		"Values": chartutil.Values{
++			"filename":  "test",
++			"filename2": "test2",
++		},
++		"Chart": c.Metadata,
++		"Release": chartutil.Values{
++			"Name": "TestRelease",
++		},
++	}
++
++	out, err := Render(c, v)
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	expect := "test-function"
++	if got := out["TplLoadFromFile/templates/base"]; got != expect {
++		t.Fatalf("Expected %q, got %q", expect, got)
++	}
++}

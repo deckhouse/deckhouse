@@ -17,6 +17,11 @@ if [[ $file =~ ^modules/.* ]]; then
   module_name="${file%%/*}"
   file="${file##${module_name}}"
 
+  if [[ ! -d "modules/${module_name}" ]]; then
+    echo "Directory 'modules/${module_name}' is not found or not accessible."
+    exit 1
+  fi
+
   if [[ $file =~ ^/hooks/.* ]]; then
     if [[ -f "modules/${module_name}${file}" ]]; then
       hook_name="$(basename "${file%%_test.go}")"
@@ -26,23 +31,34 @@ if [[ $file =~ ^modules/.* ]]; then
       if ! grep -q '\(FIt\|FDescribe\|FContext\) *(' "$(dirname "modules/${module_name}${file}")/${hook_name}_test.go"; then
         focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
         ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+        echo "Run focused unit tests for module hook '${hook_name}'"
+      else
+        echo "Run all unit tests for module hook '${hook_name}'"
       fi
     else
       tests="./modules/$module_name${file}/..."
+      echo "Run unit tests for module '${module_name}'"
     fi
   elif [[ $file == "/hooks" ]]; then
     tests="./modules/$module_name/hooks/..."
+    echo "Run unit tests for all module hooks '${module_name}'"
   elif [[ $file =~ ^/(template_tests|templates)(/.*)? ]]; then
     tests="./modules/$module_name/template_tests/..."
-  elif [[ $file == "/values_matrix_test.yaml" ]]; then
+    echo "Run template tests for module '${module_name}'"
+  elif [[ $file == "/values_matrix_test.yaml" && -f "modules/${module_name}${file}" ]]; then
+    docker_args="-e MODULES_DIR=/deckhouse/modules/${module_name} -w /deckhouse"
+    ginkgo_args="-v --slowSpecThreshold=30"
     tests="./testing/matrix/..."
-    docker_args="-e MODULES_DIR=./modules/${module_name}"
+    echo "Run matrix tests for module '${module_name}'"
   else
     tests="./modules/$module_name/... ./testing/matrix/..."
+    #tests="./modules/$module_name/hooks/... ./modules/$module_name/template_tests/...  ./testing/matrix/..."
     docker_args="-e MODULES_DIR=./modules/${module_name}"
+    echo "Run unit tests and matrix tests for module '${module_name}'"
   fi
 elif [[ $file == "modules" ]]; then
   tests="./modules/... ./testing/matrix/..."
+  echo "Run unit tests and matrix tests for all modules"
 elif [[ $file =~ ^global-hooks/.* ]]; then
   if [[ -f "${file}" ]]; then
     hook_name="$(basename "${file%%_test.go}")"
@@ -52,12 +68,22 @@ elif [[ $file =~ ^global-hooks/.* ]]; then
     if ! grep -q '\(FIt\|FDescribe\|FContext\) *(' "$(dirname "${file}")/${hook_name}_test.go"; then
       focus_args="-ginkgo.focus=${hook_name} -ginkgo.regexScansFilePath=true"
       ginkgo_args="--focus=${hook_name} --regexScansFilePath=true"
+      echo "Run focused unit tests for global hook '${hook_name}'"
+    else
+      echo "Run all unit tests for global hook '${hook_name}'"
     fi
   else
     tests="./${file}/..."
+    echo "Run unit tests for all global hooks"
   fi
+elif [[ $file =~ ^./testing/matrix$ || $file =~ ^matrix$ ]]; then
+  docker_args="-e MODULES_DIR=/deckhouse/modules -w /deckhouse"
+  ginkgo_args="-v --slowSpecThreshold=30"
+  tests="./testing/matrix/..."
+  echo "Run all matrix tests"
 elif [[ "$file" == "." ]]; then
   tests="./..."
+  echo "Run tests in current directory"
 fi
 
 if [[ -z "$tests" && -z "$docker_args" && -z "$focus_args" ]]; then
@@ -97,9 +123,9 @@ if [[ "$DEBUG" == "yes" ]]; then
     sleep 0.1
   done
 else
-  echo "Running: docker exec $docker_args $CONTAINER_NAME ginkgo -vet=off $tests $ginkgo_args ..."
+  echo "Running: docker exec $docker_args $CONTAINER_NAME bash -c \"ginkgo -vet=off $ginkgo_args $tests\""
 
-  cmd="ginkgo -vet=off $tests $ginkgo_args &"
+  cmd="ginkgo -vet=off $ginkgo_args $tests &"
   cmd="$cmd$(
     cat <<"END"
 pid=$!

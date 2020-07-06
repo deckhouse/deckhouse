@@ -27,8 +27,7 @@ var _ = Describe("Module :: node-local-dns :: helm temtplate", func() {
 
 		It("Shoud successfull render helm", func() {
 			hec.HelmRender()
-			Expect(string(hec.Session.Err.Contents())).To(HaveLen(0))
-			Expect(hec.Session.ExitCode()).To(BeZero())
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 		})
 
 	})

@@ -22,7 +22,7 @@ var _ = Describe("Matrix tests", func() {
 	modulesCH := make(chan types.Module, len(modules))
 	Context("module discovery", func() {
 		It("", func() {
-			Expect(err).ToNot(ErrorOccurred())
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 

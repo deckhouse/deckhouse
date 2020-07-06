@@ -1,7 +1,6 @@
 package template_tests
 
 import (
-	"github.com/onsi/gomega/gbytes"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -52,7 +51,6 @@ const testCRDsWithAllowAccessToSystemNamespaces = `---
       name: cluster-write-all
 `
 
-
 const testCRDsWithCrdsKey = `---
 crds:
   - name: testenev
@@ -99,8 +97,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 
 		It("Should create a ClusterRoleBinding for each additionalRole", func() {
-			Expect(string(f.Session.Err.Contents())).To(HaveLen(0))
-			Expect(f.Session.ExitCode()).To(BeZero())
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:additional-role:cluster-write-all")
 			Expect(crb.Exists()).To(BeTrue())
@@ -166,7 +163,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-
 	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDsWithLimitNamespaces)
@@ -174,8 +170,8 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 
 		It("Helm should fail", func() {
-			Expect(f.Session.ExitCode()).To(Not(BeZero()))
-			Expect(f.Session.Err).Should(gbytes.Say("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
 		})
 	})
 
@@ -186,10 +182,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 
 		It("Helm should fail", func() {
-			Expect(f.Session.ExitCode()).To(Not(BeZero()))
-			Expect(f.Session.Err).Should(gbytes.Say("You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."))
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."))
 		})
 	})
 
 })
-

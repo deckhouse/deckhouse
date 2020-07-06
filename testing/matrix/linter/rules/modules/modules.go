@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -127,44 +128,71 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 		modulesDir = defaultDeckhouseModulesDir
 	}
 
-	var lintRuleErrorsList errors.LintRuleErrorsList
-	_ = filepath.Walk(modulesDir, func(path string, info os.FileInfo, _ error) error {
-		if !isExistsOnFilesystem(path, "/Chart.yaml") {
-			return nil
-		}
+	// Get all paths with Chart.yaml first.
+	// modulesDir can be a module directory or a directory that contains modules in subdirectories.
+	var chartYamlDirs = make([]string, 0)
+	if isExistsOnFilesystem(modulesDir, "Chart.yaml") {
+		chartYamlDirs = append(chartYamlDirs, modulesDir)
+	} else {
+		err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return fmt.Errorf("error access '%s': %v\n", path, err)
+			}
 
-		parts := strings.Split(path, string(os.PathSeparator))
+			// Continue if got top path
+			if path == modulesDir {
+				return nil
+			}
+
+			// Check if first level subdirectory has a Chart.yaml
+			if info.IsDir() {
+				if skipModuleIfNeeded(filepath.Base(path)) {
+					return filepath.SkipDir
+				}
+
+				if isExistsOnFilesystem(path, "Chart.yaml") {
+					chartYamlDirs = append(chartYamlDirs, path)
+				}
+				return filepath.SkipDir
+			}
+
+			return nil
+		})
+		if err != nil {
+			return modules, fmt.Errorf("search modules with Chart.yaml: %v", err)
+		}
+	}
+
+	var lintRuleErrorsList errors.LintRuleErrorsList
+
+	for _, modulePath := range chartYamlDirs {
+		parts := strings.Split(modulePath, string(os.PathSeparator))
 		moduleName := parts[len(parts)-1]
 
-		if skipModuleIfNeeded(moduleName) {
-			return nil
-		}
+		lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
 
-		lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, path))
-
-		name, lintError := chartModuleRule(moduleName, path)
+		name, lintError := chartModuleRule(moduleName, modulePath)
 		lintRuleErrorsList.Add(lintError)
 		if name == "" {
-			return nil
+			continue
 		}
 
-		namespace, lintError := namespaceModuleRule(moduleName, path)
+		namespace, lintError := namespaceModuleRule(moduleName, modulePath)
 		lintRuleErrorsList.Add(lintError)
 		if namespace == "" {
-			return nil
+			continue
 		}
 
-		if isExistsOnFilesystem(path, "/crds") {
-			lintRuleErrorsList.Merge(crdsModuleRule(moduleName, path+"/crds"))
+		if isExistsOnFilesystem(modulePath, "crds") {
+			lintRuleErrorsList.Merge(crdsModuleRule(moduleName, modulePath+"/crds"))
 		}
 
-		modules = append(modules, types.Module{Name: name, Path: path, Namespace: namespace})
-		return nil
-	})
+		modules = append(modules, types.Module{Name: name, Path: modulePath, Namespace: namespace})
+	}
 	return modules, lintRuleErrorsList.ConvertToError()
 }
 
 func isExistsOnFilesystem(parts ...string) bool {
-	_, err := os.Stat(strings.Join(parts, string(os.PathSeparator)))
+	_, err := os.Stat(filepath.Join(parts...))
 	return err == nil
 }

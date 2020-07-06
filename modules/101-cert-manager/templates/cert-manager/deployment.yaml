@@ -31,8 +31,6 @@ spec:
       labels:
         app: cert-manager
     spec:
-      strategy:
-        type: Recreate
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cert-manager")) | indent 6 }}

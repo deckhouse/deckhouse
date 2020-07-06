@@ -50,8 +50,6 @@ metadata:
 spec:
   replicas: 1
   serviceName: openvpn
-  strategy:
-    type: OnDelete
   selector:
     matchLabels:
       app: {{ .Chart.Name }}

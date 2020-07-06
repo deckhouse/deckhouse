@@ -90,10 +90,6 @@ spec:
   {{- $storageClass := .Values.prometheus.internal.prometheusLongterm.effectiveStorageClass }}
   {{- if $storageClass }}
   storage:
-    # TODO: Remove the following 3 lines with empty values after prometheus-operator update
-    class: ""
-    selector: {}
-    resources: {}
     volumeClaimTemplate:
       spec:
         accessModes:

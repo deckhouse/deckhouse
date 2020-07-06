@@ -11,16 +11,16 @@ import (
 	"syscall"
 
 	"github.com/fatih/color"
-	"github.com/helm/helm/pkg/renderutil"
-	"github.com/helm/helm/pkg/timeconv"
 	"github.com/kyokomi/emoji"
 	"gopkg.in/yaml.v3"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/proto/hapi/chart"
+
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/util/helm"
 )
 
 var (
@@ -37,7 +37,7 @@ type ModuleController struct {
 
 func NewModuleController(m types.Module, values []string) *ModuleController {
 	// Check chart requirements to make sure all dependencies are present in /charts
-	hc, err := chartutil.Load(m.Path)
+	hc, err := loader.Load(m.Path)
 	if err != nil {
 		panic(fmt.Errorf("chart load: %v", err))
 	}
@@ -128,22 +128,16 @@ func (c *ModuleController) Run() error {
 }
 
 func (c *ModuleController) RunRender(values string, objectStore *storage.UnstructuredObjectStore) error {
-	data, err := renderutil.Render(c.Chart,
-		&chart.Config{Raw: values, Values: map[string]*chart.Value{}},
-		renderutil.Options{
-			ReleaseOptions: chartutil.ReleaseOptions{
-				Name:      c.Module.Name,
-				IsInstall: true,
-				IsUpgrade: true,
-				Time:      timeconv.Now(),
-				Namespace: c.Module.Namespace,
-			},
-		})
+	var renderer helm.Renderer
+	renderer.Name = c.Module.Name
+	renderer.Namespace = c.Module.Namespace
+	renderer.LintMode = true
+	files, err := renderer.RenderChart(c.Chart, values)
 	if err != nil {
-		return fmt.Errorf("chart render: %v", err)
+		return fmt.Errorf("helm chart render: %v", err)
 	}
 
-	for path, bigFile := range data {
+	for path, bigFile := range files {
 		bigFileTmp := strings.TrimSpace(bigFile)
 		docs := sep.Split(bigFileTmp, -1)
 		for _, d := range docs {
