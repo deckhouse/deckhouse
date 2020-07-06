@@ -12,6 +12,7 @@ kubernetes_version="1.18.4-1"
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}
 
+bb-yum-remove kubeadm
 bb-yum-install "kubelet-$kubernetes_version" "kubectl-$kubernetes_version" kubernetes-cni-0.8.6-0
 
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
