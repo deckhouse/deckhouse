@@ -125,7 +125,7 @@ function __main__() {
   for member in $remove_list; do
     unset IFS
     echo "Removing $member from cluster"
-    member_hash="$(echo "$existing_members" | grep "(?<=\s)$member(?=,)" | cut -d',' -f1)"
+    member_hash="$(echo "$existing_members" | grep -P ",\s+$member,\s" | cut -d',' -f1)"
     etcdctl --insecure-skip-tls-verify=true member remove "$member_hash"
   done
   unset IFS
