@@ -1,5 +1,5 @@
 ---
-title: "Node manager управление узлами кластера"
+title: "Управление узлами кластера"
 tags:
   - node-manager
 type:
