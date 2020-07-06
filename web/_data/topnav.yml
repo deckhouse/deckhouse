@@ -21,5 +21,7 @@ topnav:
       url: /guides/monitoring.html
     - title: Разработка Deckhouse
       url: /guides/development.html
+    - title: Управление узлами кластера
+      url: /guides/node-manager.html
   - title: Каналы обновлений
     url: /releases.html
