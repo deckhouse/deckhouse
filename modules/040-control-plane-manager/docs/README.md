@@ -4,11 +4,41 @@ title: Модуль control-plane-manager
 
 ## Принцип работы
 
-С помощью DaemonSet `control-plane-manager` запускается на всех master нодах (лейбл `node-role.kubernetes.io/master: ""`) кластера.
+С помощью DaemonSet `control-plane-manager` запускается на всех master-нодах кластера (лейбл `node-role.kubernetes.io/master: ""`) и:
 
-1. Обновляет сертификаты всех control plane компонентов.
-2. Добавляет и удаляет новых etcd member'ов в etcd кластере.
-3. Согласно [политикам](#Политики-обновления-control-plane-компонентов) делает upgrade или downgrade компонентов Kubernetes control plane.
+1. **Управляет всеми сертификатами control-plane** (сертификаты размещаются на узлах согласно [принятым в kubeadm рекомендациям](https://kubernetes.io/docs/setup/best-practices/certificates/#certificate-paths)):
+    1. Устанавливает все корневые сертификаты. Сертификаты хранятся в секрете `d8-pki` в `kube-system`.
+        * корневой CA kubernetes (`ca.crt` и `ca.key`),
+        * корневой CA etcd (`etcd/ca.crt` и `etcd/ca.key`),
+        * RSA сертификат и ключ для подписи Service Account'ов (`sa.pub` и `sa.key`),
+        * корневой CA для extension API серверов (`front-proxy-ca.key` и `front-proxy-ca.crt`).
+    2. Управляет всеми сертификатами узла, необходимыми для control-plane – выписывает, продлевает и перевыписывает, если что-то изменилось (например, список SAN'ов). Сертификаты хранятся только на узлах.
+        * серверный сертификат apiserver (`apiserver.crt` и `apiserver.key`),
+        * клиентский сертификат для подключения apiserver к kubelet (`apiserver-kubelet-client.crt` и `apiserver-kubelet-client.key`),
+        * клиентский сертификат для подключения apiserver к etcd (`apiserver-etcd-client.crt` и `apiserver-etcd-client.key`),
+        * клиентский сертификат для подключения apiserver к extension API-серверам (`front-proxy-client.crt` и `front-proxy-client.key`),
+        * серверный сертификат etcd (`etcd/server.crt` и `etcd/server.key`),
+        * клиентский сертификат для подключения etcd к другим членам кластера (`etcd/peer.crt` и `etcd/peer.key`),
+        * клиентский сертификат для подключения kubelet к etcd для helthcheck'ов (`etcd/healthcheck-client.crt` и `etcd/healthcheck-client.key`).
+2. **Управляет etcd**:
+    * На узлах:
+        * Генерирует статический манифест etcd (`/etc/kubernetes/manifests/etcd.yaml`) со всеми необходимыми параметрами (с учетом состояния кластера и настроек модуля).
+          * В том числе, всегда указывает `--initial-cluster-state=existing`, чтобы ни при каких обстоятельствах не допустить split-brain.
+        * Если отсутствует директория `/var/lib/etcd`, автоматически выполняет join текущего узла в кластер.
+        * При изменении любых сертификатов или любых параметров перезапускает etcd, дожидаясь успешного запуска с новыми настройками.
+    * Централизовано:
+        * Автоматически удаляет членов кластера etcd, для которых не существует одноименный узел (объект Node) в кластере Kubernetes (и которые не указаны в параметре `etcd.externalMembersNames`, см. подробнее ниже).
+        * Выполняет upgrade или downgrade согласно [политикам](#Политики-обновления-control-plane-компонентов).
+3. **Управляет компонентами control-plane** (`kube-apiserver`, `kube-controller-manager`, `kube-scheduler`):
+    * На узлах:
+        * Генерирует (а также продлевает и обновляет) kubeconfig'и для подключения компонентов к apiserver.
+        * Генерирует статические манифесты со всеми необходимыми параметрами (с учетом состояния кластера и настроек модуля).
+        * При изменении любых сертификатов, любых конфигов или любых параметров в манифесте перезапускает компонент, дожидаясь успешного запуска с новыми настройками.
+    * Централизовано:
+        * Выполняет upgrade или downgrade согласно [политикам](#Политики-обновления-control-plane-компонентов).
+4. **Управляет kubeconfig'ом для cluster-admin** на узлах:
+    * Генерирует (а так же продлевает и обновляет) kubeconfig с правами cluster-admin'а (размещает в /etc/kubernetes/admin.yaml).
+    * Устанавливает symlink пользователю root, чтобы kubeconfig использовался по-умолчанию.
 
 ## Политики обновления control plane компонентов
 
@@ -61,7 +91,7 @@ controlPlaneManager: "false"
     * `sourceRanges` — список CIDR, которым разрешен доступ к API.
       * Облачный провайдер может не поддерживать данную опцию и игнорировать её.
 * `etcd` — параметры `etcd`.
-  * `externalMembersNames` – массив имен внешних etcd member'ов (эти member'ы не будут удалятся). 
+  * `externalMembersNames` – массив имен внешних etcd member'ов (эти member'ы не будут удалятся).
 
 
 #### Пример конфигурации модуля
@@ -76,12 +106,52 @@ controlPlaneManager: |
   loadBalancer: {}
 ```
 
-## Что делать, если что-то пошло не так?
+## FAQ
 
-1. В процессе работы control-plane-manager оставляет резервные копии в `/etc/kubernetes/deckhouse/backup`, они могут помочь.
-2. Удачи.
+### Как добавить мастер?
 
-### Радикальное восстановление etcd кластера
+Просто поставить на ноду лейбл `node-role.kubernetes.io/master: ""`, все остальное произойдет полностью автоматически.
+
+### Как удалить мастер?
+
+* Если удаление не нарушет кворум в etcd (в корректно функционирущем кластере это все ситуации, кроме перехода 2 -> 1):
+    1. Удалить виртуальную машину обычным способом.
+* Если удаление нарушает кворум (переход 2 -> 1):
+    1. Остановить kubelet на узле (не останавливая контейнер с etcd),
+    2. Удалить объект Node из Kubernetes
+    3. [Дождаться](#как-посмотреть-список-memberов-в-etcd), пока etcd member будет автоматически удален.
+    4. Удалить виртуальную машину обычным способом.
+
+### Как убрать мастер, сохранив узел?
+
+1. Снять лейбл `node-role.kubernetes.io/master: ""` и дождаться, пока etcd member будет удален автоматически.
+2. Зайти на узел и выполнить следующие действия:
+  ```shell
+  rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+  rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+  rm -f /etc/kubernetes/authorization-webhook-config.yaml
+  rm -f /etc/kubernetes/admin.conf /root/.kube/config
+  rm -rf /etc/kubernetes/deckhouse
+  rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+  rm -rf /var/lib/etcd
+  ```
+
+### Как посмотреть список member'ов в etcd?
+
+1. Зайти в pod с etcd.
+  ```shell
+  kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) sh
+  ```
+2. Выполнить команду.
+  ```shell
+  etcdctl --ca-file /etc/kubernetes/pki/etcd/ca.crt --cert-file /etc/kubernetes/pki/etcd/ca.crt --key-file /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list
+  ```
+
+### Что делать, если что-то пошло не так?
+
+В процессе работы control-plane-manager оставляет резервные копии в `/etc/kubernetes/deckhouse/backup`, они могут помочь.
+
+### Что делать, если кластер etcd развалился?
 
 1. Остановить (удалить `/etc/kubernetes/manifests/etcd.yaml`) etcd на всех нодах, кроме одной. С неё мы начнём восстановление multi-master'а.
 2. На оставшейся ноде указать следующий параметр командной строки: `--force-new-cluster`.
