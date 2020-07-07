@@ -8,7 +8,7 @@ $@ &
 CHILDREN_PID="$!"
 
 attempt=0
-max_attempts=20
+max_attempts=120 # 2min
 until ss -nltp4 | grep -qE "127.0.0.1:10248.*pid=$CHILDREN_PID" && curl -s -f http://127.0.0.1:10248/healthz > /dev/null; do
   attempt=$(( attempt + 1 ))
 
