@@ -12,6 +12,7 @@ rules:
   resources:
   - customprometheusrules
   - grafanadashboarddefinitions
+  - grafanaadditionaldatasources
   verbs:
   - get
   - list
@@ -30,6 +31,7 @@ rules:
   resources:
   - customprometheusrules
   - grafanadashboarddefinitions
+  - grafanaadditionaldatasources
   verbs:
   - create
   - delete

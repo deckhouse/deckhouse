@@ -188,8 +188,12 @@ metadata:
   name: another-prometheus
 spec:
   type: prometheus
-  access: direct
-  url: http://another-prometheus.example.com/prometheus
+  access: proxy
+  url: https://another-prometheus.example.com/prometheus
+  basicAuth: true
+  basicAuthUser: foo
   jsonData:
     timeInterval: 30s
+  secureJsonData:
+    basicAuthPassword: bar
 ```
