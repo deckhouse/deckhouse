@@ -10,6 +10,7 @@ spec:
   selector:
     matchLabels:
       app: csi-controller
+  serviceName: ""
   template:
     metadata:
       labels:
