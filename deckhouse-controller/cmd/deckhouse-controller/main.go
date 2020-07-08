@@ -46,6 +46,11 @@ func main() {
 			sh_app.SetupLogging()
 			log.Infof("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
 
+			// Set hook metrics listen port if flat is not passed.
+			if sh_app.HookMetricsListenPort == "" {
+				sh_app.HookMetricsListenPort = app.DeckhouseHookMetricsListenPort
+			}
+
 			operator := deckhouse.DefaultDeckhouse()
 			err := deckhouse.InitAndStart(operator)
 			if err != nil {

@@ -22,6 +22,8 @@ const DeckhouseLogTypeDefault = "json"
 const DeckshouseKubeClientQpsDefault = "20"
 const DeckshouseKubeClientBurstDefault = "40"
 
+const DeckhouseHookMetricsListenPort = "9651"
+
 func DefineStartCommandFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("pod-name", "Pod name to get image digest.").
 		Envar("DECKHOUSE_POD").
