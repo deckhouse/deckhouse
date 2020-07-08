@@ -9,12 +9,28 @@ metadata:
 spec:
   jobLabel: app
   podMetricsEndpoints:
-  - targetPort: 9650
+  - port: self
     relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_container_port_number]
+      regex: "9650"
+      action: keep
     - regex: endpoint|namespace|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
+    - targetLabel: scrape_source
+      replacement: self
+  - port: custom
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+    - regex: endpoint|namespace|container
+      action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: scrape_source
+      replacement: custom
   selector:
     matchLabels:
       app: deckhouse

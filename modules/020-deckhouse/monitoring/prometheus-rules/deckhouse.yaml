@@ -1,7 +1,7 @@
 - name: d8.deckhouse.availability
   rules:
-  - alert: D8DeckhouseTargetDown
-    expr: max by (job) (up{job="deckhouse"} == 0)
+  - alert: D8DeckhouseSelfTargetDown
+    expr: max by (job) (up{job="deckhouse", scrape_source="self"} == 0)
     labels:
       severity_level: "4"
       tier: cluster
@@ -16,8 +16,24 @@
       plk_ignore_labels: "job"
       summary: Prometheus не может получить метрики deckhouse
 
-  - alert: D8DeckhouseTargetAbsent
-    expr: absent(up{job="deckhouse"}) == 1
+  - alert: D8DeckhouseCustomTargetDown
+    expr: max by (job) (up{job="deckhouse", scrape_source="custom"} == 0)
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8DeckhouseUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_labels_as_annotations: "instance,pod"
+      plk_ignore_labels: "job"
+      summary: Prometheus не может получить кастомны метрики от хуков deckhouse
+
+  - alert: D8DeckhouseSelfTargetAbsent
+    expr: absent(up{job="deckhouse", scrape_source="self"}) == 1
     labels:
       severity_level: "4"
       tier: cluster
