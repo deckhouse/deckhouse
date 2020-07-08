@@ -49,7 +49,7 @@ Build:
         docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
         docker image push $DESTINATION_IMAGE;
         docker image rmi $DESTINATION_IMAGE;
-        docker image tag $(werf stage image install) $DESTINATION_INSTALL_IMAGE;
+        docker image tag $(werf stage image dev/install) $DESTINATION_INSTALL_IMAGE;
         docker image push $DESTINATION_INSTALL_IMAGE;
         docker image rmi $DESTINATION_INSTALL_IMAGE;
       fi
