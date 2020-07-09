@@ -1,15 +1,16 @@
-variable "clusterConfig" {
+variable "clusterConfiguration" {
   type = any
 }
 
-variable "providerClusterConfig" {
+variable "providerClusterConfiguration" {
   type = any
 }
 
-variable "initConfig" {
-  type = any
+variable "nodeIndex" {
+  type = string
 }
 
-variable "providerInitConfig" {
-  type = any
+variable "cloudConfig" {
+  type = string
+  default = ""
 }

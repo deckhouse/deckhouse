@@ -18,10 +18,24 @@ variable "keypair_ssh_name" {
   type = string
 }
 
-variable "master_external_port_id" {
+variable "floating_ip_network" {
   type = string
+  default = ""
+}
+
+variable "network_port_ids" {
+  type = list(string)
 }
 
 variable "config_drive" {
   type = bool
+  default = false
+}
+
+variable "node_index" {
+  type = string
+}
+
+variable "cloud_config" {
+  type = string
 }

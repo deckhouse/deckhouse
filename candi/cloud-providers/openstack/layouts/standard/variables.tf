@@ -1,23 +1,25 @@
-variable "clusterConfig" {
+variable "clusterConfiguration" {
   type = any
 }
 
-variable "providerClusterConfig" {
+variable "providerClusterConfiguration" {
   type = any
 }
 
-variable "initConfig" {
-  type = any
+variable "nodeIndex" {
+  type = string
+  default = ""
 }
 
-variable "providerInitConfig" {
-  type = any
+variable "cloudConfig" {
+  type = string
+  default = ""
 }
 
 locals {
-  prefix = var.clusterConfig.cloud.prefix
-  pod_subnet_cidr = var.clusterConfig.podSubnetCIDR
-  internal_network_cidr = var.providerClusterConfig.standard.internalNetworkCIDR
-  external_network_name = var.providerClusterConfig.standard.externalNetworkName
-  network_security = lookup(var.providerClusterConfig.standard, "internalNetworkSecurity", true)
+  prefix = var.clusterConfiguration.cloud.prefix
+  pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR
+  internal_network_cidr = var.providerClusterConfiguration.standard.internalNetworkCIDR
+  external_network_name = var.providerClusterConfiguration.standard.externalNetworkName
+  network_security = lookup(var.providerClusterConfiguration.standard, "internalNetworkSecurity", true)
 }

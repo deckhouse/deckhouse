@@ -1,10 +1,3 @@
-output "deckhouse_config" {
-  value = {
-    "nginxIngressEnabled": false
-    "prometheusMadisonIntegrationEnabled": false
-  }
-}
-
 output "cloud_discovery_data" {
   value = {
     "internalNetworkNames" = [openstack_networking_network_v2.internal.name]
