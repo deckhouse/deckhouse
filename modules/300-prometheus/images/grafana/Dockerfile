@@ -1,21 +1,21 @@
-FROM grafana/build-container:1.2.13
+FROM grafana/build-container:1.2.19
 RUN mkdir -p /go/src/github.com/grafana/grafana && \
-    curl -LSs https://github.com/grafana/grafana/archive/v6.6.2.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
+    curl -LSs https://github.com/grafana/grafana/archive/v7.0.6.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
 WORKDIR /go/src/github.com/grafana/grafana
 RUN make deps
 COPY ./extra_vars.patch .
 COPY ./folders.patch .
-COPY ./ignore_single_smallest_time_step_to_be_compatible_with_fast_forward_feature.patch .
+COPY ./fix_thin_bars.patch .
 RUN patch -p1 < ./extra_vars.patch && patch -p1 < ./folders.patch
-RUN patch -p1 < ./ignore_single_smallest_time_step_to_be_compatible_with_fast_forward_feature.patch
-RUN bash -l -c "go run build.go build package" && \
+RUN patch -p1 < ./fix_thin_bars.patch
+RUN bash -c "go run build.go build package" && \
     mv dist/*.deb /grafana.deb
 
 FROM alpine:3.10
 WORKDIR /plugin
 RUN apk add --no-cache git && \
     cd /plugin && \
-    git clone --branch v0.2.0 https://github.com/flant/grafana-statusmap.git .
+    git clone --branch v0.3.0 https://github.com/flant/grafana-statusmap.git .
 
 FROM debian:9
 COPY --from=0 /grafana.deb /

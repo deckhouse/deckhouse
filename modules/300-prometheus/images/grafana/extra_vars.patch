@@ -1,8 +1,8 @@
 diff --git a/public/app/plugins/datasource/prometheus/datasource.ts b/public/app/plugins/datasource/prometheus/datasource.ts
-index e6c79faa42..55668ac4f7 100644
+index 77c6ab39f8..81919a5b5d 100644
 --- a/public/app/plugins/datasource/prometheus/datasource.ts
 +++ b/public/app/plugins/datasource/prometheus/datasource.ts
-@@ -356,6 +356,15 @@ export class PrometheusDatasource extends DataSourceApi<PromQuery, PromOptions>
+@@ -364,6 +364,24 @@ export class PrometheusDatasource extends DataSourceApi<PromQuery, PromOptions>
          ...this.getRangeScopedVars(options.range),
        });
      }
@@ -10,20 +10,29 @@ index e6c79faa42..55668ac4f7 100644
 +    const intervalScrapeX4ForRangeVectors = Math.max(kbn.interval_to_seconds(this.interval) * 4, interval);
 +    const intervalForRangeVectors = Math.max(kbn.interval_to_seconds(this.interval) * 2, interval);
 +    scopedVars = Object.assign({}, scopedVars, {
-+      __interval_rv: { text: intervalForRangeVectors + 's', value: intervalForRangeVectors + 's'},
-+      __interval_sx3: { text: intervalScrapeX3ForOverTimeVectors + 's', value: intervalScrapeX3ForOverTimeVectors + 's'},
-+      __interval_sx4: { text: intervalScrapeX4ForRangeVectors + 's', value: intervalScrapeX4ForRangeVectors + 's'},
++      __interval_rv: {
++        text: intervalForRangeVectors + 's',
++        value: intervalForRangeVectors + 's',
++      },
++      __interval_sx3: {
++        text: intervalScrapeX3ForOverTimeVectors + 's',
++        value: intervalScrapeX3ForOverTimeVectors + 's',
++      },
++      __interval_sx4: {
++        text: intervalScrapeX4ForRangeVectors + 's',
++        value: intervalScrapeX4ForRangeVectors + 's',
++      },
 +    });
 +
      query.step = interval;
- 
+
      let expr = target.expr;
 diff --git a/public/app/plugins/datasource/prometheus/promql.ts b/public/app/plugins/datasource/prometheus/promql.ts
-index 0bde2da9c2..a63a0ac707 100644
+index d4b68200ba..e82b62614e 100644
 --- a/public/app/plugins/datasource/prometheus/promql.ts
 +++ b/public/app/plugins/datasource/prometheus/promql.ts
 @@ -2,6 +2,8 @@ import { CompletionItem } from '@grafana/ui';
- 
+
  export const RATE_RANGES: CompletionItem[] = [
    { label: '$__interval', sortText: '$__interval' },
 +  { label: '$__interval_sx3', sortText: '$__interval_sx3' },
