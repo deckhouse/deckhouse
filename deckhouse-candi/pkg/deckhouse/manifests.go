@@ -74,6 +74,9 @@ spec:
           value: PLACEHOLDER
         ports:
         - containerPort: 9650
+          name: self
+        - containerPort: 9651
+          name: custom
         readinessProbe:
           httpGet:
             path: /ready

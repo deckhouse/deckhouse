@@ -5,8 +5,11 @@ go 1.12
 require (
 	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
 	github.com/aws/aws-sdk-go v1.15.90
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20200629165725-a1a4303dcd1b // branch: feat_helm_3
-	github.com/flant/shell-operator v1.0.0-beta.10.0.20200623160558-059424b1a40a // branch: master for addon-operator 41c52f114c82
+	github.com/coreos/etcd v3.3.22+incompatible // indirect
+	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20200708095832-aa722bddf952 // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.10.0.20200708094531-126d47838bc0 // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.1.0
 	github.com/sirupsen/logrus v1.4.2
