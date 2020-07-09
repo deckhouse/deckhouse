@@ -22,11 +22,8 @@ metadata:
    heritage: deckhouse
    module: deckhouse-web
    app: dex-authenticator
- annotations:
-   dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: "$(module::public_domain deckhouse)"
-  sendAuthorizationHeader: true
   applicationIngressCertificateSecretName: "ingress-tls"
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
