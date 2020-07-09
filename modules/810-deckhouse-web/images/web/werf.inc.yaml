@@ -37,7 +37,7 @@ ansible:
           cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
           if [ $? -eq 0 ]; then
             # permalink not present, add it
-            PERMALINK="/$(echo $i | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#.md$#.html#')"
+            PERMALINK="/$(echo $i | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#readme\.html$#index.html#' )"
             sed -i "1apermalink: $PERMALINK" $i
           fi
         done
@@ -46,6 +46,16 @@ ansible:
         chdir: /srv/jekyll-data
     - name: "Building"
       shell: jekyll build
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Link checking"
+      shell: bundle exec htmlproofer \
+        --allow-hash-href \
+        --empty-alt-ignore \
+        --check_html \
+        --url_ignore "/localhost/,/https\:\/\/t.me/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+        ./_site/
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data

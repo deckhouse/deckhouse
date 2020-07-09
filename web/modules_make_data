@@ -17,5 +17,7 @@ for module in $modules_list ; do
   - title: $module
     url: /modules/$module/
 YAML
+    # Move files from docs/ directory up one level to preserve relative assets link
+    mv -f ./modules/$module/docs/* ./modules/$module/
   fi
 done

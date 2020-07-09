@@ -10,7 +10,7 @@ title: "Модуль cloud-provider-aws"
     * Синхронизирует метаданные AWS Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в AWS.
 2. simple-bridge — DaemonSet. Настраивает bridge между нодами.
 3. CSI storage — для заказа дисков в AWS.
-4. Регистрация в модуле [node-manager](modules/040-node-manager), чтобы [AWSInstanceClass'ы](#AWSInstanceClass) можно было использовать в [NodeGroups](modules/040-node-manager/README.md#nodegroup-custom-resource).
+4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [AWSInstanceClass'ы](#awsinstanceclass-custom-resource) можно было использовать в [NodeGroups]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 ## Конфигурация
 
@@ -24,7 +24,7 @@ title: "Модуль cloud-provider-aws"
 
 ### Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `AWSInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/README.md#Как-мне-перекатить-машины-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `AWSInstanceClass`. См. подробнее в документации модуля [node-manager]({{ site.baseurl }}/modules/040-node-manager/#как-мне-перекатить-машины-с-новой-конфигурацией).
 
 Для работы machine-controller-manager необходим пользователь с правами:
 ```
@@ -36,7 +36,7 @@ IAMFullAccess
 * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys)
 * `region` — имя AWS региона, в котором будут заказываться instances.
-* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [NodeGroup](modules/040-node-manager/README.md#NodeGroup-custom-resource) объекте.
+* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по-умолчанию для поля zones в [NodeGroup]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource) объекте.
     * Формат — массив строк.
     * Опциональный параметр. Вычисляется из всех зон в текущем регионе.
 * `instances` — параметры заказываемых instances.
@@ -69,7 +69,7 @@ cloudProviderAws: |
 
 ### AWSInstanceClass custom resource
 
-Ресурс описывает параметры группы AWS Instances, которые будет использовать machine-controller-manager из модуля [cloud-instance-manager](modules/040-cloud-instance-manager). На этот ресурс ссылается ресурс `CloudInstanceClass` из вышеупомянутого модуля.
+Ресурс описывает параметры группы AWS Instances, которые будет использовать machine-controller-manager из модуля [node-manager]({{ site.baseurl }}/modules/040-node-manager/). На этот ресурс ссылается ресурс `CloudInstanceClass` из вышеупомянутого модуля.
 
 Все опции идут в `.spec`.
 
@@ -159,20 +159,20 @@ kubernetes.io/cluster/kube-prod: shared
 
 В AWS нужно создать:
 
-1. По subnetwork в каждой зоне с опцией `auto-assign public IPv4 address`. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
-2. Routing table с роутом до IGW. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
-3. Security group, разрешающий всю коммуникацию между instances. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
+1. По subnetwork в каждой зоне с опцией `auto-assign public IPv4 address`. Прикрепить [clusterID тэг](#определение-cluster-id-тэга).
+2. Routing table с роутом до IGW. Прикрепить [clusterID тэг](#определение-cluster-id-тэга).
+3. Security group, разрешающий всю коммуникацию между instances. Прикрепить [clusterID тэг](#определение-cluster-id-тэга).
 4. Заказанный и настроенный master instance со следующими параметрами:
 
     1. Сеть включена в subnetwork из шага №1.
-    2. Прикрепить [clusterID тэг](#Определение-cluster-ID-тэга).
+    2. Прикрепить [clusterID тэг](#определение-cluster-id-тэга).
 
-    [Пример](install-kubernetes/aws/playbook.yml) настройки ОС для master'а через kubeadm.
+    [Пример](https://github.com/deckhouse/deckhouse/blob/master/install-kubernetes/aws/playbook.yml) настройки ОС для master'а через kubeadm.
 
 ### Автоматизированная подготовка окружения
 
-1. [Terraform](install-kubernetes/aws/tf) для создания облачных ресурсов.
-2. [Ansible playbook](install-kubernetes/aws/playbook.yml) для provision'а master'а с помощью kubeadm.
+1. [Terraform](https://github.com/deckhouse/deckhouse/tree/master/install-kubernetes/aws/tf) для создания облачных ресурсов.
+2. [Ansible playbook](https://github.com/deckhouse/deckhouse/blob/master/install-kubernetes/aws/playbook.yml) для provision'а master'а с помощью kubeadm.
 
 **Внимание!** Перед использованием готовых скриптов, следует установить два плагина для Terraform и Ansible.
 
@@ -199,5 +199,5 @@ chmod +x ~/.ansible-terraform-inventory
 
 1. [Настройте](#настройка-окружения) облачное окружение. Возможно, [автоматически](#автоматизированная-подготовка-окружения).
 2. [Установите](#включение-модуля) deckhouse с помощью `install.sh`, передав флаг `--extra-config-map-data base64_encoding_of_custom_config` с [параметрами](#параметры) модуля.
-3. [Создайте](#AWSInstanceClass-custom-resource) один или несколько `AWSInstanceClass`
-4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [node-manager](modules/040-node-manager).
+3. [Создайте](#awsinstanceclass-custom-resource) один или несколько `AWSInstanceClass`
+4. Управляйте количеством и процессом заказа машин в облаке с помощью модуля [node-manager]({{ site.baseurl }}/modules/040-node-manager/).

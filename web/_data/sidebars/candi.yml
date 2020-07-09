@@ -2,10 +2,10 @@ entries:
 - title: Подсистема CandI
   folders:
     - title: Подсистема CandI
-      url: /candi/docs/
+      url: /candi/
       folderitems:
       - title: Описание
-        url: /candi/docs/
+        url: /candi/
       - title: Фреймфорк bashible
         url: /candi/bashible/
       - title: Control Plane Kubeadm

@@ -3,8 +3,6 @@ title: "Модуль Prometheus Pushgateway"
 permalink: /modules/303-prometheus-pushgateway/
 ---
 
-{% raw %}
-
 Данный модуль устанавливает в кластер [Prometheus Pushgateway](https://github.com/prometheus/pushgateway). Он предназначен для приема метрик от приложения и отдачи их Prometheus.
 
 ### Включение модуля
@@ -36,7 +34,7 @@ prometheusPushgateway: |
   - second
   - another
 ```
-
+{% raw %}
 ### О Prometheus Pushgateway
 
 * [Когда стоит использовать](https://prometheus.io/docs/practices/pushing/)

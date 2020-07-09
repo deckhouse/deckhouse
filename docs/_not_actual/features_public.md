@@ -91,7 +91,7 @@ Deckhouse устанавливает в ваш кластер настроенн
 - Round Trip Time
 - Mean deviation
 
-> Модуль: [ping-exporter](/docs/modules/ping-exporter/)
+> Модуль: [ping-exporter]({/docs/modules/ping-exporter/)
 
 <a name="balancer" />
 

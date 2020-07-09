@@ -17,10 +17,10 @@ hide_sidebar: false
 ### Параметры
 
 * `enableMultiTenancy` — включить авторизацию по namespace.
-  * Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+  * Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator).
   * Значение по-умолчанию – `false` (то есть multi-tenancy отключен).
-* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator](/modules/160-control-plane-configurator).
-  * `enabled` — передавать ли в control-plane-configurator параметры для настройки authz-webhook (см. [параметры control-plane-configurator-а](/modules/160-control-plane-configurator#параметры)).
+* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator).
+  * `enabled` — передавать ли в control-plane-configurator параметры для настройки authz-webhook (см. [параметры control-plane-configurator-а]({{ site.baseurl }}/modules/160-control-plane-configurator#параметры)).
     * При выключении этого параметра, модуль control-plane-configurator будет считать, что по-умолчанию Webhook-авторизация выключена и, соответственно, если не будет дополнительных настроек, то control-plane-configurator будет стремиться вычеркнуть упоминания Webhook-плагина из манифеста. Даже если вы настроите манифест вручную.
     * По-умолчанию `true`.
 
@@ -94,7 +94,7 @@ spec:
 В kubernetes есть две категории пользователей:
 * ServiceAccount-ы, учёт которых ведёт сам Kubernetes через API.
 * Остальные пользователи, чей учёт ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера – существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. Мы поддерживаем только два способа:
-    * Модуль [user-authn](/modules/150-user-authn/) (подробнее см. документацию модуля).
+    * Модуль [user-authn]({{ site.baseurl }}/modules/150-user-authn/) (подробнее см. документацию модуля).
     * Выдача сертификатов.
 
 Для выдачи сертификата нужно сделать сертификат указав `CN=<имя>` и несколько `O=<группа>` и подписать его с помощью корневой CA кластера. Именно этим механизмом вы аутентифицируетесь в кластере когда, например, используете kubectl на бастионе.
@@ -156,7 +156,7 @@ spec:
 
 ## Настройка kube-apiserver
 
-Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator).
 
 <details>
   <summary>Изменения манифеста, которые произойдут

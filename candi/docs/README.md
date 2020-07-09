@@ -11,11 +11,11 @@ hide_sidebar: false
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * Модули **Deckhouse'а**:
-    * [**control-plane-manager**](../modules/040-control-plane-manager) - установка и обновление `control-plane` для master-узлов.
-    * [**node-manager**](../modules/040-node-manager) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
+    * [**control-plane-manager**]({{ site.baseurl }}/modules/040-control-plane-manager/) - установка и обновление `control-plane` для master-узлов.
+    * [**node-manager**]({{ site.baseurl }}/modules/040-node-manager/) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
     * **cloud-provider-**
-        * [**openstack**](../modules/030-cloud-provider-openstack) - модуль для взаимодействия с облаками на базе `OpenStack`.
-* Installer или [**deckhouse-candi**](../deckhouse-candi) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
+        * [**openstack**]({{ site.baseurl }}/modules/030-cloud-provider-openstack/) - модуль для взаимодействия с облаками на базе `OpenStack`.
+* Installer или [**deckhouse-candi**]({{ site.baseurl }}/candi/deckhouse-candi.html) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
 
 ## Installer
 
@@ -60,12 +60,12 @@ deckhouse:
 
 | Kind          | Description        | OpenAPI path       |
 | ------------- | ------------------ | ------------------ |
-| ClusterConfiguration  | Основная часть конфигурации кластера Kubernetes | [candi/openapi/cluster_configuration.yaml](./openapi/cluster_configuration.yaml) |
-| InitConfiguration     | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](./openapi/init_configuration.yaml)|
-| OpenStackClusterConfiguration  | Основная часть конфигурации кластера Kubernetes в OpenStack | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](./cloud-providers/openstack/openapi/cluster_configuration.yaml) |
-| OpenStackInitConfiguration     | Часть конфигурации, которая нужна только при создании кластера в OpenStack | [candi/cloud-providers/openstack/openapi/init_configuration.yaml](./cloud-providers/openstack/openapi/init_configuration.yaml)|
-| BashibleTemplateData  | Данные для компиляции Bashible Bundle (используется только для deckhouse-candi render bashible-bunble) | [candi/bashible/openapi.yaml](./bashible/openapi.yaml) |
-| KubeadmConfigTemplateData | Данные для компиляции Kubeadm config (используется только для deckhouse-candi render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](./control-plane-kubeadm/openapi.yaml)|
+| ClusterConfiguration  | Основная часть конфигурации кластера Kubernetes | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/cluster_configuration.yaml) |
+| InitConfiguration     | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
+| OpenStackClusterConfiguration  | Основная часть конфигурации кластера Kubernetes в OpenStack | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
+| OpenStackInitConfiguration     | Часть конфигурации, которая нужна только при создании кластера в OpenStack | [candi/cloud-providers/openstack/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/init_configuration.yaml)|
+| BashibleTemplateData  | Данные для компиляции Bashible Bundle (используется только для deckhouse-candi render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
+| KubeadmConfigTemplateData | Данные для компиляции Kubeadm config (используется только для deckhouse-candi render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
 Процесс развертывания кластера при помощи `deckhouse-candi` делится на несколько этапов:
@@ -99,8 +99,8 @@ deckhouse:
 Bundle представляет собой tar-архив со всеми необходимыми файлами с такой же структурой папок, которая должна быть на удаленном сервере. 
 
 В bundle входят:
-1. Подготовленные step'ы из всех директорий (подробнее можно узнать о расположении степов из [описания bashible](./bashible/README.md)). 
-2. Подготовленный файл конфигурации для kubeadm (подробнее можно узнать о конфигурации из [описания control-plane-kubeadm](./control-plane-kubeadm/README.md)). 
+1. Подготовленные step'ы из всех директорий (подробнее можно узнать о расположении степов из [описания bashible]({{ site.baseurl }}/candi/bashible/)). 
+2. Подготовленный файл конфигурации для kubeadm (подробнее можно узнать о конфигурации из [описания control-plane-kubeadm]({{ site.baseurl }}/candi//control-plane-kubeadm/)). 
 3. Объединенный в один файл bashbooster.
 
 Далее архив загружается по scp на сервер и распаковывается, после чего выполняется `/var/lib/bashible/bashible.sh --local`.

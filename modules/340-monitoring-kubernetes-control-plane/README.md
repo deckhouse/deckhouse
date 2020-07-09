@@ -34,7 +34,7 @@
     * `authenticationMethod` — как аутентифицироваться. Обязательный параметр.
       * Варианты:
         * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
-        * `PrometheusCertificate` — использовать стандартный сертификат, который поставляется с модулем [prometheus](/modules/300-prometheus), и выдать ему соответствующие права на доступ к метрикам при помощи RBAC.
+        * `PrometheusCertificate` — использовать стандартный сертификат, который поставляется с модулем [prometheus]({{ site.baseurl }}/modules/300-prometheus), и выдать ему соответствующие права на доступ к метрикам при помощи RBAC.
     * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр если `authenticationMethod` == `Certificate`. Секрет должен содержать два ключа:
       * `client.crt` — сертификат.
       * `client.key` — ключ.
@@ -68,7 +68,7 @@
       * Варианты:
         * `None` — не аутентифицироваться.
         * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
-        * `PrometheusCertificate` — использовать стандартный сертификат, который поставляется с модулем [prometheus](/modules/300-prometheus), и выдать ему соответствующие права на доступ к метрикам при помощи RBAC.
+        * `PrometheusCertificate` — использовать стандартный сертификат, который поставляется с модулем [prometheus]({{ site.baseurl }}/modules/300-prometheus), и выдать ему соответствующие права на доступ к метрикам при помощи RBAC.
     * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр если `authenticationMethod` == `Certificate`. Секрет должен содержать два ключа:
       * `client.crt` — сертификат.
       * `client.key` — ключ.
@@ -109,7 +109,7 @@
       * Варианты:
         * `None` — не аутентифицироваться.
         * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
-        * `PrometheusCertificate` — использовать стандартный сертификат, который поставляется с модулем [prometheus](/modules/300-prometheus), и выдать ему соответствующие права на доступ к метрикам при помощи RBAC.
+        * `PrometheusCertificate` — использовать стандартный сертификат, который поставляется с модулем [prometheus]({{ site.baseurl }}/modules/300-prometheus), и выдать ему соответствующие права на доступ к метрикам при помощи RBAC.
     * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр если `authenticationMethod` == `Certificate`. Секрет должен содержать два ключа:
       * `client.crt` — сертификат.
       * `client.key` — ключ.

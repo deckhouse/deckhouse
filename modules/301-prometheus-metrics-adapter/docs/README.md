@@ -4,10 +4,9 @@ permalink: /modules/301-prometheus-metrics-adapter/
 search: autoscaler 
 ---
 
-{% raw %}
 ## Назначение
 
-**TLDR;** — модуль позволяет работать [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)- и [VPA](https://github.com/deckhouse/deckhouse/blob/master/modules/302-vertical-pod-autoscaler/README.md)- автоскейлерам по «любым» метрикам.
+**TLDR;** — модуль позволяет работать [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)- и [VPA]({{ site.baseurl }}/modules/302-vertical-pod-autoscaler/)- автоскейлерам по «любым» метрикам.
 
 Данный модуль устанавливает в кластер [имплементацию](https://github.com/DirectXMan12/k8s-prometheus-adapter) Kubernetes [resource metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/custom-metrics-api.md) и [external metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/external-metrics-api.md) для получения метрик из Prometheus.
 
@@ -32,11 +31,11 @@ search: autoscaler
 
 ### Параметры
 
-* `highAvailability` — ручное управление [режимом отказоустойчивости](/FEATURES.md#отказоустойчивость).
+* `highAvailability` — ручное управление режимом отказоустойчивости.
 
 ## Как работает
 
-Данный модуль регистрирует k8s-prometheus-adapter в качестве external API сервиса, который расширяет возможности Kubernetes API. Когда какому-то из компонентов Kubernetes (VPA, HPA) требуется информация об используемых ресурсах, он делает запрос в Kubernetes API, а тот, в свою очередь, проксирует запрос в адаптер. Адаптер на основе своего [конфигурационного файла](templates/config-map.yaml) выясняет, как посчитать метрику и отправляет запрос в Prometheus.
+Данный модуль регистрирует k8s-prometheus-adapter в качестве external API сервиса, который расширяет возможности Kubernetes API. Когда какому-то из компонентов Kubernetes (VPA, HPA) требуется информация об используемых ресурсах, он делает запрос в Kubernetes API, а тот, в свою очередь, проксирует запрос в адаптер. Адаптер на основе своего [конфигурационного файла](https://github.com/deckhouse/deckhouse/blob/master/modules/301-prometheus-metrics-adapter/templates/config-map.yaml) выясняет, как посчитать метрику и отправляет запрос в Prometheus.
 
 ## Как настраивать HPA?
 
@@ -65,6 +64,7 @@ search: autoscaler
 
 Пример HPA для скейлинга по базовым метрикам из `metrics.k8s.io`: CPU и Memory Pod'ов. Особое внимание на `averageUtulization` — это значение отражает целевой процент ресурсов, который был **реквестирован**.
 
+{% raw %}
 ```yaml
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
@@ -97,6 +97,7 @@ spec:
         type: Utilization
         averageUtilization: 80 # если поды реквестировали по 1GB памяти и в среднем съели более 800MB, — скейлимся
 ```
+{% endraw %}
 
 ### Скейлинг по кастомным метрикам
 
@@ -121,6 +122,7 @@ spec:
 
 С помощью Cluster-ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса можно её локально переопределять. Формат у всех CRD одинаковый:
 
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressMetric
@@ -138,17 +140,19 @@ metadata:
 spec:
   query: sum(ingress_nginx_detail_sent_bytes_sum{<<.LabelMatchers>>}) by (<<.GroupBy>>)
 ```
+{% endraw %}
 
 Где:
 * `.metadata.name` — имя метрики, используется в HPA.
 * `.spec.query` — кастомный PromQL-запрос, который возвращает однозначное значение для вашего набора лейблов (используйте группировку операторами `sum() by()`, `max() by()` и пр.). В запросе необходимо **обязательно использовать** ключики:
-    * `<<.LabelMatchers>>` — заменится на набор лейблов `{namespace="mynamespace",ingress="myingress"}`. Можно добавить свои лейблы через запятую как в [примере ниже](#пример-с-размером-очереди-rabbitmq).
+    * `<<.LabelMatchers>>` — заменится на набор лейблов `{namespace="mynamespace",ingress="myingress"}`. Можно добавить свои лейблы через запятую как в [примере ниже](#пример-использования-кастомных-метрик-с-размером-очереди-rabbitmq).
     * `<<.GroupBy>>` — заменится на перечисление лейблов `namespace,ingress` для группировки (`max() by(...)`, `sum() by (...)` и пр.).
 
 #### Применяем кастомные метрики в HPA
 
 После регистрации кастомной метрики можно на неё сослаться. С точки зрения HPA, кастомные метрики бывают двух видов — `Pods` и `Object`. С `Object` всё просто — это отсылка к объекту в кластере, который имеет в прометее метрики с соответствующими лейблами (`namespace=XXX,ingress=YYY`). Эти лейблы будут подставляться вместо `<<.LabelMatchers>>` в вашем кастомном запросе.
 
+{% raw %}
 ```yaml
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
@@ -175,13 +179,15 @@ spec:
         type: Value     # Для метрик типа Object можно использовать только `type: Value`.
         value: 10       # Если значение нашей кастомной метрики больше 10, то надо скейлиться!
 ```
+{% endraw %}
 
-C `Pods` сложнее — из ресурса, который скейлит HPA, будут извлечены все pod-ы и по каждому будет собраны метрики с соответствующими лейблами (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...). Из этих метрик HPA посчитает среднее и использует для скейлинга. См. [пример ниже](#пример-с-использованием метрик-типа-pods).
+C `Pods` сложнее — из ресурса, который скейлит HPA, будут извлечены все pod-ы и по каждому будет собраны метрики с соответствующими лейблами (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...). Из этих метрик HPA посчитает среднее и использует для скейлинга. См. [пример ниже](#примеры-с-использованием-кастомных-метрик-типа-pods).
 
 ### Пример использования кастомных метрик с размером очереди RabbitMQ
 
 Имеем очередь "send_forum_message" в RabbitMQ, для которого зарегистрирован сервис "rmq". Если сообщений в очереди больше 42 — скейлимся.
 
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ServiceMetric
@@ -216,11 +222,13 @@ spec:
         type: Value
         value: 42
 ```
+{% endraw %}
 
 ### Примеры с использованием кастомных метрик типа `Pods`
 
 Хотим, чтобы среднее количество php-fpm-воркеров в деплойменте "mybackend" было не больше 5.
 
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: PodMetric
@@ -250,9 +258,11 @@ spec:
         type: AverageValue # Для метрик с type: Pods можно использовать только AverageValue.
         averageValue: 5   # Если среднее значение метрики у всех подов деплоя myworker больше 5, то скейлимся.
 ```
+{% endraw %}
 
 Скейлим deployment по процентному количеству active-воркеров php-fpm.
 
+{% raw %}
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -282,6 +292,7 @@ spec:
         type: AverageValue
         averageValue: 80 # Если в среднем по деплойменту 80% воркеров заняты, скейлимся
 ```
+{% raw %}
 
 ### Скейлинг по внешним метрикам
 
@@ -293,6 +304,7 @@ Prometheus-metrics-adapter поддерживает механизм `externalRu
 
 Пример PrometheusRule:
 
+{% raw %}
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -309,11 +321,13 @@ spec:
     - record: kube_adapter_metric_mymetric # Как ваша новая метрика будет называться
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress) # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в неё лишние лейблы.
 ```
+{% endraw %}
 
 #### Применяем внешние метрики в HPA
 
 После регистрации внешней метрики можно на неё сослаться.
 
+{% raw %}
 ```yaml
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
@@ -340,6 +354,7 @@ spec:
         type: Value     # Для метрик типа External можно использовать только `type: Value`.
         value: 10       # Если значение нашей метрики больше 10, то надо скейлиться!
 ```
+{% endraw %}
 
 #### Пример с размером очереди в Amazon SQS
 
@@ -347,6 +362,7 @@ spec:
 
 В Amazon SQS работает очередь "send_forum_message". Если сообщений в очереди больше 42 — скейлимся. Для получения метрик из Amazon SQS понадобится экспортер, для примера — [sqs-exporter](https://github.com/ashiddo11/sqs-exporter).
 
+{% raw %}
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -387,6 +403,7 @@ spec:
         type: Value
         value: 42
 ```
+{% endraw %}
 
 ## Отладка
 
@@ -413,5 +430,4 @@ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/me
 ```shell
 kubectl get --raw "/apis/external.metrics.k8s.io/v1beta1"
 ```
-{% endraw %}
 

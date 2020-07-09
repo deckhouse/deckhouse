@@ -11,7 +11,7 @@ hide_sidebar: false
 
 ### DestinationRule
 
-[Reference](https://istio.io/docs/reference/config/networking/v1alpha3/destination-rule/).
+[Reference](https://istio.io/latest/docs/reference/config/networking/destination-rule/).
 
 Настройка исходящих запросов на сервис:
 * балансировка трафика между эндпоинтами,
@@ -60,12 +60,12 @@ spec:
 ```
 
 Ещё примеры:
-* [Circuit Breaker](#circuit breaker)
+* [Circuit Breaker](#circuit-breaker)
 * [Canary](#canary)
 
 ### VirtualService
 
-[Reference](https://istio.io/docs/reference/config/networking/v1alpha3/virtual-service/).
+[Reference](https://istio.io/latest/docs/reference/config/networking/virtual-service/).
 
 Использование VirtualService опционально, классические сервисы продолжают работать если вам достаточно их функционала.
 
@@ -123,7 +123,7 @@ spec:
 
 ### ServiceEntry
 
-[Reference](https://istio.io/docs/reference/config/networking/v1alpha3/service-entry/).
+[Reference](https://istio.io/latest/docs/reference/config/networking/service-entry/).
 
 Аналог Endpoints + Service из ванильного Kubernetes. Позволяет сообщить Istio о существовании внешнего сервиса или даже переопределить его адрес.
 
@@ -133,10 +133,10 @@ spec:
 
 ### Policy
 
-[Reference](https://istio.io/docs/reference/config/istio.authentication.v1alpha1/#Policy).
+Reference (Не актуальная ссылка - `https://istio.io/docs/reference/config/istio.authentication.v1alpha1/#Policy`).
 
 Локальные настройки аутентификации на стороне приёмника (сервиса). Можно определить JWT-аутентификацию или включить/выключить mTLS для какого-то сервиса.
-Для глобального включения mTLS используйте [параметр модуля](/modules/360-istio/README.md#параметры) `tlsMode`.
+Для глобального включения mTLS используйте [параметр модуля]({{ site.baseurl }}/modules/360-istio/#параметры) `tlsMode`.
 
 ```yaml
 apiVersion: authentication.istio.io/v1alpha1
@@ -178,13 +178,13 @@ spec:
 
 #### RbacConfig
 
-[Reference](https://istio.io/docs/reference/config/authorization/istio.rbac.v1alpha1/#RbacConfig-Mode).
+Reference (Не актуальная ссылка - `https://istio.io/docs/reference/config/authorization/istio.rbac.v1alpha1/#RbacConfig-Mode`).
 
 ВКЛ/ВЫКЛ нативную авторизацию для namespace или для отдельных сервисов. Если авторизация включена — работает правило "всё, что не разрешено — запрещено".
 
 #### ServiceRole
 
-[Reference](https://istio.io/docs/reference/config/authorization/istio.rbac.v1alpha1/#ServiceRole).
+Reference (Не актуальная ссылка - https://istio.io/docs/reference/config/authorization/istio.rbac.v1alpha1/#ServiceRole`).
 
 Определяет **ЧТО** разрешено.
 
@@ -205,14 +205,14 @@ spec:
 
 #### ServiceRoleBinding
 
-[Reference](https://istio.io/docs/reference/config/authorization/istio.rbac.v1alpha1/#ServiceRoleBinding).
+> Устаревшая ссылка на Reference - `https://istio.io/docs/reference/config/authorization/istio.rbac.v1alpha1/#ServiceRoleBinding`.
 
 Привязывает [**ЧТО**](#servicerole) разрешено **КОМУ** (spec.subjects).
 
 При этом **КОГО** можно определить несколькими способами:
 
 * ServiceAccount — указать в поле users sa пода, из которого обращаются.
-* На основе аргументов из запроса, включая данные из JWT-токена. Полный список на [официальном сайте](https://istio.io/docs/reference/config/authorization/constraints-and-properties/).
+* На основе аргументов из запроса, включая данные из JWT-токена. Полный список на [официальном сайте](https://istio.io/latest/docs/reference/config/security/conditions/).
 
 
 ```yaml
@@ -234,7 +234,7 @@ spec:
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` модуля [nginx-ingress](/modules/400-nginx-ingress).
+* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` модуля [nginx-ingress]({{ site.baseurl }}/modules/400-nginx-ingress).
 * Service, на который будет ссылаться Ingress. Обязательно с `ClusterIP`.
 * Ingress, который ссылается на Service. У Ingress должна быть аннотация `nginx.ingress.kubernetes.io/service-upstream: "true"`. Sidecar-ы от Istio, которые прикреплены к ingress, перехватывают только трафик, адресованный на диапазон Service CIDR, соответственно, мы получаем возможность разделить два мира. В классическом мире ingress обращается напрямую к подам на диапазон Pod CIDR и всё работает как прежде. В мире же Istio, ingress обращается на ClusterIP и тем самым трафик перехватывается sidecar-ом.
 

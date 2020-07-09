@@ -1,8 +1,9 @@
 ---
+title: "Включение поддержки UUID для всех виртуальных машин"
+sidebar: modules-cloud-provider-vsphere
+permalink: modules/030-cloud-provider-vsphere/csi/disk_uuid.html
+hide_sidebar: false
 ---
-
-Включение поддержки UUID для всех виртуальных машин
-=======
 
 Для работы `vsphere-csi-driver` у всех виртуальных машин кластера необходимо включить поддержку параметра `disk.EnableUUID`.
 

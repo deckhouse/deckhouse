@@ -23,5 +23,5 @@ extended_monitoring_{0}_threshold{{namespace="{1}", threshold="{2}", {3}="{4}"}}
 
 ## Добавление стандартных аннотаций и их значений
 
-В файле [extended-monitoring.py]({{ site.baseurl }}/modules/340-extended-monitoring/images/extended-monitoring/src/extended-monitoring.py) достаточно добавить в аттрибут `default_annotations` в Annotated классе, соответствующий типу Kubernetes объекта, необходимые аннотации.
+В файле [extended-monitoring.py](https://github.com/deckhouse/deckhouse/tree/master/modules/340-extended-monitoring/images/extended-monitoring/src/extended-monitoring.py) достаточно добавить в аттрибут `default_annotations` в Annotated классе, соответствующий типу Kubernetes объекта, необходимые аннотации.
 {% endraw %}

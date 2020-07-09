@@ -12,20 +12,20 @@ hide_sidebar: false
 ------------
 
 ### Параметры
-* `tlsMode` — режим прозрачного шифрования трафика между pod'ами ([Mutual TLS](https://istio.io/docs/tasks/security/mtls-migration/)).
+* `tlsMode` — режим прозрачного шифрования трафика между pod'ами ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).e
     * Возможные значения:
         * `"Off"` — pod'ы не будут шифровать исходящие запросы и не будут отклонять реквесты, которые не зашифрованы. (Hint: пишите "Off" только в кавычках).
         * `"MutualPermissive"` — pod'ы будут шифровать исходящие запросы, но не будут отклонять реквесты, которые не зашифрованы. Режим полезен в переходный момент при переезде на mTLS.
         * `"Mutual"` — pod'ы будут шифровать исходящие запросы и строго будут принимать только зашифрованные реквесты.
     * При включении режима `"Mutual"` перестанут работать классические HTTP-пробы, так как kubelet ничего про mTLS не знает. Но в sidecar c istio предусмотрен специальный порт, куда можно эти пробы направить. Sidecar-injector, который добавляет sidecar-ы в поды, заодно перенаправит ваши пробы на специальный порт.
     * По-умолчанию `"Off"`.
-    * Управлять режимом mTLS можно локально с помощью ресурсов [Policy](/modules/360-istio/docs/usage.html#policy) и [DestinationRule](/modules/360-istio/docs/usage.html#destinationrule).
-* `disableMixerTelemetry` — выключить компонент Mixer и сбор [телеметрии](https://istio.io/docs/concepts/policies-and-telemetry/). Деплоймент mixer-telemetry будет получать от сайдкаров метрики и агрегировать их для экспорта в Prometheus. Может повлиять на производительность сайдкаров.
+    * Управлять режимом mTLS можно локально с помощью ресурсов [Policy]({{ site.baseurl }}/modules/360-istio/usage.html#policy) и [DestinationRule]({{ site.baseurl }}/modules/360-istio/usage.html#destinationrule).
+* `disableMixerTelemetry` — выключить компонент Mixer и сбор [телеметрии](https://istio.io/latest/docs/concepts/observability/). Деплоймент mixer-telemetry будет получать от сайдкаров метрики и агрегировать их для экспорта в Prometheus. Может повлиять на производительность сайдкаров.
     * По-умолчанию `false`.
-* `enableAuthorizationGlobally` — включить режим [нативной авторизации](/modules/360-istio/docs/usage.html#нативная-авторизация) средствами istio-proxy "что не разрешено, то запрещено".
+* `enableAuthorizationGlobally` — включить режим [нативной авторизации]({{ site.baseurl }}/modules/360-istio/usage.html#нативная-авторизация) средствами istio-proxy "что не разрешено, то запрещено".
     * **Важно!** Авторизация без mTLS-аутентификации не будет работать в полной мере. В этом случае будут доступны только простейшие аргументы для составления политик, такие как source.ip и request.headers.
     * При включении авторизации перестанут работать классические HTTP-пробы, так как разрешающих правил для проб никто не сделал. Но в sidecar c istio предусмотрен специальный порт, куда можно эти пробы направить. Sidecar-injector, который добавляет sidecar-ы в поды, заодно перенаправит ваши пробы на специальный порт.
-    * Авторизацию также можно включать локально, для namespace или для единственного сервиса с помощью ресурса [RbacConfig](/modules/360-istio/docs/usage.html#rbacconfig).
+    * Авторизацию также можно включать локально, для namespace или для единственного сервиса с помощью ресурса [RbacConfig]({{ site.baseurl }}/modules/360-istio/usage.html#rbacconfig).
     * По-умолчанию `false`.
 * `sidecarInjectorPolicy` — определяет поведение sidecar-injector-а после того, как его натравили на прикладной namespace (см. [Как активировать istio для моего приложения?](#как-активировать-istio-для-моего-приложения)).
     * Возможные значения — `enabled` (вставлять sidecar в новые поды) или `disabled` (не вставлять sidecar в новые поды). Переопределить поведение можно аннотацией к поду `sidecar.istio.io/inject`.

@@ -77,7 +77,7 @@ ingressNginxEnabled: "false"
         * Параметр является обязательным, если не указан `httpPort`.
 
 * `acceptRequestsFrom` — список CIDR, которым разрешено подключаться к контроллеру. Вне зависимости от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение (а не "адрес клиента", который может передаваться в некоторых inlet'ах через заголовки или с использованием proxy protocol).
-    * Этот параметр реализован при помощи [map module](ngx_http_map_module) и если адрес, с которого непосредственно производится подключение, не разрешен – nginx закрывает соединение (при помощи return 444).
+    * Этот параметр реализован при помощи [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html) и если адрес, с которого непосредственно производится подключение, не разрешен – nginx закрывает соединение (при помощи return 444).
     * По-умолчанию к контроллеру можно подключаться с любых адресов.
 * `resourcesRequests` — настройки максимальных значений cpu и memory, которые может запросить под при выборе ноды (если VPA выключен, максимальные значения становятся желаемыми). 
     * `mode` — режим управления реквестами ресурсов:
@@ -111,7 +111,7 @@ ingressNginxEnabled: "false"
         * По-умолчанию `false`.
     * `includeSubDomains` — применять ли настройки hsts ко всем саб-доменам сайта.
         * По-умолчанию `false`.
-* `legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](templates/ingress/configmap.yaml).
+* `legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/402-ingress-nginx/templates/controller/configmap.yaml).
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `disableHTTP2` — bool, выключить ли HTTP/2.
     * По-умолчанию HTTP/2 включен (`false`).
@@ -141,7 +141,7 @@ ingressNginxEnabled: "false"
     * **Внимание!** Не рекомендуется использовать данную опцию, не гарантируется обратная совместимость или работоспособность ingress controller'а с использованием данной опции.
 * `additionalHeaders` — дополнительные header'ы, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
 
-
+{% raw %}
 ### Пример
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -212,6 +212,7 @@ spec:
     sourceRanges:
     - 192.168.0.0/24
 ```
+{% endraw %}
 
 Статистика
 ----------
@@ -256,7 +257,8 @@ spec:
 В случае, если вы хотите ограничить доступ к вашему приложению внутри кластера ТОЛЬКО от подов ingress'а, 
 вам необходимо в pod с приложением добавить контейнер с kube-rbac-proxy:
 
-### Пример Deployment для защищенного приложения: 
+### Пример Deployment для защищенного приложения:
+{% raw %}
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -308,6 +310,8 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
+{% endraw %}
+
 Приложение принимает запросы на адресе 127.0.0.1, что означает, что по незащищенному соединению к нему можно подключиться только изнутри пода.
 Прокси же слушает на адресе 0.0.0.0 и перехватывает весь внешний трафик к поду.
 
@@ -315,8 +319,9 @@ spec:
 
 Чтобы аутентифицировать и авторизовывать пользователей при помощи kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В наших кластерах [уже есть готовая ClusterRole](../../020-deckhouse/templates/kube-rbac-proxy.yaml) - **d8-rbac-proxy**.
+В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/master/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) - **d8-rbac-proxy**.
 Создавать её самостоятельно не нужно! Нужно только прикрепить её к serviceaccount'у вашего Deployment'а.
+{% raw %}
 ```yaml
 ---
 apiVersion: v1
@@ -361,10 +366,12 @@ data:
           subresource: http
           name: my-app
 ```
+{% endraw %}
 Согласно конфигурации, у пользователя должны быть права на доступ к Deployment с именем `my-app` 
 и его дополнительному ресурсу `http` в неймспейсе `my-namespace`.
 
-Выглядят такие права в виде RBAC так: 
+Выглядят такие права в виде RBAC так:
+{% raw %} 
 ```yaml
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -402,4 +409,5 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   proxy_ssl_protocols TLSv1.2;
   proxy_ssl_session_reuse on;
 ```
+{% endraw %}
 Подробнее о том, как работает аутентификация по сертификатам можно прочитать [по этой ссылке](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).
