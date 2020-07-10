@@ -23,8 +23,9 @@ function __main__() {
     unset IFS
     /usr/local/bin/helm 2to3 convert --release-storage configmaps --tiller-out-cluster --tiller-ns d8-system ${release} --release-versions-max 1
 
-    if secret="$(kubectl -n antiopa get secret -l owner=helm,name="$release" -o json | jq '.items[0]')" 2>/dev/null ; then
+    if [ "$(kubectl -n antiopa get secret -l owner=helm,name="$release" -o name | wc -l)" -gt 0 ] ; then
       # migrate from antiopa to d8-system
+      secret="$(kubectl -n antiopa get secret -l owner=helm,name="$release" -o json | jq '.items[0]')" 2>/dev/null
       echo -n '"' > /tmp/release_data
       jq '.data.release' <<< "$secret" -r | base64 -d | base64 -d | gunzip | jq '.namespace = "d8-system"' | gzip | base64 -w0 | base64 -w0 >> /tmp/release_data
       echo '"' >> /tmp/release_data
