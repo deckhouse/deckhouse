@@ -12,11 +12,13 @@ fi
 
 # If kubelet use incorrect certs, reconfigure to use certs that are auto-renewed
 if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq --arg user ${kubelet_kubeconfig_user} '.users[] | select(.name == $user) | .user."client-certificate"' -r | grep ${kubelet_certificate_path} -q ; then
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set users.${kubelet_kubeconfig_user}.client-certificate ${kubelet_certificate_path}
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set   users.${kubelet_kubeconfig_user}.client-certificate ${kubelet_certificate_path}
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config unset users.${kubelet_kubeconfig_user}.client-certificate-data
   bb-flag-set kubelet-need-restart
 fi
 if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq --arg user ${kubelet_kubeconfig_user} '.users[] | select(.name == $user) | .user."client-key"' -r | grep ${kubelet_certificate_path} -q ; then
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set users.${kubelet_kubeconfig_user}.client-key ${kubelet_certificate_path}
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set   users.${kubelet_kubeconfig_user}.client-key ${kubelet_certificate_path}
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config unset users.${kubelet_kubeconfig_user}.client-key-data
   bb-flag-set kubelet-need-restart
 fi
 {{- end }}
