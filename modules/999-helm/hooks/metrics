@@ -5,26 +5,33 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
-    kubernetes:
-    - name: helm_releases
-      group: main
-      waitForSynchronization: false
-      keepFullObjectsInMemory: false
-      executeHookOnEvent: ["Added"]
-      apiVersion: v1
-      kind: ConfigMap
-      labelSelector:
-        matchLabels:
-          OWNER: TILLER
-      jqFilter: |
-        {
-          "metadata": .metadata
-        }
+    onStartup: 1
     schedule:
     - group: main
       queue: /modules/$(module::name::kebab_case)/helm_releases
       crontab: "*/20 * * * *"
 EOF
+}
+
+function __on_startup() {
+  if metrics_from_prometheus="$(curl -s --connect-timeout 10 --max-time 10 -k -XGET -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility")"; then
+    metrics="$(jq '.data.result[] |
+    {
+      "name": "resource_versions_compatibility",
+      "set": (.value[1] | tonumber),
+      "group": "/modules/'$(module::name::kebab_case)'/metrics",
+      "labels": {
+        "helm_release_name": .metric.helm_release_name,
+        "resource_name": .metric.resource_name,
+        "kind": .metric.kind,
+        "api_version": .metric.api_version,
+        "namespace": .metric.namespace
+      }
+    }
+    ' <<< "$metrics_from_prometheus")"
+
+    echo -e "$metrics" >> $METRICS_PATH
+  fi
 }
 
 function __main__() {
@@ -59,19 +66,18 @@ function __main__() {
   '
 
 
-  D8_HELM_HOST="$HELM_HOST"
+  HELM_HOST=""
   metrics=""
 
-  namespaces="$(context::jq -r '.snapshots.helm_releases[].filterResult.metadata.namespace' | sort | uniq)"
+  # helm 2
+  namespaces="$(kubectl get configmaps -A -l OWNER=TILLER --no-headers | awk '{print $1}' | uniq)"
   for namespace in $namespaces; do
-    if [ "$namespace" != "d8-system" ]; then
-      HELM_HOST=""
-    else
-      HELM_HOST="$D8_HELM_HOST"
+    if [ "$namespace" == "d8-system" ]; then
+      continue
     fi
-    if release_names="$(context::jq -rec --arg ns "$namespace" '.snapshots.helm_releases | map(select(.filterResult.metadata.namespace == $ns and .filterResult.metadata.labels.STATUS == "DEPLOYED") | .filterResult.metadata.labels.NAME) | unique []')"; then
+    if release_names="$(kubectl -n "$namespace" get configmaps -l OWNER=TILLER --no-headers --show-labels | grep DEPLOYED | sed 's/,\|=/ /g' | awk '{print $7}' | sort | uniq)"; then
       for release_name in $release_names; do
-        if manifest="$(helm --tiller-namespace "$namespace" get manifest "$release_name" 2>/dev/null | yq read -d"*" -j -)"; then
+        if manifest="$(helm2 --tiller-namespace "$namespace" get manifest "$release_name" 2>/dev/null | yq read -d"*" -j -)"; then
           metrics="$metrics\n$(jq -rc --arg release_name "$release_name" --argjson d "$unsupported_versions" '
             .[] | select(.kind != null) |
             {
@@ -90,7 +96,37 @@ function __main__() {
             | if $d[.labels.kind] != null then if $d[$in.labels.kind] | has($in.labels.api_version) then .set = 1 else . end else . end
           ' <<< "$manifest")"
         else
-          echo "WARNING: <helm --tiller-namespace $namespace get manifest $release_name> failed"
+          echo "WARNING: <helm2 --tiller-namespace $namespace get manifest $release_name> failed"
+        fi
+      done
+    fi
+  done
+
+  # helm 3
+  namespaces="$(kubectl get secrets -A -l owner=helm --no-headers | awk '{print $1}' | uniq)"
+  for namespace in $namespaces; do
+    if release_names="$(kubectl -n "$namespace" get secret -l owner=helm,status=deployed --no-headers --show-labels | sed 's/,\|=/ /g' | awk '{print $8}' | sort | uniq)"; then
+      for release_name in $release_names; do
+        if manifest="$(helm --namespace "$namespace" get manifest "$release_name" 2>/dev/null | yq read -d"*" -j -)"; then
+          metrics="$metrics\n$(jq -rc --arg release_name "$release_name" --argjson d "$unsupported_versions" '
+            .[] | select(.kind != null) |
+            {
+              "name": "resource_versions_compatibility",
+              "set": 0,
+              "group": "/modules/'$(module::name::kebab_case)'/metrics",
+              "labels": {
+                "helm_release_name": $release_name,
+                "resource_name": .metadata.name,
+                "kind": .kind,
+                "api_version": .apiVersion,
+                "namespace": .metadata.namespace
+              }
+            }
+            | . as $in
+            | if $d[.labels.kind] != null then if $d[$in.labels.kind] | has($in.labels.api_version) then .set = 1 else . end else . end
+          ' <<< "$manifest")"
+        else
+          echo "WARNING: <helm --namespace $namespace get manifest $release_name> failed"
         fi
       done
     fi
