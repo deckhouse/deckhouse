@@ -1,0 +1,180 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      executeHookOnEvent: ["Modified", "Deleted"]
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+          {
+            "hostname": .metadata.labels."kubernetes.io/hostname",
+            "zone": (.metadata.labels | if has("failure-domain.beta.kubernetes.io/zone") then ."failure-domain.beta.kubernetes.io/zone" else "NONE" end),
+            "unschedulable": (.spec.unschedulable // false)
+          }
+    - name: statefulsets
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      apiVersion: apps/v1
+      kind: StatefulSet
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      executeHookOnEvent: ["Added"]
+      jqFilter: |
+        {
+          "node_hostname": (.metadata.annotations | if has("node") then .node else "" end),
+          "zone": (.metadata.annotations | if has("zone") then .zone else "NONE" end),
+          "sts": .metadata.name[-1:],
+          "image": .spec.template.spec.containers[0].image
+        }
+    - name: pods
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      executeHookOnEvent: []
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "sts": .metadata.ownerReferences[0].name[-1:],
+          "creationTimestamp": (.metadata.creationTimestamp | fromdateiso8601)
+        }
+    - name: pdb
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      apiVersion: policy/v1beta1
+      kind: PodDisruptionBudget
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      executeHookOnEvent: []
+      jqFilter: |
+        {
+          "disruptionAllowed": (.status.disruptionsAllowed > 0)
+        }
+    schedule:
+    - group: main
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      crontab: "* * * * *"
+EOF
+}
+
+# schedule one sts
+function __on_group::main() {
+  if ! values::has smokeMini.internal.sts.a.image; then
+    current_values="$(values::get smokeMini.internal.sts)"
+    values="$(context::jq -rc --argjson current_values "$current_values" '[.snapshots.statefulsets[].filterResult | {(.sts): {"node": .node_hostname, "zone": .zone, "image": .image}}] | reduce .[] as $i ($current_values; . + $i)')"
+    values::set smokeMini.internal.sts "$values"
+  fi
+
+  # Find non existent sts, if any
+  target_sts="$(values::jq -r '.smokeMini.internal.sts | [to_entries[] | select(.value | has("node") | not)] | select(.!=[]) | first.key')"
+
+  # Otherwise, find sts placed on non existent node
+  if [ -z "$target_sts" ]; then
+    for i in $(context::jq -r '.snapshots.statefulsets | keys[]'); do
+      if ! context::jq -e --argjson i "$i" '.snapshots.statefulsets[$i].filterResult as $sts | .snapshots.nodes[].filterResult | select(.hostname == $sts.node_hostname)' >/dev/null ; then
+        target_sts="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.sts')"
+        break
+      fi
+    done
+  fi
+
+  # Otherwise, find sts placed on unscheduleable node
+  if [ -z "$target_sts" ]; then
+    for i in $(context::jq -r '.snapshots.statefulsets | keys[]'); do
+      if context::jq -e --argjson i "$i" '.snapshots.statefulsets[$i].filterResult as $sts | .snapshots.nodes[].filterResult | select(.hostname == $sts.node_hostname and .unschedulable)' >/dev/null ; then
+        target_sts="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.sts')"
+        break
+      fi
+    done
+  fi
+
+  # Check that PDB allows us to make a step
+  if ! context::jq -e '.snapshots.pdb[].filterResult.disruptionAllowed'; then
+    return 0
+  fi
+
+  # Otherwise, find sts which was not moved longest time
+  if [ -z "$target_sts" ]; then
+    target_sts="$(context::jq -r '[.snapshots.pods[].filterResult] | min_by(.creationTimestamp).sts')"
+
+    # Ignore, if it was moved less than N-1 cron schedule periods ago (where N is number of sts)
+    pod_creation_timestamp="$(context::jq -r '[.snapshots.pods[].filterResult] | min_by(.creationTimestamp).creationTimestamp')"
+    unixtime_now="$(date +%s)"
+    n="$(values::jq -r '.smokeMini.internal.sts | [to_entries[] | select(.value | has("node"))] | length')"
+    if (( unixtime_now - pod_creation_timestamp < 60 * (n - 1) )) ; then
+      return 0
+    fi
+  fi
+
+  # Calculate the amount of statefulsets in zones
+  zones_map=$(context::jq -r '([.snapshots.nodes[].filterResult.zone] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $zone_map | [.snapshots.statefulsets[].filterResult] | reduce .[] as $i ($zone_map; .[$i.zone] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')
+
+  # Get sts zone
+  sts_zone="$(context::jq -r --arg sts "$target_sts" '.snapshots.statefulsets[].filterResult | select(.sts == $sts).zone')"
+
+  # Check, if zone still exists
+  if context::jq -er --arg sts_zone "$sts_zone" '.snapshots.nodes | [.[] | select(.filterResult.zone == $sts_zone)] | length < 1' >/dev/null ; then
+    sts_zone=""
+  fi
+
+  # Check sts zone
+  if [ -n "$sts_zone" ]; then
+    # zone is set, checking constraints
+
+    # if sts count > 1 in zone
+    if jq -er --arg sts_zone "$sts_zone" '.[] | select(.name == $sts_zone).sts_count > 1' <<< "$zones_map"  >/dev/null; then
+      zones_without_sts="$(context::jq -r '([.snapshots.nodes[].filterResult.zone] | unique) - ([.snapshots.statefulsets[].filterResult.zone] | unique) | .[]')"
+
+      # if there are zones without sts, then select new zone
+      if [ -n "$zones_without_sts" ]; then
+        sts_zone="$(sort -R <<< "$zones_without_sts" | head -n1)"
+      fi
+    fi
+  else
+    # Zone is not set, select new zone
+    zones_with_min_sts="$(jq -r 'group_by(.sts_count)[0][].name' <<< "$zones_map")"
+    sts_zone="$(sort -R <<< "$zones_with_min_sts" | head -n1)"
+  fi
+
+  # Count sts per node (in zone)
+  nodes_map="$(context::jq -r --arg zone "$sts_zone" '([.snapshots.nodes[].filterResult | select(.zone == $zone).hostname] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $node_map | [.snapshots.statefulsets[].filterResult | select(.zone == $zone)] | reduce .[] as $i ($node_map; .[$i.node_hostname] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')"
+
+  # Select new node
+  nodes_with_min_sts="$(jq -r 'group_by(.sts_count)[0][].name' <<< "$nodes_map")"
+  sts_node="$(sort -R <<< "$nodes_with_min_sts" | head -n1)"
+
+  # Apply new values
+  values::set smokeMini.internal.sts.${target_sts}.node "$sts_node"
+  values::set smokeMini.internal.sts.${target_sts}.image "$(values::get global.modulesImages.registry)/smoke-mini/smoke-mini:$(values::get global.modulesImages.tags.smokeMini.smokeMini)"
+  if [ "$(values::get smokeMini.internal.sts.${target_sts}.zone)" != "$sts_zone" ] ; then
+    kubernetes::delete_if_exists::non_blocking "d8-smoke-mini" "persistentvolumeclaim/disk-smoke-mini-${target_sts}-0"
+    values::set smokeMini.internal.sts.${target_sts}.zone "$sts_zone"
+  fi
+}
+
+hook::run "$@"

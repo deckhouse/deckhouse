@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -30,7 +31,12 @@ func main() {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.RemoteAddr, r.RequestURI)
+	log.Println(os.Getenv("HOSTNAME"), r.RemoteAddr, r.RequestURI)
+	if r.RequestURI != "/" {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "404 Not Found %s\n", r.RequestURI)
+		return
+	}
 	fmt.Fprintf(w, "ok")
 }
 
@@ -160,28 +166,30 @@ func prometheusHandler(w http.ResponseWriter, r *http.Request) {
 
 func neighborHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, r.RequestURI)
-	targetServices := []string{"smoke-mini-a", "smoke-mini-b", "smoke-mini-c"}
-	for i := 0; i < len(targetServices); i++ {
-		if targetServices[i] == os.Getenv("HOSTNAME") {
+	targetServices := strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")
+	for i := len(targetServices) - 1; i >= 0; i-- {
+		if fmt.Sprintf("smoke-mini-%s-0", targetServices[i]) == os.Getenv("HOSTNAME") {
 			targetServices = append(targetServices[:i], targetServices[i+1:]...)
 		}
 	}
-	resp, err := http.Get(fmt.Sprintf("http://%s/", targetServices[0]))
-	if err != nil {
-		log.Println(err)
-		resp, err = http.Get(fmt.Sprintf("http://%s/", targetServices[1]))
-		if err != nil {
-			log.Println(err)
+	errorCount := 0
+	for i := 0; i < len(targetServices); i++ {
+		if errorCount < 2 {
+			resp, err := http.Get(fmt.Sprintf("http://smoke-mini-%s/", targetServices[i]))
+			if err != nil {
+				log.Println(err)
+				errorCount++
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil || string(body) != "ok" {
+				log.Println(err)
+				errorCount++
+			}
+		} else {
 			w.WriteHeader(500)
 			return
 		}
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(500)
-		return
-	}
-	fmt.Fprintf(w, "%v", string(body))
+	fmt.Fprintf(w, "ok")
 }
