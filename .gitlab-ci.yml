@@ -39,8 +39,6 @@ Build:
     DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
     DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
   script:
-    - export KUBECONFIG=$(mktemp -d)/kubeconfig
-    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf build-and-publish --images-repo=${CI_REGISTRY_IMAGE}
@@ -71,8 +69,6 @@ Tests:
   stage: testing
   script:
     - pwd
-    - export KUBECONFIG=$(mktemp -d)/kubeconfig
-    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - rm -rf testing/kcov-report
@@ -112,8 +108,6 @@ Matrix Tests:
   stage: testing
   script:
     - pwd
-    - export KUBECONFIG=$(mktemp -d)/kubeconfig
-    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf run tests
@@ -134,8 +128,6 @@ Hooks Configuration Tests:
   stage: testing
   script:
     - pwd
-    - export KUBECONFIG=$(mktemp -d)/kubeconfig
-    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - werf run tests
@@ -251,8 +243,6 @@ rock-solid:
 Cleanup registry:
   stage: cleanup_registry
   script:
-    - export KUBECONFIG=$(mktemp -d)/kubeconfig
-    - echo $BASE64_KUBECONFIG | base64 -d -w0 > $KUBECONFIG
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
     - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
