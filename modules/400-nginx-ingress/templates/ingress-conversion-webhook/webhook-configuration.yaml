@@ -7,14 +7,18 @@ metadata:
 webhooks:
 - name: ingress-conversion.flant.com
   failurePolicy: Fail
+  {{- if semverCompare ">=1.15" .Values.global.discovery.kubernetesVersion }}
   matchPolicy: Equivalent
+  {{- end }}
   timeoutSeconds: 3
   clientConfig:
     service:
       name: ingress-conversion-webhook
       namespace: d8-system
       path: "/mutate"
+      {{- if semverCompare ">=1.15" .Values.global.discovery.kubernetesVersion }}
       port: 443
+      {{- end }}
     caBundle: {{ .Values.nginxIngress.internal.ingressConversionWebhookCA | b64enc }}
   rules:
     - operations: [ "CREATE", "UPDATE" ]
