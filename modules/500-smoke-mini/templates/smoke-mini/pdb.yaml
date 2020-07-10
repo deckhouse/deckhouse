@@ -9,7 +9,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 {{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
-  minAvailable: 2
+  minAvailable: {{ sub (keys .Values.smokeMini.internal.sts | len) 1 }}
   selector:
     matchLabels:
       app: {{ .Chart.Name }}

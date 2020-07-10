@@ -1,4 +1,9 @@
 smokeMini:
-  internal:
-    nodeSelector: {}
   auth: {}
+  internal:
+    sts:
+      a: {}
+      b: {}
+      c: {}
+      d: {}
+      e: {}
