@@ -111,7 +111,7 @@ ingressNginxEnabled: "false"
         * По-умолчанию `false`.
     * `includeSubDomains` — применять ли настройки hsts ко всем саб-доменам сайта.
         * По-умолчанию `false`.
-* `legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+* `legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/402-ingress-nginx/templates/controller/configmap.yaml).
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `disableHTTP2` — bool, выключить ли HTTP/2.
     * По-умолчанию HTTP/2 включен (`false`).

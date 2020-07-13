@@ -31,7 +31,7 @@ title: "Модуль nginx-ingress"
 * `nodePortHTTPS` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации порта 443 (по-умолчанию аналогично `nodePortHTTP`).
 * `config.hsts` — bool, включен ли hsts.
     * По-умолчанию — выключен (`false`).
-* `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://www.owasp.org/index.php/TLS_Cipher_String_Cheat_Sheet). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/_template.config.tpl).
+* `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/_template.config.tpl).
     * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `config.disableHTTP2` — bool, выключить ли HTTP/2.
     * По умолчанию HTTP/2 включен (`false`).
