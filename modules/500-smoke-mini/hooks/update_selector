@@ -17,7 +17,8 @@ function __config__() {
           {
             "hostname": .metadata.labels."kubernetes.io/hostname",
             "zone": (.metadata.labels | if has("failure-domain.beta.kubernetes.io/zone") then ."failure-domain.beta.kubernetes.io/zone" else "NONE" end),
-            "unschedulable": (.spec.unschedulable // false)
+            "unschedulable": (.spec.unschedulable // false),
+            "ready": (if .status.conditions then .status.conditions[] | select(.type == "Ready") | .status == "True" else false end)
           }
     - name: statefulsets
       group: main
@@ -113,13 +114,13 @@ function __on_group::main() {
     done
   fi
 
-  # Check that PDB allows us to make a step
-  if ! context::jq -e '.snapshots.pdb[].filterResult.disruptionAllowed'; then
-    return 0
-  fi
-
   # Otherwise, find sts which was not moved longest time
   if [ -z "$target_sts" ]; then
+    # Check that PDB allows us to make a step
+    if ! context::jq -e '.snapshots.pdb[].filterResult.disruptionAllowed' >/dev/null; then
+      return 0
+    fi
+
     target_sts="$(context::jq -r '[.snapshots.pods[].filterResult] | min_by(.creationTimestamp).sts')"
 
     # Ignore, if it was moved less than N-1 cron schedule periods ago (where N is number of sts)
@@ -138,7 +139,7 @@ function __on_group::main() {
   sts_zone="$(context::jq -r --arg sts "$target_sts" '.snapshots.statefulsets[].filterResult | select(.sts == $sts).zone')"
 
   # Check, if zone still exists
-  if context::jq -er --arg sts_zone "$sts_zone" '.snapshots.nodes | [.[] | select(.filterResult.zone == $sts_zone)] | length < 1' >/dev/null ; then
+  if context::jq -er --arg sts_zone "$sts_zone" '.snapshots.nodes | [.[] | select(.filterResult.zone == $sts_zone and .filterResult.ready == true and .filterResult.unschedulable == false)] | length < 1' >/dev/null ; then
     sts_zone=""
   fi
 
@@ -162,7 +163,7 @@ function __on_group::main() {
   fi
 
   # Count sts per node (in zone)
-  nodes_map="$(context::jq -r --arg zone "$sts_zone" '([.snapshots.nodes[].filterResult | select(.zone == $zone).hostname] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $node_map | [.snapshots.statefulsets[].filterResult | select(.zone == $zone)] | reduce .[] as $i ($node_map; .[$i.node_hostname] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')"
+  nodes_map="$(context::jq -r --arg zone "$sts_zone" '([.snapshots.nodes[].filterResult | select(.zone == $zone and .ready == true and .unschedulable == false).hostname] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $node_map | [.snapshots.statefulsets[].filterResult | select(.zone == $zone)] | reduce .[] as $i ($node_map; .[$i.node_hostname] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')"
 
   # Select new node
   nodes_with_min_sts="$(jq -r 'group_by(.sts_count)[0][].name' <<< "$nodes_map")"

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    kubernetes:
+    - name: statefulsets
+      keepFullObjectsInMemory: false
+      apiVersion: apps/v1
+      kind: StatefulSet
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      jqFilter: |
+        {
+          "metadata": .metadata
+        }
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.statefulsets.0; then
+    if ! context::jq -e '.snapshots.statefulsets[0].filterResult.metadata.annotations | has("node")'; then
+      kubectl -n d8-smoke-mini delete sts --all
+      kill 1
+    fi
+  fi
+}
+
+hook::run $@
