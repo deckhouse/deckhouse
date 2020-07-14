@@ -26,10 +26,6 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 	parseCmd.Flag("output", "output format json or yaml").
 		Short('o').
 		StringVar(&ParseOutput)
-	var ParseIncludeBootstrap bool
-	parseCmd.Flag("include-bootstrap", "include bootstrap field in output").
-		Short('b').
-		BoolVar(&ParseIncludeBootstrap)
 	parseCmd.Action(func(c *kingpin.ParseContext) error {
 		var err error
 		var metaConfig *config.MetaConfig
@@ -53,11 +49,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 			}
 		}
 
-		output, err := metaConfig.MarshalConfig(ParseIncludeBootstrap)
-		if err != nil {
-			return err
-		}
-
+		output := metaConfig.MarshalConfig()
 		fmt.Println(string(output))
 		return nil
 	})

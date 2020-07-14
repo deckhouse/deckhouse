@@ -48,7 +48,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			fmt.Printf("list namespaces: %v", err)
 			if kubeCl.KubeProxy != nil {
 				fmt.Printf("Press Ctrl+C to close proxy connection.")
-				ch := make(chan struct{}, 0)
+				ch := make(chan struct{})
 				<-ch
 			}
 			return nil

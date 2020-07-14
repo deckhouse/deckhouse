@@ -18,7 +18,10 @@ import (
 func main() {
 	defer EnableTrace()()
 
-	logboek.Init()
+	err := logboek.Init()
+	if err != nil {
+		panic(fmt.Errorf("can't start logging system: %w", err))
+	}
 	logboek.SetLevel(logboek.Info)
 
 	// kill all started subprocesses on return from main or on signal

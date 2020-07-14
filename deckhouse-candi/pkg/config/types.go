@@ -27,8 +27,8 @@ type ClusterConfigSpec struct {
 	ClusterDomain     string                 `json:"clusterDomain"`
 }
 
-type ProviderClusterConfigSpec struct {
-	Layout string `json:"layout"`
+type MasterNodeGroupSpec struct {
+	Replicas int `json:"replicas"`
 }
 
 type DeckhouseClusterConfig struct {

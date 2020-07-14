@@ -471,7 +471,6 @@ func (e *Executor) Stop() {
 		close(e.stopCh)
 	}
 	<-e.waitCh
-	return
 }
 
 // Run executes a command and blocks until it is finished or stopped.

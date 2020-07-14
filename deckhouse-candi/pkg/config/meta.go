@@ -16,12 +16,16 @@ type MetaConfig struct {
 	ProviderName         string `json:"-"`
 	OriginalProviderName string `json:"-"`
 
-	DeckhouseConfig DeckhouseClusterConfig `json:"-"`
+	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
 
-	ClusterConfig             map[string]json.RawMessage `json:"clusterConfig"`
-	ProviderClusterConfig     map[string]json.RawMessage `json:"providerClusterConfig"`
-	InitClusterConfig         map[string]json.RawMessage `json:"initConfig"`
-	InitProviderClusterConfig map[string]json.RawMessage `json:"providerInitConfig"`
+	// FIXME DELETE!!!!
+	NodeIndex int `json:"nodeIndex"`
+
+	ClusterConfig             map[string]json.RawMessage `json:"clusterConfiguration"`
+	ProviderClusterConfig     map[string]json.RawMessage `json:"providerClusterConfiguration"`
+	InitClusterConfig         map[string]json.RawMessage `json:"-"`
+	InitProviderClusterConfig map[string]json.RawMessage `json:"-"`
 }
 
 func (m *MetaConfig) Prepare() {
@@ -36,11 +40,25 @@ func (m *MetaConfig) Prepare() {
 		_ = json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout)
 		m.Layout = strcase.ToKebab(m.Layout)
 
+		var masterNodeGroup MasterNodeGroupSpec
+		_ = json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup)
+
 		m.ProviderName = strings.ToLower(cloud.Provider)
 		m.OriginalProviderName = cloud.Provider
+		m.MasterNodeGroupSpec = masterNodeGroup
 	}
 
 	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
+}
+
+func (m *MetaConfig) MarshalMasterNodeGroupConfig(nodeIndex int) []byte {
+	result := make(map[string]interface{})
+	result["clusterConfiguration"] = m.ClusterConfig
+	result["providerClusterConfiguration"] = m.ProviderClusterConfig
+	result["nodeIndex"] = nodeIndex
+
+	data, _ := json.Marshal(result)
+	return data
 }
 
 func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interface{} {
@@ -75,22 +93,9 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 	return firstConfig
 }
 
-func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string]interface{} {
+func (m *MetaConfig) MergeNodeGroupConfig() map[string]interface{} {
 	// We can't create NodeGroup with nodeType Cloud for now because the adoption mechanism is not ready yet
-	/*
-		var doc map[string]json.RawMessage
 
-		err := json.Unmarshal(instanceClass, &doc)
-		if err != nil {
-			return nil, err
-		}
-
-		var metadata struct{ Name string }
-		err = json.Unmarshal(doc["metadata"], &metadata)
-		if err != nil {
-			return nil, err
-		}
-	*/
 	nodeType := "Hybrid"
 	if m.ClusterType == "Static" {
 		nodeType = "Static"
@@ -118,21 +123,13 @@ func (m *MetaConfig) MergeNodeGroupConfig( /*instanceClass []byte*/ ) map[string
 					},
 				},
 			},
-			/*
-				"cloudInstances": map[string]interface{}{
-					"classReference": map[string]interface{}{
-						"kind": string(doc["kind"]),
-						"name": metadata.Name,
-					},
-				},
-			*/
 		},
 	}
 }
 
-// TODO: remove _
-func (m *MetaConfig) MarshalConfig(_ bool) ([]byte, error) {
-	return json.Marshal(m)
+func (m *MetaConfig) MarshalConfig() []byte {
+	data, _ := json.Marshal(m)
+	return data
 }
 
 func (m *MetaConfig) MarshalClusterConfigYAML() ([]byte, error) {

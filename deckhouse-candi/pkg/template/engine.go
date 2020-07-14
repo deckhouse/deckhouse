@@ -27,22 +27,9 @@ func (e Engine) Render(tmpl []byte) (out *bytes.Buffer, err error) {
 func (e Engine) initFunMap(t *template.Template) {
 	funcMap := FuncMap()
 
-	includedNames := make(map[string]int)
-
-	// Add the 'include' function here so we can close over t.
+	// include function doesn't required in candi templates
 	funcMap["include"] = func(name string, data interface{}) (string, error) {
-		var buf strings.Builder
-		if v, ok := includedNames[name]; ok {
-			if v > recursionMaxNums {
-				return "", errors.Wrapf(fmt.Errorf("unable to execute template"), "rendering template has a nested reference name: %s", name)
-			}
-			includedNames[name]++
-		} else {
-			includedNames[name] = 1
-		}
-		err := t.ExecuteTemplate(&buf, name, data)
-		includedNames[name]--
-		return buf.String(), err
+		return "NotImplemented", nil
 	}
 
 	// Add the 'tpl' function here

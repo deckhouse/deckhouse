@@ -99,7 +99,6 @@ func (t *Tunnel) Up() error {
 
 	// TODO add tunnel health monitor, restart tunnel if it drops.
 	// write to stdinWriter, wait the same text on stdoutReader
-
 	return nil
 }
 
@@ -115,7 +114,6 @@ func (t *Tunnel) Stop() {
 		t.stop = true
 		t.sshCmd.Process.Kill()
 	}
-	return
 }
 
 func (t *Tunnel) String() string {

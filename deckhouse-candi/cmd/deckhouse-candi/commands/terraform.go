@@ -31,19 +31,18 @@ func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		basePipelineResult, err := terraform.NewPipeline(
-			"base-infrastructure",
-			app.TerraformStateDir,
-			metaConfig,
-			terraform.GetBasePipelineResult,
-		).Run()
+		basePipelineResult, err := terraform.NewPipeline(&terraform.PipelineOptions{
+			Provider:  metaConfig.ProviderName,
+			Layout:    metaConfig.Layout,
+			Step:      "base-infrastructure",
+			StateDir:  app.TerraformStateDir,
+			GetResult: terraform.GetBasePipelineResult,
+		}).Run()
 		if err != nil {
 			return err
 		}
 
-		logboek.LogInfoF("Deckhouse Config: %s\n", prettyPrintJSON(basePipelineResult["deckhouseConfig"]))
 		logboek.LogInfoF("Cloud Discovery Data: %s\n", prettyPrintJSON(basePipelineResult["cloudDiscovery"]))
-
 		return nil
 	}
 
@@ -72,19 +71,19 @@ func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		masterPipelineResult, err := terraform.NewPipeline(
-			"master-node-bootstrap",
-			app.TerraformStateDir,
-			metaConfig,
-			terraform.GetMasterPipelineResult,
-		).Run()
+		masterPipelineResult, err := terraform.NewPipeline(&terraform.PipelineOptions{
+			Provider:  metaConfig.ProviderName,
+			Layout:    metaConfig.Layout,
+			Step:      "master-node",
+			StateDir:  app.TerraformStateDir,
+			GetResult: terraform.GetMasterNodePipelineResult,
+		}).Run()
 		if err != nil {
 			return err
 		}
 
-		logboek.LogInfoF("Master IP: %s\n", string(masterPipelineResult["masterIP"]))
-		logboek.LogInfoF("Node IP: %s\n", string(masterPipelineResult["nodeIP"]))
-		logboek.LogInfoF("Deckhouse Config: %s\n", prettyPrintJSON(masterPipelineResult["deckhouseConfig"]))
+		logboek.LogInfoF("Master Address for SSH: %s\n", string(masterPipelineResult["masterIPFroSSH"]))
+		logboek.LogInfoF("Node Internal Address: %s\n", string(masterPipelineResult["nodeInternalIP"]))
 		logboek.LogInfoF("Master Instance Group: %s\n", prettyPrintJSON(masterPipelineResult["masterInstanceClass"]))
 
 		return nil
@@ -115,18 +114,17 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 		}
 
 		var masterState string
-		err = logboek.LogProcess("Run Destroy for master-node-bootstrap", log.BoldOptions(), func() error {
-			masterRunner := terraform.NewRunner("master-node-bootstrap", metaConfig)
+		err = logboek.LogProcess("Run Destroy for master-node", log.BoldOptions(), func() error {
+			masterRunner := terraform.NewRunner(metaConfig.ProviderName, metaConfig.Layout, "master-node", metaConfig.MarshalMasterNodeGroupConfig(0))
 			masterRunner.WithStateDir(app.TerraformStateDir)
-			stdout, err := masterRunner.Init(false)
+
+			err = masterRunner.Init()
 			if err != nil {
-				logboek.LogInfoF(string(stdout))
 				return err
 			}
 
-			stdout, err = masterRunner.Destroy(true)
+			err = masterRunner.Destroy(true)
 			if err != nil {
-				logboek.LogInfoF(string(stdout))
 				return err
 			}
 			masterState = masterRunner.State
@@ -138,17 +136,16 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 
 		var baseState string
 		err = logboek.LogProcess("Run Destroy for base-infrastructure", log.BoldOptions(), func() error {
-			baseRunner := terraform.NewRunner("base-infrastructure", metaConfig)
+			baseRunner := terraform.NewRunner(metaConfig.ProviderName, metaConfig.Layout, "base-infrastructure", metaConfig.MarshalConfig())
 			baseRunner.WithStateDir(app.TerraformStateDir)
-			stdout, err := baseRunner.Init(false)
+
+			err = baseRunner.Init()
 			if err != nil {
-				logboek.LogInfoF(string(stdout))
 				return err
 			}
 
-			stdout, err = baseRunner.Destroy(true)
+			err = baseRunner.Destroy(true)
 			if err != nil {
-				logboek.LogInfoF(string(stdout))
 				return err
 			}
 			baseState = baseRunner.State

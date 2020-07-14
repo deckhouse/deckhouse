@@ -29,6 +29,7 @@ type Config struct {
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
 	TerraformState        []byte
+	NodesTerraformState   map[string][]byte
 	CloudDiscovery        []byte
 	DeckhouseConfig       map[string]interface{}
 }
@@ -133,11 +134,27 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 			name:     `Secret "d8-cluster-terraform-state"`,
 			manifest: func() interface{} { return generateSecretWithTerraformState(cfg.TerraformState) },
 			createTask: func(manifest interface{}) error {
-				_, err := client.CoreV1().Secrets("kube-system").Create(manifest.(*apiv1.Secret))
+				_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
 				return err
 			},
 			updateTask: func(manifest interface{}) error {
-				_, err := client.CoreV1().Secrets("kube-system").Update(manifest.(*apiv1.Secret))
+				_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+				return err
+			},
+		})
+	}
+
+	for nodeName, tfState := range cfg.NodesTerraformState {
+		getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, tfState) }
+		tasks = append(tasks, createManifestTask{
+			name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+			manifest: getManifest,
+			createTask: func(manifest interface{}) error {
+				_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				return err
+			},
+			updateTask: func(manifest interface{}) error {
+				_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
 				return err
 			},
 		})

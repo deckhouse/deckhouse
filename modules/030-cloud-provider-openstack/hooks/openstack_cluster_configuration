@@ -31,7 +31,7 @@ function set_values_from_provider_cluster_configuration_yaml() {
   provider='{}'
   provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
   if [[ "$provider_cluster_configuration_yaml" != "null" ]]; then
-    provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfig.provider | . //= {}')
+    provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfiguration.provider | . //= {}')
   fi
 
   #TODO merge configs framework

@@ -45,7 +45,6 @@ func (s *Session) Stop() {
 	}
 	app.Debugf("Wait while %d processes stops\n", count)
 	wg.Wait()
-	return
 }
 
 func (s *Session) RegisterStoppable(stopable Stopable) {

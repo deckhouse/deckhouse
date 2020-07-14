@@ -27,6 +27,7 @@ podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.15"
+sshPublicKeys: []
 `
 		stateA = `
 apiVersion: v1
@@ -48,6 +49,7 @@ podSubnetCIDR: 10.122.0.0/16
 podSubnetNodeCIDRPrefix: "26"
 serviceSubnetCIDR: 10.213.0.0/16
 kubernetesVersion: "1.16"
+sshPublicKeys: []
 `
 		stateB = `
 apiVersion: v1

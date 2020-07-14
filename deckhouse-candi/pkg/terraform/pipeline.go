@@ -1,35 +1,41 @@
 package terraform
 
 import (
+	"fmt"
+
 	"github.com/flant/logboek"
 
-	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/log"
 )
 
 type Pipeline struct {
 	Step            string
 	TerraformRunner Interface
-	MetaConfig      *config.MetaConfig
 	GetResult       func(*Pipeline) (map[string][]byte, error)
 }
 
-func NewPipeline(step, stateDir string, metaConfig *config.MetaConfig, getResult func(*Pipeline) (map[string][]byte, error)) *Pipeline {
-	tfRunner := NewRunner(step, metaConfig)
-	tfRunner.WithStateDir(stateDir)
-	return &Pipeline{Step: step, TerraformRunner: tfRunner, MetaConfig: metaConfig, GetResult: getResult}
+type PipelineOptions struct {
+	Provider string
+	Layout   string
+	Step     string
+
+	StateDir           string
+	TerraformVariables []byte
+	GetResult          func(*Pipeline) (map[string][]byte, error)
+}
+
+func NewPipeline(options *PipelineOptions) *Pipeline {
+	tfRunner := NewRunner(options.Provider, options.Layout, options.Step, options.TerraformVariables)
+	tfRunner.WithStateDir(options.StateDir)
+	return &Pipeline{Step: options.Step, TerraformRunner: tfRunner, GetResult: options.GetResult}
 }
 
 func (p *Pipeline) runTerraform() error {
-	bootstrap := p.Step != "base-infrastructure"
-
-	out, err := p.TerraformRunner.Init(bootstrap)
-	if err != nil {
-		logboek.LogInfoLn(string(out))
+	if err := p.TerraformRunner.Init(); err != nil {
 		return err
 	}
 
-	out, err = p.TerraformRunner.Apply()
+	out, err := p.TerraformRunner.Apply()
 	if err != nil {
 		logboek.LogInfoLn(string(out))
 		return err
@@ -40,7 +46,7 @@ func (p *Pipeline) runTerraform() error {
 
 func (p *Pipeline) Run() (map[string][]byte, error) {
 	var result map[string][]byte
-	err := logboek.LogProcess("Run Terraform pipeline "+p.Step, log.BoldOptions(), func() error {
+	err := logboek.LogProcess(fmt.Sprintf("🌳 Run Terraform pipeline %s 🌳", p.Step), log.BoldOptions(), func() error {
 		err := p.runTerraform()
 		if err != nil {
 			return err
@@ -52,11 +58,6 @@ func (p *Pipeline) Run() (map[string][]byte, error) {
 }
 
 func GetBasePipelineResult(p *Pipeline) (map[string][]byte, error) {
-	deckhouseConfig, err := p.TerraformRunner.GetTerraformOutput("deckhouse_config")
-	if err != nil {
-		return nil, err
-	}
-
 	cloudDiscovery, err := p.TerraformRunner.GetTerraformOutput("cloud_discovery_data")
 	if err != nil {
 		return nil, err
@@ -68,19 +69,13 @@ func GetBasePipelineResult(p *Pipeline) (map[string][]byte, error) {
 	}
 
 	return map[string][]byte{
-		"terraformState":  tfState,
-		"deckhouseConfig": deckhouseConfig,
-		"cloudDiscovery":  cloudDiscovery,
+		"terraformState": tfState,
+		"cloudDiscovery": cloudDiscovery,
 	}, nil
 }
 
-func GetMasterPipelineResult(p *Pipeline) (map[string][]byte, error) {
-	deckhouseConfig, err := p.TerraformRunner.GetTerraformOutput("deckhouse_config")
-	if err != nil {
-		return nil, err
-	}
-
-	masterIPAddress, err := p.TerraformRunner.GetTerraformOutput("master_ip_address")
+func GetMasterNodePipelineResult(p *Pipeline) (map[string][]byte, error) {
+	masterIPAddressForSSH, err := p.TerraformRunner.GetTerraformOutput("master_ip_address_for_ssh")
 	if err != nil {
 		return nil, err
 	}
@@ -90,15 +85,20 @@ func GetMasterPipelineResult(p *Pipeline) (map[string][]byte, error) {
 		return nil, err
 	}
 
-	nodeIP, err := p.TerraformRunner.GetTerraformOutput("node_ip")
+	nodeInternalIP, err := p.TerraformRunner.GetTerraformOutput("node_internal_ip_address")
+	if err != nil {
+		return nil, err
+	}
+
+	tfState, err := p.TerraformRunner.getState()
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string][]byte{
-		"masterIP":            masterIPAddress,
-		"nodeIP":              nodeIP,
-		"deckhouseConfig":     deckhouseConfig,
+		"terraformState":      tfState,
+		"masterIPForSSH":      masterIPAddressForSSH,
 		"masterInstanceClass": masterInstanceClass,
+		"nodeInternalIP":      nodeInternalIP,
 	}, nil
 }
