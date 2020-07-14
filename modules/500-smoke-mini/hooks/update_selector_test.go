@@ -26,6 +26,10 @@ metadata:
   labels:
     kubernetes.io/hostname: node-a-1
   name: node-a-1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(state))
