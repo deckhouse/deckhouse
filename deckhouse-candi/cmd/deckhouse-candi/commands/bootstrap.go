@@ -67,6 +67,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
 			Bundle:                metaConfig.DeckhouseConfig.Bundle,
 			LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
+			DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
 			ClusterConfig:         clusterConfig,
 			ProviderClusterConfig: providerClusterConfig,
 		}
@@ -75,38 +76,49 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		// var masterInstanceClass []byte
 		if metaConfig.ClusterType == "Cloud" {
 			err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
-				basePipelineResult, err := terraform.NewPipeline("base-infrastructure", app.TerraformStateDir, metaConfig, terraform.GetBasePipelineResult).Run()
+				basePipelineResult, err := terraform.NewPipeline(&terraform.PipelineOptions{
+					Provider:           metaConfig.ProviderName,
+					Layout:             metaConfig.Layout,
+					Step:               "base-infrastructure",
+					TerraformVariables: metaConfig.MarshalConfig(),
+					StateDir:           app.TerraformStateDir,
+					GetResult:          terraform.GetBasePipelineResult,
+				}).Run()
 				if err != nil {
 					return err
 				}
 
-				masterPipelineResult, err := terraform.NewPipeline("master-node-bootstrap", app.TerraformStateDir, metaConfig, terraform.GetMasterPipelineResult).Run()
+				masterPipelineResult, err := terraform.NewPipeline(&terraform.PipelineOptions{
+					Provider:           metaConfig.ProviderName,
+					Layout:             metaConfig.Layout,
+					Step:               "master-node",
+					TerraformVariables: metaConfig.MarshalMasterNodeGroupConfig(0),
+					StateDir:           app.TerraformStateDir,
+					GetResult:          terraform.GetMasterNodePipelineResult,
+				}).Run()
 				if err != nil {
 					return err
 				}
 
-				installConfig.DeckhouseConfig = metaConfig.MergeDeckhouseConfig(
-					basePipelineResult["deckhouseConfig"],
-					masterPipelineResult["deckhouseConfig"],
-				)
 				installConfig.CloudDiscovery = basePipelineResult["cloudDiscovery"]
 				installConfig.TerraformState = basePipelineResult["terraformState"]
 
-				_ = json.Unmarshal(masterPipelineResult["masterIP"], &app.SshHost)
-				_ = json.Unmarshal(masterPipelineResult["nodeIP"], &nodeIP)
-				// masterInstanceClass = masterPipelineResult["masterInstanceClass"]
+				_ = json.Unmarshal(masterPipelineResult["masterIPForSSH"], &app.SshHost)
+				_ = json.Unmarshal(masterPipelineResult["nodeInternalIP"], &nodeIP)
+
+				// Add tf-node-state to store it in kubernetes in future
+				installConfig.NodesTerraformState = make(map[string][]byte)
+				installConfig.NodesTerraformState["master-0"] = masterPipelineResult["terraformState"]
 
 				sshClient.Settings.Host = app.SshHost
 
-				logboek.LogInfoF("Master IP: %s", masterPipelineResult["masterIP"])
+				logboek.LogInfoF("Master Address: %s", masterPipelineResult["masterIPForSSH"])
 				return nil
 			})
 			if err != nil {
 				return err
 			}
 		} else {
-			installConfig.DeckhouseConfig = metaConfig.MergeDeckhouseConfig()
-
 			var static struct {
 				NodeIP string `json:"nodeIP"`
 			}
@@ -157,8 +169,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 
 			for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
+				scriptPath := templateController.TmpDir + "/bootstrap/" + bootstrapScript
+
 				err = logboek.LogProcess("Run "+bootstrapScript, log.BoldOptions(), func() error {
-					scriptPath := templateController.TmpDir + "/bootstrap/" + bootstrapScript
 					if _, err := os.Stat(scriptPath); err != nil {
 						if os.IsNotExist(err) {
 							logboek.LogInfoF("Script %s doesn't found\n", scriptPath)
@@ -172,7 +185,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 					_, err := cmd.Execute()
 					if err != nil {
-						return fmt.Errorf("run %s: %v", bootstrapScript, err)
+						return fmt.Errorf("run %s: %w", scriptPath, err)
 					}
 					return nil
 				})
@@ -295,7 +308,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		fmt.Print(banner)
-		err = logboek.LogProcess("🚀 Start Deckhouse CandI bootstrap 🚀",
+		err = logboek.LogProcess("🐜 Start Deckhouse CandI bootstrap 🐜",
 			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
 
 		if err != nil {

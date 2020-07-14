@@ -31,7 +31,7 @@ func TestPipeline(t *testing.T) {
 				basePipeline := Pipeline{
 					Step:            "tf_master",
 					TerraformRunner: &fakeTfRunner,
-					GetResult:       GetMasterPipelineResult,
+					GetResult:       GetMasterNodePipelineResult,
 				}
 				_, err := basePipeline.Run()
 				return err

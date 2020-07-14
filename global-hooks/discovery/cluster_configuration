@@ -21,7 +21,7 @@ EOF
 }
 
 function set_values_from_cluster_configuration_yaml() {
-  cluster_configuration_json=$(echo "$1" | deckhouse-controller helper cluster-configuration | jq -r '.clusterConfig')
+  cluster_configuration_json=$(echo "$1" | deckhouse-controller helper cluster-configuration | jq -r '.clusterConfiguration')
 
   values::set global.clusterConfiguration "$cluster_configuration_json"
 

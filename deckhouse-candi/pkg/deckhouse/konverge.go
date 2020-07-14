@@ -50,8 +50,8 @@ func RunKonverge(client *kube.KubernetesClient, basePipeline *terraform.Pipeline
 		return err
 	}
 
-	basePipeline.MetaConfig.ClusterConfig = clusterConfigData
-	basePipeline.MetaConfig.ProviderClusterConfig = providerClusterConfigData
+	// basePipeline.MetaConfig.ClusterConfig = clusterConfigData
+	// basePipeline.MetaConfig.ProviderClusterConfig = providerClusterConfigData
 
 	basePipelineResult, err := basePipeline.Run()
 	if err != nil {

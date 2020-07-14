@@ -2,10 +2,11 @@ package deckhouse
 
 import (
 	"encoding/base64"
-	"github.com/flant/logboek"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/flant/logboek"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -280,9 +281,9 @@ func generateSecret(name, namespace string, data map[string][]byte) *apiv1.Secre
 func generateSecretWithTerraformState(data []byte) *apiv1.Secret {
 	return generateSecret(
 		"d8-cluster-terraform-state",
-		"kube-system",
+		"d8-system",
 		map[string][]byte{
-			"cluster_terraform_state.json": data,
+			"cluster-tf-state.json": data,
 		},
 	)
 }
@@ -300,4 +301,12 @@ func generateSecretWithProviderClusterConfig(configData, discoveryData []byte) *
 		})
 }
 
-func int32Ptr(i int32) *int32 { return &i }
+func generateSecretWithNodeTerraformState(nodeName string, data []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-node-terraform-state-"+nodeName,
+		"d8-system",
+		map[string][]byte{
+			"node-tf-state.json": data,
+		},
+	)
+}

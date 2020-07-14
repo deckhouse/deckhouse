@@ -12,6 +12,51 @@ apiVersions:
       kind:
         type: string
         enum: [OpenStackClusterConfiguration]
+      masterNodeGroup:
+        required: [replicas, instanceClass]
+        properties:
+          replicas:
+            type: integer
+          instanceClass:
+            type: object
+            required: [flavorName, imageName, kubernetesDataVolumeType]
+            properties:
+              kubernetesDataVolumeType:
+                type: string
+              flavorName:
+                type: string
+              imageName:
+                type: string
+              rootDiskSizeInGb:
+                type: integer
+              securityGroups:
+                type: array
+                items:
+                  type: string
+      nodeGroups:
+        type: array
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              type: string
+            replicas:
+              type: integer
+            instanceClass:
+              required: [flavorName, imageName]
+              type: object
+              properties:
+                flavorName:
+                  type: string
+                imageName:
+                  type: string
+                rootDiskSizeInGb:
+                  type: integer
+                securityGroups:
+                  type: array
+                  items:
+                    type: string
       layout:
         type: string
       standard:

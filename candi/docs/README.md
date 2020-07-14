@@ -78,7 +78,7 @@ deckhouse:
         * `deckhouse_config` - часть конфигурации Deckhouse, которая в будущем будет слита и сохранена в configmap `deckhouse` в namespace `d8-system`. 
     * State terraform'а после выполнения данной фазы будет сохранен в secret `d8-cluster-teraform-state`.
 
-* `master-node-bootstrap` - создает первый узел кластера.
+* `master-node` - создает первый узел кластера.
     * Через механизм [ouput](https://www.terraform.io/docs/configuration/outputs.html) на данном этапе в installer передаются данные:
         * `master_instance_class` - `OpenStackInstanceClass` для создания master-узлов.
         * `master_ip` - адрес из "внешней" сети, по нему мы будем производить подключение к первому узлу.

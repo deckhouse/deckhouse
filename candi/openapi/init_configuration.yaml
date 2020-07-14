@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, sshPublicKeys, masterNodeGroup, deckhouse]
+    required: [apiVersion, kind, deckhouse]
     properties:
       apiVersion:
         type: string
@@ -12,22 +12,6 @@ apiVersions:
       kind:
         type: string
         enum: [InitConfiguration]
-      sshPublicKeys:
-        type: array
-        items:
-          type: string
-      masterNodeGroup:
-        type: object
-        required: [maxPerZone, minPerZone, zones]
-        properties:
-           maxPerZone:
-             type: integer
-           minPerZone:
-             type: integer
-           zones:
-             type: array
-             items:
-               type: string
       deckhouse:
         type: object
         oneOf:

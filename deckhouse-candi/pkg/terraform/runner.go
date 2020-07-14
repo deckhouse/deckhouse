@@ -10,7 +10,6 @@ import (
 
 	"github.com/flant/logboek"
 
-	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/log"
 )
 
@@ -21,19 +20,19 @@ const (
 )
 
 type Interface interface {
-	Init(bool) ([]byte, error)
+	Init() error
 	Apply() ([]byte, error)
 	GetTerraformOutput(string) ([]byte, error)
-	Destroy(bool) ([]byte, error)
+	Destroy(bool) error
 	getState() ([]byte, error)
 }
 
 type Runner struct {
-	step       string
-	stateDir   string
-	WorkingDir string
-	State      string
-	MetaConfig *config.MetaConfig
+	step               string
+	stateDir           string
+	WorkingDir         string
+	State              string
+	TerraformVariables []byte
 }
 
 var (
@@ -41,9 +40,9 @@ var (
 	_ Interface = &FakeRunner{}
 )
 
-func NewRunner(step string, metaConfig *config.MetaConfig) *Runner {
-	workingDir := buildTerraformPath(metaConfig.ProviderName, metaConfig.Layout, step)
-	return &Runner{WorkingDir: workingDir, stateDir: workingDir, step: step, MetaConfig: metaConfig}
+func NewRunner(provider, layout, step string, terraformVariables []byte) *Runner {
+	workingDir := buildTerraformPath(provider, layout, step)
+	return &Runner{WorkingDir: workingDir, stateDir: workingDir, step: step, TerraformVariables: terraformVariables}
 }
 
 func (r *Runner) WithStateDir(dir string) {
@@ -52,16 +51,11 @@ func (r *Runner) WithStateDir(dir string) {
 	}
 }
 
-func (r *Runner) Init(bootstrap bool) ([]byte, error) {
-	err := logboek.LogProcess("Terraform Init", log.TerraformOptions(), func() error {
-		clusterConfigJSON, err := r.MetaConfig.MarshalConfig(bootstrap)
-		if err != nil {
-			return fmt.Errorf("terraform prepare cluster config error: %v", err)
-		}
-
+func (r *Runner) Init() error {
+	return logboek.LogProcess("Terraform Init", log.TerraformOptions(), func() error {
 		varFilePath := filepath.Join(r.stateDir, varFileName)
-		if err = ioutil.WriteFile(varFilePath, clusterConfigJSON, 0755); err != nil {
-			return fmt.Errorf("terraform saving cluster config error: %v", err)
+		if err := ioutil.WriteFile(varFilePath, r.TerraformVariables, 0755); err != nil {
+			return fmt.Errorf("terraform saving cluster config error: %w", err)
 		}
 
 		args := []string{
@@ -75,7 +69,6 @@ func (r *Runner) Init(bootstrap bool) ([]byte, error) {
 
 		return execTerraform(args...)
 	})
-	return []byte(""), err
 }
 
 func (r *Runner) Apply() ([]byte, error) {
@@ -115,15 +108,15 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 	return exec.Command("terraform", args...).CombinedOutput()
 }
 
-func (r *Runner) Destroy(detectState bool) ([]byte, error) {
+func (r *Runner) Destroy(detectState bool) error {
 	if r.State == "" {
 		if !detectState {
-			return nil, fmt.Errorf("no state found, try to run terraform apply first")
+			return fmt.Errorf("no state found, try to run terraform apply first")
 		}
 		r.State = filepath.Join(r.stateDir, r.step+deckhouseClusterStateSuffix)
 	}
 
-	err := logboek.LogProcess("Terraform Destroy", log.TerraformOptions(), func() error {
+	return logboek.LogProcess("Terraform Destroy", log.TerraformOptions(), func() error {
 		args := []string{
 			"destroy",
 			"-no-color",
@@ -135,7 +128,6 @@ func (r *Runner) Destroy(detectState bool) ([]byte, error) {
 
 		return execTerraform(args...)
 	})
-	return []byte(""), err
 }
 
 func (r *Runner) getState() ([]byte, error) {
@@ -183,8 +175,8 @@ type FakeRunner struct {
 	OutputResults map[string]fakeResult
 }
 
-func (r *FakeRunner) Init(_ bool) ([]byte, error) {
-	return r.InitResult.Data, r.InitResult.Error
+func (r *FakeRunner) Init() error {
+	return r.InitResult.Error
 }
 
 func (r *FakeRunner) Apply() ([]byte, error) {
@@ -196,7 +188,7 @@ func (r *FakeRunner) GetTerraformOutput(output string) ([]byte, error) {
 	return result.Data, result.Error
 }
 
-func (r *FakeRunner) Destroy(_ bool) ([]byte, error) { return nil, nil }
+func (r *FakeRunner) Destroy(_ bool) error { return nil }
 
 func (r *FakeRunner) getState() ([]byte, error) {
 	return []byte(r.State), nil
