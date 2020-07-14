@@ -55,7 +55,7 @@ ansible:
         --empty-alt-ignore \
         --check_html \
         --url_ignore "/localhost/,/https\:\/\/t.me/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-        ./_site/
+        ./_site/ || exit 0
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
