@@ -18,4 +18,4 @@ data:
       updateIntervalSeconds: 15
       options:
         path: /etc/grafana-dashboard-definitions
-        folderFromFileStructure: true
+        foldersFromFilesStructure: true
