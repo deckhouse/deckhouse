@@ -14,6 +14,11 @@ EOF
 }
 
 function __on_startup() {
+  cluster_version=$(values::get global.discovery.kubernetesVersion)
+  if semver::gt "$cluster_version" "1.15" ; then
+    return 0
+  fi
+
   if metrics_from_prometheus="$(curl -s --connect-timeout 10 --max-time 10 -k -XGET -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility")"; then
     metrics="$(jq '.data.result[] |
     {
