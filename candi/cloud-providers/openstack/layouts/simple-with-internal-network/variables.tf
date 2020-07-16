@@ -1,23 +1,25 @@
-variable "clusterConfig" {
+variable "clusterConfiguration" {
   type = any
 }
 
-variable "providerClusterConfig" {
+variable "providerClusterConfiguration" {
   type = any
 }
 
-variable "initConfig" {
-  type = any
+variable "nodeIndex" {
+  type = string
+  default = ""
 }
 
-variable "providerInitConfig" {
-  type = any
+variable "cloudConfig" {
+  type = string
+  default = ""
 }
 
 locals {
-  prefix = var.clusterConfig.cloud.prefix
-  pod_subnet_cidr = var.clusterConfig.podSubnetCIDR
-  internal_subnet_name = var.providerClusterConfig.simpleWithInternalNetwork.internalSubnetName
-  external_network_name = lookup(var.providerClusterConfig.simpleWithInternalNetwork, "externalNetworkName", "")
-  pod_network_mode = lookup(var.providerClusterConfig.simpleWithInternalNetwork, "podNetworkMode", "DirectRoutingWithPortSecurityEnabled")
+  prefix = var.clusterConfiguration.cloud.prefix
+  pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR
+  internal_subnet_name = var.providerClusterConfiguration.simpleWithInternalNetwork.internalSubnetName
+  external_network_name = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "externalNetworkName", "")
+  pod_network_mode = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "podNetworkMode", "DirectRoutingWithPortSecurityEnabled")
 }

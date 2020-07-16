@@ -1,23 +1,25 @@
-variable "clusterConfig" {
+variable "clusterConfiguration" {
   type = any
 }
 
-variable "providerClusterConfig" {
+variable "providerClusterConfiguration" {
   type = any
 }
 
-variable "initConfig" {
-  type = any
+variable "nodeIndex" {
+  type = string
+  default = ""
 }
 
-variable "providerInitConfig" {
-  type = any
+variable "cloudConfig" {
+  type = string
+  default = ""
 }
 
 locals {
-  prefix = var.clusterConfig.cloud.prefix
-  pod_subnet_cidr = var.clusterConfig.podSubnetCIDR
-  external_network_name = var.providerClusterConfig.simple.externalNetworkName
-  external_network_dhcp = lookup(var.providerClusterConfig.simple, "externalNetworkDHCP", true)
-  pod_network_mode = lookup(var.providerClusterConfig.simple, "podNetworkMode", "VXLAN")
+  prefix = var.clusterConfiguration.cloud.prefix
+  pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR
+  external_network_name = var.providerClusterConfiguration.simple.externalNetworkName
+  external_network_dhcp = lookup(var.providerClusterConfiguration.simple, "externalNetworkDHCP", true)
+  pod_network_mode = lookup(var.providerClusterConfiguration.simple, "podNetworkMode", "VXLAN")
 }

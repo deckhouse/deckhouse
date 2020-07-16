@@ -30,6 +30,7 @@ type Interface interface {
 type Runner struct {
 	step               string
 	stateDir           string
+	stateSuffix        string
 	WorkingDir         string
 	State              string
 	TerraformVariables []byte
@@ -45,10 +46,18 @@ func NewRunner(provider, layout, step string, terraformVariables []byte) *Runner
 	return &Runner{WorkingDir: workingDir, stateDir: workingDir, step: step, TerraformVariables: terraformVariables}
 }
 
-func (r *Runner) WithStateDir(dir string) {
+func (r *Runner) WithStateDir(dir string) *Runner {
 	if dir != "" {
 		r.stateDir = dir
 	}
+	return r
+}
+
+func (r *Runner) WithStateSuffix(suffix string) *Runner {
+	if suffix != "" {
+		r.stateSuffix = suffix
+	}
+	return r
 }
 
 func (r *Runner) Init() error {
@@ -73,7 +82,7 @@ func (r *Runner) Init() error {
 
 func (r *Runner) Apply() ([]byte, error) {
 	err := logboek.LogProcess("Terraform Apply", log.TerraformOptions(), func() error {
-		state := filepath.Join(r.stateDir, r.step+deckhouseClusterStateSuffix)
+		state := filepath.Join(r.stateDir, r.step+r.stateSuffix+deckhouseClusterStateSuffix)
 		args := []string{
 			"apply",
 			"-auto-approve",
@@ -113,7 +122,7 @@ func (r *Runner) Destroy(detectState bool) error {
 		if !detectState {
 			return fmt.Errorf("no state found, try to run terraform apply first")
 		}
-		r.State = filepath.Join(r.stateDir, r.step+deckhouseClusterStateSuffix)
+		r.State = filepath.Join(r.stateDir, r.step+r.stateSuffix+deckhouseClusterStateSuffix)
 	}
 
 	return logboek.LogProcess("Terraform Destroy", log.TerraformOptions(), func() error {

@@ -92,7 +92,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					Provider:           metaConfig.ProviderName,
 					Layout:             metaConfig.Layout,
 					Step:               "master-node",
-					TerraformVariables: metaConfig.MarshalMasterNodeGroupConfig(0),
+					TerraformVariables: metaConfig.MarshalNodeGroupConfig("master", 0, ""),
 					StateDir:           app.TerraformStateDir,
 					GetResult:          terraform.GetMasterNodePipelineResult,
 				}).Run()
@@ -254,19 +254,19 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		err = logboek.LogProcess("🛥️ Install Deckhouse 🛥️", log.TaskOptions(), func() error {
-			var kubeCl *kube.KubernetesClient
-			err := logboek.LogProcess("Start Proxy", log.BoldOptions(), func() error {
-				kubeCl = kube.NewKubernetesClient().WithSshClient(sshClient)
-				if err := kubeCl.Init(""); err != nil {
-					return fmt.Errorf("open kubernetes connection: %v", err)
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("deckhouse install: %v", err)
+		var kubeCl *kube.KubernetesClient
+		err = logboek.LogProcess("Start Proxy", log.BoldOptions(), func() error {
+			kubeCl = kube.NewKubernetesClient().WithSshClient(sshClient)
+			if err := kubeCl.Init(""); err != nil {
+				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("start kubernetes proxy: %v", err)
+		}
 
+		err = logboek.LogProcess("🛥️ Install Deckhouse 🛥️", log.TaskOptions(), func() error {
 			err = deckhouse.WaitForKubernetesAPI(kubeCl)
 			if err != nil {
 				return fmt.Errorf("deckhouse wait api: %v", err)
@@ -282,7 +282,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			err = deckhouse.CreateNodeGroup(kubeCl, metaConfig.MergeNodeGroupConfig())
+			err = deckhouse.CreateNodeGroup(kubeCl, "master", metaConfig.MergeMasterNodeGroupConfig())
 			if err != nil {
 				return err
 			}
@@ -291,6 +291,94 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		})
 		if err != nil {
 			return err
+		}
+
+		if metaConfig.ClusterType != "Cloud" {
+			return nil
+		}
+
+		masterCloudConfig, err := deckhouse.GetCloudConfig(kubeCl, "master")
+		if err != nil {
+			return err
+		}
+
+		if metaConfig.MasterNodeGroupSpec.Replicas > 1 {
+			for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
+				stateSuffix := fmt.Sprintf("-%v", i)
+				nodeName := fmt.Sprintf("master-%v", i)
+				nodeConfig := metaConfig.MarshalNodeGroupConfig("master", i, masterCloudConfig)
+
+				err = logboek.LogProcess(fmt.Sprintf("🌿 Bootstrap additional Master Node %v 🌿", i), log.TaskOptions(), func() error {
+					state, err := terraform.NewPipeline(&terraform.PipelineOptions{
+						Provider:           metaConfig.ProviderName,
+						Layout:             metaConfig.Layout,
+						Step:               "master-node",
+						TerraformVariables: nodeConfig,
+						StateDir:           app.TerraformStateDir,
+						StateSuffix:        stateSuffix,
+						GetResult:          terraform.OnlyState,
+					}).Run()
+					if err != nil {
+						return err
+					}
+
+					return deckhouse.SaveNodeTerraformState(kubeCl, nodeName, state["terraformState"])
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		staticNodeGroups := metaConfig.GetStaticNodeGroups()
+		for _, staticNodeGroup := range staticNodeGroups {
+			err = deckhouse.CreateNodeGroup(kubeCl, staticNodeGroup.Name, metaConfig.MergeNodeGroupConfig(staticNodeGroup))
+			if err != nil {
+				return err
+			}
+
+			nodeCloudConfig, err := deckhouse.GetCloudConfig(kubeCl, staticNodeGroup.Name)
+			if err != nil {
+				return err
+			}
+
+			for i := 0; i < staticNodeGroup.Replicas; i++ {
+				stateSuffix := fmt.Sprintf("-%s-%v", staticNodeGroup.Name, i)
+				nodeName := fmt.Sprintf("%s-%v", staticNodeGroup.Name, i)
+				nodeConfig := metaConfig.MarshalNodeGroupConfig(staticNodeGroup.Name, i, nodeCloudConfig)
+
+				err = logboek.LogProcess(fmt.Sprintf("🌿 Bootstrap additional node %v 🌿", nodeName), log.TaskOptions(), func() error {
+					state, err := terraform.NewPipeline(&terraform.PipelineOptions{
+						Provider:           metaConfig.ProviderName,
+						Layout:             metaConfig.Layout,
+						Step:               "static-node",
+						TerraformVariables: nodeConfig,
+						StateDir:           app.TerraformStateDir,
+						StateSuffix:        stateSuffix,
+						GetResult:          terraform.OnlyState,
+					}).Run()
+					if err != nil {
+						return err
+					}
+
+					return deckhouse.SaveNodeTerraformState(kubeCl, nodeName, state["terraformState"])
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		err = deckhouse.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas)
+		if err != nil {
+			return err
+		}
+
+		for _, staticNodeGroup := range staticNodeGroups {
+			err = deckhouse.WaitForNodesBecomeReady(kubeCl, staticNodeGroup.Name, staticNodeGroup.Replicas)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil

@@ -8,7 +8,7 @@ module "network_security" {
 module "keypair" {
   source = "../../../terraform-modules/keypair"
   prefix = local.prefix
-  ssh_public_key = var.initConfig.sshPublicKeys[0]
+  ssh_public_key = var.clusterConfiguration.sshPublicKeys[0]
 }
 
 data "openstack_compute_availability_zones_v2" "zones" {}
@@ -33,7 +33,7 @@ resource "openstack_networking_subnet_v2" "internal" {
     start = cidrhost(local.internal_network_cidr, 2)
     end = cidrhost(local.internal_network_cidr, 254)
   }
-  dns_nameservers = var.providerClusterConfig.standard.internalNetworkDNSServers
+  dns_nameservers = var.providerClusterConfiguration.standard.internalNetworkDNSServers
 }
 
 resource "openstack_networking_router_v2" "router" {

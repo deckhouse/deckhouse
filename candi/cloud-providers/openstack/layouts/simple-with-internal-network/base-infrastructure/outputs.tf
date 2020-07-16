@@ -20,13 +20,6 @@ locals {
   cloud_discovery_data = local.external_network_name == "" ? merge(local.data_2, {"externalNetworkNames": []}) : merge(local.data_2, local.data_external_network_names)
 }
 
-output "deckhouse_config" {
-  value = {
-    "nginxIngressEnabled": false
-    "prometheusMadisonIntegrationEnabled": false
-  }
-}
-
 output "cloud_discovery_data" {
   value = local.cloud_discovery_data
 }

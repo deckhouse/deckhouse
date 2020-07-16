@@ -321,6 +321,7 @@ END
   echo
 }
 
+sleep 60
 etcd_manifest_path="/etc/kubernetes/manifests/etcd.yaml"
 if [ -f "${etcd_manifest_path}" ] ; then
   etcd_advertise_address="$(grep -Po '(?<=--advertise-client-urls=https://).+(?=:2379)' "$etcd_manifest_path")"

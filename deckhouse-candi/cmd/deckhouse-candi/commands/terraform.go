@@ -115,7 +115,7 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 
 		var masterState string
 		err = logboek.LogProcess("Run Destroy for master-node", log.BoldOptions(), func() error {
-			masterRunner := terraform.NewRunner(metaConfig.ProviderName, metaConfig.Layout, "master-node", metaConfig.MarshalMasterNodeGroupConfig(0))
+			masterRunner := terraform.NewRunner(metaConfig.ProviderName, metaConfig.Layout, "master-node", metaConfig.MarshalNodeGroupConfig("master", 0, ""))
 			masterRunner.WithStateDir(app.TerraformStateDir)
 
 			err = masterRunner.Init()

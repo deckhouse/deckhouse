@@ -20,13 +20,15 @@ type PipelineOptions struct {
 	Step     string
 
 	StateDir           string
+	StateSuffix        string
 	TerraformVariables []byte
 	GetResult          func(*Pipeline) (map[string][]byte, error)
 }
 
 func NewPipeline(options *PipelineOptions) *Pipeline {
-	tfRunner := NewRunner(options.Provider, options.Layout, options.Step, options.TerraformVariables)
-	tfRunner.WithStateDir(options.StateDir)
+	tfRunner := NewRunner(options.Provider, options.Layout, options.Step, options.TerraformVariables).
+		WithStateDir(options.StateDir).
+		WithStateSuffix(options.StateSuffix)
 	return &Pipeline{Step: options.Step, TerraformRunner: tfRunner, GetResult: options.GetResult}
 }
 
@@ -80,11 +82,6 @@ func GetMasterNodePipelineResult(p *Pipeline) (map[string][]byte, error) {
 		return nil, err
 	}
 
-	masterInstanceClass, err := p.TerraformRunner.GetTerraformOutput("master_instance_class")
-	if err != nil {
-		return nil, err
-	}
-
 	nodeInternalIP, err := p.TerraformRunner.GetTerraformOutput("node_internal_ip_address")
 	if err != nil {
 		return nil, err
@@ -96,9 +93,17 @@ func GetMasterNodePipelineResult(p *Pipeline) (map[string][]byte, error) {
 	}
 
 	return map[string][]byte{
-		"terraformState":      tfState,
-		"masterIPForSSH":      masterIPAddressForSSH,
-		"masterInstanceClass": masterInstanceClass,
-		"nodeInternalIP":      nodeInternalIP,
+		"terraformState": tfState,
+		"masterIPForSSH": masterIPAddressForSSH,
+		"nodeInternalIP": nodeInternalIP,
 	}, nil
+}
+
+func OnlyState(p *Pipeline) (map[string][]byte, error) {
+	tfState, err := p.TerraformRunner.getState()
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]byte{"terraformState": tfState}, nil
 }

@@ -1,8 +1,8 @@
 locals {
-  root_disk_size = lookup(var.providerInitConfig.masterInstanceClass, "rootDiskSizeInGb", "")
-  image_name = var.providerInitConfig.masterInstanceClass.imageName
-  flavor_name = var.providerInitConfig.masterInstanceClass.flavorName
-  security_group_names = lookup(var.providerInitConfig.masterInstanceClass, "securityGroups", [])
+  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeInGb", "")
+  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
+  security_group_names = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "securityGroups", [])
 }
 
 module "network_security_info" {
@@ -11,15 +11,25 @@ module "network_security_info" {
   enabled = local.network_security
 }
 
-module "standard_master" {
-  source = "../../../terraform-modules/standard-master"
+module "master" {
+  source = "../../../terraform-modules/master"
   prefix = local.prefix
+  node_index = var.nodeIndex
+  cloud_config = var.cloudConfig
   root_disk_size = local.root_disk_size
   image_name = local.image_name
   flavor_name = local.flavor_name
   keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
-  master_internal_port_id = local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id
-  external_network_name = data.openstack_networking_network_v2.external.name
+  network_port_ids = local.network_security ? list(openstack_networking_port_v2.master_external_with_security[0].id, openstack_networking_port_v2.master_internal_with_security[0].id) : list(openstack_networking_port_v2.master_external_without_security[0].id, openstack_networking_port_v2.master_internal_without_security[0].id)
+  config_drive = !local.external_network_dhcp
+}
+
+module "kubernetes_data" {
+  source = "../../../terraform-modules/kubernetes-data"
+  prefix = local.prefix
+  node_index = var.nodeIndex
+  master_id = module.master.id
+  volume_type = var.providerClusterConfiguration.masterNodeGroup.instanceClass.kubernetesDataVolumeType
 }
 
 module "security_groups" {
@@ -58,6 +68,13 @@ resource "openstack_networking_port_v2" "master_internal_with_security" {
   }
 }
 
+resource "openstack_networking_port_v2" "master_external_with_security" {
+  count = local.network_security ? 1 : 0
+  network_id = data.openstack_networking_network_v2.external.id
+  admin_state_up = "true"
+  security_group_ids = module.security_groups.security_group_ids
+}
+
 resource "openstack_networking_port_v2" "master_internal_without_security" {
   count = local.network_security ? 0 : 1
   network_id = data.openstack_networking_network_v2.internal.id
@@ -65,4 +82,10 @@ resource "openstack_networking_port_v2" "master_internal_without_security" {
   fixed_ip {
     subnet_id = data.openstack_networking_subnet_v2.internal.id
   }
+}
+
+resource "openstack_networking_port_v2" "master_external_without_security" {
+  count = local.network_security ? 0 : 1
+  network_id = data.openstack_networking_network_v2.external.id
+  admin_state_up = "true"
 }

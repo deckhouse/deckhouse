@@ -6,16 +6,17 @@ hide_sidebar: false
 
 ## Поддерживаемые схемы размещения
 
-Каждая схема размещения должна быть описана двумя объектами OpenStackClusterConfiguration и OpenStackInitConfiguration.
+Каждая схема размещения должна быть описана объектом OpenStackClusterConfiguration.
 
 **`OpenStackClusterConfiguration`** - содержит в себе описание схемы размещения, набор полей зависит от выбранной схемы и описан
 для каждой из них ниже.
+* Поле `masterNodeGroup` определяет параметры, с которыми будут создан instance для мастера:
+  * `replicas` — кол-во master нод в кластере
+  * `instanceClass` может содержать в себе **только** параметры `flavorName`, `imageName`, `kubernetesDataVolumeType`, `rootDiskSizeInGb`, `securityGroups`.
+  Остальные параметры указывать **нельзя** — они будут сконфигурированы автоматически на основании выбранной схемы размещения.
+  Подробнее про данные параметры описано в документации модуля [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource).
 * В поле `provider` передаются параметры подключения к api openstack, они совпадают с параметрами
 передаваемыми в поле `connection` в модуле [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#параметры).
-
-**`OpenStackInitConfiguration`** - содержит в себе параметры, используемые во время бутстрапа кластера.
-* Поле `masterInstanceClass` определяет параметры, с которыми будет создан instance для мастера — может содержать в себе **только** параметры `flavorName`, `imageName`, `rootDiskSizeInGb` и `securityGroups`. Остальные параметры указывать **нельзя** — они будут сконфигурированы автоматически на основании выбранной
-схемы размещения. Подробнее про данные параметры описано в документации модуля [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource).
 
 ### Standard
 Создаётся внутренняя сеть кластера со шлюзом в публичную сеть, ноды не имеют публичных ip адресов. Для мастера заказывается
@@ -35,18 +36,38 @@ standard:
   - 4.2.2.2
   internalNetworkSecurity: true|false                     # optional, default true
   externalNetworkName: shared                             # required
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
+    rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
+nodeGroups:
+- name: front
+  replicas: 2
+  instanceClass:
+    flavorName: m1.small                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    rootDiskSizeInGb: 20                                  # optional, local disk is used if not specified
+    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network used as default gateway
+    networks:                                             # required, first network will be used as default gateway
+    - name: k-aksenov                                     # required, network name
+      podNetwork: true                                    # optional, default false
+      security: true                                      # optional, whether to define security setting for this network
+    - name: shared
+      security: false
+    floatingIpPools:                                      # optional, list of network pools where to order floating ips
+    - public
+    - shared
+    securityGroups:                                       # optional, specified security groups must exist, they are not created
+    - sec_group_1
+    - sec_group_2
 provider:
   ...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackInitConfiguration
-masterInstanceClass:
-  flavorName: m1.large                                      # required
-  imageName: ubuntu-18.04-cloud-amd64                       # required
-  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  securityGroups:                                           # optional
-  - sec_group_1
-  - sec_group_2
 ```
 
 ### StandardWithNoRouter
@@ -71,18 +92,28 @@ standardWithNoRouter:
   externalNetworkName: ext-net                            # required
   externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)   
   internalNetworkSecurity: true|false                     # optional, default true
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
+    rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
+nodeGroups:
+- name: front
+  replicas: 2
+  instanceClass:
+    flavorName: m1.smakk                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    rootDiskSizeInGb: 20                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
 provider:
   ...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackInitConfiguration
-masterInstanceClass:
-  flavorName: m1.large                                      # required
-  imageName: ubuntu-18.04-cloud-amd64                       # required
-  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  securityGroups:                                           # optional
-  - sec_group_1
-  - sec_group_2
 ```
 
 ### Simple
@@ -106,18 +137,28 @@ simple:
   externalNetworkName: ext-net                            # required
   externalNetworkDHCP: false                              # optional, default true   
   podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
+    rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
+nodeGroups:
+- name: front
+  replicas: 2
+  instanceClass:
+    flavorName: m1.smakk                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    rootDiskSizeInGb: 20                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
 provider:
   ...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackInitConfiguration
-masterInstanceClass:
-  flavorName: m1.large                                      # required
-  imageName: ubuntu-18.04-cloud-amd64                       # required
-  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  securityGroups:                                           # optional
-  - sec_group_1
-  - sec_group_2
 ```
 
 ### SimpleWithInternalNetwork
@@ -139,17 +180,27 @@ simpleWithInternalNetwork:
   internalSubnetName: pivot-standard                      # required, all cluster nodes have to be in the same subnet
   podNetworkMode: DirectRoutingWithPortSecurityEnabled    # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
   externalNetworkName: ext-net                            # optional, if set will be used for ordering load balancer floating ip
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
+    rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
+nodeGroups:
+- name: front
+  replicas: 2
+  instanceClass:
+    flavorName: m1.smakk                                  # required
+    imageName: ubuntu-18-04-cloud-amd64                   # required
+    rootDiskSizeInGb: 20                                  # optional, local disk is used if not specified
+    securityGroups:                                       # optional
+    - sec_group_1
+    - sec_group_2
 provider:
   ...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackInitConfiguration
-masterInstanceClass:
-  flavorName: m1.large                                      # required
-  imageName: ubuntu-18.04-cloud-amd64                       # required
-  rootDiskSizeInGb: 50                                      # optional, ephemeral disks are use if not specified
-  securityGroups:                                           # optional
-  - sec_group_1
-  - sec_group_2
 ```
 
