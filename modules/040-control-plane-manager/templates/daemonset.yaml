@@ -117,6 +117,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: KUBERNETES_VERSION
+          value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
         readinessProbe:
           exec:
             command:

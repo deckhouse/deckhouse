@@ -2,11 +2,17 @@ FROM golang:1.13.12-buster as kubeadm_builder
 WORKDIR /src/
 RUN apt update
 RUN apt install rsync -y
-RUN wget https://github.com/flant/kubernetes/archive/v1.16.10-flant.2.tar.gz -O - | tar -xz --strip-components=1 -C /src
-RUN make all WHAT=cmd/kubeadm
+
+RUN mkdir /src/kubernetes-1.16 && wget https://github.com/flant/kubernetes/archive/v1.16.10-flant.2.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.16
+RUN cd kubernetes-1.16 && make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.16
+
+RUN mkdir /src/kubernetes-1.17 && wget https://github.com/flant/kubernetes/archive/v1.17.8-rc.1-flant.1.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.17
+RUN cd kubernetes-1.17 && make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.17
+
+RUN mkdir /src/kubernetes-1.18 && wget https://github.com/flant/kubernetes/archive/v1.18.5-rc.1-flant.1.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.18
+RUN cd kubernetes-1.18 && make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.18
 
 FROM alpine:3.11
-
 RUN apk add --no-cache jq curl bash gettext grep
 RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v1.16.10/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && \
   chmod +x /usr/local/bin/kubectl
@@ -16,7 +22,10 @@ RUN curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1
   chmod +x /usr/local/bin/cfssl
 ADD control-plane-manager /control-plane-manager
 
-COPY --from=kubeadm_builder /src/_output/bin/kubeadm /usr/local/bin/
+COPY --from=kubeadm_builder /kubeadm-1.16 /usr/local/bin/
+COPY --from=kubeadm_builder /kubeadm-1.17 /usr/local/bin/
+COPY --from=kubeadm_builder /kubeadm-1.18 /usr/local/bin/
+
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 
 ENTRYPOINT [ "/control-plane-manager" ]
