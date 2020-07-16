@@ -29,7 +29,7 @@ func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) 
 	}
 
 	if len(pods.Items) != 1 {
-		return fmt.Errorf("only one deckhouse pod should exist: %v", pods.Items)
+		return fmt.Errorf("one deckhouse pod should exist: %v", pods.Items)
 	}
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
@@ -37,24 +37,11 @@ func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) 
 	timer := time.NewTicker(3 * time.Second)
 	defer timer.Stop()
 
-	printDots := true
-
-	stopPrintDots := func() {
-		if printDots {
-			logboek.LogInfoF("\n")
-			printDots = false
-		}
-	}
-
 	for {
 		select {
 		case <-*stopChan:
 			return nil
 		case <-timer.C:
-			if printDots {
-				logboek.LogInfoF(".")
-			}
-
 			request := client.CoreV1().Pods("d8-system").GetLogs(pods.Items[0].Name, &logOptions)
 			result, err := request.DoRaw()
 			if err != nil {
@@ -72,18 +59,17 @@ func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) 
 				}
 				var line logLine
 				if err := json.Unmarshal(l, &line); err != nil {
-					return err
+					logboek.LogInfoLn("can't parse json log line")
+					continue
 				}
 
 				if line.Level == "error" || (line.Output == "stderr" && line.Component != "tiller") {
-					stopPrintDots()
 					logboek.LogWarnLn(line.Message)
 					continue
 				}
 
 				// TODO use module.state label
 				if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
-					stopPrintDots()
 					logboek.LogInfoF("Module %q run successfully\n", line.Module)
 					continue
 				}

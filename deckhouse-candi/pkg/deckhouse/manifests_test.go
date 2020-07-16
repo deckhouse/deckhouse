@@ -2,9 +2,10 @@ package deckhouse
 
 import (
 	"fmt"
-	"sigs.k8s.io/yaml"
 	"strings"
 	"testing"
+
+	"sigs.k8s.io/yaml"
 )
 
 func Test_struct_vs_unmarshal(t *testing.T) {
@@ -57,5 +58,4 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 	}
 
 	fmt.Printf("%d lines are differ\n", diff)
-
 }

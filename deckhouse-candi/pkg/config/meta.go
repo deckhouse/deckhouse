@@ -51,11 +51,13 @@ func (m *MetaConfig) Prepare() {
 	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
 }
 
-func (m *MetaConfig) MarshalMasterNodeGroupConfig(nodeIndex int) []byte {
+func (m *MetaConfig) MarshalNodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := make(map[string]interface{})
 	result["clusterConfiguration"] = m.ClusterConfig
 	result["providerClusterConfiguration"] = m.ProviderClusterConfig
 	result["nodeIndex"] = nodeIndex
+	result["cloudConfig"] = cloudConfig
+	result["nodeGroupName"] = nodeGroupName
 
 	data, _ := json.Marshal(result)
 	return data
@@ -93,7 +95,18 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 	return firstConfig
 }
 
-func (m *MetaConfig) MergeNodeGroupConfig() map[string]interface{} {
+func (m *MetaConfig) GetStaticNodeGroups() []StaticNodeGroupSpec {
+	var staticNodeGroups []StaticNodeGroupSpec
+	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
+	if !ok {
+		return staticNodeGroups
+	}
+
+	_ = json.Unmarshal(nodeGroups, &staticNodeGroups)
+	return staticNodeGroups
+}
+
+func (m *MetaConfig) MergeMasterNodeGroupConfig() map[string]interface{} {
 	// We can't create NodeGroup with nodeType Cloud for now because the adoption mechanism is not ready yet
 
 	nodeType := "Hybrid"
@@ -123,6 +136,23 @@ func (m *MetaConfig) MergeNodeGroupConfig() map[string]interface{} {
 					},
 				},
 			},
+		},
+	}
+}
+
+func (m *MetaConfig) MergeNodeGroupConfig(staticNodeGroup StaticNodeGroupSpec) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]interface{}{
+			"name": staticNodeGroup.Name,
+		},
+		"spec": map[string]interface{}{
+			"nodeType": "Hybrid",
+			"disruptions": map[string]interface{}{
+				"approvalMode": "Manual",
+			},
+			"nodeTemplate": staticNodeGroup.NodeTemplate,
 		},
 	}
 }

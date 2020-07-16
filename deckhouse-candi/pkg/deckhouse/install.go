@@ -2,6 +2,7 @@ package deckhouse
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -213,46 +214,74 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 
 	return logboek.LogProcess("Create Manifests", log.BoldOptions(), func() error {
 		for _, task := range tasks {
-			logboek.LogInfoF("Create %s\n", task.name)
-			manifest := task.manifest()
-
-			err := task.createTask(manifest)
+			err := runTask(task)
 			if err != nil {
-				if !errors.IsAlreadyExists(err) {
-					return err
-				}
-				logboek.LogInfoF("%s already exists. Trying to update ... ", task.name)
-				err = task.updateTask(manifest)
-				if err != nil {
-					logboek.LogWarnLn("ERROR!")
-					return err
-				}
-				logboek.LogInfoLn("OK!")
+				return err
 			}
 		}
 		return nil
 	})
 }
 
+func runTask(task createManifestTask) error {
+	logboek.LogInfoF("Create %s\n", task.name)
+	manifest := task.manifest()
+
+	err := task.createTask(manifest)
+	if err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return err
+		}
+		logboek.LogInfoF("%s already exists. Trying to update ... ", task.name)
+		err = task.updateTask(manifest)
+		if err != nil {
+			logboek.LogWarnLn("ERROR!")
+			return err
+		}
+		logboek.LogInfoLn("OK!")
+	}
+	return nil
+}
+
+func SaveNodeTerraformState(client *kube.KubernetesClient, nodeName string, tfState []byte) error {
+	getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, tfState) }
+	return logboek.LogProcess(fmt.Sprintf("Waiting for saving terraform state for node %s", nodeName), log.BoldOptions(), func() error {
+		for i := 1; i <= 45; i++ {
+			err := runTask(createManifestTask{
+				name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+				manifest: getManifest,
+				createTask: func(manifest interface{}) error {
+					_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+					return err
+				},
+				updateTask: func(manifest interface{}) error {
+					_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+					return err
+				},
+			})
+			if err == nil {
+				logboek.LogInfoLn("Success!")
+				return nil
+			}
+
+			logboek.LogInfoF("[Attempt #%v of 45] Waiting for saving terraform state failed, retry in 10s\n", i)
+			logboek.LogWarnF("%v\n\n", err)
+
+			time.Sleep(10 * time.Second)
+		}
+		return fmt.Errorf("timeout waiting for saving terraform state")
+	})
+}
+
 func WaitForReadiness(client *kube.KubernetesClient, cfg *Config) error {
 	return logboek.LogProcess("Wait for deckhouse readiness", log.BoldOptions(), func() error {
 		// watch for deckhouse pods in namespace become Ready
-
 		ready := make(chan struct{}, 1)
 
 		informer := kube.NewDeploymentInformer(client, context.Background())
 		informer.Namespace = "d8-system"
 		informer.FieldSelector = "metadata.name=deckhouse"
-		//podInformer.LabelSelector = &metav1.LabelSelector{
-		//	MatchLabels: nil,
-		//	MatchExpressions: []metav1.LabelSelectorRequirement{
-		//		{
-		//			Key:      "app",
-		//			Operator: "=",
-		//			Values:   []string{"deckhouse"},
-		//		},
-		//	},
-		//}
+
 		err := informer.CreateSharedInformer()
 		if err != nil {
 			return err
@@ -286,10 +315,17 @@ func WaitForReadiness(client *kube.KubernetesClient, cfg *Config) error {
 		defer checkTimer.Stop()
 
 		stopLogsChan := make(chan struct{})
+		defer func() { stopLogsChan <- struct{}{} }()
+
 		go func() {
 			for i := 1; i < 60; i++ {
-				time.Sleep(time.Second)
-				_ = PrintDeckhouseLogs(client, &stopLogsChan)
+				time.Sleep(15 * time.Second)
+				err = PrintDeckhouseLogs(client, &stopLogsChan)
+				if err != nil {
+					logboek.LogInfoF("Deckhouse is not ready yet - %v\n", err)
+					continue
+				}
+				return
 			}
 		}()
 
@@ -300,7 +336,6 @@ func WaitForReadiness(client *kube.KubernetesClient, cfg *Config) error {
 			case <-waitTimer.C:
 				waitErr = fmt.Errorf("timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors")
 			case <-ready:
-				stopLogsChan <- struct{}{}
 				logboek.LogInfoF("Deckhouse deployment is ready\n")
 			}
 			break
@@ -380,14 +415,14 @@ func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
 	)
 }
 
-func CreateNodeGroup(client *kube.KubernetesClient, data map[string]interface{}) error {
-	return logboek.LogProcess("Create NodeGroup", log.BoldOptions(), func() error {
+func CreateNodeGroup(client *kube.KubernetesClient, nodeGroupName string, data map[string]interface{}) error {
+	return logboek.LogProcess("Create NodeGroup "+nodeGroupName, log.BoldOptions(), func() error {
 		doc := unstructured.Unstructured{}
 		doc.SetUnstructuredContent(data)
 
 		resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
 
-		for i := 1; i < 45; i++ {
+		for i := 1; i <= 45; i++ {
 			res, err := client.Dynamic().Resource(resourceSchema).Create(&doc, metav1.CreateOptions{})
 			if err == nil {
 				logboek.LogInfoF("NodeGroup %q created\n", res.GetName())
@@ -410,7 +445,7 @@ func CreateNodeGroup(client *kube.KubernetesClient, data map[string]interface{})
 
 func WaitForKubernetesAPI(client *kube.KubernetesClient) error {
 	return logboek.LogProcess("Wait for Kubernetes API to become ready", log.BoldOptions(), func() error {
-		for i := 1; i < 45; i++ {
+		for i := 1; i <= 45; i++ {
 			_, err := client.CoreV1().Namespaces().Get("kube-system", metav1.GetOptions{})
 			if err == nil {
 				logboek.LogInfoLn("Kubernetes API ready")
@@ -421,6 +456,68 @@ func WaitForKubernetesAPI(client *kube.KubernetesClient) error {
 			logboek.LogInfoF("%v\n\n", err)
 			time.Sleep(5 * time.Second)
 		}
-		return fmt.Errorf("failed waiting for Kubernetes API to become ready")
+		return fmt.Errorf("timeout waiting for Kubernetes API become ready")
+	})
+}
+
+func GetCloudConfig(client *kube.KubernetesClient, nodeGroupName string) (string, error) {
+	var cloudData string
+	err := logboek.LogProcess("☁️ Get cloud data ☁️", log.BoldOptions(), func() error {
+		for i := 1; i <= 45; i++ {
+			secret, err := client.CoreV1().Secrets("d8-cloud-instance-manager").Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
+			if err != nil {
+				logboek.LogInfoF("[Attempt #%v of 45] Request to Kubernetes API failed, next attempt in 5s\n", i)
+				logboek.LogInfoF("%v\n\n", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
+			logboek.LogInfoLn("Success!")
+			return nil
+		}
+		return fmt.Errorf("waiting for manual-bootstrap-for-%s failed", nodeGroupName)
+	})
+	return cloudData, err
+}
+
+func WaitForNodesBecomeReady(client *kube.KubernetesClient, nodeGroupName string, desiredReadyNodes int) error {
+	return logboek.LogProcess(fmt.Sprintf("💦 Waiting for NodeGroup %s become Ready 💦", nodeGroupName), log.BoldOptions(), func() error {
+		for i := 1; i <= 100; i++ {
+			nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
+			if err != nil {
+				logboek.LogInfoF("[Attempt #%v of 100] Error while listing %s nodes, retry in 20s\n", i, nodeGroupName)
+				logboek.LogInfoF("%v\n\n", err)
+				time.Sleep(20 * time.Second)
+				continue
+			}
+
+			readyNodes := make(map[string]struct{})
+
+			for _, node := range nodes.Items {
+				for _, c := range node.Status.Conditions {
+					if c.Type == apiv1.NodeReady {
+						if c.Status == apiv1.ConditionTrue {
+							readyNodes[node.Name] = struct{}{}
+						}
+					}
+				}
+			}
+
+			logboek.LogInfoF("[Attempt #%v of 100] Nodes Ready %v of %v, retry in 20s\n", i, len(readyNodes), desiredReadyNodes)
+			for _, node := range nodes.Items {
+				condition := "NotReady"
+				if _, ok := readyNodes[node.Name]; ok {
+					condition = "Ready"
+				}
+				logboek.LogInfoF("* %s | %s\n", node.Name, condition)
+			}
+			logboek.LogInfoF("\n")
+			if len(readyNodes) >= desiredReadyNodes {
+				logboek.LogInfoLn("Success!")
+				return nil
+			}
+			time.Sleep(20 * time.Second)
+		}
+		return fmt.Errorf("waiting %s nodes become ready failed", nodeGroupName)
 	})
 }

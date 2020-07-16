@@ -1,5 +1,5 @@
 module "security_groups" {
-  source = "../security-groups"
+  source = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
   security_group_names = local.security_group_names
 }
 

@@ -31,6 +31,12 @@ type MasterNodeGroupSpec struct {
 	Replicas int `json:"replicas"`
 }
 
+type StaticNodeGroupSpec struct {
+	Replicas     int                    `json:"replicas"`
+	Name         string                 `json:"name"`
+	NodeTemplate map[string]interface{} `json:"nodeTemplate"`
+}
+
 type DeckhouseClusterConfig struct {
 	ReleaseChannel    string                 `json:"releaseChannel,omitempty"`
 	DevBranch         string                 `json:"devBranch,omitempty"`
