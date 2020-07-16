@@ -103,10 +103,10 @@ spec:
 
 ## Как добавить дополнительные dashboard'ы в вашем проекте?
 
-Есть два способа кастомизации dashboard'ов для Grafana.
+Добавление пользовательских dashboard'ов для Grafana в deckhouse реализовано при помощи подхода infrastructure as a code. 
+Чтобы ваш dashboard появился в Grafana, необходимо создать в кластере специальный ресурс - `GrafanaDashboardDefinition`.
 
-1. Графана хранит данные персистентно. Все созданные или измененные через интерфейс grafana dashboard'ы будут сохранены.
-2. Для реализации подхода infrastructure as a code можно использовать специальный ресурс - `GrafanaDashboardDefinition`.
+Пример:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: GrafanaDashboardDefinition
@@ -156,6 +156,28 @@ spec:
         plk_markup_format: markdown
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
+```
+### Как подключить дополнительные Datasource для Grafana?
+Для подключения дополнительных datasource'ов к Grafana добавлен специальный ресурс - `GrafanaAdditionalDatasource`.
+
+Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). 
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: another-prometheus
+spec:
+  type: prometheus
+  access: proxy
+  url: https://another-prometheus.example.com/prometheus
+  basicAuth: true
+  basicAuthUser: foo
+  jsonData:
+    timeInterval: 30s
+  secureJsonData:
+    basicAuthPassword: bar
 ```
 
 ## Как обеспечить безопасный доступ к метрикам?
