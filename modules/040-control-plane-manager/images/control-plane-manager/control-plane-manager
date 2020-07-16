@@ -22,6 +22,15 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
   LAST_APPLIED_CONFIGURATION_CHECKSUM=$(cat $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksum)
 fi
 
+# verify Kubernetes version
+declare -A supported_kubernetes_versions=( ["1.15"]="1.16" ["1.16"]="1.16" ["1.17"]="1.17" ["1.18"]="1.18")
+if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
+  echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
+  exit 1
+fi
+# shellcheck disable=SC2139
+kubeadm_binary="/usr/local/bin/kubeadm-${supported_kubernetes_versions[$KUBERNETES_VERSION]}"
+
 function backup_file_or_folder() {
   if [[ ! -e "$BACKUP_DIR/$1" ]] ; then
     if [[ -e "$1" ]] ; then
@@ -122,7 +131,7 @@ function generate_or_renew_certificate() {
     certificate=$ROOTFS_DIR/etc/kubernetes/pki/$2
     tmp_certificate=$TMP_ROOTFS_DIR/etc/kubernetes/pki/$2
   fi
-  kubeadm_cmd="kubeadm init phase certs $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
+  kubeadm_cmd="$kubeadm_binary init phase certs $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
 
   echo "Generate or renew $1 certificate ($certificate.crt)"
   if [[ -f $certificate.crt ]] ; then
@@ -177,7 +186,7 @@ function generate_or_renew_certificate() {
 function generate_or_renew_kubeconfig() {
   kubeconfig=$ROOTFS_DIR/etc/kubernetes/$1.conf
   tmp_kubeconfig=$TMP_ROOTFS_DIR/etc/kubernetes/$1.conf
-  kubeadm_cmd="kubeadm init phase kubeconfig $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
+  kubeadm_cmd="$kubeadm_binary init phase kubeconfig $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
 
   echo "Generate or renew $kubeconfig"
   if [[ -f $kubeconfig ]] ; then
@@ -228,10 +237,10 @@ function converge_component() {
   tmp_manifest=$TMP_ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml
   checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/kustomize/999-${component}-checksum.yaml
   if [[ "$component" != "etcd" ]] ; then
-    kubeadm_cmd="kubeadm init phase control-plane ${component#kube-} --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
   else
-    kubeadm_cmd="kubeadm init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
-    kubeadm_etcd_join_cmd="kubeadm -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+    kubeadm_cmd="$kubeadm_binary init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
   fi
 
   echo "Converge $component"
