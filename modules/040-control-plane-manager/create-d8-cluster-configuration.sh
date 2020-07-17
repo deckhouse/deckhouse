@@ -45,10 +45,26 @@ if ! kubectl -n kube-system get secret d8-pki > /dev/null 2> /dev/null ; then
   exit 1
 fi
 
+masterInternalIP=$(kubectl get nodes -l node-role.kubernetes.io/master='' -o json | jq '.items[0].status.addresses[] | select(.type == "InternalIP") | .address' -r)
+
 #check etcd on correct ip
-if ! nc -z "$(kubectl -n d8-system get pods -l app=deckhouse -o json | jq .items[].status.podIP -r)" 2379; then
-  echo "Error: etcd listens on master external ip"
+if ! nc -z "$masterInternalIP" 2379; then
+  echo "Error: etcd must listen on master internal ip"
   exit 1
+fi
+
+apiserverAdvertiseAddress=$(kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip' -r)
+#check apiserver on correct ip and controlPlaneManager configuration
+if [[ "x$apiserverAdvertiseAddress" != "x$masterInternalIP" ]]; then
+  if [[ "x$(deckhouse-controller module values control-plane-manager | yq r - controlPlaneManager.apiserver.bindToWildcard)" != "xtrue" ]]; then
+    echo "Error: apiserver advertise address differs from master internal ip, so you must set controlPlaneManager.apiserver.bindToWildcard to true"
+    exit 1
+  fi
+
+  if ! deckhouse-controller module values control-plane-manager | yq r - controlPlaneManager.apiserver.certSANs -j | jq -e ". | index(\"$apiserverAdvertiseAddress\")"; then
+    echo "Error: apiserver advertise address must be added to controlPlaneManager.apiserver.certSANs"
+    exit 1
+  fi
 fi
 
 #check if kubeadm config exists
