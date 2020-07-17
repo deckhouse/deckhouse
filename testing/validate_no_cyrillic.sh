@@ -52,7 +52,7 @@ function main() {
     fi
 
     echo -n "  * diff: $new_path"
-    check_russian_letters "$(jq -rc '.diff' <<< ${FILE_DIFF} | grep -Ev '-')"
+    check_russian_letters "$(jq -rc '.diff' <<< ${FILE_DIFF} | grep '+')"
   done
 }
 
