@@ -50,4 +50,4 @@ bootstrap:
   masterInstanceClass:
     flavorName: m1.large
     imageName: ubuntu-18.04-cloud-amd64
-    rootDiskSizeInGb: 50
+    rootDiskSize: 50

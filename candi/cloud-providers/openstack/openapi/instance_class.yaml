@@ -56,8 +56,8 @@ spec:
               type: array
               items:
                 type: string
-            securityGroups:
-              description: Security groups that will be applied to VM's network ports
+            additionalSecurityGroups:
+              description: Security groups that will be applied to VM's network ports in addition to security groups set in provider configuration
               example:
               - "security-group-1"
               - "security-group-2"

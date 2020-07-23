@@ -20,7 +20,8 @@ cloudProviderOpenstack:
     instances: {}
     zones: []
   instances: {}
-  loadBalancer: {}
+  additionalExternalNetworkNames:
+  - additional-ext-net
 `
 		initValuesStringB = `
 global:
@@ -36,6 +37,9 @@ cloudProviderOpenstack:
     password: nein
     region: HetznerFinland
   externalNetworkNames: [public1, public2]
+  additionalExternalNetworkNames:
+  - additional-ext-net
+  - public2
   internalNetworkNames: [int1, int2]
   podNetworkMode: DirectRouting
   instances:
@@ -132,6 +136,13 @@ provider:
   username: user-name
   password: pa$$word
   region: HetznerFinland
+sshPublicKey: "aaaa"
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large
+    imageName: ubuntu-18-04-cloud-amd64
+    kubernetesDataVolumeType: ceph-ssd
 `
 		stateAWithoutLoadbalancers = fmt.Sprintf(`
 apiVersion: v1
@@ -167,7 +178,7 @@ data: {}
 
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
 
-	Context("Cluster has empty cloudProviderOpenstack and discovery data", func() {
+	Context("Cluster has minimal cloudProviderOpenstack configuration and not empty discovery data", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateA))
 			f.RunHook()
@@ -187,7 +198,7 @@ data: {}
 [internal]
 `))
 			Expect(f.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
-[external]
+[additional-ext-net, external]
 `))
 			Expect(f.ValuesGet(internal + "zones").String()).To(MatchYAML(`
 ["zone1", "zone2"]
@@ -220,7 +231,7 @@ connection:
   username: jamie
   password: nein
   region: HetznerFinland
-externalNetworkNames: [public1, public2]
+externalNetworkNames: [additional-ext-net, public1, public2]
 internalNetworkNames: [int1, int2]
 podNetworkMode: DirectRouting
 instances:
@@ -254,7 +265,7 @@ loadBalancer:
 [int1, int2]
 `))
 			Expect(b.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
-[public1, public2]
+[additional-ext-net, public1, public2]
 `))
 			Expect(b.ValuesGet(internal + "zones").String()).To(MatchYAML("[]"))
 			Expect(b.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
@@ -272,7 +283,7 @@ subnetID: overrideSubnetID
 				b.RunHook()
 			})
 
-			It("Should merge values from cloudProviderOpenstack and discovery data", func() {
+			It("Should override values from discovery data with cloudProviderOpenstack configuration", func() {
 				Expect(b).To(ExecuteSuccessfully())
 				connection := "cloudProviderOpenstack.internal.connection."
 				Expect(b.ValuesGet(connection + "authURL").String()).To(Equal("https://test.tests.com:5000/v3/"))
@@ -283,21 +294,20 @@ subnetID: overrideSubnetID
 				Expect(b.ValuesGet(connection + "region").String()).To(Equal("HetznerFinland"))
 				internal := "cloudProviderOpenstack.internal."
 				Expect(b.ValuesGet(internal + "internalNetworkNames").String()).To(MatchYAML(`
-[int1, int2, internal]
+[int1, int2]
 `))
 				Expect(b.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
-[external, public1, public2]
+[additional-ext-net, public1, public2]
 `))
 				Expect(b.ValuesGet(internal + "zones").String()).To(MatchYAML(`
 ["zone1", "zone2"]
 `))
 				Expect(b.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
 				Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[default, security_group_1, security_group_2, ssh-and-ping]
+[security_group_1, security_group_2]
 `))
 				Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
 subnetID: overrideSubnetID
-floatingNetworkID: floatingNetworkID
 `))
 			})
 		})
@@ -323,7 +333,7 @@ floatingNetworkID: floatingNetworkID
 [int1, int2]
 `))
 			Expect(b.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
-[public1, public2]
+[additional-ext-net, public1, public2]
 `))
 			Expect(b.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
 			Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
@@ -342,7 +352,7 @@ subnetID: overrideSubnetID
 			c.RunHook()
 		})
 
-		It("Should merge values from cloudProviderOpenstack and discovery data", func() {
+		It("Should override values from discovery data with cloudProviderOpenstack configuration", func() {
 			Expect(c).To(ExecuteSuccessfully())
 			connection := "cloudProviderOpenstack.internal.connection."
 			Expect(c.ValuesGet(connection + "authURL").String()).To(Equal("https://test.tests.com:5000/v3/"))
@@ -353,17 +363,17 @@ subnetID: overrideSubnetID
 			Expect(c.ValuesGet(connection + "region").String()).To(Equal("HetznerFinland"))
 			internal := "cloudProviderOpenstack.internal."
 			Expect(c.ValuesGet(internal + "internalNetworkNames").String()).To(MatchYAML(`
-[int1, int2, internal]
+[int1, int2]
 `))
 			Expect(c.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
-[external, public1, public2]
+[public1, public2]
 `))
 			Expect(c.ValuesGet(internal + "zones").String()).To(MatchYAML(`
 ["zone1", "zone2"]
 `))
 			Expect(c.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
 			Expect(c.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[default, security_group_1, security_group_2, ssh-and-ping]
+[security_group_1, security_group_2]
 `))
 			Expect(c.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`{}`))
 		})

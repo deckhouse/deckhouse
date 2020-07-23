@@ -30,12 +30,12 @@ spec:
   {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
   keyName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.sshKeyPairName }}
   {{- end }}
-  {{- if or (hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups") (hasKey .nodeGroup.instanceClass "securityGroups") }}
+  {{- if or (hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups") (hasKey .nodeGroup.instanceClass "additionalSecurityGroups") }}
   securityGroups:
     {{- range .Values.nodeManager.internal.cloudProvider.openstack.instances.securityGroups }}
   - {{ . }}
     {{- end }}
-    {{- range .nodeGroup.instanceClass.securityGroups }}
+    {{- range .nodeGroup.instanceClass.additionalSecurityGroups }}
   - {{ . }}
     {{- end }}
   {{- end }}

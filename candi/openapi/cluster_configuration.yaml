@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, clusterType, kubernetesVersion, sshPublicKeys, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
+    required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
     properties:
       apiVersion:
         type: string
@@ -15,10 +15,6 @@ apiVersions:
       clusterType:
         type: string
         enum: [Cloud, Static]
-      sshPublicKeys:
-        type: array
-        items:
-          type: string
       cloud:
         type: object
         required: [provider]

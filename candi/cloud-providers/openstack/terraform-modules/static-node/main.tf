@@ -9,7 +9,7 @@ data "openstack_images_image_v2" "image" {
 
 data "openstack_networking_network_v2" "network" {
   count = length(local.networks)
-  name = local.networks[count.index]["name"]
+  name = local.networks[count.index]
 }
 
 resource "openstack_networking_port_v2" "port" {
@@ -17,10 +17,10 @@ resource "openstack_networking_port_v2" "port" {
   name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
   network_id = data.openstack_networking_network_v2.network[count.index].id
   admin_state_up = "true"
-  security_group_ids = lookup(local.networks[count.index], "security", true) ? module.security_groups.security_group_ids : []
+  security_group_ids = try(index(local.networks_with_security_disabled, data.openstack_networking_network_v2.network[count.index].name), -1) == -1 ? module.security_groups.security_group_ids : []
 
   dynamic "allowed_address_pairs" {
-    for_each = lookup(local.networks[count.index], "security", true) && lookup(local.networks[count.index], "podNetwork", false) ? list(local.pod_subnet_cidr) : []
+    for_each = local.internal_network_security_enabled && local.networks[count.index] == local.prefix ? list(local.pod_subnet_cidr) : []
 
     content {
       ip_address = allowed_address_pairs.value

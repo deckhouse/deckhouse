@@ -155,7 +155,7 @@ internal:
       additionalNetworks:
       - mynetwork
       - mynetwork2
-      securityGroups:
+      additionalSecurityGroups:
       - ic-groupa
       - ic-groupb
     nodeType: Cloud
