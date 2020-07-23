@@ -74,6 +74,13 @@ spec:
         env:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            host: 127.0.0.1
+            path: /health-check
+            port: 8085
+            scheme: HTTP
         resources:
           limits:
             cpu: 150m
