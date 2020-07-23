@@ -34,28 +34,27 @@ function set_values_from_provider_cluster_configuration_yaml() {
     provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfiguration.provider | . //= {}')
   fi
 
-  #TODO merge configs framework
   provider_discovery_data=$(echo "$1" | jq -r '
     if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
       "instances": {},
       "loadBalancer": {}
     } end | .provider_discovery_data')
-  #getting provider discovery data with fall back to default empty values
+
+  #values from cloudProviderOpenstack in deckhouse config can override discovery data and cluster configuration from provider
   cloudProviderOpenstack=$(values::get cloudProviderOpenstack)
-  connection=$(echo "$cloudProviderOpenstack" | jq -r --argjson provider "$provider" '.connection //= {} | $provider * .connection')
+  connection=$(echo "$cloudProviderOpenstack" | jq -r --argjson provider "$provider" '.connection //= $provider | .connection')
   values::set cloudProviderOpenstack.internal.connection "$connection"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.internalNetworkNames //= [] | $data.internalNetworkNames + .internalNetworkNames | unique')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.internalNetworkNames //= $data.internalNetworkNames | .internalNetworkNames | . //= [] | unique')
   values::set cloudProviderOpenstack.internal.internalNetworkNames "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= [] | $data.externalNetworkNames + .externalNetworkNames | unique')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= $data.externalNetworkNames | .externalNetworkNames + .additionalExternalNetworkNames | . //= [] | unique')
   values::set cloudProviderOpenstack.internal.externalNetworkNames "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.instances.securityGroups //= [] | $data.instances.securityGroups + .instances.securityGroups | unique')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.instances.securityGroups //= $data.instances.securityGroups | .instances.securityGroups | . //= [] | unique')
   values::set cloudProviderOpenstack.internal.instances.securityGroups "$i"
 
-  #TODO remove after pivot merged
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= [] | $data.zones + .zones | unique')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= $data.zones | .zones | . //= [] | unique')
   values::set cloudProviderOpenstack.internal.zones "$i"
 
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then $data.instances.sshKeyPairName else .instances.sshKeyPairName end')
@@ -64,7 +63,7 @@ function set_values_from_provider_cluster_configuration_yaml() {
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
   values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if $data.loadBalancer == null then .loadBalancer else $data.loadBalancer * .loadBalancer end')
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.loadBalancer == null or .loadBalancer == {}) then $data.loadBalancer else .loadBalancer end | . //= {}')
   values::set cloudProviderOpenstack.internal.loadBalancer "$i"
 }
 

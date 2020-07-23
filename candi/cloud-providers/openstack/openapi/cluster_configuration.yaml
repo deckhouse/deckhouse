@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, layout, provider]
+    required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
     properties:
       apiVersion:
         type: string
@@ -12,6 +12,8 @@ apiVersions:
       kind:
         type: string
         enum: [OpenStackClusterConfiguration]
+      sshPublicKey:
+        type: string
       masterNodeGroup:
         required: [replicas, instanceClass]
         properties:
@@ -20,6 +22,7 @@ apiVersions:
           instanceClass:
             type: object
             required: [flavorName, imageName, kubernetesDataVolumeType]
+            additionalProperties: false
             properties:
               kubernetesDataVolumeType:
                 type: string
@@ -27,9 +30,9 @@ apiVersions:
                 type: string
               imageName:
                 type: string
-              rootDiskSizeInGb:
+              rootDiskSize:
                 type: integer
-              securityGroups:
+              additionalSecurityGroups:
                 type: array
                 items:
                   type: string
@@ -66,16 +69,34 @@ apiVersions:
                       value:
                         type: string
             instanceClass:
-              required: [flavorName, imageName, networks]
+              required: [flavorName, imageName, mainNetwork]
+              additionalProperties: false
               type: object
               properties:
                 flavorName:
                   type: string
                 imageName:
                   type: string
-                rootDiskSizeInGb:
+                rootDiskSize:
                   type: integer
-                securityGroups:
+                configDrive:
+                  type: boolean
+                  default: false
+                mainNetwork:
+                  type: string
+                additionalNetworks:
+                  type: array
+                  items:
+                    type: string
+                networksWithSecurityDisabled:
+                  type: array
+                  items:
+                    type: string
+                floatingIPPools:
+                  type: array
+                  items:
+                    type: string
+                additionalSecurityGroups:
                   type: array
                   items:
                     type: string
@@ -142,6 +163,9 @@ apiVersions:
             default: DirectRoutingWithPortSecurityEnabled
           externalNetworkName:
             type: string
+          masterWithExternalFloatingIP:
+            type: boolean
+            default: true
       provider:
         type: object
         additionalProperties: false

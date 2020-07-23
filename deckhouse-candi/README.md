@@ -24,8 +24,6 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.16"
 clusterDomain: "cluster.local"
-sshPublicKeys:
-- ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDTXjTmx3hq2EPDQHWSJN7By1VNFZ8colI5tEeZDBVYAe9Oxq4FZsKCb1aGIskDaiAHTxrbd2efoJTcPQLBSBM79dcELtqfKj9dtjy4S1W0mydvWb2oWLnvOaZX/H6pqjz8jrJAKXwXj2pWCOzXerwk9oSI4fCE7VbqsfT4bBfv27FN4/Vqa6iWiCc71oJopL9DldtuIYDVUgOZOa+t2J4hPCCSqEJK/r+ToHQbOWxbC5/OAufXDw2W1vkVeaZUur5xwwAxIb3wM3WoS3BbwNlDYg9UB2D8+EZgNz1CCCpSy1ELIn7q8RnrTp0+H8V9LoWHSgh3VCWeW8C/MnTW90IR stas@stas-ThinkPad
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
@@ -43,6 +41,7 @@ deckhouse:
 apiVersion: deckhouse.io/v1alpha1
 kind: OpenStackClusterConfiguration
 layout: Standard
+sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDTXjTmx3hq2EPDQHWSJN7By1VNFZ8colI5tEeZDBVYAe9Oxq4FZsKCb1aGIskDaiAHTxrbd2efoJTcPQLBSBM79dcELtqfKj9dtjy4S1W0mydvWb2oWLnvOaZX/H6pqjz8jrJAKXwXj2pWCOzXerwk9oSI4fCE7VbqsfT4bBfv27FN4/Vqa6iWiCc71oJopL9DldtuIYDVUgOZOa+t2J4hPCCSqEJK/r+ToHQbOWxbC5/OAufXDw2W1vkVeaZUur5xwwAxIb3wM3WoS3BbwNlDYg9UB2D8+EZgNz1CCCpSy1ELIn7q8RnrTp0+H8V9LoWHSgh3VCWeW8C/MnTW90IR"
 standard:
   internalNetworkCIDR: 192.168.199.0/24
   internalNetworkDNSServers:
@@ -50,6 +49,10 @@ standard:
   - 4.2.2.2
   internalNetworkSecurity: true
   externalNetworkName: public
+masterNodeGroup:
+  flavorName: m1.large
+  imageName: ubuntu-18-04-cloud-amd64
+  rootDiskSize: 20
 provider:
   authURL: https://cloud.flant.com/v3/
   domainName: Default
@@ -57,13 +60,6 @@ provider:
   username: xxx
   password: xxx
   region: HetznerFinland
----
-apiVersion: deckhouse.io/v1alpha1
-kind: OpenStackInitConfiguration
-masterInstanceClass:
-  flavorName: m1.large
-  imageName: ubuntu-18-04-cloud-amd64
-  rootDiskSizeInGb: 20
 ```
 Для установки кластера надо запустить контейнер с образом, содержащим deckhouse-candi. Для этого запускаем из registry
 уже готовый образ:

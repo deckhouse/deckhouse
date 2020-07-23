@@ -1,7 +1,7 @@
 module "keypair" {
   source = "../../../terraform-modules/keypair"
   prefix = local.prefix
-  ssh_public_key = var.clusterConfiguration.sshPublicKeys[0]
+  ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 }
 
 data "openstack_compute_availability_zones_v2" "zones" {}
