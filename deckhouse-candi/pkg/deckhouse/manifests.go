@@ -112,7 +112,7 @@ spec:
 		case "DECKHOUSE_BUNDLE":
 			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = bundle
 		case "KUBERNETES_DEPLOYED":
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = time.Unix(0, time.Now().Unix()).String()
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = time.Now().Format(time.RFC3339)
 		}
 	}
 
@@ -265,14 +265,16 @@ func generateDeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.C
 	return &configMap
 }
 
-func generateSecret(name, namespace string, data map[string][]byte) *apiv1.Secret {
+func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
+	preparedLabels := map[string]string{"heritage": "deckhouse"}
+	for key, value := range labels {
+		preparedLabels[key] = value
+	}
 	return &apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
+			Labels:    preparedLabels,
 		},
 		Data: data,
 	}
@@ -285,28 +287,38 @@ func generateSecretWithTerraformState(data []byte) *apiv1.Secret {
 		map[string][]byte{
 			"cluster-tf-state.json": data,
 		},
+		nil,
 	)
 }
 
 func generateSecretWithClusterConfig(data []byte) *apiv1.Secret {
-	return generateSecret("d8-cluster-configuration", "kube-system",
-		map[string][]byte{"cluster-configuration.yaml": data})
+	return generateSecret(
+		"d8-cluster-configuration",
+		"kube-system",
+		map[string][]byte{"cluster-configuration.yaml": data},
+		nil,
+	)
 }
 
 func generateSecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Secret {
-	return generateSecret("d8-provider-cluster-configuration", "kube-system",
+	return generateSecret(
+		"d8-provider-cluster-configuration",
+		"kube-system",
 		map[string][]byte{
 			"cloud-provider-cluster-configuration.yaml": configData,
 			"cloud-provider-discovery-data.json":        discoveryData,
-		})
+		},
+		nil,
+	)
 }
 
-func generateSecretWithNodeTerraformState(nodeName string, data []byte) *apiv1.Secret {
+func generateSecretWithNodeTerraformState(nodeName, nodeGroup string, data []byte) *apiv1.Secret {
 	return generateSecret(
 		"d8-node-terraform-state-"+nodeName,
 		"d8-system",
 		map[string][]byte{
 			"node-tf-state.json": data,
 		},
+		map[string]string{"node.deckhouse.io/terraform-state": nodeGroup},
 	)
 }

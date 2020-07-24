@@ -1,8 +1,7 @@
 package commands
 
 import (
-	"bytes"
-	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/flant/logboek"
@@ -10,160 +9,94 @@ import (
 
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
+	"flant/deckhouse-candi/pkg/deckhouse"
 	"flant/deckhouse-candi/pkg/log"
+	"flant/deckhouse-candi/pkg/ssh"
+	"flant/deckhouse-candi/pkg/task"
 	"flant/deckhouse-candi/pkg/terraform"
 )
 
-func prettyPrintJSON(jsonData []byte) string {
-	var data bytes.Buffer
-	_ = json.Indent(&data, jsonData, "", "  ")
-	return data.String()
-}
-
-func DefineRunBaseTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("base-infrastructure", "Run base terraform and save the state.")
-	app.DefineConfigFlags(cmd)
-	app.DefineTerraformFlags(cmd)
-
-	runFunc := func() error {
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
-		if err != nil {
-			return err
-		}
-
-		basePipelineResult, err := terraform.NewPipeline(&terraform.PipelineOptions{
-			Provider:  metaConfig.ProviderName,
-			Layout:    metaConfig.Layout,
-			Step:      "base-infrastructure",
-			StateDir:  app.TerraformStateDir,
-			GetResult: terraform.GetBasePipelineResult,
-		}).Run()
-		if err != nil {
-			return err
-		}
-
-		logboek.LogInfoF("Cloud Discovery Data: %s\n", prettyPrintJSON(basePipelineResult["cloudDiscovery"]))
-		return nil
-	}
-
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("🌱 Run Terraform Base 🌱",
-			log.MainProcessOptions(), func() error { return runFunc() })
-
-		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
-			os.Exit(1)
-		}
-		return nil
-	})
-
-	return cmd
-}
-
-func DefineRunMasterTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("master-node-bootstrap", " Run master terraform and return the result.")
-	app.DefineConfigFlags(cmd)
-	app.DefineTerraformFlags(cmd)
-
-	runFunc := func() error {
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
-		if err != nil {
-			return err
-		}
-
-		masterPipelineResult, err := terraform.NewPipeline(&terraform.PipelineOptions{
-			Provider:  metaConfig.ProviderName,
-			Layout:    metaConfig.Layout,
-			Step:      "master-node",
-			StateDir:  app.TerraformStateDir,
-			GetResult: terraform.GetMasterNodePipelineResult,
-		}).Run()
-		if err != nil {
-			return err
-		}
-
-		logboek.LogInfoF("Master Address for SSH: %s\n", string(masterPipelineResult["masterIPFroSSH"]))
-		logboek.LogInfoF("Node Internal Address: %s\n", string(masterPipelineResult["nodeInternalIP"]))
-		logboek.LogInfoF("Master Instance Group: %s\n", prettyPrintJSON(masterPipelineResult["masterInstanceClass"]))
-
-		return nil
-	}
-
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("🌱 Run Terraform Master Bootstrap 🌱",
-			log.MainProcessOptions(), func() error { return runFunc() })
-
-		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
-			os.Exit(1)
-		}
-		return nil
-	})
-	return cmd
-}
-
 func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("destroy-all", " Destroy all terraform environment.")
+	app.DefineSshFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineTerraformFlags(cmd)
+	app.DefineSanityFlags(cmd)
 
-	runFunc := func() error {
+	runFunc := func(sshClient *ssh.SshClient) error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
 		if err != nil {
 			return err
 		}
 
-		var masterState string
-		err = logboek.LogProcess("Run Destroy for master-node", log.BoldOptions(), func() error {
-			masterRunner := terraform.NewRunner(metaConfig.ProviderName, metaConfig.Layout, "master-node", metaConfig.MarshalNodeGroupConfig("master", 0, ""))
-			masterRunner.WithStateDir(app.TerraformStateDir)
-
-			err = masterRunner.Init()
-			if err != nil {
-				return err
-			}
-
-			err = masterRunner.Destroy(true)
-			if err != nil {
-				return err
-			}
-			masterState = masterRunner.State
-			return nil
-		})
+		err = app.AskBecomePassword()
 		if err != nil {
-			logboek.LogErrorLn(err)
+			return err
 		}
 
-		var baseState string
-		err = logboek.LogProcess("Run Destroy for base-infrastructure", log.BoldOptions(), func() error {
-			baseRunner := terraform.NewRunner(metaConfig.ProviderName, metaConfig.Layout, "base-infrastructure", metaConfig.MarshalConfig())
-			baseRunner.WithStateDir(app.TerraformStateDir)
-
-			err = baseRunner.Init()
-			if err != nil {
-				return err
-			}
-
-			err = baseRunner.Destroy(true)
-			if err != nil {
-				return err
-			}
-			baseState = baseRunner.State
-			return nil
-		})
-		if err != nil {
-			logboek.LogErrorLn(err)
+		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+			return err
 		}
 
-		_ = os.Remove(masterState)
-		_ = os.Remove(baseState)
+		kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+		if err != nil {
+			return err
+		}
 
-		return nil
+		nodesState, err := deckhouse.GetNodesStateFromCluster(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		clusterState, err := deckhouse.GetClusterStateFromCluster(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		for nodeGroupName, nodeGroupStates := range nodesState {
+			step := "static-node"
+			if nodeGroupName == "master" {
+				step = "master-node"
+			}
+
+			for name, state := range nodeGroupStates {
+				err := logboek.LogProcess(fmt.Sprintf("🔥 Destroy node %s 🔥", name), log.BoldOptions(), func() error {
+					nodeRunner := terraform.NewRunnerFromMetaConfig(step, metaConfig).
+						WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroupName, 0, "")).
+						WithState(state).
+						WithAutoApprove(app.SanityCheck)
+
+					defer nodeRunner.Close()
+					return terraform.DestroyPipeline(nodeRunner)
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return logboek.LogProcess("🔥 Destroy cluster infrastructure 🔥", log.BoldOptions(), func() error {
+			baseRunner := terraform.NewRunnerFromMetaConfig("base-infrastructure", metaConfig).
+				WithState(clusterState).
+				WithAutoApprove(app.SanityCheck)
+
+			defer baseRunner.Close()
+			return terraform.DestroyPipeline(baseRunner)
+		})
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("💣 Run Terraform Destroy All 💣",
-			log.MainProcessOptions(), func() error { return runFunc() })
+		if !app.SanityCheck {
+			logboek.LogWarnLn("NOTE: You will be asked for approve of every terraform destroy command.\n" +
+				"If you understand what you are doing, you can use flag --yes-i-am-sane-and-i-understand-what-i-am-doing to skip approvals\n")
+		}
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
+		}
+
+		err = logboek.LogProcess("💣 Run Terraform Destroy All 💣",
+			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
 
 		if err != nil {
 			logboek.LogErrorF("\nCritical Error: %s\n", err)

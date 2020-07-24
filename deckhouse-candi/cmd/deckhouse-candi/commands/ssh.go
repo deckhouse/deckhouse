@@ -129,9 +129,9 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		stdout, err = cmd.Execute()
 		if err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
-				return fmt.Errorf("script '%s' error: %v\nstderr: %s\n", ScriptPath, err, string(ee.Stderr))
+				return fmt.Errorf("script '%s' error: %w stderr: %s", ScriptPath, err, string(ee.Stderr))
 			} else {
-				return fmt.Errorf("script '%s' error: %v\n", ScriptPath, err)
+				return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 			}
 		}
 		logboek.LogInfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
@@ -173,9 +173,9 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		stdout, err := cmd.ExecuteBundle(parentDir, bundleDir)
 		if err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
-				return fmt.Errorf("bundle '%s' error: %v\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
+				return fmt.Errorf("bundle '%s' error: %w\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
 			} else {
-				return fmt.Errorf("bundle '%s' error: %v\n", bundleDir, err)
+				return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 			}
 		}
 		logboek.LogInfoF("Got %d symbols\n", len(stdout))

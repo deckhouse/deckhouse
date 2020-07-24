@@ -15,6 +15,7 @@ type MetaConfig struct {
 	Layout               string `json:"-"`
 	ProviderName         string `json:"-"`
 	OriginalProviderName string `json:"-"`
+	ClusterPrefix        string `json:"-"`
 
 	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
 	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
@@ -28,41 +29,30 @@ type MetaConfig struct {
 	InitProviderClusterConfig map[string]json.RawMessage `json:"-"`
 }
 
+// Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare() {
 	_ = json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType)
 
-	if m.ClusterType == "Cloud" {
-		cloud := struct {
-			Provider string `json:"provider"`
-		}{}
-		// Validated by openapi schema
-		_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
+	if m.ClusterType == CloudClusterType {
 		_ = json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout)
 		m.Layout = strcase.ToKebab(m.Layout)
+
+		var cloud ClusterConfigCloudSpec
+		_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
 
 		var masterNodeGroup MasterNodeGroupSpec
 		_ = json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup)
 
 		m.ProviderName = strings.ToLower(cloud.Provider)
 		m.OriginalProviderName = cloud.Provider
+		m.ClusterPrefix = cloud.Prefix
 		m.MasterNodeGroupSpec = masterNodeGroup
 	}
 
 	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
 }
 
-func (m *MetaConfig) MarshalNodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
-	result := make(map[string]interface{})
-	result["clusterConfiguration"] = m.ClusterConfig
-	result["providerClusterConfiguration"] = m.ProviderClusterConfig
-	result["nodeIndex"] = nodeIndex
-	result["cloudConfig"] = cloudConfig
-	result["nodeGroupName"] = nodeGroupName
-
-	data, _ := json.Marshal(result)
-	return data
-}
-
+// MergeDeckhouseConfig returns deckhouse config merged from different sources
 func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interface{} {
 	deckhouseModuleConfig := map[string]interface{}{
 		"logLevel": m.DeckhouseConfig.LogLevel,
@@ -106,11 +96,10 @@ func (m *MetaConfig) GetStaticNodeGroups() []StaticNodeGroupSpec {
 	return staticNodeGroups
 }
 
-func (m *MetaConfig) MergeMasterNodeGroupConfig() map[string]interface{} {
-	// We can't create NodeGroup with nodeType Cloud for now because the adoption mechanism is not ready yet
-
+// MarshalMasterNodeGroupConfig prepares NodeGroup custom resource for master nodes
+func (m *MetaConfig) MarshalMasterNodeGroupConfig() map[string]interface{} {
 	nodeType := "Hybrid"
-	if m.ClusterType == "Static" {
+	if m.ClusterType == StaticClusterType {
 		nodeType = "Static"
 	}
 
@@ -140,7 +129,11 @@ func (m *MetaConfig) MergeMasterNodeGroupConfig() map[string]interface{} {
 	}
 }
 
-func (m *MetaConfig) MergeNodeGroupConfig(staticNodeGroup StaticNodeGroupSpec) map[string]interface{} {
+// MarshalNodeGroupConfig prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
+func (m *MetaConfig) MarshalNodeGroupConfig(staticNodeGroup StaticNodeGroupSpec) map[string]interface{} {
+	if staticNodeGroup.NodeTemplate == nil {
+		staticNodeGroup.NodeTemplate = make(map[string]interface{})
+	}
 	return map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "NodeGroup",
@@ -183,36 +176,11 @@ func (m *MetaConfig) MarshalConfigForKubeadmTemplates(nodeIP string) map[string]
 		"extraArgs":            make(map[string]interface{}),
 		"clusterConfiguration": data,
 	}
+
 	if nodeIP != "" {
 		result["nodeIP"] = nodeIP
 	}
 	return result
-}
-
-func (m *MetaConfig) prepareNodeGroup() map[string]interface{} {
-	var data map[string]interface{}
-	_ = json.Unmarshal(m.InitClusterConfig["masterNodeGroup"], &data)
-
-	var instanceClassData map[string]interface{}
-	_ = json.Unmarshal(m.InitProviderClusterConfig["masterInstanceClass"], &instanceClassData)
-
-	preparedNodeGroup := map[string]interface{}{
-		"name":          "master",
-		"nodeType":      m.ClusterType,
-		"instanceClass": instanceClassData,
-		"cloudInstances": map[string]interface{}{
-			"classReference": map[string]string{
-				"name": "master",
-				"kind": m.OriginalProviderName + "InstanceClass",
-			},
-		},
-	}
-
-	for key, value := range data {
-		preparedNodeGroup[key] = value
-	}
-
-	return preparedNodeGroup
 }
 
 func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP string) map[string]interface{} {
@@ -224,9 +192,59 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 		data[key] = t
 	}
 
-	ip, ipnet, err := net.ParseCIDR(data["serviceSubnetCIDR"].(string))
+	clusterBootstrap := map[string]interface{}{
+		"clusterDomain":     data["clusterDomain"],
+		"clusterDNSAddress": getDNSAddress(data["serviceSubnetCIDR"].(string)),
+	}
+
+	if nodeIP != "" {
+		clusterBootstrap["nodeIP"] = nodeIP
+	}
+
+	return map[string]interface{}{
+		"runType":           "ClusterBootstrap",
+		"bundle":            bundle,
+		"kubernetesVersion": data["kubernetesVersion"],
+		"nodeGroup": map[string]interface{}{
+			"name":     "master",
+			"nodeType": m.ClusterType,
+			"cloudInstances": map[string]interface{}{
+				"classReference": map[string]string{
+					"name": "master",
+				},
+			},
+		},
+		"clusterBootstrap": clusterBootstrap,
+	}
+}
+
+// PrepareTerraformNodeGroupConfig returns values for terraform to order master node or static node
+func (m *MetaConfig) PrepareTerraformNodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
+	result := map[string]interface{}{
+		"clusterConfiguration":         m.ClusterConfig,
+		"providerClusterConfiguration": m.ProviderClusterConfig,
+		"nodeIndex":                    nodeIndex,
+		"cloudConfig":                  cloudConfig,
+		"nodeGroupName":                nodeGroupName,
+	}
+
+	data, _ := json.Marshal(result)
+	return data
+}
+
+func getDNSAddress(serviceCIDR string) string {
+	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
 		panic("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+	}
+
+	inc := func(ip net.IP) {
+		for j := len(ip) - 1; j >= 0; j-- {
+			ip[j]++
+			if ip[j] > 0 {
+				break
+			}
+		}
 	}
 
 	clusterDNS := ""
@@ -240,28 +258,5 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 		counter++
 	}
 
-	clusterBootstrap := map[string]interface{}{
-		"clusterDomain":     data["clusterDomain"],
-		"clusterDNSAddress": clusterDNS,
-	}
-	if nodeIP != "" {
-		clusterBootstrap["nodeIP"] = nodeIP
-	}
-
-	return map[string]interface{}{
-		"runType":           "ClusterBootstrap",
-		"bundle":            bundle,
-		"kubernetesVersion": data["kubernetesVersion"],
-		"nodeGroup":         m.prepareNodeGroup(),
-		"clusterBootstrap":  clusterBootstrap,
-	}
-}
-
-func inc(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
-	}
+	return clusterDNS
 }

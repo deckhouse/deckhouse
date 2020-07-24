@@ -2,12 +2,16 @@ package config
 
 import (
 	"encoding/json"
+	"flant/deckhouse-candi/pkg/kube"
 	"fmt"
+	"github.com/flant/logboek"
 	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"sigs.k8s.io/yaml"
 )
@@ -25,6 +29,57 @@ func ParseConfig(path string) (*MetaConfig, error) {
 	}
 
 	return ParseConfigFromData(string(fileContent))
+}
+
+func ParseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) {
+	for i := 1; i < 45; i++ {
+		metaConfig, err := parseConfigFromCluster(kubeCl)
+		if err == nil {
+			return metaConfig, nil
+		}
+
+		logboek.LogInfoF("[Attempt #%v of 45] Getting cluster configuration failed, next attempt in 10s\n", i)
+		logboek.LogWarnF("%v\n\n", err)
+
+		time.Sleep(10 * time.Second)
+	}
+	return nil, fmt.Errorf("timeout while getting cluster configuration")
+}
+
+func parseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) {
+	metaConfig := MetaConfig{}
+
+	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-cluster-configuration", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var clusterConfigData map[string]json.RawMessage
+	if err := yaml.Unmarshal(clusterConfig.Data["cluster-configuration.yaml"], &clusterConfigData); err != nil {
+		return nil, err
+	}
+
+	metaConfig.ClusterConfig = clusterConfigData
+
+	var clusterType string
+	if err := json.Unmarshal(clusterConfigData["clusterType"], &clusterType); err != nil {
+		return nil, err
+	}
+
+	if clusterType == CloudClusterType {
+		providerClusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-provider-cluster-configuration", metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		var providerClusterConfigData map[string]json.RawMessage
+		if err := yaml.Unmarshal(providerClusterConfig.Data["cloud-provider-cluster-configuration.yaml"], &providerClusterConfigData); err != nil {
+			return nil, err
+		}
+
+		metaConfig.ProviderClusterConfig = providerClusterConfigData
+	}
+	return &metaConfig, nil
 }
 
 func ParseConfigFromData(configData string) (*MetaConfig, error) {

@@ -1,71 +1,45 @@
 package terraform
 
-import (
-	"fmt"
+func ApplyPipeline(r *Runner, extractFn func(r *Runner) (map[string][]byte, error)) (map[string][]byte, error) {
+	err := r.Init()
+	if err != nil {
+		return nil, err
+	}
 
-	"github.com/flant/logboek"
+	err = r.Plan()
+	if err != nil {
+		return nil, err
+	}
 
-	"flant/deckhouse-candi/pkg/log"
-)
+	err = r.Apply()
+	if err != nil {
+		return nil, err
+	}
 
-type Pipeline struct {
-	Step            string
-	TerraformRunner Interface
-	GetResult       func(*Pipeline) (map[string][]byte, error)
+	return extractFn(r)
 }
 
-type PipelineOptions struct {
-	Provider string
-	Layout   string
-	Step     string
-
-	StateDir           string
-	StateSuffix        string
-	TerraformVariables []byte
-	GetResult          func(*Pipeline) (map[string][]byte, error)
-}
-
-func NewPipeline(options *PipelineOptions) *Pipeline {
-	tfRunner := NewRunner(options.Provider, options.Layout, options.Step, options.TerraformVariables).
-		WithStateDir(options.StateDir).
-		WithStateSuffix(options.StateSuffix)
-	return &Pipeline{Step: options.Step, TerraformRunner: tfRunner, GetResult: options.GetResult}
-}
-
-func (p *Pipeline) runTerraform() error {
-	if err := p.TerraformRunner.Init(); err != nil {
+func DestroyPipeline(r *Runner) error {
+	err := r.Init()
+	if err != nil {
 		return err
 	}
 
-	out, err := p.TerraformRunner.Apply()
+	err = r.Destroy()
 	if err != nil {
-		logboek.LogInfoLn(string(out))
 		return err
 	}
 
 	return nil
 }
 
-func (p *Pipeline) Run() (map[string][]byte, error) {
-	var result map[string][]byte
-	err := logboek.LogProcess(fmt.Sprintf("🌳 Run Terraform pipeline %s 🌳", p.Step), log.BoldOptions(), func() error {
-		err := p.runTerraform()
-		if err != nil {
-			return err
-		}
-		result, err = p.GetResult(p)
-		return err
-	})
-	return result, err
-}
-
-func GetBasePipelineResult(p *Pipeline) (map[string][]byte, error) {
-	cloudDiscovery, err := p.TerraformRunner.GetTerraformOutput("cloud_discovery_data")
+func GetBaseInfraResult(r *Runner) (map[string][]byte, error) {
+	cloudDiscovery, err := r.GetTerraformOutput("cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
 
-	tfState, err := p.TerraformRunner.getState()
+	tfState, err := r.getState()
 	if err != nil {
 		return nil, err
 	}
@@ -76,18 +50,18 @@ func GetBasePipelineResult(p *Pipeline) (map[string][]byte, error) {
 	}, nil
 }
 
-func GetMasterNodePipelineResult(p *Pipeline) (map[string][]byte, error) {
-	masterIPAddressForSSH, err := p.TerraformRunner.GetTerraformOutput("master_ip_address_for_ssh")
+func GetMasterNodeResult(r *Runner) (map[string][]byte, error) {
+	masterIPAddressForSSH, err := r.GetTerraformOutput("master_ip_address_for_ssh")
 	if err != nil {
 		return nil, err
 	}
 
-	nodeInternalIP, err := p.TerraformRunner.GetTerraformOutput("node_internal_ip_address")
+	nodeInternalIP, err := r.GetTerraformOutput("node_internal_ip_address")
 	if err != nil {
 		return nil, err
 	}
 
-	tfState, err := p.TerraformRunner.getState()
+	tfState, err := r.getState()
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +73,8 @@ func GetMasterNodePipelineResult(p *Pipeline) (map[string][]byte, error) {
 	}, nil
 }
 
-func OnlyState(p *Pipeline) (map[string][]byte, error) {
-	tfState, err := p.TerraformRunner.getState()
+func OnlyState(r *Runner) (map[string][]byte, error) {
+	tfState, err := r.getState()
 	if err != nil {
 		return nil, err
 	}

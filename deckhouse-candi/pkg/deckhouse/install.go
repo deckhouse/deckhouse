@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kube"
 	"flant/deckhouse-candi/pkg/log"
 )
@@ -146,7 +147,7 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 	}
 
 	for nodeName, tfState := range cfg.NodesTerraformState {
-		getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, tfState) }
+		getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, "master", tfState) }
 		tasks = append(tasks, createManifestTask{
 			name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			manifest: getManifest,
@@ -243,13 +244,60 @@ func runTask(task createManifestTask) error {
 	return nil
 }
 
-func SaveNodeTerraformState(client *kube.KubernetesClient, nodeName string, tfState []byte) error {
-	getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, tfState) }
+func SaveNodeTerraformState(client *kube.KubernetesClient, nodeName, nodeGroup string, tfState []byte) error {
+	getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, nodeGroup, tfState) }
 	return logboek.LogProcess(fmt.Sprintf("Waiting for saving terraform state for node %s", nodeName), log.BoldOptions(), func() error {
 		for i := 1; i <= 45; i++ {
 			err := runTask(createManifestTask{
 				name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 				manifest: getManifest,
+				createTask: func(manifest interface{}) error {
+					_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+					return err
+				},
+				updateTask: func(manifest interface{}) error {
+					_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+					return err
+				},
+			})
+			if err == nil {
+				logboek.LogInfoLn("Success!")
+				return nil
+			}
+
+			logboek.LogInfoF("[Attempt #%v of 45] Waiting for saving terraform state failed, retry in 10s\n", i)
+			logboek.LogWarnF("%v\n\n", err)
+
+			time.Sleep(10 * time.Second)
+		}
+		return fmt.Errorf("timeout waiting for saving terraform state")
+	})
+}
+
+func DeleteTerraformState(client *kube.KubernetesClient, secretName string) error {
+	return logboek.LogProcess(fmt.Sprintf("Waiting for deleting terraform state %s", secretName), log.BoldOptions(), func() error {
+		for i := 1; i <= 45; i++ {
+			err := client.CoreV1().Secrets("d8-system").Delete(secretName, &metav1.DeleteOptions{})
+			if err == nil {
+				logboek.LogInfoLn("Success!")
+				return nil
+			}
+
+			logboek.LogInfoF("[Attempt #%v of 45] Waiting for deleting terraform state failed, retry in 10s\n", i)
+			logboek.LogWarnF("%v\n\n", err)
+
+			time.Sleep(10 * time.Second)
+		}
+		return fmt.Errorf("timeout waiting for saving terraform state")
+	})
+}
+
+func SaveClusterTerraformState(client *kube.KubernetesClient, tfState []byte) error {
+	return logboek.LogProcess("Waiting for saving cluster terraform state", log.BoldOptions(), func() error {
+		for i := 1; i <= 45; i++ {
+			err := runTask(createManifestTask{
+				name:     `Secret "d8-cluster-terraform-state"`,
+				manifest: func() interface{} { return generateSecretWithTerraformState(tfState) },
 				createTask: func(manifest interface{}) error {
 					_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
 					return err
@@ -430,7 +478,12 @@ func CreateNodeGroup(client *kube.KubernetesClient, nodeGroupName string, data m
 			}
 
 			if errors.IsAlreadyExists(err) {
-				logboek.LogWarnF("Object %v\n", err)
+				logboek.LogInfoF("Object %v, updating...", err)
+				_, err := client.Dynamic().Resource(resourceSchema).Update(&doc, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				logboek.LogInfoLn("OK!")
 				return nil
 			}
 
@@ -462,7 +515,7 @@ func WaitForKubernetesAPI(client *kube.KubernetesClient) error {
 
 func GetCloudConfig(client *kube.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
-	err := logboek.LogProcess("☁️ Get cloud data ☁️", log.BoldOptions(), func() error {
+	err := logboek.LogProcess(fmt.Sprintf("☁️ Get %s cloud config ☁️", nodeGroupName), log.BoldOptions(), func() error {
 		for i := 1; i <= 45; i++ {
 			secret, err := client.CoreV1().Secrets("d8-cloud-instance-manager").Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
 			if err != nil {
@@ -520,4 +573,77 @@ func WaitForNodesBecomeReady(client *kube.KubernetesClient, nodeGroupName string
 		}
 		return fmt.Errorf("waiting %s nodes become ready failed", nodeGroupName)
 	})
+}
+
+func WaitForSingleNodeBecomeReady(client *kube.KubernetesClient, nodeName string) error {
+	return logboek.LogProcess(fmt.Sprintf("💦 Waiting for single node %s become Ready 💦", nodeName), log.BoldOptions(), func() error {
+		for i := 1; i <= 100; i++ {
+			node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+			if err != nil {
+				logboek.LogInfoF("[Attempt #%v of 100] Error while getting nod %s, retry in 20s\n", i, nodeName)
+				logboek.LogInfoF("%v\n\n", err)
+				time.Sleep(20 * time.Second)
+				continue
+			}
+
+			for _, c := range node.Status.Conditions {
+				if c.Type == apiv1.NodeReady {
+					if c.Status == apiv1.ConditionTrue {
+						logboek.LogInfoLn("Success!")
+						return nil
+					}
+				}
+			}
+			logboek.LogInfoF("[Attempt #%v of 100] Node %s not ready, retry in 20s\n", i, nodeName)
+			time.Sleep(20 * time.Second)
+		}
+		return fmt.Errorf("waiting for single node %s become ready failed", nodeName)
+	})
+}
+
+func IsNodeExistsInCluster(client *kube.KubernetesClient, nodeName string) (bool, error) {
+	isExists := false
+	err := logboek.LogProcess(fmt.Sprintf("💦 Check for single node %s existance 💦", nodeName), log.BoldOptions(), func() error {
+		for i := 1; i <= 100; i++ {
+			_, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return nil
+				}
+				logboek.LogInfoF("[Attempt #%v of 100] Error while getting nod %s, retry in 20s\n", i, nodeName)
+				logboek.LogInfoF("%v\n\n", err)
+				time.Sleep(20 * time.Second)
+				continue
+			}
+			isExists = true
+		}
+		return fmt.Errorf("waiting cheking for single node %s existance failed", nodeName)
+	})
+	return isExists, err
+}
+
+func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, error) {
+	clusterConfig, err := metaConfig.MarshalClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("marshal cluster config: %v", err)
+	}
+
+	providerClusterConfig, err := metaConfig.MarshalProviderClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("marshal provider config: %v", err)
+	}
+
+	installConfig := Config{
+		Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
+		DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
+		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
+		ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
+		Bundle:                metaConfig.DeckhouseConfig.Bundle,
+		LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
+		DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
+		ClusterConfig:         clusterConfig,
+		ProviderClusterConfig: providerClusterConfig,
+	}
+
+	return &installConfig, nil
 }

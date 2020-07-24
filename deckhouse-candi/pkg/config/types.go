@@ -1,5 +1,10 @@
 package config
 
+const (
+	CloudClusterType  = "Cloud"
+	StaticClusterType = "Static"
+)
+
 type SchemaIndex struct {
 	Kind    string `json:"kind"`
 	Version string `json:"apiVersion"`
@@ -19,12 +24,9 @@ type OpenAPISchemaVersion struct {
 	Schema  interface{} `json:"openAPISpec"`
 }
 
-type ClusterConfigSpec struct {
-	ClusterType       string                 `json:"clusterType"`
-	Cloud             map[string]interface{} `json:"cloud"`
-	KubernetesVersion string                 `json:"kubernetesVersion"`
-	ServiceSubnetCIDR string                 `json:"serviceSubnetCIDR"`
-	ClusterDomain     string                 `json:"clusterDomain"`
+type ClusterConfigCloudSpec struct {
+	Provider string `json:"provider"`
+	Prefix   string `json:"prefix"`
 }
 
 type MasterNodeGroupSpec struct {

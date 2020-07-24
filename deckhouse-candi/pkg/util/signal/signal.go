@@ -44,8 +44,8 @@ func WaitForProcessInterruption(cb ...func()) {
 
 func Exit(s os.Signal) {
 	signum := 0
-	switch v := s.(type) {
-	case syscall.Signal:
+	v, ok := s.(syscall.Signal)
+	if ok {
 		signum = int(v)
 	}
 	os.Exit(128 + signum)
