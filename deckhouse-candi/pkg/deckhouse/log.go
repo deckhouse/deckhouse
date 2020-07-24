@@ -29,7 +29,7 @@ func PrintDeckhouseLogs(client *kube.KubernetesClient, stopChan *chan struct{}) 
 	}
 
 	if len(pods.Items) != 1 {
-		return fmt.Errorf("one deckhouse pod should exist: %v", pods.Items)
+		return fmt.Errorf("one deckhouse pod should exist, current pods - %v", pods.Items)
 	}
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}

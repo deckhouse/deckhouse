@@ -47,19 +47,17 @@ func main() {
 	commands.DefineBootstrapCommand(kpApp)
 
 	// konverge
-	commands.DefineKonvergeCommand(kpApp)
+	commands.DefineConvergeCommand(kpApp)
 
 	// plumbing commands:
 	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
 	{
-		commands.DefineRunBaseTerraformCommand(terraformCmd)
-		commands.DefineRunMasterTerraformCommand(terraformCmd)
 		commands.DefineRunDestroyAllTerraformCommand(terraformCmd)
 	}
 
-	renderCmd := kpApp.Command("render", "Parse, validate and render bundles.")
+	renderCmd := kpApp.Command("render", "Parse, validate and render bundles and configs.")
 	{
-		app.DefineCommandParseClusterConfiguration(kpApp, renderCmd)
+		commands.DefineCommandParseClusterConfiguration(kpApp, renderCmd)
 		commands.DefineRenderBashibleBundle(renderCmd)
 		commands.DefineRenderKubeadmConfig(renderCmd)
 	}

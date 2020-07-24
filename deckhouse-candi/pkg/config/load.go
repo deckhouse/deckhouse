@@ -40,7 +40,7 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 
 	isValid, err := openAPIValidate(doc, s.Get(index))
 	if !isValid {
-		return nil, err
+		return nil, fmt.Errorf("document validation failed:\n\n%s\n\n%w", string(*doc), err)
 	}
 	return &index, nil
 }

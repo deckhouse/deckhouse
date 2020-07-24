@@ -2,9 +2,10 @@ package app
 
 import (
 	"fmt"
+	"os"
+
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"os"
 )
 
 var (

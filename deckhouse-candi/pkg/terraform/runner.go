@@ -5,35 +5,46 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/flant/logboek"
 
+	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/log"
 )
 
 const (
-	deckhouseClusterStateSuffix = "-deckhouse-candi.tfstate"
+	deckhouseClusterStateSuffix = "-deckhouse-candi.*.tfstate"
+	deckhousePlanSuffix         = "-deckhouse-candi.*.tfplan"
 	cloudProvidersDir           = "/deckhouse/candi/cloud-providers/"
-	varFileName                 = "cluster-config.auto.tfvars.json"
+	varFileName                 = "cluster-config.auto.*.tfvars.json"
 )
+
+var deckhouseCandiTemporaryDirName = filepath.Join(os.TempDir(), "deckhouse-candi")
 
 type Interface interface {
 	Init() error
-	Apply() ([]byte, error)
+	Apply() error
 	GetTerraformOutput(string) ([]byte, error)
-	Destroy(bool) error
+	Destroy() error
+	Close()
 	getState() ([]byte, error)
 }
 
 type Runner struct {
-	step               string
-	stateDir           string
-	stateSuffix        string
-	WorkingDir         string
-	State              string
-	TerraformVariables []byte
+	step string
+
+	workingDir string
+
+	statePath     string
+	planPath      string
+	variablesPath string
+
+	autoApprove   bool
+	changesInPlan bool
 }
 
 var (
@@ -41,88 +52,186 @@ var (
 	_ Interface = &FakeRunner{}
 )
 
-func NewRunner(provider, layout, step string, terraformVariables []byte) *Runner {
+func NewRunner(provider, layout, step string) *Runner {
 	workingDir := buildTerraformPath(provider, layout, step)
-	return &Runner{WorkingDir: workingDir, stateDir: workingDir, step: step, TerraformVariables: terraformVariables}
+	return &Runner{workingDir: workingDir, step: step}
 }
 
-func (r *Runner) WithStateDir(dir string) *Runner {
-	if dir != "" {
-		r.stateDir = dir
+func NewRunnerFromMetaConfig(step string, metaConfig *config.MetaConfig) *Runner {
+	return NewRunner(metaConfig.ProviderName, metaConfig.Layout, step)
+}
+
+func (r *Runner) WithStatePath(state string) *Runner {
+	if state != "" {
+		r.statePath = state
+	} else {
+		tmpFile, err := ioutil.TempFile(deckhouseCandiTemporaryDirName, r.step+deckhouseClusterStateSuffix)
+		if err != nil {
+			logboek.LogWarnF("can't save terraform variables for runner %s: %s\n", r.step, err)
+			return r
+		}
+		r.statePath = tmpFile.Name()
 	}
 	return r
 }
 
-func (r *Runner) WithStateSuffix(suffix string) *Runner {
-	if suffix != "" {
-		r.stateSuffix = suffix
+func (r *Runner) WithState(stateData []byte) *Runner {
+	_ = os.Mkdir(deckhouseCandiTemporaryDirName, 0755)
+
+	tmpFile, err := ioutil.TempFile(deckhouseCandiTemporaryDirName, r.step+deckhouseClusterStateSuffix)
+	if err != nil {
+		logboek.LogWarnF("can't save terraform state for runner %s: %s\n", r.step, err)
+		return r
 	}
+
+	err = ioutil.WriteFile(tmpFile.Name(), stateData, 0755)
+	if err != nil {
+		logboek.LogWarnF("can't write terraform state for runner %s: %s\n", r.step, err)
+		return r
+	}
+
+	r.statePath = tmpFile.Name()
+	return r
+}
+
+func (r *Runner) WithVariablesPath(variables string) *Runner {
+	if variables != "" {
+		r.variablesPath = variables
+	} else {
+		tmpFile, err := ioutil.TempFile(deckhouseCandiTemporaryDirName, varFileName)
+		if err != nil {
+			logboek.LogWarnF("can't save terraform variables for runner %s: %s\n", r.step, err)
+			return r
+		}
+		r.statePath = tmpFile.Name()
+	}
+	return r
+}
+
+func (r *Runner) WithVariables(variablesData []byte) *Runner {
+	_ = os.Mkdir(deckhouseCandiTemporaryDirName, 0755)
+
+	tmpFile, err := ioutil.TempFile(deckhouseCandiTemporaryDirName, varFileName)
+	if err != nil {
+		logboek.LogWarnF("can't save terraform variables for runner %s: %s\n", r.step, err)
+		return r
+	}
+
+	err = ioutil.WriteFile(tmpFile.Name(), variablesData, 0755)
+	if err != nil {
+		logboek.LogWarnF("can't write terraform variables for runner %s: %s\n", r.step, err)
+		return r
+	}
+
+	r.variablesPath = tmpFile.Name()
+	return r
+}
+
+func (r *Runner) WithAutoApprove(autoApprove bool) *Runner {
+	r.autoApprove = autoApprove
 	return r
 }
 
 func (r *Runner) Init() error {
 	return logboek.LogProcess("Terraform Init", log.TerraformOptions(), func() error {
-		varFilePath := filepath.Join(r.stateDir, varFileName)
-		if err := ioutil.WriteFile(varFilePath, r.TerraformVariables, 0755); err != nil {
-			return fmt.Errorf("terraform saving cluster config error: %w", err)
-		}
-
 		args := []string{
 			"init",
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
-			fmt.Sprintf("-var-file=%s", varFilePath),
-			r.WorkingDir,
+			fmt.Sprintf("-var-file=%s", r.variablesPath),
+			r.workingDir,
 		}
 
-		return execTerraform(args...)
+		_, err := execTerraform(args...)
+		return err
 	})
 }
 
-func (r *Runner) Apply() ([]byte, error) {
-	err := logboek.LogProcess("Terraform Apply", log.TerraformOptions(), func() error {
-		state := filepath.Join(r.stateDir, r.step+r.stateSuffix+deckhouseClusterStateSuffix)
+func (r *Runner) Apply() error {
+	return logboek.LogProcess("Terraform Apply", log.TerraformOptions(), func() error {
+		if !r.autoApprove && r.changesInPlan {
+			if !askForConfirmation("Do you want to CHANGE your objects state in cloud?") {
+				return fmt.Errorf("terraform apply aborted")
+			}
+		}
 		args := []string{
 			"apply",
-			"-auto-approve",
 			"-input=false",
 			"-no-color",
-			fmt.Sprintf("-var-file=%s", filepath.Join(r.stateDir, varFileName)),
-			fmt.Sprintf("-state=%s", state),
-			fmt.Sprintf("-state-out=%s", state),
-			r.WorkingDir,
+			"-auto-approve",
+			fmt.Sprintf("-state=%s", r.statePath),
+			fmt.Sprintf("-state-out=%s", r.statePath),
 		}
 
-		err := execTerraform(args...)
-		if err == nil {
-			r.State = state
+		if r.planPath != "" {
+			args = append(args, r.planPath)
+		} else {
+			args = append(args,
+				fmt.Sprintf("-var-file=%s", r.variablesPath),
+				r.workingDir,
+			)
 		}
+
+		_, err := execTerraform(args...)
 		return err
 	})
-	return []byte(""), err
+}
+
+func (r *Runner) Plan() error {
+	return logboek.LogProcess("Terraform Plan", log.TerraformOptions(), func() error {
+		tmpFile, err := ioutil.TempFile(deckhouseCandiTemporaryDirName, r.step+deckhousePlanSuffix)
+		if err != nil {
+			return fmt.Errorf("can't create temp file for plan: %w", err)
+		}
+
+		args := []string{
+			"plan",
+			"-input=false",
+			"-no-color",
+			"-detailed-exitcode",
+			fmt.Sprintf("-var-file=%s", r.variablesPath),
+			fmt.Sprintf("-state=%s", r.statePath),
+			fmt.Sprintf("-out=%s", tmpFile.Name()),
+		}
+
+		args = append(args, r.workingDir)
+
+		exitCode, err := execTerraform(args...)
+		if exitCode == 2 {
+			r.changesInPlan = true
+		} else if err != nil {
+			return err
+		}
+
+		r.planPath = tmpFile.Name()
+		return nil
+	})
 }
 
 func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
-	if r.State == "" {
+	if r.statePath == "" {
 		return nil, fmt.Errorf("no state found, try to run terraform apply first")
 	}
 	args := []string{
 		"output",
 		"-no-color",
 		"-json",
-		fmt.Sprintf("-state=%s", r.State),
+		fmt.Sprintf("-state=%s", r.statePath),
 	}
 	args = append(args, output)
 	return exec.Command("terraform", args...).CombinedOutput()
 }
 
-func (r *Runner) Destroy(detectState bool) error {
-	if r.State == "" {
-		if !detectState {
-			return fmt.Errorf("no state found, try to run terraform apply first")
+func (r *Runner) Destroy() error {
+	if r.statePath == "" {
+		return fmt.Errorf("no state found, try to run terraform apply first")
+	}
+
+	if !r.autoApprove {
+		if !askForConfirmation("Do you want to DELETE your objects from cloud?") {
+			return fmt.Errorf("terraform destroy aborted")
 		}
-		r.State = filepath.Join(r.stateDir, r.step+r.stateSuffix+deckhouseClusterStateSuffix)
 	}
 
 	return logboek.LogProcess("Terraform Destroy", log.TerraformOptions(), func() error {
@@ -130,29 +239,37 @@ func (r *Runner) Destroy(detectState bool) error {
 			"destroy",
 			"-no-color",
 			"-auto-approve",
-			fmt.Sprintf("-var-file=%s", filepath.Join(r.stateDir, varFileName)),
-			fmt.Sprintf("-state=%s", r.State),
-			r.WorkingDir,
+			fmt.Sprintf("-var-file=%s", r.variablesPath),
+			fmt.Sprintf("-state=%s", r.statePath),
 		}
+		args = append(args, r.workingDir)
 
-		return execTerraform(args...)
+		_, err := execTerraform(args...)
+		return err
 	})
 }
 
 func (r *Runner) getState() ([]byte, error) {
-	return ioutil.ReadFile(r.State)
+	return ioutil.ReadFile(r.statePath)
 }
 
-func execTerraform(args ...string) error {
+func (r *Runner) Close() {
+	_ = os.Remove(r.statePath)
+	_ = os.Remove(r.variablesPath)
+}
+
+func execTerraform(args ...string) (int, error) {
 	cmd := exec.Command("terraform", args...)
 	stdout, _ := cmd.StdoutPipe()
 
 	var errbuf bytes.Buffer
 	cmd.Stderr = &errbuf
+	cmd.Stdin = os.Stdin
 
 	err := cmd.Start()
 	if err != nil {
-		return fmt.Errorf("run terraform: %v", err)
+		logboek.LogWarnF("%s\n%v\n", errbuf.String(), err)
+		return cmd.ProcessState.ExitCode(), err
 	}
 
 	r := bufio.NewScanner(stdout)
@@ -161,11 +278,11 @@ func execTerraform(args ...string) error {
 	}
 
 	err = cmd.Wait()
-	if err != nil {
-		logboek.LogWarnF(errbuf.String() + "\n")
-		return fmt.Errorf("wait terraform: %v", err)
+	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
+	if err != nil && exitCode != 2 {
+		logboek.LogWarnF("%s\n%v\n", errbuf.String(), err)
 	}
-	return nil
+	return exitCode, err
 }
 
 func buildTerraformPath(provider, layout, step string) string {
@@ -188,8 +305,8 @@ func (r *FakeRunner) Init() error {
 	return r.InitResult.Error
 }
 
-func (r *FakeRunner) Apply() ([]byte, error) {
-	return r.ApplyResult.Data, r.ApplyResult.Error
+func (r *FakeRunner) Apply() error {
+	return r.ApplyResult.Error
 }
 
 func (r *FakeRunner) GetTerraformOutput(output string) ([]byte, error) {
@@ -197,8 +314,34 @@ func (r *FakeRunner) GetTerraformOutput(output string) ([]byte, error) {
 	return result.Data, result.Error
 }
 
-func (r *FakeRunner) Destroy(_ bool) error { return nil }
+func (r *FakeRunner) Destroy() error { return nil }
+
+func (r *FakeRunner) Close() {}
 
 func (r *FakeRunner) getState() ([]byte, error) {
 	return []byte(r.State), nil
+}
+
+func askForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Println("--------")
+		fmt.Printf("%s [y/n]: ", s)
+
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			logboek.LogWarnF("can't read from stdin: %v\n", err)
+			return false
+		}
+
+		response := strings.ToLower(strings.TrimSpace(string(line)))
+
+		if response == "y" || response == "yes" {
+			fmt.Println("--------")
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
 }

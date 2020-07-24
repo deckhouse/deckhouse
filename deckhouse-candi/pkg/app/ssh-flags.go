@@ -45,7 +45,7 @@ func DefineSshFlags(cmd *kingpin.CmdClause) {
 		if len(SshAgentPrivateKeys) == 0 {
 			SshAgentPrivateKeys = append(SshAgentPrivateKeys, DefaultSshAgentPrivateKeys)
 		}
-		SshPrivateKeys, err = ParseSshPrivateKeyPaths(SshAgentPrivateKeys)
+		SshPrivateKeys, err = ParseSSHPrivateKeyPaths(SshAgentPrivateKeys)
 		if err != nil {
 			return fmt.Errorf("ssh private keys: %v", err)
 		}
@@ -53,7 +53,7 @@ func DefineSshFlags(cmd *kingpin.CmdClause) {
 	})
 }
 
-func ParseSshPrivateKeyPaths(pathSets []string) ([]string, error) {
+func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 	res := make([]string, 0)
 	if len(pathSets) == 0 || (len(pathSets) == 1 && pathSets[0] == "") {
 		return res, nil

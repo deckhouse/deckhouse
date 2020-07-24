@@ -80,7 +80,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 	case e := <-waitCh:
 		return "", fmt.Errorf("proxy exited suddenly: %v", e)
 	case <-t.C:
-		return "", fmt.Errorf("timeout waiting fot api proxy port")
+		return "", fmt.Errorf("timeout waiting for api proxy port")
 	case <-portReady:
 		if port == "" {
 			return "", fmt.Errorf("got empty port from kubectl proxy")

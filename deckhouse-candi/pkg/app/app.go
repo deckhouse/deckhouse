@@ -5,8 +5,6 @@ import (
 	"os"
 
 	"gopkg.in/alecthomas/kingpin.v2"
-
-	sh_app "github.com/flant/shell-operator/pkg/app"
 )
 
 const (
@@ -16,17 +14,19 @@ const (
 var (
 	AppVersion = "dev"
 
-	ConfigPath = ""
+	ConfigPath  = ""
+	SanityCheck = false
 )
-
-func DefineKonvergeFlags(cmd *kingpin.CmdClause) {
-	sh_app.DefineKubeClientFlags(cmd)
-}
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("config", "Config file path").
 		Required().
 		StringVar(&ConfigPath)
+}
+
+func DefineSanityFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double check what you are doing here").
+		BoolVar(&SanityCheck)
 }
 
 var IsDebug = -1

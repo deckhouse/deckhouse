@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const recursionMaxNums = 1000
-
 type Engine struct {
 	Name string
 	Data map[string]interface{}

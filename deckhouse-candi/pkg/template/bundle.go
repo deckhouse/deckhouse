@@ -139,7 +139,7 @@ func createEmptyFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("create empty file %s: %v", path, err)
 	}
-	newFile.Close()
+	_ = newFile.Close()
 	return nil
 }
 
