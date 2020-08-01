@@ -25,7 +25,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		return logboek.LogProcess("🐟 Start Deckhouse CandI converge 🐟", log.MainProcessOptions(), func() error {
+		return logboek.LogProcess("🐟 ~ Start Deckhouse cluster Converge", log.MainProcessOptions(), func() error {
 			if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 				return err
 			}

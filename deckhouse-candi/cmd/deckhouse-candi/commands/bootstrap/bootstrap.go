@@ -1,4 +1,4 @@
-package commands
+package bootstrap
 
 import (
 	"encoding/json"
@@ -55,7 +55,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var nodeIP string
 		// var masterInstanceClass []byte
 		if metaConfig.ClusterType == config.CloudClusterType {
-			err = logboek.LogProcess("🌱 Run Terraform 🌱", log.TaskOptions(), func() error {
+			err = logboek.LogProcess("🚢 ~ Create Kubernetes Master node", log.TaskOptions(), func() error {
 				baseStateFilepath := filepath.Join(app.TerraformStateDir, fmt.Sprintf("%s-base-infra.tfstate", metaConfig.ClusterPrefix))
 				baseRunner := terraform.NewRunnerFromMetaConfig("base-infrastructure", metaConfig).
 					WithVariables(metaConfig.MarshalConfig()).
@@ -172,7 +172,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		fmt.Print(banner)
-		err = logboek.LogProcess("🐜 Start Deckhouse CandI bootstrap 🐜",
+		err = logboek.LogProcess("⛵ ~ Bootstrap: Deckhouse Cluster and Infrastructure",
 			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
 
 		if err != nil {

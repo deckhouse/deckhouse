@@ -95,7 +95,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return err
 		}
 
-		err = logboek.LogProcess("🛥️ Wait for Deckhouse to become ready 🛥️", log.TaskOptions(), func() error {
+		err = logboek.LogProcess("🛥️ ~ Wait for Deckhouse to become ready 🛥️", log.TaskOptions(), func() error {
 			kubeCl := kube.NewKubernetesClient().WithSshClient(sshCl)
 			// auto init
 			err = kubeCl.Init("")

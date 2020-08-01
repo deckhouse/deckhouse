@@ -6,10 +6,10 @@ import (
 	"runtime/trace"
 
 	"github.com/flant/logboek"
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands"
+	"flant/deckhouse-candi/cmd/deckhouse-candi/commands/bootstrap"
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/process"
 	"flant/deckhouse-candi/pkg/util/signal"
@@ -23,6 +23,7 @@ func main() {
 		panic(fmt.Errorf("can't start logging system: %w", err))
 	}
 	logboek.SetLevel(logboek.Info)
+	logboek.SetWidth(logboek.DefaultWidth)
 
 	// kill all started subprocesses on return from main or on signal
 	defer process.DefaultSession.Stop()
@@ -32,10 +33,7 @@ func main() {
 		})
 	}()
 
-	// kubectl compatibility
-	sh_app.KubeConfig = os.Getenv("KUBECONFIG")
-
-	kpApp := kingpin.New(app.AppName, "")
+	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
@@ -44,9 +42,14 @@ func main() {
 	})
 
 	// bootstrap
-	commands.DefineBootstrapCommand(kpApp)
+	bootstrap.DefineBootstrapCommand(kpApp)
+	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
+	{
+		bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
+		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
+	}
 
-	// konverge
+	// converge
 	commands.DefineConvergeCommand(kpApp)
 
 	// plumbing commands:
@@ -74,7 +77,6 @@ func main() {
 
 	deckhouseCmd := kpApp.Command("deckhouse", "Install and uninstall deckhouse.")
 	{
-		commands.DefineDeckhouseInstall(deckhouseCmd)
 		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
 		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
 	}

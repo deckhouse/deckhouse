@@ -69,7 +69,7 @@ func RunConverge(kubeCl *kube.KubernetesClient, metaConfig *config.MetaConfig) e
 }
 
 func updateClusterState(kubeCl *kube.KubernetesClient, metaConfig *config.MetaConfig) error {
-	return logboek.LogProcess("🌱 Update cluster terraform state 🌱", log.ConvergeOptions(), func() error {
+	return logboek.LogProcess("🌱 ~ Update cluster Terraform state 🌱", log.ConvergeOptions(), func() error {
 		clusterState, err := GetClusterStateFromCluster(kubeCl)
 		if err != nil {
 			return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
@@ -97,7 +97,7 @@ func updateClusterState(kubeCl *kube.KubernetesClient, metaConfig *config.MetaCo
 }
 
 func createPreviouslyNotExistentNodeGroup(kubeCl *kube.KubernetesClient, metaConfig *config.MetaConfig, group config.StaticNodeGroupSpec) error {
-	return logboek.LogProcess(fmt.Sprintf("✨️ Create new NodeGroup %s (replicas: %v) ✨️", group.Name, group.Replicas), log.ConvergeOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("✨️ ~ Create new NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), log.ConvergeOptions(), func() error {
 		err := CreateNodeGroup(kubeCl, group.Name, metaConfig.MarshalNodeGroupConfig(group))
 		if err != nil {
 			return err
@@ -143,7 +143,7 @@ func (c *ConvergeController) Run(nodeGroupName string, nodeGroupState map[string
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := GetStepByNodeGroupName(nodeGroupName)
 
-	return logboek.LogProcess(fmt.Sprintf("✨️ Converge NodeGroup %s (replicas: %v) ✨️", nodeGroupName, replicas), log.ConvergeOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("✨️ ~ Converge NodeGroup %s (replicas: %v)️", nodeGroupName, replicas), log.ConvergeOptions(), func() error {
 		nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName)
 		if err != nil {
 			return err
@@ -179,7 +179,7 @@ func (c *ConvergeController) Run(nodeGroupName string, nodeGroupState map[string
 }
 
 func (c *ConvergeController) addNewNodeGroup(nodeGroup *ConvergeNodeGroupGroupOptions) error {
-	return logboek.LogProcess(fmt.Sprintf("🌼 Add new nodes for NodeGroup %s (replicas: %v) 🌼", nodeGroup.Name, nodeGroup.Replicas), log.BoldOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("🌼 ~ Add new nodes for NodeGroup %s (replicas: %v)", nodeGroup.Name, nodeGroup.Replicas), log.BoldOptions(), func() error {
 		count := len(nodeGroup.State)
 		index := 0
 
@@ -200,7 +200,7 @@ func (c *ConvergeController) addNewNodeGroup(nodeGroup *ConvergeNodeGroupGroupOp
 
 func (c *ConvergeController) updateNode(nodeGroup *ConvergeNodeGroupGroupOptions, nodeName string) error {
 	state := nodeGroup.State[nodeName]
-	return logboek.LogProcess(fmt.Sprintf("🌻 Update node %s 🌻", nodeName), log.TaskOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("🌻 ~ Update node %s", nodeName), log.TaskOptions(), func() error {
 		index := getIndexFromNodeName(nodeName)
 		if index == -1 {
 			logboek.LogWarnF("can't extract index from terraform state secret, skip %s\n", nodeName)
@@ -227,7 +227,7 @@ func (c *ConvergeController) updateNode(nodeGroup *ConvergeNodeGroupGroupOptions
 }
 
 func (c *ConvergeController) deleteRedundantNodes(nodeGroup *ConvergeNodeGroupGroupOptions) error {
-	return logboek.LogProcess(fmt.Sprintf("🔥 Delete redundant nodes for NodeGroup %s 🔥", nodeGroup.Name), log.TaskOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("🔥 ~ Delete redundant nodes for NodeGroup %s", nodeGroup.Name), log.TaskOptions(), func() error {
 		deleteNodesNames := make(map[string][]byte)
 		count := len(nodeGroup.State)
 
