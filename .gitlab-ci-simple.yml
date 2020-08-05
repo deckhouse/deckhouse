@@ -1,0 +1,71 @@
+include:
+  - '.gitlab/ci_templates/build.yml'
+  - '.gitlab/ci_templates/cleanup.yml'
+  - '.gitlab/ci_templates/tests.yml'
+  - '.gitlab/ci_templates/deploy.yml'
+
+stages:
+  - build_modules_images
+  - build
+  - testing
+  - deploy
+  - cleanup_registry
+  - cleanup_builder
+
+Build Modules Images:
+  extends: .Build Modules Images template
+  tags:
+  - deckhouse
+
+Build:
+  extends: .Build template
+  tags:
+    - deckhouse
+
+Matrix Tests:
+  extends: .Matrix Tests template
+  tags:
+    - deckhouse
+
+Hooks Configuration Tests:
+  extends: .Hooks Configuration Tests template
+  tags:
+    - deckhouse
+
+.base_deploy: &base_deploy
+  extends: .base_deploy_template
+  tags:
+    - deckhouse
+  needs:
+    - "Matrix Tests"
+    - "Hooks Configuration Tests"
+    - "Build"
+    - "Build Modules Images"
+
+early-access:
+  <<: *base_deploy
+  environment:
+    name: early-access
+  only:
+    - tags
+    - master
+    - /^release-.*$/
+
+stable:
+  <<: *base_deploy
+  environment:
+    name: stable
+  only:
+    - tags
+    - master
+
+Cleanup registry:
+  extends: .Cleanup registry template
+  tags:
+    - deckhouse
+  retry: 2
+
+Cleanup modules images:
+  extends: .Cleanup modules images template
+  tags:
+    - deckhouse

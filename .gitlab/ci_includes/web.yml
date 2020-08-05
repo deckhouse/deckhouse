@@ -1,0 +1,87 @@
+Build Website:
+  stage: build
+  script:
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - source <(werf ci-env gitlab --verbose)
+    - if [ "$CI_COMMIT_REF_NAME" == "master" ] ; then export WERF_TAG_GIT_BRANCH=master ; fi
+    - werf build-and-publish --config werf-web.yaml
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  tags:
+    - werf-distributed
+  interruptible: true
+
+.web_base_deploy: &web_base_deploy
+  stage: deploy_website
+  script:
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --verbose)
+    - werf deploy
+      --config werf-web.yaml
+      --helm-chart-dir=web-public/.helm
+      --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
+      --set "global.env=${CI_ENVIRONMENT_SLUG}"
+      --namespace deckhouse-$CI_ENVIRONMENT_SLUG
+      --release deckhouse-$CI_ENVIRONMENT_SLUG
+  needs:
+    - "Build"
+    - "Build Modules Images"
+    - "Build Website"
+  dependencies:
+    - "Build Modules Images"
+  tags:
+    - werf-distributed
+
+deckhouse.test.flant.com:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
+  environment:
+    name: web-test
+    url: https://deckhouse.test.flant.com
+  except:
+    - schedules
+  when: manual
+
+early.deckhouse.io:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+  environment:
+    name: web-early
+    url: https://early.deckhouse.io
+  except:
+    - schedules
+  when: manual
+
+deckhouse.io:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+  environment:
+    name: web-production
+    url: https://deckhouse.io
+  only:
+    - master
+    - /^release-.*$/
+  except:
+    - schedules
+  when: manual
+
+Web cleanup:
+  stage: cleanup_registry
+  script:
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --verbose)
+    - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
+    - werf cleanup --config werf-web.yaml
+  only:
+    - schedules
+  tags:
+    - werf-distributed
+

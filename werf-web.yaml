@@ -1,0 +1,184 @@
+project: deckhouse-web
+configVersion: 1
+---
+artifact: web-public-static
+from: jekyll/jekyll:3.8
+mount:
+  - from: build_dir
+    to: /usr/local/bundle
+ansible:
+  install:
+    - name: "Install Dependencies"
+      shell: bundle install
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+  setup:
+    - name: "Add permalinks"
+      shell: |
+        for i in $(find . -regex '.*.md' -print); do
+          cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
+          if [ $? -eq 0 ]; then
+            # permalink is absent, add permalink
+            PERMALINK="/$(echo $i | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$#index.html#' )"
+            sed -i "1apermalink: $PERMALINK" $i
+          fi
+        done
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Generate sidebars"
+      shell: |
+        /bin/bash /srv/jekyll-data/modules_make_data > /srv/jekyll-data/_data/sidebars/documentation-main.yml2 &&  sed '1,+6d' _data/sidebars/documentation-main.yml >> /srv/jekyll-data/_data/sidebars/documentation-main.yml2  && mv -f /srv/jekyll-data/_data/sidebars/documentation-main.yml2 /srv/jekyll-data/_data/sidebars/documentation-main.yml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Build static files"
+      shell: jekyll build
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Link checking"
+      shell: bundle exec htmlproofer \
+        --allow-hash-href \
+        --empty-alt-ignore \
+        --check_html \
+        --url_ignore "/localhost/,/https\:\/\/t.me/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+        ./_site/ || exit 0
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+git:
+- add: /web-public
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    install: ['Gemfile','Gemfile.lock']
+    setup: ['**/*']
+  excludePaths:
+    - .helm
+    - .werffiles
+    - "_data/releases.yml"
+    - "docs"
+- add: /web
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+    - "_data/releases.yml"
+- add: /docs
+  to: /srv/jekyll-data/docs
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['guides', 'README.md']
+- add: /docs-public
+  to: /srv/jekyll-data/docs
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  excludePaths: ['guides', 'README.md']
+- add: /
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['candi/**/*.md', 'deckhouse-candi/**/*.md','deckhouse-controller/**/*.md']
+- add: /modules
+  to: /srv/jekyll-data/modules
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['**/docs/']
+---
+image: dev/web-public
+from: nginx:1.17.2
+ansible:
+  setup:
+  - name: "Copy nginx.conf"
+    copy:
+      content: |
+{{ .Files.Get "web-public/.werffiles/nginx.conf" | indent 8 }}
+      dest: /etc/nginx/nginx.conf
+import:
+- artifact: web-public-static
+  add: /srv/jekyll-data/_site/
+  to: /usr/share/nginx/html
+  before: setup
+---
+{{ $_ := set . "RubyVersion" "2.5.1" }}
+{{ $_ := set . "BundlerVersion" "1.17.3" }}
+{{ $_ := set . "BaseImage" "registry.flant.com/images/ubuntu:16.04" }}
+{{ $_ := set . "UbuntuCodename" "xenial" }}
+
+image: web/saml-authenticator
+from: {{ .BaseImage }}
+docker:
+  WORKDIR: /app
+ansible:
+  beforeInstall:
+  - name: "Install mysql client"
+    apt:
+      name:
+        - libmysqlclient-dev
+        - mysql-client
+        - g++
+      update_cache: yes
+  - name: Import rvm gpg keys
+    shell: |
+      set -e
+      curl -sSL https://rvm.io/mpapis.asc | gpg --import -
+      curl -sSL https://rvm.io/pkuczynski.asc | gpg --import -
+  - get_url:
+      url: https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer
+      dest: /tmp/rvm-installer
+  - name: "Install rvm"
+    command: bash -e /tmp/rvm-installer stable
+  - name: "Install ruby {{ .RubyVersion }}"
+    raw: bash -lec {{`{{ item | quote }}`}}
+    with_items:
+    - rvm install {{ .RubyVersion }}
+    - rvm use --default {{ .RubyVersion }}
+    - gem install bundler  -v {{ .BundlerVersion }} --no-ri --no-rdoc
+    - rvm cleanup all
+  install:
+  - file:
+      path: /root/.ssh
+      state: directory
+      owner: root
+      group: root
+      recurse: yes
+  - name: "Setup ssh known_hosts used in Gemfile"
+    shell: |
+      set -e
+      ssh-keyscan github.com >> /root/.ssh/known_hosts
+      ssh-keyscan fox.flant.com >> /root/.ssh/known_hosts
+    args:
+      executable: /bin/bash
+  - name: "Install Gemfile dependencies with bundler"
+    shell: |
+      set -e
+      source /etc/profile.d/rvm.sh
+      cd /app
+      bundle install --without development test --path vendor/bundle
+    args:
+      executable: /bin/bash
+git:
+- url: 'https://github.com/flant/nginx_saml_authenticator.git'
+  add: /
+  to: /app
+  commit: 007a0495871b7d3e42249a5b00437b98a9548585
+  owner: app
+  group: app
+  excludePaths:
+  - examples
+  stageDependencies:
+    install:
+    - Gemfile.lock

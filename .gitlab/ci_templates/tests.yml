@@ -1,0 +1,103 @@
+.Matrix Tests template:
+  stage: testing
+  script:
+    - pwd
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests
+        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true
+
+.Hooks Configuration Tests template:
+  stage: testing
+  before_script:
+    - rm -rf shell-operator || true
+    - git submodule update --init --recursive
+  script:
+    - pwd
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests
+        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true
+
+.Tests template:
+  stage: testing
+  before_script:
+    - rm -rf shell-operator || true
+    - git submodule update --init --recursive
+  script:
+    - pwd
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - rm -rf testing/kcov-report
+    - chmod -R 0777 testing
+    - |
+      >testing/dummy_dirs
+      for dir in $(find -L global-hooks modules/*/hooks -type d); do
+        echo "$dir" >> testing/dummy_dirs
+        cat > "$dir/dummy" <<"EOF"
+          #!/bin/bash
+      EOF
+      done
+    - >
+      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
+      go test -vet=off ./modules/... ./global-hooks/...
+    - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
+  after_script:
+    - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse alpine:3.11 chmod -R 0777 /testing
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  artifacts:
+    when: always
+    paths:
+    - testing/kcov-report
+    expire_in: 14 days
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true
+
+.No Cyrillic Validation template:
+  stage: testing
+  script:
+    - pwd
+    - ./testing/validate_no_cyrillic.sh ${CI_PROJECT_ID} ${CI_COMMIT_SHA} ${FOX_ACCESS_TOKEN}
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true

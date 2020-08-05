@@ -1,0 +1,19 @@
+.Cleanup registry template:
+  stage: cleanup_registry
+  before_script:
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
+  script:
+    - werf cleanup --images-repo ${CI_REGISTRY_IMAGE} --without-kube
+  only:
+  - schedules
+
+.Cleanup modules images template:
+  stage: cleanup_builder
+  script:
+    - ./modules_images_werf cleanup
+    - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
+    - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
+  only:
+    - schedules

@@ -1,211 +1,68 @@
+include:
+  - '.gitlab/ci_includes/web.yml'
+  - '.gitlab/ci_templates/build.yml'
+  - '.gitlab/ci_templates/cleanup.yml'
+  - '.gitlab/ci_templates/tests.yml'
+  - '.gitlab/ci_templates/deploy.yml'
+
 variables:
   WERF_TRUE_GIT_DEBUG_WORKTREE_SWITCH: "1"
   WERF_VERBOSE: "1"
-  WERF_LOG_VERBOSE: "1"
 
 stages:
   - build_modules_images
   - build
   - testing
   - deploy
-  - Deploy Website
+  - deploy_website
   - cleanup_registry
   - cleanup_builder
 
 Build Modules Images:
-  stage: build_modules_images
-  script:
-  - ./modules_images_werf bp
-  before_script:
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
-  except:
-  - schedules
-  - alpha
-  - beta
-  - early-access
-  - stable
-  - rock-solid
+  extends: .Build Modules Images template
   tags:
   - build_modules_images
-  interruptible: true
-  artifacts:
-    when: always
-    paths:
-    - modules/images_tags.json
-    expire_in: 30 days
 
 Build:
-  stage: build
-  variables:
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
-    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
-  script:
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf build-and-publish --images-repo=${CI_REGISTRY_IMAGE}
-    - if [[ -n ${CI_COMMIT_TAG} ]]; then
-        echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;
-        docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
-        docker image push $DESTINATION_IMAGE;
-        docker image rmi $DESTINATION_IMAGE;
-        docker image tag $(werf stage image dev/install) $DESTINATION_INSTALL_IMAGE;
-        docker image push $DESTINATION_INSTALL_IMAGE;
-        docker image rmi $DESTINATION_INSTALL_IMAGE;
-      fi
-  before_script:
-    - rm -rf shell-operator || true
-    - git submodule update --init --recursive
-  except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
-  interruptible: true
+  extends: .Build template
   tags:
     - werf-distributed
 
 Tests:
-  stage: testing
-  script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - rm -rf testing/kcov-report
-    - chmod -R 0777 testing
-    - |
-      >testing/dummy_dirs
-      for dir in $(find -L global-hooks modules/*/hooks -type d); do
-        echo "$dir" >> testing/dummy_dirs
-        cat > "$dir/dummy" <<"EOF"
-          #!/bin/bash
-      EOF
-      done
-    - >
-      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
-      go test -vet=off ./modules/... ./global-hooks/...
-    - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
-  before_script:
-    - rm -rf shell-operator || true
-    - git submodule update --init --recursive
-  except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
-  artifacts:
-    when: always
-    paths:
-    - testing/kcov-report
-    expire_in: 14 days
-  interruptible: true
+  extends: .Tests template
   tags:
     - werf-distributed
 
 Matrix Tests:
-  stage: testing
-  script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests
-        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
-  except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
-  interruptible: true
+  extends: .Matrix Tests template
   tags:
     - werf-distributed
 
 Hooks Configuration Tests:
-  stage: testing
-  script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests
-        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
-  except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
-  interruptible: true
+  extends: .Hooks Configuration Tests template
   tags:
     - werf-distributed
 
 No Cyrillic Validation:
-  stage: testing
-  script:
-    - pwd
-    - ./testing/validate_no_cyrillic.sh ${CI_PROJECT_ID} ${CI_COMMIT_SHA} ${FOX_ACCESS_TOKEN}
-  except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
-  interruptible: true
+  extends: .No Cyrillic Validation template
   tags:
     - werf-distributed
 
 .base_deploy: &base_deploy
-  stage: deploy
-  variables:
-    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
-    SOURCE_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
-    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_JOB_NAME}
-  script:
-    - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
-    - docker image pull $SOURCE_IMAGE
-    - docker image tag $SOURCE_IMAGE $DESTINATION_IMAGE
-    - docker image push $DESTINATION_IMAGE
-    - docker image pull $SOURCE_INSTALL_IMAGE
-    - docker image tag $SOURCE_INSTALL_IMAGE $DESTINATION_INSTALL_IMAGE
-    - docker image push $DESTINATION_INSTALL_IMAGE
+  extends: .base_deploy_template
   after_script:
-    - docker image rmi $SOURCE_IMAGE
-    - docker image rmi $SOURCE_INSTALL_IMAGE
     - docker image rmi $DESTINATION_IMAGE
     - docker image rmi $DESTINATION_INSTALL_IMAGE
     - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_SHA}
     - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
-  when: manual
   needs:
     - "Matrix Tests"
+    - "Hooks Configuration Tests"
     - "Tests"
     - "Build"
+    - "Build Modules Images"
   tags:
     - werf-distributed
-
-alpha (pre-release):
-  <<: *base_deploy
-  variables:
-    SOURCE_IMAGE: ${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_NAME}
-    SOURCE_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_REF_NAME}
-    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:alpha
-    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:alpha
-  environment:
-    name: alpha
-  only:
-    - master
-    - /^release-.*$/
-  except:
-    - schedules
 
 alpha:
   <<: *base_deploy
@@ -213,6 +70,8 @@ alpha:
     name: alpha
   only:
     - tags
+    - master
+    - /^release-.*$/
 
 beta:
   <<: *base_deploy
@@ -243,79 +102,14 @@ rock-solid:
     - tags
 
 Cleanup registry:
-  stage: cleanup_registry
+  extends: .Cleanup registry template
   script:
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - docker login -u sample-user -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
     - werf cleanup --images-repo ${CI_REGISTRY_IMAGE}
-  only:
-  - schedules
   tags:
     - werf-distributed
   retry: 2
 
 Cleanup modules images:
-  stage: cleanup_builder
-  script:
-    - ./modules_images_werf cleanup
-    - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
-    - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
-  only:
-    - schedules
+  extends: .Cleanup modules images template
   tags:
     - build
-
-.web_base_deploy: &web_base_deploy
-  stage: Deploy Website
-  script:
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf deploy --helm-chart-dir=web-public/.helm --images-repo=${CI_REGISTRY_IMAGE}
-      --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
-      --set "global.env=${CI_ENVIRONMENT_SLUG}"
-      --namespace deckhouse-$CI_ENVIRONMENT_SLUG
-      --release deckhouse-$CI_ENVIRONMENT_SLUG
-  needs:
-    - "Build"
-    - "Build Modules Images"
-  dependencies:
-    - "Build Modules Images"
-  tags:
-    - werf-distributed
-
-deckhouse.test.flant.com:
-  <<: *web_base_deploy
-  variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
-  environment:
-    name: web-test
-    url: https://deckhouse.test.flant.com
-  except:
-    - schedules
-  when: manual
-
-early.deckhouse.io:
-  <<: *web_base_deploy
-  variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
-  environment:
-    name: web-early
-    url: https://early.deckhouse.io
-  except:
-    - schedules
-  when: manual
-
-deckhouse.io:
-  <<: *web_base_deploy
-  variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
-  environment:
-    name: web-production
-    url: https://deckhouse.io
-  only:
-    - master
-    - /^release-.*$/
-  except:
-    - schedules
-  when: manual

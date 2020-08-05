@@ -1,0 +1,50 @@
+.Build Modules Images template:
+  stage: build_modules_images
+  before_script:
+  - rm -rf shell-operator || true
+  - git submodule update --init --recursive
+  script:
+  - ./modules_images_werf bp
+  except:
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
+  interruptible: true
+  artifacts:
+    when: always
+    paths:
+    - modules/images_tags.json
+    expire_in: 30 days
+
+.Build template:
+  stage: build
+  variables:
+    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
+  before_script:
+    - rm -rf shell-operator || true
+    - git submodule update --init --recursive
+  script:
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf build-and-publish --images-repo=${CI_REGISTRY_IMAGE}
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then
+        echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;
+        docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
+        docker image push $DESTINATION_IMAGE;
+        docker image rmi $DESTINATION_IMAGE;
+        docker image tag $(werf stage image dev/install) $DESTINATION_INSTALL_IMAGE;
+        docker image push $DESTINATION_INSTALL_IMAGE;
+        docker image rmi $DESTINATION_INSTALL_IMAGE;
+      fi
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  interruptible: true
