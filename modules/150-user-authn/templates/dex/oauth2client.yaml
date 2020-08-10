@@ -1,5 +1,14 @@
+{{- define "dex_authenticators_with_access_to_kubernetes_api" }}
+  {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+    {{- if $crd.allowAccessToKubernetes }}
+      "not empty string"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+
 {{- $context := . }}
-{{- if or $context.Values.userAuthn.internal.dexAuthenticatorCRDs $context.Values.userAuthn.publishAPI.enable $context.Values.userAuthn.kubeconfigGenerator }}
+{{- if or (include "dex_authenticators_with_access_to_kubernetes_api" $context) $context.Values.userAuthn.publishAPI.enable $context.Values.userAuthn.kubeconfigGenerator }}
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
