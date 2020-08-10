@@ -1,8 +1,5 @@
 ---
 title: "User stories"
-sidebar: modules-user-authz
-permalink: modules/140-user-authz/user-stories.html
-hide_sidebar: false
 ---
 
 1. There is a CRD `ClusterAuthorizationRule`. Its resources are used to generate `ClusterRoleBindings` for users who mentioned in the field `subjects`. The set of `ClusterRoles` to bind is declared by fields:

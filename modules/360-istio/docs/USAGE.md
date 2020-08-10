@@ -1,8 +1,6 @@
 ---
 title: "Использование модуля istio"
-permalink: /modules/360-istio/usage.html
-sidebar: modules-istio
-hide_sidebar: false
+sidebartitle: "Использование"
 ---
 
 Для использования в приложениях одобрены только эти ресуры.

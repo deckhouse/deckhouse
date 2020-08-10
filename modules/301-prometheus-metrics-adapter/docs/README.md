@@ -1,6 +1,5 @@
 ---
 title: Модуль prometheus-metrics-adapter
-permalink: /modules/301-prometheus-metrics-adapter/
 search: autoscaler 
 ---
 

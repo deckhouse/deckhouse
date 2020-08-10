@@ -3,15 +3,18 @@ entries:
   folders:
     - title: Подсистема CandI
       url: /candi/
-      folderitems:
+      subfolders:
       - title: Описание
         url: /candi/
+      - title: Deckhouse CandI
+        url: /candi/deckhouse-candi.html
       - title: Фреймфорк bashible
         url: /candi/bashible/
       - title: Control Plane Kubeadm
         url: /candi/control-plane-kubeadm/
-        subfolders:
-        - title: Cloud providers
-          subfolderitems:
+      - title: Cloud providers
+        subfolderitems:
           - title: Openstack
             url: /candi/cloud-providers/openstack/
+      - title: Deckhouse-controller development
+        url: /candi/deckhouse-controller.html

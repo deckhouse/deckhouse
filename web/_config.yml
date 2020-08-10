@@ -1,7 +1,7 @@
 
 topnav_title: Deckhouse
 site_title: Deckhouse
-company_name: Флант
+company_name: Flant
 
 exclude:
   - .idea/
@@ -42,10 +42,33 @@ defaults:
       layout: "page"
       comments: false
       search: true
-      sidebar: sidebar
       topnav: topnav
-      hide_sidebar: true
       output: web
+  - scope:
+      path: "candi"
+      type: "pages"
+    values:
+      sidebar: candi
+  - scope:
+      path: "deckhouse-controller"
+      type: "pages"
+    values:
+      sidebar: candi
+  - scope:
+      path: "deckhouse-candi"
+      type: "pages"
+    values:
+      sidebar: candi
+  - scope:
+      path: "docs/guides"
+      type: "pages"
+    values:
+      sidebar: guides
+  - scope:
+      path: "modules"
+      type: "pages"
+    values:
+      sidebar: modules
 
 output: web
 

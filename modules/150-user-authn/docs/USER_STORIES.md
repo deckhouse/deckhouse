@@ -1,8 +1,5 @@
 ---
 title: "User Stories" 
-sidebar: modules-user-authn
-permalink: modules/150-user-authn/user-stories.html
-hide_sidebar: false
 ---
 
 1. Connect an authentication provider using config values 

@@ -1,7 +1,6 @@
 ---
 title: Модули
 permalink: modules/index.html
-sidebar: modules
 toc: false
 ---
 

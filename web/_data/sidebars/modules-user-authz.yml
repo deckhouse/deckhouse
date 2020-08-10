@@ -7,6 +7,6 @@ entries:
       - title: Описание модуля
         url: /modules/140-user-authz/
       - title: User stories
-        url: /modules/140-user-authz/user-stories.html
+        url: /modules/140-user-authz/user_stories.html
       - title: Разработка
         url: /modules/140-user-authz/development.html

@@ -1,8 +1,5 @@
 ---
 title: "Модуль cloud-provider-vsphere"
-sidebar: modules-cloud-provider-vsphere
-permalink: modules/030-cloud-provider-vsphere/
-hide_sidebar: false
 ---
 
 ## Содержимое модуля
@@ -197,7 +194,7 @@ StorageClass будет создан автоматически для кажд�
     7. Создать пользователя, привязав к нему роль из пункта #6.
 
 4. На созданный Datacenter **необходимо** "повесить" тэг из категории тэгов, указанный в `regionTagCategory` (по-умолчанию, `k8s-region`). Этот тэг будет обозначать **регион**.
-5. Настроенная(-ые) Kubernetes master ноды. [Пример](https://github.com/deckhouse/deckhouse/blob/master/install-kubernetes/vsphere/playbook.yml) настройки ОС для master'а через kubeadm. Для созданных vSphere VirtualMachine прописать extraConfig согласно [инструкции]({{ site.baseurl }}/modules/030-cloud-provider-vsphere/csi/disk_uuid.html).
+5. Настроенная(-ые) Kubernetes master ноды. [Пример](https://github.com/deckhouse/deckhouse/blob/master/install-kubernetes/vsphere/playbook.yml) настройки ОС для master'а через kubeadm. Для созданных vSphere VirtualMachine прописать extraConfig согласно [инструкции]({{ site.baseurl }}/modules/030-cloud-provider-vsphere/disk_uuid.html).
 
 ## Как мне поднять кластер?
 

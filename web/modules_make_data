@@ -4,20 +4,47 @@ if [ -f modules_menu_skip ]; then
   modules_skip_list=$(cat modules_menu_skip)
 fi
 
-modules_list=$(find modules -regex '.*.md' -print | cut -d\/ -f2 | sort | uniq)
+modules_list=$(find modules -regex '.*/docs/.*.md' -print | grep -v FEATURES.md | cut -d\/ -f2 | sort | uniq)
 
-echo "topnav_modules_items: &modules_items"
+echo "modules_items: &modules_items"
 for module in $modules_list ; do
   skip=false
   for el in $modules_skip_list ; do
     if [[ $el == $module ]] ; then skip=true; break; fi
   done
   if [[ $skip == 'false' ]]; then
+    subfolders=""
+    subfolders_raw=$(find modules/$module/docs/ -regex '.*.md' -print | grep -v FEATURES.md |cut -d\/ -f 4 | sort | uniq | grep -iv readme.md)
+    for subfolder_item in $subfolders_raw ; do
+      head -n 1 ./modules/$module/docs/$subfolder_item | grep -l "^---" &> /dev/null
+      if [ $? -eq 0 ]; then
+        subfolders="${subfolders}${subfolders:+ }${subfolder_item}"
+      fi
+    done
     cat << YAML
   - title: $module
     url: /modules/$module/
 YAML
+    if [[ ${#subfolders} -gt 0 ]]; then
+      # Construct submenu
+      cat << YAML
+    subfolderitems:
+    - title: Описание модуля
+      url: /modules/$module/
+YAML
+      for subfolder_item in $subfolders ; do
+        subfolder_item_title=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'sidebartitle:' | cut -d: -f2 | sed -e 's/^[[:space:]]*//')
+        if [[ ${#subfolder_item_title} -lt 1 ]]; then
+          subfolder_item_title=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'title:' | cut -d: -f2 | sed -e 's/^[[:space:]]*//')
+        fi
+        subfolder_item_url=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'permalink:' | cut -d: -f2 | sed -e 's/^[[:space:]]*//')
+    cat << YAML
+    - title: $subfolder_item_title
+      url: $subfolder_item_url
+YAML
+      done
+    fi
     # Move files from docs/ directory up one level to preserve relative assets link
-    mv -f ./modules/$module/docs/* ./modules/$module/
+    if [ -d ./modules/$module/docs/ ] && [ -n "$(ls -A ./modules/$module/docs/)" ]; then mv -f ./modules/$module/docs/* ./modules/$module/ ; fi
   fi
 done

@@ -1,8 +1,6 @@
 ---
 title: "Модуль extended-monitoring"
 permalink: /modules/340-extended-monitoring/
-sidebar: modules-extended-monitoring
-hide_sidebar: false
 ---
 
 Состоит из двух Prometheus exporter'ов:

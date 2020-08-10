@@ -1,5 +1,12 @@
 $('#mysidebar').height($(".nav").height());
 
+$( document ).ready(function() {
+    $('#search-input').on("keyup", function (e) {
+            if (e.target.value.length > 0 ) $(".header-search__results").addClass("active");
+            else $(".header-search__results").removeClass("active");
+          });
+});
+
 document.addEventListener("DOMContentLoaded", function() {
   /**
    * AnchorJS
@@ -8,7 +15,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
   $.getJSON('/config/channel.json', {_: new Date().getTime()}).done(function (resp) {
     if (resp && resp['channel']) {
-      $(".updateChannelContent").text(resp['channel']);
+      $(".updatechannel__content").text(resp['channel']);
+      // $(".updatechannel__content").prop('title',resp['channel']);
+      $(".updatechannel__content").removeClass("disable");
       $(".releases__menu-item.releases__menu--channel--"+resp['channel']).addClass("releases__menu-item-block-active");
       $(".releases__menu-item-title.releases__menu--channel--"+resp['channel']).addClass("releases__menu-item-title-active");
       var update_channels_list = ['alpha','beta','early-access','stable','rock-solid'];
@@ -17,9 +26,8 @@ document.addEventListener("DOMContentLoaded", function() {
       } else {
         $("#releases__stale__block").css({display: "none"});
       };
-
     } else {
-      $(".updateChannelContent").text('unknown');
+      $(".updatechannel__content").text('unknown');
       console.log('UpdateChannel is not defined.');
     };
   });
@@ -33,7 +41,6 @@ $( document ).ready(function() {
     //console.log (h);
     if (h > 800) {
         // $( "#mysidebar" ).attr("class", "nav affix");
-        $( "#mysidebar" ).attr("class", "nav");
     }
     // activate tooltips. although this is a bootstrap js function, it must be activated this way in your theme.
     $('[data-toggle="tooltip"]').tooltip({

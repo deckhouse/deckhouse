@@ -1,0 +1,85 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-public
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-hash: sha1
+    nginx.ingress.kubernetes.io/session-cookie-name: ingress_route
+{{- if or (eq .Values.global.env "web-production") (eq .Values.global.env "web-test") }}
+    nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+    nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.{{ .Release.Name }}.svc.cluster.local/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+{{- else if (eq .Values.global.env "web-early") }}
+    nginx.ingress.kubernetes.io/auth-url: "http://{{ .Chart.Name }}-saml-authenticator.{{ .Chart.Name }}-{{ .Values.global.env }}.svc.cluster.local/saml/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "/saml/login"
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      auth_request_set $saml_authorization $upstream_http_authorization;
+      proxy_set_header Authorization $saml_authorization;
+{{- end }}
+spec:
+  rules:
+  - host: {{ .Values.global.url | quote }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ .Chart.Name }}-public
+          servicePort: http
+        path: /
+  tls:
+    - hosts:
+      - {{ .Values.global.url | quote }}
+      secretName: {{ first (pluck .Values.global.env .Values.ingress.secret_name) | default .Values.ingress.secret_name._default }}
+{{- if eq .Values.global.env "web-early" }}
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-saml
+spec:
+  tls:
+  - hosts:
+    - {{ .Values.global.url | quote }}
+    secretName: {{ first (pluck .Values.global.env .Values.ingress.secret_name) | default .Values.ingress.secret_name._default }}
+  rules:
+  - host: {{ .Values.global.url | quote }}
+    http:
+      paths:
+      - path: /saml
+        backend:
+          serviceName: {{ .Chart.Name }}-saml-authenticator
+          servicePort: http
+{{- end }}
+{{- if or (eq .Values.global.env "web-production") (eq .Values.global.env "web-test") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+  name: {{ .Chart.Name }}-public
+spec:
+  applicationDomain: {{ .Values.global.url | quote }}
+  sendAuthorizationHeader: false
+  applicationIngressCertificateSecretName: {{ first (pluck .Values.global.env .Values.ingress.secret_name) | default .Values.ingress.secret_name._default  | quote }}
+  applicationIngressClassName: "nginx"
+  keepUsersLoggedInFor: "720h"
+{{- end }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: {{ .Chart.Name }}-public
+spec:
+  secretName: {{ first (pluck .Values.global.env .Values.ingress.secret_name) | default .Values.ingress.secret_name._default }}
+  dnsNames:
+  - {{ .Values.global.url | quote }}
+  acme:
+    config:
+    - http01:
+        ingressClass: "nginx"
+      domains:
+      - {{ .Values.global.url | quote }}
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer

@@ -1,0 +1,91 @@
+<div class="header">
+    <div class="page__container">
+        <div class="header__content">
+            <a href="/" class="header__logo">
+                <img src="{{ site.baseurl }}/images/logo.svg" alt="deckhouse" width="200"/>
+            </a>
+            <ul class="header__menu header__menu_active">
+                <!-- toggle sidebar button -->
+                <!-- entries without drop-downs appear here -->
+
+{% assign topnav = site.data[page.topnav] %}
+{% assign topnav_dropdowns = site.data[page.topnav].topnav_dropdowns %}
+
+                {% for entry in topnav.topnav %}
+                  {% for item in entry.items %}
+                    <li class="header__menu-item
+                        {%- if item.folderitems %} header__menu-item_parent{% endif %}
+                        {%- if item.url.size>1 and page.url == item.url %} header__menu-item_active{% endif %}
+                        {%- if item.url.size>1 and page.url contains '/modules/' and item.url == '/documentation.html' %} header__menu-item_active{% endif %}
+                        {%- if item.url.size>1 and page.url contains '/guides/' and item.url == '/documentation.html' %} header__menu-item_active{% endif %}
+                        {%- if item.url.size>1 and page.url contains '/candi/' and item.url == '/documentation.html' %} header__menu-item_active{% endif %}
+                        {%- if item.url.size<2 and page.url.size<2 %} header__menu-item_active{% endif %}">
+<!--                    {%- if item.url.size>1 and page.url != item.url and page.url contains item.url %} header__menu-item_active{% endif %} -->
+                      <a href="{{ site.baseurl}}{{ item.url }}">{{ item.title }}</a>
+                      {% if item.folderitems %}
+                      <div class="header__submenu-container">
+                          <ul class="header__submenu">
+                            {% for folderitem in item.folderitems %}
+                              {% if folderitem.external_url %}
+                              <li class="header__submenu-item"><a href="{{folderitem.external_url}}" target="_blank" rel="noopener">{{folderitem.title}}</a></li>
+                              {% elsif page.url contains folderitem.url %}
+                              <li class="header__submenu-item"><a href="{{ site.baseurl }}/{{ folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
+                              {% else %}
+                              <li class="header__submenu-item"><a href="{{ site.baseurl }}/{{ folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
+                              {% endif %}
+                            {% endfor %}
+                          </ul>
+                      </div>
+                      {%- endif %}
+                    </li>
+                  {% endfor %}
+                {% endfor %}
+                <!-- entries with drop-downs appear here -->
+                <!-- conditional logic to control which topnav appears for the audience defined in the configuration file.-->
+                {% for entry in topnav_dropdowns %}
+                {% for folder in entry.folders %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ folder.title }}<b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                        {% for folderitem in folder.folderitems %}
+                        {% if folderitem.external_url %}
+                        <li><a href="{{folderitem.external_url}}" target="_blank" rel="noopener">{{folderitem.title}}</a></li>
+                        {% elsif page.url contains folderitem.url %}
+                        <li class="dropdownActive"><a href="{{ site.baseurl }}/{{folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
+                        {% else %}
+                        <li><a href="{{ site.baseurl }}/{{folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </li>
+                {% endfor %}
+                {% endfor %}
+                {% if site.feedback_disable == null or site.feedback_disable == false %}
+			{% include feedback.html %}
+		{% endif %}
+                <!--comment out this block if you want to hide search-->
+                <li>
+                    <!--start search-->
+                    <div class="header-search">
+                        <input type="text" class="header-search__input" id="search-input" placeholder="{{site.data.strings.search_placeholder_text}}">
+                        <ul class="header-search__results" id="results-container"></ul>
+                    </div>
+                    {% asset jekyll-search.js %}
+                    <script type="text/javascript">
+                            SimpleJekyllSearch.init({
+                                searchInput: document.getElementById('search-input'),
+                                resultsContainer: document.getElementById('results-container'),
+                                dataSource: '{{ site.baseurl }}/search.json?{{ 'now' | date: "%s"}}',
+                                searchResultTemplate: '<li><a href="{url}" title="{{page.title | escape }}">{title}</a></li>',
+                    noResultsText: '{{site.data.strings.search_no_results_text}}',
+                            limit: 10,
+                            fuzzy: true,
+                    })
+                    </script>
+                    <!--end search-->
+                </li>
+            </ul>
+        </div>
+    </div>
+        <!-- /.container -->
+</div>

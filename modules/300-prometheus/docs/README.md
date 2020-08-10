@@ -5,9 +5,6 @@ tags:
 type:
   - instruction
 search: prometheus
-permalink: /modules/300-prometheus/
-sidebar: modules-prometheus
-hide_sidebar: false
 ---
 
 Модуль устанавливает [prometheus](https://prometheus.io/) (используя модуль [operator-prometheus]({{ site.baseurl }}/modules/200-operator-prometheus/)) и полностью его настраивает!
@@ -101,10 +98,10 @@ hide_sidebar: false
 * `longtermScrapeInterval` — с помощью данного параметра можно указать, как часто longterm prometheus будет собирать себе "снимок" данных из основного prometheus.
     * По-умолчанию `5m`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * `mainMaxDiskSizeGigabytes` — максимальный размер в гигабайтах, до которого автоматически может ресайзиться диск Prometheus main.
     *  Опциональный параметр, значение по-умолчанию — `300`.

@@ -1,8 +1,5 @@
 ---
 title: Поддержка модуля istio
-permalink: /modules/360-istio/development.html
-sidebar: modules-istio
-hide_sidebar: false
 ---
 
 

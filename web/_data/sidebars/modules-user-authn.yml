@@ -7,7 +7,7 @@ entries:
       - title: Описание модуля
         url: /modules/150-user-authn/
       - title: User stories
-        url: /modules/150-user-authn/user-stories.html
+        url: /modules/150-user-authn/user_stories.html
 
         subfolders:
         - title: Создание приложений

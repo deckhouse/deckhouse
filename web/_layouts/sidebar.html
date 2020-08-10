@@ -1,0 +1,14 @@
+---
+layout: default
+---
+<div class="page__container">
+  {% comment %}{%- include nav-breadcrumbs.html %}{% endcomment %}
+  <div class="layout-sidebar">
+    <div class="layout-sidebar__sidebar">
+      {%- include sidebar.html %}
+    </div>
+    <div class="layout-sidebar__content">
+      {{ content }}
+    </div>
+  </div>
+</div>

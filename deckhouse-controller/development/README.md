@@ -1,5 +1,8 @@
-Deckhouse
-=======
+---
+title: "Deckhouse-controller development"
+permalink: /candi/deckhouse-controller.html
+---
+
 
 Запуск в minikube
 -----------------

@@ -1,8 +1,5 @@
 ---
 title: "Модуль user-authn" 
-sidebar: modules-user-authn
-permalink: /modules/150-user-authn/
-hide_sidebar: false
 search: kube config generator
 ---
 
@@ -361,9 +358,7 @@ data:
 
 Для работы dashboard и kubeconfig-generator в вашем кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator/).
 
-<details>
-  <summary>Аргументы kube-apiserver, которые будут настроены
-  </summary>
+{% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
 * --oidc-client-id=kubernetes
 * --oidc-groups-claim=groups
@@ -373,5 +368,4 @@ data:
 В случае использования самоподписанных сертификатов для dex, будет добавлен ещё один аргумент, а так же в под с apiserver будет смонтирован файл с CA:
 
 * --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
-
-</details>
+{% endofftopic %}

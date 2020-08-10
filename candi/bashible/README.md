@@ -1,7 +1,5 @@
 ---
 title: Фреймворк - Bashible
-sidebar: candi
-hide_sidebar: false
 ---
 
 Фреймворк для настройки и управления узлами в кластере Kubernetes.

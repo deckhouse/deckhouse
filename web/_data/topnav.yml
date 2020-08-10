@@ -1,10 +1,3 @@
-# Next lines are for local build only
-topnav_modules_items: &modules_items
-  - title: 020-deckhouse
-    url: /modules/020-deckhouse
-
-
-## Topnav single links
 ## if you want to list an external url, use external_url instead of url. the theme will apply a different link base.
 topnav:
 - title: Topnav
@@ -12,16 +5,8 @@ topnav:
   - title: CandI
     url: /candi/
   - title: Модули
-    url: /modules/
-    folderitems: *modules_items
+    url: /modules/020-deckhouse/
   - title: Руководства
     url: /guides/monitoring.html
-    folderitems:
-    - title: Prometheus Мониторинг приложений
-      url: /guides/monitoring.html
-    - title: Разработка Deckhouse
-      url: /guides/development.html
-    - title: Управление узлами кластера
-      url: /guides/node-manager.html
   - title: Каналы обновлений
     url: /releases.html

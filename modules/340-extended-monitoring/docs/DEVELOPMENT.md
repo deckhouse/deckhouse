@@ -1,8 +1,6 @@
 ---
 title: "Разработка Prometheus Rules"
-permalink: /modules/340-extended-monitoring/development.html
-sidebar: modules-extended-monitoring
-hide_sidebar: false
+sidebartitle: "Prometheus Rules"
 ---
 
 {% raw %}

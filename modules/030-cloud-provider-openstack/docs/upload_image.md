@@ -1,7 +1,5 @@
 ---
 title: "Загрузка image в OpenStack" 
-sidebar: modules-cloud-provider-openstack
-hide_sidebar: false
 ---
 
 ## Загрузка image в openstack

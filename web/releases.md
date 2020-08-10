@@ -1,8 +1,9 @@
 ---
 title: Каналы обновлений
 permalink: releases.html
-hide_sidebar: true
+layout: sidebar-nosidebar
 toc: false
+
 ---
 {::options parse_block_html="false" /}
 {% asset releases.css %}
@@ -39,3 +40,4 @@ toc: false
 {%- endfor %}
 </div>
 
+</div>
