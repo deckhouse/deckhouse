@@ -1,8 +1,5 @@
 ---
 title: "Разработка"
-sidebar: modules-user-authz
-permalink: modules/140-user-authz/development.html
-hide_sidebar: false
 ---
 
 ## Кастомизация прав для предустановленных accessLevel

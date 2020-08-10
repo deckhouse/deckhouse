@@ -1,6 +1,6 @@
 ---
 title: Deckhouse
-permalink: /
+permalink: /documentation.html
 ---
 
 ## Что такое Deckhouse?
@@ -81,9 +81,7 @@ data:
 
 **Важно!** Если модуль предполагает работу DaemonSet'a на всех нодах кластера (например, `ping-exporter` и `node-problem-detector`) или модуль должен работать на master-узлах (например `prometheus-metrics-adapter` или некоторые компоненты `vertical-pod-autoscaler`) — то у таких модулей возможность настройки `nodeSelector` и `tolerations` отключена.
 
-<details>
-<summary><b>Особенности автоматики, зависящие от "типа" модуля</b>
-</summary>
+{% offtopic title="Особенности автоматики, зависящие от 'типа' модуля" %}{% raw %}
 * Модули *monitoring* (operator-prometheus, prometheus и vertical-pod-autoscaler):
   * Порядок поиска узлов (для определения nodeSelector):
     * Наличие ноды с лейблом <code>node-role.flant.com/MODULE_NAME</code>
@@ -109,7 +107,8 @@ data:
     * Добавляемые toleration'ы (добавляются одновременно все):
         * <code>{"key":"dedicated.flant.com","operator":"Equal","value":"MODULE_NAME"}</code> (Например: <code>{"key":"dedicated.flant.com","operator":"Equal","value":"network-gateway"}</code>)
         * <code>{"key":"dedicated.flant.com","operator":"Equal","value":"system"}</code>
-</details>
+{% endraw %}
+{% endofftopic %}
 
 ## Конфигурация (глобальная)
 

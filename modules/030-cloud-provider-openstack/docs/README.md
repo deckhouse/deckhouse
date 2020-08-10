@@ -1,8 +1,5 @@
 ---
 title: "Модуль cloud-provider-openstack"
-sidebar: modules-cloud-provider-openstack
-permalink: /modules/030-cloud-provider-openstack/
-hide_sidebar: false
 ---
 
 ## Содержимое модуля

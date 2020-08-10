@@ -26,29 +26,38 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data
   setup:
-    - name: "Adding modules into navigation menu"
-      shell: /bin/bash modules_make_data > /srv/jekyll-data/_data/topnav.yml2 &&  sed '1,+4d' _data/topnav.yml >> /srv/jekyll-data/_data/topnav.yml2  && mv -f /srv/jekyll-data/_data/topnav.yml2 /srv/jekyll-data/_data/topnav.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data
-    - name: "Adding permalinks if it wasn't set and stripping 'docs/' from it"
+    - name: "Add permalinks"
       shell: |
         for i in $(find . -regex '.*.md' -print); do
-          cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
+          head -n 1 $i | grep -l "^---" &> /dev/null
           if [ $? -eq 0 ]; then
-            # permalink not present, add it
-            PERMALINK="/$(echo $i | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#readme\.html$#index.html#' )"
-            sed -i "1apermalink: $PERMALINK" $i
+            cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
+            if [ $? -eq 0 ]; then
+              # permalink not present, add it
+              PERMALINK="/$(echo $i | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##'  | sed 's#readme\.html$#index.html#' )"
+              sed -i "1apermalink: $PERMALINK" $i
+            fi
           fi
         done
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
-    - name: "Building"
+    - name: "Generate sidebars"
+      shell: /bin/bash modules_make_data > /srv/jekyll-data/_data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> /srv/jekyll-data/_data/sidebars/modules.yml2  && mv -f /srv/jekyll-data/_data/sidebars/modules.yml2 /srv/jekyll-data/_data/sidebars/modules.yml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Build static files"
       shell: jekyll build
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
+    - name: "Make symlink for /index.html to pass tests"
+      shell: ln -s documentation.html index.html
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/_site
+        warn: false
     - name: "Link checking"
       shell: bundle exec htmlproofer \
         --allow-hash-href \
@@ -67,20 +76,15 @@ git:
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: ['**/*']
-- add: /docs
-  to: /srv/jekyll-data/docs
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  excludePaths: ['_not_actual/']
+  excludePaths: ['docs']
 - add: /
   to: /srv/jekyll-data
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['README.md', 'candi/**/*.md', 'deckhouse-candi/**/*.md']
+  includePaths: ['docs','candi/**/*.md', 'deckhouse-candi/**/*.md','deckhouse-controller/**/*.md']
+  excludePaths: ['_not_actual/']
 - add: /modules
   to: /srv/jekyll-data/modules
   owner: jekyll
@@ -88,3 +92,4 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths: ['**/docs/']
+  excludePaths: ['**/FEATURES.md']

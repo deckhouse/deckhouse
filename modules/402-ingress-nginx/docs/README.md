@@ -38,10 +38,10 @@ ingressNginxEnabled: "false"
     * По-умолчанию берется версия из настроек модуля.
     * Доступные варианты: `"0.25"`, `"0.26"`, `"0.33"`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 * `loadBalancer` — секция настроек для inlet'а `LoadBalancer`:
@@ -129,7 +129,7 @@ ingressNginxEnabled: "false"
             * GeoIP2-ASN
             * GeoLite2-ASN
             * GeoLite2-Country
-            * GeoLite2-City</details>
+            * GeoLite2-City
 * `underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers).
     * По-умолчанию `false`.
 * `customErrors` — секция с настройкой кастомизации HTTP ошибок (если секция определена, то все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех ingress-nginx контроллеров**);

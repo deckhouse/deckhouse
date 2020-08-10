@@ -46,7 +46,7 @@ function main() {
     new_path=$(jq -rc '.new_path' <<< ${FILE_DIFF})
 
     # skip documentation
-    if [[ "$new_path" == *".md" ]]; then
+    if [[ "$new_path" == *".md" ]] || [[ -n $(echo $new_path | grep -E "^web-public/|^web/") ]]; then
       echo "  * skip: $new_path"
       continue
     fi

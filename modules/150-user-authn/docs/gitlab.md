@@ -1,8 +1,6 @@
 ---
 title: "Создание приложения в GitLab для аутентификации в кластере" 
-sidebar: modules-user-authn
-permalink: modules/150-user-authn/gitlab.html
-hide_sidebar: false
+sidebartitle: "Аутентификация в GitLab"
 ---
 
 Для настройки аутентификации с помощью модуля `user-authn` необходимо в GitLab проекта создать новое приложение.

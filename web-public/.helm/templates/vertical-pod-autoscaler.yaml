@@ -1,0 +1,16 @@
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}-public
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ .Chart.Name }}-public
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: web
+      maxAllowed:
+        cpu: 200m

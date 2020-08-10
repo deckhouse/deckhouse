@@ -5,9 +5,6 @@ tags:
   - grafana
 type:
   - instruction
-sidebar: modules-prometheus
-hide_sidebar: false
-permalink: /modules/300-prometheus/prometheus_as_external_datasource.html
 search: Как подключится к Prometheus, пользовательская Grafana
 ---
 

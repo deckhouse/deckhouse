@@ -1,8 +1,6 @@
 ---
 title: "Создание приложения в GitHub организации для аутентификации в кластере" 
-sidebar: modules-user-authn
-permalink: modules/150-user-authn/github.html
-hide_sidebar: false
+sidebartitle: "Аутентификация в GitHub"
 ---
 
 Для настройки аутентификации с помощью модуля `user-authn` необходимо в организации GitHub создать новое приложение.

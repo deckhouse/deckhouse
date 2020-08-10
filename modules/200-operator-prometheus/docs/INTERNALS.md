@@ -1,8 +1,5 @@
 ---
 title: "Как работает Prometheus под управлением Prometheus Operator"
-permalink: /modules/200-operator-prometheus/internals.html
-sidebar: modules-operator-prometheus
-hide_sidebar: false
 ---
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->

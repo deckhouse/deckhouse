@@ -7,4 +7,4 @@ entries:
       - title: Описание модуля
         url: /modules/030-cloud-provider-vsphere/
       - title: Включение поддержки UUID для всех виртуальных машин
-        url: /modules/030-cloud-provider-vsphere/csi/disk_uuid.html
+        url: /modules/030-cloud-provider-vsphere/disk_uuid.html

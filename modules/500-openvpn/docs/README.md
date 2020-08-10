@@ -82,10 +82,10 @@ data:
       * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для админки openvpn (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По-умолчанию `false`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 

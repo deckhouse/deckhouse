@@ -1,0 +1,117 @@
+{{ if (eq .Values.global.env "web-early") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-saml-authenticator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: {{ .Chart.Name }}-saml-authenticator
+  template:
+    metadata:
+      labels:
+        service: {{ .Chart.Name }}-saml-authenticator
+    spec:
+      priorityClassName: production-medium
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  service: {{ .Chart.Name }}-saml-authenticator
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      imagePullSecrets:
+      - name: registrysecret
+      volumes:
+      - name: backend-saml
+        secret:
+          secretName: {{ .Chart.Name }}-backend-saml
+      containers:
+      - name: saml-authenticator
+        command: ['/bin/bash', '-l', '-c', 'bundle exec puma -p 80']
+{{ tuple "web/saml-authenticator" . | include "werf_container_image" | indent 8 }}
+        readinessProbe:
+          tcpSocket:
+            port: 80
+        livenessProbe:
+          tcpSocket:
+            port: 80
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: backend-saml
+          readOnly: true
+          mountPath: /etc/saml-ssl
+        env:
+{{ tuple "web/saml-authenticator" . | include "werf_container_env" | indent 8 }}
+        - name: PUBLIC_URL
+          value: "https://{{ .Values.global.url }}"
+        - name: IDP_METADATA_URL
+          value: {{ required (printf ".Values.saml_metadata_url.%s required!" .Values.global.env) (pluck .Values.global.env .Values.saml_metadata_url | first) | quote }}
+        - name: SESSION_EXPIRE_AFTER
+          value: "57600"
+        - name: CERTIFICATE
+          value: "/etc/saml-ssl/tls.crt"
+        - name: PRIVATE_KEY
+          value: "/etc/saml-ssl/tls.key"
+        - name: ATTRIBUTES
+          value: "email::s"
+        - name: AUTHENTICATION_REQUIRED
+          value: "true"
+        - name: SESSION_SECRET
+          value: {{ pluck .Values.global.env .Values.secret_key_base | first | default .Values.secret_key_base._default | quote }}
+        - name: RACK_ENV
+          value: "production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-saml-authenticator
+spec:
+  clusterIP: None
+  selector:
+    service: {{ .Chart.Name }}-saml-authenticator
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Chart.Name }}-backend-saml
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ tuple (printf "backend-saml/%s/tls.crt" .Values.global.env) . | include "werf_secret_file" | b64enc }}
+  tls.key: {{ tuple (printf "backend-saml/%s/tls.key" .Values.global.env) . | include "werf_secret_file" | b64enc }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}-saml-authenticator
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ .Chart.Name }}-saml-authenticator
+  updatePolicy:
+    updateMode: "Auto"
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: {{ .Chart.Name }}-saml-authenticator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      service: {{ .Chart.Name }}-saml-authenticator
+{{ end }}

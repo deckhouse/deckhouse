@@ -1,7 +1,5 @@
 ---
 title: "Hybrid кластер в OpenStack" 
-sidebar: modules-cloud-provider-openstack
-hide_sidebar: false
 ---
 
 ## Требования

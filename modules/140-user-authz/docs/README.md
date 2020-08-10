@@ -1,8 +1,5 @@
 ---
 title: "Модуль user-authz" 
-sidebar: modules-user-authz
-permalink: modules/140-user-authz/
-hide_sidebar: false
 ---
 
 Данный модуль отвечает за генерацию RBAC для пользователей и реализует простейший multi-tenancy с разграничением доступа по namespace.
@@ -158,9 +155,7 @@ spec:
 
 Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator).
 
-<details>
-  <summary>Изменения манифеста, которые произойдут
-  </summary>
+{% offtopic title="Изменения манифеста, которые произойдут" %}
 
 * Будет поправлен аргумент `--authorization-mode`, добавится перед методом RBAC метод Webhook (например, --authorization-mode=Node,Webhook,RBAC).
 * Добавится `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`.
@@ -179,7 +174,7 @@ spec:
       path: /etc/kubernetes/authorization-webhook-config.yaml
       type: FileOrCreate
   ```
-</details>
+{% endofftopic %}
 
 ## Кастомизация прав для предустановленных accessLevel
 

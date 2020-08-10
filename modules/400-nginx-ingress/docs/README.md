@@ -57,10 +57,10 @@ title: "Модуль nginx-ingress"
 * `enableIstioSidecar` — добавить к подам контроллера sidecar для контролирования трафика средствами Istio. Будут добавлены две аннотации: `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`, а непосредственно добавление контейнера в под осуществит [sidecar-injector от Istio]({{ site.baseurl }}/modules/360-istio/usage.html#ingress).
     * **Важно!** Так как в режиме `Direct` pod'ы работают в host network, то механизм идентификации трафика для заворачивания в Istio, который основан на Service CIDR, несёт потенциальную опасность для других сервисов с ClusterIP. Для подобных inlet'ов поддержка Istio отключена.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига

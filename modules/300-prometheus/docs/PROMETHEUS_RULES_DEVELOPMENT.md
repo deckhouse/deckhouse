@@ -4,9 +4,6 @@ tags:
   - prometheus
 type:
   - instruction
-permalink: /modules/300-prometheus/prometheus_rules_development.html
-sidebar: modules-prometheus
-hide_sidebar: false
 search: Разработка правил Prometheus, prometheus alerting rules
 ---
 

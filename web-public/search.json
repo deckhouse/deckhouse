@@ -1,0 +1,34 @@
+---
+title: search
+layout: none
+search: exclude
+---
+
+[
+{% assign searchedpages = site.pages | where: "search", true %}
+{%- for page in searchedpages %}
+{%- unless page.search == "exclude" %}
+{
+"title": "{{ page.title | escape }}",
+"tags": "{{ page.tags }}",
+"keywords": "{{page.keywords}}",
+"url": "{{ site.baseurl }}/{{ page.url | remove_first: "/"}}",
+"summary": "{{ page.summary | strip }}"
+}
+{%- unless forloop.last and site.posts.size < 1 %},{% endunless %}
+{%- endunless %}
+{%- endfor %}
+
+{%- for post in site.posts %}
+
+{
+"title": "{{ post.title | escape }}",
+"tags": "{{ post.tags }}",
+"keywords": "{{post.keywords}}",
+"url": "{{ site.baseurl }}/{{ post.url | remove_first: "/"}}",
+"summary": "{{post.summary | strip }}"
+}
+{%- unless forloop.last %},{% endunless %}
+{%- endfor %}
+
+]

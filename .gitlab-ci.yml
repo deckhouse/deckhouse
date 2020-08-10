@@ -1,12 +1,14 @@
 variables:
   WERF_TRUE_GIT_DEBUG_WORKTREE_SWITCH: "1"
   WERF_VERBOSE: "1"
+  WERF_LOG_VERBOSE: "1"
 
 stages:
   - build_modules_images
   - build
   - testing
   - deploy
+  - Deploy Website
   - cleanup_registry
   - cleanup_builder
 
@@ -263,3 +265,57 @@ Cleanup modules images:
     - schedules
   tags:
     - build
+
+.web_base_deploy: &web_base_deploy
+  stage: Deploy Website
+  script:
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf deploy --helm-chart-dir=web-public/.helm --images-repo=${CI_REGISTRY_IMAGE}
+      --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
+      --set "global.env=${CI_ENVIRONMENT_SLUG}"
+      --namespace deckhouse-$CI_ENVIRONMENT_SLUG
+      --release deckhouse-$CI_ENVIRONMENT_SLUG
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  dependencies:
+    - "Build Modules Images"
+  tags:
+    - werf-distributed
+
+deckhouse.test.flant.com:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
+  environment:
+    name: web-test
+    url: https://deckhouse.test.flant.com
+  except:
+    - schedules
+  when: manual
+
+early.deckhouse.io:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+  environment:
+    name: web-early
+    url: https://early.deckhouse.io
+  except:
+    - schedules
+  when: manual
+
+deckhouse.io:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+  environment:
+    name: web-production
+    url: https://deckhouse.io
+  only:
+    - master
+    - /^release-.*$/
+  except:
+    - schedules
+  when: manual

@@ -1,8 +1,5 @@
 ---
 title: "Модуль prometheus-madison-integration"
-permalink: /modules/340-prometheus-madison-integration/
-sidebar: modules-prometheus-madison-integration
-hide_sidebar: false
 ---
 
 ## Описание

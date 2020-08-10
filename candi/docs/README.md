@@ -1,7 +1,6 @@
 ---
 title: Подсистема CandI (Cluster and Infrastructure)
-sidebar: candi
-hide_sidebar: false
+permalink: /candi/
 ---
 
 Система для развертывания и управления Kubernetes кластерами.

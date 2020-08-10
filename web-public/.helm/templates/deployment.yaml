@@ -1,0 +1,41 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Chart.Name }}-public
+  labels:
+    app: {{ .Chart.Name }}-public
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-public
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}-public
+    spec:
+      imagePullSecrets:
+      - name: registrysecret
+      containers:
+      - name: web
+{{ tuple "dev/web-public" . | include "werf_container_image" | indent 8 }}
+        command: ["nginx", "-g", "daemon off;"]
+        env:
+{{ tuple "dev/web-public" . | include "werf_container_env" | indent 8 }}
+        ports:
+          - containerPort: 80
+            name: http
+            protocol: TCP
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/usr/sbin/nginx", "-s", "quit"]
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80

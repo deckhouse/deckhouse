@@ -1,0 +1,59 @@
+
+topnav_title: Deckhouse
+site_title: Deckhouse
+company_name: Flant
+
+exclude:
+  - .idea/
+  - .gitignore
+  - vendor
+  - Gemfile.lock
+  - Gemfile
+
+highlighter: rouge
+
+plugins:
+  - jekyll-assets
+
+markdown: kramdown
+kramdown:
+ input: GFM
+ auto_ids: true
+ hard_wrap: false
+ syntax_highlighter: rouge
+ parse_block_html: true
+
+breadcrumbs:
+  root:
+    hide: true  # show breadcrumbs on root/home page
+    image: false # Show image or title text
+  hometext: "Home"
+
+feedback_disable: true
+collections:
+  tooltips:
+    output: false
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+      comments: false
+      search: true
+      topnav: topnav
+      output: web
+      sidebar: documentation-main
+
+output: web
+
+timezone: Europe/Moscow
+
+exclude:
+- .gitignore
+- Gemfile
+- Gemfile.lock
+- modules_make_data
+- modules_menu_skip
+
