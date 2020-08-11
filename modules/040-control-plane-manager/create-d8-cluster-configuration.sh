@@ -33,9 +33,9 @@ if kubectl -n kube-system get pods -l k8s-app=kube-controller-manager -o yaml | 
   exit 1
 fi
 
-#check if single master
-if [[ "x$(kubectl get nodes -l node-role.kubernetes.io/master="" -o name | wc -l)" != "x1" ]] ; then
-  echo "Error: script must not be executed on multi master clusters"
+#check if standalone etcd
+if [[ "x$(kubectl -n kube-system get pods -l component=etcd,tier=control-plane -o name | wc -l)" != "x1" ]] ; then
+  echo "Error: script must be executed only on standalone etcd"
   exit 1
 fi
 
@@ -46,10 +46,17 @@ if ! kubectl -n kube-system get secret d8-pki > /dev/null 2> /dev/null ; then
 fi
 
 masterInternalIP=$(kubectl get nodes -l node-role.kubernetes.io/master='' -o json | jq '.items[0].status.addresses[] | select(.type == "InternalIP") | .address' -r)
+etcdMemberList=$(kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1 | cut -d/ -f2) -- etcdctl --ca-file /etc/kubernetes/pki/etcd/ca.crt --cert-file /etc/kubernetes/pki/etcd/ca.crt --key-file /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list)
 
-#check etcd on correct ip
-if ! nc -z "$masterInternalIP" 2379; then
-  echo "Error: etcd must listen on master internal ip"
+#check etcd clientURLs
+if ! echo "$etcdMemberList" | grep -o "clientURLs=[^ ]*" | grep "$masterInternalIP"; then
+  echo "Error: etcd must listen for clients on master internal ip"
+  exit 1
+fi
+
+#check etcd peerURLs
+if ! echo "$etcdMemberList" | grep -o "peerURLs=[^ ]*" | grep "$masterInternalIP"; then
+  echo "Error: etcd must listen for peers on master internal ip"
   exit 1
 fi
 
@@ -111,6 +118,12 @@ END
 
 if [[ $1 == "dry-run" ]]; then
   exit 0
+fi
+
+#check if d8-cluster-configuration already exists
+if kubectl -n kube-system get secret d8-cluster-configuration > /dev/null 2> /dev/null ; then
+  echo "Error: d8-cluster-configuration secret in namespace kube-system already exists"
+  exit 1
 fi
 
 kubectl create -f - <<END
