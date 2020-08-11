@@ -1,6 +1,6 @@
 ---
 title: Модуль prometheus-metrics-adapter
-search: autoscaler 
+search: autoscaler, HorizontalPodAutoscaler 
 ---
 
 ## Назначение

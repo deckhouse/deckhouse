@@ -1,6 +1,7 @@
 ---
 title: "Модуль deckhouse"
 permalink: /modules/020-deckhouse/
+search: releaseChannel, стабилизация релизного канала, автосмена канала обновлений
 ---
 
 Модуль не устанавливает, но настраивает **Deckhouse**.   
