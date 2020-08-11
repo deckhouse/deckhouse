@@ -60,7 +60,7 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			}
 
 			for name, state := range nodeGroupStates {
-				err := logboek.LogProcess(fmt.Sprintf("🔥 Destroy node %s 🔥", name), log.BoldOptions(), func() error {
+				err := logboek.LogProcess(fmt.Sprintf("🔥 ~ Destroy node %s", name), log.BoldOptions(), func() error {
 					nodeRunner := terraform.NewRunnerFromMetaConfig(step, metaConfig).
 						WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroupName, 0, "")).
 						WithState(state).
@@ -75,8 +75,9 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			}
 		}
 
-		return logboek.LogProcess("🔥 Destroy cluster infrastructure 🔥", log.BoldOptions(), func() error {
+		return logboek.LogProcess("🔥 ~ Destroy cluster infrastructure", log.BoldOptions(), func() error {
 			baseRunner := terraform.NewRunnerFromMetaConfig("base-infrastructure", metaConfig).
+				WithVariables(metaConfig.MarshalConfig()).
 				WithState(clusterState).
 				WithAutoApprove(app.SanityCheck)
 
@@ -95,7 +96,7 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			return err
 		}
 
-		err = logboek.LogProcess("💣 Run Terraform Destroy All 💣",
+		err = logboek.LogProcess("💣 ~ Terraform: Destroy All",
 			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
 
 		if err != nil {

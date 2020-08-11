@@ -19,7 +19,7 @@ func TaskOptions() logboek.LogProcessOptions {
 	return logboek.LogProcessOptions{
 		LevelLogProcessOptions: logboek.LevelLogProcessOptions{
 			Style: &logboek.Style{
-				Attributes: []color.Attribute{color.FgHiBlue, color.Bold},
+				Attributes: []color.Attribute{color.FgBlue, color.Bold},
 			},
 		},
 	}
@@ -50,7 +50,7 @@ func TerraformOptions() logboek.LogProcessOptions {
 	return logboek.LogProcessOptions{
 		LevelLogProcessOptions: logboek.LevelLogProcessOptions{
 			Style: &logboek.Style{
-				Attributes: []color.Attribute{color.FgMagenta, color.Bold},
+				Attributes: []color.Attribute{color.FgGreen, color.Bold},
 			},
 		},
 	}

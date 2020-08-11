@@ -133,7 +133,7 @@ func (r *Runner) WithAutoApprove(autoApprove bool) *Runner {
 }
 
 func (r *Runner) Init() error {
-	return logboek.LogProcess("Terraform Init", log.TerraformOptions(), func() error {
+	return logboek.LogProcess("🌱 ~ Terraform Init", log.TerraformOptions(), func() error {
 		args := []string{
 			"init",
 			"-get-plugins=false",
@@ -149,9 +149,9 @@ func (r *Runner) Init() error {
 }
 
 func (r *Runner) Apply() error {
-	return logboek.LogProcess("Terraform Apply", log.TerraformOptions(), func() error {
+	return logboek.LogProcess("🌱 ~ Terraform Apply", log.TerraformOptions(), func() error {
 		if !r.autoApprove && r.changesInPlan {
-			if !askForConfirmation("Do you want to CHANGE your objects state in cloud?") {
+			if !askForConfirmation("Do you want to CHANGE objects state in the cloud?") {
 				return fmt.Errorf("terraform apply aborted")
 			}
 		}
@@ -179,7 +179,7 @@ func (r *Runner) Apply() error {
 }
 
 func (r *Runner) Plan() error {
-	return logboek.LogProcess("Terraform Plan", log.TerraformOptions(), func() error {
+	return logboek.LogProcess("🌱 ~ Terraform Plan", log.TerraformOptions(), func() error {
 		tmpFile, err := ioutil.TempFile(deckhouseCandiTemporaryDirName, r.step+deckhousePlanSuffix)
 		if err != nil {
 			return fmt.Errorf("can't create temp file for plan: %w", err)
@@ -229,12 +229,12 @@ func (r *Runner) Destroy() error {
 	}
 
 	if !r.autoApprove {
-		if !askForConfirmation("Do you want to DELETE your objects from cloud?") {
+		if !askForConfirmation("Do you want to DELETE objects from the cloud?") {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}
 
-	return logboek.LogProcess("Terraform Destroy", log.TerraformOptions(), func() error {
+	return logboek.LogProcess("🌱 ~ Terraform Destroy", log.TerraformOptions(), func() error {
 		args := []string{
 			"destroy",
 			"-no-color",
@@ -326,7 +326,7 @@ func askForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Println("--------")
+		fmt.Println("~~~~~~~~~~")
 		fmt.Printf("%s [y/n]: ", s)
 
 		line, _, err := reader.ReadLine()
@@ -338,7 +338,7 @@ func askForConfirmation(s string) bool {
 		response := strings.ToLower(strings.TrimSpace(string(line)))
 
 		if response == "y" || response == "yes" {
-			fmt.Println("--------")
+			fmt.Println("~~~~~~~~~~")
 			return true
 		} else if response == "n" || response == "no" {
 			return false

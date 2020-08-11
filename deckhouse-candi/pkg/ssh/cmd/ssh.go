@@ -62,6 +62,8 @@ func (s *Ssh) Cmd() *exec.Cmd {
 		"StrictHostKeyChecking=accept-new",
 		"-o",
 		"UserKnownHostsFile=.ssh_known_hosts",
+		"-o",
+		"ServerAliveInterval=15",
 	}
 
 	if s.Session.ExtraArgs != "" {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/flant/logboek"
@@ -17,13 +18,13 @@ import (
 )
 
 func BootstrapMaster(sshClient *ssh.SshClient, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
-	return logboek.LogProcess("🔨 Run Master Bootstrap 🔨", log.TaskOptions(), func() error {
+	return logboek.LogProcess("🛠️ ~ Run Master Bootstrap", log.TaskOptions(), func() error {
 		if err := template.PrepareBootstrap(controller, nodeIP, bundleName, metaConfig); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
 		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
-			scriptPath := controller.TmpDir + "/bootstrap/" + bootstrapScript
+			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 			err := logboek.LogProcess("Run "+bootstrapScript, log.BoldOptions(), func() error {
 				if _, err := os.Stat(scriptPath); err != nil {
 					if os.IsNotExist(err) {
@@ -51,13 +52,13 @@ func BootstrapMaster(sshClient *ssh.SshClient, bundleName, nodeIP string, metaCo
 }
 
 func PrepareBashibleBundle(bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
-	return logboek.LogProcess("📦 Prepare Bashible Bundle 📦", log.TaskOptions(), func() error {
+	return logboek.LogProcess("📦 ~ Prepare Bashible Bundle", log.TaskOptions(), func() error {
 		return template.PrepareBundle(controller, nodeIP, bundleName, metaConfig)
 	})
 }
 
 func ExecuteBashibleBundle(sshClient *ssh.SshClient, tmpDir string) error {
-	return logboek.LogProcess("🚁 Run Bashible Bundle 🚁", log.TaskOptions(), func() error {
+	return logboek.LogProcess("🚁 ~ Execute Bashible Bundle", log.TaskOptions(), func() error {
 		bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
 		parentDir := tmpDir + "/var/lib"
 		bundleDir := "bashible"
@@ -75,7 +76,7 @@ func ExecuteBashibleBundle(sshClient *ssh.SshClient, tmpDir string) error {
 
 func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
 	var bundleName string
-	err := logboek.LogProcess("🐛 Detect Bashible Bundle 🐛", log.TaskOptions(), func() error {
+	err := logboek.LogProcess("🔍 ~ Detect Bashible Bundle", log.TaskOptions(), func() error {
 		// run detect bundle type
 		detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
 		stdout, err := detectCmd.Execute()
@@ -95,7 +96,7 @@ func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
 }
 
 func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
-	return logboek.LogProcess("🐾 Wait for SSH on master become ready 🐾", log.TaskOptions(), func() error {
+	return logboek.LogProcess("🚥 ~ Wait for SSH on Master become ready", log.TaskOptions(), func() error {
 		err := sshClient.Check().AwaitAvailability()
 		if err != nil {
 			return fmt.Errorf("await master available: %v", err)
@@ -105,7 +106,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
 }
 
 func InstallDeckhouse(kubeCl *kube.KubernetesClient, config *deckhouse.Config, nodeGroupConfig map[string]interface{}) error {
-	return logboek.LogProcess("🍀 Install Deckhouse 🍀", log.TaskOptions(), func() error {
+	return logboek.LogProcess("🐳 ~ Install Deckhouse", log.TaskOptions(), func() error {
 		err := deckhouse.WaitForKubernetesAPI(kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse wait api: %v", err)
@@ -132,7 +133,7 @@ func InstallDeckhouse(kubeCl *kube.KubernetesClient, config *deckhouse.Config, n
 
 func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*kube.KubernetesClient, error) {
 	var kubeCl *kube.KubernetesClient
-	err := logboek.LogProcess("🕸️ Start Kubernetes API proxy 🕸️", log.TaskOptions(), func() error {
+	err := logboek.LogProcess("🚤 ~ Start Kubernetes API proxy", log.TaskOptions(), func() error {
 		kubeCl = kube.NewKubernetesClient().WithSshClient(sshClient)
 		if err := kubeCl.Init(""); err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
@@ -148,8 +149,8 @@ func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*kube.KubernetesClient, 
 const rebootExitCode = 255
 
 func RebootMaster(sshClient *ssh.SshClient) error {
-	return logboek.LogProcess("🌪️ Reboot master 🌪️", log.TaskOptions(), func() error {
-		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().WithSSHArgs("-o", "ServerAliveInterval=15")
+	return logboek.LogProcess("⛺ ~ Reboot Master️", log.TaskOptions(), func() error {
+		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().WithSSHArgs("-o", "ServerAliveCountMax=3")
 		if err := rebootCmd.Run(); err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
 				if ee.ExitCode() == rebootExitCode {

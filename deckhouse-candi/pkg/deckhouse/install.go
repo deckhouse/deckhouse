@@ -322,7 +322,7 @@ func SaveClusterTerraformState(client *kube.KubernetesClient, tfState []byte) er
 }
 
 func WaitForReadiness(client *kube.KubernetesClient, cfg *Config) error {
-	return logboek.LogProcess("Wait for deckhouse readiness", log.BoldOptions(), func() error {
+	return logboek.LogProcess("Wait for Deckhouse readiness", log.BoldOptions(), func() error {
 		// watch for deckhouse pods in namespace become Ready
 		ready := make(chan struct{}, 1)
 
@@ -515,7 +515,7 @@ func WaitForKubernetesAPI(client *kube.KubernetesClient) error {
 
 func GetCloudConfig(client *kube.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
-	err := logboek.LogProcess(fmt.Sprintf("☁️ Get %s cloud config ☁️", nodeGroupName), log.BoldOptions(), func() error {
+	err := logboek.LogProcess(fmt.Sprintf("☁️ ~ Get %s cloud config️", nodeGroupName), log.BoldOptions(), func() error {
 		for i := 1; i <= 45; i++ {
 			secret, err := client.CoreV1().Secrets("d8-cloud-instance-manager").Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
 			if err != nil {
@@ -534,7 +534,7 @@ func GetCloudConfig(client *kube.KubernetesClient, nodeGroupName string) (string
 }
 
 func WaitForNodesBecomeReady(client *kube.KubernetesClient, nodeGroupName string, desiredReadyNodes int) error {
-	return logboek.LogProcess(fmt.Sprintf("💦 Waiting for NodeGroup %s become Ready 💦", nodeGroupName), log.BoldOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("💦 ~ Waiting for NodeGroup %s become Ready", nodeGroupName), log.BoldOptions(), func() error {
 		for i := 1; i <= 100; i++ {
 			nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
 			if err != nil {
@@ -576,7 +576,7 @@ func WaitForNodesBecomeReady(client *kube.KubernetesClient, nodeGroupName string
 }
 
 func WaitForSingleNodeBecomeReady(client *kube.KubernetesClient, nodeName string) error {
-	return logboek.LogProcess(fmt.Sprintf("💦 Waiting for single node %s become Ready 💦", nodeName), log.BoldOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("💦 ~ Waiting for single node %s become Ready", nodeName), log.BoldOptions(), func() error {
 		for i := 1; i <= 100; i++ {
 			node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 			if err != nil {

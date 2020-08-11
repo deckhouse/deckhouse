@@ -43,7 +43,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("📦 Prepare Bashible Bundle 📦",
+		err := logboek.LogProcess("📦 ~ Prepare Bashible Bundle",
 			log.MainProcessOptions(), func() error { return runFunc() })
 
 		if err != nil {
@@ -74,7 +74,7 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("📦 Prepare Kubeadm Config 📦",
+		err := logboek.LogProcess("📦 ~ Prepare Kubeadm Config",
 			log.MainProcessOptions(), func() error { return runFunc() })
 
 		if err != nil {

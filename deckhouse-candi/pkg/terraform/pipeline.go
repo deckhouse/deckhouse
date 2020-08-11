@@ -1,22 +1,36 @@
 package terraform
 
+import (
+	"fmt"
+
+	"github.com/flant/logboek"
+
+	"flant/deckhouse-candi/pkg/log"
+)
+
 func ApplyPipeline(r *Runner, extractFn func(r *Runner) (map[string][]byte, error)) (map[string][]byte, error) {
-	err := r.Init()
-	if err != nil {
-		return nil, err
-	}
+	var extractedData map[string][]byte
+	err := logboek.LogProcess(fmt.Sprintf("🌳 ~ Execute Terraform %s apply pipeline", r.step), log.BoldOptions(), func() error {
+		err := r.Init()
+		if err != nil {
+			return err
+		}
 
-	err = r.Plan()
-	if err != nil {
-		return nil, err
-	}
+		err = r.Plan()
+		if err != nil {
+			return err
+		}
 
-	err = r.Apply()
-	if err != nil {
-		return nil, err
-	}
+		err = r.Apply()
+		if err != nil {
+			return err
+		}
 
-	return extractFn(r)
+		extractedData, err = extractFn(r)
+		return err
+	})
+
+	return extractedData, err
 }
 
 func DestroyPipeline(r *Runner) error {
