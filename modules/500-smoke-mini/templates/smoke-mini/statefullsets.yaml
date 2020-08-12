@@ -11,8 +11,8 @@ metadata:
 {{ include "helm_lib_module_labels" (list $context (dict "app" $.Chart.Name)) | indent 2 }}
   annotations:
     node: {{ $sts.node }}
-    {{- if ne $sts.zone "NONE" }}
-    zone: {{ $sts.zone }}
+    {{- if ne ($sts.zone) "NONE" }}
+    zone: {{ $sts.zone | quote }}
     {{- end }}
 spec:
   replicas: 1
@@ -57,7 +57,7 @@ spec:
         volumeMounts:
           - name: disk
             mountPath: /disk
-    {{- $storageClass := $.Values.smokeMini.internal.effectiveStorageClass }}
+    {{- $storageClass := $sts.effectiveStorageClass }}
     {{- if $storageClass }}
   volumeClaimTemplates:
   - metadata:

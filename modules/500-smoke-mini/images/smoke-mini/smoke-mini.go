@@ -172,13 +172,17 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 			targetServices = append(targetServices[:i], targetServices[i+1:]...)
 		}
 	}
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
 	errorCount := 0
 	for i := 0; i < len(targetServices); i++ {
-		if errorCount < 2 {
-			resp, err := http.Get(fmt.Sprintf("http://smoke-mini-%s/", targetServices[i]))
+		if errorCount <= 2 {
+			resp, err := client.Get(fmt.Sprintf("http://smoke-mini-%s/", targetServices[i]))
 			if err != nil {
 				log.Println(err)
 				errorCount++
+				continue
 			}
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)

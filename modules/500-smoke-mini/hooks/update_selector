@@ -32,13 +32,14 @@ function __config__() {
       labelSelector:
         matchLabels:
           app: smoke-mini
-      executeHookOnEvent: ["Added"]
+      executeHookOnEvent: []
       jqFilter: |
         {
           "node_hostname": (.metadata.annotations | if has("node") then .node else "" end),
           "zone": (.metadata.annotations | if has("zone") then .zone else "NONE" end),
           "sts": .metadata.name[-1:],
-          "image": .spec.template.spec.containers[0].image
+          "image": .spec.template.spec.containers[0].image,
+          "storageClassName": (.spec | if has("volumeClaimTemplates") then .volumeClaimTemplates[] | select(.metadata.name=="disk") | .spec.storageClassName else false end)
         }
     - name: pods
       group: main
@@ -76,6 +77,94 @@ function __config__() {
         {
           "disruptionAllowed": (.status.disruptionsAllowed > 0)
         }
+    - name: default_sc
+      group: main
+      keepFullObjectsInMemory: true
+      queue: /modules/$(module::name::kebab_case)/update_selector
+      apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      jqFilter: |
+        (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
+        (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+
+    # pvc_modified
+    - name: pvc_modified
+      keepFullObjectsInMemory: true
+      queue: /modules/$(module::name::kebab_case)/update_selector_pvc
+      executeHookOnEvent: ["Modified"]
+      executeHookOnSynchronization: false
+      group: pvc_modified
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isDeletionTimestamp": (if .metadata | has("deletionTimestamp") then true else false end)
+        }
+    - name: pods_mod
+      keepFullObjectsInMemory: true
+      queue: /modules/$(module::name::kebab_case)/update_selector_pvc
+      group: pvc_modified
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isPending": (if .status.phase == "Pending" then true else false end)
+        }
+    # pvc_deleted
+    - name: pvc_deleted
+      keepFullObjectsInMemory: true
+      queue: /modules/$(module::name::kebab_case)/update_selector_pvc
+      executeHookOnEvent: ["Deleted"]
+      executeHookOnSynchronization: false
+      group: pvc_deleted
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isDeletionTimestamp": (if .metadata | has("deletionTimestamp") then true else false end)
+        }
+    - name: pods_del
+      group: pvc_deleted
+      keepFullObjectsInMemory: true
+      queue: /modules/$(module::name::kebab_case)/update_selector_pvc
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: ["d8-smoke-mini"]
+      labelSelector:
+        matchLabels:
+          app: smoke-mini
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isPending": (if .status.phase == "Pending" then true else false end)
+        }
     schedule:
     - group: main
       queue: /modules/$(module::name::kebab_case)/update_selector
@@ -83,11 +172,47 @@ function __config__() {
 EOF
 }
 
+function __on_group::pvc_modified() {
+  for i in $(context::jq -r '.snapshots.pvc_modified | keys[]'); do
+    if context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.isDeletionTimestamp' >/dev/null; then
+      pvc_name="$(context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.name')"
+      pod_name="$(echo "$pvc_name" | cut -d- -f2-)"
+      if context::jq -er --arg pod_name "$pod_name" '.snapshots.pods_mod[].filterResult | select(.name == $pod_name)' >/dev/null; then
+        kubernetes::delete_if_exists::non_blocking "d8-smoke-mini" "pod/$pod_name"
+        echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim/$pvc_name is Terminating !!!"
+      fi
+    fi
+  done
+}
+
+function __on_group::pvc_deleted() {
+  for i in $(context::jq -r '.snapshots.pods_del | keys[]'); do
+    if context::jq -er --argjson i "$i" '.snapshots.pods_del[$i].filterResult.isPending' >/dev/null; then
+      pod_name="$(context::get snapshots.pods_del.$i.filterResult.name)"
+      pvc_name="disk-$pod_name"
+      kubernetes::delete_if_exists::non_blocking "d8-smoke-mini" "pod/$pod_name"
+      echo "!!! NOTICE: deleting pod/$pod_name because persistentvolumeclaim/$pvc_name was deleted !!!"
+    fi
+  done
+}
+
 # schedule one sts
 function __on_group::main() {
+  effective_storage_class="false"
+  if context::jq -er '.snapshots.default_sc[] | select(.filterResult == true)' >/dev/null; then
+    effective_storage_class="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
+  fi
+  if values::has --config global.storageClass; then
+    effective_storage_class="$(values::get --config global.storageClass)"
+  fi
+  if values::has --config smokeMini.storageClass; then
+    effective_storage_class="$(values::get --config smokeMini.storageClass)"
+  fi
+
+
   if ! values::has smokeMini.internal.sts.a.image; then
     current_values="$(values::get smokeMini.internal.sts)"
-    values="$(context::jq -rc --argjson current_values "$current_values" '[.snapshots.statefulsets[].filterResult | {(.sts): {"node": .node_hostname, "zone": .zone, "image": .image}}] | reduce .[] as $i ($current_values; . + $i)')"
+    values="$(context::jq -rc --argjson current_values "$current_values" '[.snapshots.statefulsets[].filterResult | {(.sts): {"node": .node_hostname, "zone": .zone, "image": .image, "effectiveStorageClass": (.storageClassName // false)}}] | reduce .[] as $i ($current_values; . + $i)')"
     values::set smokeMini.internal.sts "$values"
   fi
 
@@ -114,6 +239,16 @@ function __on_group::main() {
     done
   fi
 
+  # Otherwise, find sts with not up-to-date storage class
+  if [ -z "$target_sts" ]; then
+    for i in $(context::jq -r '.snapshots.statefulsets | keys[]'); do
+      if context::jq -e --argjson i "$i" --arg effective_storage_class "$effective_storage_class" '.snapshots.statefulsets[$i].filterResult | select(.storageClassName | tostring != $effective_storage_class)' >/dev/null ; then
+        target_sts="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.sts')"
+        break
+      fi
+    done
+  fi
+
   # Otherwise, find sts which was not moved longest time
   if [ -z "$target_sts" ]; then
     # Check that PDB allows us to make a step
@@ -131,6 +266,8 @@ function __on_group::main() {
       return 0
     fi
   fi
+
+  echo "LOG: target_sts: $target_sts"
 
   # Calculate the amount of statefulsets in zones
   zones_map=$(context::jq -r '([.snapshots.nodes[].filterResult.zone] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $zone_map | [.snapshots.statefulsets[].filterResult] | reduce .[] as $i ($zone_map; .[$i.zone] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')
@@ -174,7 +311,19 @@ function __on_group::main() {
   values::set smokeMini.internal.sts.${target_sts}.image "$(values::get global.modulesImages.registry)/smoke-mini/smoke-mini:$(values::get global.modulesImages.tags.smokeMini.smokeMini)"
   if [ "$(values::get smokeMini.internal.sts.${target_sts}.zone)" != "$sts_zone" ] ; then
     kubernetes::delete_if_exists::non_blocking "d8-smoke-mini" "persistentvolumeclaim/disk-smoke-mini-${target_sts}-0"
-    values::set smokeMini.internal.sts.${target_sts}.zone "$sts_zone"
+    echo "!!! NOTICE: zone changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts}-0 !!!"
+    values::set smokeMini.internal.sts.${target_sts}.zone "\"$sts_zone\""
+  fi
+
+  storage_class_from_sts="$(values::get smokeMini.internal.sts.${target_sts}.effectiveStorageClass)"
+  if [ "$storage_class_from_sts" != "$effective_storage_class" ] ; then
+    values::set smokeMini.internal.sts.${target_sts}.effectiveStorageClass "$effective_storage_class"
+    if [ -n "$storage_class_from_sts" ]; then
+      kubernetes::delete_if_exists::non_blocking "d8-smoke-mini" "persistentvolumeclaim/disk-smoke-mini-${target_sts}-0"
+      echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts}-0 !!!"
+      kubernetes::delete_if_exists::non_blocking "d8-smoke-mini" "statefulset/smoke-mini-$target_sts"
+      echo "!!! NOTICE: storage class changed, deleting statefulset/smoke-mini-$target_sts !!!"
+    fi
   fi
 }
 
