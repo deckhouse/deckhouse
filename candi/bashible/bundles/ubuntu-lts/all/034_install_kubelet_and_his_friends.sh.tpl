@@ -12,6 +12,14 @@ kubernetes_version="1.18.4-01"
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}
 
+kubernetes_current_version="$(dpkg -s kubelet | awk '/Version/{print $2}')"
+if grep "^1.15" <<< "$kubernetes_version" >/dev/null && grep "^1.16" <<< "$kubernetes_current_version" >/dev/null; then
+  bb-deckhouse-get-disruptive-update-approval
+fi
+if grep "^1.16" <<< "$kubernetes_version" >/dev/null && grep "^1.15" <<< "$kubernetes_current_version" >/dev/null; then
+  bb-deckhouse-get-disruptive-update-approval
+fi
+
 bb-apt-remove kubeadm
 bb-apt-install "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" kubernetes-cni=0.8.6-00
 
