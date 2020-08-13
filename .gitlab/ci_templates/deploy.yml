@@ -1,0 +1,32 @@
+.base_deploy_template:
+  stage: deploy
+  variables:
+    DESTINATION_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_JOB_NAME}
+    DESTINATION_INSTALL_IMAGE: ${CI_REGISTRY_IMAGE}/install:${CI_JOB_NAME}
+  before_script:
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then
+        SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
+        SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
+      else
+        SOURCE_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_NAME};
+        SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_REF_NAME};
+      fi
+  script:
+    - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
+    - docker image pull $SOURCE_IMAGE
+    - docker image tag $SOURCE_IMAGE $DESTINATION_IMAGE
+    - docker image push $DESTINATION_IMAGE
+    - docker image pull $SOURCE_INSTALL_IMAGE
+    - docker image tag $SOURCE_INSTALL_IMAGE $DESTINATION_INSTALL_IMAGE
+    - docker image push $DESTINATION_INSTALL_IMAGE
+    - docker image rmi $SOURCE_IMAGE
+    - docker image rmi $SOURCE_INSTALL_IMAGE
+  after_script:
+    - docker image rmi $DESTINATION_IMAGE
+    - docker image rmi $DESTINATION_INSTALL_IMAGE
+  dependencies:
+    - "Build Modules Images"
+  when: manual
+  except:
+    - schedules
+

@@ -7,7 +7,7 @@ if [ -f /.kubeadm.checksum ]; then
   fi
 else
   if [ -f /etc/kubernetes/admin.conf ]; then
-    >2& echo "ERROR: Trying to re-bootstrap cluster which was bootstrapped more than 2h ago. To force re-bootstrap: touch /.kubeadm.checksum"
+    >&2 echo "ERROR: Trying to re-bootstrap cluster which was bootstrapped more than 2h ago. To force re-bootstrap: touch /.kubeadm.checksum"
     exit 1
   fi
 fi

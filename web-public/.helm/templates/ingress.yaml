@@ -12,7 +12,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.{{ .Release.Name }}.svc.cluster.local/dex-authenticator/auth
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 {{- else if (eq .Values.global.env "web-early") }}
-    nginx.ingress.kubernetes.io/auth-url: "http://{{ .Chart.Name }}-saml-authenticator.{{ .Chart.Name }}-{{ .Values.global.env }}.svc.cluster.local/saml/auth"
+    nginx.ingress.kubernetes.io/auth-url: "http://{{ .Chart.Name }}-saml-authenticator.{{ .Release.Name }}.svc.cluster.local/saml/auth"
     nginx.ingress.kubernetes.io/auth-signin: "/saml/login"
     nginx.ingress.kubernetes.io/auth-method: "GET"
     nginx.ingress.kubernetes.io/configuration-snippet: |

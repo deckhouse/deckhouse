@@ -4,6 +4,11 @@ set -o pipefail
 set -e
 
 function bp() {
+  # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
+  if [[  "$DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES" == "true" ]]; then
+    pull
+  fi
+
   werf build-and-publish --config modules_images_werf.yaml --stages-storage :local --publish-report-path images_tags_werf.json
 
   jq '
@@ -26,10 +31,19 @@ function bp() {
 }
 
 function cleanup() {
-  >2& echo "Not implemented!"
+  >&2 echo "Not implemented!"
   # TODO
   # Make an empty artifact
   echo "{}" > modules/images_tags.json
+}
+
+function pull() {
+  >&2 echo "Pulling images..."
+  cat $(find modules -name *Dockerfile -o -name *werf.inc.yaml) \
+    | grep -Eo '^(from\:|FROM)\s(\S+)$' \
+    | cut -d ' ' -f2 | tr -d \" \
+    | sort | uniq \
+    | xargs --no-run-if-empty -n 1 docker pull -q
 }
 
 ! read -rd '' HELP_STRING <<"EOF"
@@ -39,7 +53,10 @@ Available subcommands: (for details, modules_images SUBCOMMAND --help)
 
 modules_images bp
 modules_images cleanup
+modules_images pull
 EOF
+
+type jq &>/dev/null || (echo "Please install jq (https://stedolan.github.io/jq/)"; exit 1)
 
 if [[ $# -eq 0 ]] ; then
   echo "$HELP_STRING"
@@ -57,6 +74,8 @@ case "$SUBCOMMAND" in
     bp $@ ;;
   cleanup )
     cleanup $@ ;;
+  pull )
+    pull $@ ;;
   * )
     echo "$HELP_STRING"; exit 1 ;;
 esac
