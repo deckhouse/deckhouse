@@ -1,0 +1,74 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: main
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      queue: /modules/$(module::name::kebab_case)/update_approval
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+      jqFilter: |
+          {
+            "name": .metadata.name,
+            "isUnschedulable": (.spec.unschedulable // false),
+            "isReady": (if .status.conditions then .status.conditions[] | select(.type == "Ready") | .status == "True" else false end),
+            "isWaitingForApproval": (if .metadata.annotations | has("control-plane-manger.deckhouse.io/waiting-for-approval") then true else false end),
+            "isApproved": (if .metadata.annotations | has("control-plane-manger.deckhouse.io/approved") then true else false end)
+          }
+    - name: control_plane_manager
+      group: main
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      queue: /modules/$(module::name::kebab_case)/update_approval
+      apiVersion: v1
+      kind: Pod
+      labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - d8-control-plane-manager
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isReady": (if .status.conditions then .status.conditions[] | select(.type == "Ready") | .status == "True" else false end),
+          "nodeName": (.spec.nodeName // false)
+        }
+EOF
+}
+
+function __on_group::main() {
+  # Remove approved annotations if pod is ready and node has annotation
+  for node_name in $(context::jq -r '.snapshots.control_plane_manager[].filterResult | select(.isReady == true and .nodeName != false) | .nodeName'); do
+    if context::jq -e --arg node_name "$node_name" '.snapshots.nodes[].filterResult | select(.name == $node_name and .isApproved == true)' >/dev/null; then
+      kubernetes::patch_jq "" "node/${node_name}" 'del(.metadata.annotations."control-plane-manger.deckhouse.io/approved")'
+      return 0
+    fi
+  done
+
+  # Skip, if already has approved nodes
+  if context::jq -e '[.snapshots.nodes[].filterResult | select(.isApproved == true)] | any' >/dev/null; then
+    return 0
+  fi
+
+  # Approve one node
+  if approved_node_name="$(context::jq -er '[.snapshots.nodes[].filterResult | select(.isWaitingForApproval == true and .isReady == true and .isUnschedulable == false)] | first.name')"; then
+    kubernetes::patch_jq "" "node/${approved_node_name}" '.metadata.annotations."control-plane-manger.deckhouse.io/approved" = "" |
+                                                          del(.metadata.annotations."control-plane-manger.deckhouse.io/waiting-for-approval")'
+  fi
+}
+
+hook::run "$@"
