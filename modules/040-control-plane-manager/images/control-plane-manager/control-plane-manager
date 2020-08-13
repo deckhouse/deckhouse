@@ -6,6 +6,58 @@ set -Eeuo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
 
+MAX_RETRIES=42
+
+>&2 echo "Setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node..."
+attempt=0
+until
+  node_data="$(
+    kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+    {
+      "resourceVersion": .metadata.resourceVersion,
+      "isApproved": (.metadata.annotations | has("control-plane-manger.deckhouse.io/approved")),
+      "isWaitingForApproval": (.metadata.annotations | has("control-plane-manger.deckhouse.io/waiting-for-approval"))
+    }
+  ')" &&
+   jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
+do
+  attempt=$(( attempt + 1 ))
+  if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+    >&2 echo "ERROR: Can't set control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node."
+    exit 1
+  fi
+  kubectl \
+    --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
+    --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+    control-plane-manger.deckhouse.io/waiting-for-approval= || { echo "Retry setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
+done
+
+>&2 echo "Waiting for control-plane-manger.deckhouse.io/approved= annotation on our Node..."
+attempt=0
+until
+  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+  jq -e '.metadata.annotations | has("control-plane-manger.deckhouse.io/approved")' >/dev/null
+do
+  attempt=$(( attempt + 1 ))
+  if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+    >&2 echo "ERROR: Can't get annotation 'control-plane-manger.deckhouse.io/approved' from our Node."
+    exit 1
+  fi
+  echo "Waiting for approval to start:"
+  echo "Retry in 10sec..."
+  sleep 10
+done
+
+>&2 echo "Waiting for all image-holder containers will be ready..."
+until
+  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-system get po ${MY_POD_NAME} -o json | \
+  jq -e '.status.containerStatuses | [ .[] | select(.name != "control-plane-manager").ready] | all == true' >/dev/null
+do
+  echo "Waiting for all image-holder containers will be ready..."
+  echo "Retry in 10sec..."
+  sleep 10
+done
+
 # Base env
 CLUSTER_PKI_DIR=/pki
 CONFIG_DIR=/config
@@ -321,7 +373,6 @@ END
   echo
 }
 
-sleep 60
 etcd_manifest_path="/etc/kubernetes/manifests/etcd.yaml"
 if [ -f "${etcd_manifest_path}" ] ; then
   etcd_advertise_address="$(grep -Po '(?<=--advertise-client-urls=https://).+(?=:2379)' "$etcd_manifest_path")"

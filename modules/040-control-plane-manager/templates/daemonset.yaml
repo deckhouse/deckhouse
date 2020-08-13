@@ -117,6 +117,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: KUBERNETES_VERSION
           value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
         readinessProbe:
