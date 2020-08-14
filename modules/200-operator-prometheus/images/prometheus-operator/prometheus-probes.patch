@@ -1,0 +1,49 @@
+--- a/pkg/prometheus/statefulset.go	2020-08-14 15:06:35.572400372 +0300
++++ b/pkg/prometheus/statefulset.go	2020-08-13 20:03:47.204359852 +0300
+@@ -573,7 +573,7 @@
+ 		fmt.Sprintf("--config-envsubst-file=%s", path.Join(confOutDir, configEnvsubstFilename)),
+ 	}
+
+-	const localProbe = `if [ -x "$(command -v curl)" ]; then curl %s; elif [ -x "$(command -v wget)" ]; then wget -q -O /dev/null %s; else exit 1; fi`
++	const localProbe = `if [ -x "$(command -v curl)" ]; then curl --connect-timeout %d %s; elif [ -x "$(command -v wget)" ]; then wget -T %d -q -O /dev/null %s; else exit 1; fi`
+
+ 	var livenessProbeHandler v1.Handler
+ 	var readinessProbeHandler v1.Handler
+@@ -587,7 +587,7 @@
+ 					Command: []string{
+ 						"sh",
+ 						"-c",
+-						fmt.Sprintf(localProbe, localHealthyPath, localHealthyPath),
++						fmt.Sprintf(localProbe, probeTimeoutSeconds, localHealthyPath, probeTimeoutSeconds, localHealthyPath),
+ 					},
+ 				}
+ 			} else {
+@@ -605,7 +605,7 @@
+ 					Command: []string{
+ 						"sh",
+ 						"-c",
+-						fmt.Sprintf(localProbe, localReadyPath, localReadyPath),
++						fmt.Sprintf(localProbe, probeTimeoutSeconds, localReadyPath, probeTimeoutSeconds, localReadyPath),
+ 					},
+ 				}
+
+--- a/pkg/prometheus/statefulset_test.go	2020-08-14 15:06:59.828337362 +0300
++++ b/pkg/prometheus/statefulset_test.go	2020-08-13 20:31:54.778146581 +0300
+@@ -426,7 +426,7 @@
+ 				Command: []string{
+ 					`sh`,
+ 					`-c`,
+-					`if [ -x "$(command -v curl)" ]; then curl http://localhost:9090/-/ready; elif [ -x "$(command -v wget)" ]; then wget -q -O /dev/null http://localhost:9090/-/ready; else exit 1; fi`,
++					`if [ -x "$(command -v curl)" ]; then curl --connect-timeout 3 http://localhost:9090/-/ready; elif [ -x "$(command -v wget)" ]; then wget -T 3 -q -O /dev/null http://localhost:9090/-/ready; else exit 1; fi`,
+ 				},
+ 			},
+ 		},
+@@ -445,7 +445,7 @@
+ 				Command: []string{
+ 					`sh`,
+ 					`-c`,
+-					`if [ -x "$(command -v curl)" ]; then curl http://localhost:9090/-/healthy; elif [ -x "$(command -v wget)" ]; then wget -q -O /dev/null http://localhost:9090/-/healthy; else exit 1; fi`,
++					`if [ -x "$(command -v curl)" ]; then curl --connect-timeout 3 http://localhost:9090/-/healthy; elif [ -x "$(command -v wget)" ]; then wget -T 3 -q -O /dev/null http://localhost:9090/-/healthy; else exit 1; fi`,
+ 				},
+ 			},
+ 		},
