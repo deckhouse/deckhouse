@@ -12,12 +12,14 @@ kubernetes_version="1.18.4-01"
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}
 
-kubernetes_current_version="$(dpkg -s kubelet | awk '/Version/{print $2}')"
-if grep "^1.15" <<< "$kubernetes_version" >/dev/null && grep "^1.16" <<< "$kubernetes_current_version" >/dev/null; then
-  bb-deckhouse-get-disruptive-update-approval
-fi
-if grep "^1.16" <<< "$kubernetes_version" >/dev/null && grep "^1.15" <<< "$kubernetes_current_version" >/dev/null; then
-  bb-deckhouse-get-disruptive-update-approval
+if dpkg -S kubelet >/dev/null 2>&1; then
+  kubernetes_current_version="$(dpkg -s kubelet | awk '/Version/{print $2}')"
+  if grep "^1.15" <<< "$kubernetes_version" >/dev/null && grep "^1.16" <<< "$kubernetes_current_version" >/dev/null; then
+    bb-deckhouse-get-disruptive-update-approval
+  fi
+  if grep "^1.16" <<< "$kubernetes_version" >/dev/null && grep "^1.15" <<< "$kubernetes_current_version" >/dev/null; then
+    bb-deckhouse-get-disruptive-update-approval
+  fi
 fi
 
 bb-apt-remove kubeadm
