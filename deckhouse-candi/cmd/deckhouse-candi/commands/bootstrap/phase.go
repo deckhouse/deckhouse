@@ -8,11 +8,12 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
-	"flant/deckhouse-candi/pkg/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/resources"
 	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/ssh"
-	"flant/deckhouse-candi/pkg/task"
+	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/template"
 )
 
@@ -51,14 +52,14 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
 		}
 
-		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
-		if err := task.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
+		if err := commands.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
 			return err
 		}
 		return nil
@@ -100,10 +101,10 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		bundleName, err := task.DetermineBundleName(sshClient)
+		bundleName, err := commands.DetermineBundleName(sshClient)
 		if err != nil {
 			return err
 		}
@@ -111,16 +112,16 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 		templateController := template.NewTemplateController("")
 		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
-		if err := task.BootstrapMaster(sshClient, bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
+		if err := commands.BootstrapMaster(sshClient, bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
 			return err
 		}
-		if err = task.PrepareBashibleBundle(bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
+		if err = commands.PrepareBashibleBundle(bundleName, app.InternalNodeIP, "", metaConfig, templateController); err != nil {
 			return err
 		}
-		if err := task.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
+		if err := commands.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
 			return err
 		}
-		if err := task.RebootMaster(sshClient); err != nil {
+		if err := commands.RebootMaster(sshClient); err != nil {
 			return err
 		}
 		return nil
@@ -156,29 +157,29 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineResourcesFlags(cmd)
 
 	runFunc := func(sshClient *ssh.SshClient) error {
-		var resources *config.Resources
+		var resourcesToCreate *config.Resources
 		if app.ResourcesPath != "" {
 			parsedResources, err := config.ParseResources(app.ResourcesPath)
 			if err != nil {
 				return err
 			}
 
-			resources = parsedResources
+			resourcesToCreate = parsedResources
 		}
 
-		if resources == nil {
+		if resourcesToCreate == nil {
 			return nil
 		}
 
-		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
 
-		return deckhouse.CreateResourcesLoop(kubeCl, resources)
+		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

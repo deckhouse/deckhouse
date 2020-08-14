@@ -10,7 +10,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
-	"flant/deckhouse-candi/pkg/ssh"
+	"flant/deckhouse-candi/pkg/system/ssh"
 )
 
 func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {

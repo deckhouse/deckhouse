@@ -11,7 +11,7 @@ import (
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands"
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands/bootstrap"
 	"flant/deckhouse-candi/pkg/app"
-	"flant/deckhouse-candi/pkg/process"
+	"flant/deckhouse-candi/pkg/system/process"
 	"flant/deckhouse-candi/pkg/util/signal"
 )
 

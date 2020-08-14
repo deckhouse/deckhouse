@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"flant/deckhouse-candi/pkg/kube"
+	"flant/deckhouse-candi/pkg/kubernetes/client"
 	"flant/deckhouse-candi/pkg/util/retry"
 )
 
@@ -31,7 +31,7 @@ func ParseConfig(path string) (*MetaConfig, error) {
 	return ParseConfigFromData(string(fileContent))
 }
 
-func ParseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) {
+func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
@@ -45,7 +45,7 @@ func ParseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) 
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) {
+func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	metaConfig := MetaConfig{}
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-cluster-configuration", metav1.GetOptions{})

@@ -39,6 +39,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			templateData,
 			strings.ToLower(templateData["provider"].(string)),
 			templateData["bundle"].(string),
+			"",
 		)
 	}
 

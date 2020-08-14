@@ -33,7 +33,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	})
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, bundleName string, metaConfig *config.MetaConfig) error {
+func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
 	kubeadmData := metaConfig.MarshalConfigForKubeadmTemplates(nodeIP)
 	logTemplatesData("kubeadm", kubeadmData)
 
@@ -41,7 +41,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName string, me
 	logTemplatesData("bashible", bashibleData)
 
 	return logboek.LogProcess("Render bashible bundle templates", log.BoldOptions(), func() error {
-		if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName); err != nil {
+		if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
 			return err
 		}
 
@@ -55,7 +55,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName string, me
 	})
 }
 
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle string) error {
+func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
 	dataWithoutNodeGroup := withoutNodeGroup(templateData)
 	getDataForStep := func(step string) map[string]interface{} {
 		if step != "node-group" {
@@ -109,6 +109,12 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		return err
 	}
 
+	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
+	logboek.LogInfoF("Create %q\n", devicePathFile)
+	if err := createFileWithContent(devicePathFile, devicePath); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -134,13 +140,24 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	return nil
 }
 
-func createEmptyFile(path string) error {
+func createFileWithContent(path, content string) error {
 	newFile, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("create empty file %s: %v", path, err)
+		return fmt.Errorf("create file %s: %v", path, err)
 	}
-	_ = newFile.Close()
+	defer newFile.Close()
+
+	if content != "" {
+		_, err = newFile.WriteString(content)
+		if err != nil {
+			return fmt.Errorf("create file with content %s: %v", path, err)
+		}
+	}
 	return nil
+}
+
+func createEmptyFile(path string) error {
+	return createFileWithContent(path, "")
 }
 
 func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {

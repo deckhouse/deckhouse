@@ -8,11 +8,11 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
-	"flant/deckhouse-candi/pkg/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
 	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/ssh"
-	"flant/deckhouse-candi/pkg/task"
+	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/terraform"
 )
 
@@ -34,21 +34,21 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			return err
 		}
 
-		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
 
-		kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
 
-		nodesState, err := deckhouse.GetNodesStateFromCluster(kubeCl)
+		nodesState, err := converge.GetNodesStateFromCluster(kubeCl)
 		if err != nil {
 			return err
 		}
 
-		clusterState, err := deckhouse.GetClusterStateFromCluster(kubeCl)
+		clusterState, err := converge.GetClusterStateFromCluster(kubeCl)
 		if err != nil {
 			return err
 		}

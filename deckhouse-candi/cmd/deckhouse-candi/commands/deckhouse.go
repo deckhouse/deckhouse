@@ -10,10 +10,10 @@ import (
 
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
-	"flant/deckhouse-candi/pkg/deckhouse"
-	"flant/deckhouse-candi/pkg/kube"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/client"
 	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/ssh"
+	"flant/deckhouse-candi/pkg/system/ssh"
 )
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -34,7 +34,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		}
 
 		err = logboek.LogProcess("☠️ ~ Remove Deckhouse️", log.TaskOptions(), func() error {
-			kubeCl := kube.NewKubernetesClient().WithSSHClient(sshCl)
+			kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
 			// auto init
 			err = kubeCl.Init("")
 			if err != nil {
@@ -117,7 +117,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		}
 
 		err = logboek.LogProcess("🛥️ ~ Create Deckhouse Deployment", log.TaskOptions(), func() error {
-			kubeCl := kube.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 			if err := kubeCl.Init(""); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
