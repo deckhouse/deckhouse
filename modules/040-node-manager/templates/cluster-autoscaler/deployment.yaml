@@ -75,12 +75,15 @@ spec:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager
         livenessProbe:
-          failureThreshold: 8
-          httpGet:
-            host: 127.0.0.1
-            path: /health-check
-            port: 8085
-            scheme: HTTP
+          exec:
+            command:
+            - sh
+            - -c
+            - wget -T 3 -q -O /dev/null http://127.0.0.1:8085/health-check
+          failureThreshold: 6
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
         resources:
           limits:
             cpu: 150m
