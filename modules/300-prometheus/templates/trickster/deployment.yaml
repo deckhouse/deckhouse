@@ -45,9 +45,12 @@ spec:
         - mountPath: /etc/trickster/trickster.conf
           name: trickster-config
           subPath: trickster.conf
+        - mountPath: /etc/trickster/ssl/
+          name: prometheus-api-client-tls
+          readOnly: true
         livenessProbe:
           httpGet:
-            path: /trickster/trickster/ping
+            path: /trickster/trickster/health/main
             port: 443
             scheme: HTTPS
         readinessProbe:
@@ -99,15 +102,6 @@ spec:
                   resource: deployments
                   subresource: prometheus-metrics
                   name: trickster
-      - name: outgoing-nginx
-        image: {{ $.Values.global.modulesImages.registry }}/common/nginx:{{ $.Values.global.modulesImages.tags.common.nginx }}
-        volumeMounts:
-        - mountPath: /etc/nginx/nginx.conf
-          name: trickster-config
-          subPath: outgoing-nginx.conf
-        - mountPath: /etc/nginx/ssl/
-          name: prometheus-api-client-tls
-          readOnly: true
       volumes:
       - name: trickster-config
         configMap:
