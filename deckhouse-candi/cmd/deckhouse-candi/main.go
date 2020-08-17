@@ -47,6 +47,7 @@ func main() {
 	{
 		bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
 		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
+		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
 	}
 
 	// converge

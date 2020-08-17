@@ -35,7 +35,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			return err
 		}
 
-		kubeCl := kube.NewKubernetesClient().WithSshClient(sshCl)
+		kubeCl := kube.NewKubernetesClient().WithSSHClient(sshCl)
 		// auto init
 		err = kubeCl.Init("")
 		if err != nil {
@@ -96,7 +96,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		}
 
 		err = logboek.LogProcess("🛥️ ~ Wait for Deckhouse to become ready 🛥️", log.TaskOptions(), func() error {
-			kubeCl := kube.NewKubernetesClient().WithSshClient(sshCl)
+			kubeCl := kube.NewKubernetesClient().WithSSHClient(sshCl)
 			// auto init
 			err = kubeCl.Init("")
 			if err != nil {
