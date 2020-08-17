@@ -17,83 +17,34 @@ data:
       [origins]
         [origins.main]
           origin_type = 'prometheus'
-          origin_url = 'http://127.0.0.1:9090'
+    {{- if (include "helm_lib_ha_enabled" .) }}
+          origin_url = 'https://prometheus-affinitive.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
+    {{- else }}
+          origin_url = 'https://prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
+    {{- end }}
           max_value_age_secs = {{ mul .Values.prometheus.retentionDays 86400 }}
           fast_forward_disable = false
           default_step = 30
 
+            [origins.main.tls]
+              insecure_skip_verify = true
+              client_cert_path = '/etc/trickster/ssl/tls.crt'
+              client_key_path = '/etc/trickster/ssl/tls.key'
+
         [origins.longterm]
           origin_type = 'prometheus'
-          origin_url = 'http://127.0.0.1:9091'
+          origin_url = 'https://prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
           max_value_age_secs = {{ mul .Values.prometheus.longtermRetentionDays 86400 }}
           fast_forward_disable = false
           default_step = 300
+
+            [origins.longterm.tls]
+              insecure_skip_verify = true
+              client_cert_path = '/etc/trickster/ssl/tls.crt'
+              client_key_path = '/etc/trickster/ssl/tls.key'
 
       [metrics]
         listen_port = 8001
         listen_address = "127.0.0.1"
       [logging]
         log_level = 'info'
-  outgoing-nginx.conf: |
-    user nginx;
-    worker_processes 1;
-    error_log /dev/stderr warn;
-
-    events {
-      worker_connections 1000;
-    }
-
-    http {
-      log_format json_combined escape=json
-        '{'
-          '"time_local":"$time_local",'
-          '"remote_addr":"$remote_addr",'
-          '"remote_user":"$remote_user",'
-          '"request":"$request",'
-          '"status": "$status",'
-          '"body_bytes_sent":"$body_bytes_sent",'
-          '"request_time":"$request_time",'
-          '"http_referrer":"$http_referer",'
-          '"http_user_agent":"$http_user_agent"'
-        '}';
-
-      access_log /dev/stdout json_combined;
-
-      resolver {{ .Values.global.discovery.clusterDNSAddress }};
-
-      server {
-        server_name 127.0.0.1;
-        listen 127.0.0.1:9090;
-
-        large_client_header_buffers 4 32k;
-
-        location / {
-        {{- if (include "helm_lib_ha_enabled" .) }}
-          set                           $backend "https://prometheus-affinitive.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090";
-        {{- else }}
-          set                           $backend "https://prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090";
-        {{- end }}
-          proxy_pass                    $backend;
-          proxy_ssl_certificate         /etc/nginx/ssl/tls.crt;
-          proxy_ssl_certificate_key     /etc/nginx/ssl/tls.key;
-          proxy_ssl_protocols           TLSv1.2;
-          proxy_ssl_session_reuse       on;
-        }
-      }
-
-      server {
-        server_name 127.0.0.1;
-        listen 127.0.0.1:9091;
-
-        large_client_header_buffers 4 32k;
-
-        location / {
-          set                           $backend "https://prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090";
-          proxy_pass                    $backend;
-          proxy_ssl_certificate         /etc/nginx/ssl/tls.crt;
-          proxy_ssl_certificate_key     /etc/nginx/ssl/tls.key;
-          proxy_ssl_protocols           TLSv1.2;
-          proxy_ssl_session_reuse       on;
-        }
-      }
-    }
