@@ -148,3 +148,58 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 
 	return cmd
 }
+
+func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("create-resources", "Create resources in Kubernetes cluster.")
+	app.DefineSshFlags(cmd)
+	app.DefineBecomeFlags(cmd)
+	app.DefineResourcesFlags(cmd)
+
+	runFunc := func(sshClient *ssh.SshClient) error {
+		var resources *config.Resources
+		if app.ResourcesPath != "" {
+			parsedResources, err := config.ParseResources(app.ResourcesPath)
+			if err != nil {
+				return err
+			}
+
+			resources = parsedResources
+		}
+
+		if resources == nil {
+			return nil
+		}
+
+		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+			return err
+		}
+		kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+		if err != nil {
+			return err
+		}
+
+		return deckhouse.CreateResourcesLoop(kubeCl, resources)
+	}
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
+		}
+
+		err = app.AskBecomePassword()
+		if err != nil {
+			return err
+		}
+
+		err = logboek.LogProcess("⛵ ~ Bootstrap Phase: Create resources",
+			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
+		if err != nil {
+			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			os.Exit(1)
+		}
+		return nil
+	})
+
+	return cmd
+}

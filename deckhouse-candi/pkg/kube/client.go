@@ -29,7 +29,7 @@ func NewFakeKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{KubernetesClient: sh_kube.NewFakeKubernetesClient()}
 }
 
-func (k *KubernetesClient) WithSshClient(client *ssh.SshClient) *KubernetesClient {
+func (k *KubernetesClient) WithSSHClient(client *ssh.SshClient) *KubernetesClient {
 	k.SshClient = client
 	return k
 }

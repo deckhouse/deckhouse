@@ -37,6 +37,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
+	app.DefineResourcesFlags(cmd)
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
@@ -45,6 +46,16 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
 		if err != nil {
 			return err
+		}
+
+		var resources *config.Resources
+		if app.ResourcesPath != "" {
+			parsedResources, err := config.ParseResources(app.ResourcesPath)
+			if err != nil {
+				return err
+			}
+
+			resources = parsedResources
 		}
 
 		deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
@@ -157,6 +168,16 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		}
+
+		if resources != nil {
+			err = logboek.LogProcess("⛴️ ~ Create Resources", log.TaskOptions(), func() error {
+				return deckhouse.CreateResourcesLoop(kubeCl, resources)
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	}
 

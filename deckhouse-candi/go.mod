@@ -24,6 +24,7 @@ require (
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.17.0
+	k8s.io/apiextensions-apiserver v0.17.0
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v0.17.0
 	sigs.k8s.io/yaml v1.1.1-0.20191128155103-745ef44e09d6

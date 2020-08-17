@@ -19,6 +19,7 @@ import (
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kube"
 	"flant/deckhouse-candi/pkg/log"
+	"flant/deckhouse-candi/pkg/util/retry"
 )
 
 type Config struct {
@@ -36,6 +37,16 @@ type Config struct {
 	DeckhouseConfig       map[string]interface{}
 }
 
+func (c *Config) GetImage() string {
+	registryNameTemplate := "%s/dev:%s"
+	tag := c.DevBranch
+	if c.ReleaseChannel != "" {
+		registryNameTemplate = "%s:%s"
+		tag = strcase.ToKebab(c.ReleaseChannel)
+	}
+	return fmt.Sprintf(registryNameTemplate, c.Registry, tag)
+}
+
 func (c *Config) IsRegistryAccessRequired() bool {
 	return c.DockerCfg != ""
 }
@@ -48,11 +59,6 @@ type createManifestTask struct {
 }
 
 func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error {
-	image := cfg.Registry + ":" + strcase.ToKebab(cfg.ReleaseChannel)
-	if cfg.ReleaseChannel == "" {
-		image = cfg.Registry + "/dev:" + cfg.DevBranch
-	}
-
 	tasks := []createManifestTask{
 		{
 			name:     `Namespace "d8-system"`,
@@ -200,7 +206,7 @@ func CreateDeckhouseManifests(client *kube.KubernetesClient, cfg *Config) error 
 		name: `Deployment "deckhouse"`,
 		manifest: func() interface{} {
 			return generateDeckhouseDeployment(
-				image, cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired(),
+				cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired(),
 			)
 		},
 		createTask: func(manifest interface{}) error {
@@ -246,87 +252,51 @@ func runTask(task createManifestTask) error {
 
 func SaveNodeTerraformState(client *kube.KubernetesClient, nodeName, nodeGroup string, tfState []byte) error {
 	getManifest := func() interface{} { return generateSecretWithNodeTerraformState(nodeName, nodeGroup, tfState) }
-	return logboek.LogProcess(fmt.Sprintf("Waiting for saving terraform state for node %s", nodeName), log.BoldOptions(), func() error {
-		for i := 1; i <= 45; i++ {
-			err := runTask(createManifestTask{
-				name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-				manifest: getManifest,
-				createTask: func(manifest interface{}) error {
-					_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
-					return err
-				},
-				updateTask: func(manifest interface{}) error {
-					_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
-					return err
-				},
-			})
-			if err == nil {
-				logboek.LogInfoLn("Success!")
-				return nil
-			}
-
-			logboek.LogInfoF("[Attempt #%v of 45] Waiting for saving terraform state failed, retry in 10s\n", i)
-			logboek.LogWarnF("%v\n\n", err)
-
-			time.Sleep(10 * time.Second)
-		}
-		return fmt.Errorf("timeout waiting for saving terraform state")
+	return retry.StartLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10, func() error {
+		return runTask(createManifestTask{
+			name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+			manifest: getManifest,
+			createTask: func(manifest interface{}) error {
+				_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				return err
+			},
+			updateTask: func(manifest interface{}) error {
+				_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+				return err
+			},
+		})
 	})
 }
 
 func DeleteTerraformState(client *kube.KubernetesClient, secretName string) error {
-	return logboek.LogProcess(fmt.Sprintf("Waiting for deleting terraform state %s", secretName), log.BoldOptions(), func() error {
-		for i := 1; i <= 45; i++ {
-			err := client.CoreV1().Secrets("d8-system").Delete(secretName, &metav1.DeleteOptions{})
-			if err == nil {
-				logboek.LogInfoLn("Success!")
-				return nil
-			}
-
-			logboek.LogInfoF("[Attempt #%v of 45] Waiting for deleting terraform state failed, retry in 10s\n", i)
-			logboek.LogWarnF("%v\n\n", err)
-
-			time.Sleep(10 * time.Second)
-		}
-		return fmt.Errorf("timeout waiting for saving terraform state")
+	return retry.StartLoop(fmt.Sprintf("Save Terraform %q", secretName), 45, 10, func() error {
+		return client.CoreV1().Secrets("d8-system").Delete(secretName, &metav1.DeleteOptions{})
 	})
 }
 
 func SaveClusterTerraformState(client *kube.KubernetesClient, tfState []byte) error {
-	return logboek.LogProcess("Waiting for saving cluster terraform state", log.BoldOptions(), func() error {
-		for i := 1; i <= 45; i++ {
-			err := runTask(createManifestTask{
-				name:     `Secret "d8-cluster-terraform-state"`,
-				manifest: func() interface{} { return generateSecretWithTerraformState(tfState) },
-				createTask: func(manifest interface{}) error {
-					_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
-					return err
-				},
-				updateTask: func(manifest interface{}) error {
-					_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
-					return err
-				},
-			})
-			if err == nil {
-				logboek.LogInfoLn("Success!")
-				return nil
-			}
-
-			logboek.LogInfoF("[Attempt #%v of 45] Waiting for saving terraform state failed, retry in 10s\n", i)
-			logboek.LogWarnF("%v\n\n", err)
-
-			time.Sleep(10 * time.Second)
-		}
-		return fmt.Errorf("timeout waiting for saving terraform state")
+	return retry.StartLoop("Save Cluster Terraform state", 45, 10, func() error {
+		return runTask(createManifestTask{
+			name:     `Secret "d8-cluster-terraform-state"`,
+			manifest: func() interface{} { return generateSecretWithTerraformState(tfState) },
+			createTask: func(manifest interface{}) error {
+				_, err := client.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				return err
+			},
+			updateTask: func(manifest interface{}) error {
+				_, err := client.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+				return err
+			},
+		})
 	})
 }
 
 func WaitForReadiness(client *kube.KubernetesClient, cfg *Config) error {
-	return logboek.LogProcess("Wait for Deckhouse readiness", log.BoldOptions(), func() error {
+	return logboek.LogProcess("Waiting for Deckhouse readiness", log.BoldOptions(), func() error {
 		// watch for deckhouse pods in namespace become Ready
 		ready := make(chan struct{}, 1)
 
-		informer := kube.NewDeploymentInformer(client, context.Background())
+		informer := kube.NewDeploymentInformer(context.Background(), client)
 		informer.Namespace = "d8-system"
 		informer.FieldSelector = "metadata.name=deckhouse"
 
@@ -405,18 +375,11 @@ func DeleteDeckhouseDeployment(client *kube.KubernetesClient) error {
 }
 
 func CreateDeckhouseDeployment(client *kube.KubernetesClient, cfg *Config) error {
-	image := cfg.Registry + ":" + strcase.ToKebab(cfg.ReleaseChannel)
-	if cfg.ReleaseChannel == "" {
-		image = cfg.Registry + "/dev:" + cfg.DevBranch
-	}
-
 	tasks := []createManifestTask{
 		{
 			name: `Deployment "deckhouse"`,
 			manifest: func() interface{} {
-				return generateDeckhouseDeployment(
-					image, cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired(),
-				)
+				return generateDeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
 			},
 			createTask: func(manifest interface{}) error {
 				_, err := client.AppsV1().Deployments("d8-system").Create(manifest.(*appsv1.Deployment))
@@ -453,171 +416,123 @@ func CreateDeckhouseDeployment(client *kube.KubernetesClient, cfg *Config) error
 }
 
 func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
-	image := cfg.Registry + ":" + strcase.ToKebab(cfg.ReleaseChannel)
-	if cfg.ReleaseChannel == "" {
-		image = cfg.Registry + "/dev:" + cfg.DevBranch
-	}
-
-	return generateDeckhouseDeployment(
-		image, cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired(),
-	)
+	return generateDeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
 }
 
 func CreateNodeGroup(client *kube.KubernetesClient, nodeGroupName string, data map[string]interface{}) error {
-	return logboek.LogProcess("Create NodeGroup "+nodeGroupName, log.BoldOptions(), func() error {
-		doc := unstructured.Unstructured{}
-		doc.SetUnstructuredContent(data)
+	doc := unstructured.Unstructured{}
+	doc.SetUnstructuredContent(data)
 
-		resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
+	resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
 
-		for i := 1; i <= 45; i++ {
-			res, err := client.Dynamic().Resource(resourceSchema).Create(&doc, metav1.CreateOptions{})
-			if err == nil {
-				logboek.LogInfoF("NodeGroup %q created\n", res.GetName())
-				return nil
-			}
-
-			if errors.IsAlreadyExists(err) {
-				logboek.LogInfoF("Object %v, updating...", err)
-				_, err := client.Dynamic().Resource(resourceSchema).Update(&doc, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				logboek.LogInfoLn("OK!")
-				return nil
-			}
-
-			logboek.LogInfoF("[Attempt #%v of 45] Waiting for NodeGroup to be created, next attempt in 15s\n", i)
-			logboek.LogWarnF("%v\n\n", err)
-
-			time.Sleep(15 * time.Second)
+	return retry.StartLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15, func() error {
+		res, err := client.Dynamic().Resource(resourceSchema).Create(&doc, metav1.CreateOptions{})
+		if err == nil {
+			logboek.LogInfoF("NodeGroup %q created\n", res.GetName())
+			return nil
 		}
-		return fmt.Errorf("failed waiting for NodeGroup")
+
+		if errors.IsAlreadyExists(err) {
+			logboek.LogInfoF("Object %v, updating...", err)
+			_, err := client.Dynamic().Resource(resourceSchema).Update(&doc, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			logboek.LogInfoLn("OK!")
+		}
+		return nil
 	})
 }
 
 func WaitForKubernetesAPI(client *kube.KubernetesClient) error {
-	return logboek.LogProcess("Wait for Kubernetes API to become ready", log.BoldOptions(), func() error {
-		for i := 1; i <= 45; i++ {
-			_, err := client.CoreV1().Namespaces().Get("kube-system", metav1.GetOptions{})
-			if err == nil {
-				logboek.LogInfoLn("Kubernetes API ready")
-				return nil
-			}
-
-			logboek.LogInfoF("[Attempt #%v of 45] Waiting for Kubernetes API to become ready, next attempt in 5s\n", i)
-			logboek.LogInfoF("%v\n\n", err)
-			time.Sleep(5 * time.Second)
+	return retry.StartLoop("Waiting for Kubernetes API to become Ready", 45, 5, func() error {
+		_, err := client.CoreV1().Namespaces().Get("kube-system", metav1.GetOptions{})
+		if err == nil {
+			return nil
 		}
-		return fmt.Errorf("timeout waiting for Kubernetes API become ready")
+		return fmt.Errorf("kubernetes API is not Ready: %w", err)
 	})
 }
 
 func GetCloudConfig(client *kube.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
-	err := logboek.LogProcess(fmt.Sprintf("☁️ ~ Get %s cloud config️", nodeGroupName), log.BoldOptions(), func() error {
-		for i := 1; i <= 45; i++ {
-			secret, err := client.CoreV1().Secrets("d8-cloud-instance-manager").Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
-			if err != nil {
-				logboek.LogInfoF("[Attempt #%v of 45] Request to Kubernetes API failed, next attempt in 5s\n", i)
-				logboek.LogInfoF("%v\n\n", err)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
-			logboek.LogInfoLn("Success!")
-			return nil
+	err := retry.StartLoop(fmt.Sprintf("Get %q cloud config️", nodeGroupName), 45, 5, func() error {
+		secret, err := client.CoreV1().Secrets("d8-cloud-instance-manager").Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("waiting for manual-bootstrap-for-%s failed", nodeGroupName)
+		cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
+		return nil
 	})
 	return cloudData, err
 }
 
 func WaitForNodesBecomeReady(client *kube.KubernetesClient, nodeGroupName string, desiredReadyNodes int) error {
-	return logboek.LogProcess(fmt.Sprintf("💦 ~ Waiting for NodeGroup %s become Ready", nodeGroupName), log.BoldOptions(), func() error {
-		for i := 1; i <= 100; i++ {
-			nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
-			if err != nil {
-				logboek.LogInfoF("[Attempt #%v of 100] Error while listing %s nodes, retry in 20s\n", i, nodeGroupName)
-				logboek.LogInfoF("%v\n\n", err)
-				time.Sleep(20 * time.Second)
-				continue
-			}
+	return retry.StartLoop(fmt.Sprintf("Waiting for NodeGroup %s to become Ready", nodeGroupName), 100, 20, func() error {
+		nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
+		if err != nil {
+			return err
+		}
 
-			readyNodes := make(map[string]struct{})
+		readyNodes := make(map[string]struct{})
 
-			for _, node := range nodes.Items {
-				for _, c := range node.Status.Conditions {
-					if c.Type == apiv1.NodeReady {
-						if c.Status == apiv1.ConditionTrue {
-							readyNodes[node.Name] = struct{}{}
-						}
+		for _, node := range nodes.Items {
+			for _, c := range node.Status.Conditions {
+				if c.Type == apiv1.NodeReady {
+					if c.Status == apiv1.ConditionTrue {
+						readyNodes[node.Name] = struct{}{}
 					}
 				}
 			}
-
-			logboek.LogInfoF("[Attempt #%v of 100] Nodes Ready %v of %v, retry in 20s\n", i, len(readyNodes), desiredReadyNodes)
-			for _, node := range nodes.Items {
-				condition := "NotReady"
-				if _, ok := readyNodes[node.Name]; ok {
-					condition = "Ready"
-				}
-				logboek.LogInfoF("* %s | %s\n", node.Name, condition)
-			}
-			logboek.LogInfoF("\n")
-			if len(readyNodes) >= desiredReadyNodes {
-				logboek.LogInfoLn("Success!")
-				return nil
-			}
-			time.Sleep(20 * time.Second)
 		}
-		return fmt.Errorf("waiting %s nodes become ready failed", nodeGroupName)
+
+		if len(readyNodes) >= desiredReadyNodes {
+			return nil
+		}
+
+		errorMessage := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+		for _, node := range nodes.Items {
+			condition := "NotReady"
+			if _, ok := readyNodes[node.Name]; ok {
+				condition = "Ready"
+			}
+			errorMessage += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+		}
+
+		return fmt.Errorf(errorMessage)
 	})
 }
 
 func WaitForSingleNodeBecomeReady(client *kube.KubernetesClient, nodeName string) error {
-	return logboek.LogProcess(fmt.Sprintf("💦 ~ Waiting for single node %s become Ready", nodeName), log.BoldOptions(), func() error {
-		for i := 1; i <= 100; i++ {
-			node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
-			if err != nil {
-				logboek.LogInfoF("[Attempt #%v of 100] Error while getting nod %s, retry in 20s\n", i, nodeName)
-				logboek.LogInfoF("%v\n\n", err)
-				time.Sleep(20 * time.Second)
-				continue
-			}
+	return retry.StartLoop(fmt.Sprintf("Waiting for single Node %q to become Ready", nodeName), 100, 20, func() error {
+		node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-			for _, c := range node.Status.Conditions {
-				if c.Type == apiv1.NodeReady {
-					if c.Status == apiv1.ConditionTrue {
-						logboek.LogInfoLn("Success!")
-						return nil
-					}
+		for _, c := range node.Status.Conditions {
+			if c.Type == apiv1.NodeReady {
+				if c.Status == apiv1.ConditionTrue {
+					logboek.LogInfoLn("Success!")
+					return nil
 				}
 			}
-			logboek.LogInfoF("[Attempt #%v of 100] Node %s not ready, retry in 20s\n", i, nodeName)
-			time.Sleep(20 * time.Second)
 		}
-		return fmt.Errorf("waiting for single node %s become ready failed", nodeName)
+
+		return fmt.Errorf("node %q is not Ready yet", nodeName)
 	})
 }
 
 func IsNodeExistsInCluster(client *kube.KubernetesClient, nodeName string) (bool, error) {
 	isExists := false
-	err := logboek.LogProcess(fmt.Sprintf("💦 Check for single node %s existance 💦", nodeName), log.BoldOptions(), func() error {
-		for i := 1; i <= 100; i++ {
-			_, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return nil
-				}
-				logboek.LogInfoF("[Attempt #%v of 100] Error while getting nod %s, retry in 20s\n", i, nodeName)
-				logboek.LogInfoF("%v\n\n", err)
-				time.Sleep(20 * time.Second)
-				continue
-			}
-			isExists = true
+	err := retry.StartLoop(fmt.Sprintf("Checking that single Node %q exists", nodeName), 100, 20, func() error {
+		_, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("waiting cheking for single node %s existance failed", nodeName)
+
+		isExists = true
+		return nil
 	})
 	return isExists, err
 }

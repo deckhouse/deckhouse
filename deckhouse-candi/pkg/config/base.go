@@ -2,18 +2,18 @@ package config
 
 import (
 	"encoding/json"
-	"flant/deckhouse-candi/pkg/kube"
 	"fmt"
-	"github.com/flant/logboek"
 	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	"flant/deckhouse-candi/pkg/kube"
+	"flant/deckhouse-candi/pkg/util/retry"
 )
 
 const (
@@ -32,18 +32,17 @@ func ParseConfig(path string) (*MetaConfig, error) {
 }
 
 func ParseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) {
-	for i := 1; i < 45; i++ {
-		metaConfig, err := parseConfigFromCluster(kubeCl)
-		if err == nil {
-			return metaConfig, nil
-		}
+	var metaConfig *MetaConfig
+	var err error
 
-		logboek.LogInfoF("[Attempt #%v of 45] Getting cluster configuration failed, next attempt in 10s\n", i)
-		logboek.LogWarnF("%v\n\n", err)
-
-		time.Sleep(10 * time.Second)
+	err = retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 45, 10, func() error {
+		metaConfig, err = parseConfigFromCluster(kubeCl)
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("timeout while getting cluster configuration")
+	return metaConfig, nil
 }
 
 func parseConfigFromCluster(kubeCl *kube.KubernetesClient) (*MetaConfig, error) {

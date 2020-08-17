@@ -134,7 +134,7 @@ func InstallDeckhouse(kubeCl *kube.KubernetesClient, config *deckhouse.Config, n
 func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*kube.KubernetesClient, error) {
 	var kubeCl *kube.KubernetesClient
 	err := logboek.LogProcess("🚤 ~ Start Kubernetes API proxy", log.TaskOptions(), func() error {
-		kubeCl = kube.NewKubernetesClient().WithSshClient(sshClient)
+		kubeCl = kube.NewKubernetesClient().WithSSHClient(sshClient)
 		if err := kubeCl.Init(""); err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
