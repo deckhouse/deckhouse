@@ -32,8 +32,13 @@ Build Website:
     - "Build"
     - "Build Modules Images"
     - "Build Website"
-  dependencies:
-    - "Build Modules Images"
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   tags:
     - werf-distributed
 
@@ -44,8 +49,6 @@ deckhouse.test.flant.com:
   environment:
     name: web-test
     url: https://deckhouse.test.flant.com
-  except:
-    - schedules
   when: manual
 
 early.deckhouse.io:
@@ -55,8 +58,6 @@ early.deckhouse.io:
   environment:
     name: web-early
     url: https://early.deckhouse.io
-  except:
-    - schedules
   when: manual
 
 deckhouse.io:
@@ -69,8 +70,6 @@ deckhouse.io:
   only:
     - master
     - /^release-.*$/
-  except:
-    - schedules
   when: manual
 
 Web cleanup:
