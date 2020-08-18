@@ -28,9 +28,9 @@ var deckhouseCandiTemporaryDirName = filepath.Join(os.TempDir(), "deckhouse-cand
 type Interface interface {
 	Init() error
 	Apply() error
-	GetTerraformOutput(string) ([]byte, error)
 	Destroy() error
 	Close()
+	GetTerraformOutput(string) ([]byte, error)
 	getState() ([]byte, error)
 }
 
@@ -220,7 +220,11 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 		fmt.Sprintf("-state=%s", r.statePath),
 	}
 	args = append(args, output)
-	return exec.Command("terraform", args...).CombinedOutput()
+	result, err := exec.Command("terraform", args...).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("can't get terraform output for %q\n%s\n%w", output, string(result), err)
+	}
+	return result, nil
 }
 
 func (r *Runner) Destroy() error {
@@ -262,13 +266,13 @@ func execTerraform(args ...string) (int, error) {
 	cmd := exec.Command("terraform", args...)
 	stdout, _ := cmd.StdoutPipe()
 
-	var errbuf bytes.Buffer
-	cmd.Stderr = &errbuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
 	cmd.Stdin = os.Stdin
 
 	err := cmd.Start()
 	if err != nil {
-		logboek.LogWarnF("%s\n%v\n", errbuf.String(), err)
+		logboek.LogWarnF("%s\n%v\n", errBuf.String(), err)
 		return cmd.ProcessState.ExitCode(), err
 	}
 
@@ -280,7 +284,7 @@ func execTerraform(args ...string) (int, error) {
 	err = cmd.Wait()
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != 2 {
-		logboek.LogWarnF("%s\n%v\n", errbuf.String(), err)
+		logboek.LogWarnF("%s\n%v\n", errBuf.String(), err)
 	}
 	return exitCode, err
 }

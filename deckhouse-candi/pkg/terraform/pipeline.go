@@ -75,15 +75,21 @@ func GetMasterNodeResult(r *Runner) (map[string][]byte, error) {
 		return nil, err
 	}
 
+	kubernetesDataDevicePath, err := r.GetTerraformOutput("kubernetes_data_device_path")
+	if err != nil {
+		return nil, err
+	}
+
 	tfState, err := r.getState()
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string][]byte{
-		"terraformState": tfState,
-		"masterIPForSSH": masterIPAddressForSSH,
-		"nodeInternalIP": nodeInternalIP,
+		"terraformState":           tfState,
+		"masterIPForSSH":           masterIPAddressForSSH,
+		"nodeInternalIP":           nodeInternalIP,
+		"kubernetesDataDevicePath": kubernetesDataDevicePath,
 	}, nil
 }
 

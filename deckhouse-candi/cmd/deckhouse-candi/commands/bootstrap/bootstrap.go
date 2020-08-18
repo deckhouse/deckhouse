@@ -11,11 +11,13 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
-	"flant/deckhouse-candi/pkg/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/resources"
 	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/ssh"
-	"flant/deckhouse-candi/pkg/task"
+	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/template"
 	"flant/deckhouse-candi/pkg/terraform"
 )
@@ -48,14 +50,14 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		var resources *config.Resources
+		var resourcesToCreate *config.Resources
 		if app.ResourcesPath != "" {
 			parsedResources, err := config.ParseResources(app.ResourcesPath)
 			if err != nil {
 				return err
 			}
 
-			resources = parsedResources
+			resourcesToCreate = parsedResources
 		}
 
 		deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
@@ -64,7 +66,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var nodeIP string
-		// var masterInstanceClass []byte
+		var devicePath string
 		if metaConfig.ClusterType == config.CloudClusterType {
 			err = logboek.LogProcess("🚢 ~ Create Kubernetes Master node", log.TaskOptions(), func() error {
 				baseStateFilepath := filepath.Join(app.TerraformStateDir, fmt.Sprintf("%s-base-infra.tfstate", metaConfig.ClusterPrefix))
@@ -94,10 +96,12 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 				_ = json.Unmarshal(masterPipelineResult["masterIPForSSH"], &app.SshHost)
 				_ = json.Unmarshal(masterPipelineResult["nodeInternalIP"], &nodeIP)
+				_ = json.Unmarshal(masterPipelineResult["kubernetesDataDevicePath"], &devicePath)
 
 				// Add tf-node-state to store it in kubernetes in future
 				deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
-				deckhouseInstallConfig.NodesTerraformState["master-0"] = masterPipelineResult["terraformState"]
+				stateSecretName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
+				deckhouseInstallConfig.NodesTerraformState[stateSecretName] = masterPipelineResult["terraformState"]
 
 				sshClient.Settings.Host = app.SshHost
 
@@ -115,10 +119,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			nodeIP = static.NodeIP
 		}
 
-		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		bundleName, err := task.DetermineBundleName(sshClient)
+		bundleName, err := commands.DetermineBundleName(sshClient)
 		if err != nil {
 			return err
 		}
@@ -126,26 +130,26 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		templateController := template.NewTemplateController("")
 		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
-		if err := task.BootstrapMaster(sshClient, bundleName, nodeIP, metaConfig, templateController); err != nil {
+		if err := commands.BootstrapMaster(sshClient, bundleName, nodeIP, metaConfig, templateController); err != nil {
 			return err
 		}
-		if err = task.PrepareBashibleBundle(bundleName, nodeIP, metaConfig, templateController); err != nil {
+		if err = commands.PrepareBashibleBundle(bundleName, nodeIP, devicePath, metaConfig, templateController); err != nil {
 			return err
 		}
-		if err := task.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
+		if err := commands.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
 			return err
 		}
-		if err := task.RebootMaster(sshClient); err != nil {
+		if err := commands.RebootMaster(sshClient); err != nil {
 			return err
 		}
-		if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
-		if err := task.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
+		if err := commands.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
 			return err
 		}
 		if metaConfig.ClusterType != config.CloudClusterType {
@@ -153,25 +157,25 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return nil
 		}
 
-		if err := task.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+		if err := commands.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 			return err
 		}
 		staticNodeGroups := metaConfig.GetStaticNodeGroups()
-		if err := task.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
+		if err := commands.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
 			return err
 		}
-		if err := deckhouse.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+		if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 			return err
 		}
 		for _, staticNodeGroup := range staticNodeGroups {
-			if err := deckhouse.WaitForNodesBecomeReady(kubeCl, staticNodeGroup.Name, staticNodeGroup.Replicas); err != nil {
+			if err := converge.WaitForNodesBecomeReady(kubeCl, staticNodeGroup.Name, staticNodeGroup.Replicas); err != nil {
 				return err
 			}
 		}
 
-		if resources != nil {
+		if resourcesToCreate != nil {
 			err = logboek.LogProcess("⛴️ ~ Create Resources", log.TaskOptions(), func() error {
-				return deckhouse.CreateResourcesLoop(kubeCl, resources)
+				return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
 			})
 			if err != nil {
 				return err

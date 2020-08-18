@@ -8,11 +8,11 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
-	"flant/deckhouse-candi/pkg/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
 	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/ssh"
-	"flant/deckhouse-candi/pkg/task"
+	"flant/deckhouse-candi/pkg/system/ssh"
 )
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
@@ -25,12 +25,12 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		return logboek.LogProcess("🐟 ~ Start Deckhouse cluster Converge", log.MainProcessOptions(), func() error {
-			if err := task.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		return logboek.LogProcess("⛵ ~ Converge: Start converge ", log.MainProcessOptions(), func() error {
+			if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 				return err
 			}
 
-			kubeCl, err := task.StartKubernetesAPIProxy(sshClient)
+			kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 			if err != nil {
 				return err
 			}
@@ -42,7 +42,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 			metaConfig.Prepare()
 
-			err = deckhouse.RunConverge(kubeCl, metaConfig)
+			err = converge.RunConverge(kubeCl, metaConfig)
 			if err != nil {
 				return fmt.Errorf("converge problem: %v", err)
 			}

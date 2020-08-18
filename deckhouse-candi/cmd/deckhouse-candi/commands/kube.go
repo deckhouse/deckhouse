@@ -11,10 +11,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"flant/deckhouse-candi/pkg/app"
-	"flant/deckhouse-candi/pkg/deckhouse"
-	"flant/deckhouse-candi/pkg/kube"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/deckhouse"
+	"flant/deckhouse-candi/pkg/kubernetes/client"
 	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/ssh"
+	"flant/deckhouse-candi/pkg/system/ssh"
 )
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -35,7 +35,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			return err
 		}
 
-		kubeCl := kube.NewKubernetesClient().WithSSHClient(sshCl)
+		kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
 		// auto init
 		err = kubeCl.Init("")
 		if err != nil {
@@ -96,7 +96,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		}
 
 		err = logboek.LogProcess("🛥️ ~ Wait for Deckhouse to become ready 🛥️", log.TaskOptions(), func() error {
-			kubeCl := kube.NewKubernetesClient().WithSSHClient(sshCl)
+			kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
 			// auto init
 			err = kubeCl.Init("")
 			if err != nil {
