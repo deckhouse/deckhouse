@@ -35,18 +35,8 @@ clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
-sshPublicKeys:
-- ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDTXjTmx3hq2EPDQHWSJN7By1VNFZ8colI5tEeZDBVYAe9Oxq4FZsKCb1aGIskDaiAHTxrbd2efoJTcPQLBSBM79dcELtqfKj9dtjy4S1W0mydvWb2oWLnvOaZX/H6pqjz8jrJAKXwXj2pWCOzXerwk9oSI4fCE7VbqsfT4bBfv27FN4/Vqa6iWiCc71oJopL9DldtuIYDVUgOZOa+t2J4hPCCSqEJK/r+ToHQbOWxbC5/OAufXDw2W1vkVeaZUur5xwwAxIb3wM3WoS3BbwNlDYg9UB2D8+EZgNz1CCCpSy1ELIn7q8RnrTp0+H8V9LoWHSgh3VCWeW8C/MnTW90IR stas@stas-ThinkPad
-masterNodeGroup:
-  static:
-    internalNetworkCIDRs:
-      - 10.0.0.0/24
-  zones:
-  - nova
-  minPerZone: 1
-  maxPerZone: 3
 deckhouse:
-  imagesRepo: registry.flant.com/sys/antiopa
+  imagesRepo: registry.example.com/deckhouse
   registryDockerCfg: edsfkslfklsdfkl==
   releaseChannel: Alpha
   configOverrides:
@@ -57,34 +47,34 @@ deckhouse:
 
 Для валидации и проставления значений по умолчанию используются спецификации OpenAPI.
 
-| Kind          | Description        | OpenAPI path       |
-| ------------- | ------------------ | ------------------ |
-| ClusterConfiguration  | Основная часть конфигурации кластера Kubernetes | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/cluster_configuration.yaml) |
-| InitConfiguration     | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
-| OpenStackClusterConfiguration  | Основная часть конфигурации кластера Kubernetes в OpenStack | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
-| OpenStackInitConfiguration     | Часть конфигурации, которая нужна только при создании кластера в OpenStack | [candi/cloud-providers/openstack/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/init_configuration.yaml)|
-| BashibleTemplateData  | Данные для компиляции Bashible Bundle (используется только для deckhouse-candi render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
-| KubeadmConfigTemplateData | Данные для компиляции Kubeadm config (используется только для deckhouse-candi render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
+| Kind                           | OpenAPI path       | Description        | 
+| ------------------------------ | ------------------ | ------------------ |
+| ClusterConfiguration           | Основная часть конфигурации кластера Kubernetes | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/cluster_configuration.yaml) |
+| InitConfiguration              | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
+| OpenStackClusterConfiguration  | Конфигурации кластера Kubernetes в OpenStack | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
+| BashibleTemplateData           | Данные для компиляции Bashible Bundle (используется только для deckhouse-candi render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
+| KubeadmConfigTemplateData      | Данные для компиляции Kubeadm config (используется только для deckhouse-candi render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
 Процесс развертывания кластера при помощи `deckhouse-candi` делится на несколько этапов:
 
 #### Terraform
-Запуск terraform разделен на два этапа:
-* `base-infrastructure` - создает в облаке основные компоненты для создания инфраструктуры: сети, роутеры, ssh-ключи, security-группы.
+Существуют три варианта запуска:
+* `base-infrastructure` - создает в облаке компоненты инфраструктуры: сети, роутеры, ssh-ключи, политики безопасности и так далее.
     * Через механизм [ouput](https://www.terraform.io/docs/configuration/outputs.html) на данном этапе в installer передаются данные:
         * `cloud_discovery_data` - информация, необходима для корректной работы cloud-provider'а в дальнейшем, будет сохранена в secret `d8-provider-cluster-configuration` в namespace `kube-system`.
-        * `deckhouse_config` - часть конфигурации Deckhouse, которая в будущем будет слита и сохранена в configmap `deckhouse` в namespace `d8-system`. 
-    * State terraform'а после выполнения данной фазы будет сохранен в secret `d8-cluster-teraform-state`.
 
-* `master-node` - создает первый узел кластера.
+* `master-node` - создает master-узлы для кластера.
     * Через механизм [ouput](https://www.terraform.io/docs/configuration/outputs.html) на данном этапе в installer передаются данные:
-        * `master_instance_class` - `OpenStackInstanceClass` для создания master-узлов.
-        * `master_ip` - адрес из "внешней" сети, по нему мы будем производить подключение к первому узлу.
-        * `node_ip` - адрес из "внутренней" сети, будет использован для настройки control-plane компонентов.
-    * State terraform'а после выполнения данной фазы сохранен не будет.
+        * `master_ip_address_for_ssh` - адрес из "внешней" сети, по нему мы будем производить подключение к первому узлу.
+        * `node_internal_ip_address` - адрес из "внутренней" сети, будет использован для настройки control-plane компонентов.
+        * `kubernetes_data_device_path` - имя девайса, предназначенного для хранения данных Kubernetes.
 
-**Внимание!!** для baremetal кластеров terraform не выполняется, вместо этого обязательным становится параметр командной строки `--ssh-host`, чтобы deckhouse-candi знал, куда ему нужно подключиться.
+* `static-node` - создает статический узел для кластера.
+
+> State terraform'а будет сохранен в secret в namespace'е d8-system после каждой фазы
+
+**Внимание!!** для bare metal кластеров terraform не выполняется, вместо этого обязательным становится параметр командной строки `--ssh-host`, чтобы deckhouse-candi знал, куда ему нужно подключиться.
 
 #### Подготовительный этап
 Во время подготовительного этапа происходит:
@@ -105,7 +95,7 @@ Bundle представляет собой tar-архив со всеми нео
 Далее архив загружается по scp на сервер и распаковывается, после чего выполняется `/var/lib/bashible/bashible.sh --local`.
 
 #### Установка Deckhouse
-Для доступа к API свежеустановленного кластера Kubernetes deckhouse-candi делает две вещи:
+Для доступа к API только что созданного кластера Kubernetes deckhouse-candi делает две вещи:
 * Запускает на сервере Kubernetes команду `kubectl proxy --port=0` для поднятия прокси на свободном порту.
 * Открывает ssh-туннель со свободного локального порта на порта прокси на удаленном сервере.
 
@@ -113,17 +103,29 @@ Bundle представляет собой tar-архив со всеми нео
 * Cluster Role `cluster-administrator`
 * Service Account для `deckhouse`
 * Cluster Role Binding роли `cluster-administrator` для sa `deckhouse`
-* Secret для доступа к docker `registry`
+* Secret для доступа к docker registry для deckhouse `deckhouse-registry`
 * ConfigMap для `deckhouse`
 * Deployment для `deckhouse`
 * Secret'ы с данными создания кластера (если такие данные есть):
     * `d8-cluster-configuration`
-    * `d8-cluster-terraform-state`
     * `d8-provider-cluster-configuration`
-    
+* Secret'ы, содержащие состояние terraform
+    * `d8-cluster-terraform-state`
+    * `d8-node-terraform-state-.*`
+
  После установки `deckhouse-candi` ожидает, когда pod `deckhouse` станет `Ready`. Readiness-проба устроена так, что контейнер переходит в состояние Ready только после того, как в очереди `deckhouse` не останется ни одного задания, связанного с установкой или обновлением модуля.
  
  Состояние `Ready` - сигнал для `deckhouse-candi`, что можно создать в кластере объект `NodeGroup` для master-узлов.
  
- На этом процесс развертывания кластера заканчивается.
+#### Создание дополнительных master-узлов и статических узлов
+При создании дополнительных узлов deckhouse-candi взаимодействует с API Kubernetes. 
+* Создает необходимые NodeGroup объекты
+* Дожидается появления Secret'ов, содержащих cloud-init для создания узлов в этой группе
+* Запускает соответствующий terraform (master-node  или static-node)
+* При успешном выполнении сохраняет state в кластер Kubernetes
 
+> Deckhouse-candi ожидает перехода узлов в каждой NodeGroup в состояние Ready, иначе процесс их создания будет завершен с ошибкой
+
+#### Создание дополнительных ресурсов
+При указании путь до файла с манифестами при помощи флага `--resources` deckhouse-candi отсортирует их по `apiGroup/kind`, дождется регистрации этих типов в API Kubernetes и создаст их.
+> Процесс описан подробнее в документации к deckhouse-candi.
