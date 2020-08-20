@@ -45,6 +45,20 @@ func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig, nil
 }
 
+func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+	var metaConfig *MetaConfig
+	var err error
+
+	err = retry.StartSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5, func() error {
+		metaConfig, err = parseConfigFromCluster(kubeCl)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return metaConfig, nil
+}
+
 func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	metaConfig := MetaConfig{}
 

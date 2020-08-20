@@ -1,0 +1,16 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
+  if kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
+    if kubectl -n d8-system get secret d8-cluster-terraform-state >/dev/null 2>&1 ; then
+      echo "true" > "$MODULE_ENABLED_RESULT"
+      return
+    fi
+  fi
+  echo "false" > "$MODULE_ENABLED_RESULT"
+}
+
+enabled::run "$@"

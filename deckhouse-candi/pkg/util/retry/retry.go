@@ -27,13 +27,14 @@ func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error
 }
 
 func StartSilentLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
+	var err error
 	for i := 1; i <= attemptsQuantity; i++ {
-		if err := task(); err != nil {
+		if err = task(); err != nil {
 			<-time.After(time.Duration(waitSeconds) * time.Second)
 			continue
 		}
 
 		return nil
 	}
-	return fmt.Errorf("timeout while %s", name)
+	return fmt.Errorf("timeout while %s: last error: %v", name, err)
 }

@@ -284,7 +284,8 @@ func execTerraform(args ...string) (int, error) {
 	err = cmd.Wait()
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != 2 {
-		logboek.LogWarnF("%s\n%v\n", errBuf.String(), err)
+		err = fmt.Errorf("%s : %v", errBuf.String(), err)
+		logboek.LogWarnF(err.Error())
 	}
 	return exitCode, err
 }

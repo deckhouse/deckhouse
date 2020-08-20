@@ -57,6 +57,7 @@ func main() {
 	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
 	{
 		commands.DefineRunDestroyAllTerraformCommand(terraformCmd)
+		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
 	}
 
 	renderCmd := kpApp.Command("render", "Parse, validate and render bundles and configs.")

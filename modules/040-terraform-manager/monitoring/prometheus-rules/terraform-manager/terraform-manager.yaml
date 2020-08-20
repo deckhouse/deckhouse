@@ -1,0 +1,231 @@
+- name: d8.terraform-manager.terraform-manager.availability
+  rules:
+
+  - alert: D8TerraformManagerTargetDown
+    expr: max by (job) (up{job="terraform-manager"} == 0)
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_ignore_labels: "job"
+      description: >
+        To get more details:
+
+        Check pods state: `kubectl -n d8-system get pod -l app=terraform-manager`
+        or logs: `kubectl -n d8-system logs -l app=terraform-manager -c terraform-manager`
+      summary: Prometheus can't scrape terraform-manager
+
+  - alert: D8TerraformManagerTargetAbsent
+    expr: absent(up{job="terraform-manager"}) == 1
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_ignore_labels: "job"
+      plk_grouped_by__main: "D8TerraformManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      description: >
+        To get more details:
+
+        Check pods state: `kubectl -n d8-system get pod -l app=terraform-manager`
+        or logs: `kubectl -n d8-system logs -l app=terraform-manager -c terraform-manager`
+      summary: Prometheus has no `terraform-manager` target
+
+  - alert: D8TerraformManagerPodIsNotReady
+    expr: |
+      min by (pod) (
+        kube_controller_pod{namespace="d8-system", controller_type="Deployment", controller_name="terraform-manager"}
+        * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-system"}
+      ) != 1
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_labels_as_annotations: "pod"
+      plk_grouped_by__main: "D8TerraformManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Pod terraform-manager is not Ready
+      description: |
+        Terraform-manager doesn't check the difference between real Kubernetes cluster state and Terraform state.
+
+        Pease, check:
+        1. Deployment description: `kubectl -n d8-system describe deploy terraform-manager`
+        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-manager`
+
+  - alert: D8TerraformManagerPodIsNotRunning
+    expr: |
+      max by (namespace, pod, phase) (
+        kube_controller_pod{namespace="d8-system", controller_type="Deployment", controller_name="terraform-manager"}
+        * on (pod) group_right() kube_pod_status_phase{namespace="d8-system",phase!="Running"}
+        > 0
+      )
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Pod terraform-manager is not Running
+      description: |
+        Terraform-manager doesn't check the difference between real Kubernetes cluster state and Terraform state.
+
+        Pease, check:
+        1. Deployment description: `kubectl -n d8-system describe deploy terraform-manager`
+        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-manager`
+
+  - alert: D8TerraformManagerUnavailable
+    expr: count(ALERTS{alertname=~"D8TerraformManagerTargetDown|D8TerraformManagerTargetAbsent|D8TerraformManagerPodIsNotRunning|D8TerraformManagerPodIsNotReady", alertstate="firing"})
+    labels:
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      summary: Terraform-manager is not working
+      description: |
+        Terraform-manager is not working. To reach the problem, check grouped alerts.
+
+- name: d8.terraform-manager.terraform-manager.checks
+  rules:
+
+  - alert: D8TerraformManagerHasErrors
+    expr: |
+      increase(candi_converge_exporter_errors[5m]) == 3
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Errors occurred while terraform-manager working.
+
+        Check pods logs to get more details: `kubectl -n d8-system logs -l app=terraform-manager -c terraform-manager`
+      summary: Terraform-manager has errors
+
+  - alert: D8TerraformManagerClusterStateChanged
+    expr: |
+      candi_converge_cluster_status{status="changed"} == 1
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Real Kubernetes cluster state and Terraform state differ.
+
+        It's important to make them equal.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-manager cluster state changed
+
+  - alert: D8TerraformManagerNodeStateChanged
+    expr: |
+      max by(node_group, name) (candi_converge_node_status{status="changed"} == 1)
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Real Node "{{ $labels.name }}" state and Terraform state differ.
+
+        It's important to make them equal.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-manager node state changed
+
+  - alert: D8TerraformManagerClusterStateError
+    expr: |
+      candi_converge_cluster_status{status="error"} == 1
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Terraform-manager can't check difference between Kubernetes cluster state and Terraform state.
+
+        Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-manager cluster state error
+
+  - alert: D8TerraformManagerNodeStateError
+    expr: |
+      max by(node_group, name) (candi_converge_node_status{status="error"} == 1)
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Terraform-manager can't check difference between Node "{{ $labels.name }}" state and Terraform state.
+
+        Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-manager node state error
+
+  - alert: D8TerraformManagerNodeGroupHasProblemWithReplicas
+    expr: |
+      max by(name, status) (candi_converge_node_group_status{status!="ok"} == 1)
+    labels:
+      severity_level: "8"
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformManagerChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        NodeGroup "{{ $labels.name }}" has {{ $labels.status }} amount of replicas.
+
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-manager node state error
+
+  - alert: D8TerraformManagerChecksFailed
+    expr: count(ALERTS{alertname=~"D8TerraformManagerHasErrors|D8TerraformManagerClusterStateChanged|D8TerraformManagerNodeStateChanged||D8TerraformManagerClusterStateError|D8TerraformManagerNodeStateError|D8TerraformManagerNodeGroupHasProblemWithReplicas", alertstate="firing"})
+    labels:
+      d8_module: terraform-manager
+      d8_component: terraform-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      description: |
+        Terraform-manager found the difference between real Kubernetes cluster state and Terraform state.
+
+        To reach the problem, check grouped alerts.
+      summary: Terraform-manager found the difference between real Kubernetes cluster state and Terraform state.

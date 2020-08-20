@@ -262,7 +262,11 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 
 		if errors.IsAlreadyExists(err) {
 			logboek.LogInfoF("Object %v, updating...", err)
-			_, err := kubeCl.Dynamic().Resource(resourceSchema).Update(&doc, metav1.UpdateOptions{})
+			content, err := doc.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			_, err = kubeCl.Dynamic().Resource(resourceSchema).Patch(doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 			if err != nil {
 				return err
 			}

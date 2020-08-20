@@ -1,0 +1,31 @@
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: terraform-manager
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    honorLabels: true
+    scrapeTimeout: 25s
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+    - regex: endpoint|namespace
+      action: labeldrop
+  selector:
+    matchLabels:
+      app: terraform-manager
+  namespaceSelector:
+    matchNames:
+    - d8-system
