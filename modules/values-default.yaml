@@ -19,6 +19,7 @@ verticalPodAutoscalerCrdEnabled: true
 deckhouseEnabled: true
 cloudProviderOpenstackEnabled: true
 nodeManagerEnabled: true
+terraformManagerEnabled: true
 controlPlaneManagerEnabled: true
 kubeProxyEnabled: true
 certManagerEnabled: true

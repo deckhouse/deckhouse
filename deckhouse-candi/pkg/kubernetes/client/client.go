@@ -40,7 +40,7 @@ func (k *KubernetesClient) Init(configSrc string) error {
 
 	switch configSrc {
 	case "SSH":
-		if app.SshHost != "" {
+		if app.SshHost == "" {
 			return fmt.Errorf("no ssh-host to connect to kubernetes via ssh tunnel")
 		}
 		startProxy = true

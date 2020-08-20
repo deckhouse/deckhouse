@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/flant/logboek"
+	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
@@ -103,6 +104,23 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			logboek.LogErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
 		}
+		return nil
+	})
+	return cmd
+}
+
+func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
+	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineConvergeExporterFlags(cmd)
+	app.DefineSshFlags(cmd)
+	app.DefineBecomeFlags(cmd)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		logboek.SetLevel(logboek.Error)
+
+		exporter := commands.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
+		exporter.Start()
 		return nil
 	})
 	return cmd

@@ -1,0 +1,85 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: terraform-manager
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-manager")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: terraform-manager
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: terraform-manager
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-manager")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+  selector:
+    matchLabels:
+      module: {{ $.Chart.Name }}
+      app: terraform-manager
+  template:
+    metadata:
+      labels:
+        module: {{ $.Chart.Name }}
+        app: terraform-manager
+    spec:
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "terraform-manager")) | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: terraform-manager
+      containers:
+      - name: terraform-manager
+        image: {{ .Values.global.modulesImages.registry }}/terraform-manager/{{ include "terraform_manager_image" . }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 9100
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 9100
+          timeoutSeconds: 5
+      - name: kube-rbac-proxy
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9100"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 9100
+          name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:9101/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-system
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: terraform-manager

@@ -33,6 +33,20 @@ func ApplyPipeline(r *Runner, extractFn func(r *Runner) (map[string][]byte, erro
 	return extractedData, err
 }
 
+func CheckPipeline(r *Runner) (bool, error) {
+	err := r.Init()
+	if err != nil {
+		return false, err
+	}
+
+	err = r.Plan()
+	if err != nil {
+		return false, err
+	}
+
+	return r.changesInPlan, err
+}
+
 func DestroyPipeline(r *Runner) error {
 	err := r.Init()
 	if err != nil {

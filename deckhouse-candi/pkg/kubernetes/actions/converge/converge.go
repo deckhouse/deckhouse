@@ -257,7 +257,7 @@ func (c *ConvergeController) updateNode(nodeGroup *ConvergeNodeGroupGroupOptions
 }
 
 func (c *ConvergeController) deleteRedundantNodes(nodeGroup *ConvergeNodeGroupGroupOptions) error {
-	return logboek.LogProcess(fmt.Sprintf("🔥 ~ Delete redundant nodes for NodeGroup %s", nodeGroup.Name), log.TaskOptions(), func() error {
+	return logboek.LogProcess(fmt.Sprintf("🔥 ~ Delete redundant Nodes for NodeGroup %s", nodeGroup.Name), log.TaskOptions(), func() error {
 		deleteNodesNames := make(map[string][]byte)
 		count := len(nodeGroup.State)
 
