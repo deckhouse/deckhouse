@@ -12,8 +12,12 @@ var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
 
 	Context("With FromIngressSecret option and empty cluster", func() {
 		BeforeEach(func() {
-			f.KubeStateSetAndWaitForBindingContexts("", 0)
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "FromIngressSecret")
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
+			f.RunHook()
+		})
+		It("Should run", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 
 		Context("Adding secret", func() {

@@ -425,7 +425,7 @@ var _ = BeforeSuite(func() {
 
 	sc := bufio.NewScanner(dummyDirsFile)
 	for sc.Scan() {
-		dir := string(sc.Text())
+		dir := sc.Text()
 
 		cmd := &exec.Cmd{
 			Path: filepath.Join(dir, "dummy"),
@@ -439,7 +439,12 @@ var _ = BeforeSuite(func() {
 		)
 
 		if res.ExitCode() != 0 {
-			panic("")
+			panic(fmt.Sprintf(
+				"Exit %v\nStdout:\n%s\nStderr:\n%s\n",
+				res.ExitCode(),
+				string(res.Out.Contents()),
+				string(res.Err.Contents()),
+			))
 		}
 	}
 	if err := sc.Err(); err != nil {
