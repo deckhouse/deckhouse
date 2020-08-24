@@ -25,11 +25,20 @@ type logLine struct {
 func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}) error {
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		return err
+		return fmt.Errorf("Waiting for an API")
 	}
 
-	if len(pods.Items) != 1 {
-		return fmt.Errorf("one deckhouse pod should exist, current pods - %v", pods.Items)
+	if len(pods.Items) < 1 {
+		return fmt.Errorf("No Deckhouse pod found")
+	}
+
+	for _, pod := range pods.Items {
+		message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
+		if pod.Status.Phase != corev1.PodRunning {
+			return fmt.Errorf(message)
+		}
+		logboek.LogInfoLn(message)
+		logboek.LogInfoLn("Running pod found! Checking logs...")
 	}
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
@@ -45,35 +54,38 @@ func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}
 			request := kubeCl.CoreV1().Pods("d8-system").GetLogs(pods.Items[0].Name, &logOptions)
 			result, err := request.DoRaw()
 			if err != nil {
-				return err
+				return fmt.Errorf("Request failed. Probably pod doesn't exist anymore.")
 			}
 
 			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
 
-			reader := bufio.NewReader(bytes.NewReader(result))
-			for {
-				l, _, err := reader.ReadLine()
-				if err != nil {
-					break
-				}
-				var line logLine
-				if err := json.Unmarshal(l, &line); err != nil {
-					logboek.LogInfoLn("can't parse json log line")
-					continue
-				}
+			printLogsByLine(result)
+		}
+	}
+}
 
-				if line.Level == "error" || (line.Output == "stderr" && line.Component != "tiller") {
-					logboek.LogWarnLn(line.Message)
-					continue
-				}
+func printLogsByLine(content []byte) {
+	reader := bufio.NewReader(bytes.NewReader(content))
+	for {
+		l, _, err := reader.ReadLine()
+		if err != nil {
+			break
+		}
+		var line logLine
+		if err := json.Unmarshal(l, &line); err != nil {
+			continue
+		}
 
-				// TODO use module.state label
-				if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
-					logboek.LogInfoF("Module %q run successfully\n", line.Module)
-					continue
-				}
-			}
+		if line.Level == "error" || (line.Output == "stderr" && line.Component != "tiller") {
+			logboek.LogWarnF("\t%s\n", line.Message)
+			continue
+		}
+
+		// TODO use module.state label
+		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
+			logboek.LogInfoF("\tModule %q run successfully\n", line.Module)
+			continue
 		}
 	}
 }

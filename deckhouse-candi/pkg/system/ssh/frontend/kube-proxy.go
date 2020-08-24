@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/flant/logboek"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/flant/logboek"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"flant/deckhouse-candi/pkg/app"
@@ -137,6 +137,12 @@ func (k *KubeProxy) Stop() {
 		k.tunnel.Stop()
 	}
 	k.stop = true
+}
+
+func (k *KubeProxy) Restart() error {
+	k.Stop()
+	_, err := k.Start()
+	return err
 }
 
 // ScanPasswordOrLines is a split function for a Scanner that returns each line of

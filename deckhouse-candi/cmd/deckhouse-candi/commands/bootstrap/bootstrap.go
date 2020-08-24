@@ -18,20 +18,25 @@ import (
 	"flant/deckhouse-candi/pkg/kubernetes/actions/resources"
 	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
-	"flant/deckhouse-candi/pkg/template"
 	"flant/deckhouse-candi/pkg/terraform"
 )
 
-const banner = `
-========================================================================================
+const banner = "" +
+	`========================================================================================
  _____             _     _                                ______                _ _____
 (____ \           | |   | |                              / _____)              | (_____)
  _   \ \ ____ ____| |  _| | _   ___  _   _  ___  ____   | /      ____ ____   _ | |  _
 | |   | / _  ) ___) | / ) || \ / _ \| | | |/___)/ _  )  | |     / _  |  _ \ / || | | |
 | |__/ ( (/ ( (___| |< (| | | | |_| | |_| |___ ( (/ /   | \____( ( | | | | ( (_| |_| |_
 |_____/ \____)____)_| \_)_| |_|\___/ \____(___/ \____)   \______)_||_|_| |_|\____(_____)
-========================================================================================
-`
+========================================================================================`
+
+func printBanner() {
+	_ = log.BootstrapProcess("Banner", func() error {
+		logboek.LogInfoLn(banner)
+		return nil
+	})
+}
 
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
@@ -68,44 +73,42 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var nodeIP string
 		var devicePath string
 		if metaConfig.ClusterType == config.CloudClusterType {
-			err = logboek.LogProcess("🚢 ~ Create Kubernetes Master node", log.TaskOptions(), func() error {
+			err = log.BootstrapProcess("Cloud infrastructure", func() error {
 				baseStateFilepath := filepath.Join(app.TerraformStateDir, fmt.Sprintf("%s-base-infra.tfstate", metaConfig.ClusterPrefix))
-				baseRunner := terraform.NewRunnerFromMetaConfig("base-infrastructure", metaConfig).
+				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 					WithVariables(metaConfig.MarshalConfig()).
 					WithStatePath(baseStateFilepath).
 					WithAutoApprove(true)
 
-				basePipelineResult, err := terraform.ApplyPipeline(baseRunner, terraform.GetBaseInfraResult)
+				baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 				if err != nil {
 					return err
 				}
 
 				masterStateFilepath := filepath.Join(app.TerraformStateDir, fmt.Sprintf("%s-first-master.tfstate", metaConfig.ClusterPrefix))
-				masterRunner := terraform.NewRunnerFromMetaConfig("master-node", metaConfig).
+				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
 					WithVariables(metaConfig.PrepareTerraformNodeGroupConfig("master", 0, "")).
 					WithStatePath(masterStateFilepath).
 					WithAutoApprove(true)
 
-				masterPipelineResult, err := terraform.ApplyPipeline(masterRunner, terraform.GetMasterNodeResult)
+				masterOutputs, err := terraform.ApplyPipeline(masterRunner, "Node master-node-0", terraform.GetMasterNodeResult)
 				if err != nil {
 					return err
 				}
 
-				deckhouseInstallConfig.CloudDiscovery = basePipelineResult["cloudDiscovery"]
-				deckhouseInstallConfig.TerraformState = basePipelineResult["terraformState"]
+				deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
+				deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
-				_ = json.Unmarshal(masterPipelineResult["masterIPForSSH"], &app.SshHost)
-				_ = json.Unmarshal(masterPipelineResult["nodeInternalIP"], &nodeIP)
-				_ = json.Unmarshal(masterPipelineResult["kubernetesDataDevicePath"], &devicePath)
+				app.SshHost = masterOutputs.MasterIPForSSH
+				sshClient.Settings.Host = masterOutputs.MasterIPForSSH
 
-				// Add tf-node-state to store it in kubernetes in future
+				nodeIP = masterOutputs.NodeInternalIP
+				devicePath = masterOutputs.KubeDataDevicePath
+
 				deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 				stateSecretName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-				deckhouseInstallConfig.NodesTerraformState[stateSecretName] = masterPipelineResult["terraformState"]
+				deckhouseInstallConfig.NodesTerraformState[stateSecretName] = masterOutputs.TerraformState
 
-				sshClient.Settings.Host = app.SshHost
-
-				logboek.LogInfoF("Master Address: %s", masterPipelineResult["masterIPForSSH"])
 				return nil
 			})
 			if err != nil {
@@ -122,27 +125,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		bundleName, err := commands.DetermineBundleName(sshClient)
-		if err != nil {
-			return err
-		}
-
-		templateController := template.NewTemplateController("")
-		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
-
-		if err := commands.BootstrapMaster(sshClient, bundleName, nodeIP, metaConfig, templateController); err != nil {
-			return err
-		}
-		if err = commands.PrepareBashibleBundle(bundleName, nodeIP, devicePath, metaConfig, templateController); err != nil {
-			return err
-		}
-		if err := commands.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
-			return err
-		}
-		if err := commands.RebootMaster(sshClient); err != nil {
-			return err
-		}
-		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := commands.RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
 			return err
 		}
 		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
@@ -152,6 +135,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err := commands.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
 			return err
 		}
+
 		if metaConfig.ClusterType != config.CloudClusterType {
 			// The rest of pipeline is additional master and static nodes creating process
 			return nil
@@ -164,17 +148,24 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err := commands.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
 			return err
 		}
-		if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
-			return err
-		}
-		for _, staticNodeGroup := range staticNodeGroups {
-			if err := converge.WaitForNodesBecomeReady(kubeCl, staticNodeGroup.Name, staticNodeGroup.Replicas); err != nil {
+
+		err = log.BootstrapProcess("Waiting for additional Nodes", func() error {
+			if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 				return err
 			}
+			for _, staticNodeGroup := range staticNodeGroups {
+				if err := converge.WaitForNodesBecomeReady(kubeCl, staticNodeGroup.Name, staticNodeGroup.Replicas); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return nil
 		}
 
 		if resourcesToCreate != nil {
-			err = logboek.LogProcess("⛴️ ~ Create Resources", log.TaskOptions(), func() error {
+			err = log.BootstrapProcess("Create Resources", func() error {
 				return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
 			})
 			if err != nil {
@@ -196,12 +187,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		fmt.Print(banner)
-		err = logboek.LogProcess("⛵ ~ Bootstrap: Deckhouse Cluster and Infrastructure",
-			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
+		printBanner()
+		err = runFunc(sshClient)
 
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			logboek.LogErrorLn(err.Error())
 			os.Exit(1)
 		}
 		return nil

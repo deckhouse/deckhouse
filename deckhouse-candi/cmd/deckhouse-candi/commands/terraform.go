@@ -1,18 +1,19 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"sigs.k8s.io/yaml"
 
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
-	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/terraform"
 )
@@ -20,22 +21,12 @@ import (
 func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("destroy-all", " Destroy all terraform environment.")
 	app.DefineSshFlags(cmd)
-	app.DefineConfigFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 	app.DefineSanityFlags(cmd)
 
 	runFunc := func(sshClient *ssh.SshClient) error {
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		err := app.AskBecomePassword()
 		if err != nil {
-			return err
-		}
-
-		err = app.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
-		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
 
@@ -43,6 +34,13 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 		if err != nil {
 			return err
 		}
+
+		metaConfig, err := config.ParseConfigFromCluster(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		metaConfig.Prepare()
 
 		nodesState, err := converge.GetNodesStateFromCluster(kubeCl)
 		if err != nil {
@@ -61,30 +59,27 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			}
 
 			for name, state := range nodeGroupStates {
-				err := logboek.LogProcess(fmt.Sprintf("🔥 ~ Destroy node %s", name), log.BoldOptions(), func() error {
-					nodeRunner := terraform.NewRunnerFromMetaConfig(step, metaConfig).
-						WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroupName, 0, "")).
-						WithState(state).
-						WithAutoApprove(app.SanityCheck)
+				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, step).
+					WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroupName, 0, "")).
+					WithState(state).
+					WithAutoApprove(app.SanityCheck)
 
-					defer nodeRunner.Close()
-					return terraform.DestroyPipeline(nodeRunner)
-				})
+				err := terraform.DestroyPipeline(nodeRunner, fmt.Sprintf("Node %s", name))
 				if err != nil {
 					return err
 				}
+
+				nodeRunner.Close()
 			}
 		}
 
-		return logboek.LogProcess("🔥 ~ Destroy cluster infrastructure", log.BoldOptions(), func() error {
-			baseRunner := terraform.NewRunnerFromMetaConfig("base-infrastructure", metaConfig).
-				WithVariables(metaConfig.MarshalConfig()).
-				WithState(clusterState).
-				WithAutoApprove(app.SanityCheck)
+		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+			WithVariables(metaConfig.MarshalConfig()).
+			WithState(clusterState).
+			WithAutoApprove(app.SanityCheck)
 
-			defer baseRunner.Close()
-			return terraform.DestroyPipeline(baseRunner)
-		})
+		defer baseRunner.Close()
+		return terraform.DestroyPipeline(baseRunner, "Kubernetes cluster")
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -97,11 +92,9 @@ func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.Cmd
 			return err
 		}
 
-		err = logboek.LogProcess("💣 ~ Terraform: Destroy All",
-			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
-
+		err = runFunc(sshClient)
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			logboek.LogErrorLn(err.Error())
 			os.Exit(1)
 		}
 		return nil
@@ -121,6 +114,61 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 
 		exporter := commands.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
 		exporter.Start()
+		return nil
+	})
+	return cmd
+}
+
+func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
+	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineOutputFlag(cmd)
+	app.DefineSshFlags(cmd)
+	app.DefineBecomeFlags(cmd)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		logboek.SetLevel(logboek.Error)
+		logboek.LogInfoLn("Check started...\n")
+
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
+		}
+
+		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
+		if err != nil {
+			return err
+		}
+
+		metaConfig, err := config.ParseConfigInCluster(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		metaConfig.Prepare()
+
+		statistic, err := converge.CheckState(kubeCl, metaConfig)
+		if err != nil {
+			return err
+		}
+
+		var data []byte
+		switch app.OutputFormat {
+		case "yaml":
+			data, err = yaml.Marshal(statistic)
+			if err != nil {
+				return err
+			}
+		case "json":
+			data, err = json.Marshal(statistic)
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("Unknown output format %s", app.OutputFormat)
+		}
+
+		fmt.Println(string(data))
 		return nil
 	})
 	return cmd

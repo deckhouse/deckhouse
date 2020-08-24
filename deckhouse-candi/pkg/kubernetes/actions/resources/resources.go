@@ -56,7 +56,7 @@ func CreateResources(kubeCl *client.KubernetesClient, resources *config.Resource
 }
 
 func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Resources, gvk schema.GroupVersionKind) error {
-	return retry.StartLoop(fmt.Sprintf("Creation of %s resources", gvk.String()), 25, 5, func() error {
+	return retry.StartLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5, func() error {
 		gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
 		if err != nil {
 			return fmt.Errorf("can't get resource by kind and apiVersion: %w", err)

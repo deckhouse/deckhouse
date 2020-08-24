@@ -150,7 +150,6 @@ func (c *ConvergeExporter) getStatistic() {
 	if err != nil {
 		log.Errorln(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
-		return
 	}
 
 	for _, status := range clusterStatuses {

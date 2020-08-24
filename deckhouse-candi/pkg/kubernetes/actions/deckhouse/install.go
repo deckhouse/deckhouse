@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	"flant/deckhouse-candi/pkg/config"
-	"flant/deckhouse-candi/pkg/kubernetes/actions"
-	"flant/deckhouse-candi/pkg/kubernetes/actions/manifests"
-	"flant/deckhouse-candi/pkg/kubernetes/client"
-	"flant/deckhouse-candi/pkg/log"
-	"flant/deckhouse-candi/pkg/util/retry"
 	"github.com/flant/logboek"
 	"github.com/iancoleman/strcase"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"flant/deckhouse-candi/pkg/config"
+	"flant/deckhouse-candi/pkg/kubernetes/actions"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/manifests"
+	"flant/deckhouse-candi/pkg/kubernetes/client"
+	"flant/deckhouse-candi/pkg/log"
+	"flant/deckhouse-candi/pkg/util/retry"
 )
 
 type Config struct {
@@ -223,7 +224,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
-	return logboek.LogProcess("Waiting for Deckhouse readiness", log.BoldOptions(), func() error {
+	return logboek.LogProcess("Waiting for Deckhouse to become Ready", log.BoldOptions(), func() error {
 		// watch for deckhouse pods in namespace become Ready
 		ready := make(chan struct{}, 1)
 
@@ -271,7 +272,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 				time.Sleep(15 * time.Second)
 				err = PrintDeckhouseLogs(kubeCl, &stopLogsChan)
 				if err != nil {
-					logboek.LogInfoF("Deckhouse is not ready yet - %v\n", err)
+					logboek.LogInfoLn(err.Error())
 					continue
 				}
 				return

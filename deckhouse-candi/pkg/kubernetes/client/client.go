@@ -91,6 +91,5 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 	}
 
 	logboek.LogInfoF("Proxy started on port %s\n", port)
-
 	return port, nil
 }
