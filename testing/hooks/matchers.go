@@ -22,6 +22,16 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 		return false, fmt.Errorf("ExecuteSuccessfully matcher expects a *HookExecutionConfig")
 	}
 
+	// There is no Session for go hooks, so this matcher is just ignored
+	if hec.GoHook != nil {
+		if hec.GoHookOut != nil {
+			if hec.GoHookOut.Error != nil {
+				return false, hec.GoHookOut.Error
+			}
+		}
+		return true, nil
+	}
+
 	if hec.Session.ExitCode() == matcher.path {
 		return true, nil
 	}

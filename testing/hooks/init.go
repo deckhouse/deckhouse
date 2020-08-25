@@ -24,7 +24,13 @@ import (
 	"sigs.k8s.io/yaml"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	utils "github.com/flant/shell-operator/pkg/utils/file"
 	"github.com/flant/shell-operator/test/hook/context"
+
+	// Define Register func and Registry object to import go-hooks.
+	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/addon-operator/sdk/registry"
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -64,6 +70,7 @@ type CustomCRD struct {
 type HookExecutionConfig struct {
 	tmpDir                   string // FIXME
 	HookPath                 string
+	GoHook                   sdk.GoHook
 	values                   *values_store.ValuesStore
 	configValues             *values_store.ValuesStore
 	hookConfig               string // <hook> --config output
@@ -76,7 +83,8 @@ type HookExecutionConfig struct {
 	BindingContextController *context.BindingContextController
 	extraHookEnvs            []string
 
-	Session *gexec.Session
+	Session   *gexec.Session
+	GoHookOut *sdk.HookOutput
 }
 
 func (hec *HookExecutionConfig) RegisterCRD(group, version, kind string, namespaced bool) {
@@ -124,71 +132,123 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	var err error
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
-	hookConfig := new(HookExecutionConfig)
+	hec := new(HookExecutionConfig)
 	_, f, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("can't execute runtime.Caller")
 	}
-	hookConfig.HookPath = strings.TrimSuffix(f, "_test.go")
+	hec.HookPath = strings.TrimSuffix(f, "_test.go")
 
-	hookConfig.KubeExtraCRDs = []CustomCRD{}
+	// Search golang hook by name.
+	goHookPath := hec.HookPath + ".go"
+	hasGoHook, err := utils.FileExists(goHookPath)
+	if err == nil && hasGoHook {
+		goHookName := filepath.Base(goHookPath)
+		for _, h := range registry.Registry().Hooks() {
+			if strings.Contains(goHookPath, h.Metadata().Path) {
+				hec.GoHook = h
+				break
+			}
+		}
+		if hec.GoHook == nil {
+			panic(fmt.Errorf("go hook '%s' exists but is not registered as '%s'", goHookPath, goHookName))
+		}
+		hec.HookPath = ""
+	}
+
+	hec.KubeExtraCRDs = []CustomCRD{}
 
 	BeforeEach(func() {
-		hookConfig.values, err = values_store.NewStoreFromRawYaml([]byte(initValues))
+		hec.values, err = values_store.NewStoreFromRawYaml([]byte(initValues))
 		if err != nil {
 			panic(err)
 		}
-		hookConfig.configValues, err = values_store.NewStoreFromRawYaml([]byte(initConfigValues))
+		hec.configValues, err = values_store.NewStoreFromRawYaml([]byte(initConfigValues))
 		if err != nil {
 			panic(err)
 		}
-		hookConfig.IsKubeStateInited = false
-		hookConfig.BindingContexts.Set()
+		hec.IsKubeStateInited = false
+		hec.BindingContexts.Set()
 	})
 
-	hookEnvs = append(hookEnvs, "D8_IS_TESTS_ENVIRONMENT=yes")
+	// Run --config for shell hook
+	if hec.GoHook == nil {
+		hookEnvs = append(hookEnvs, "D8_IS_TESTS_ENVIRONMENT=yes")
 
-	stdout := bytes.Buffer{}
-	stderr := bytes.Buffer{}
-	cmd := &exec.Cmd{
-		Path:   hookConfig.HookPath,
-		Args:   []string{hookConfig.HookPath, "--config"},
-		Env:    append(os.Environ(), hookEnvs...),
-		Stdout: &stdout,
-		Stderr: &stderr,
+		stdout := bytes.Buffer{}
+		stderr := bytes.Buffer{}
+		cmd := &exec.Cmd{
+			Path:   hec.HookPath,
+			Args:   []string{hec.HookPath, "--config"},
+			Env:    append(os.Environ(), hookEnvs...),
+			Stdout: &stdout,
+			Stderr: &stderr,
+		}
+
+		hec.tmpDir, err = ioutil.TempDir(globalTmpDir, "")
+		if err != nil {
+			panic(err)
+		}
+
+		if err := cmd.Run(); err != nil {
+			panic(fmt.Errorf("%s\nstdout:\n%s\n\nstderr:\n%s", err, stdout.String(), stderr.String()))
+		}
+
+		var config ShellOperatorHookConfig
+		err = yaml.Unmarshal(stdout.Bytes(), &config)
+		if err != nil {
+			panic(err)
+		}
+
+		result, err := json.Marshal(config)
+		if err != nil {
+			panic(err)
+		}
+		hec.hookConfig = string(result)
 	}
 
-	hookConfig.tmpDir, err = ioutil.TempDir(globalTmpDir, "")
-	if err != nil {
-		panic(err)
-	}
-
-	if err := cmd.Run(); err != nil {
-		panic(fmt.Errorf("%s\nstdout:\n%s\n\nstderr:\n%s", err, stdout.String(), stderr.String()))
-	}
-
-	var config ShellOperatorHookConfig
-	err = yaml.Unmarshal(stdout.Bytes(), &config)
-	if err != nil {
-		panic(err)
-	}
-
-	result, err := json.Marshal(config)
-	if err != nil {
-		panic(err)
-	}
-	hookConfig.hookConfig = string(result)
-
-	return hookConfig
+	return hec
 }
 
-func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, desiredQuantity int) string {
-	var contexts string
+func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, desiredQuantity int) context.GeneratedBindingContexts {
+	var contexts context.GeneratedBindingContexts
 	var err error
 	if !hec.IsKubeStateInited {
 		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig, newKubeState)
 		if err != nil {
 			panic(err)
+		}
+
+		if hec.GoHook != nil {
+			// create GlobalHook or Module and convert its config
+			m := hec.GoHook.Metadata()
+			// tests are only for schedule and kubernetes bindings, so we can test all hooks as global hooks
+			globalHook := module_manager.NewGlobalHook(m.Name, m.Path)
+			globalHook.WithGoHook(hec.GoHook)
+
+			var yamlConfigBytes []byte
+			var goConfig *sdk.HookConfig
+
+			goConfig = hec.GoHook.Config()
+			if goConfig.YamlConfig != "" {
+				yamlConfigBytes = []byte(goConfig.YamlConfig)
+			}
+
+			if len(yamlConfigBytes) > 0 {
+				err = globalHook.WithConfig(yamlConfigBytes)
+				if err != nil {
+					panic(fmt.Errorf("fail load hook YAML config: %v", err))
+				}
+			} else {
+				if goConfig != nil {
+					err := globalHook.WithGoConfig(goConfig)
+					if err != nil {
+						panic(fmt.Errorf("fail load hook golang config: %v", err))
+					}
+				}
+			}
+
+			hec.BindingContextController.WithHook(&globalHook.Hook)
 		}
 
 		if len(hec.KubeExtraCRDs) > 0 {
@@ -216,11 +276,11 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 	return contexts
 }
 
-func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) string {
+func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) context.GeneratedBindingContexts {
 	return hec.KubeStateSetAndWaitForBindingContexts(newKubeState, 0)
 }
 
-func (hec *HookExecutionConfig) RunSchedule(crontab string) string {
+func (hec *HookExecutionConfig) RunSchedule(crontab string) context.GeneratedBindingContexts {
 	if hec.BindingContextController == nil {
 		return ScheduleBindingContext("Empty Schedule")
 	}
@@ -257,6 +317,11 @@ func (hec *HookExecutionConfig) KubeStateToKubeObjects() error {
 }
 
 func (hec *HookExecutionConfig) RunHook() {
+	if hec.GoHook != nil {
+		hec.RunGoHook()
+		return
+	}
+
 	var (
 		err error
 
@@ -405,6 +470,61 @@ func (hec *HookExecutionConfig) RunHook() {
 		hec.ObjectStore = patchedObjects
 		hec.KubernetesResourcePatch = kubePatch
 	}
+}
+
+func (hec *HookExecutionConfig) RunGoHook() {
+	if hec.GoHook == nil {
+		return
+	}
+
+	var (
+		err error
+	)
+
+	err = hec.KubeStateToKubeObjects()
+	Expect(err).ShouldNot(HaveOccurred())
+
+	Expect(hec.values.JsonRepr).ToNot(BeEmpty())
+
+	Expect(hec.configValues.JsonRepr).ToNot(BeEmpty())
+
+	values, err := addonutils.NewValuesFromBytes(hec.values.JsonRepr)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JsonRepr)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	hookInput := &sdk.HookInput{
+		BindingContexts: hec.BindingContexts.BindingContexts,
+		Values:          values,
+		ConfigValues:    convigValues,
+		Envs: map[string]string{
+			"ADDON_OPERATOR_NAMESPACE": "tests",
+			"DECKHOUSE_POD":            "tests",
+			"D8_IS_TESTS_ENVIRONMENT":  "yes",
+			"PATH":                     os.Getenv("PATH"),
+		},
+	}
+
+	out, err := hec.GoHook.Run(hookInput)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	if out.MemoryValuesPatches != nil {
+		patchedValuesBytes, err := out.MemoryValuesPatches.Apply(hec.values.JsonRepr)
+		Expect(err).ShouldNot(HaveOccurred())
+		hec.values = values_store.NewStoreFromRawJson(patchedValuesBytes)
+	}
+
+	if out.ConfigValuesPatches != nil {
+		patchedConfigValuesBytes, err := out.ConfigValuesPatches.Apply(hec.configValues.JsonRepr)
+		Expect(err).ShouldNot(HaveOccurred())
+		hec.configValues = values_store.NewStoreFromRawJson(patchedConfigValuesBytes)
+	}
+
+	hec.GoHookOut = out
+
+	// TODO Kubernetes patch not supported for Go Hooks now.
+	// https://github.com/flant/shell-operator/issues/94
 }
 
 var _ = BeforeSuite(func() {

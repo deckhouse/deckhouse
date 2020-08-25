@@ -13,6 +13,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+
+	"github.com/flant/addon-operator/sdk"
+	_ "github.com/flant/addon-operator/sdk/registry"
+	"github.com/flant/shell-operator/pkg/hook/binding_context"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 )
 
 var _ = Describe("Prometheus hooks :: alertmanager discovery ::", func() {
@@ -117,5 +122,50 @@ spec:
 			})
 		})
 
+	})
+})
+
+// MergeAlertManagers test
+var _ = Describe("Prometheus hooks :: alertmanager discovery :: go funcs ::", func() {
+	Context("MergeAlertManagers ::", func() {
+		It("should return '{}' if no 'alertmanager_services' snapshot", func() {
+			in := &sdk.BindingInput{
+				BindingContext: hook.BindingContext{
+					Binding:   "main",
+					Type:      "Group",
+					Snapshots: map[string][]types.ObjectAndFilterResult{},
+				},
+			}
+			in.BindingContext.Metadata.Group = "main"
+			out, err := MergeAlertManagers(in)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(out).Should(Equal(`{}`))
+		})
+
+		It("should merge filterResults in 'alertmanager_services' snapshot", func() {
+			in := &sdk.BindingInput{
+				BindingContext: hook.BindingContext{
+					Binding: "main",
+					Type:    "Group",
+					Snapshots: map[string][]types.ObjectAndFilterResult{
+						"alertmanager_services": {
+							{
+								FilterResult: `{"prometheus":"prom-one", "service":{"name":"srvOne", "namespace": "nsOne", "pathPrefix": "/prom", "port": 12}}`,
+							},
+							{
+								FilterResult: `{"prometheus":"prom-one", "service":{"name":"srvTwo", "namespace": "nsTwo", "pathPrefix": "/prom-two", "port": "prom-port"}}`,
+							},
+							{
+								FilterResult: `{"prometheus":"long-term", "service":{"name":"srvLongTerm", "namespace": "nsOne", "pathPrefix": "/long-prom", "port": 9090}}`,
+							},
+						},
+					},
+				},
+			}
+			in.BindingContext.Metadata.Group = "main"
+			out, err := MergeAlertManagers(in)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(out).Should(Equal(`{"long-term":[{"name":"srvLongTerm","namespace":"nsOne","pathPrefix":"/long-prom","port":9090}],"prom-one":[{"name":"srvOne","namespace":"nsOne","pathPrefix":"/prom","port":12},{"name":"srvTwo","namespace":"nsTwo","pathPrefix":"/prom-two","port":"prom-port"}]}`))
+		})
 	})
 })

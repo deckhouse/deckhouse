@@ -4,12 +4,12 @@ go 1.12
 
 require (
 	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
+	github.com/deckhouse/deckhouse v0.0.0
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20200708095832-aa722bddf952 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.10.0.20200708094531-126d47838bc0 // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20200814152246-8570d2963321 // branch: feat_hooks_golang
+	github.com/flant/shell-operator v1.0.0-beta.11.0.20200814111719-6b5dd3944bfc // branch: feat_hooks_golang
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.1.0
 	github.com/sirupsen/logrus v1.4.2
@@ -20,9 +20,9 @@ require (
 	go.uber.org/zap v1.15.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.17.0
-	k8s.io/apimachinery v0.17.0
-	k8s.io/kubectl v0.17.0
+	k8s.io/api v0.18.0
+	k8s.io/apimachinery v0.18.0
+	k8s.io/kubectl v0.18.0
 )
 
 //replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.4-0.20200313141509-0c0fba4d39e1 // branch: fix_in_body_0_19_7
@@ -32,3 +32,15 @@ require (
 //replace github.com/flant/addon-operator => ../../addon-operator
 
 replace flant/deckhouse-candi => ../deckhouse-candi
+
+replace github.com/deckhouse/deckhouse => ../
+
+replace k8s.io/api => k8s.io/api v0.17.0
+
+replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.0
+
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.17.0
+
+replace k8s.io/client-go => k8s.io/client-go v0.17.0
+
+replace google.golang.org/grpc => google.golang.org/grpc v1.23.0

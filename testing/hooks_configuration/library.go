@@ -40,6 +40,7 @@ func (hc *HookConfig) String() string {
 	return hc.JSON
 }
 
+// FIXME use addon-operator’s methods to discover all hooks.
 func GetAllHooks() ([]Hook, error) {
 	hooks := []Hook{}
 	hookDirs, err := filepath.Glob("/deckhouse/modules/*/hooks")
@@ -55,10 +56,22 @@ func GetAllHooks() ([]Hook, error) {
 				return err
 			}
 
+			// Ignore tests.
 			if strings.HasSuffix(path, "test.go") {
 				return nil
 			}
 
+			// Ignore golang hooks.
+			if strings.HasSuffix(path, ".go") {
+				return nil
+			}
+
+			// Ignore non executables.
+			if info.Mode()&0111 == 0 {
+				return nil
+			}
+
+			// Ignore subdirectories.
 			if info.IsDir() {
 				return nil
 			}
