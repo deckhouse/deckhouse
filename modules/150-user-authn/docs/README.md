@@ -139,7 +139,7 @@ data:
 * `idTokenTTL` — данный параметр отвечает за время жизни id токена (указывается с суффиксом s, m или h);
   * По-умолчанию — 10 минут.
   * Пример: `1h`
-* `highAvailability` — ручное управление [режимом отказоустойчивости]({{ site.baseurl }}/features.html#отказоустойчивость).
+* `highAvailability` — ручное управление режимом отказоустойчивости.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/vsphere-csi-driver":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.

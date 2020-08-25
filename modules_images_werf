@@ -37,6 +37,20 @@ function cleanup() {
   echo "{}" > modules/images_tags.json
 }
 
+function test_web_links() {
+  set +e
+  IMAGE_URL="${CI_REGISTRY_IMAGE}/deckhouse-web/web:$(jq .deckhouseWeb.web -r modules/images_tags.json)"
+  REPORT_FILE=${REPORT_FILE:-link_test_report.txt}
+  docker pull ${IMAGE_URL}
+  (docker run --rm --entrypoint cat $IMAGE_URL /usr/share/nginx/html/link_test_report.txt) &> ${REPORT_FILE}
+  echo -e "\n#################################################\nThe deckhouse-web module link checking report:\n"
+  cat ${REPORT_FILE}
+  cat ${REPORT_FILE} | grep -Eq 'finished successfully.$'
+  if [ $? -ne 0 ]; then
+    exit 1
+  fi
+}
+
 function pull() {
   >&2 echo "Pulling images..."
   cat $(find modules -name *Dockerfile -o -name *werf.inc.yaml) \
@@ -53,6 +67,7 @@ Available subcommands: (for details, modules_images SUBCOMMAND --help)
 
 modules_images bp
 modules_images cleanup
+modules_images test_web_links
 modules_images pull
 EOF
 
@@ -74,6 +89,8 @@ case "$SUBCOMMAND" in
     bp $@ ;;
   cleanup )
     cleanup $@ ;;
+  test_web_links )
+    test_web_links $@ ;;
   pull )
     pull $@ ;;
   * )

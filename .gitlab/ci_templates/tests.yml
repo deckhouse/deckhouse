@@ -101,3 +101,33 @@
     - "Build"
     - "Build Modules Images"
   interruptible: true
+
+.Web links test:
+  variables:
+    REPORT_FILE: link_test_report.txt
+  stage: testing
+  script:
+    - ./modules_images_werf test_web_links
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
+    - werf run --config werf-web.yaml dev/web-public --docker-options="--rm --entrypoint cat" -- /usr/share/nginx/html/link_test_report.txt | tee ${REPORT_FILE}
+    - echo -e "\n#################################################\nPublic site link checking report...\n"
+    - |
+      cat ${REPORT_FILE} | grep -Eq 'finished successfully.$'
+      if [ $? -ne 0 ]; then
+        exit 1
+      fi
+  after_script:
+    - rm -f ${REPORT_FILE}
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  allow_failure: true
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true

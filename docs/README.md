@@ -148,7 +148,7 @@ global: |
 * `storageClass` — имя storage class, который будет использоваться для всех служебных компонентов (prometheus, grafana, openvpn, ...).
     * По-умолчанию — null, а значит служебные будут использовать `cluster.defaultStorageClass` (который определяется автоматически), а если такого нет — `emptyDir`.
     * Этот параметр имеет смысл использовать только в исключительных ситуациях.
-* `highAvailability` — глобальный включатель [режима отказоустойчивости]({{ site.baseurl }}/features.html#отказоустойчивость) для модулей, которые это поддерживают. По-умолчанию не определён и решение принимается на основе autodiscovery-параметра `global.discovery.clusterControlPlaneIsHighlyAvailable` (см. [описание]({{ site.baseurl }}/features.html#отказоустойчивость)).
+* `highAvailability` — глобальный включатель режима отказоустойчивости для модулей, которые это поддерживают. По-умолчанию не определён и решение принимается на основе autodiscovery-параметра `global.discovery.clusterControlPlaneIsHighlyAvailable`.
 
 ### Включение и отключение модулей
 
