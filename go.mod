@@ -3,10 +3,11 @@ module github.com/deckhouse/deckhouse
 go 1.13
 
 require (
+	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20200629165725-a1a4303dcd1b // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.10.0.20200623160558-059424b1a40a // branch: master
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20200814152246-8570d2963321 // branch: feat_hooks_golang
+	github.com/flant/shell-operator v1.0.0-beta.11.0.20200814111719-6b5dd3944bfc // branch: feat_hooks_golang
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.4.0
@@ -22,7 +23,7 @@ require (
 	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1
 	gopkg.in/evanphx/json-patch.v4 v4.5.0
 	gopkg.in/yaml.v2 v2.2.8
-	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.18.0
 	k8s.io/apiextensions-apiserver v0.18.0
@@ -30,7 +31,11 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-//replace github.com/flant/shell-operator => ../../shell-operator
+//replace github.com/flant/shell-operator => ../shell-operator
+
+//replace github.com/flant/addon-operator => ../addon-operator
+
+replace flant/deckhouse-candi => ./deckhouse-candi
 
 // TODO remove when https://github.com/helm/helm/pull/8371 will be merged and released.
 //replace helm.sh/helm/v3 => github.com/diafour/helm/v3 v3.2.5-0.20200630114452-b734742e3342 // branch: fix_tpl_performance_3_2_4

@@ -319,6 +319,29 @@ git:
     - go.sum
     setup:
     - "pkg/**/*.go"
+- add: /
+  to: /
+  includePaths:
+    - go.mod
+    - go.sum
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+- add: /global-hooks
+  to: /global-hooks
+  includePaths:
+    - "**/*.go"
+  stageDependencies:
+    setup:
+      - "**/*.go"
+- add: /modules
+  to: /modules
+  includePaths:
+    - "**/*.go"
+  stageDependencies:
+    setup:
+      - "**/*.go"
 import:
 - artifact: libjq
   add: /libjq

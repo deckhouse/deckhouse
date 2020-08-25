@@ -7,6 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+
+	_ "github.com/flant/addon-operator/sdk/registry"
 )
 
 var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
