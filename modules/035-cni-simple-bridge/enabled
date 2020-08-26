@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  echo "true" > $MODULE_ENABLED_RESULT
+}
+
+enabled::run $@

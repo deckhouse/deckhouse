@@ -1,0 +1,64 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: flannel
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "flannel")) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: flannel
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: flannel
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+      hostNetwork: true
+      tolerations:
+      - operator: Exists
+      serviceAccountName: {{ .Chart.Name }}
+      containers:
+      - name: kube-flannel
+        image: {{ .Values.global.modulesImages.registry }}/cni-flannel/flanneld:{{ .Values.global.modulesImages.tags.cniFlannel.flanneld }}
+        args:
+        - --ip-masq
+        - --kube-subnet-mgr
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+        securityContext:
+          privileged: true
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: run
+          mountPath: /run
+        - name: flannel-cfg
+          mountPath: /etc/kube-flannel/
+        - name: cni
+          mountPath: /etc/cni/net.d
+      volumes:
+        - name: run
+          hostPath:
+            path: /run
+        - name: cni
+          hostPath:
+            path: /etc/cni/net.d
+        - name: flannel-cfg
+          configMap:
+            name: flannel

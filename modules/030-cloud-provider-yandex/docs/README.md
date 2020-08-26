@@ -6,9 +6,8 @@ title: "Модуль cloud-provider-yandex"
 
 1. cloud-controller-manager — контроллер для управления ресурсами облака из Kubernetes.
     * Синхронизирует метаданные Yandex Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в Yandex.
-2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
-3. CSI storage — для заказа дисков в Yandex.
-4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [YandexInstanceClass'ы](#yandexinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
+2. CSI storage — для заказа дисков в Yandex.
+3. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [YandexInstanceClass'ы](#yandexinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 ## Конфигурация
 

@@ -8,9 +8,8 @@ title: "Модуль cloud-provider-aws"
     * Создаёт route'ы для PodNetwork в cloud provider'е.
     * Создаёт LoadBalancer'ы для Service-объектов Kubernetes с типом LoadBalancer.
     * Синхронизирует метаданные AWS Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в AWS.
-2. simple-bridge — DaemonSet. Настраивает bridge между нодами.
-3. CSI storage — для заказа дисков в AWS.
-4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [AWSInstanceClass'ы](#awsinstanceclass-custom-resource) можно было использовать в [NodeGroups]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
+2. CSI storage — для заказа дисков в AWS.
+3. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [AWSInstanceClass'ы](#awsinstanceclass-custom-resource) можно было использовать в [NodeGroups]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 ## Конфигурация
 
