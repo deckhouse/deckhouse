@@ -71,7 +71,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 }
 
 func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("deckhouse-deployment-ready", "Wait while deployment is ready.")
+	cmd := parent.Command("deployment-ready", "Wait while deployment is ready.")
 	app.DefineSshFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	sh_app.DefineKubeClientFlags(cmd)

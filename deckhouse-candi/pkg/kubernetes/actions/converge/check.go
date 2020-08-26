@@ -3,7 +3,7 @@ package converge
 import (
 	"fmt"
 
-	"github.com/flant/logboek"
+	"github.com/hashicorp/go-multierror"
 
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/client"
@@ -19,11 +19,28 @@ const (
 	ExcessiveStatus    = "excessive"
 )
 
+type ClusterCheckResult struct {
+	Status string `json:"status,omitempty"`
+}
+
+type NodeCheckResult struct {
+	Group  string `json:"group,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Status string `json:"status,omitempty"`
+}
+
+type NodeGroupCheckResult struct {
+	Name   string `json:"name,omitempty"`
+	Status string `json:"status,omitempty"`
+}
+
+type Statistics struct {
+	Node       []NodeCheckResult      `json:"nodes,omitempty"`
+	NodeGroups []NodeGroupCheckResult `json:"node_groups,omitempty"`
+	Cluster    ClusterCheckResult     `json:"cluster,omitempty"`
+}
+
 func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (bool, error) {
-	/*
-	  labels:
-	    status
-	*/
 	clusterState, err := GetClusterStateFromCluster(kubeCl)
 	if err != nil {
 		return false, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
@@ -33,7 +50,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		return false, fmt.Errorf("kubernetes cluster has no state")
 	}
 
-	baseRunner := terraform.NewRunnerFromMetaConfig("base-infrastructure", metaConfig).
+	baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 		WithVariables(metaConfig.MarshalConfig()).
 		WithState(clusterState).
 		WithAutoApprove(true)
@@ -42,35 +59,14 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 	return terraform.CheckPipeline(baseRunner)
 }
 
-type ClusterCheckResult struct {
-	Status string
-}
-
-type NodeCheckResult struct {
-	Group  string
-	Name   string
-	Status string
-}
-
-type NodeGroupCheckResult struct {
-	Name   string
-	Status string
-}
-
-type ConvergeStatistics struct {
-	Node       []NodeCheckResult
-	NodeGroups []NodeGroupCheckResult
-	Cluster    ClusterCheckResult
-}
-
-func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *ConvergeNodeGroupGroupOptions, nodeName string) (bool, error) {
+func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string) (bool, error) {
 	state := nodeGroup.State[nodeName]
 	index := getIndexFromNodeName(nodeName)
 	if index == -1 {
 		return false, fmt.Errorf("can't extract index from terraform state secret, skip %s\n", nodeName)
 	}
 
-	nodeRunner := terraform.NewRunnerFromMetaConfig(nodeGroup.Step, metaConfig).
+	nodeRunner := terraform.NewRunnerFromConfig(metaConfig, nodeGroup.Step).
 		WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithState(state)
 	defer nodeRunner.Close()
@@ -78,33 +74,27 @@ func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *ConvergeNodeGroupG
 	return terraform.CheckPipeline(nodeRunner)
 }
 
-func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*ConvergeStatistics, error) {
-	/*
-	  labels:
-	    node_group
-	    node_name
-	    status
-
-	  labels:
-	    name
-	    status
-	*/
-	statistics := ConvergeStatistics{
+func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*Statistics, error) {
+	statistics := Statistics{
 		Node:       make([]NodeCheckResult, 0),
 		NodeGroups: make([]NodeGroupCheckResult, 0),
 		Cluster:    ClusterCheckResult{Status: OKStatus},
 	}
 
+	var allErrs *multierror.Error
+
 	clusterChanged, err := checkClusterState(kubeCl, metaConfig)
 	if err != nil {
 		statistics.Cluster.Status = ErrorStatus
+		allErrs = multierror.Append(allErrs, err)
 	} else if clusterChanged {
 		statistics.Cluster.Status = ChangedStatus
 	}
 
 	nodesState, err := GetNodesStateFromCluster(kubeCl)
 	if err != nil {
-		return nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+		allErrs = multierror.Append(allErrs, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err))
+		return nil, allErrs.ErrorOrNil()
 	}
 
 	var nodeGroupsWithStateInCluster []string
@@ -132,7 +122,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 		}
 
 		statistics.NodeGroups = append(statistics.NodeGroups, nodeGroupCheckResult)
-		nodeGroup := ConvergeNodeGroupGroupOptions{
+		nodeGroup := NodeGroupGroupOptions{
 			Name:     nodeGroupName,
 			Step:     step,
 			Replicas: replicas,
@@ -144,8 +134,8 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 			checkResult := NodeCheckResult{Group: nodeGroupName, Name: name, Status: OKStatus}
 			changed, err := checkNodeState(metaConfig, &nodeGroup, name)
 			if err != nil {
-				logboek.LogErrorLn(err)
 				checkResult.Status = ErrorStatus
+				allErrs = multierror.Append(allErrs, fmt.Errorf("node %s: %v", name, err))
 			} else if changed {
 				checkResult.Status = ChangedStatus
 			}
@@ -153,5 +143,5 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 			statistics.Node = append(statistics.Node, checkResult)
 		}
 	}
-	return &statistics, nil
+	return &statistics, allErrs.ErrorOrNil()
 }

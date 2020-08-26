@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"flant/deckhouse-candi/pkg/kubernetes/client"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/util/retry"
 )
 
@@ -34,10 +35,11 @@ func ParseConfig(path string) (*MetaConfig, error) {
 func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
-
-	err = retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 45, 10, func() error {
-		metaConfig, err = parseConfigFromCluster(kubeCl)
-		return err
+	err = log.CommonProcess("Get Cluster configuration", func() error {
+		return retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 45, 10, func() error {
+			metaConfig, err = parseConfigFromCluster(kubeCl)
+			return err
+		})
 	})
 	if err != nil {
 		return nil, err

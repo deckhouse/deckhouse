@@ -34,6 +34,8 @@ func main() {
 	}()
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
+	kpApp.HelpFlag.Short('h')
+	kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
@@ -58,6 +60,7 @@ func main() {
 	{
 		commands.DefineRunDestroyAllTerraformCommand(terraformCmd)
 		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
+		commands.DefineTerraformCheckCommand(terraformCmd)
 	}
 
 	renderCmd := kpApp.Command("render", "Parse, validate and render bundles and configs.")
@@ -71,16 +74,16 @@ func main() {
 	{
 		commands.DefineTestSshConnectionCommand(testCmd)
 		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
-		commands.DefineWaitDeploymentReadyCommand(testCmd)
 		commands.DefineTestScpCommand(testCmd)
 		commands.DefineTestUploadExecCommand(testCmd)
 		commands.DefineTestBundle(testCmd)
 	}
 
-	deckhouseCmd := kpApp.Command("deckhouse", "Install and uninstall deckhouse.")
+	deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
 	{
 		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
 		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
+		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
 	}
 
 	kpApp.Version("v0.1.0").Author("Flant")

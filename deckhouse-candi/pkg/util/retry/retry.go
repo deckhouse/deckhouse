@@ -10,11 +10,11 @@ import (
 )
 
 func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
-	return logboek.LogProcess(name, log.BoldOptions(), func() error {
+	return log.BoldProcess(name, func() error {
 		for i := 1; i <= attemptsQuantity; i++ {
 			if err := task(); err != nil {
 				logboek.LogInfoF("❌ Attempt #%v of %v |\n\t%s failed, next attempt will be in %vs\n", i, attemptsQuantity, name, waitSeconds)
-				logboek.LogInfoF("\nError: %v\n\n", err)
+				logboek.LogInfoF("\tError: %v\n\n", err)
 				<-time.After(time.Duration(waitSeconds) * time.Second)
 				continue
 			}
