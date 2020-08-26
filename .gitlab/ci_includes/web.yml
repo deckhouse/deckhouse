@@ -1,10 +1,12 @@
 Build Website:
   stage: build
+  variables:
+    WERF_CONFIG: werf-web.yaml
   script:
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - source <(werf ci-env gitlab --verbose)
     - if [ "$CI_COMMIT_REF_NAME" == "master" ] ; then export WERF_TAG_GIT_BRANCH=master ; fi
-    - werf build-and-publish --config werf-web.yaml
+    - werf build-and-publish
   except:
     - schedules
     - alpha
@@ -16,11 +18,16 @@ Build Website:
     - werf-distributed
   interruptible: true
 
+Web links test:
+  extends: .Web links test
+  tags:
+    - werf-distributed
+
 .web_base_deploy: &web_base_deploy
   stage: deploy_website
   script:
     - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --verbose)
+    - type werf && source <(werf ci-env gitlab --config werf-web.yaml --verbose)
     - werf deploy
       --config werf-web.yaml
       --helm-chart-dir=web-public/.helm
@@ -32,6 +39,7 @@ Build Website:
     - "Build"
     - "Build Modules Images"
     - "Build Website"
+    - "Web links test"
   except:
     - schedules
     - alpha
@@ -74,11 +82,13 @@ deckhouse.io:
 
 Web cleanup:
   stage: cleanup_registry
+  variables:
+    WERF_CONFIG: werf-web.yaml
   script:
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - type werf && source <(werf ci-env gitlab --verbose)
     - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
-    - werf cleanup --config werf-web.yaml
+    - werf cleanup
   only:
     - schedules
   tags:

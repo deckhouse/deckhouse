@@ -39,12 +39,14 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data
     - name: "Link checking"
-      shell: bundle exec htmlproofer \
-        --allow-hash-href \
-        --empty-alt-ignore \
-        --check_html \
-        --url_ignore "/localhost/,/https\:\/\/t.me/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-        ./_site/ || exit 0
+      shell: |
+        (bundle exec htmlproofer \
+          --allow-hash-href \
+          --empty-alt-ignore \
+          --check_html \
+          --url_ignore "/localhost/,/https\:\/\/t.me/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+          ./_site/ &> /srv/jekyll-data/_site/link_test_report.txt ) || true
+        cat /srv/jekyll-data/_site/link_test_report.txt
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
