@@ -240,6 +240,12 @@
 {{- end -}}
 
 {{- define "user_authz_cluster_admin_rules" }}
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterauthorizationrules
+  verbs:
+{{- include "user_authz_verbs" "rw" }}
 {{- end }}
 
 {{- define "user_authz_super_admin_rules" }}
