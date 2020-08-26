@@ -1,4 +1,5 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -13,10 +14,10 @@ spec:
     name: image-availability-exporter
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
+  {{- end }}
 ---
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: image-availability-exporter
   namespace: d8-monitoring
@@ -45,18 +46,18 @@ spec:
         image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/image-availability-exporter:{{ .Values.global.modulesImages.tags.extendedMonitoring.imageAvailabilityExporter }}
         args:
         - --bind-address=127.0.0.1:8080
-{{- if .Values.extendedMonitoring.imageAvailability }}
   {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
         - --ignored-images={{ .Values.extendedMonitoring.imageAvailability.ignoredImages | join "," | quote }}
   {{- end }}
   {{- if .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
         - --skip-registry-cert-verification={{ .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
   {{- end }}
-{{- end }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         resources:
           requests:
             cpu: "100m"
             memory: "64Mi"
+  {{- end }}
         readinessProbe:
           httpGet:
             path: /healthz
@@ -94,3 +95,4 @@ spec:
                   resource: deployments
                   subresource: prometheus-metrics
                   name: image-availability-exporter
+{{- end }}

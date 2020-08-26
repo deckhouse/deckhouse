@@ -1,3 +1,4 @@
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -13,3 +14,4 @@ spec:
   selector:
     matchLabels:
       app: image-availability-exporter
+{{- end }}

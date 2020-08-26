@@ -16,8 +16,10 @@ global:
     clusterVersion: 1.15.5
 extendedMonitoring:
   imageAvailability:
+    exporterEnabled:
+      __ConstantChoices__: [true, false]
     ignoredImages:
-      __ConstantChoice__:
+      __ConstantChoices__:
       - ["alpine:3.10", "alpine:3.2"]
       - ["ubuntu:xenial"]
       - __EmptyItem__
