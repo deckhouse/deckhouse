@@ -12,6 +12,7 @@ global:
         csiProvisioner: imagehash
         csiAttacher: imagehash
         csiSnapshotter: imagehash
+        csiResizer: imagehash
         csiNodeDriverRegistrar: imagehash
         cloudControllerManager: imagehash
         flanneld: imagehash
