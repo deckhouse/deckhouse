@@ -1,6 +1,11 @@
 {{- if ne .runType "ClusterBootstrap" }}
 
 kubelet_kubeconfig_path="/etc/kubernetes/kubelet.conf"
+
+if [ ! -f $kubelet_kubeconfig_path ]; then
+  exit 0
+fi
+
 kubelet_certificate_path="/var/lib/kubelet/pki/kubelet-client-current.pem"
 kubelet_kubeconfig_user=$(kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.users[].name' -r)
 
