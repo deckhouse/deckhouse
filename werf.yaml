@@ -1,5 +1,17 @@
 project: deckhouse
 configVersion: 1
+cleanup:
+  keepPolicies:
+  - references:
+      tag: /.*/
+  - references:
+      branch: /.*/
+    imagesPerReference:
+      last: 2
+  - references:
+      branch: master
+    imagesPerReference:
+      last: 10
 ---
 image: common-base
 from: alpine:3.11

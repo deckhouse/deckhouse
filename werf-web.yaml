@@ -1,5 +1,13 @@
 project: deckhouse-web
 configVersion: 1
+cleanup:
+  keepPolicies:
+  - references:
+      tag: /.*/
+  - references:
+      branch: /.*/
+    imagesPerReference:
+      last: 1
 ---
 artifact: web-public-static
 from: jekyll/jekyll:3.8
