@@ -1,5 +1,5 @@
 diff --git a/server/handlers.go b/server/handlers.go
-index 694ababb..bdd6ee69 100644
+index 694ababb..e2e882ec 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -963,7 +963,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
@@ -25,7 +25,7 @@ index 694ababb..bdd6ee69 100644
  	ident := connector.Identity{
  		UserID:            refresh.Claims.UserID,
  		Username:          refresh.Claims.Username,
-@@ -1029,19 +1024,28 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -1029,19 +1024,32 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		ConnectorData:     connectorData,
  	}
 
@@ -36,7 +36,11 @@ index 694ababb..bdd6ee69 100644
 -	// this interface can't perform refreshing.
 -	if refreshConn, ok := conn.Connector.(connector.RefreshConnector); ok {
 -		newIdent, err := refreshConn.Refresh(r.Context(), parseScopes(scopes), ident)
-+	if refresh.ObsoleteToken != token.Token {
++	currentTime := s.now()
++	isExpiredObsoleteToken := refresh.ObsoleteToken == token.Token && currentTime.After(refresh.LastUsed.Add(s.idTokensValidFor / 4))
++	isNonObsoleteToken := refresh.ObsoleteToken != token.Token
++
++	if isExpiredObsoleteToken || isNonObsoleteToken {
 +		conn, err := s.getConnector(refresh.ConnectorID)
  		if err != nil {
 -			s.logger.Errorf("failed to refresh identity: %v", err)
@@ -63,7 +67,7 @@ index 694ababb..bdd6ee69 100644
  	}
 
  	claims := storage.Claims{
-@@ -1067,10 +1071,11 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -1067,10 +1075,11 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -71,14 +75,14 @@ index 694ababb..bdd6ee69 100644
 -		RefreshId: refresh.ID,
 -		Token:     storage.NewID(),
 +	newToken := token
-+	if refresh.ObsoleteToken != token.Token {
++	if isExpiredObsoleteToken || isNonObsoleteToken {
 +		newToken.Token = storage.NewID()
  	}
 +
  	rawNewToken, err := internal.Marshal(newToken)
  	if err != nil {
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
-@@ -1078,47 +1083,50 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -1078,47 +1087,50 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -86,8 +90,8 @@ index 694ababb..bdd6ee69 100644
 -	updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
 -		if old.Token != refresh.Token {
 -			return old, errors.New("refresh token claimed twice")
-+	if refresh.ObsoleteToken != token.Token {
-+		lastUsed := s.now()
++	if isExpiredObsoleteToken || isNonObsoleteToken {
++		lastUsed := currentTime
 +		updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
 +			if old.Token != refresh.Token {
 +				return old, errors.New("refresh token claimed twice")
