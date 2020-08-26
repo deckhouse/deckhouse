@@ -17,7 +17,6 @@ priorityClassEnabled: true
 prometheusCrdEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 deckhouseEnabled: true
-cloudProviderOpenstackEnabled: true
 nodeManagerEnabled: true
 terraformManagerEnabled: true
 controlPlaneManagerEnabled: true
