@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: aws_instance_classes
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: deckhouse.io/v1alpha1
+      kind: AWSInstanceClass
+      jqFilter: |
+        {
+          "name": (.metadata.name),
+          "hasSpotPrice": (.spec | has("spotPrice"))
+        }
+EOF
+}
+
+function __main__() {
+  readarray -t -d $'\n' unpatched_ics < <(context::jq -rc '.snapshots.aws_instance_classes[].filterResult | select(.hasSpotPrice) | .name')
+
+  if [[ ${#unpatched_ics[@]} == "0" ]]; then
+    return 0
+  fi
+
+  for ic_name in "${unpatched_ics[@]}" ; do
+    kubernetes::patch_jq "" "awsinstanceclasses.deckhouse.io/$ic_name" "del(.spec.spotPrice) | .spec.spot = true"
+  done
+}
+
+hook::run "$@"
