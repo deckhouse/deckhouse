@@ -139,7 +139,7 @@ var _ = Describe("Prometheus hooks :: alertmanager discovery :: go funcs ::", fu
 			in.BindingContext.Metadata.Group = "main"
 			out, err := MergeAlertManagers(in)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(out).Should(Equal(`{}`))
+			Expect(out).Should(Equal(struct{}{}))
 		})
 
 		It("should merge filterResults in 'alertmanager_services' snapshot", func() {
@@ -165,7 +165,13 @@ var _ = Describe("Prometheus hooks :: alertmanager discovery :: go funcs ::", fu
 			in.BindingContext.Metadata.Group = "main"
 			out, err := MergeAlertManagers(in)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(out).Should(Equal(`{"long-term":[{"name":"srvLongTerm","namespace":"nsOne","pathPrefix":"/long-prom","port":9090}],"prom-one":[{"name":"srvOne","namespace":"nsOne","pathPrefix":"/prom","port":12},{"name":"srvTwo","namespace":"nsTwo","pathPrefix":"/prom-two","port":"prom-port"}]}`))
+			Expect(out).Should(BeAssignableToTypeOf(map[string][]interface{}{}))
+			Expect(out).Should(HaveKey("long-term"))
+			Expect(out).Should(HaveKey("prom-one"))
+			m := out.(map[string][]interface{})
+			Expect(m["long-term"]).Should(HaveLen(1))
+			Expect(m["prom-one"]).Should(HaveLen(2))
+			//`{"long-term":[{"name":"srvLongTerm","namespace":"nsOne","pathPrefix":"/long-prom","port":9090}],"prom-one":[{"name":"srvOne","namespace":"nsOne","pathPrefix":"/prom","port":12},{"name":"srvTwo","namespace":"nsTwo","pathPrefix":"/prom-two","port":"prom-port"}]}`))
 		})
 	})
 })

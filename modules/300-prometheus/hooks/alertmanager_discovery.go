@@ -72,7 +72,7 @@ Shell variant:
   }
 */
 func (c *AlertManagerDiscovery) Main(input *sdk.BindingInput) (*sdk.BindingOutput, error) {
-	jsonItems, err := MergeAlertManagers(input)
+	alertManagers, err := MergeAlertManagers(input)
 	if err != nil {
 		return &sdk.BindingOutput{Error: err}, err
 	}
@@ -83,7 +83,7 @@ func (c *AlertManagerDiscovery) Main(input *sdk.BindingInput) (*sdk.BindingOutpu
 				{
 					Op:    "add",
 					Path:  "/prometheus/internal/alertmanagers",
-					Value: jsonItems,
+					Value: alertManagers,
 				},
 			},
 		},
@@ -102,10 +102,10 @@ func (c *AlertManagerDiscovery) Main(input *sdk.BindingInput) (*sdk.BindingOutpu
 // {"prom-one":[{"name":"srvOne", ...}, {"name":"srvTwo", ...}],
 //  "longterm":[{"name":"AnotherSrv", ...}]
 // }
-func MergeAlertManagers(input *sdk.BindingInput) (string, error) {
+func MergeAlertManagers(input *sdk.BindingInput) (interface{}, error) {
 	services, ok := input.BindingContext.Snapshots["alertmanager_services"]
 	if !ok {
-		return "{}", nil
+		return struct{}{}, nil
 	}
 	alertmanagers := map[string][]interface{}{}
 	for _, srv := range services {
@@ -121,10 +121,10 @@ func MergeAlertManagers(input *sdk.BindingInput) (string, error) {
 		alertmanagers[alertmanagerService.Prometheus] = append(alertmanagers[alertmanagerService.Prometheus], alertmanagerService.Service)
 	}
 
-	out, err := json.Marshal(alertmanagers)
-	if err != nil {
-		return "", err
-	}
+	//out, err := json.Marshal(alertmanagers)
+	//if err != nil {
+	//	return "", err
+	//}
 
-	return string(out), nil
+	return alertmanagers, nil
 }
