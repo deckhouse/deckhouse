@@ -1,0 +1,65 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: config
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cluster-configuration]
+      jqFilter: '.data."cluster-configuration.yaml" | @base64d'
+EOF
+}
+
+function __main__() {
+  cloud_provider=""
+  if context::has snapshots.config.0; then
+    cloud_provider=$(context::get  --required 'snapshots.config.0.filterResult' \
+      | deckhouse-controller helper cluster-configuration \
+      | jq -rc '.clusterConfiguration | if .cloud then .cloud.provider else . end')
+
+  elif values::has --config cloudProviderOpenstack; then
+    cloud_provider="OpenStack"
+
+  elif values::has --config cloudProviderAws; then
+    cloud_provider="AWS"
+
+  elif values::has --config cloudProviderGcp; then
+    cloud_provider="GCP"
+
+  elif values::has --config cloudProviderVsphere; then
+    cloud_provider="vSphere"
+
+  elif values::has --config cloudProviderYandex; then
+    cloud_provider="Yandex"
+
+  fi
+
+  declare -A providers; providers=( \
+      ["OpenStack"]="cloudProviderOpenstack"
+      ["AWS"]="cloudProviderAws"
+      ["GCP"]="cloudProviderGcp"
+      ["Yandex"]="cloudProviderYandex"
+      ["vSphere"]="cloudProviderVsphere"
+  )
+
+  for key in "${!providers[@]}"; do
+    module=${providers[$key]}
+    if [[ "$key" == "$cloud_provider" ]]; then
+      values::set "${module}Enabled" true
+    else
+      values::unset "${module}Enabled"
+    fi
+  done
+}
+
+hook::run "$@"
