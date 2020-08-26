@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, csi, flannel.
+2. There are applications which must be deployed — cloud-controller-manager, csi.
 3. There is list of datastores in values.yaml. StorageClass must be created for every datastore. Datastore mentioned in value `defaultDatastore` must be annotated as default.
 
 */
@@ -33,7 +33,6 @@ const globalValues = `
       cloudProviderVsphere:
         attacher: imagehash
         externalResizer: imagehash
-        flanneld: imagehash
         livenessprobe: imagehash
         nodeRegistrar: imagehash
         provisioner: imagehash
@@ -89,12 +88,6 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			flannelCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:flannel")
-			flannelCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:flannel")
-			flannelSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "flannel")
-			flannelDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "flannel")
-			flannelCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-vsphere", "flannel")
-
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "vsphere.csi.vmware.com")
 			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "vsphere-csi-controller")
 			csiCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:vsphere-csi:controller")
@@ -148,11 +141,6 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(csiNodeDS.Exists()).To(BeTrue())
 			Expect(csiDriverControllerVPA.Exists()).To(BeTrue())
 			Expect(csiDriverControllerSS.Exists()).To(BeTrue())
-			Expect(flannelCR.Exists()).To(BeTrue())
-			Expect(flannelCRB.Exists()).To(BeTrue())
-			Expect(flannelSA.Exists()).To(BeTrue())
-			Expect(flannelDS.Exists()).To(BeTrue())
-			Expect(flannelCM.Exists()).To(BeTrue())
 
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())

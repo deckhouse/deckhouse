@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, pd-csi-driver, simple-bridge.
+2. There are applications which must be deployed — cloud-controller-manager, pd-csi-driver.
 
 */
 
@@ -36,7 +36,6 @@ const globalValues = `
         csiResizer: imagehash
         csiSnapshotter: imagehash
         csiNodeDriverRegistrar: imagehash
-        simpleBridge: imagehash
         cloudControllerManager: imagehash
         pdCsiPlugin: imagehash
   discovery:
@@ -111,11 +110,6 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-gcp:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-gcp:cluster-admin")
 
-			simpleBridgeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-gcp", "simple-bridge")
-			simpleBridgeCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:simple-bridge")
-			simpleBridgeCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:simple-bridge")
-			simpleBridgeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "simple-bridge")
-
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
@@ -169,11 +163,6 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
-
-			Expect(simpleBridgeDS.Exists()).To(BeTrue())
-			Expect(simpleBridgeCR.Exists()).To(BeTrue())
-			Expect(simpleBridgeCRB.Exists()).To(BeTrue())
-			Expect(simpleBridgeSA.Exists()).To(BeTrue())
 		})
 	})
 })

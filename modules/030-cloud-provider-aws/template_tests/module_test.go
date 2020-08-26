@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, ebs-csi-driver, simple-bridge.
+2. There are applications which must be deployed — cloud-controller-manager, ebs-csi-driver.
 
 */
 
@@ -38,7 +38,6 @@ const globalValues = `
         csiNodeDriverRegistrar: imagehash
         csiLivenessProbe: imagehash
         ebsCsiPlugin: imagehash
-        simpleBridge: imagehash
         cloudControllerManager: imagehash
         nodeTerminationHandler: imagehash
   discovery:
@@ -113,11 +112,6 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			ebsSnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:ebs-csi:controller:external-snapshotter")
 			ebsStorageClass := f.KubernetesGlobalResource("StorageClass", "gp2")
 
-			simpleBridgeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-aws", "simple-bridge")
-			simpleBridgeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "simple-bridge")
-			simpleBridgeCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:simple-bridge")
-			simpleBridgeCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:simple-bridge")
-
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-aws:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-aws:cluster-admin")
 
@@ -170,10 +164,6 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ebsSnapshotterCR.Exists()).To(BeTrue())
 			Expect(ebsSnapshotterCRB.Exists()).To(BeTrue())
 			Expect(ebsStorageClass.Exists()).To(BeTrue())
-			Expect(simpleBridgeDS.Exists()).To(BeTrue())
-			Expect(simpleBridgeSA.Exists()).To(BeTrue())
-			Expect(simpleBridgeCR.Exists()).To(BeTrue())
-			Expect(simpleBridgeCRB.Exists()).To(BeTrue())
 		})
 	})
 })

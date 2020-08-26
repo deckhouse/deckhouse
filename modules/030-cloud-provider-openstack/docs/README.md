@@ -7,9 +7,8 @@ title: "Модуль cloud-provider-openstack"
 1. `cloud-controller-manager` — контроллер для управления ресурсами OpenStack из Kubernetes.
     1. Создаёт LoadBalancer'ы для Service-объектов Kubernetes с типом `LoadBalancer`.
     2. Синхронизирует метаданные OpenStack Servers и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в OpenStack.
-2. `flannel` — DaemonSet. Настраивает PodNetwork между нодами.
-3. CSI storage — для заказа дисков в Cinder (block). Manilla (filesystem) пока не поддерживается.
-4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [OpenStackInstanceClass'ы](#openstackinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
+2. CSI storage — для заказа дисков в Cinder (block). Manilla (filesystem) пока не поддерживается.
+3. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [OpenStackInstanceClass'ы](#openstackinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 
 ## Конфигурация
@@ -19,7 +18,7 @@ title: "Модуль cloud-provider-openstack"
 Модуль автоматически включается для всех облачных кластеров развёрнутых в OpenStack.
 
 ### Параметры
-Настройки модуля устанавливаются автоматически на основании [выбранной схемы размещения]({{ site.baseurl }}/candi/). В 
+Настройки модуля устанавливаются автоматически на основании [выбранной схемы размещения]({{ site.baseurl }}/candi/). В
 большинстве случаев нет необходимости в ручной конфигурации модуля.
 
 Если вам необходимо настроить модуль, потому что, например, у вас bare metal кластер, для которого нужно включить
@@ -57,7 +56,7 @@ cloudProviderOpenstack: |
     * Опциональный параметр.
     * Формат — integer. В гигабайтах.
     > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по-умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска
-    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](upload_image.html) 
+    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](upload_image.html)
       > ```bash
         openstack volume type list
         openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME

@@ -1,0 +1,29 @@
+global:
+  enabledModules: ["cert-manager"]
+  modules:
+    publicDomainTemplate: "%s.example.com"
+    https:
+      __ConstantChoices__:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: registry.example.com
+    tags:
+      cniSimpleBridge:
+        simpleBridge: hashstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    d8SpecificNodeCountByRole:
+      system:
+        __ConstantChoices__: [1, 2, 3]
+    kubernetesVersion: 1.15.5
+
+cniSimpleBridge: {}

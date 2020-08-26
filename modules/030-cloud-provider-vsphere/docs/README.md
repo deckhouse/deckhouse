@@ -6,9 +6,8 @@ title: "Модуль cloud-provider-vsphere"
 
 1. cloud-controller-manager — контроллер для управления ресурсами Vsphere из Kubernetes.
     1. Синхронизирует метаданные vSphere VirtualMachines и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в vSphere.
-2. flannel — DaemonSet. Настраивает PodNetwork между нодами.
-3. CSI storage — для заказа дисков на datastore через механизм First-Class Disk.
-4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [VsphereInstanceClass'ы](#vsphereinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
+2. CSI storage — для заказа дисков на datastore через механизм First-Class Disk.
+3. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [VsphereInstanceClass'ы](#vsphereinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 ## Конфигурация
 

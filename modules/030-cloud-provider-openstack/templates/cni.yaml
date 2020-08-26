@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cni-configuration
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+data:
+  cni: {{ b64enc "flannel" | quote }}
+  flannel: {{ b64enc "{\"podNetworkMode\":\"host-gw\"}" | quote }}

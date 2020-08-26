@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, yandex-csi, simple-bridge.
+2. There are applications which must be deployed — cloud-controller-manager, yandex-csi.
 
 */
 
@@ -38,7 +38,6 @@ const globalValues = `
         csiLivenessProbe: imagehash
         cloudControllerManager: imagehash
         yandexCsiPlugin: imagehash
-        simpleBridge: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -86,11 +85,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "deckhouse-registry")
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
-			sbCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:simple-bridge")
-			sbCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:simple-bridge")
-			sbSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "simple-bridge")
-			sbDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "simple-bridge")
 
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
 			csiControllerSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-yandex", "csi-controller")
@@ -171,11 +165,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiCredentials.Exists()).To(BeTrue())
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
-
-			Expect(sbCR.Exists()).To(BeTrue())
-			Expect(sbCRB.Exists()).To(BeTrue())
-			Expect(sbSA.Exists()).To(BeTrue())
-			Expect(sbDS.Exists()).To(BeTrue())
 
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())

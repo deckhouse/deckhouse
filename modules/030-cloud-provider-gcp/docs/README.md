@@ -8,9 +8,8 @@ title: "Модуль cloud-provider-gcp"
     * Создаёт route'ы для PodNetwork в cloud provider'е.
     * Создаёт LoadBalancer'ы для Service-объектов Kubernetes с типом LoadBalancer.
     * Синхронизирует метаданные GCP Instances и Kubernetes Nodes. Удаляет из Kubernetes ноды, которых более нет в GCP.
-2. simple-bridge CNI — DaemonSet, который работает на **каждой** ноде кластера. Вытаскивает из API Kubernetes CIDR, выданный этой конкретной ноде и кладёт в виде CNI конфигурации в `/etc/cni/net.d/simple-bridge.conf`.
-3. CSI storage — для заказа дисков в GCP.
-4. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [GCPInstanceClass'ы](#gcpinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
+2. CSI storage — для заказа дисков в GCP.
+3. Регистрация в модуле [node-manager]({{ site.baseurl }}/modules/040-node-manager/), чтобы [GCPInstanceClass'ы](#gcpinstanceclass-custom-resource) можно было использовать в [CloudInstanceClass'ах]({{ site.baseurl }}/modules/040-node-manager/#nodegroup-custom-resource).
 
 ## Конфигурация
 
