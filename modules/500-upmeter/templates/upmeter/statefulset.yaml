@@ -1,0 +1,86 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: upmeter
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | indent 2 }}
+spec:
+  replicas: 1
+  serviceName: upmeter
+  selector:
+    matchLabels:
+      app: upmeter
+  template:
+    metadata:
+      labels:
+        app: upmeter
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      enableServiceLinks: false
+      serviceAccountName: upmeter
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      containers:
+      - name: upmeter
+        image: {{ $.Values.global.modulesImages.registry }}/upmeter/upmeter:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}
+        command:
+          - /upmeter
+          - start
+        env:
+          - name: UPMETER_DB_PATH
+            value: /db/downtime.db.sqlite
+          - name: UPMETER_LISTEN_HOST
+            value: 127.0.0.1
+          - name: UPMETER_LISTEN_PORT
+            value: "8091"
+        volumeMounts:
+          - mountPath: /db
+            name: data
+            readOnly: false
+      - name: kube-rbac-proxy
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 443
+          name: https
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:8091/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: statefulsets
+                  subresource: http
+                  name: upmeter
+{{- $storageClass := .Values.upmeter.internal.effectiveStorageClass }}
+{{- if $storageClass }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: {{ $storageClass }}
+      resources:
+        requests:
+          storage: 1Gi
+{{- else }}
+      volumes:
+      - name: data
+        emptyDir: {}
+{{- end }}

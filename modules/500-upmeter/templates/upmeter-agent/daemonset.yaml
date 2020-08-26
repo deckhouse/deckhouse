@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: upmeter-agent
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: upmeter-agent
+  template:
+    metadata:
+      labels:
+        app: upmeter-agent
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      serviceAccountName: upmeter-agent
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      containers:
+        - name: agent
+          image: {{ $.Values.global.modulesImages.registry }}/upmeter/upmeter:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}
+          command:
+            - /upmeter
+            - agent
+          env:
+          - name: UPMETER_TLS
+            value: "true"
+          - name: UPMETER_SERVICE_HOST
+            value: upmeter
+          - name: UPMETER_SERVICE_PORT
+            value: "443"
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+            {{- $disabledProbes := .Values.upmeter.disabledProbes }}
+            {{- if eq .Values.upmeter.smokeMiniDisabled true }}
+            {{- $disabledProbes = append $disabledProbes "synthetic/" }}
+            {{- end }}
+          - name: UPMETER_DISABLED_PROBES
+            value: {{ $disabledProbes | join "," | quote }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      enableServiceLinks: false

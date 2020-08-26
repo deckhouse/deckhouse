@@ -1,9 +1,0 @@
-smokeMini:
-  auth: {}
-  internal:
-    sts:
-      a: {}
-      b: {}
-      c: {}
-      d: {}
-      e: {}

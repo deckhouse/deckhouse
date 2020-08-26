@@ -1,0 +1,50 @@
+{
+  "name": "upmeter-webui",
+  "version": "1.0.0",
+  "description": "Web interface for upmeter",
+  "repository": "github.com/deckhouse/deckhouse",
+  "license": "Apache 2.0",
+  "scripts": {
+    "test": "echo no tests && exit 1",
+    "start:dev": "./node_modules/.bin/webpack-dev-server --hot --inline --progress",
+    "build": "./node_modules/.bin/webpack --config webpack.config.js"
+  },
+  "keywords": [
+    "upmeter"
+  ],
+  "author": "JSC Flant",
+  "devDependencies": {
+    "@babel/core": "7.8.4",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/preset-env": "7.12.1",
+    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-svg-core": "^1.2.32",
+    "@fortawesome/free-brands-svg-icons": "^5.15.1",
+    "@fortawesome/free-regular-svg-icons": "^5.15.1",
+    "@fortawesome/free-solid-svg-icons": "^5.15.1",
+    "app-manifest-webpack-plugin": "^1.2.0",
+    "babel-loader": "^8.0.6",
+    "copy-webpack-plugin": "^6.2.1",
+    "css-loader": "^5.0.0",
+    "html-webpack-plugin": "^4.5.0",
+    "mini-css-extract-plugin": "^1.1.2",
+    "style-loader": "^2.0.0",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-middleware": "^3.7.2",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.5.3",
+    "d3-axis": "2",
+    "d3-fetch": "2",
+    "d3-format": "2",
+    "d3-scale": "3",
+    "d3-scale-chromatic": "2",
+    "d3-selection": "2",
+    "d3-shape": "2",
+    "d3-transition": "2",
+    "jquery": "^3.5.1",
+    "luxon": "^1.25.0"
+  }
+}

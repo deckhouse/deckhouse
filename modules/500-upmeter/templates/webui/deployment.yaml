@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webui
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "webui")) | indent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      enableServiceLinks: false
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      containers:
+        - name: webui
+          image: {{ .Values.global.modulesImages.registry }}/upmeter/webui:{{ .Values.global.modulesImages.tags.upmeter.webui }}
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "/usr/sbin/nginx", "-s", "quit" ]
+          ports:
+          - name: webui
+            containerPort: 80
+            protocol: TCP

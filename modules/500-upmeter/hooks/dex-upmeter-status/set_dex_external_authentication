@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 9
+EOF
+}
+
+function __main__() {
+  # dex + https
+  if values::array_has global.enabledModules "user-authn" && [[ $(values::get_first_defined upmeter.https.mode global.modules.https.mode) != "Disabled" ]]; then
+    if ! values::has --config upmeter.auth.status.externalAuthentication ; then
+      values::set upmeter.auth.status.externalAuthentication '{}'
+      values::set upmeter.auth.status.externalAuthentication.authURL "https://status-dex-authenticator.d8-upmeter.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
+      values::set upmeter.auth.status.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
+      values::set upmeter.internal.deployDexAuthenticator "true"
+    else
+      values::unset upmeter.internal.deployDexAuthenticator
+      values::set upmeter.auth.status.externalAuthentication "$(values::get --config upmeter.auth.status.externalAuthentication)"
+    fi
+  else
+    if ! values::has --config upmeter.auth.status.externalAuthentication ; then
+      values::unset upmeter.auth.status.externalAuthentication
+    else
+      values::set upmeter.auth.status.externalAuthentication "$(values::get --config upmeter.auth.status.externalAuthentication)"
+    fi
+    values::unset upmeter.internal.deployDexAuthenticator
+  fi
+}
+
+hook::run $@
