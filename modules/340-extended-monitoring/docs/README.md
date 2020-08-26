@@ -16,7 +16,9 @@ permalink: /modules/340-extended-monitoring/
 
 ### Конфигурация
 
-* `imageAvailabilityExporter`
+* `imageAvailability` — настройки мониторинга доступности образов в кластере.
+  * `exporterEnabled` — включен ли imageAvailabilityExporter
+    * Формат — bool. По-умолчанию, `true`.
   * `ignoredImages` — список имён образов, наличие которых не надо проверять в registry. Например, `alpine:3.12` или `quay.io/test/test:v1.1`.
     * Формат — массив строк.
     * Опциональный параметр.

@@ -1,3 +1,4 @@
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -66,3 +67,4 @@ subjects:
 - kind: ServiceAccount
   name: image-availability-exporter
   namespace: d8-monitoring
+{{- end }}
