@@ -4,6 +4,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	candiapp "flant/deckhouse-candi/cmd/deckhouse-candi/commands"
+
 	sh_app "github.com/flant/shell-operator/pkg/app"
 
 	"flant/deckhouse-controller/pkg/helpers/aws"
@@ -47,6 +48,10 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		openstackGetVolumeTypes := openstackCommand.Command("get-volume-types", "Get volume types.")
 		openstackGetVolumeTypes.Action(func(c *kingpin.ParseContext) error {
 			return openstack.GetVolumeTypes()
+		})
+		supportsOnlineDiskResize := openstackCommand.Command("supports-online-disk-resize", "Check whether block-storage API support online resize.")
+		supportsOnlineDiskResize.Action(func(c *kingpin.ParseContext) error {
+			return openstack.SupportsOnlineDiskResize()
 		})
 	}
 

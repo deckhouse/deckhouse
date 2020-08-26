@@ -21,7 +21,7 @@ metadata:
 provisioner: csi-cinderplugin
 parameters:
   type: {{ $volumeType | quote }}
-allowVolumeExpansion: true
+allowVolumeExpansion: {{ $.Values.cloudProviderOpenstack.internal.supportsOnlineDiskResize | default false }}
 volumeBindingMode: WaitForFirstConsumer
   {{- end }}
 {{- end }}

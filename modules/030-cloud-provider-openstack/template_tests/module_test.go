@@ -34,6 +34,7 @@ const globalValues = `
         csiProvisioner: imagehash
         csiAttacher: imagehash
         csiSnapshotter: imagehash
+        csiResizer: imagehash
         csiNodeDriverRegistrar: imagehash
         cloudControllerManager: imagehash
   discovery:

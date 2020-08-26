@@ -1,0 +1,52 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 30
+EOF
+}
+
+function __main__() {
+  OS_AUTH_URL="$(values::get --required cloudProviderOpenstack.internal.connection.authURL)"
+  export OS_AUTH_URL
+
+  OS_USERNAME="$(values::get --required cloudProviderOpenstack.internal.connection.username)"
+  export OS_USERNAME
+
+  OS_PASSWORD="$(values::get --required cloudProviderOpenstack.internal.connection.password)"
+  export OS_PASSWORD
+
+  OS_DOMAIN_NAME="$(values::get --required cloudProviderOpenstack.internal.connection.domainName)"
+  export OS_DOMAIN_NAME
+
+  OS_PROJECT_NAME="$(values::get cloudProviderOpenstack.internal.connection.tenantName)"
+  if [[ -n $OS_PROJECT_NAME && $OS_PROJECT_NAME != null ]]; then
+    export OS_PROJECT_NAME
+  fi
+
+  OS_PROJECT_ID="$(values::get cloudProviderOpenstack.internal.connection.tenantID)"
+  if [[ -n $OS_PROJECT_ID && $OS_PROJECT_ID != null ]]; then
+    export OS_PROJECT_ID
+  fi
+
+  OS_REGION_NAME="$(values::get --required cloudProviderOpenstack.internal.connection.region)"
+  export OS_REGION_NAME
+
+  OS_CACERT="$(values::get cloudProviderOpenstack.internal.connection.caCert)"
+  if [[ -n $OS_CACERT && $OS_CACERT != null ]]; then
+    export OS_CACERT
+  fi
+
+  supports_online_disk_resize="$(deckhouse-controller helper openstack supports-online-disk-resize)"
+  if [[ "$supports_online_disk_resize" == "yes" ]]; then
+    values::set cloudProviderOpenstack.internal.supportsOnlineDiskResize true
+  else
+    values::set cloudProviderOpenstack.internal.supportsOnlineDiskResize false
+  fi
+
+}
+
+hook::run "$@"

@@ -6,12 +6,13 @@ require (
 	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
 	github.com/deckhouse/deckhouse v0.0.0
 	github.com/aws/aws-sdk-go v1.15.90
+	github.com/blang/semver v3.5.0+incompatible
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/flant/addon-operator v1.0.0-beta.6.0.20200814152246-8570d2963321 // branch: feat_hooks_golang
 	github.com/flant/shell-operator v1.0.0-beta.11.0.20200814111719-6b5dd3944bfc // branch: feat_hooks_golang
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
-	github.com/gophercloud/gophercloud v0.1.0
+	github.com/gophercloud/gophercloud v0.12.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.5.1

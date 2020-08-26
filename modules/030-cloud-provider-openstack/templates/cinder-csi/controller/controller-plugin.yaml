@@ -46,6 +46,14 @@ spec:
           volumeMounts:
             - mountPath: /var/lib/csi/sockets/pluginproxy/
               name: socket-dir
+        - name: csi-resizer
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderOpenstack.csiResizer }}
+          args:
+            - "--csi-address=/var/lib/csi/sockets/pluginproxy/csi.sock"
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: cinder-csi-plugin
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/cinder-csi-plugin:{{ .Values.global.modulesImages.tags.cloudProviderOpenstack.cinderCsiPlugin }}
           args :
