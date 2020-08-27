@@ -2,8 +2,8 @@ locals {
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
   image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  security_group_names = concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", []))
   network_security = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled"
+  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
 }
 
 module "master" {
