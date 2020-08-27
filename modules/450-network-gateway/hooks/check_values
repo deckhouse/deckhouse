@@ -11,23 +11,23 @@ EOF
 
 function __main__() {
   if ! values::has networkGateway.nodeSelector; then
-    echo "ERROR: networkGateway.nodeSelector is mandatory."
+    >&2 echo "ERROR: networkGateway.nodeSelector is mandatory."
     return 1
   fi
 
   if ! values::has networkGateway.subnet; then
-    echo "ERROR: networkGateway.subnet is mandatory."
+    >&2 echo "ERROR: networkGateway.subnet is mandatory."
     return 1
   fi
 
   subnet=$(values::get networkGateway.subnet)
   if ! echo "${subnet}" | grep -q -E '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
-    echo "ERROR: networkGateway.subnet format is 'IP/Prefix'."
+    >&2 echo "ERROR: networkGateway.subnet format is 'IP/Prefix'."
     return 1
-  fi 
+  fi
 
   if ! values::has networkGateway.publicAddress; then
-    echo "ERROR: networkGateway.publicAddress is mandatory."
+    >&2 echo "ERROR: networkGateway.publicAddress is mandatory."
     return 1
   fi
 }

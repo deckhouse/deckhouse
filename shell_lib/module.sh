@@ -21,7 +21,7 @@ function module::public_domain() {
   if echo "$TEMPLATE" | grep -q '%s'; then
     printf "$TEMPLATE" "$1"
   else
-    echo "ERROR: global.modules.publicDomainTemplate must contain '%s'."
+    >&2 echo "ERROR: global.modules.publicDomainTemplate must contain '%s'."
     return 1
   fi
 }

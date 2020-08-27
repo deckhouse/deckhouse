@@ -67,12 +67,12 @@ function set_etcdctl_credentials() {
   ETCDCTL_ENDPOINTS="$1"
 
   if [[ -z "$ETCDCTL_ENDPOINTS" ]]; then
-    echo "ERROR: Failed to find etcdctl endpoints"
+    >&2 echo "ERROR: Failed to find etcdctl endpoints"
     exit 1
   fi
 
   if [[ ! -s "$ETCDCTL_CERT" || ! -s "$ETCDCTL_KEY" || ! -s "$ETCDCTL_CACERT" ]]; then
-    echo "etcd certs not present in a snapshot storage"
+    >&2 echo "etcd certs not present in a snapshot storage"
     exit 1
   fi
 
