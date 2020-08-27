@@ -10,7 +10,7 @@ title: Cloud provider - Openstack
 для каждой из них ниже.
 * Поле `masterNodeGroup` определяет параметры, с которыми будут создан instance для мастера:
   * `replicas` — кол-во master нод в кластере
-  * `instanceClass` может содержать в себе **только** параметры `flavorName`, `imageName`, `kubernetesDataVolumeType`, `rootDiskSize`, `securityGroups`.
+  * `instanceClass` может содержать в себе **только** параметры `flavorName`, `imageName`, `kubernetesDataVolumeType`, `rootDiskSize`, `additionalSecurityGroups`.
   Остальные параметры указывать **нельзя** — они будут сконфигурированы автоматически на основании выбранной схемы размещения.
   Подробнее про данные параметры описано в документации модуля [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource).
 * В поле `provider` передаются параметры подключения к api openstack, они совпадают с параметрами
@@ -41,7 +41,7 @@ masterNodeGroup:
     imageName: ubuntu-18-04-cloud-amd64                   # required
     kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
     rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 nodeGroups:
@@ -61,7 +61,7 @@ nodeGroups:
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
     - shared
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 provider:
@@ -97,7 +97,7 @@ masterNodeGroup:
     imageName: ubuntu-18-04-cloud-amd64                   # required
     kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
     rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 nodeGroups:
@@ -117,7 +117,7 @@ nodeGroups:
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
     - shared
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 provider:
@@ -152,7 +152,7 @@ masterNodeGroup:
     imageName: ubuntu-18-04-cloud-amd64                   # required
     kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
     rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 nodeGroups:
@@ -172,7 +172,7 @@ nodeGroups:
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
     - shared
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 provider:
@@ -206,7 +206,7 @@ masterNodeGroup:
     imageName: ubuntu-18-04-cloud-amd64                   # required
     kubernetesDataVolumeType: ceph-ssd                    # required, volume type for etcd and kubernetes certs (always use fastest disk supplied by provider)
     rootDiskSizeInGb: 50                                  # optional, local disk is used if not specified
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 nodeGroups:
@@ -226,7 +226,7 @@ nodeGroups:
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
     - shared
-    securityGroups:                                       # optional, additional security groups
+    additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
 provider:
