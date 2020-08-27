@@ -5,11 +5,15 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
-    onStartup: 30
+    beforeHelm: 30
 EOF
 }
 
 function __main__() {
+  if values::get --required cloudProviderOpenstack.internal.supportsOnlineDiskResize >/dev/null 2>&1; then
+    return 0
+  fi
+
   OS_AUTH_URL="$(values::get --required cloudProviderOpenstack.internal.connection.authURL)"
   export OS_AUTH_URL
 
