@@ -2,8 +2,8 @@ locals {
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
   image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  security_group_names = concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", []))
   network_security = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled"
+  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
   external_network_floating_ip = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "masterWithExternalFloatingIP", true)
 }
 
@@ -17,7 +17,7 @@ module "master" {
   flavor_name = local.flavor_name
   keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
   network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
-  floating_ip_network = external_network_floating_ip ? local.external_network_name : ""
+  floating_ip_network = local.external_network_floating_ip ? local.external_network_name : ""
 }
 
 module "kubernetes_data" {
