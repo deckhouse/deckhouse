@@ -49,3 +49,11 @@ dynatrace:
         - key: dedicated
           operator: Equal
           value: production
+    -
+      - name: group_with_underscores
+        nodeSelector:
+          node-role/production: ""
+        tolerations:
+          - key: dedicated
+            operator: Equal
+            value: production
