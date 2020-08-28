@@ -14,10 +14,12 @@ title: "Настройка политик безопасности на нода
 
 ## Установка дополнительных security groups на мастерах и статических нодах
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
-security groups указываются в OpenStackClusterConfiguration. Для мастеров в секции `masterNodeGroup` в поле `additionalSecurityGroups`,
-для статических нод в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, также в поле `additionalSecurityGroups`.
+security groups указываются в `OpenStackClusterConfiguration`:
+- Для мастеров — в секции `masterNodeGroup` в поле `additionalSecurityGroups`.
+- Для статических нод — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, также в поле `additionalSecurityGroups`.
+
 Поле `additionalSecurityGroups` представляет собой массив строк с именами security groups.
 
 ## Установка дополнительных security groups на эфемерных нодах
 Необходимо прописать параметр `additionalSecurityGroups` для всех OpenStackInstanceClass в кластере, которым нужны дополнительные
-security groups. Смотри [параметры модуля cloud-provider-openstack](README.md).
+security groups. Смотри [параметры модуля cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource).
