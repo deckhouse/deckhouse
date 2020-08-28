@@ -13,6 +13,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 provisioner: vsphere.csi.vmware.com
 volumeBindingMode: Immediate
+allowVolumeExpansion: true
 parameters:
   parent_type: {{ $ds.datastoreType | quote }}
   parent_name: {{ $ds.path | quote }}
