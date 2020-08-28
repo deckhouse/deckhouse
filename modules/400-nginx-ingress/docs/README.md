@@ -23,22 +23,22 @@ title: "Модуль nginx-ingress"
     * Определяется автоматически в зависимости от типа кластера (GCE и ACS — LoadBalancer, AWS — AWSClassicLoadBalancer, Manual — Direct; подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/_helpers.tpl#L22-30))!
     * Поддерживаются следующие inlet'ы:
         * `LoadBalancer` (автоматически для `GCE` и `ACS`) — заказывает автоматом LoadBalancer.
-        * `AWSClassicLoadBalancer` (автоматически для`AWS`) — заказывает автоматом LoadBalancer и включает proxy protocol, используется по-умолчанию для AWS.
+        * `AWSClassicLoadBalancer` (автоматически для`AWS`) — заказывает автоматом LoadBalancer и включает proxy protocol, используется по умолчанию для AWS.
         * `Direct` (автоматически `Manual`) — pod'ы работают в host network, nginx слушает на 80 и 443 порту, хитрая схема с direct-fallback.
         * `NodePort` — создает сервис с типом NodePort, подходит в тех ситуациях, когда необходимо настроить "сторонний" балансировщик (например, использовать AWS Application Load Balancer, Qrator или  CloudFLare). Допустимый диапазон 30000-32767 (настраивается параметром `kube-apiserver --service-node-port-range`).
     * Очень наглядно посмотреть отличия четырех типов inlet'ов можно [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/controller.yaml).
-* `nodePortHTTP` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации 80-го порта (по-умолчанию ничего не указывается и kube-controller-manager подбирает случайный свободный).
-* `nodePortHTTPS` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации порта 443 (по-умолчанию аналогично `nodePortHTTP`).
+* `nodePortHTTP` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации 80-го порта (по умолчанию ничего не указывается и kube-controller-manager подбирает случайный свободный).
+* `nodePortHTTPS` — для inlet'ов с типом `NodePort` позволяет задать конкретный `nodePort` для публикации порта 443 (по умолчанию аналогично `nodePortHTTP`).
 * `config.hsts` — bool, включен ли hsts.
-    * По-умолчанию — выключен (`false`).
+    * По умолчанию — выключен (`false`).
 * `config.legacySSL` — bool, включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/_template.config.tpl).
-    * По-умолчанию включён только TLSv1.2 и самые новые cipher suites.
+    * По умолчанию включён только TLSv1.2 и самые новые cipher suites.
 * `config.disableHTTP2` — bool, выключить ли HTTP/2.
     * По умолчанию HTTP/2 включен (`false`).
 * `config.ComputeFullForwardedFor` - bool, дополнять ли заголовок X-Forwarded-For прокси адресами или заменять его, нужно только в тех случаях, если на входе стоит балансер не под нашим управлением.
     * По умолчанию `compute-full-forwarded-for выключен (`false`).
 * `config.underscoresInHeaders` — bool, разрешены ли нижние подчеркивания в хедерах. Подробнее [здесь](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers). Почему не стоит бездумно включать написано [здесь](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers)
-    * По-умолчанию `false`.
+    * По умолчанию `false`.
 * `config.setRealIPFrom` — список CIDR, с которых разрешено использовать заголовок `X-Forwarded-For` в качестве адреса клиента.
     * Список строк - именно **YAML list**, а не строка со значениями через запятую!
     * **Важно!** Так как nginx ingress (как и сам nginx) не поддерживает получение адреса клиента из `X-Forwarded-For`, при одновременном использовании proxy protocol параметр `config.setRealIPFrom` запрещено использовать для inlet'ов `Direct` и `AWSClassicLoadBalancer`.
@@ -54,13 +54,13 @@ title: "Модуль nginx-ingress"
     * Список строк - именно **YAML list**, а не строка со значениями через запятую!
     * **Важно!** Данный параметр является обязательным, если указан любой из других `customErrors` параметров.
     * **Важно!** Добавление, удаление или изменение параметра приводит к рестарту nginx'ов.
-* `enableIstioSidecar` — добавить к подам контроллера sidecar для контролирования трафика средствами Istio. Будут добавлены две аннотации: `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`, а непосредственно добавление контейнера в под осуществит [sidecar-injector от Istio]({{ site.baseurl }}/modules/360-istio/usage.html#ingress).
+* `enableIstioSidecar` — добавить к подам контроллера sidecar для контролирования трафика средствами Istio. Будут добавлены две аннотации: `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`, а непосредственно добавление контейнера в под осуществит [sidecar-injector от Istio](/modules/360-istio/usage.html#ingress).
     * **Важно!** Так как в режиме `Direct` pod'ы работают в host network, то механизм идентификации трафика для заворачивания в Istio, который основан на Service CIDR, несёт потенциальную опасность для других сервисов с ClusterIP. Для подобных inlet'ов поддержка Istio отключена.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
+    * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
 ### Пример конфига
@@ -329,6 +329,6 @@ nginxIngress: |
 * При создании Service с `spec.type=LoadBalancer` Kubernetes создает сервис с типом `NodePort` и, дополнительно, лезет в клауд и настраивает балансировщик клауда, чтобы он бросал трафик на все узлы Kubernetes на определенные `spec.ports[*].nodePort` (генерятся рандомные в диапазоне `30000-32767`).
 * В GCE и Azure балансировщик отправляет трафик на узлы сохраняя source адрес клиента. Если при создании сервиса в Kubernetes указать `spec.externalTrafficPolicy=Local`, то Kubernetes приходящий на узел трафик не будет раскидывать по всем узлам, на которых есть endpoint'ы, а будет кидать только на локальные endpoint'ы, находящиеся на этом узле, а если их нет — соединение не будет устанавливаться. Подробнее об этом [тут](https://kubernetes.io/docs/tutorials/services/source-ip/) и [особенно тут](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip).
 * В AWS все интересней:
-    * До версии Kubernetes 1.9 единственным типом LB, который можно было создать в AWS из Kubernetes, был Classic. При этом, по-умолчанию создается `AWS Classic LoadBalancer`, который проксирует TCP трафик (так же на `spec.ports[*].nodePort`). Трафик при этом приходит не с адреса клиента, а с адресов LoadBalancer'а. И единственный способ узнать адрес клиента — включить proxy protocol (это можно сделать через [аннотацию сервиса в Kubernetes](https://github.com/kubernetes/legacy-cloud-providers/blob/master/aws/aws.go).
+    * До версии Kubernetes 1.9 единственным типом LB, который можно было создать в AWS из Kubernetes, был Classic. При этом, по умолчанию создается `AWS Classic LoadBalancer`, который проксирует TCP трафик (так же на `spec.ports[*].nodePort`). Трафик при этом приходит не с адреса клиента, а с адресов LoadBalancer'а. И единственный способ узнать адрес клиента — включить proxy protocol (это можно сделать через [аннотацию сервиса в Kubernetes](https://github.com/kubernetes/legacy-cloud-providers/blob/master/aws/aws.go).
     * Начиная с версии Kubernetes 1.9 [можно заводить Network LoadBalancer'ы](https://kubernetes.io/docs/concepts/services-networking/service/#network-load-balancer-support-on-aws-alpha). Такой LoadBalancer работает аналогично Azure и GCE — отправляет трафик с сохранением source адреса клиента.
 

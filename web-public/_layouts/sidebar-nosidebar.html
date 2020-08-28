@@ -4,10 +4,6 @@ layout: default
 <div class="page__container">
    {% comment %}{%- include nav-breadcrumbs.html %}{% endcomment %}
   <div class="layout-sidebar">
-    {%- unless page.toc == false %}
-    {%- include toc.html %}
-    {%- endunless %}
-
     <div>
       {{ content }}
     </div>

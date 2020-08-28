@@ -1,45 +1,13 @@
 ---
 title: "Модуль Prometheus Pushgateway"
-permalink: /modules/303-prometheus-pushgateway/
 ---
 
 Данный модуль устанавливает в кластер [Prometheus Pushgateway](https://github.com/prometheus/pushgateway). Он предназначен для приема метрик от приложения и отдачи их Prometheus.
 
-### Включение модуля
+[Подробнее](https://prometheus.io/docs/practices/pushing/) о том, когда стоит использовать `Prometheus Pushgateway`.
+[Подробнее](https://prometheus.io/docs/instrumenting/pushing/) о том, как использовать `Prometheus Pushgateway`.
 
-Модуль по-умолчанию **выключен**. Для включения добавьте в CM `deckhouse`:
-
-```yaml
-data:
-  prometheusPushgatewayEnabled: "true"
-```
-
-### Параметры
-
-* `instances` — данный параметр содержит список PushGateway-ев для каждого из которых будет создан отдельный PushGateway.
-* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
-    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
-* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет [использоваться автоматика]({{ site.baseurl }}/documentation.html#выделение-узлов-под-определенный-вид-нагрузки).
-    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-
-### Пример конфигурации
-
-```yaml
-prometheusPushgatewayEnabled: "true"
-prometheusPushgateway: |
-  instances:
-  - first
-  - second
-  - another
-```
 {% raw %}
-### О Prometheus Pushgateway
-
-* [Когда стоит использовать](https://prometheus.io/docs/practices/pushing/)
-* [Как использовать](https://prometheus.io/docs/instrumenting/pushing/).
-
 #### Пример работы с PushGateway:
 
 Адрес PushGateway: `http://first.kube-prometheus-pushgateway:9091`.

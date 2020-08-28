@@ -44,31 +44,7 @@ defaults:
       search: true
       topnav: topnav
       output: web
-  - scope:
-      path: "candi"
-      type: "pages"
-    values:
-      sidebar: candi
-  - scope:
-      path: "deckhouse-controller"
-      type: "pages"
-    values:
-      sidebar: candi
-  - scope:
-      path: "candictl"
-      type: "pages"
-    values:
-      sidebar: candi
-  - scope:
-      path: "docs/guides"
-      type: "pages"
-    values:
-      sidebar: guides
-  - scope:
-      path: "modules"
-      type: "pages"
-    values:
-      sidebar: modules
+      sidebar: main
 
 output: web
 

@@ -8,32 +8,48 @@
                 <!-- toggle sidebar button -->
                 <!-- entries without drop-downs appear here -->
 
-{% assign topnav = site.data[page.topnav] %}
+{% assign topnav = site.data[page.topnav].entries %}
 {% assign topnav_dropdowns = site.data[page.topnav].topnav_dropdowns %}
 
-                {% for entry in topnav.topnav %}
+                {% for entry in topnav %}
                   {% for item in entry.items %}
                     <li class="header__menu-item
                         {%- if item.folderitems %} header__menu-item_parent{% endif %}
                         {%- if item.url.size>1 and page.url == item.url %} header__menu-item_active{% endif %}
-                        {%- if item.url.size>1 and page.url contains '/modules/' and item.url == '/documentation.html' %} header__menu-item_active{% endif %}
-                        {%- if item.url.size>1 and page.url contains '/guides/' and item.url == '/documentation.html' %} header__menu-item_active{% endif %}
-                        {%- if item.url.size>1 and page.url contains '/candi/' and item.url == '/documentation.html' %} header__menu-item_active{% endif %}
+                        {%- if item.url.size>1 and page.url contains '/modules/' and item.url == '/overview.html' %} header__menu-item_active{% endif %}
+                        {%- if item.url.size>1 and page.url contains '/guides/' and item.url == '/overview.html' %} header__menu-item_active{% endif %}
+                        {%- if item.url.size>1 and page.url contains '/candi/' and item.url == '/overview.html' %} header__menu-item_active{% endif %}
                         {%- if item.url.size<2 and page.url.size<2 %} header__menu-item_active{% endif %}">
 <!--                    {%- if item.url.size>1 and page.url != item.url and page.url contains item.url %} header__menu-item_active{% endif %} -->
                       <a href="{{ site.baseurl}}{{ item.url }}">{{ item.title }}</a>
-                      {% if item.folderitems %}
+                      {%- if item.folderitems %}
                       <div class="header__submenu-container">
                           <ul class="header__submenu">
-                            {% for folderitem in item.folderitems %}
-                              {% if folderitem.external_url %}
-                              <li class="header__submenu-item"><a href="{{folderitem.external_url}}" target="_blank" rel="noopener">{{folderitem.title}}</a></li>
-                              {% elsif page.url contains folderitem.url %}
-                              <li class="header__submenu-item"><a href="{{ site.baseurl }}/{{ folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
-                              {% else %}
-                              <li class="header__submenu-item"><a href="{{ site.baseurl }}/{{ folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
-                              {% endif %}
-                            {% endfor %}
+                            {%- for folderitem in item.folderitems %}
+                              {%- if folderitem.external_url %}
+                              <li class="header__submenu-item {% if folderitem.subfolderitems %}header__submenu-item_parent{% endif %}"><a href="{{folderitem.external_url}}" target="_blank" rel="noopener">{{folderitem.title}}</a>
+                              {%- elsif page.url contains folderitem.url %}
+                              <li class="header__submenu-item {% if folderitem.subfolderitems %}header__submenu-item_parent{% endif %}"><a href="{{ site.baseurl }}/{{ folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a>
+                              {%- elsif folderitem.url %}
+                              <li class="header__submenu-item {% if folderitem.subfolderitems %}header__submenu-item_parent{% endif %}"><a href="{{ site.baseurl }}/{{ folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a>
+                              {%- else %}
+                              <li class="header__submenu-item {% if folderitem.subfolderitems %}header__submenu-item_parent{% endif %}"><span>{{folderitem.title}}</span>
+                              {%- endif %}
+                              {%- if folderitem.subfolderitems %}
+                                <ul class="header__submenu-folder">
+                                {%- for subfolderitem in folderitem.subfolderitems %}
+                                  {%- if subfolderitem.external_url %}
+                                  <li class="header__submenu-folderitem"><a href="{{subfolderitem.external_url}}" target="_blank" rel="noopener">{{subfolderitem.title}}</a></li>
+                                  {%- elsif page.url contains subfolderitem.url %}
+                                  <li class="header__submenu-folderitem"><a href="{{ site.baseurl }}/{{ subfolderitem.url | remove_first: "/" }}">{{subfolderitem.title}}</a></li>
+                                  {%- else %}
+                                  <li class="header__submenu-folderitem"><a href="{{ site.baseurl }}/{{ subfolderitem.url | remove_first: "/" }}">{{subfolderitem.title}}</a></li>
+                                  {%- endif %}
+                                {%- endfor %}
+                                </ul>
+                              {%- endif %}
+                              </li>
+                            {%- endfor %}
                           </ul>
                       </div>
                       {%- endif %}

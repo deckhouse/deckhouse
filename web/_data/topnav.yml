@@ -2,11 +2,5 @@
 topnav:
 - title: Topnav
   items:
-  - title: CandI
-    url: /candi/
-  - title: Модули
-    url: /modules/020-deckhouse/
-  - title: Руководства
-    url: /guides/monitoring.html
   - title: Каналы обновлений
     url: /releases.html

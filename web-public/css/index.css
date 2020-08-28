@@ -290,11 +290,11 @@ html, body, .page {
 }
 
 .welcome__title {
-    font-size: 55px;
+    font-size: 25px;
     font-weight: 600;
     font-style: normal;
     font-stretch: normal;
-    line-height: 65px;
+    line-height: 40px;
     letter-spacing: normal;
     color: #00122c;
     margin: 0 0 30px 0;

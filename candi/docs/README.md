@@ -10,11 +10,11 @@ permalink: /candi/
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * Модули **Deckhouse'а**:
-    * [**control-plane-manager**]({{ site.baseurl }}/modules/040-control-plane-manager/) - установка и обновление `control-plane` для master-узлов.
-    * [**node-manager**]({{ site.baseurl }}/modules/040-node-manager/) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
+    * [**control-plane-manager**](/modules/040-control-plane-manager/) - установка и обновление `control-plane` для master-узлов.
+    * [**node-manager**](/modules/040-node-manager/) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
     * **cloud-provider-**
-        * [**openstack**]({{ site.baseurl }}/modules/030-cloud-provider-openstack/) - модуль для взаимодействия с облаками на базе `OpenStack`.
-* Installer или [**candictl**]({{ site.baseurl }}/candi/candictl.html) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
+        * [**openstack**](/modules/030-cloud-provider-openstack/) - модуль для взаимодействия с облаками на базе `OpenStack`.
+* Installer или [**candictl**](/candi/candictl.html) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
 
 ## Installer
 
@@ -88,8 +88,8 @@ deckhouse:
 Bundle представляет собой tar-архив со всеми необходимыми файлами с такой же структурой папок, которая должна быть на удаленном сервере. 
 
 В bundle входят:
-1. Подготовленные step'ы из всех директорий (подробнее можно узнать о расположении степов из [описания bashible]({{ site.baseurl }}/candi/bashible/)). 
-2. Подготовленный файл конфигурации для kubeadm (подробнее можно узнать о конфигурации из [описания control-plane-kubeadm]({{ site.baseurl }}/candi//control-plane-kubeadm/)). 
+1. Подготовленные step'ы из всех директорий (подробнее можно узнать о расположении степов из [описания bashible](/candi/bashible/)).
+2. Подготовленный файл конфигурации для kubeadm (подробнее можно узнать о конфигурации из [описания control-plane-kubeadm](/candi//control-plane-kubeadm/)).
 3. Объединенный в один файл bashbooster.
 
 Далее архив загружается по scp на сервер и распаковывается, после чего выполняется `/var/lib/bashible/bashible.sh --local`.
@@ -127,5 +127,5 @@ Bundle представляет собой tar-архив со всеми нео
 > Deckhouse-candi ожидает перехода узлов в каждой NodeGroup в состояние Ready, иначе процесс их создания будет завершен с ошибкой
 
 #### Создание дополнительных ресурсов
-При указании путь до файла с манифестами при помощи флага `--resources` candictl отсортирует их по `apiGroup/kind`, дождется регистрации этих типов в API Kubernetes и создаст их.
+При указании пути до файла с манифестами (флаг `--resources`), candictl отсортирует их по `apiGroup/kind`, дождется регистрации этих типов в API Kubernetes и создаст их.
 > Процесс описан подробнее в документации к candictl.

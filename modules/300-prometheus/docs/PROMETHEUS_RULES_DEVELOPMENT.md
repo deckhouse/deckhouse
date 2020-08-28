@@ -1,7 +1,5 @@
 ---
 title: "Разработка правил Prometheus"
-tags:
-  - prometheus
 type:
   - instruction
 search: Разработка правил Prometheus, prometheus alerting rules
@@ -18,7 +16,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
     * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (pod'ы, cronjob'ы, место на диске и пр.).
     * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
-* Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. [в нашей документации по устройству Prometheus Operator]({{ site.baseurl }}/modules/200-operator-prometheus/internals.html)):
+* Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. в документации модуля [Prometheus Operator](/modules/200-operator-prometheus/)):
     * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
         * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
         * Если изменений нет, то надо проверить, что deckhouse сдеплоилась успешно:

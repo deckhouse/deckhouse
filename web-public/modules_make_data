@@ -6,11 +6,12 @@ fi
 
 modules_list=$(find modules -regex '.*/docs/README.md' -print | cut -d\/ -f2 | sort | uniq)
 
+# construct documentation menu
 echo "modules_items: &modules_items"
-cat << YAML
-  - title: Общие сведения
-    url: /modules/
-YAML
+#cat << YAML
+#  - title: Общие сведения
+#    url: /modules/
+#YAML
 for module in $modules_list ; do
   skip=false
   for el in $modules_skip_list ; do
@@ -21,7 +22,7 @@ for module in $modules_list ; do
   if [ $? -ne 0 ]; then skip=true; fi
   if [[ $skip == 'false' ]]; then
     subfolders=""
-    subfolders_raw=$(find modules/$module/docs/ -regex '.*.md' -print | cut -d\/ -f 4 | sort | uniq | grep -iv readme.md)
+    subfolders_raw=$(find modules/$module/docs/ -regex '.*.md' -print | sed "s#modules/$module/docs/##" | sort | uniq | grep -ivE '^features.md|^readme.md')
     for subfolder_item in $subfolders_raw ; do
       head -n 1 ./modules/$module/docs/$subfolder_item | grep -l "^---" &> /dev/null
       if [ $? -eq 0 ]; then
@@ -29,7 +30,7 @@ for module in $modules_list ; do
       fi
     done
     cat << YAML
-  - title: $module
+  - title: $(echo $module | cut -d- -f2-)
     url: /modules/$module/
 YAML
     if [[ ${#subfolders} -gt 0 ]]; then
@@ -40,11 +41,11 @@ YAML
       url: /modules/$module/
 YAML
       for subfolder_item in $subfolders ; do
-        subfolder_item_title=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'sidebartitle:' | cut -d: -f2 | sed -e 's/^[[:space:]]*//')
+        subfolder_item_title=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'sidebartitle:' | cut -d: -f2- | sed -e 's/^[[:space:]]*//')
         if [[ ${#subfolder_item_title} -lt 1 ]]; then
-          subfolder_item_title=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'title:' | cut -d: -f2 | sed -e 's/^[[:space:]]*//')
+          subfolder_item_title=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'title:' | cut -d: -f2- | sed -e 's/^[[:space:]]*//')
         fi
-        subfolder_item_url=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'permalink:' | cut -d: -f2 | sed -e 's/^[[:space:]]*//')
+        subfolder_item_url=$(cat ./modules/$module/docs/$subfolder_item | grep -i 'permalink:' | cut -d: -f2- | sed -e 's/^[[:space:]]*//')
     cat << YAML
     - title: $subfolder_item_title
       url: $subfolder_item_url

@@ -1,0 +1,358 @@
+.card-gradient__gradient-left, .card-gradient__gradient-right, .projection__bg-3 {
+    display: none
+}
+
+.card-benefits {
+    width: 100%;
+    /*height: 100%;*/
+    padding-top: 50px
+}
+
+.card-benefits--big {
+    padding-top: 49px
+}
+
+.card-benefits__inner {
+    position: relative;
+    height: 100%;
+    padding: 40px 15px 15px 40px;
+    background-color: #4075ff14;
+    border-radius: 15px
+}
+
+.card-benefits--big .card-benefits__inner {
+    padding-top: 60px
+}
+
+.glide__slide--active .card-benefits__inner {
+    box-shadow: 0 25px 45px 0 rgba(98, 82, 212, .15)
+}
+
+.card-benefits__header {
+    margin-bottom: 8px
+}
+
+.card-benefits__faq::before {
+    width: 10px;
+	height: 10px;
+	background: red;
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+	content: '';
+    display: block;
+    position: relative;
+    left: -15px;
+    top: 15px;
+    border: none;
+}
+
+.card-benefits--big .card-benefits__header {
+    margin-bottom: 19px
+}
+
+.card-benefits__icon-container {
+    position: absolute;
+    top: -24px;
+    left: 40px;
+    display: flex;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background-color: #6252d4;
+    border-radius: 50%
+}
+
+.card-benefits__icon {
+    margin: auto;
+    fill: #fff
+}
+
+.card-benefits__title {
+    margin: 0 0 10px
+}
+
+.card-benefits--big .card-benefits__title {
+    margin-bottom: 19px;
+    font-weight: 600
+}
+
+.card-benefits__title a {
+    transition: all .3s ease;
+    color: #6252d4
+}
+
+.card-benefits__title a:active, .card-benefits__title a:focus, .card-benefits__title a:hover {
+    color: #463f66
+}
+
+.card-benefits__text {
+    margin: 0;
+    padding-right: 28px;
+    color: rgba(20,13,50,.85);
+    letter-spacing: .2px;
+    line-height: 1.4em;
+    font-size: 18px;
+    word-break: break-word;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.card-benefits__text:not(:last-child) {
+    margin-bottom: 14px
+}
+
+.glide__slide .card-benefits__text span {
+    display: inline-block
+}
+
+.glide__slide .card-benefits__text span:not(:last-child) {
+    margin-bottom: 19px
+}
+
+.card-benefits__list {
+    margin: 0 0 0 20px;
+    padding: 0
+}
+
+.card-benefits__list:not(:last-child) {
+    margin-bottom: 28px
+}
+
+.card-benefits__list li {
+    margin: 10px 0 0
+}
+
+.card-certificate {
+    width: 100%
+}
+
+.card-certificate__inner {
+    position: relative;
+    margin-top: 28px;
+    padding: 41px 20px 47px 199px;
+    background-color: #fff;
+    border-radius: 15px
+}
+
+.card-certificate__icon {
+    position: absolute;
+    top: -42px;
+    left: -4px;
+    width: 206px;
+    height: auto
+}
+
+.card-certificate__title {
+    margin: 0
+}
+
+.card-gradient {
+    position: relative;
+    padding-bottom: 84px
+}
+
+.card-gradient__icon-container {
+    display: flex;
+    width: 110px;
+    height: 110px;
+    margin: 0 0 18px -14px;
+    background-color: #6252d4;
+    border-radius: 50%
+}
+
+.card-gradient__icon-container--polygon {
+    border-radius: 0;
+    -webkit-clip-path: polygon(50% 0, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0 60%, 10% 20%);
+    clip-path: polygon(50% 0, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0 60%, 10% 20%)
+}
+
+.card-gradient__icon {
+    flex: none;
+    margin: auto;
+    fill: #fff
+}
+
+.card-gradient__title {
+    min-height: 32px;
+    margin-bottom: 20px
+}
+
+.card-gradient__text {
+    position: relative;
+    z-index: 1;
+    margin: 0 0 27px 2px
+}
+
+.card-gradient__button {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    margin-left: 5px
+}
+
+.card-gradient__gradient-right {
+    position: absolute;
+    bottom: 96px;
+    left: 26px;
+    width: 436px;
+    height: 194px
+}
+
+.card-gradient__gradient-left {
+    position: absolute;
+    bottom: 0;
+    left: -32px;
+    width: 446px;
+    height: 184px
+}
+
+.card-simple {
+    padding: 31px 41px 40px;
+    background-color: #fff;
+    border-radius: 15px;
+    box-shadow: 0 35px 45px 0 rgba(98, 82, 212, .15)
+}
+
+.card-simple__title {
+    margin-bottom: 14px
+}
+
+.card-simple__description {
+    margin-top: 0;
+    margin-bottom: 0
+}
+
+.card-simple__description:not(:last-child) {
+    margin-bottom: 14px
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: 40px 40px 32px;
+    background-color: #fff;
+    border-radius: 15px;
+    transition: opacity .9s ease, box-shadow .9s ease
+}
+
+.card--transparent {
+    opacity: .9
+}
+
+.card--transparent:hover {
+    opacity: 1
+}
+
+.card--transparent:focus-within {
+    opacity: 1
+}
+
+.card:hover {
+    box-shadow: 0 25px 45px 0 rgba(98, 82, 212, .15)
+}
+
+.card:focus-within {
+    box-shadow: 0 25px 45px 0 rgba(98, 82, 212, .15)
+}
+
+.card__header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 80px;
+    margin-bottom: 20px
+}
+
+.card__icon-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex: none;
+    width: 80px;
+    height: 80px;
+    margin-right: 20px;
+    background-color: #f8f7fd;
+    border-radius: 50%;
+    transition: background-color .9s ease
+}
+
+.card:hover .card__icon-container {
+    background-color: #6252d4
+}
+
+.card:focus-within .card__icon-container {
+    background-color: #6252d4
+}
+
+.card__icon {
+    margin: auto;
+    fill: #6252d4;
+    transition: color .9s ease
+}
+
+.card:hover .card__icon {
+    fill: #fff
+}
+
+.card:focus-within .card__icon {
+    fill: #fff
+}
+
+.card__title {
+    margin: 6px 0 0;
+    padding-left: 100px
+}
+
+.card__text {
+    margin-top: 0;
+    margin-bottom: 28px
+}
+
+.card__footer {
+    display: flex;
+    align-items: center;
+    margin-top: auto
+}
+
+.card__time {
+    padding-left: 26px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cg fill='none' fill-rule='evenodd' stroke='%23140D32' transform='translate(1 1)'%3E%3Ccircle cx='8' cy='8' r='8'/%3E%3Cpath d='M4 7.5L7.774 10 12 5'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0;
+    background-size: 17px;
+    font-size: 12px
+}
+
+.card__button {
+    margin-left: auto
+}
+
+.main-page__features-container {
+    /*margin-left: 15%;*/
+    /*margin-right: 15%;*/
+}
+
+.main-page__features-list {
+    display: flex;
+    flex-wrap: wrap;
+    /*margin-right: -40px;*/
+    /*margin-left: -40px;*/
+    /*padding: 0;*/
+    list-style: none
+}
+
+.main-page__feature {
+    width: 45%;
+    margin-right: 40px;
+    margin-bottom: 20px
+}
+
+.main-page__usercases-list {
+    list-style: none;
+    font-size: 0.9em;
+    line-height: 1.4em;
+    padding-left: 20px;
+}

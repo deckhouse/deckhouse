@@ -1,1 +1,7 @@
 000-common
+010-operator-prometheus-crd
+010-prometheus-crd
+010-vertical-pod-autoscaler-crd
+010-user-authn-crd
+340-monitoring-custom
+400-nginx-ingress

@@ -1,6 +1,4 @@
----
 title: "Интеграция с Madison"
----
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
 
