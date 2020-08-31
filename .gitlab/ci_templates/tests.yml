@@ -129,5 +129,6 @@
   allow_failure: true
   needs:
     - "Build"
+    - "Build Website"
     - "Build Modules Images"
   interruptible: true

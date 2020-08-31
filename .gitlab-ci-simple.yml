@@ -65,6 +65,14 @@ Cleanup registry:
     - deckhouse
   retry: 2
 
+Cleanup modules registry:
+  extends: .Cleanup modules registry template
+  variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-modules-images
+  tags:
+    - deckhouse
+  retry: 2
+
 Cleanup modules images:
   extends: .Cleanup modules images template
   tags:

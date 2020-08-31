@@ -9,7 +9,7 @@ function bp() {
     pull
   fi
 
-  werf build-and-publish --config modules_images_werf.yaml --stages-storage :local --publish-report-path images_tags_werf.json
+  werf build-and-publish --config modules_images_werf.yaml --publish-report-path images_tags_werf.json
 
   jq '
     def to_camel_case:
@@ -31,10 +31,8 @@ function bp() {
 }
 
 function cleanup() {
-  >&2 echo "Not implemented!"
-  # TODO
-  # Make an empty artifact
-  echo "{}" > modules/images_tags.json
+  docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
+  werf cleanup --config modules_images_werf.yaml --without-kube
 }
 
 function test_web_links() {
@@ -82,7 +80,7 @@ SUBCOMMAND=$1
 shift
 
 type multiwerf && source <(multiwerf use 1.1 alpha)
-type werf && source <(werf ci-env gitlab --verbose);
+type werf && source <(werf ci-env gitlab --verbose)
 
 case "$SUBCOMMAND" in
   bp )
