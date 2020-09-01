@@ -134,7 +134,7 @@ function __main__ {
     elif context::has snapshots.etcd_pods_kops.0; then
       etcd_connection_opts="$(context::jq -r '.snapshots.etcd_pods_kops[0].filterResult')"
     else
-      echo "ERROR: Something went wrong, pod etcd not found. Service kube-openvpn/openvpn-external not have been migrated to d8-openvpn namespace."
+      >&2 echo "ERROR: Something went wrong, pod etcd not found. Service kube-openvpn/openvpn-external not have been migrated to d8-openvpn namespace."
       return 0
     fi
     pod_name="$(jq -r '.pod_name' <<< "$etcd_connection_opts")"

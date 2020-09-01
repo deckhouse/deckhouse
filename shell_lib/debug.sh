@@ -5,7 +5,7 @@ function debug::breakpoint() {
   port="$2"
 
   if netstat -nlt | grep -q "$ip:$port.*LISTEN"; then
-    echo "ERROR: Failed to listen on $ip:$port: Already in use"
+    >&2 echo "ERROR: Failed to listen on $ip:$port: Already in use"
     return 1
   fi
 

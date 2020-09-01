@@ -87,7 +87,7 @@ elif [[ "$file" == "." ]]; then
 fi
 
 if [[ -z "$tests" && -z "$docker_args" && -z "$focus_args" ]]; then
-  echo >&2 "ERROR: Don't know how to run tests for \"$1\""
+  >&2 echo "ERROR: Don't know how to run tests for \"$1\""
   exit 1
 fi
 
