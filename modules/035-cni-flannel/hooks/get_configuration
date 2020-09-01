@@ -34,7 +34,7 @@ function __main__() {
     i="$(jq -r --argjson self "$flannel_config" 'if $self.podNetworkMode != null then $self.podNetworkMode else .podNetworkMode // "host-gw" end' <<< "$flannel_config_from_secret")"
     values::set cniFlannel.internal.podNetworkMode "$i"
   else
-    values::unset cniFlannel.internal
+    values::unset cniFlannel.internal.podNetworkMode
   fi
 }
 
