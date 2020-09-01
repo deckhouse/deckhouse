@@ -1,5 +1,8 @@
 global:
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules:
+    __ConstantChoices__:
+    - ["vertical-pod-autoscaler-crd"]
+    - ["vertical-pod-autoscaler-crd", "control-plane-manager"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

@@ -1,3 +1,34 @@
+{{ define "instruction" }}
+  {{- if .Values.global.enabledModules | has "control-plane-manager" }}
+**Control-plane-manager** module is enabled. It means that certificates of control plane components and kubelets will renew automatically .
+If you see this alert, it's probably because someone uses stale kubeconfig on ci-runner or in user's home directory.
+
+To find who it is and where stale kubeconfig is located, you need to search in a kube-apiserver logs.
+```
+kubectl -n kube-system logs -l component=kube-apiserver | grep "Certificate expires in one week"
+```
+  {{- else }}
+You need to use `kubeadm` to check control plane certificates.
+1. Install kubeadm: `apt install kubeadm={{ .Values.global.discovery.kubernetesVersion }}.*`.
+2. Check certificates: `kubeadm alpha certs check-expiration`
+
+To check kubelet certificates, on each node you need to:
+1. Check kubelet config:
+```
+ps aux \
+  | grep "/usr/bin/kubelet" \
+  | grep -o -e "--kubeconfig=\S*" \
+  | cut -f2 -d"=" \
+  | xargs cat
+```
+2. Find field `client-certificate` or `client-certificate-data`
+3. Check certificate using openssl
+
+There are no tools to help you find other stale kubeconfigs.
+It will be better for you to enable `control-plane-manager` module to be able to debug in this case.
+  {{- end }}
+{{- end }}
+
 - name: coreos.kubernetes
   rules:
   - record: pod:container_memory_usage_bytes:sum
@@ -41,45 +72,6 @@
       1e+06
     labels:
       quantile: "0.5"
-#  - alert: APIServerLatencyHigh
-#    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
-#      > 1
-#    for: 10m
-#    labels:
-#      severity: warning
-#    annotations:
-#      description: the API server has a 99th percentile latency of {{ $value }} seconds
-#        for {{$labels.verb}} {{$labels.resource}}
-#      summary: API server high latency
-#  - alert: APIServerLatencyHigh
-#    expr: max(apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}) BY (resource, verb)
-#      > 4
-#    for: 10m
-#    labels:
-#      severity: critical
-#    annotations:
-#      description: the API server has a 99th percentile latency of {{ $value }} seconds
-#        for {{$labels.verb}} {{$labels.resource}}
-#      summary: API server high latency
-#  - alert: APIServerErrorsHigh
-#    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
-#      * 100 > 2
-#    for: 10m
-#    labels:
-#      severity: warning
-#    annotations:
-#      description: API server returns errors for {{ $value }}% of requests
-#        for {{$labels.verb}} {{$labels.resource}}
-#      summary: API server request errors
-#  - alert: APIServerErrorsHigh
-#    expr: max(rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])) by (resource, verb)
-#      * 100 > 5
-#    for: 10m
-#    labels:
-#      severity: critical
-#    annotations:
-#      description: API server returns errors for {{ $value }}% of requests
-#        for {{$labels.verb}} {{$labels.resource}}
   - alert: K8SApiserverDown
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 20m
@@ -97,7 +89,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
-      description: Some clients connect to {{$labels.component}} with Certificate which expiring soon (less than 7 days) on node {{$labels.node}}
+      description: |
+        Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 7 days) on node {{`{{$labels.node}}`}}.
+{{ include "instruction" . | indent 8 }}
       summary: Kubernetes has API clients with soon expiring certificates
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
@@ -106,5 +100,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
-      description: Some clients connect to {{$labels.component}} with Certificate which expiring soon (less than 1 day) on node {{$labels.component}}
+      description: |
+        Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 1 day) on node {{`{{$labels.component}}`}}.
+{{ include "instruction" . | indent 8 }}
       summary: Kubernetes has API clients with soon expiring certificates
