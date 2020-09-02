@@ -42,6 +42,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "1m"
+      plk_grouped_by__main: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       description: >
         Следует проверить состояние Pod'ов etcd: `kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }}`.
       summary: Участник etcd кластера на ноде {{ $labels.node }} потерял лидера.
