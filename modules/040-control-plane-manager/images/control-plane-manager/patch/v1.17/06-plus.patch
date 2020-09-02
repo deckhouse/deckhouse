@@ -1,0 +1,25 @@
+diff --git a/cmd/kubeadm/app/phases/etcd/local.go b/cmd/kubeadm/app/phases/etcd/local.go
+index ecf553f5ec1f7..2bb887eb83c6d 100644
+--- a/cmd/kubeadm/app/phases/etcd/local.go
++++ b/cmd/kubeadm/app/phases/etcd/local.go
+@@ -177,7 +177,7 @@ func GetEtcdPodSpec(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmapi.A
+ 		certsVolumeName: staticpodutil.NewVolume(certsVolumeName, cfg.CertificatesDir+"/etcd", &pathType),
+ 	}
+ 	// probeHostname returns the correct localhost IP address family based on the endpoint AdvertiseAddress
+-	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(&cfg.Etcd, utilsnet.IsIPv6String(endpoint.AdvertiseAddress))
++	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(&cfg.Etcd)
+ 	return staticpodutil.ComponentPod(
+ 		v1.Container{
+ 			Name:            kubeadmconstants.Etcd,
+diff --git a/cmd/kubeadm/app/util/etcd/etcd.go b/cmd/kubeadm/app/util/etcd/etcd.go
+index 0bac01620a52d..ec53a655cd648 100644
+--- a/cmd/kubeadm/app/util/etcd/etcd.go
++++ b/cmd/kubeadm/app/util/etcd/etcd.go
+@@ -177,7 +177,6 @@ func getRawEtcdEndpointsFromPodAnnotation(client clientset.Interface, backoff wa
+ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface) ([]string, int, error) {
+ 	klog.V(3).Infof("retrieving etcd endpoints from %q annotation in etcd Pods", constants.EtcdAdvertiseClientUrlsAnnotationKey)
+ 	podList, err := client.CoreV1().Pods(metav1.NamespaceSystem).List(
+-		context.TODO(),
+ 		metav1.ListOptions{
+ 			LabelSelector: fmt.Sprintf("component=%s,tier=%s", constants.Etcd, constants.ControlPlaneTier),
+ 		},

@@ -1,1 +1,1 @@
-FROM k8s.gcr.io/kube-proxy:v1.16.9
+FROM k8s.gcr.io/kube-proxy:v1.16.15

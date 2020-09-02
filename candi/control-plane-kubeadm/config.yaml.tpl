@@ -3,11 +3,11 @@ kind: ClusterConfiguration
 {{- if eq .clusterConfiguration.kubernetesVersion "1.15" }}
 kubernetesVersion: 1.15.12
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.16" }}
-kubernetesVersion: 1.16.11
+kubernetesVersion: 1.16.15
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.17" }}
-kubernetesVersion: 1.17.7
+kubernetesVersion: 1.17.11
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.18" }}
-kubernetesVersion: 1.18.4
+kubernetesVersion: 1.18.8
 {{- else }}
   {{- join (slice "Kubernetes version" .clusterConfiguration.kubernetesVersion "is not supported!") " "| fail }}
 {{- end }}
