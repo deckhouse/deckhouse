@@ -20,7 +20,7 @@ stages:
 Build Modules Images:
   extends: .Build Modules Images template
   tags:
-  - build_modules_images
+  - werf-distributed
 
 Build:
   extends: .Build template
@@ -102,8 +102,14 @@ rock-solid:
 
 Cleanup registry:
   extends: .Cleanup registry template
-  script:
-    - werf cleanup --images-repo ${CI_REGISTRY_IMAGE}
+  tags:
+    - werf-distributed
+  retry: 2
+
+Cleanup modules registry:
+  extends: .Cleanup modules registry template
+  variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-modules-images
   tags:
     - werf-distributed
   retry: 2
@@ -111,4 +117,4 @@ Cleanup registry:
 Cleanup modules images:
   extends: .Cleanup modules images template
   tags:
-    - build
+    - werf-distributed

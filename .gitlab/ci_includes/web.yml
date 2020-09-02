@@ -2,6 +2,7 @@ Build Website:
   stage: build
   variables:
     WERF_CONFIG: werf-web.yaml
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-web
   script:
     - type multiwerf && source <(multiwerf use 1.1 alpha)
     - source <(werf ci-env gitlab --verbose)
@@ -19,6 +20,8 @@ Build Website:
   interruptible: true
 
 Web links test:
+  variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-web
   extends: .Web links test
   tags:
     - werf-distributed
@@ -53,6 +56,7 @@ Web links test:
 deckhouse.test.flant.com:
   <<: *web_base_deploy
   variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-web
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
   environment:
     name: web-test
@@ -62,6 +66,7 @@ deckhouse.test.flant.com:
 early.deckhouse.io:
   <<: *web_base_deploy
   variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-web
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
   environment:
     name: web-early
@@ -71,6 +76,7 @@ early.deckhouse.io:
 deckhouse.io:
   <<: *web_base_deploy
   variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-web
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
   environment:
     name: web-production
@@ -83,6 +89,7 @@ deckhouse.io:
 Web cleanup:
   stage: cleanup_registry
   variables:
+    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-web
     WERF_CONFIG: werf-web.yaml
   script:
     - type multiwerf && source <(multiwerf use 1.1 alpha)
