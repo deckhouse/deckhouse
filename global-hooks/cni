@@ -7,7 +7,6 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: cni_configuration_secret
-      queue: /modules/$(module::name::kebab_case)
       keepFullObjectsInMemory: false
       group: main
       apiVersion: v1
