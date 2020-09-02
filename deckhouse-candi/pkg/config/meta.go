@@ -28,6 +28,8 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration"`
+
+	UUID []byte `json:"clusterUUID,omitempty"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -237,7 +239,14 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 		"providerClusterConfiguration": m.ProviderClusterConfig,
 		"nodeIndex":                    nodeIndex,
 		"cloudConfig":                  cloudConfig,
-		"nodeGroupName":                nodeGroupName,
+	}
+
+	if nodeGroupName != "master" {
+		result["nodeGroupName"] = nodeGroupName
+	}
+
+	if len(m.UUID) > 0 {
+		result["clusterUUID"] = m.UUID
 	}
 
 	data, _ := json.Marshal(result)
