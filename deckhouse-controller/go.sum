@@ -167,6 +167,7 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200814152246-8570d2963321 h1:Nk/sPEmfhMYOrYct0D6nSNOn1QZXUjJZGM2KlYL9LII=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200814152246-8570d2963321/go.mod h1:7HVJYyp7UZ2kAHQ0rBlEcxUdbka4OZeZTgA47IIjaEo=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200828133223-8069d30b8a83/go.mod h1:7HVJYyp7UZ2kAHQ0rBlEcxUdbka4OZeZTgA47IIjaEo=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200901144947-733cc1df759e/go.mod h1:7HVJYyp7UZ2kAHQ0rBlEcxUdbka4OZeZTgA47IIjaEo=
 github.com/flant/libjq-go v1.6.1-0.20200401092614-198670408da1/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWDDKFlwgETsT1OiXD1gZtRHcNxAs1lc=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
