@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 
-	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
@@ -33,7 +32,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		err = logboek.LogProcess("☠️ ~ Remove Deckhouse️", log.TaskOptions(), func() error {
+		err = log.Process("default", "Remove Deckhouse️", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
 			// auto init
 			err = kubeCl.Init("")
@@ -85,12 +84,12 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		clusterConfig, err := metaConfig.MarshalClusterConfigYAML()
+		clusterConfig, err := metaConfig.ClusterConfigYAML()
 		if err != nil {
 			return fmt.Errorf("marshal cluster config: %v", err)
 		}
 
-		providerClusterConfig, err := metaConfig.MarshalProviderClusterConfigYAML()
+		providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 		if err != nil {
 			return fmt.Errorf("marshal provider config: %v", err)
 		}
@@ -116,7 +115,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return nil
 		}
 
-		err = logboek.LogProcess("🛥️ ~ Create Deckhouse Deployment", log.TaskOptions(), func() error {
+		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 			if err := kubeCl.Init(""); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)

@@ -3,6 +3,7 @@ package terraform
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"flant/deckhouse-candi/pkg/log"
 )
@@ -38,21 +39,27 @@ func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineO
 		return err
 	}
 
-	err := log.TerraformProcess(fmt.Sprintf("Pipeline %s for %s", r.step, name), pipelineFunc)
+	err := log.Process("terraform", fmt.Sprintf("Pipeline %s for %s", r.step, name), pipelineFunc)
 	return extractedData, err
 }
 
-func CheckPipeline(r *Runner) (bool, error) {
-	err := r.Init()
-	if err != nil {
-		return false, err
-	}
+func CheckPipeline(r *Runner, name string) (bool, error) {
+	isChange := false
+	pipelineFunc := func() error {
+		err := r.Init()
+		if err != nil {
+			return err
+		}
 
-	err = r.Plan()
-	if err != nil {
-		return false, err
-	}
+		err = r.Plan()
+		if err != nil {
+			return err
+		}
 
+		isChange = r.changesInPlan
+		return nil
+	}
+	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.step, name), pipelineFunc)
 	return r.changesInPlan, err
 }
 
@@ -69,7 +76,7 @@ func DestroyPipeline(r *Runner, name string) error {
 		}
 		return nil
 	}
-	return log.TerraformProcess(fmt.Sprintf("Destroy %s for %s", r.step, name), pipelineFunc)
+	return log.Process("terraform", fmt.Sprintf("Destroy %s for %s", r.step, name), pipelineFunc)
 }
 
 func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
@@ -90,17 +97,17 @@ func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
 }
 
 func GetMasterNodeResult(r *Runner) (*PipelineOutputs, error) {
-	masterIPAddressForSSH, err := getStringOutput(r, "master_ip_address_for_ssh")
+	masterIPAddressForSSH, err := getStringOrIntOutput(r, "master_ip_address_for_ssh")
 	if err != nil {
 		return nil, err
 	}
 
-	nodeInternalIP, err := getStringOutput(r, "node_internal_ip_address")
+	nodeInternalIP, err := getStringOrIntOutput(r, "node_internal_ip_address")
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesDataDevicePath, err := getStringOutput(r, "kubernetes_data_device_path")
+	kubernetesDataDevicePath, err := getStringOrIntOutput(r, "kubernetes_data_device_path")
 	if err != nil {
 		return nil, err
 	}
@@ -127,14 +134,32 @@ func OnlyState(r *Runner) (*PipelineOutputs, error) {
 	return &PipelineOutputs{TerraformState: tfState}, nil
 }
 
-func getStringOutput(r *Runner, name string) (string, error) {
+type stringOrInt string
+
+func (s *stringOrInt) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err == nil {
+		*s = stringOrInt(str)
+		return nil
+	}
+
+	var i int
+	if err := json.Unmarshal(b, &i); err != nil {
+		return err
+	}
+
+	*s = stringOrInt(strconv.Itoa(i))
+	return nil
+}
+
+func getStringOrIntOutput(r *Runner, name string) (string, error) {
 	outputRaw, err := r.GetTerraformOutput(name)
 	if err != nil {
 		return "", err
 	}
 
-	var output string
+	var output stringOrInt
 	// skip error check here, because terraform always return valid json
 	_ = json.Unmarshal(outputRaw, &output)
-	return output, nil
+	return string(output), nil
 }

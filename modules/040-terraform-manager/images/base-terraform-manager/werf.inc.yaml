@@ -31,7 +31,7 @@ ansible:
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: alpine:3.11
 docker:
-  CMD: ["deckhouse-candi", "terraform", "converge-exporter"]
+  ENTRYPOINT: ["deckhouse-candi"]
 import:
 - artifact: deckhouse-candi
   add: /deckhouse-candi/deckhouse-candi

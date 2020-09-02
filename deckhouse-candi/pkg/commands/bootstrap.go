@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flant/logboek"
-
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/deckhouse"
@@ -20,23 +18,23 @@ import (
 )
 
 func BootstrapMaster(sshClient *ssh.SshClient, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
-	return log.BootstrapProcess("Initial bootstrap", func() error {
+	return log.Process("bootstrap", "Initial bootstrap", func() error {
 		if err := template.PrepareBootstrap(controller, nodeIP, bundleName, metaConfig); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
 		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
-			err := logboek.LogProcess("Run "+bootstrapScript, log.BoldOptions(), func() error {
+			err := log.Process("default", bootstrapScript, func() error {
 				if _, err := os.Stat(scriptPath); err != nil {
 					if os.IsNotExist(err) {
-						logboek.LogInfoF("Script %s doesn't found\n", scriptPath)
+						log.InfoF("Script %s doesn't found\n", scriptPath)
 						return nil
 					}
 					return fmt.Errorf("script path: %v", err)
 				}
 				cmd := sshClient.UploadScript(scriptPath).
-					WithStdoutHandler(func(l string) { logboek.LogInfoLn(l) }).
+					WithStdoutHandler(func(l string) { log.InfoLn(l) }).
 					Sudo()
 
 				_, err := cmd.Execute()
@@ -54,13 +52,13 @@ func BootstrapMaster(sshClient *ssh.SshClient, bundleName, nodeIP string, metaCo
 }
 
 func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
-	return log.BootstrapProcess("Prepare Bashible Bundle", func() error {
+	return log.Process("bootstrap", "Prepare Bashible Bundle", func() error {
 		return template.PrepareBundle(controller, nodeIP, bundleName, devicePath, metaConfig)
 	})
 }
 
 func ExecuteBashibleBundle(sshClient *ssh.SshClient, tmpDir string) error {
-	return log.BootstrapProcess("Execute Bashible Bundle", func() error {
+	return log.Process("bootstrap", "Execute Bashible Bundle", func() error {
 		bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
 		parentDir := tmpDir + "/var/lib"
 		bundleDir := "bashible"
@@ -82,9 +80,32 @@ func RunBashiblePipeline(sshClient *ssh.SshClient, cfg *config.MetaConfig, nodeI
 		return err
 	}
 
+	var bashibleUpToDate bool
+	_ = log.Process("bootstrap", "Check Bashible", func() error {
+		bashibleCmd := sshClient.Command("sudo", "/var/lib/bashible/bashible.sh").Sudo()
+		rawOut, _ := bashibleCmd.CombinedOutput()
+		out := strings.TrimSuffix(string(rawOut), "\n")
+
+		switch out {
+		case "Can't acquire lockfile /var/lock/bashible.":
+			fallthrough
+		case "Configuration is in sync, nothing to do.":
+			log.InfoLn("Bashible is already installed and healthy!")
+			log.InfoF("\t%s\n", out)
+			bashibleUpToDate = true
+		default:
+			log.InfoLn("Bashible is not ready! Let's try to install it ...")
+			log.InfoF("\tReason: %s\n", out)
+		}
+		return nil
+	})
+	if bashibleUpToDate {
+		return nil
+	}
+
 	templateController := template.NewTemplateController("")
-	_ = log.BoldProcess("Rendered templates directory", func() error {
-		logboek.LogInfoLn(templateController.TmpDir)
+	_ = log.Process("bootstrap", "Rendered templates directory", func() error {
+		log.InfoLn(templateController.TmpDir)
 		return nil
 	})
 
@@ -105,7 +126,7 @@ func RunBashiblePipeline(sshClient *ssh.SshClient, cfg *config.MetaConfig, nodeI
 
 func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
 	var bundleName string
-	err := log.BootstrapProcess("Detect Bashible Bundle", func() error {
+	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
 		// run detect bundle type
 		detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
 		stdout, err := detectCmd.Execute()
@@ -117,7 +138,7 @@ func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
 		}
 
 		bundleName = strings.Trim(string(stdout), "\n ")
-		logboek.LogInfoF("Detected bundle: %s\n", bundleName)
+		log.InfoF("Detected bundle: %s\n", bundleName)
 
 		return nil
 	})
@@ -125,10 +146,10 @@ func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
 }
 
 func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
-	return log.BootstrapProcess("Wait for SSH on Master become Ready", func() error {
+	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
-		_ = log.BoldProcess("Connection string", func() error {
-			logboek.LogInfoLn(availabilityCheck.String())
+		_ = log.Process("default", "Connection string", func() error {
+			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
 		if err := availabilityCheck.AwaitAvailability(); err != nil {
@@ -139,7 +160,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
 }
 
 func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config, nodeGroupConfig map[string]interface{}) error {
-	return log.BootstrapProcess("Install Deckhouse", func() error {
+	return log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := deckhouse.WaitForKubernetesAPI(kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse wait api: %v", err)
@@ -166,7 +187,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 
 func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
-	err := log.CommonProcess("Start Kubernetes API proxy", func() error {
+	err := log.Process("common", "Start Kubernetes API proxy", func() error {
 		if err := sshClient.Check().AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master available: %v", err)
 		}
@@ -187,7 +208,7 @@ func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*client.KubernetesClient
 const rebootExitCode = 255
 
 func RebootMaster(sshClient *ssh.SshClient) error {
-	return log.BootstrapProcess("Reboot Master️", func() error {
+	return log.Process("bootstrap", "Reboot Master️", func() error {
 		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().WithSSHArgs("-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
@@ -201,26 +222,26 @@ func RebootMaster(sshClient *ssh.SshClient) error {
 				err,
 			)
 		}
-		logboek.LogInfoLn("OK!")
+		log.InfoLn("OK!")
 		return nil
 	})
 }
 
 func BootstrapStaticNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, staticNodeGroups []config.StaticNodeGroupSpec) error {
-	for _, staticNodeGroup := range staticNodeGroups {
-		err := log.BootstrapProcess(fmt.Sprintf("Create %s NodeGroup", staticNodeGroup.Name), func() error {
-			err := converge.CreateNodeGroup(kubeCl, staticNodeGroup.Name, metaConfig.MarshalNodeGroupConfig(staticNodeGroup))
+	for _, ng := range staticNodeGroups {
+		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
+			err := converge.CreateNodeGroup(kubeCl, ng.Name, metaConfig.NodeGroupManifest(ng))
 			if err != nil {
 				return err
 			}
 
-			nodeCloudConfig, err := converge.GetCloudConfig(kubeCl, staticNodeGroup.Name)
+			cloudConfig, err := converge.GetCloudConfig(kubeCl, ng.Name)
 			if err != nil {
 				return err
 			}
 
-			for i := 0; i < staticNodeGroup.Replicas; i++ {
-				err = converge.BootstrapAdditionalNode(kubeCl, i, metaConfig.ProviderName, metaConfig.Layout, "static-node", staticNodeGroup.Name, nodeCloudConfig, metaConfig)
+			for i := 0; i < ng.Replicas; i++ {
+				err = converge.BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig)
 				if err != nil {
 					return err
 				}
@@ -235,14 +256,14 @@ func BootstrapStaticNodes(kubeCl *client.KubernetesClient, metaConfig *config.Me
 }
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, replicas int) error {
-	return log.BootstrapProcess("Create master NodeGroup", func() error {
+	return log.Process("bootstrap", "Create master NodeGroup", func() error {
 		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, "master")
 		if err != nil {
 			return err
 		}
 
 		for i := 1; i < replicas; i++ {
-			err = converge.BootstrapAdditionalMasterNode(kubeCl, i, metaConfig.ProviderName, metaConfig.Layout, masterCloudConfig, metaConfig)
+			err = converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig)
 			if err != nil {
 				return err
 			}

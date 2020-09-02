@@ -35,8 +35,10 @@ func DefineSshFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
 		StringVar(&SshBastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
+		Default(SshBastionUser).
 		StringVar(&SshBastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").
+		Default(SshUser).
 		StringVar(&SshUser)
 	cmd.Flag("ssh-host", "SSH destination host").
 		StringVar(&SshHost)

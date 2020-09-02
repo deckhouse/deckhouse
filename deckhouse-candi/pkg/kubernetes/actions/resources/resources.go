@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/logboek"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,6 +13,7 @@ import (
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/actions"
 	"flant/deckhouse-candi/pkg/kubernetes/client"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/util/retry"
 )
 
@@ -50,7 +50,7 @@ func CreateResources(kubeCl *client.KubernetesClient, resources *config.Resource
 	}
 
 	if len(resourcesToCreate) > 0 {
-		logboek.LogInfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
+		log.InfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
 	}
 	return nil
 }

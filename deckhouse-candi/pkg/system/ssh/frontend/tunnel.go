@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/flant/logboek"
-
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh/cmd"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
+	"flant/deckhouse-candi/pkg/util/retry"
 )
 
 type Tunnel struct {
@@ -19,7 +19,9 @@ type Tunnel struct {
 	Type    string // Remote or Local
 	Address string
 	sshCmd  *exec.Cmd
-	stop    bool
+
+	stopCh  chan struct{}
+	errorCh chan error
 }
 
 func NewTunnel(sess *session.Session, ttype string, address string) *Tunnel {
@@ -27,6 +29,8 @@ func NewTunnel(sess *session.Session, ttype string, address string) *Tunnel {
 		Session: sess,
 		Type:    ttype,
 		Address: address,
+		stopCh:  make(chan struct{}, 1),
+		errorCh: make(chan error, 1),
 	}
 }
 
@@ -67,8 +71,6 @@ func (t *Tunnel) Up() error {
 	}
 
 	tunnelReadyCh := make(chan struct{}, 1)
-	tunnelErrorCh := make(chan error, 1)
-
 	go func() {
 		//defer wg.Done()
 		t.ConsumeLines(stdoutReadPipe, func(l string) {
@@ -80,27 +82,35 @@ func (t *Tunnel) Up() error {
 	}()
 
 	go func() {
-		//defer wg.Done()
-		err = t.sshCmd.Wait()
-		if t.stop {
-			return
-		}
-		if err != nil {
-			tunnelErrorCh <- err
-		} else {
-			app.Debugf("tunnel '%s' process exited.\n", t.String())
-		}
+		t.errorCh <- t.sshCmd.Wait()
 	}()
 
 	select {
-	case err = <-tunnelErrorCh:
+	case err = <-t.errorCh:
 		return fmt.Errorf("cannot open tunnel '%s': %v", t.String(), err)
 	case <-tunnelReadyCh:
 	}
 
-	// TODO add tunnel health monitor, restart tunnel if it drops.
-	// write to stdinWriter, wait the same text on stdoutReader
 	return nil
+}
+
+func (t *Tunnel) HealthMonitor() error {
+	for {
+		select {
+		case err := <-t.errorCh:
+			if err != nil {
+				log.ErrorF("Tunnel stopped with an error: %v. ", err)
+				log.InfoLn("Restarting a tunnel ...")
+			}
+			err = retry.StartSilentLoop("tunnel", 5, 5, t.Up)
+			if err != nil {
+				return err
+			}
+		case <-t.stopCh:
+			_ = t.sshCmd.Process.Kill()
+			return nil
+		}
+	}
 }
 
 func (t *Tunnel) Stop() {
@@ -108,12 +118,11 @@ func (t *Tunnel) Stop() {
 		return
 	}
 	if t.Session == nil {
-		logboek.LogErrorF("bug: down tunnel '%s': no session", t.String())
+		log.ErrorF("bug: down tunnel '%s': no session", t.String())
 		return
 	}
 	if t.sshCmd != nil {
-		t.stop = true
-		t.sshCmd.Process.Kill()
+		t.stopCh <- struct{}{}
 	}
 }
 

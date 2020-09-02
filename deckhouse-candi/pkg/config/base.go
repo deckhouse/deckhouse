@@ -35,7 +35,7 @@ func ParseConfig(path string) (*MetaConfig, error) {
 func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
-	err = log.CommonProcess("Get Cluster configuration", func() error {
+	err = log.Process("common", "Get Cluster configuration", func() error {
 		return retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 45, 10, func() error {
 			metaConfig, err = parseConfigFromCluster(kubeCl)
 			return err
@@ -94,6 +94,8 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 
 		metaConfig.ProviderClusterConfig = providerClusterConfigData
 	}
+
+	metaConfig.Prepare()
 	return &metaConfig, nil
 }
 
@@ -141,8 +143,6 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 			metaConfig.ClusterConfig = data
 		case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
 			metaConfig.ProviderClusterConfig = data
-		case strings.HasSuffix(index.Kind, "InitConfiguration"):
-			metaConfig.InitProviderClusterConfig = data
 		}
 	}
 

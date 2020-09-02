@@ -4,22 +4,23 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flant/logboek"
-
 	"flant/deckhouse-candi/pkg/log"
 )
 
 func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
-	return log.BoldProcess(name, func() error {
+	return log.Process("default", name, func() error {
 		for i := 1; i <= attemptsQuantity; i++ {
 			if err := task(); err != nil {
-				logboek.LogInfoF("❌ Attempt #%v of %v |\n\t%s failed, next attempt will be in %vs\n", i, attemptsQuantity, name, waitSeconds)
-				logboek.LogInfoF("\tError: %v\n\n", err)
+				log.Fail(fmt.Sprintf(
+					"Attempt #%v of %v |\n\t%s failed, next attempt will be in %vs\n",
+					i, attemptsQuantity, name, waitSeconds,
+				))
+				log.InfoF("\tError: %v\n\n", err)
 				<-time.After(time.Duration(waitSeconds) * time.Second)
 				continue
 			}
 
-			logboek.LogInfoLn("✅ Succeeded!")
+			log.Success("Succeeded!\n")
 			return nil
 		}
 		return fmt.Errorf("timeout while %s", name)

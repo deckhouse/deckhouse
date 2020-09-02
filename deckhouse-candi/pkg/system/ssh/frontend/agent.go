@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh/cmd"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
 )
@@ -59,21 +60,22 @@ func (a *Agent) AddKeys() error {
 
 		str := string(output)
 		if str != "" && str != "\n" {
-			fmt.Printf("ssh-add: %s\n", output)
+			log.InfoF("ssh-add: %s\n", output)
 		}
 	}
 
 	if app.IsDebug == 1 {
 		app.Debugf("list added keys\n")
 		listCmd := cmd.NewSshAdd(a.Session).ListCmd()
-		output, err := listCmd.CombinedOutput()
 
+		output, err := listCmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("ssh-add -l: %v", err)
 		}
+
 		str := string(output)
 		if str != "" && str != "\n" {
-			fmt.Printf("ssh-add -l: %s\n", output)
+			log.InfoF("ssh-add -l: %s\n", output)
 		}
 	}
 

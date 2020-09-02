@@ -1,9 +1,14 @@
 package app
 
-import "gopkg.in/alecthomas/kingpin.v2"
+import (
+	"os"
+	"path/filepath"
+
+	"gopkg.in/alecthomas/kingpin.v2"
+)
 
 var (
-	TerraformStateDir = ""
+	TerraformStateDir = filepath.Join(os.TempDir(), "deckhouse-candi")
 )
 
 func DefineTerraformFlags(cmd *kingpin.CmdClause) {

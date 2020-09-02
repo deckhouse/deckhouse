@@ -17,8 +17,7 @@ func WaitForProcessInterruption(cb ...func()) {
 	interruptCh := make(chan os.Signal, 1)
 
 	forcedExit := func(s os.Signal) {
-		fmt.Printf("\n~~~~~~~~~~\n")
-		fmt.Printf("Forced shutdown by '%s' signal\n", s.String())
+		fmt.Printf("\nForced shutdown by '%s' signal\n", s.String())
 
 		Exit(s)
 	}
@@ -30,8 +29,7 @@ func WaitForProcessInterruption(cb ...func()) {
 		switch allowedCount {
 		case 0:
 			if len(cb) > 0 {
-				fmt.Printf("\n~~~~~~~~~~\n")
-				fmt.Printf("Grace shutdown by '%s' signal\n", sig.String())
+				fmt.Printf("\nGrace shutdown by '%s' signal\n", sig.String())
 				cb[0]()
 				Exit(sig)
 			} else {

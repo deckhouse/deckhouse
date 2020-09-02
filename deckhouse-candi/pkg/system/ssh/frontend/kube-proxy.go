@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/logboek"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
 )
 
@@ -52,7 +52,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 		m := portRe.FindStringSubmatch(line)
 		if len(m) == 2 && m[1] != "" {
 			port = m[1]
-			logboek.LogInfoF("Got proxy port = %s\n", port)
+			log.InfoF("Got proxy port = %s\n", port)
 			portReady <- struct{}{}
 		}
 	})
@@ -120,6 +120,13 @@ func (k *KubeProxy) Start() (port string, err error) {
 
 	k.tunnel = tun
 	success = true
+
+	go func() {
+		err := k.tunnel.HealthMonitor()
+		if err != nil {
+			log.ErrorLn(err)
+		}
+	}()
 	return fmt.Sprintf("%d", localPort), nil
 }
 

@@ -1,10 +1,9 @@
 package commands
 
 import (
+	"flant/deckhouse-candi/pkg/log"
 	"fmt"
 	"os"
-
-	"github.com/flant/logboek"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -19,6 +18,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
 	app.DefineSshFlags(cmd)
 	app.DefineBecomeFlags(cmd)
+	app.DefineTerraformFlags(cmd)
 
 	runFunc := func(sshClient *ssh.SshClient) error {
 		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
@@ -30,7 +30,6 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		metaConfig.Prepare()
 
 		err = converge.RunConverge(kubeCl, metaConfig)
 		if err != nil {
@@ -51,7 +50,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		err = runFunc(sshClient)
 		if err != nil {
-			logboek.LogErrorLn(err.Error())
+			log.ErrorLn(err.Error())
 			os.Exit(1)
 		}
 		return nil

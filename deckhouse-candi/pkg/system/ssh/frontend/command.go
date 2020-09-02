@@ -6,9 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/flant/logboek"
-
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/process"
 	"flant/deckhouse-candi/pkg/system/ssh/cmd"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
@@ -79,7 +78,7 @@ func (c *Command) Sudo() *Command {
 				passSent = true
 			} else {
 				// Second prompt is error!
-				logboek.LogErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
+				log.ErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
 				os.Exit(1)
 			}
 			return "reset"
@@ -116,7 +115,6 @@ func (c *Command) Output() ([]byte, []byte, error) {
 
 	output, err := c.cmd.Output()
 	if err != nil {
-		//fmt.Printf("%s: %s\n", c.Name, output)
 		return output, nil, fmt.Errorf("execute command '%s': %v", c.Name, err)
 	}
 	return output, nil, nil

@@ -2,13 +2,12 @@ package template
 
 import (
 	"bytes"
+	"flant/deckhouse-candi/pkg/log"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/flant/logboek"
 )
 
 const (
@@ -34,7 +33,7 @@ func RenderTemplate(templatesDir string, data map[string]interface{}) ([]Rendere
 
 	files, err := ioutil.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
-		logboek.LogInfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
+		log.InfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
 		return nil, nil
 	}
 

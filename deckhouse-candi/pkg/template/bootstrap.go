@@ -4,15 +4,13 @@ import (
 	"flant/deckhouse-candi/pkg/log"
 	"path/filepath"
 
-	"github.com/flant/logboek"
-
 	"flant/deckhouse-candi/pkg/config"
 )
 
 const bootstrapDir = "/bootstrap"
 
 func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string, metaConfig *config.MetaConfig) error {
-	bashibleData := metaConfig.MarshalConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	bashibleData := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
 
 	saveInfo := []saveFromTo{
 		{
@@ -32,9 +30,9 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 		},
 	}
 
-	return logboek.LogProcess("Render bootstrap templates", log.BoldOptions(), func() error {
+	return log.Process("default", "Render bootstrap templates", func() error {
 		for _, info := range saveInfo {
-			logboek.LogInfoF("From %q to %q\n", info.from, info.to)
+			log.InfoF("From %q to %q\n", info.from, info.to)
 			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
 				return err
 			}

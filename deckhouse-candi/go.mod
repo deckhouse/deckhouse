@@ -3,6 +3,7 @@ module flant/deckhouse-candi
 go 1.13
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig/v3 v3.1.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
@@ -21,6 +22,7 @@ require (
 	github.com/prometheus/common v0.4.1
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904
+	golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/satori/go.uuid.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.2.8

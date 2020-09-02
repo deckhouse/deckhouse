@@ -2,11 +2,10 @@ package manifests
 
 import (
 	"encoding/base64"
+	"flant/deckhouse-candi/pkg/log"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/flant/logboek"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -248,7 +247,7 @@ func DeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap
 		if strings.HasSuffix(setting, "Enabled") {
 			boolData, ok := data.(bool)
 			if !ok {
-				logboek.LogWarnF("deckhouse config map: %q must be boo\n", setting)
+				log.ErrorF("deckhouse config map: %q must be boo\n", setting)
 			}
 			configMapData[setting] = strconv.FormatBool(boolData)
 
@@ -256,7 +255,7 @@ func DeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap
 		}
 		convertedData, err := yaml.Marshal(data)
 		if err != nil {
-			logboek.LogWarnF("preparing deckhouse config map error (probably validation bug): %v", err)
+			log.ErrorF("preparing deckhouse config map error (probably validation bug): %v", err)
 			continue
 		}
 		configMapData[setting] = string(convertedData)
@@ -312,13 +311,15 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 	)
 }
 
-func SecretWithNodeTerraformState(nodeName, nodeGroup string, data []byte) *apiv1.Secret {
+func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
+	body := map[string][]byte{"node-tf-state.json": data}
+	if settings != nil {
+		body["node-group-settings.json"] = settings
+	}
 	return generateSecret(
 		"d8-node-terraform-state-"+nodeName,
 		"d8-system",
-		map[string][]byte{
-			"node-tf-state.json": data,
-		},
+		body,
 		map[string]string{
 			"node.deckhouse.io/node-group":      nodeGroup,
 			"node.deckhouse.io/node-name":       nodeName,

@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/flant/logboek"
 	uuid "gopkg.in/satori/go.uuid.v1"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh/cmd"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
 )
@@ -53,7 +53,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 	defer func() {
 		err := os.Remove(srcPath)
 		if err != nil {
-			logboek.LogErrorF("Error: cannot remove tmp file '%s': %v\n", srcPath, err)
+			log.ErrorF("Error: cannot remove tmp file '%s': %v\n", srcPath, err)
 		}
 	}()
 
@@ -74,7 +74,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 	}
 
 	if len(scp.StdoutBytes()) > 0 {
-		logboek.LogInfoF("Upload file: %s", string(scp.StdoutBytes()))
+		log.InfoF("Upload file: %s", string(scp.StdoutBytes()))
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (f *File) Download(remotePath string, dstPath string) error {
 	}
 
 	if len(stdout) > 0 {
-		logboek.LogInfoF("Download file: %s", string(stdout))
+		log.InfoF("Download file: %s", string(stdout))
 	}
 	return nil
 }
@@ -119,7 +119,7 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 	}
 
 	if len(stdout) > 0 {
-		logboek.LogInfoF("Download file: %s", string(stdout))
+		log.InfoF("Download file: %s", string(stdout))
 	}
 
 	data, err := ioutil.ReadFile(dstPath)

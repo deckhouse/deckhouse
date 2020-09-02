@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -12,11 +13,22 @@ const (
 )
 
 var (
+	TmpDirName = filepath.Join(os.TempDir(), "deckhouse-candi")
+)
+
+var (
 	AppVersion = "dev"
 
 	ConfigPath  = ""
 	SanityCheck = false
+	LoggerType  = "pretty"
 )
+
+func GlobalFlags(cmd *kingpin.Application) {
+	cmd.Flag("logger-type", "Format output of an deckhouse-candi in different ways.").
+		Default("pretty").
+		EnumVar(&LoggerType, "pretty", "simple")
+}
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("config", "Config file path").
@@ -26,6 +38,7 @@ func DefineConfigFlags(cmd *kingpin.CmdClause) {
 
 func DefineSanityFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double check what you are doing here").
+		Default("false").
 		BoolVar(&SanityCheck)
 }
 

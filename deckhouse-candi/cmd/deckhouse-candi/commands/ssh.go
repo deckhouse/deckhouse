@@ -6,10 +6,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/flant/logboek"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
 )
 
@@ -134,8 +134,8 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 			}
 		}
-		logboek.LogInfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
-		logboek.LogInfoF("Got %d symbols\n", len(stdout))
+		log.InfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
+		log.InfoF("Got %d symbols\n", len(stdout))
 		return nil
 	})
 
@@ -178,7 +178,7 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 			}
 		}
-		logboek.LogInfoF("Got %d symbols\n", len(stdout))
+		log.InfoF("Got %d symbols\n", len(stdout))
 		return nil
 	})
 

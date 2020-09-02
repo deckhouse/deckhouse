@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flant/logboek"
 	"github.com/iancoleman/strcase"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -148,7 +147,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 	}
 
 	for nodeName, tfState := range cfg.NodesTerraformState {
-		getManifest := func() interface{} { return manifests.SecretWithNodeTerraformState(nodeName, "master", tfState) }
+		getManifest := func() interface{} { return manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil) }
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
@@ -212,7 +211,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 		},
 	})
 
-	return logboek.LogProcess("Create Manifests", log.BoldOptions(), func() error {
+	return log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
 			err := task.Create()
 			if err != nil {
@@ -224,7 +223,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
-	return logboek.LogProcess("Waiting for Deckhouse to become Ready", log.BoldOptions(), func() error {
+	return log.Process("default", "Waiting for Deckhouse to become Ready", func() error {
 		// watch for deckhouse pods in namespace become Ready
 		ready := make(chan struct{}, 1)
 
@@ -272,7 +271,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 				time.Sleep(15 * time.Second)
 				err = PrintDeckhouseLogs(kubeCl, &stopLogsChan)
 				if err != nil {
-					logboek.LogInfoLn(err.Error())
+					log.InfoLn(err.Error())
 					continue
 				}
 				return
@@ -286,7 +285,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 			case <-waitTimer.C:
 				waitErr = fmt.Errorf("timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors")
 			case <-ready:
-				logboek.LogInfoF("Deckhouse deployment is ready\n")
+				log.InfoF("Deckhouse deployment is ready\n")
 			}
 			break
 		}
@@ -295,11 +294,11 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 }
 
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
-	return logboek.LogProcess("Remove deckhouse", log.BoldOptions(), func() error {
-		logboek.LogInfoF("Delete Deployment/deckhouse\n")
+	return log.Process("default", "Remove deckhouse", func() error {
+		log.InfoF("Delete Deployment/deckhouse\n")
 		err := kubeCl.AppsV1().Deployments("d8-system").Delete("deckhouse", &metav1.DeleteOptions{})
 		if err != nil {
-			logboek.LogWarnF("Error: %v\n", err)
+			log.InfoF("Error: %v\n", err)
 		}
 
 		return nil
@@ -323,7 +322,7 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 		},
 	}
 
-	return logboek.LogProcess("Create Deployment", log.BoldOptions(), func() error {
+	return log.Process("default", "Create Deployment", func() error {
 		return task.Create()
 	})
 }
@@ -343,12 +342,12 @@ func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
 }
 
 func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, error) {
-	clusterConfig, err := metaConfig.MarshalClusterConfigYAML()
+	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
 		return nil, fmt.Errorf("marshal cluster config: %v", err)
 	}
 
-	providerClusterConfig, err := metaConfig.MarshalProviderClusterConfigYAML()
+	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 	if err != nil {
 		return nil, fmt.Errorf("marshal provider config: %v", err)
 	}

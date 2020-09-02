@@ -42,6 +42,10 @@ spec:
       serviceAccountName: terraform-manager
       containers:
       - name: terraform-manager
+        args:
+        - "terraform"
+        - "converge-exporter"
+        - "--logger-type=simple"
         image: {{ .Values.global.modulesImages.registry }}/terraform-manager/{{ include "terraform_manager_image" . }}
         livenessProbe:
           httpGet:

@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,7 +94,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return err
 		}
 
-		err = logboek.LogProcess("🛥️ ~ Wait for Deckhouse to become ready 🛥️", log.TaskOptions(), func() error {
+		err = log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
 			// auto init
 			err = kubeCl.Init("")

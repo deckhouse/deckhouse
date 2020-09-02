@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/flant/logboek"
 	"gopkg.in/yaml.v2"
 
 	"flant/deckhouse-candi/pkg/config"
@@ -27,20 +26,20 @@ type saveFromTo struct {
 
 func logTemplatesData(name string, data map[string]interface{}) {
 	formattedData, _ := yaml.Marshal(data)
-	_ = logboek.LogProcess(fmt.Sprintf("%s data", name), log.BoldOptions(), func() error {
-		logboek.LogInfoF(string(formattedData))
+	_ = log.Process("default", fmt.Sprintf("%s data", name), func() error {
+		log.InfoF(string(formattedData))
 		return nil
 	})
 }
 
 func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
-	kubeadmData := metaConfig.MarshalConfigForKubeadmTemplates(nodeIP)
+	kubeadmData := metaConfig.ConfigForKubeadmTemplates(nodeIP)
 	logTemplatesData("kubeadm", kubeadmData)
 
-	bashibleData := metaConfig.MarshalConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	bashibleData := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
 	logTemplatesData("bashible", bashibleData)
 
-	return logboek.LogProcess("Render bashible bundle templates", log.BoldOptions(), func() error {
+	return log.Process("default", "Render bashible bundle templates", func() error {
 		if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
 			return err
 		}
@@ -50,7 +49,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 		}
 
 		bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
-		logboek.LogInfoF("From %q to %q\n", bashboosterDir, bashibleDir)
+		log.InfoF("From %q to %q\n", bashboosterDir, bashibleDir)
 		return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
 	})
 }
@@ -97,20 +96,20 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 	}
 
 	for _, info := range saveInfo {
-		logboek.LogInfoF("From %q to %q\n", info.from, info.to)
+		log.InfoF("From %q to %q\n", info.from, info.to)
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
 			return err
 		}
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	logboek.LogInfoF("Create %q\n", firstRunFileFlag)
+	log.InfoF("Create %q\n", firstRunFileFlag)
 	if err := createEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	logboek.LogInfoF("Create %q\n", devicePathFile)
+	log.InfoF("Create %q\n", devicePathFile)
 	if err := createFileWithContent(devicePathFile, devicePath); err != nil {
 		return err
 	}
@@ -132,7 +131,7 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		},
 	}
 	for _, info := range saveInfo {
-		logboek.LogInfoF("From %q to %q\n", info.from, info.to)
+		log.InfoF("From %q to %q\n", info.from, info.to)
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
 			return err
 		}
